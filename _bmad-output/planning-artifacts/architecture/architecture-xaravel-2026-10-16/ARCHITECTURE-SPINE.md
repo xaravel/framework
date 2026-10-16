@@ -234,7 +234,8 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   - **Builder.** `model.related('posts')` returns the Relation, typed by key, and `related('typo')` is a compile error. Awaiting an unchained `related(name)` is load-if-missing, and caches the result on the model (FR-63). A chained query never caches. Relation mutators (`associate`, `attach`, `sync`, `save`, `create`, …) keep Upstream's side effects.
   - **No callable form.** `model.posts()` does not exist.
   - **Divergence Record.** DIV-2's record carries this surface and its adaptation rule: `$m->rel()` → `m.related('rel')`, and lazy `$m->rel` → `await m.related('rel')`.
-  - **`automaticallyEagerLoadRelationships()` and `handleLazyLoadingViolationUsing()`.** They go to an Escalation in the first Eloquent relationships Epic. The proposal on the table: an awaited `related(name)` on a model from a collection eager-loads `name` for the whole collection. Until it is decided, their Test IDs stay `not-ported-yet`.
+  - **`automaticallyEagerLoadRelationships()` [ADOPTED].** When it is enabled, awaiting an unchained `related(name)` on a model that came from a collection eager-loads `name` for the whole collection in one query. Sync reads of loaded siblings then succeed, and unloaded sync reads still throw.
+  - **`handleLazyLoadingViolationUsing()`.** Its meaning goes to an Escalation in the first Eloquent relationships Epic. Until it is decided, its Test IDs stay `not-ported-yet`.
 
 ### AD-9 — DIV-9 PHP value model
 
@@ -691,7 +692,7 @@ These decisions change confirmed PRD text. The PRD and its Divergence Records ar
 | `route:cache` with closure routes; CSRF classification of `QUERY` | Routing Epic: follow Upstream at the Pin, escalate if it has no answer |
 | Boost FR-106 producer hooks | They use Upstream public APIs only (`getBindings`, log taps, exception-handler `reportable`); the Boost Epic adds provider-level hooks, never edits producers |
 | Redis Pub/Sub on `Bun.redis`; a 7.2 CI leg | Redis Epic (Phase 5); subscriptions use AD-20 leases |
-| `automaticallyEagerLoadRelationships()` semantics | Escalation in the first Eloquent relationships Epic (AD-8) |
+| `handleLazyLoadingViolationUsing()` semantics | Escalation in the first Eloquent relationships Epic (AD-8) |
 | Boost FR-106 output schema; read-only query enforcement (FR-110) | Boost app-tools Epic (Phase 8) |
 | `hashing.argon.threads` | Hashing Epic; Differential Tests decide |
 | `network` backend tag for `email:dns` | Validation Epic, through an Escalation; it would join `conformance/variants` |
@@ -699,7 +700,7 @@ These decisions change confirmed PRD text. The PRD and its Divergence Records ar
 | Schema-driven model typings generator | Eloquent Epic; AD-7 fixes the field forms |
 | PostgreSQL 19 in CI | After GA (now planned 2026-11-19) |
 | Windows, MySQL/MariaDB/SQL Server, SQS/Beanstalkd, Redis Cluster | Post-alpha (PRD §7.2) |
-| OQ-4 Temporal, OQ-8 bcrypt, the rest of OQ-11 | Phase 0 spikes; outcomes become `deferred:` entries or Escalations |
+| OQ-4 Temporal, OQ-8 bcrypt, the rest of OQ-11 | Phase 0 spikes confirm. Already seen on Bun 1.4.3: Temporal is present, and bcrypt needs the input truncated to 72 bytes before calling Bun (PRD OQ-4, OQ-8). Outcomes become `deferred:` entries or Escalations |
 | OQ-12 out-of-cycle security pin bumps | Maintainer, end of Phase 0 |
 | App production deployment (server entry, process manager) | Skeleton Epic (Phase 7); the framework itself is not deployed |
 | macOS x64 CI legs | Drop when GitHub retires the runners (Fall 2027) |
