@@ -1,17 +1,17 @@
 ---
-title: "Product Brief: Jaravel"
+title: "Product Brief: Xaravel"
 status: final
 created: 2026-10-15
 updated: 2026-10-15
 ---
 
-# Product Brief: Jaravel
+# Product Brief: Xaravel
 
 ## Executive Summary
 
-Jaravel is Laravel's server framework rewritten in TypeScript, running natively on Bun and built for htmx 4 front ends. A Laravel developer should open a Jaravel app and know where everything is: routes, controllers, middleware, form validation, Blade templates, Eloquent models and relationships, migrations, queues, mail, notifications, auth, and an Artisan-style CLI that scaffolds all of it.
+Xaravel is Laravel's server framework rewritten in TypeScript, running natively on Bun and built for htmx 4 front ends. A Laravel developer should open a Xaravel app and know where everything is: routes, controllers, middleware, form validation, Blade templates, Eloquent models and relationships, migrations, queues, mail, notifications, auth, and an Artisan-style CLI that scaffolds all of it.
 
-The approach is what makes this credible rather than another clone. **Laravel's own test suite is the specification.** Laravel 13 has 13,544 test methods across 36 components. Jaravel ports them to `bun test`, and a component is done when its ported tests pass. Progress is a number anyone can check against the full upstream list of tests. That turns an enormous port into a queue of work that AI agents can run unattended, in parallel, through BMAD build cycles.
+The approach is what makes this credible rather than another clone. **Laravel's own test suite is the specification.** Laravel 13 has 13,544 test methods across 36 components. Xaravel ports them to `bun test`, and a component is done when its ported tests pass. Progress is a number anyone can check against the full upstream list of tests. That turns an enormous port into a queue of work that AI agents can run unattended, in parallel, through BMAD build cycles.
 
 Why now: Bun 1.4 ships much of Laravel's infrastructure as built-ins (SQL drivers, Redis, password hashing, S3, a test runner, cron, Temporal). htmx 4 has just shipped. Laravel archived Lumen, its own lean option. And agent-driven ports of large codebases have now been done with tests as the oracle (Bun's own Zig→Rust rewrite, July 2026). No framework combines Bun, Laravel's real API, and an htmx-first design.
 
@@ -46,7 +46,7 @@ const users = await User.where('active', true).with('posts').paginate(15)
 
 1. **It's Laravel, and you can check.** Every "works like Laravel" claim is backed by a ported upstream test, measured against the full inventory of Laravel's tests on a public conformance dashboard.
 2. **Bun-native and htmx-first.** It renders on the server first, has no SPA front end to keep in sync, and has no adapter layers.
-3. **Jaravel Boost.** An MCP server that exposes an app's routes (including htmx fragment routes), container bindings, config, schema, logs, the last error and structured test failures. The agents building Jaravel use it first, and the agents building apps on it use it after.
+3. **Xaravel Boost.** An MCP server that exposes an app's routes (including htmx fragment routes), container bindings, config, schema, logs, the last error and structured test failures. The agents building Xaravel use it first, and the agents building apps on it use it after.
 
 Honest note: the moat is execution and verifiability, not technology. Nobody has done the slow work of passing Laravel's suite.
 
@@ -54,10 +54,10 @@ Honest note: the moat is execution and verifiability, not technology. Nobody has
 
 - **Primary:** Laravel developers who need or want TypeScript and Bun, and who refuse to give up Laravel to get them.
 - **Secondary:** TypeScript developers building server-rendered htmx apps who want a batteries-included framework.
-- **Also:** AI coding agents. Strong conventions plus Boost make Jaravel apps easy for agents to build in.
+- **Also:** AI coding agents. Strong conventions plus Boost make Xaravel apps easy for agents to build in.
 - **First user:** Ed.
 
-Jaravel is a public open-source project under the MIT licence (the same as Laravel), crediting Laravel.
+Xaravel is a public open-source project under the MIT licence (the same as Laravel), crediting Laravel.
 
 ## Scope
 
@@ -84,20 +84,20 @@ Scope is full. It is **sequenced** by dependency, not cut, across nine phases:
 - **Pipeline:** pin the upstream version, then inventory every test with a stable ID. Write `PORTING.md` (the idiom and decision rules) and pilot on Support. Each story then runs: translate the tests, implement against them, and send the result to adversarial reviewers. The method and prior art are in the addendum.
 - **Parallelism:** agents run unattended, fanned out. Components in the same phase are independent, so their epics run in parallel, one git worktree per story. `bmad-build-auto` runs the loop. Ed reviews each completed epic.
 - **Ratchet:** CI fails on any unexpected failure *or* unexpected pass. Every skip has a reason from a fixed list.
-- **Versioning:** the port is pinned to an exact upstream tag (v13.37.0) so the target doesn't move mid-epic. At each phase boundary the pin moves to the latest 13.x, and new or changed upstream tests become stories. Jaravel's major versions mirror Laravel's (Jaravel 13 = Laravel 13), and Laravel 14 (about Q1 2027) gets its own re-sync epic.
+- **Versioning:** the port is pinned to an exact upstream tag (v13.37.0) so the target doesn't move mid-epic. At each phase boundary the pin moves to the latest 13.x, and new or changed upstream tests become stories. Xaravel's major versions mirror Laravel's (Xaravel 13 = Laravel 13), and Laravel 14 (about Q1 2027) gets its own re-sync epic.
 
 ## Success Criteria
 
 - **Conformance rate:** ported upstream tests passing, out of all of Laravel 13's tests, per component. It only moves forward.
 - **Unattended throughput:** epics finished by agents that pass Ed's review without needing rework.
-- **Dogfooding:** Ed ships a real htmx app on Jaravel, as the first milestone after the HTTP and Blade phases.
-- **Currency:** stays within one 13.x pin step of upstream, and ships Jaravel 14 after Laravel 14.
+- **Dogfooding:** Ed ships a real htmx app on Xaravel, as the first milestone after the HTTP and Blade phases.
+- **Currency:** stays within one 13.x pin step of upstream, and ships Xaravel 14 after Laravel 14.
 
 ## Risks and Unknowns
 
 - **Size:** 275k lines of PHP source and 296k lines of tests. Prior ports show the last few percent of conformance takes the longest.
 - **Breaks from Laravel that can't be avoided**, each with a decision record:
-  - **Queued closures.** JavaScript can't serialize a closure's captured variables. Jaravel will support job classes fully, plus closures that take their data as explicit arguments.
+  - **Queued closures.** JavaScript can't serialize a closure's captured variables. Xaravel will support job classes fully, plus closures that take their data as explicit arguments.
   - **Container autowiring.** TypeScript erases types, so explicit injection tokens are needed.
   - **Async IO.** Only IO is awaited; see "sync core, async edges" under The Solution.
   - **Generated code.** Blade compiler tests and `make:*` stubs assert generated PHP. They become TS and rendered-HTML assertions, checked against PHP Laravel's output.
@@ -106,4 +106,4 @@ Scope is full. It is **sequenced** by dependency, not cut, across nine phases:
 
 ## Vision
 
-In 2–3 years Jaravel is the answer to "Laravel, but TypeScript". It tracks Laravel releases within weeks and has a public conformance dashboard to prove it. With Boost, a developer or an agent can describe an htmx app and have it scaffolded, tested and running on Bun, the Laravel way.
+In 2–3 years Xaravel is the answer to "Laravel, but TypeScript". It tracks Laravel releases within weeks and has a public conformance dashboard to prove it. With Boost, a developer or an agent can describe an htmx app and have it scaffolded, tested and running on Bun, the Laravel way.

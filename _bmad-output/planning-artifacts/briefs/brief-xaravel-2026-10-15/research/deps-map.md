@@ -1,4 +1,4 @@
-# Jaravel dependency-replacement map
+# Xaravel dependency-replacement map
 
 Researched 2026-10-15. Source of truth: `laravel/framework` shallow clone at commit `86864f3` (Application::VERSION = **13.37.0**), cloned read-only into `tmp/research/deps-laravel/framework`. Nothing in the clone was executed.
 
@@ -86,10 +86,10 @@ PHP extensions: ctype, filter, hash, mbstring, openssl, session, tokenizer. Sugg
 
 | Dependency | Laravel uses it for | Replacement | Tier | Notes / Bun caveats |
 |---|---|---|---|---|
-| symfony/http-foundation | `Illuminate\Http\Request` extends Symfony Request; Response, JsonResponse, RedirectResponse, StreamedResponse, BinaryFileResponse, Cookie, ParameterBag/InputBag/HeaderBag/FileBag/ServerBag, UploadedFile, IpUtils, AcceptHeader, Session interfaces | Port only the parts that leak into Laravel's tests, as `@jaravel/http-foundation`. Back it with Web `Request`/`Response`: Hono `c.req.raw` on input, a Web `Response` on output. Use **Bun.Cookie/Bun.CookieMap** for cookies, Web `File`/`FormData` plus `Bun.write` for uploads, and `new Response(Bun.file(p))` for file responses | W (+B, H) | Details in §6.1. About 27 test files import HttpFoundation directly (`tests/Http/HttpRequestTest.php` alone is 2,138 lines). |
+| symfony/http-foundation | `Illuminate\Http\Request` extends Symfony Request; Response, JsonResponse, RedirectResponse, StreamedResponse, BinaryFileResponse, Cookie, ParameterBag/InputBag/HeaderBag/FileBag/ServerBag, UploadedFile, IpUtils, AcceptHeader, Session interfaces | Port only the parts that leak into Laravel's tests, as `@xaravel/http-foundation`. Back it with Web `Request`/`Response`: Hono `c.req.raw` on input, a Web `Response` on output. Use **Bun.Cookie/Bun.CookieMap** for cookies, Web `File`/`FormData` plus `Bun.write` for uploads, and `new Response(Bun.file(p))` for file responses | W (+B, H) | Details in §6.1. About 27 test files import HttpFoundation directly (`tests/Http/HttpRequestTest.php` alone is 2,138 lines). |
 | symfony/http-kernel | `HttpKernelInterface`, `TerminableInterface`, HttpException hierarchy (`NotFoundHttpException`, `HttpException`), `Kernel` constants | Write: a small set of exception classes plus interfaces. Hono's `HTTPException` can wrap them at the edge | W | Trivial. |
 | symfony/routing | `Route::compile()` uses Symfony's `RouteCompiler` (regex, optional params, host patterns); `CompiledRouteCollection` uses `CompiledUrlMatcher`/`CompiledUrlMatcherDumper` | Port Symfony `RouteCompiler` (~300 LOC). The Laravel Router owns matching, and Hono registers one catch-all handler. Bun 1.4 ships **`URLPattern`** natively, which can serve as an alternative matcher. Hono's `RegExpRouter` can be adopted later as a fast prefilter | W (+B) | Laravel route tests (optional params, `where`, domain routes, 405, HEAD-for-GET, fallback, `route:cache`) need Laravel semantics. Hono's matcher semantics differ. |
-| symfony/console | Base `Command`, `Application`, Input/Output, verbosity, `Table`, `ProgressBar`, `QuestionHelper`, `OutputFormatter` `<info>` tags, signals | **Write** a slim Symfony-Console-compatible core (`@jaravel/console`). Do not use citty/commander as the core. Details in §6.2 | W | The largest single dependency (253 imports). |
+| symfony/console | Base `Command`, `Application`, Input/Output, verbosity, `Table`, `ProgressBar`, `QuestionHelper`, `OutputFormatter` `<info>` tags, signals | **Write** a slim Symfony-Console-compatible core (`@xaravel/console`). Do not use citty/commander as the core. Details in §6.2 | W | The largest single dependency (253 imports). |
 | symfony/process | `Illuminate\Process` (Process::run/start/pool/pipe/fake), `queue:listen`, `schema:dump`, scheduler background tasks, `composer` wrapper | **Bun.spawn / Bun.spawnSync / Bun.$** (shell). Use **Bun.Terminal** (new built-in PTY in 1.4) for `tty()` | B | Timeouts: `AbortSignal.timeout` plus `proc.kill()`. Idle timeout: write it. Signals: `proc.kill(sig)`. |
 | symfony/finder | `Filesystem::files/allFiles/directories`, file session GC, `make:*` stubs, config/event discovery | **Bun.Glob** + `node:fs` `readdir({recursive:true})` | B | Use `tinyglobby` (215M/wk) only if Bun.Glob misses a pattern feature. |
 | symfony/mailer | Transports (SMTP, sendmail, SES, Postmark, Mailgun, Resend, Cloudflare, log, array, failover, roundrobin), `SentMessage`, `Envelope` | Write the Laravel `MailManager` plus thin transport classes. Use **nodemailer** (25.7M/wk, v10.1.1, active; README states ESM build "runs on Bun") for SMTP and sendmail. Use `fetch` for Postmark/Mailgun/Resend/Cloudflare APIs, and `@aws-sdk/client-sesv2` (5.2M/wk) for SES | N + W | Tests assert on Symfony `Email`/`SentMessage` objects, so wrap our own Email model around nodemailer's composer. |
@@ -128,8 +128,8 @@ PHP extensions: ctype, filter, hash, mbstring, openssl, session, tokenizer. Sugg
 | fruitcake/php-cors | `HandleCors` middleware driven by `config/cors.php` | **hono/cors** (defaults include `QUERY` method) or port fruitcake's `CorsService` (~250 LOC) for `allowed_origins_patterns`/`supports_credentials` parity | H / W | Port recommended, so `HandleCorsTest` passes unchanged. |
 | tijsverkoyen/css-to-inline-styles | Mail Markdown theme CSS inlining | **juice** (3.5M/wk, v12.2.0, active) | N | Pure JS (cheerio), so Bun-safe. |
 | vlucas/phpdotenv | `LoadEnvironmentVariables` (`.env`, `.env.{APP_ENV}`), `Env::get` casting (`true`/`(true)`/`null`/`empty`), immutable repository | **Write** the Laravel `Env` repository plus a phpdotenv-grammar parser. Disable Bun's auto-load in the app (`bunfig.toml` `env = false` or `--no-env-file`) so precedence is deterministic. `dotenv` (192M/wk) `parse()` is an option, but its quoting/interpolation rules differ | W (+B) | Bun's built-in `.env` loading is keyed on NODE_ENV, not APP_ENV, and has its own `$VAR` expansion. 1.4 no longer loads `.env` when Bun runs as `node`. |
-| psr/container, psr/log, psr/simple-cache, psr/http-message | Contracts | TypeScript interfaces in `@jaravel/contracts` | W | Trivial. |
-| composer-runtime-api | Package discovery (`PackageManifest`), `Composer` helper | `package.json` field such as `"jaravel": { "providers": [...] }` plus `bun pm` | W | — |
+| psr/container, psr/log, psr/simple-cache, psr/http-message | Contracts | TypeScript interfaces in `@xaravel/contracts` | W | Trivial. |
+| composer-runtime-api | Package discovery (`PackageManifest`), `Composer` helper | `package.json` field such as `"xaravel": { "providers": [...] }` plus `bun pm` | W | — |
 
 ## 3. PHP extensions and runtime features
 
@@ -157,7 +157,7 @@ PHP extensions: ctype, filter, hash, mbstring, openssl, session, tokenizer. Sugg
 | phpunit/phpunit | Test runner for the spec suite | **bun test** (`--parallel`, `--isolate`, `--shard`, `--changed`, retries, `jest.useFakeTimers`/`setSystemTime` in 1.4) plus our own **PHPUnit-assertion shim** (`assertSame`, `assertEquals` with PHP loose semantics, `expectException`, data providers → `test.each`) | B + W | The shim is what makes the mechanical test port feasible. |
 | brianium/paratest | Parallel testing (`--parallel`, `ParallelTesting` tokens) | `bun test --parallel` / `--shard`. Emulate `TEST_TOKEN` per worker | B | Whether Bun exposes a per-worker index is unverified. |
 | mockery/mockery | `Facade::shouldReceive`, `$this->mock()`, `partialMock`, `spy` | **Write** a Mockery-style fluent API (`shouldReceive().once().with().andReturn()`) over Proxies. `bun:test` `mock`/`spyOn` for primitives. sinon (10.9M/wk) as an alternative | W (+B) | Mockery semantics are deeply embedded in the tests (hundreds of uses). |
-| orchestra/testbench-core | Bootstraps an app for package tests | Write `@jaravel/testbench` | W | — |
+| orchestra/testbench-core | Bootstraps an app for package tests | Write `@xaravel/testbench` | W | — |
 | fakerphp/faker | Model factories | **@faker-js/faker** (17.9M/wk, v10.6.0) | N | Method names differ, so map `fake()->name()` and similar. |
 | aws/aws-sdk-php | SQS queue, SES mail, DynamoDB cache/lock, S3 | `@aws-sdk/client-sqs` (12.8M/wk), `-sesv2`, `-dynamodb`. S3 via **Bun.S3Client** | N + B | — |
 | pda/pheanstalk | beanstalkd queue | Write it (text protocol over `Bun.connect`) | W | Low priority. |
@@ -191,7 +191,7 @@ Hono 4.x built-ins available for reuse: middleware `basic-auth, bearer-auth, bod
 
 ### 6.1 What replaces Symfony HttpFoundation's Request/Response?
 
-- **Hono's role:** Hono is the server adapter (`export default { fetch: app.fetch }` on Bun.serve) and supplies its middleware set. Hono's `Context` is **not** the Laravel Request. One catch-all route (`app.all('*', kernel.handle)`) hands control to Jaravel's HTTP Kernel, which owns middleware, routing, and response conversion.
+- **Hono's role:** Hono is the server adapter (`export default { fetch: app.fetch }` on Bun.serve) and supplies its middleware set. Hono's `Context` is **not** the Laravel Request. One catch-all route (`app.all('*', kernel.handle)`) hands control to Xaravel's HTTP Kernel, which owns middleware, routing, and response conversion.
 - **Request:** `Illuminate\Http\Request` is our own class built from the Web `Request` plus connection info (`server.requestIP()` / Hono `getConnInfo`). It holds:
   - `query` from `URL.searchParams`, with PHP bracket parsing (`a[b][]=1`). Write a `qs`-compatible parser; PHP's `parse_str` rules differ from `URLSearchParams`.
   - `request`/`json`/`files` pre-parsed by the async capture stage (`formData()`, `json()`). `UploadedFile` wraps the Web `File`.
@@ -212,7 +212,7 @@ Hono 4.x built-ins available for reuse: middleware `basic-auth, bearer-auth, bod
 |---|---|---|---|
 | commander 15.0.0 | 538M | argv→action. No InputDefinition/OutputInterface/verbosity/Helper set; no `{name} {--opt=}` signature DSL | Not the core |
 | yargs 18.2 | 274M | Same as commander | No |
-| citty 0.2.2 (unjs) | 36M | Lightweight, lazy sub-commands, ESM. No I/O abstraction | No (could front `bunx jaravel` only) |
+| citty 0.2.2 (unjs) | 36M | Lightweight, lazy sub-commands, ESM. No I/O abstraction | No (could front `bunx xaravel` only) |
 | cac 7.1 | 51M | Similar | No |
 | clipanion 4.0.0-rc.4 | 4.8M | Class-based commands (closest shape), but still RC since 2024 | No |
 | @poppinss/cliui / AdonisJS Ace | 225k | Reference design for a Laravel-like CLI in TS | Read for ideas |
@@ -220,7 +220,7 @@ Hono 4.x built-ins available for reuse: middleware `basic-auth, bearer-auth, bod
 | @inquirer/prompts 8.7 | 43M | Mature, different look and API | Alternative |
 | ink 8.0 | 7.9M | React TUI; too heavy | No |
 
-**Recommendation:** write `@jaravel/console`, a direct, slimmed port of the Symfony Console pieces that Laravel touches:
+**Recommendation:** write `@xaravel/console`, a direct, slimmed port of the Symfony Console pieces that Laravel touches:
 - `Application`, `Command`
 - `InputDefinition`/`InputArgument`/`InputOption`, `ArgvInput`/`ArrayInput`/`StringInput`
 - `OutputInterface` + `ConsoleOutput`/`BufferedOutput`/`NullOutput`, `OutputFormatter` with `<info>/<comment>/<error>/<fg=…>` tags

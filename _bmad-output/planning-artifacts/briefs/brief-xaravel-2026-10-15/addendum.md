@@ -1,8 +1,8 @@
-# Addendum: Jaravel
+# Addendum: Xaravel
 
 Supporting depth for downstream documents (PRD, architecture). Not part of the brief itself.
 
-> **Superseded by review (2026-10-15):** Hono was later dropped from the core stack (HTTP runs directly on `Bun.serve` with Laravel's router and middleware ported). Research sections below that mention Hono, `@hono/mcp`, or Hono middleware reflect the earlier stack. For MCP's HTTP transport, use the MCP TS SDK's Web-standard streamable-HTTP handling mounted on a Jaravel route instead of `@hono/mcp`. See "Design notes from review".
+> **Superseded by review (2026-10-15):** Hono was later dropped from the core stack (HTTP runs directly on `Bun.serve` with Laravel's router and middleware ported). Research sections below that mention Hono, `@hono/mcp`, or Hono middleware reflect the earlier stack. For MCP's HTTP transport, use the MCP TS SDK's Web-standard streamable-HTTP handling mounted on a Xaravel route instead of `@hono/mcp`. See "Design notes from review".
 
 ## Landscape snapshot (researched 2026-10-15)
 
@@ -63,10 +63,10 @@ Docs: laravel.com/docs/13.x. All three are separate Composer packages (not in la
 |---|---|---|---|---|
 | `laravel/ai` | 1.2.3 | 338 | Agent classes (tools, provider tools, middleware, structured output), streaming (incl. Vercel data protocol), DB-backed conversation memory, images/TTS/STT/embeddings/reranking/files/vector stores, failover, `::fake()`, ~15 providers | `ai` (Vercel) v7 + `@ai-sdk/*` providers |
 | `laravel/mcp` | 1.0.2 | 122 (incl. Conformance) | MCP servers: Tools/Resources/Prompts; `Mcp::web()` (HTTP) and `Mcp::local()` (stdio CLI); OAuth 2.1 (Passport) or Sanctum; inspector + test helpers | `@modelcontextprotocol/sdk` 1.32 (v2 split pkgs at 2.3.1) + `@hono/mcp` 0.3.2 (peers sdk ^1.29 → v1 vs v2 decision needed) |
-| `laravel/boost` | 2.10.3 (dev dep) | 95 | MCP server for coding agents built on laravel/mcp: app info, browser logs, DB connections/query/schema, absolute URL, last error, log entries, record rule, hosted semantic docs search (~17k entries); tinker (off by default); writes guidelines to CLAUDE.md/AGENTS.md, Agent Skills, `.ai/rules/`; package hook | Built on Jaravel's own MCP layer |
+| `laravel/boost` | 2.10.3 (dev dep) | 95 | MCP server for coding agents built on laravel/mcp: app info, browser logs, DB connections/query/schema, absolute URL, last error, log entries, record rule, hosted semantic docs search (~17k entries); tinker (off by default); writes guidelines to CLAUDE.md/AGENTS.md, Agent Skills, `.ai/rules/`; package hook | Built on Xaravel's own MCP layer |
 
-### "Jaravel Boost" candidate surface
-Route table (incl. htmx fragment routes), container bindings, config/env keys, DB schema + read-only query, logs + last error, CLI command list, eval REPL, browser logs, version-pinned docs search, record-rule/project rules, per-module skills, run-test-suite with structured failures. Strategic: the same tool serves the agents building Jaravel and the agents building apps on it.
+### "Xaravel Boost" candidate surface
+Route table (incl. htmx fragment routes), container bindings, config/env keys, DB schema + read-only query, logs + last error, CLI command list, eval REPL, browser logs, version-pinned docs search, record-rule/project rules, per-module skills, run-test-suite with structured failures. Strategic: the same tool serves the agents building Xaravel and the agents building apps on it.
 
 Open checks: Bun stdio-transport edge cases (spike); MCP SDK v1 vs v2.
 
@@ -88,7 +88,7 @@ Full tables: [`research/laravel-anatomy.md`](research/laravel-anatomy.md). Sourc
 6. HTTP layer (originally on Hono; superseded, see note above): Http 751, Cookie 32, Session 109, Routing 556
 7. View/templating 454, Console 396, Mail 211
 8. Queue 648, Concurrency 17, Broadcasting 165, Auth 313, Notifications 103, Image 291
-9. Foundation 1,152 (incl. generators), Testing 431, Jaravel Testbench
+9. Foundation 1,152 (incl. generators), Testing 431, Xaravel Testbench
 
 ### Structural prerequisites / decisions surfaced
 - **Testbench equivalent** gates all 2,809 integration tests → unit tests first, integration unlock after Foundation + Testbench.
@@ -170,7 +170,7 @@ Port Blade's compiler (BladeCompiler, 22 Compiles* concerns, ComponentTagCompile
 Laravel's router, middleware pipeline, HttpFoundation-style Request/Response, sessions and CSRF are ported so their upstream tests apply. That leaves Hono little to do over `Bun.serve` + Web Request/Response, so the core takes no HTTP-framework dependency. Hono's middleware (cors, etag, compress…) is replaced by Laravel's own middleware, which has its own upstream tests.
 
 ### Testbench is not a test runner
-`bun test` is the runner (the PHPUnit equivalent). Orchestra Testbench is a fake Laravel *application* that integration tests boot into: default config, service providers, a `users` migration and `UserFactory`, plus attributes such as `#[WithConfig]`, `#[WithMigration]`, `#[RequiresDatabase]`. 267+ upstream integration files depend on it. `@jaravel/testbench` = skeleton app + test hooks; built during Phase 9, with a minimal version earlier if integration tests are pulled forward.
+`bun test` is the runner (the PHPUnit equivalent). Orchestra Testbench is a fake Laravel *application* that integration tests boot into: default config, service providers, a `users` migration and `UserFactory`, plus attributes such as `#[WithConfig]`, `#[WithMigration]`, `#[RequiresDatabase]`. 267+ upstream integration files depend on it. `@xaravel/testbench` = skeleton app + test hooks; built during Phase 9, with a minimal version earlier if integration tests are pulled forward.
 
 ### Serialized closures
 Laravel can queue a closure: `dispatch(function () use ($podcast) { $podcast->publish(); })`. laravel/serializable-closure reads the closure's source code via PHP reflection, serializes it with its captured `use` variables, signs it with APP_KEY, and a worker process re-creates and runs it. JS can read a function's source (`fn.toString()`) but cannot see its captured scope or imports, so a faithful port is impossible. Proposed model:
@@ -182,9 +182,9 @@ Laravel can queue a closure: `dispatch(function () use ($podcast) { $podcast->pu
 Upstream compiler tests assert `template → exact PHP source`. Rewriting each expected string to TS would mean hand-writing expected values that no longer trace to upstream. Proposed: keep every upstream template input; assert on **rendered HTML** for a fixed data set, with expected HTML generated by running the same templates through PHP Laravel (the oracle). TS output gets snapshot tests as a secondary check. Same pattern for the 88 `make:*` generator stubs: the expected file is the TS equivalent, reviewed once and snapshotted.
 
 ### Version policy
-Laravel ships one major a year (13 now; 14 about Q1 2027) and a minor/patch about weekly (13.37.0 as of 2026-10-15). Tracking `latest` continuously means the test inventory changes under running epics. Proposed: pin an exact tag (v13.37.0) for the baseline; bump to the latest 13.x at each phase boundary; the inventory diff (added/changed/removed tests) becomes stories; Jaravel majors mirror Laravel majors; one re-sync epic per Laravel major.
+Laravel ships one major a year (13 now; 14 about Q1 2027) and a minor/patch about weekly (13.37.0 as of 2026-10-15). Tracking `latest` continuously means the test inventory changes under running epics. Proposed: pin an exact tag (v13.37.0) for the baseline; bump to the latest 13.x at each phase boundary; the inventory diff (added/changed/removed tests) becomes stories; Xaravel majors mirror Laravel majors; one re-sync epic per Laravel major.
 
 ## Open questions parked for the PRD
-- **Symfony's own test suites:** Jaravel ports the parts of Symfony that Laravel builds on (HttpFoundation-style request/response, the route compiler, the console core). Should the relevant Symfony component tests be pulled in as extra conformance specs for those ports, or does Laravel's suite give enough coverage?
+- **Symfony's own test suites:** Xaravel ports the parts of Symfony that Laravel builds on (HttpFoundation-style request/response, the route compiler, the console core). Should the relevant Symfony component tests be pulled in as extra conformance specs for those ports, or does Laravel's suite give enough coverage?
 - **Temporal in Bun 1.4:** research disagreed on whether it's present or complete. Spike before the Support/Carbon epic.
 - **htmx 4 on npm:** 4.x is on the `next` tag until early 2027. Decide how apps pin it.

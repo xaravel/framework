@@ -1,4 +1,4 @@
-# Jaravel porting strategy: test-suite-as-spec, PHP→TS semantic gaps, async, test infrastructure
+# Xaravel porting strategy: test-suite-as-spec, PHP→TS semantic gaps, async, test infrastructure
 
 Date: 2026-10-15. Target: laravel/framework `13.x` (latest tag v13.37.0). Runtime: Bun + Hono.
 Sibling note: `laravel-anatomy.md` (per-component LOC and layering). This note covers *how* to port.
@@ -46,7 +46,7 @@ Runtime deps that become porting surface (composer `require`) [V]: symfony/{cons
 
 **Deno node_compat harness.** Deno copies Node test files verbatim from the Node tarball. The intent is to run them **unmodified**. `config.jsonc` lists the enabled tests, an `ignore` section keeps edited copies from being overwritten, and `${platform}Ignore` keys hold OS-specific skips. CI regenerates the enabled set from daily runs ("consistently passing over the last 10 days"), which works as a ratchet against flakiness. Results go to a dashboard: https://node-test-viewer.deno.dev/results/latest. Sources: https://code.fosterhangdaan.com/foster/denoland-deno/src/branch/main/tests/node_compat/runner/README.md (mirror of denoland/deno) [S].
 
-**Deno WPT (WinterTC-style web conformance).** `expectation.json` mirrors the WPT directory tree. Each entry is `true` (file passes), `false` (file fails), or an array of failing subtest names. `wpt.ts update` rewrites the file from actual results. Source: https://docs.deno.com/runtime/contributing/web_platform_tests [S]. **This is the best model for the Jaravel skip list: a machine-maintained expectation file with test-case granularity, where CI fails on *unexpected* passes as well as unexpected failures.** Unexpected passes force the expectation file to stay current.
+**Deno WPT (WinterTC-style web conformance).** `expectation.json` mirrors the WPT directory tree. Each entry is `true` (file passes), `false` (file fails), or an array of failing subtest names. `wpt.ts update` rewrites the file from actual results. Source: https://docs.deno.com/runtime/contributing/web_platform_tests [S]. **This is the best model for the Xaravel skip list: a machine-maintained expectation file with test-case granularity, where CI fails on *unexpected* passes as well as unexpected failures.** Unexpected passes force the expectation file to stay current.
 
 **uutils coreutils ↔ GNU test suite.** uutils runs the GNU coreutils test suite and tracks pass/fail/skip/error per release in a separate repo (https://github.com/uutils/coreutils-tracking). 0.10 (Aug 2026) reports 645/690 = 93.48%, up from about 84% in Oct 2025. Release notes always quote the delta. Sources: https://www.phoronix.com/news/Rust-Coreutils-0.10, https://linuxiac.com/rust-based-uutils-coreutils-0-10-reaches-93-5-gnu-compatibility/ [S]. Lessons: (a) the last ~7% is long-tail and takes years; (b) a version bump of the upstream suite changes the denominator, so pin the upstream version and re-baseline on purpose.
 
@@ -57,7 +57,7 @@ Runtime deps that become porting surface (composer `require`) [V]: symfony/{cons
 ### 1.2 LLM/agent-driven large ports (2025–2026)
 
 **Bun Zig → Rust (Jul 2026), the most relevant precedent.** https://bun.com/blog/bun-in-rust [V, fetched]. 535k lines of Zig, 1,448 files, done in 11 days with about 50 workflows and up to about 64 concurrent Claudes. The landed diff was +1.0M lines, and token spend was about $165k at API prices. Key mechanics:
-- Before any code: about 3 hours of human+agent discussion produced **`PORTING.md`** (a mapping of Zig idioms to Rust idioms) and **`LIFETIMES.tsv`** (an analysis per struct field). Both went through adversarial review and a pilot on 3 files before fan-out. *Jaravel equivalent: a `PORTING.md` idiom table (section 3 below) and a per-class "dynamic surface" inventory (which classes use `__call`, traits, `static::`) before any epic starts.*
+- Before any code: about 3 hours of human+agent discussion produced **`PORTING.md`** (a mapping of Zig idioms to Rust idioms) and **`LIFETIMES.tsv`** (an analysis per struct field). Both went through adversarial review and a pilot on 3 files before fan-out. *Xaravel equivalent: a `PORTING.md` idiom table (section 3 below) and a per-class "dynamic surface" inventory (which classes use `__call`, traits, `static::`) before any epic starts.*
 - Unit loop: **1 implementer → 2 adversarial reviewers (diff-only, told "assume it's wrong") → 1 fixer → commit.** The reviewers caught bugs that compiled cleanly.
 - The **work queue was the error list** (16k compiler errors, split by crate). After that it was failing test files: about 100 random files per round, sharded by folder, with stack traces saved per test. The CI failure list went from 972 to 23 in about 2 days.
 - **0 tests skipped or deleted**, checked by hand. Failure modes: agents **stubbing functions to "make it compile"**, and long comments justifying workarounds. A reviewer rule was added: "code that needs a paragraph to justify itself is wrong". Agents also ran git commands that broke each other's worktrees, so the fix was to allow only commits of specific files. Build contention: no `cargo` inside loops, one check per phase.
@@ -68,10 +68,10 @@ Runtime deps that become porting surface (composer `require`) [V]: symfony/{cons
 - **Design harness output for agents:** print only a few lines, log details to files, put `ERROR <reason>` on one grep-able line, and precompute aggregate stats.
 - **Agents cannot tell how much time has passed.** Use a default `--fast` mode that runs a deterministic random 1–10% sample per agent, so the fleet covers everything while each agent still gets fast regression signal.
 - Lock-file task claiming (`current_tasks/`) coordinated through git, with no orchestrator.
-- **Oracle trick for one big monolithic task:** compile most files with GCC (known-good) and only a random subset with the new compiler, so agents isolate different bugs. *Jaravel analog: run the PHP Laravel as an oracle for differential tests. For SQL, rendered views, validation messages and serialized output, the same input should produce the same output.*
+- **Oracle trick for one big monolithic task:** compile most files with GCC (known-good) and only a random subset with the new compiler, so agents isolate different bugs. *Xaravel analog: run the PHP Laravel as an oracle for differential tests. For SQL, rendered views, validation messages and serialized output, the same input should produce the same output.*
 - At about 100k LOC, new work kept breaking old work. Strict CI gating fixed it.
 
-**Ladybird LibJS C++ → Rust (Feb 2026).** https://ladybird.org/posts/adopting-rust/, https://heise.de/-11187278 [S]. About 25k lines of Rust in about 2 weeks with Claude Code and Codex. It was "human-directed, not autonomous": hundreds of small prompts, then adversarial multi-model review. The acceptance bar was **byte-identical AST and bytecode versus C++**, plus 52,898 test262 tests and 12,461 regression tests, with zero regressions. The Rust deliberately stays in a "translated from C++" style until the C++ version is removed. *Lesson for Jaravel: port the internals in literal Laravel shape first and make them idiomatic later. Decide the **public** API idioms (async, typing) up front, because changing them later is expensive.*
+**Ladybird LibJS C++ → Rust (Feb 2026).** https://ladybird.org/posts/adopting-rust/, https://heise.de/-11187278 [S]. About 25k lines of Rust in about 2 weeks with Claude Code and Codex. It was "human-directed, not autonomous": hundreds of small prompts, then adversarial multi-model review. The acceptance bar was **byte-identical AST and bytecode versus C++**, plus 52,898 test262 tests and 12,461 regression tests, with zero regressions. The Rust deliberately stays in a "translated from C++" style until the C++ version is removed. *Lesson for Xaravel: port the internals in literal Laravel shape first and make them idiomatic later. Decide the **public** API idioms (async, typing) up front, because changing them later is expensive.*
 
 **JustHTML Python → JS (Dec 2025).** https://simonwillison.net/2025/Dec/15/porting-justhtml/ [S]. 9,200 html5lib-tests passed in about 4.5 hours with a few prompts. It worked because the test suite is language-independent data. Related: Drew Breunig's "whenwords", a library shipped as spec + YAML conformance tests with no code (https://www.dbreunig.com/2026/01/08/a-software-library-with-no-code.html). *Lesson: wherever a Laravel test is really input→output data (Str, Arr, Pluralizer, SQL grammar, validation messages, Carbon formatting), extract it to a language-neutral fixture (JSON/YAML) and generate the TS test from it. Don't hand-translate.*
 
@@ -100,7 +100,7 @@ Runtime deps that become porting surface (composer `require`) [V]: symfony/{cons
 ### 2.1 Inventory extraction (the denominator)
 
 Use **both** of the following and reconcile them:
-- **Authoritative runtime list:** run the real suite once in PHP with `vendor/bin/phpunit --list-tests-xml inventory.xml`. This lists every test, *including expanded data-set names*. [M, check the flag on PHPUnit 12/13.] Also run the full suite with `--log-junit baseline.xml` in Laravel's CI DB matrix. Tests that are **skipped or failing in PHP itself** (missing extensions, `#[RequiresOperatingSystem]`) must be marked `upstream-skip` so they don't count against Jaravel.
+- **Authoritative runtime list:** run the real suite once in PHP with `vendor/bin/phpunit --list-tests-xml inventory.xml`. This lists every test, *including expanded data-set names*. [M, check the flag on PHPUnit 12/13.] Also run the full suite with `--log-junit baseline.xml` in Laravel's CI DB matrix. Tests that are **skipped or failing in PHP itself** (missing extensions, `#[RequiresOperatingSystem]`) must be marked `upstream-skip` so they don't count against Xaravel.
 - **Static AST inventory:** `nikic/php-parser` (https://github.com/nikic/PHP-Parser, which supports JSON serialization of the AST) gives, per test method: class FQCN, method, attributes (`#[DataProvider]`, `#[TestWith]`, `#[Requires*]`, Testbench `#[WithConfig]` and others), `setUp`/`tearDown` presence, facades and classes referenced, use of Mockery/fakes/`setTestNow`/DB, and LOC. This drives **component tagging, dependency ordering and difficulty scoring** for sprint planning. Regex is good enough for counts (as in section 0) but not for translation.
 
 **Test ID scheme (stable, 1:1):**
@@ -131,7 +131,7 @@ Statuses: `pass | fail | skip`. Reason vocabulary: `upstream-skip`, `platform-im
 
 ### 2.3 Assertion and construct mapping
 
-Ship a **`@jaravel/phpunit-compat` shim**: a `TestCase` base plus `assert*` functions that throw. Translations then stay close to line-for-line, and agents don't have to re-derive semantics 13k times. Custom matchers are registered with `expect.extend`.
+Ship a **`@xaravel/phpunit-compat` shim**: a `TestCase` base plus `assert*` functions that throw. Translations then stay close to line-for-line, and agents don't have to re-derive semantics 13k times. Custom matchers are registered with `expect.extend`.
 
 | PHPUnit / Laravel | bun:test translation | Notes / risk |
 |---|---|---|
@@ -149,10 +149,10 @@ Ship a **`@jaravel/phpunit-compat` shim**: a `TestCase` base plus `assert*` func
 | `setUp/tearDown` | `beforeEach/afterEach` | `parent::setUp()` chains map to TestCase base class hooks. |
 | `setUpBeforeClass` | `beforeAll` | |
 | `markTestSkipped` / `#[Requires*]` | `test.skipIf(cond)` [M] or expectation entry | |
-| Mockery `m::mock(X)->shouldReceive('f')->once()->with(..)->andReturn(..)` | **Port a mini-Mockery** (`@jaravel/mockery`): Proxy-based doubles, expectation chains, `m::close()` verification in `afterEach` | 1,449 sites. Mapping each one to `mock()`/`spyOn` idioms would be lossy and error-prone. A shim keeps the translation mechanical. bun's `mock()`/`spyOn()` (`bun:test`) are fine as the internal engine. |
+| Mockery `m::mock(X)->shouldReceive('f')->once()->with(..)->andReturn(..)` | **Port a mini-Mockery** (`@xaravel/mockery`): Proxy-based doubles, expectation chains, `m::close()` verification in `afterEach` | 1,449 sites. Mapping each one to `mock()`/`spyOn` idioms would be lossy and error-prone. A shim keeps the translation mechanical. bun's `mock()`/`spyOn()` (`bun:test`) are fine as the internal engine. |
 | PHPUnit `createMock` | same shim | 379 sites |
 | `Carbon::setTestNow()` | `Carbon.setTestNow()` in the port, plus bun's `setSystemTime` [M] for raw `Date` | 383 sites. The port's `now()` must read the Carbon test clock, not `Date.now()`. |
-| `$this->app`, `$this->get('/x')->assertOk()` (Testbench/Foundation testing) | the Jaravel TestCase provides `this.app`, `await this.get('/x')` returns a `TestResponse` with the same assertion names | These are Laravel's own testing APIs (tests/Testing has 402 tests), so port them as product code. |
+| `$this->app`, `$this->get('/x')->assertOk()` (Testbench/Foundation testing) | the Xaravel TestCase provides `this.app`, `await this.get('/x')` returns a `TestResponse` with the same assertion names | These are Laravel's own testing APIs (tests/Testing has 402 tests), so port them as product code. |
 
 ### 2.4 Translation pipeline (Airbnb-style staged, agent-driven)
 
@@ -184,7 +184,7 @@ Risk = likelihood × blast radius on public API and test fidelity. H/M/L.
   2. Support trait static properties, abstract-method requirements (enforce through TS `abstract`), and `insteadof`/`as` conflict resolution (rare, so handle it manually).
   3. Merge types through intersection or interface merging.
 - Small "behaviour" traits (Macroable, Conditionable, Tappable, ForwardsCalls, InteractsWithTime, Dumpable) can be plain functions applied to the prototype. Model-heavy traits (HasAttributes, HasRelationships, HasEvents, HasTimestamps, GuardsAttributes, HidesAttributes) stay as mixins in literal Laravel shape (Ladybird lesson).
-- **Macroable** (40 classes): static `macro(name, fn)` stores into a per-class map, and the `__call` Proxy dispatches to it. TS typing works through module augmentation (`declare module "@jaravel/support" { interface Collection<T> { myMacro(): X } }`). That's the idiomatic counterpart of IDE-helper stubs. `mixin()` copies methods from an object.
+- **Macroable** (40 classes): static `macro(name, fn)` stores into a per-class map, and the `__call` Proxy dispatches to it. TS typing works through module augmentation (`declare module "@xaravel/support" { interface Collection<T> { myMacro(): X } }`). That's the idiomatic counterpart of IDE-helper stubs. `mixin()` copies methods from an object.
 
 ### 3.4 Late static binding `static::` / `new static` (1,602 / 263). **Risk: L–M**
 - In static methods, JS `this` *is* the called subclass when invoked as `User.query()`, so `static::` maps to `this` and `new static` maps to `new this()`. In instance methods, use `this.constructor as typeof Model`.
@@ -211,9 +211,9 @@ Risk = likelihood × blast radius on public API and test fidelity. H/M/L.
   - Numbers: int vs float (`1` vs `1.0`, `PHP_INT_MAX`, integer division, `intdiv`, `%` on negatives, int overflow to float) is lost. Use `bigint` only where Laravel needs 64-bit ints (snowflake/large IDs: DB drivers return bigint columns as string or bigint). `assertSame(1.0, $x)` cases become `intentional-divergence`.
 
 ### 3.7 Eloquent dynamic attributes, relationships and type safety. **Risk: H**
-- Attributes: Proxy fallback (3.1) with `declare` typed fields. Generate them optionally from the DB schema or migrations (`jaravel model:typegen`, like Prisma/ide-helper) so users get types without hand-writing them. Casts, accessors and mutators (`Attribute::make(get:, set:)`) map directly. **Accessors must be synchronous** (see §4).
+- Attributes: Proxy fallback (3.1) with `declare` typed fields. Generate them optionally from the DB schema or migrations (`xaravel model:typegen`, like Prisma/ide-helper) so users get types without hand-writing them. Casts, accessors and mutators (`Attribute::make(get:, set:)`) map directly. **Accessors must be synchronous** (see §4).
 - Relationships: `user.posts()` returns a `HasMany<Post>` (a typed builder). Property access `user.posts` returns the **loaded** relation (§4), and the type comes from a declaration such as `declare posts: Collection<Post>`. Alternatively, derive it with a mapped type over relation-returning methods. That's possible but heavy on the TS type checker, so it's an M risk for tsc performance.
-- Prior art with the same trade-offs: Sutando (Eloquent-style on Knex, async, `await user.related('posts')` / eager `with`) https://github.com/sutandojs/sutando, and its TS rewrite Arquebus https://github.com/h3ravel/arquebus [S]. AdonisJS Lucid (preload-based) [M]. Read both before designing. Neither has a conformance suite, so Jaravel's Laravel test corpus is a real advantage.
+- Prior art with the same trade-offs: Sutando (Eloquent-style on Knex, async, `await user.related('posts')` / eager `with`) https://github.com/sutandojs/sutando, and its TS rewrite Arquebus https://github.com/h3ravel/arquebus [S]. AdonisJS Lucid (preload-based) [M]. Read both before designing. Neither has a conformance suite, so Xaravel's Laravel test corpus is a real advantage.
 
 ### 3.8 Service container autowiring (Reflection: 258 refs; Container tests 209 + broad use). **Risk: H**
 - PHP reflects constructor parameter **types and names**. TS erases both. Options:
@@ -230,12 +230,12 @@ Risk = likelihood × blast radius on public API and test fidelity. H/M/L.
   3. PHP `serialize()` payload compatibility with real Laravel queues is a non-goal. The JSON payload *shape* can match Laravel's (`displayName`, `job`, `data.commandName`, `data.command`) so Horizon-like tooling ideas still apply.
 
 ### 3.10 Global helpers (`collect`, `app`, `config`, `now`, `str`, `data_get`, `tap`, `value`, `retry`...). **Risk: L**
-- Export named functions from `@jaravel/support/helpers` and `@jaravel/foundation/helpers`. Optionally add `import "@jaravel/globals"`, which installs them on `globalThis` with a `declare global` block, for Laravel-flavoured ergonomics. `app()`/`config()`/`request()` read the ALS-scoped container (3.2).
+- Export named functions from `@xaravel/support/helpers` and `@xaravel/foundation/helpers`. Optionally add `import "@xaravel/globals"`, which installs them on `globalThis` with a `declare global` block, for Laravel-flavoured ergonomics. `app()`/`config()`/`request()` read the ALS-scoped container (3.2).
 
 ### 3.11 Carbon dates. **Risk: M–H**
 - Carbon is big: mutable `Carbon` and `CarbonImmutable`, `setTestNow`, `diffForHumans` with about 280 locales, PHP `date()` format characters, period/interval types, and macros. 383 `setTestNow` sites.
 - Temporal is the right foundation (timezone/DST correct). Node 26 ships it by default (https://infoq.com/news/2026/07/nodejs-26-temporal [S]), but **I found no evidence that Bun/JSC ships Temporal** (https://github.com/oven-sh/bun/issues/15853 [S]), so use `temporal-polyfill` / `@js-temporal/polyfill` [M].
-- Recommendation: write a `@jaravel/carbon` port over Temporal with a Laravel-used API subset first. Drive it with Laravel's tests (Support/Date tests, casting tests, `now()`), and later with selected Carbon upstream tests. Port PHP `date()` format codes exactly; they show up in DB casts and serialization (`Y-m-d H:i:s`, `serializeDate` uses ISO-8601 with microseconds: JS `Date` has ms precision, while Temporal has ns).
+- Recommendation: write a `@xaravel/carbon` port over Temporal with a Laravel-used API subset first. Drive it with Laravel's tests (Support/Date tests, casting tests, `now()`), and later with selected Carbon upstream tests. Port PHP `date()` format codes exactly; they show up in DB casts and serialization (`Y-m-d H:i:s`, `serializeDate` uses ISO-8601 with microseconds: JS `Date` has ms precision, while Temporal has ns).
 
 ### 3.12 Strings, encoding, regex. **Risk: M**
 - PHP strings are **bytes**, JS strings are UTF-16. `strlen`/`substr` (byte offsets) vs `mb_*` (123 calls). `Str::length` uses mb, which matches JS code units only for the BMP: use `Array.from`/`Intl.Segmenter` for code points or graphemes as PHP does. Use `TextEncoder` and `Uint8Array` for byte-level helpers (`Str::random`, hashes, encryption, `bin2hex`).
@@ -298,7 +298,7 @@ PHP runs one synchronous request per process. On Bun, network IO is Promise-only
 
 ## 5. Testing infrastructure the port needs
 
-### 5.1 Testbench equivalent (`@jaravel/testbench`)
+### 5.1 Testbench equivalent (`@xaravel/testbench`)
 Orchestra Testbench boots a throwaway Laravel app for package/framework tests. Hooks are `getPackageProviders`, `getEnvironmentSetUp`/`defineEnvironment`, `defineDatabaseMigrations`, `defineRoutes`, and attributes `#[WithConfig]`, `#[WithEnv]`, `#[DefineEnvironment]`, `#[WithMigration]`, `#[RequiresDatabase]` (https://packages.tools/testbench/the-basic/environment [S]). 291 Laravel test files use it.
 - Port it as a **product package**. App packages need it too.
 - TS shape: `class TestCase extends TestbenchTestCase { protected packageProviders() {...}; protected defineEnvironment(app) {...} }`. Attributes become static decorators or per-test option objects: `test("x", withConfig({...}, async () => ...))`.
@@ -309,12 +309,12 @@ Orchestra Testbench boots a throwaway Laravel app for package/framework tests. H
 - Drivers: Bun.SQL covers Postgres, MySQL/MariaDB and SQLite (`adapter`), with a single tagged-template API [S]. SQLite also has sync `bun:sqlite`. **SQL Server is not in Bun.SQL**: use `tedious`/`mssql` from npm, or mark `needs-infra` and defer (Laravel's CI runs it, but it's lower priority).
 - The connection layer must expose Laravel's semantics on top of Bun.SQL: PDO-like statement preparation with `?` bindings (Bun.SQL is tagged-template first; check its unsafe/parameterized raw-query API [M]), fetch modes, `lastInsertId`, affected rows, `SQLSTATE` error codes for `UniqueConstraintViolationException`/`LostConnection` detection, and pool checkout for transactions (§4.2.8).
 - Containers: copy Laravel's CI matrix (`databases.yml`, §0) as **docker compose services in CI**, which is simpler and deterministic. Optionally use `testcontainers` for local dev [M: check that testcontainers-node runs under Bun]. Locally, default to **SQLite in-memory** (the bulk of `tests/Database` unit tests and Integration `Sqlite` run there), then Postgres and MySQL. Defer MariaDB versions and MSSQL.
-- Per-test isolation: transaction rollback (`DatabaseTransactions`) for speed, `RefreshDatabase` for schema tests. Run test files in parallel with **one database/schema per worker** (`DB_DATABASE=jaravel_test_${workerId}`) to avoid cross-file interference. Check whether bun:test parallelism happens across files or processes [M].
+- Per-test isolation: transaction rollback (`DatabaseTransactions`) for speed, `RefreshDatabase` for schema tests. Run test files in parallel with **one database/schema per worker** (`DB_DATABASE=xaravel_test_${workerId}`) to avoid cross-file interference. Check whether bun:test parallelism happens across files or processes [M].
 - Redis/Memcached/DynamoDB for Cache, Queue and Session: Bun has a built-in Redis client (Bun 1.2.9+) [M]. Put these behind `needs-infra` tags and run them in separate CI jobs, as Laravel does (`redis.yml`, `queues.yml`) [V: workflow names].
 
 ### 5.3 Fakes (`Mail::fake`, `Queue::fake`, `Http::fake`, `Event::fake`, `Bus::fake`, `Notification::fake`, `Storage::fake`, `Process::fake`, `Exceptions::fake`)
 - These are **product code** in Laravel (`Illuminate\Support\Testing\Fakes\*`). Port them with their tests, since 431 test sites call them. The mechanism is a container `instance()` swap through `Facade::swap`, plus recorded calls and `assertSent/assertPushed/assertDispatched` with closure predicates (may need to be async-aware).
-- `Http::fake` lives in Laravel's Http client (a Guzzle wrapper). Build the Jaravel client on `fetch`, and fake it by swapping the client's transport, not by global `fetch` mocking. Put `preventStrayRequests()` in the test base class.
+- `Http::fake` lives in Laravel's Http client (a Guzzle wrapper). Build the Xaravel client on `fetch`, and fake it by swapping the client's transport, not by global `fetch` mocking. Put `preventStrayRequests()` in the test base class.
 - Time: Carbon test-now plus `freezeTime/travel/travelTo` helpers (from the Foundation testing traits).
 - Mockery shim (§2.3) for `Facade::shouldReceive`.
 
