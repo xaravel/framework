@@ -19,7 +19,7 @@ It builds on the final product brief and does not repeat it. The brief and its r
 - `research/deps-map.md`
 - `research/porting-strategy.md`
 
-Implementation detail for this PRD lives in its own `addendum.md`: repository layout, the package list, and API mapping examples.
+Implementation detail for this PRD lives in its own `addendum.md`: repository layout, the Component-to-Package mapping, and API mapping examples.
 
 **Structure:**
 
@@ -44,7 +44,9 @@ The difference is that the language is TypeScript, the runtime is Bun, and the f
 
 Xaravel earns the claim "it's Laravel" by measuring it. Laravel's own test suite is the specification. Every upstream test is inventoried, ported to `bun test`, and tracked on a public conformance dashboard whose denominator is the whole upstream suite. Where TypeScript forces a difference (async IO, erased types, closures that can't be serialized), the difference is deliberate, documented, and tested on its own terms.
 
-Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by its maintainer one epic at a time. It ships with **Xaravel Boost**, an MCP server that lets agents look inside a Xaravel app or the framework itself. So it is also the framework that agents find easiest to build on.
+Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by its maintainer one epic at a time. It ships with **Xaravel Boost**, an MCP server that lets agents look inside a Xaravel app or the framework itself. The aim is for it to be the framework that agents find easiest to build on.
+
+Long term (2–3 years), Xaravel tracks Laravel releases within weeks once the port is complete, and an App Developer can describe an htmx app and have it scaffolded, tested and running on Bun, the Laravel way.
 
 ## 2. Target User
 
@@ -77,6 +79,7 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
   - **Edge case:** Bun is older than 1.4. The Installer stops and prints the upgrade command.
 
 - **UJ-2. Dana ships an htmx form with validation.**
+  - **Persona + context:** Dana (UJ-1), an App Developer with six years of Laravel, is building her first htmx form in Xaravel.
   - **Path:**
     1. Dana writes a Blade view with `<form hx-post="/invoices">` and an `@fragment('form')`.
     2. She writes a Form Request with rules.
@@ -84,6 +87,7 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
   - **Edge case:** the same route hit without htmx falls back to Laravel's redirect-back-with-errors behaviour.
 
 - **UJ-3. Dana deploys to Postgres without changing code.**
+  - **Persona + context:** Dana (UJ-1) developed her app on SQLite and now deploys it to production.
   - **Path:**
     1. In production she sets `DB_CONNECTION=pgsql` and the usual `DB_*` keys.
     2. She runs `bun artisan migrate --force`.
@@ -118,8 +122,8 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
 - **Baseline Pin:** the exact Upstream release tag that Xaravel targets. It is initially `v13.37.0`, and it moves only at Phase boundaries (FR-7).
 - **Component:** a unit of the framework.
   - An *Upstream Component* maps 1:1 to an Upstream `src/Illuminate/<Name>` directory or Upstream package.
-  - A *Xaravel Component* is one with no Upstream equivalent: Testbench, Mockery, the htmx integration, Boost, the Installer.
-- **Package:** the npm package that publishes one Component, named `@xaravel/<component>`.
+  - A *Xaravel Component* is one with no Upstream equivalent: Testbench, Mockery, the htmx integration, Boost, the Installer, the Skeleton, the Conformance System, the Class Registry.
+- **Package:** the npm package that publishes one Component, named `@xaravel/<component>`. Exceptions: the Installer publishes as `create-xaravel`, and Contracts ship inside each Package rather than as their own Package (addendum).
 - **Test Inventory:** the full list of Upstream test cases at the Baseline Pin, with each data-provider dataset counted separately.
 - **Test ID:** the stable identifier of one Test Inventory entry.
   - PHPUnit tests: `<FQCN>::<method>#<dataset>`.
@@ -127,7 +131,7 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
 - **Backend Variant:** one backend a Test ID runs against, such as `sqlite`, `pgsql`, `mysql`, `redis`, or the `sync` / `database` / `redis` queue drivers. Tests needing no backend have the single variant `none`.
 - **Ported Test:** a `bun test` translation of exactly one Test ID, labelled with that Test ID.
 - **Xaravel Test:** a test for behaviour with no Upstream counterpart, such as the htmx integration. It has a **Xaravel Test ID** of the form `XT-<component>-<n>` and is not in the Test Inventory.
-- **Expectations File:** the machine-maintained record of the expected status of every Test ID × Backend Variant pair. The status is `pass`, `fail-known`, `skip` or `quarantined`. A skip must have a Skip Reason.
+- **Expectations File:** the machine-maintained record of the expected status of every Test ID × Backend Variant pair. The status is `pass`, `fail-known`, `skip` or `quarantined`. A skip must have a Skip Reason. A `pass` entry may carry an `adapted:<DIV-N>` marker when the test was adapted under that DIV's rule (§5.1). A `fail-known` entry counts as not passing, and it doesn't satisfy a Story's done definition or the Global rules (§4).
 - **Skip Reason:** one value from a fixed vocabulary. Each value has a rule CI enforces (FR-3):
   - `not-ported-yet`
   - `blocked-by:<component>`: that Component must sit in a later Phase.
@@ -135,7 +139,7 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
   - `php-only`: needs an approved Escalation (FR-114).
   - `upstream-skip`: the Oracle also skips or fails this test at the Baseline Pin, which the harness checks.
   - `deferred-backend:<backend>`: only for backends listed as post-alpha in §7.2.
-  - `out-of-scope:<non-goal>`: must name a §7.1 Non-Goal.
+  - `out-of-scope:<NG-N>`: must name a §7.1 Non-Goal by its ID.
 - **Quarantined:** a test whose result isn't consistent across repeated runs. It counts as not passing and always has an open Escalation.
 - **Ratchet:** the CI rule that any test result different from the Expectations File fails the build. That covers unexpected failures *and* unexpected passes.
 - **Conformance Rate:** passing Test ID × Backend Variant pairs ÷ all pairs, for one Component or overall. The denominator always includes tests that haven't been ported yet.
@@ -152,7 +156,8 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
   - every assigned Test ID × Backend Variant passes, or carries a Skip Reason that is valid under FR-3 and isn't `not-ported-yet`;
   - every assigned Xaravel Test passes;
   - its Fidelity Review has approved it;
-  - it has no open Escalations.
+  - it has no open Escalations;
+  - CI passes on the Story's change, including a full (not fast-mode) run of its assigned tests and the NFR-3 lint.
 
   A Story with no assigned tests can't be marked done.
 - **Framework Agent:** an AI agent that builds Xaravel itself.
@@ -165,10 +170,12 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
 - **Testbench:** `@xaravel/testbench`, a skeleton application plus test hooks that integration tests boot into. It is the equivalent of Orchestra Testbench.
 - **Boost:** Xaravel Boost, the MCP server for introspecting a Xaravel app or the Xaravel monorepo.
 - **htmx Request:** an HTTP request carrying `HX-Request: true`.
-- **Fragment:** a named, separately renderable part of a Blade view, declared with `@fragment` or `<hx-partial>`.
+- **Blade component:** a reusable template used as an `<x-name>` tag (FR-45). It is not a Component.
+- **Fragment:** a named, separately renderable part of a Blade view, declared with `@fragment`. (htmx 4's `<hx-partial>` is a response element that can wrap a Fragment; FR-39.)
 - **IO Terminal:** a framework method that performs IO and returns a Promise, such as `get()`, `save()` or `send()`.
 - **Strict Loading:** Eloquent behaviour in which reading a relationship that hasn't been loaded throws `LazyLoadingViolationException`.
 - **Class Registry:** the runtime map from class-name strings to classes. It is used for morph types, queue payloads and configuration.
+- **Public alpha:** the release that ends the 0.x line, once the criteria in §7.2 are met.
 
 ## 4. Features
 
@@ -187,10 +194,13 @@ Xaravel is built by AI agents running unattended in BMAD cycles and reviewed by 
 The Maintainer can generate the Test Inventory for any Baseline Pin.
 
 **Consequences (testable):**
-- Every Upstream test case gets exactly one Test ID, with each data-provider dataset counted separately.
+- Every Upstream test case gets exactly one Test ID, with each data-provider or `#[TestWith]` dataset counted separately.
 - Regenerating the inventory for the same Baseline Pin gives an identical result.
 - Each entry is tagged with its Component, unit or integration, and any backend it needs: SQLite, Postgres, MySQL, MariaDB, SQL Server, Redis, or none.
 - The inventory covers `laravel/framework`, `laravel/ai`, `laravel/mcp` and `laravel/boost`.
+- The list of Test IDs, including datasets computed at runtime, matches what the test runner actually runs inside the Oracle at the Baseline Pin (`phpunit --list-tests` or the JUnit output, and Pest's equivalent). CI checks the two match.
+- Each entry records a normalised hash of its test body and dataset values (used by FR-7).
+- Component tags come from a written mapping of test directories to Components. The mapping is a Phase 0 deliverable, on a Protected Path, signed off by the Maintainer.
 
 #### FR-2: Ported Test traceability
 
@@ -212,8 +222,9 @@ The Expectations File records exactly one status for every Test ID × Backend Va
   - `php-only` must reference an approved Escalation.
   - `upstream-skip` must be confirmed by the Oracle.
   - `deferred-backend` must name a backend listed as post-alpha.
-  - `out-of-scope` must name a §7.1 Non-Goal.
+  - `out-of-scope` must name a §7.1 Non-Goal ID (NG-N).
 - A test may be `quarantined` only with an open Escalation.
+- A `fail-known` entry blocks Epic acceptance, and the dashboard counts it separately from skips.
 
 #### FR-4: Ratchet
 
@@ -238,7 +249,7 @@ Anyone can view the Conformance Rate per Component and overall on a public page.
 
 #### FR-6: Differential Tests against the Oracle
 
-For input→output tests, expected values can be generated by running the Oracle. This covers Str, the SQL grammars, Blade rendered HTML, validation messages, date formatting, and generator output reference files.
+For input→output tests, expected values can be generated by running the Oracle. This covers Str, the SQL grammars, Blade rendered HTML, validation messages and date formatting. Generator output is not Oracle-generated, because the Oracle emits PHP; see FR-71.
 
 **Consequences (testable):**
 - Generating them twice for the same Baseline Pin gives identical expected values.
@@ -249,9 +260,10 @@ For input→output tests, expected values can be generated by running the Oracle
 The Maintainer can move the Baseline Pin to a newer Upstream tag at a Phase boundary. Realizes UJ-7.
 
 **Consequences (testable):**
-- The tool outputs a list of added, changed and removed Test IDs.
+- The tool outputs a list of added, changed and removed Test IDs. A Test ID counts as changed when its Upstream test body or its dataset values differ between the two pins.
 - Added and changed Test IDs become backlog Stories, and removed ones are retired from the Expectations File.
-- The Baseline Pin cannot change while any Epic is in progress.
+- A changed Test ID is reset to `not-ported-yet`, keeping a link to its previous Ported Test. A renamed test (same hash, new Test ID) carries its status and history over.
+- A Phase boundary is a freeze point: no new Epics start, and in-flight Epics either finish or pause. The Baseline Pin can change only at a freeze point.
 
 #### FR-8: Porting rules exist before implementation
 
@@ -259,14 +271,16 @@ Framework Agents work from a `PORTING.md` that holds the idiom table and the tes
 
 **Consequences (testable):**
 - Phase 1 Stories are not started until `PORTING.md` and the Divergence Records are merged.
+- `PORTING.md` is piloted in Phase 0 on a sample of Support and Collections tests, and revised from the pilot before Phase 1 starts.
 - Every Divergence Record states its test-adaptation rule.
+- `PORTING.md` states the mechanical rule for translating PHP expressions in Upstream test inputs, including Blade templates, to TypeScript.
 
 #### FR-9: Agent-operable harness
 
 Framework Agents can run the conformance harness unattended.
 
 **Consequences (testable):**
-- The harness has a fast mode that runs a sample, and a filter by Component or Test ID.
+- The harness has a fast mode that runs a sample, and a filter by Component or Test ID. The sample is chosen from a seed that the harness prints, so the same seed gives the same sample (NFR-7).
 - Its output is short and can be grepped, with one line per failing Test ID.
 - On a developer machine, tests whose backend isn't running are reported as not run. They don't count as failures and are never recorded in the Expectations File.
 - CI runs SQLite, Postgres and Redis as services. In CI, every Backend Variant for an alpha backend must actually run.
@@ -335,6 +349,17 @@ Stories for Xaravel Components list their Xaravel Test IDs.
 - A Xaravel Component's Epic is accepted only when every testable consequence of its FRs is covered by at least one passing Xaravel Test.
 - The Fidelity Review checks that each Xaravel Test verifies the behaviour it claims to.
 
+#### FR-116: PHPUnit-style matchers
+
+Ported Tests assert through PHPUnit-style matchers that keep PHPUnit's semantics. They are delivered in Phase 0 with `@xaravel/mockery` (FR-100).
+
+**Consequences (testable):**
+- The matchers cover every PHPUnit assertion used by the Upstream test suite at the Baseline Pin. A scan run with FR-1 lists them, and CI reports any that aren't covered.
+- `assertSame` follows PHP `===`, including array key order and value types. `assertEquals` follows PHP `==`.
+- `expectException` ends the test at the throw, as PHPUnit does.
+- PHPUnit `createMock` goes through `@xaravel/mockery`.
+- Each of these rules is verified by its own Xaravel Tests.
+
 ### 4.2 Packages, Runtime and Distribution
 
 **Description:** Xaravel ships as split packages from a single monorepo, runs only on Bun, and stays 0.x until the public alpha.
@@ -344,7 +369,7 @@ Stories for Xaravel Components list their Xaravel Test IDs.
 Each Component is published as `@xaravel/<component>`.
 
 **Consequences (testable):**
-- A Package depends only on the Packages its Component actually needs, mirroring Upstream's `composer.json` `require` lists as adjusted in the addendum.
+- A Package depends only on the Packages its Component actually needs, mirroring Upstream's `composer.json` `require` lists, except that Contracts live inside each Package (addendum).
 - `@xaravel/collections` and `@xaravel/support` can each be installed and used without the rest of the framework.
 
 #### FR-11: Framework meta-package
@@ -370,14 +395,14 @@ Until the public alpha, every Package is released as `0.x`.
 **Consequences (testable):**
 - All Packages are released together under one version number.
 - Each release's notes state the Baseline Pin it targets.
-- A 0.x release is published when each Phase completes.
+- A 0.x release is published when each Phase completes. A Phase is complete when the Maintainer has accepted all of its Epics and no `blocked-by` entry points at it (§4).
 
 #### FR-14: Monorepo
 
 All Components, the Skeleton, the Installer, the conformance harness and the docs live in one repository under the `github.com/xaravel` organization, organised as Bun workspaces with one workspace per Package. The repo is `github.com/xaravel/framework`, mirroring `laravel/framework`; `xaravel/xaravel` is reserved for a possible Skeleton mirror.
 
 **Consequences (testable):**
-- The `@xaravel` npm org is registered before the first publish.
+- Every Package publishes under the `@xaravel` npm scope (org registered 2026-10-15), except the Installer, which publishes as `create-xaravel`.
 
 ### 4.3 Skeleton and Installer
 
@@ -436,6 +461,7 @@ App Developers read configuration with `config('app.name')`, from `config/*.ts`,
 
 **Consequences (testable):**
 - `.env` parsing matches phpdotenv's grammar: quoting, interpolation, multiline values and `export` prefixes.
+- Which environment file loads, including `.env.<APP_ENV>`, and the precedence of real environment variables match Laravel. Bun's own `.env` auto-loading doesn't change the result.
 - `config:cache` produces a cached configuration that loads with the same values.
 
 #### FR-21: Facades and global helpers
@@ -475,6 +501,7 @@ App Developers can use `Str`, `Stringable`, `Arr`, `Fluent`, `Number`, `Uri`, `B
 **Consequences (testable):**
 - Pluralization follows Doctrine Inflector's English rules.
 - `Str.ascii` / `Str.slug` transliteration matches the Oracle.
+- `Str.markdown` / `Str.inlineMarkdown` honour the `html_input` and `allow_unsafe_links` options as Laravel does, verified with XSS payloads like FR-46's.
 
 #### FR-25: Dates
 
@@ -506,6 +533,7 @@ Controllers read input with Laravel's Request API: `input`, `query`, `all`, `onl
 
 **Consequences (testable):**
 - Input accessors are synchronous inside middleware and controllers, because the body is parsed once before the middleware pipeline.
+- The `ValidatePostSize` limit is enforced before the body is buffered and parsed, so an oversized body is rejected without being read in full.
 - Uploaded files are available as `UploadedFile` with `store()` / `storeAs()`.
 
 #### FR-29: Responses
@@ -538,6 +566,7 @@ App Developers can register global, group and route middleware, with aliases, pr
   - `SubstituteBindings`
   - `ValidateSignature`
   - `PreventRequestsDuringMaintenance`
+  - `PreventRequestForgery` (Laravel 13's origin-based CSRF check), alongside the token check in FR-32
 
 #### FR-32: CSRF protection
 
@@ -594,12 +623,19 @@ Controllers and middleware can read htmx context:
 
 These come from `HX-Request`, `HX-Request-Type`, `HX-Boosted`, `HX-Current-URL`, `HX-History-Restore-Request`, `HX-Source` and `HX-Target`.
 
+**Consequences (testable):**
+- Each accessor reads its header. `htmx()`, `isBoosted()` and `isHistoryRestore()` return booleans, and are `false` when the header is missing.
+- `requestType()` returns `full` or `partial`.
+- `target()` parses htmx 4's `tag#id` format.
+- `expectsJson()` is false for an htmx Request, because htmx 4 sends `Accept: text/html`.
+
 #### FR-38: htmx response helpers
 
 Controllers can set `HX-Trigger`, `HX-Location`, `HX-Redirect`, `HX-Refresh`, `HX-Retarget`, `HX-Reswap`, `HX-Reselect`, `HX-Push-Url` and `HX-Replace-Url` through fluent response methods.
 
 **Consequences (testable):**
 - An `HX-Trigger` event with a payload is serialised as JSON that htmx 4 accepts.
+- There are no helpers for headers that htmx 4 removed, such as `HX-Trigger-After-Swap` and `HX-Trigger-After-Settle`.
 
 #### FR-39: Fragment responses
 
@@ -607,7 +643,7 @@ Controllers can return one or more named Fragments of a view, for example `view(
 
 **Consequences (testable):**
 - Only the Fragment's HTML is sent.
-- `<hx-partial>` and out-of-band Fragments can be returned in a single response.
+- Several Fragments, wrapped in `<hx-partial>` elements or marked out-of-band, can be returned in a single response.
 
 #### FR-40: Validation failure on htmx Requests
 
@@ -617,8 +653,6 @@ The form Fragment is chosen in this order:
 1. The Fragment the developer declared with `.fragment(view, name)` on the route or the Form Request.
 2. A Fragment whose name matches the `id` in `HX-Target`, in the view the route last rendered.
 3. Otherwise, the error bag is returned as a 422 Fragment using the `validation-errors` component.
-
-[ASSUMPTION]
 
 **Consequences (testable):**
 - A non-htmx request to the same route still gets Laravel's redirect-back with errors and old input.
@@ -637,15 +671,21 @@ Controller code is the same as in Laravel: `return redirect().route('invoices.in
 
 #### FR-42: Full page versus partial rendering
 
-A boosted or history-restore htmx Request gets the full layout. A partial request (`HX-Request-Type: partial`) gets only the requested Fragment. Without one, it gets the layout's `content` section, the `@yield('content')` / `{{ $slot }}` region. [ASSUMPTION]
+A boosted or history-restore htmx Request gets the full layout. A partial request (`HX-Request-Type: partial`) gets only the requested Fragment. Without one, it gets the layout's `content` section, the `@yield('content')` / `{{ $slot }}` region.
 
 **Consequences (testable):**
 - The same route returns the full page to a non-htmx request, to a boosted request and to a history-restore request.
 - It returns only the content region to a partial htmx Request.
+- A response whose body depends on htmx headers sends `Vary: HX-Request, HX-Request-Type`, so a full page and a Fragment never share a cache entry.
 
 #### FR-43: Streaming
 
 Controllers can stream server-sent events, `multipart/mixed` responses (for hx-multipart), and WebSocket upgrades through `Bun.serve`.
+
+**Consequences (testable):**
+- Each server-sent event reaches the client when it is written, not when the handler finishes.
+- Each part of a `multipart/mixed` response is flushed as it is written.
+- A WebSocket upgrade on a route returns status 101 and hands the socket to the route's handler.
 
 ### 4.8 Blade
 
@@ -653,7 +693,7 @@ Controllers can stream server-sent events, `multipart/mixed` responses (for hx-m
 
 #### FR-44: Directives
 
-Templates support Laravel 13's Blade directives:
+Templates support every Blade directive in Upstream at the Baseline Pin, including:
 
 - **Control flow:** `@if` / `@else` / `@unless` / `@isset` / `@empty`, `@switch`, `@for` / `@foreach` / `@forelse` / `@while`, the `$loop` variable.
 - **Layouts and includes:** `@include*`, `@each`, `@extends` / `@section` / `@yield` / `@parent`, `@stack` / `@push` / `@prepend`, `@once`.
@@ -663,9 +703,9 @@ Templates support Laravel 13's Blade directives:
 - **Assets and htmx:** `@vite`, `@fragment`.
 - **Custom directives:** `Blade.directive()`.
 
-#### FR-45: Components
+#### FR-45: Blade components
 
-Templates support anonymous and class-based components:
+Templates support anonymous and class-based Blade components (not to be confused with a Component, §3):
 
 - `<x-name>` tags with `$attributes` merging
 - `@props` and `@aware`
@@ -676,11 +716,11 @@ Templates support anonymous and class-based components:
 `{{ }}` output is HTML-escaped and `{!! !!}` is raw, matching Laravel exactly.
 
 **Consequences (testable):**
-- A Xaravel Test suite of XSS payloads produces the same escaped output as the Oracle.
+- A Xaravel Test suite of XSS payloads produces the same escaped output as the Oracle. Its expected values are generated by the Oracle (FR-6), but it has no Upstream counterpart, so it isn't counted in the Conformance Rate (FR-2).
 
 #### FR-47: Async rendering and caching
 
-Rendering a view returns a Promise. Components may await data.
+Rendering a view returns a Promise. Blade components may await data.
 
 **Consequences (testable):**
 - Reading a relationship that isn't loaded during rendering throws (Strict Loading, DIV-2).
@@ -688,10 +728,11 @@ Rendering a view returns a Promise. Components may await data.
 
 #### FR-48: Blade test adaptation
 
-The View Component's Ported Tests keep every Upstream template input.
+The View Component's Ported Tests keep every Upstream template input, with PHP expressions translated to TypeScript by the mechanical rule in `PORTING.md` (FR-8).
 
 **Consequences (testable):**
-- Assertions on generated PHP are replaced by Differential Tests on rendered HTML, plus snapshot tests on the JS output, as DIV-5 specifies.
+- Assertions on generated PHP are replaced by Differential Tests on rendered HTML, as DIV-5 specifies. Only the Oracle-backed assertions count towards the Conformance Rate.
+- Snapshot tests on the JS output are extra regression guards. They are Xaravel Tests and never count as conformance passes.
 
 #### FR-49: Vite integration
 
@@ -793,6 +834,7 @@ App Developers can define every Laravel relationship type:
 
 **Consequences (testable):**
 - Eager loading works with `with()`, `load()`, `loadMissing()`, `withCount()` and the other `with*` aggregates.
+- Eloquent Collections provide Laravel's model-collection methods (`load`, `loadMissing`, `modelKeys`, `fresh`, `find`, `toQuery`, …). The ones that do IO return Promises (DIV-1).
 
 #### FR-63: Strict Loading by default
 
@@ -842,10 +884,11 @@ Commands can use `text`, `password`, `confirm`, `select`, `multiselect`, `sugges
 
 #### FR-71: Generators
 
-App Developers can generate TypeScript files with `make:*` commands. The full set is model, controller, request, middleware, migration, factory, seeder, job, event, listener, mail, notification, policy, rule, cast, command, component, view, resource, observer, scope, exception, test, provider, enum, class, interface and trait.
+App Developers can generate TypeScript files with every `make:*` and stub-backed command in Upstream at the Baseline Pin. That includes model, controller, request, middleware, migration, factory, seeder, job, event, listener, mail, notification, policy, rule, cast, command, component, view, resource, observer, scope, exception, test, provider, enum, class, interface, trait and channel, and the migration generators that the `database` drivers need (`cache:table`, `session:table`, `queue:table`, `queue:failed-table`, `queue:batches-table`, `notifications:table`).
 
 **Consequences (testable):**
-- `stub:publish` lets App Developers customise the stubs.
+- `stub:publish` lets App Developers customise every stub.
+- Each generator's Ported Test asserts against a reviewed TypeScript reference file, one per Upstream stub (DIV-5), not against Oracle output.
 - Generated files compile under `tsc --strict`.
 
 #### FR-72: Task scheduling
@@ -854,7 +897,11 @@ App Developers can define schedules in `routes/console.ts` using Laravel's frequ
 
 #### FR-73: REPL
 
-App Developers can open an interactive TypeScript REPL with the app booted, using `bun artisan tinker`. This is in scope, even though Laravel ships tinker as a separate package.
+App Developers can open an interactive TypeScript REPL with the app booted, using `bun artisan tinker`. This is in scope, even though Laravel ships tinker as a separate package. It is delivered with Console in Phase 7. It has no Upstream Test IDs, so it is verified by Xaravel Tests.
+
+**Consequences (testable):**
+- `bun artisan tinker` boots the app, so facades, helpers, models and `config()` are available in the REPL.
+- An expression that returns a Promise is awaited before its result is printed.
 
 ### 4.13 Infrastructure Services
 
@@ -888,6 +935,7 @@ App Developers can hash and verify passwords with bcrypt and argon2id, and use `
 
 **Consequences (testable):**
 - Bcrypt `$2y$` hashes produced by PHP Laravel verify in Xaravel, so a migrated users table keeps working (see OQ-8).
+- For passwords longer than 72 bytes, hashing and verification give the same result as PHP. PHP's behaviour applies, never a runtime pre-hash, and Differential Tests prove it.
 
 #### FR-79: HTTP client
 
@@ -944,6 +992,7 @@ App Developers can dispatch closures that receive their data as explicit, serial
 - The payload carries the closure's source and arguments, signed with `APP_KEY`.
 - A worker rejects a payload whose signature is invalid.
 - A closure that captures outer variables fails at dispatch time with an explanatory error.
+- On the worker, a rebuilt closure can reach only its arguments and the classes in the app's Class Registry. It has no access to ambient globals or to the dispatching module's imports.
 
 ### 4.15 Mail, Notifications and Broadcasting
 
@@ -1016,14 +1065,15 @@ App tests can fake Bus, Event, Mail, Notification, Queue, Storage, Http, Process
 
 #### FR-100: Mocking library
 
-App and framework tests can mock with a Mockery-compatible API, for example `mock(X).shouldReceive('m').once().with(1).andReturn(2)`. It ships as `@xaravel/mockery`.
+App and framework tests can mock with a Mockery-compatible API, for example `mock(X).shouldReceive('m').once().with(1).andReturn(2)`. It ships as `@xaravel/mockery`, and is delivered in Phase 0 (§7.3) because Ported Tests need it.
 
 **Consequences (testable):**
 - Unmet expectations fail the test when it finishes.
+- It covers every Mockery API used by the Upstream test suite at the Baseline Pin, as listed by the FR-116 scan.
 
 #### FR-101: Testbench
 
-Package developers and the framework's integration tests can boot a Testbench app.
+App Developers who write reusable libraries for Xaravel, and the framework's own integration tests, can boot a Testbench app.
 
 **Consequences (testable):**
 - The Testbench supports equivalents of `WithConfig`, `WithMigration`, `RequiresDatabase` and `WithEnv`, plus a default `users` migration and `UserFactory`.
@@ -1073,7 +1123,7 @@ App Agents can query:
 - application info: versions, installed Packages, environment
 - routes, with Fragment-returning routes marked
 - container bindings and config keys
-- database connections, schema, and read-only queries
+- database connections and schema, plus read-only queries once enabled (FR-110)
 - log entries, the last error, and browser logs
 - absolute URL generation
 
@@ -1084,6 +1134,10 @@ App Agents can run the app's tests, or a filtered subset, and receive failures i
 #### FR-108: Documentation search
 
 App Agents can search Xaravel's documentation for the installed version, through a local index shipped with the Package rather than a hosted service.
+
+**Consequences (testable):**
+- Search works with no network access.
+- Results come from the docs of the installed Xaravel version, not the latest one.
 
 #### FR-109: Framework mode
 
@@ -1113,18 +1167,36 @@ A Xaravel API has the same name, arguments, defaults and behaviour as its Larave
 - Methods stay camelCase.
 - Database attributes keep their column names, for example `created_at`.
 
-Examples of the mapping are in the addendum. Any other difference is a bug.
+Examples of the mapping are in the addendum. Any other difference is a bug, with two exceptions:
+
+- **Xaravel-only additions** to an Upstream surface are allowed only where an FR specifies them, for example the htmx accessors (FR-37), `.hxRedirect()` (FR-41), `validateSync()` (FR-52), `await model.relation()` (FR-63) and the htmx test assertions (FR-96).
+- **htmx Requests** are handled by the htmx Integration (FR-35, FR-40 to FR-42). For any request that isn't an htmx Request, behaviour stays exactly Upstream's.
+
+**PHP semantics are ported, not skipped.** Where Laravel relies on PHP behaviour, Xaravel reproduces it with explicit helpers. Examples are loose comparison (`collect([1]).contains('1')` is `true`), numeric-string handling, ordered array keys, value-copy semantics and exception classes. `PORTING.md` (FR-8) defines those helpers, and the TS mapping for by-reference parameters and PHP exception classes.
+
+A TypeScript limitation that no DIV covers is never worked around silently. It goes through an Escalation (FR-114), and the Maintainer either adds a DIV or rejects the difference.
+
+**Adapting versus skipping:**
+- A test is **adapted** when its Upstream intent can still be verified under a DIV's test-adaptation rule. Examples: awaiting an IO call (DIV-1, DIV-8), or `await load()` in place of lazy access (DIV-2).
+- A test is **skipped** as `intentional-divergence` only when the behaviour it tests doesn't exist in Xaravel.
+- Adapted tests are marked `adapted:<DIV-N>` in the Expectations File. The dashboard counts them separately, and the Fidelity Review checks each one against its DIV's rule.
 
 ### 5.2 Intentional Divergences
 
 Each one has a Divergence Record, which must exist before the first Story that depends on it begins (FR-8):
 
-- **DIV-1 Async IO Terminals.** Methods that do IO return Promises: queries, saves, sends, cache, sessions, HTTP and filesystem. Everything that works in memory stays synchronous ("sync core, async edges"). Callbacks may be async and are awaited in order.
+- **DIV-1 Async IO Terminals.** "Sync core, async edges." The async surface is defined by interface. The architecture document lists every Promise-returning public method, and a type-level check enforces the list.
+  - **Async:** the store and driver contracts, plus whatever calls them. That means database connections and the IO Terminals on query builders and models, cache stores (including `array`, for a uniform interface), session handlers, queue connections, mail transports, filesystem disks, Redis, the HTTP client, broadcasting, and process runs.
+  - **Sync:**
+    - Session reads and writes after `StartSession` has loaded the session, which is persisted when the response is sent.
+    - Request input (FR-28).
+    - Collections, `Str`, `Arr`, Config, the container, query building and `toSql()`, model attributes, and Blade compilation.
+  - **Callbacks:** callbacks passed to sync APIs, such as Collection `map` / `each` / `filter`, must be sync, and passing an async callback is a type error. Use the explicit async companions instead (`eachAsync`, `mapAsync`). Callbacks passed to async APIs (events, observers, policies, transactions, `Cache.remember`) may be async, and are awaited in registration order.
 - **DIV-2 Strict Loading by default.** Relationships must be eager-loaded or explicitly awaited (FR-63). Laravel tests that rely on lazy loading through property access are adapted to `await load()`.
-- **DIV-3 Explicit injection tokens.** TypeScript erases parameter types, so autowired dependencies are declared, for example with a static `inject` list. Decorators are optional syntactic sugar. The same declared metadata drives controller method injection, implicit route model binding (FR-30) and Form Request resolution.
-- **DIV-4 Closure serialization.** Only closures with explicit arguments can be queued or run concurrently (FR-88). Job classes are unaffected.
+- **DIV-3 Explicit injection tokens.** TypeScript erases parameter types, so autowired dependencies are declared, for example with a static `inject` list. Decorators are optional syntactic sugar. The same declared metadata drives controller method injection, implicit route model binding (FR-30) and Form Request resolution. The exact shape of the declaration is decided in the architecture document.
+- **DIV-4 Closure serialization.** Only closures with explicit arguments can be queued or run concurrently (FR-88). The rule applies to every API that serializes a closure, including queued closures, `Bus.chain` and `Bus.batch` callbacks (FR-87) and `Concurrency.run` (FR-82). Job classes are unaffected.
 - **DIV-5 Generated code is TypeScript.** Blade compiles to JS, and generators emit TS. Tests that assert PHP output are replaced by tests on rendered output (Differential Tests) and TS snapshots.
-- **DIV-6 PHP-only behaviour.** Behaviour tied to PHP extensions, OPcache, `php.ini` or PHP's type juggling is marked `php-only`, and has no TypeScript equivalent.
+- **DIV-6 PHP-only behaviour.** `php-only` is limited to an enumerated catalogue: PHP extensions, OPcache, `php.ini` settings, engine internals (for example `gc_*`, `opcache_*`, `declare(ticks)`), and PHP-runtime reflection with no TypeScript analogue. Type juggling is *not* `php-only`; it is ported (§5.1). Every `php-only` entry needs an approved Escalation (FR-3).
 - **DIV-7 Discovery without reflection.** Event listeners, policies and commands are found through file conventions and explicit registration, not runtime type reflection.
 - **DIV-8 Async test bodies.** Ported Tests that touch IO become `async`, and Laravel's test helpers return awaitable results.
 
@@ -1145,7 +1217,7 @@ Each one has a Divergence Record, which must exist before the first Story that d
   - The repo publishes a `SECURITY.md` with a disclosure process.
   - CI audits dependencies.
 - **NFR-6 Performance:** correctness comes first. A benchmark suite runs and is reported for information only. It never blocks a release before the public alpha.
-- **NFR-7 Determinism:** Ported Tests and Xaravel Tests are deterministic and need no network unless tagged with a backend. Test state (clock, fakes, mocks, `Str` factories) resets after each test.
+- **NFR-7 Determinism:** Ported Tests and Xaravel Tests are deterministic and need no network unless tagged with a backend. Test state (clock, fakes, mocks, `Str` factories, and the `Sleep`, `Once` and `Lottery` state that Upstream also resets) resets after each test.
 - **NFR-8 Licence, attribution and trademark:**
   - The project is MIT-licensed and non-commercial. The LICENSE keeps Laravel's copyright notice alongside Xaravel's, because ported code is a derivative work.
   - Xaravel follows Laravel's trademark policy (laravel.com/legal/trademark):
@@ -1154,26 +1226,28 @@ Each one has a Divergence Record, which must exist before the first Story that d
     - It uses no Laravel logo or artwork, and no domain containing "Laravel".
     - It is not a commercial product or service.
 - **NFR-9 Documentation:** each Component has documentation that mirrors Laravel 13's docs structure and calls out every divergence it is subject to. Text adapted from `laravel/docs` (MIT) keeps its copyright notice.
-- **NFR-10 Agent operability:** every Story can run unattended. Its Test IDs, commands and acceptance check are machine-readable. A human is needed only for Epic review, for Escalations (FR-114) and for Infrastructure Stories that touch Protected Paths (FR-112).
+- **NFR-10 Agent operability:** every Story can run unattended, in its own git worktree. Its Test IDs, commands and acceptance check are machine-readable. A human is needed only for Epic review, for Escalations (FR-114) and for Infrastructure Stories that touch Protected Paths (FR-112).
 
 ## 7. Scope
 
 ### 7.1 Non-Goals
 
-- MongoDB support.
-- Front ends other than htmx: no Inertia, React, Vue, Svelte, Livewire or Alpine starter kits.
-- Node.js or Deno support.
-- Running PHP code, or being a PHP compatibility layer.
-- Laravel's first-party products beyond the framework, AI SDK, MCP and Boost: Sanctum, Passport, Cashier, Horizon, Telescope, Pulse, Reverb, Scout, Socialite, Dusk, Sail, Forge/Vapor/Cloud integrations. These are candidates for later (OQ-6).
-- Cutting scope to a minimal v1. Scope is the full framework, delivered in Phases.
-- Performance work before the public alpha (NFR-6).
+Each Non-Goal has an ID, which `out-of-scope:<NG-N>` Skip Reasons name (FR-3).
+
+- **NG-1** MongoDB support.
+- **NG-2** Front ends other than htmx: no Inertia, React, Vue, Svelte, Livewire or Alpine starter kits.
+- **NG-3** Node.js or Deno support.
+- **NG-4** Running PHP code, or being a PHP compatibility layer.
+- **NG-5** Laravel's first-party products beyond the framework, AI SDK, MCP and Boost: Sanctum, Passport, Cashier, Horizon, Telescope, Pulse, Reverb, Scout, Socialite, Dusk, Sail, Forge/Vapor/Cloud integrations. These are candidates for later (OQ-6).
+- **NG-6** Cutting scope to a minimal v1. Scope is the full framework, delivered in Phases.
+- **NG-7** Performance work before the public alpha (NFR-6).
 
 ### 7.2 Public Alpha Scope (the "MVP")
 
 The public alpha ends the 0.x line. It requires:
 
 - Phases 0–8 (§7.3) accepted. Everything the alpha requires is scheduled inside those Phases:
-  - the Conformance System and agent guardrails (FR-1 to FR-9, FR-111 to FR-115) and Boost framework mode (FR-109), in Phase 0;
+  - the Conformance System and agent guardrails (FR-1 to FR-9, FR-111 to FR-115), the PHPUnit-style matchers and Mockery (FR-116, FR-100), and Boost framework mode (FR-109), in Phase 0;
   - the htmx 4 Integration (FR-37 to FR-43) and the core of Foundation, in Phase 6;
   - the Skeleton and Installer (FR-15 to FR-17), the app Testing toolkit (FR-96 to FR-101) and the Testbench, in Phase 7;
   - Auth (FR-92 to FR-95), Queue (FR-85 to FR-88), MCP (FR-104) and Boost's app tools (FR-105 to FR-107, FR-110), in Phase 8.
@@ -1195,15 +1269,15 @@ Tests for those backends are recorded as `deferred-backend` until then.
 
 ### 7.3 Phases
 
-These are ordered by dependency. Components within a Phase run in parallel. Test counts are in the brief addendum. Foundation is split across Phases by sub-area: HTTP lifecycle, then console, then testing. [ASSUMPTION: this phase order]
+These are ordered by dependency. Components within a Phase run in parallel. Test counts are in the brief addendum. Foundation is split across Phases by sub-area: HTTP lifecycle, then console, then testing.
 
 0. **Infrastructure:**
    - the Conformance System and agent guardrails (FR-1 to FR-9, FR-111 to FR-115)
-   - `PORTING.md` and the Divergence Records
-   - `@xaravel/mockery` and the PHPUnit-style matchers
+   - `PORTING.md` and the Divergence Records, with the `PORTING.md` pilot on Support and Collections tests (FR-8)
+   - `@xaravel/mockery` and the PHPUnit-style matchers (FR-100, FR-116)
    - the Oracle, and Boost framework mode (FR-109)
    - spikes that resolve OQ-4, OQ-5, OQ-7, OQ-8 and OQ-11
-1. **Foundations:** Macroable, Conditionable, Contracts, Collections, Reflection, Config, JsonSchema
+1. **Foundations:** Macroable, Conditionable, Contracts, Collections, Reflection, Config, JsonSchema, and the Class Registry (FR-22), which the brief places in the first Epic
 2. Container, Support (core)
 3. Pipeline, Encryption, Hashing, Filesystem, Process, Log, Translation, Bus, Events
 4. **Database:** grammars, then Eloquent, then Migrations
@@ -1229,7 +1303,7 @@ The dogfood app (SM-3) can start once Phase 7 is accepted.
 ### 7.4 Risks and Mitigations
 
 - **The moat is execution, not technology.** Others have tried Laravel ports; what's different here is the slow, verified work of passing Laravel's suite. Mitigation: the Conformance System and agent guardrails come first (Phase 0), so progress is honest from day one.
-- **Size.** 275k lines of PHP source and about 13.5k test methods, and the last few percent of conformance historically takes the longest. Mitigation: SM-1 counts against Applicable Test IDs, and post-alpha work is explicitly phased.
+- **Size.** 275k lines of PHP source and about 13.5k test methods (the brief counts methods; the Test Inventory counts datasets, so it has more entries, and all sizing and SM-1 arithmetic use the inventory's unit), and the last few percent of conformance historically takes the longest. Mitigation: SM-1 counts against Applicable Test IDs, and post-alpha work is explicitly phased.
 - **Agents gaming the grader.** Mitigation: FR-3, FR-4, FR-111 to FR-114 and the counter-metrics.
 - **Hidden async hazards:** state leaking across concurrent requests, and missing `await`s. Mitigation: DIV-1, NFR-3 and NFR-4. Transaction and connection scoping is prototyped in the first Database Epic.
 - **Bun gaps** (Temporal, `QUERY`, bcrypt, Redis Cluster, test primitives). Mitigation: Phase 0 spikes (OQ-4, 7, 8, 11). Failing primitives become `deferred-backend` entries or Escalations.
@@ -1244,15 +1318,14 @@ The dogfood app (SM-3) can start once Phase 7 is accepted.
     - No `not-ported-yet` or `blocked-by` entries remain for those Components.
     - Quarantined tests count as not passing.
     - `intentional-divergence` skips stay in the denominator, so divergences cost conformance.
-    - [ASSUMPTION]
-  - **Validates:** FR-1 to FR-5.
+  - **Validates:** the thesis (§1), measured through FR-1 to FR-5.
 - **SM-2 Epic first-pass acceptance.** The share of Epics the Maintainer accepts on first review, with no Test IDs sent back. Every Epic must eventually be accepted; this measures how often a rework round is needed.
   - **Target:** 90% or more from Phase 2 onwards. Phases 0–1 are calibration, used to tune `PORTING.md` and the review prompts, and don't count. Validates FR-8, FR-9, FR-109.
 - **SM-3 Dogfood app.** The Maintainer's htmx app runs in production on Xaravel by the public alpha. Validates the features in §7.2.
 
 **Secondary**
-- **SM-4 Unattended Story completion.** The share of Stories that reach done with no human intervention. Validates NFR-10.
-- **SM-5 Pin currency.** The Baseline Pin is never more than one Phase behind the latest Laravel 13.x. Validates FR-7.
+- **SM-4 Unattended Story completion.** The share of Stories that reach done with no human intervention. Tracking only: no target is set before the public alpha. Validates NFR-10.
+- **SM-5 Pin currency.** The Baseline Pin is bumped to the latest Laravel 13.x tag at every Phase boundary. Validates FR-7.
 - **SM-6 Divergence count.** The number of Intentional Divergences and of Test IDs tagged `intentional-divergence`, tracked so that growth is visible. Validates §5.2.
 
 **Counter-metrics (do not optimize)**
@@ -1263,22 +1336,24 @@ The dogfood app (SM-3) can start once Phase 7 is accepted.
 
 ## 9. Open Questions
 
-1. **OQ-1 Blessing from Laravel Holdings (optional).** The name was changed from Jaravel to Xaravel, and NFR-8 follows Laravel's trademark policy. Should the Maintainer also ask Laravel Holdings (legal@laravel.com, or the form on the policy page) to acknowledge the project before the first public npm publish? Not required, but friendly.
-2. **OQ-2 Post-alpha versioning.** When does Xaravel switch from 0.x to versions that mirror Laravel's (13.x)? What conformance level justifies "Xaravel 13.0"?
-3. **OQ-3 Symfony's test suites.** Should the relevant Symfony component tests also be ported as extra conformance specs? Candidates are HttpFoundation, Routing's compiler, and Console.
-4. **OQ-4 Temporal in Bun 1.4.** The research disagreed on whether Temporal is present and complete. A Phase 0 spike resolves it (FR-25).
-5. **OQ-5 htmx 4 on npm.** htmx 4 sits on the `next` tag until early 2027. How does the Skeleton pin it?
-6. **OQ-6 First-party packages.** Which come first after the alpha? Sanctum (API tokens) is the likeliest, and MCP OAuth depends on Sanctum or Passport.
-7. **OQ-7 `Bun.serve` and `QUERY`.** Does Bun accept the `QUERY` method? If not, FR-30 needs a workaround.
-8. **OQ-8 Bun bcrypt compatibility.** Does Bun's handling of passwords longer than 72 bytes break verification of PHP-made hashes (FR-78)?
-9. **OQ-9 Hosting the Oracle.** Proposed answer: the Oracle runs in Docker on GitHub Actions. Its outputs are committed as fixtures on a Protected Path, so contributors and agents need neither Docker nor PHP. [ASSUMPTION]
-10. **OQ-10 Auth scaffolding.** Should the Skeleton offer htmx auth pages (login, register, reset), in place of Laravel's front-end starter kits?
-11. **OQ-11 Bun test primitives and MCP SDK version.** Does `bun test` offer everything the harness needs? That covers `test.failing` / `skipIf`, per-test assertion counts, `setSystemTime`, and preload `afterEach`. Separately: MCP TypeScript SDK v1 or v2, given that `@hono/mcp` peers on v1? A Phase 0 spike resolves both.
-12. **OQ-12 Upstream releases during a Phase.** Laravel ships 13.x minors weekly, and security fixes can't wait for a Phase boundary. Do security-relevant upstream changes allow an out-of-cycle pin bump?
+Every question is owned by the Maintainer and must be resolved by the gate shown.
+
+1. **OQ-1 Blessing from Laravel Holdings (optional).** The name was changed from Jaravel to Xaravel, and NFR-8 follows Laravel's trademark policy. Should the Maintainer also ask Laravel Holdings (legal@laravel.com, or the form on the policy page) to acknowledge the project before the first public npm publish? Not required, but friendly. *Resolve by: the first public npm publish.*
+2. **OQ-2 Post-alpha versioning.** When does Xaravel switch from 0.x to versions that mirror Laravel's (13.x)? What conformance level justifies "Xaravel 13.0"? *Resolve by: the public alpha.*
+3. **OQ-3 Symfony's test suites.** Should the relevant Symfony component tests also be ported as extra conformance specs? Candidates are HttpFoundation, Routing's compiler, and Console. *Resolve by: the start of Phase 6.*
+4. **OQ-4 Temporal in Bun 1.4.** The research disagreed on whether Temporal is present and complete. A Phase 0 spike resolves it (FR-25). *Resolve by: the end of Phase 0.*
+5. **OQ-5 htmx 4 on npm.** htmx 4 sits on the `next` tag until early 2027. How does the Skeleton pin it? *Resolve by: the end of Phase 0.*
+6. **OQ-6 First-party packages.** Which come first after the alpha? Sanctum (API tokens) is the likeliest, and MCP OAuth depends on Sanctum or Passport. *Resolve by: Phase 9 planning.*
+7. **OQ-7 `Bun.serve` and `QUERY`.** Does Bun accept the `QUERY` method? If not, FR-30 needs a workaround. *Resolve by: the end of Phase 0.*
+8. **OQ-8 Bun bcrypt compatibility.** Does Bun's handling of passwords longer than 72 bytes break verification of PHP-made hashes (FR-78)? The required behaviour is fixed by FR-78; the spike confirms how to meet it. *Resolve by: the end of Phase 0.*
+9. **OQ-9 Hosting the Oracle.** Resolved: the Oracle runs in Docker on GitHub Actions. Its outputs are committed as fixtures on a Protected Path, so contributors and agents need neither Docker nor PHP. *Resolve by: the end of Phase 0 (FR-6).*
+10. **OQ-10 Auth scaffolding.** Should the Skeleton offer htmx auth pages (login, register, reset), in place of Laravel's front-end starter kits? *Resolve by: the start of Phase 7 (Skeleton).*
+11. **OQ-11 Bun primitives and MCP SDK version.** Does `bun test` offer everything the harness needs? That covers `test.failing` / `skipIf`, per-test assertion counts, `setSystemTime`, and preload `afterEach`. Are the Bun built-ins this PRD names complete enough: `Bun.sql` raw bindings, `Bun.redis`, `Bun.S3Client`, `Bun.Image`, and `AsyncLocalStorage` propagation across `await`, timers, streams and `Bun.serve` callbacks? Separately: MCP TypeScript SDK v1 or v2? A Phase 0 spike resolves all three. *Resolve by: the end of Phase 0.*
+12. **OQ-12 Upstream releases during a Phase.** Laravel ships 13.x minors weekly, and security fixes can't wait for a Phase boundary. Do security-relevant upstream changes allow an out-of-cycle pin bump? *Resolve by: the end of Phase 0, before the first pin bump.*
 
 ## 10. Assumptions Index
 
-**Added in the review pass, awaiting confirmation:**
+**Added in the review pass, confirmed by the Maintainer on 2026-10-15:**
 - FR-40: how the form Fragment is chosen when validation fails on an htmx Request (declared, then `HX-Target` id, then the `validation-errors` component).
 - FR-42: a partial request without a named Fragment gets the layout's `content` region.
 - §7.3: the restructured phase order. Foundation is split across Phases 6 and 7, Blade moves to Phase 6, and Testing and Testbench move to Phase 7. MCP and Boost's app tools move to Phase 8. Boost framework mode moves to Phase 0.

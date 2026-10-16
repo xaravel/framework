@@ -78,4 +78,4 @@ The four finalize reviewers were the brief check, the research check, the rubric
    - an assertion floor (FR-113), Fidelity Review (FR-111) and Escalations (FR-114);
    - a done definition for Xaravel Components (FR-115).
 
-Medium and low findings are in the review files and were triaged in a later pass.
+Medium and low findings are in the review files. They were triaged in a later pass; the decision for each, and the deferred items with their owners, are in `review-triage.md`.
