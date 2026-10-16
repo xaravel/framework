@@ -524,7 +524,15 @@ When validation fails on an htmx Request, Xaravel re-renders the current form Fr
 
 #### FR-41: Redirects on htmx Requests
 
-`redirect()` on an htmx Request is sent as `HX-Location` (a soft navigation), or as `HX-Redirect` when asked for explicitly. It is never a 302 that would swap a full page into the target. [ASSUMPTION]
+Controller code is the same as in Laravel: `return redirect().route('invoices.index')`. The framework decides how the redirect is sent:
+
+- **Non-htmx request:** a 302, exactly as in Laravel.
+- **htmx Request:** a 200 response with `HX-Location`. htmx fetches the new page, swaps it in and updates the URL, so it feels like navigating without a full reload. A plain 302 would be followed silently by `fetch()` and the whole page would be swapped into the target element.
+- **Explicit opt-in:** `redirect().route(...).hxRedirect()` sends `HX-Redirect`, a full browser reload, for cases like logout. [ASSUMPTION]
+
+**Consequences (testable):**
+- The same controller action returns 302 to a non-htmx request, and 200 with `HX-Location` to an htmx Request.
+- Flash data and `with()` values survive both paths.
 
 #### FR-42: Full page versus partial rendering
 
@@ -738,7 +746,7 @@ App Developers can define schedules in `routes/console.ts` using Laravel's frequ
 
 #### FR-73: REPL
 
-App Developers can open an interactive TypeScript REPL with the app booted, using `bun artisan tinker`. [ASSUMPTION: in scope, although Laravel ships tinker as a separate package]
+App Developers can open an interactive TypeScript REPL with the app booted, using `bun artisan tinker`. This is in scope, even though Laravel ships tinker as a separate package.
 
 ### 4.13 Infrastructure Services
 
@@ -838,7 +846,7 @@ Upstream Components: Mail, Notifications, Broadcasting.
 App Developers can send Mailables built from Blade or Markdown templates, with CSS inlining, attachments, queued sending and `Mail.fake()`.
 
 **Consequences (testable):**
-- The `smtp`, `log`, `array` and `failover` transports are available at the public alpha. [ASSUMPTION: SES, Postmark, Resend and Mailgun come later]
+- The `smtp`, `log`, `array` and `failover` transports are available at the public alpha. SES, Postmark, Resend and Mailgun come later.
 
 #### FR-90: Notifications
 
@@ -850,7 +858,7 @@ App Developers can broadcast events to channels with authorization callbacks.
 
 **Consequences (testable):**
 - The `log` and `null` drivers, plus a Pusher-protocol driver, are available.
-- Running a WebSocket server (the equivalent of Reverb) is out of scope. [ASSUMPTION]
+- Running a WebSocket server (the equivalent of Reverb) is out of scope.
 
 ### 4.16 Security: Authentication, Authorization, Password Reset
 
@@ -873,7 +881,7 @@ App Developers can use the password broker: reset tokens, throttling, reset noti
 
 #### FR-95: Email verification
 
-App Developers can require email verification with `MustVerifyEmail`, signed verification URLs, and the `verified` middleware. [ASSUMPTION: in scope]
+App Developers can require email verification with `MustVerifyEmail`, signed verification URLs, and the `verified` middleware.
 
 ### 4.17 Testing Toolkit for App Developers
 
@@ -900,7 +908,7 @@ App tests can fake Bus, Event, Mail, Notification, Queue, Storage, Http, Process
 
 #### FR-100: Mocking library
 
-App and framework tests can mock with a Mockery-compatible API, for example `mock(X).shouldReceive('m').once().with(1).andReturn(2)`. It ships as `@xaravel/mockery`. [ASSUMPTION: package name]
+App and framework tests can mock with a Mockery-compatible API, for example `mock(X).shouldReceive('m').once().with(1).andReturn(2)`. It ships as `@xaravel/mockery`.
 
 **Consequences (testable):**
 - Unmet expectations fail the test when it finishes.
@@ -914,7 +922,11 @@ Package developers and the framework's integration tests can boot a Testbench ap
 
 #### FR-102: Browser tests
 
-App tests can drive a real browser against the running app. [ASSUMPTION: built on Playwright, as the equivalent of Laravel's browser testing]
+App tests can drive a real browser against the running app, using an API modelled on Pest 4's browser testing: `visit('/login')`, `type`, `click`, `assertSee`, `assertUrlIs`, screenshots, and device emulation. Like Pest 4, it is built on Playwright. Laravel 13's docs recommend Pest 4 for browser testing in new projects, over Dusk, which uses ChromeDriver.
+
+**Consequences (testable):**
+- Browser tests run headless in CI.
+- Pages that use htmx 4 swaps can be asserted after the swap settles.
 
 ### 4.18 AI
 
@@ -963,7 +975,7 @@ App Agents can run the app's tests, or a filtered subset, and receive failures i
 
 #### FR-108: Documentation search
 
-App Agents can search Xaravel's documentation for the installed version. [ASSUMPTION: a local index shipped with the Package, not a hosted service]
+App Agents can search Xaravel's documentation for the installed version, through a local index shipped with the Package rather than a hosted service.
 
 #### FR-109: Framework mode
 
@@ -1082,7 +1094,8 @@ The Conformance System, `PORTING.md`, the Divergence Records, `@xaravel/mockery`
   - **Target:** it never decreases at a Phase boundary.
   - **Alpha gate:** at least 90% of Test IDs in Phase 1–8 Components pass, and the rest carry Skip Reasons other than `not-ported-yet`. [ASSUMPTION]
   - **Validates:** FR-1 to FR-5.
-- **SM-2 Epic first-pass acceptance.** The share of Epics the Maintainer accepts on first review. Target: 80% or more. [ASSUMPTION] Validates FR-8, FR-9, FR-109.
+- **SM-2 Epic first-pass acceptance.** The share of Epics the Maintainer accepts on first review, with no Test IDs sent back. Every Epic must eventually be accepted; this measures how often a rework round is needed.
+  - **Target:** 90% or more from Phase 2 onwards. Phases 0–1 are calibration, used to tune `PORTING.md` and the review prompts, and don't count. [ASSUMPTION] Validates FR-8, FR-9, FR-109.
 - **SM-3 Dogfood app.** The Maintainer's htmx app runs in production on Xaravel by the public alpha. Validates the features in §7.2.
 
 **Secondary**
@@ -1117,15 +1130,8 @@ The Conformance System, `PORTING.md`, the Divergence Records, `@xaravel/mockery`
 - FR-14: the repo is `xaravel/framework`, and `xaravel/xaravel` is reserved for a Skeleton mirror.
 - FR-22: classes register themselves in the Class Registry when their module loads.
 - FR-35: htmx Requests get HTML error Fragments.
-- FR-41: a redirect on an htmx Request is sent as `HX-Location`.
-- FR-73: the tinker-style REPL is in scope.
-- FR-89: additional mail transports come after the alpha.
-- FR-91: a WebSocket server is out of scope.
-- FR-95: email verification is in scope.
-- FR-100: the mocking package is named `@xaravel/mockery`.
-- FR-102: browser testing is built on Playwright.
+- FR-41: the `.hxRedirect()` opt-in for a full reload. HX-Location as the default for htmx Requests is explained in FR-41 and doesn't change controller code.
 - FR-104: MCP over HTTP uses a Xaravel auth guard, and OAuth comes later.
-- FR-108: Boost's documentation search uses a local index.
 - §7.2: the alpha gate criteria other than Phases 1–8, which are confirmed.
 - SM-1: at least 90% of Phase 1–8 Test IDs pass at the alpha.
-- SM-2: the target for first-pass Epic acceptance is 80%.
+- SM-2: the target for first-pass Epic acceptance is 90% from Phase 2, with Phases 0–1 as calibration.
