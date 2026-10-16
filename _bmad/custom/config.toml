@@ -5,3 +5,8 @@
 #
 # [agents.bmad-agent-pm]
 # description = "Prefers short, bulleted PRDs over narrative drafts."
+
+# Product renamed Jaravel -> Xaravel on 2026-10-15.
+[core]
+project_name = "xaravel"
+user_name = "Ed"
