@@ -65,8 +65,17 @@ Mostly 1:1, from `src/Illuminate/<Name>` to `@xaravel/<name-kebab>`. Contracts a
 | `dispatch(function () use ($podcast) { … })` | `dispatch(async ({ podcast }) => …, { podcast })` | DIV-4 |
 | `$request->validate([...])` | `await request.validate({...})` | DIV-1 (IO rules) |
 | `collect([1, 2, 3])->map(fn ($x) => $x * 2)` | `collect([1, 2, 3]).map(x => x * 2)` | sync, no divergence |
-| `php artisan make:model Invoice -mfc` | `bun artisan make:model Invoice -mfc` | CLI name pending OQ-1 |
+| `php artisan make:model Invoice -mfc` | `bun artisan make:model Invoice -mfc` | CLI name kept (NFR-8) |
 
-## Phase-gate note
+## Review-pass rationale (2026-10-15)
 
-[NOTE FOR PM] in PRD §7.2: the Maintainer's dogfood app probably needs Auth (FR-92) and possibly Queue (FR-85), which sit in Phase 8. Decide during epic planning whether to pull Auth forward into the alpha, since Phase 8 depends on Phase 7 anyway.
+The four finalize reviewers were the brief check, the research check, the rubric walk and the adversarial review. Their full files are in this folder (`reconcile-*.md`, `review-*.md`). They agreed on two criticals, which the PRD now addresses:
+
+1. **The alpha depended on Phase 9.** In Upstream terms, Foundation is a grab-bag: the HTTP kernel, console generators and testing helpers all live there. So it is split by sub-area across Phases 6 and 7. Testbench moves to Phase 7, ending the period in which 2,809 integration tests (about 21%) were blocked. Blade moves to Phase 6, because htmx Fragments need it. Boost framework mode uses the MCP TypeScript SDK directly in Phase 0, because the agents building Xaravel need it from the start.
+2. **The grader could be edited by the agents being graded.** The fix is a set of new requirements:
+   - Protected Paths (FR-112), and Expectations File edits limited to the Story's own Test IDs (FR-4);
+   - a Skip Reason rule for every value (FR-3);
+   - an assertion floor (FR-113), Fidelity Review (FR-111) and Escalations (FR-114);
+   - a done definition for Xaravel Components (FR-115).
+
+Medium and low findings are in the review files and were triaged in a later pass.
