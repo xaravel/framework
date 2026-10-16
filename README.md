@@ -9,7 +9,7 @@ Xaravel aims to be Laravel, in TypeScript: the same routes, controllers, Blade v
 
 Laravel's own test suite is the specification. Every upstream test is inventoried and ported to `bun test`, and progress is measured against the full suite.
 
-> **Status: planning.** No code yet. The product brief and PRD are in [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/).
+> **Status: planning.** No code yet. The product brief, PRD and architecture spine are in [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/).
 
 ## Built with the BMAD Method
 
@@ -17,7 +17,7 @@ Xaravel is planned and built with the [BMAD Method](https://github.com/bmad-code
 
 ```
 Product brief → PRD → Architecture → Epics & stories → Sprint planning → build cycles
-     ✅           ✅        next
+     ✅           ✅          ✅            next
 ```
 
 Each Story names the upstream Laravel tests it has to pass. AI agents implement Stories in unattended build cycles, under guardrails that stop them weakening tests or editing their own grader, and the Maintainer reviews each completed Epic. The BMAD tooling lives in [`_bmad/`](_bmad/) and [`.claude/skills/`](.claude/skills/).
