@@ -457,6 +457,7 @@ The Skeleton ships with htmx 4 already set up.
 **Consequences (testable):**
 - The base layout loads htmx 4 and sends the CSRF token on every htmx Request (FR-32).
 - The welcome page includes one working Fragment example.
+- The Skeleton includes htmx auth pages (login, register, password reset) and an authenticated dashboard. These are delivered with Auth in Phase 8 (OQ-10).
 
 ### 4.4 Application Foundation and Container
 
@@ -861,7 +862,7 @@ Reading a relationship that isn't loaded throws `LazyLoadingViolationException`.
 
 **Consequences (testable):**
 - `await model.related('posts')` loads the relationship if it's missing. `model.related('posts')` is the relationship query builder. There is no `relation()` method, and no callable `model.posts()` (DIV-2).
-- `Model.automaticallyEagerLoadRelationships()` is available. How it works with `related()` is decided by an Escalation in the first Eloquent relationships Epic (architecture AD-8).
+- `Model.automaticallyEagerLoadRelationships()` is available. When it is enabled, awaiting `related(name)` with no chained calls, on a model that came from a collection, eager-loads `name` for the whole collection in one query. Sync reads of the relation on the sibling models then succeed. A sync read of a relation that isn't loaded still throws. (Maintainer decision, 2026-10-16.)
 
 #### FR-64: Casts, accessors and mutators
 
@@ -1225,6 +1226,7 @@ Each one has a Divergence Record, which must exist before the first Story that d
   - **Reading:** `model.posts` returns the loaded relation, or throws `LazyLoadingViolationException`.
   - **Building:** `model.related('posts')` is the relationship builder, and awaiting it unchained loads the relation if it is missing.
   - **Adaptation:** Laravel's `$m->rel()` becomes `m.related('rel')`. Tests that rely on lazy loading through property access are adapted to `await m.related('rel')`.
+  - **Automatic eager loading:** When it is enabled, awaiting `related(name)` with no chained calls, on a model that came from a collection, eager-loads `name` for the whole collection in one query. Sync reads of the relation on the sibling models then succeed. A sync read of a relation that isn't loaded still throws. (Maintainer decision, 2026-10-16.)
 - **DIV-3 Explicit injection tokens.** TypeScript erases parameter types, so autowired dependencies are declared in one form, `inject({ <paramName>: <Spec>, … })` (architecture AD-4).
   - **Where it goes:** it is a decorator on classes (constructor parameters) and methods, and a wrapper for closures, for example `inject({ post: Post }, (post) => …)`.
   - **Keys:** key order is parameter order, and keys are parameter names.
@@ -1422,17 +1424,17 @@ The dogfood app (SM-3) can start once Phase 7 is accepted.
 
 Every question is owned by the Maintainer and must be resolved by the gate shown.
 
-1. **OQ-1 Blessing from Laravel Holdings (optional).** The name was changed from Jaravel to Xaravel, and NFR-8 follows Laravel's trademark policy. Should the Maintainer also ask Laravel Holdings (legal@laravel.com, or the form on the policy page) to acknowledge the project before the first public npm publish? Not required, but friendly. *Resolve by: the first public npm publish.*
-2. **OQ-2 Post-alpha versioning.** When does Xaravel switch from 0.x to versions that mirror Laravel's (13.x)? What conformance level justifies "Xaravel 13.0"? *Resolve by: the public alpha.*
-3. **OQ-3 Symfony's test suites.** Should the relevant Symfony component tests also be ported as extra conformance specs? Candidates are HttpFoundation, Routing's compiler, and Console. *Resolve by: the start of Phase 6.*
-4. **OQ-4 Temporal in Bun 1.4.** The research disagreed on whether Temporal is present and complete. A Phase 0 spike resolves it (FR-25). *Resolve by: the end of Phase 0.*
+1. **OQ-1 Blessing from Laravel Holdings (optional).** Resolved 2026-10-16: the Maintainer emails Taylor Otwell about the project before the first public npm publish.
+2. **OQ-2 Post-alpha versioning.** Resolved 2026-10-16: Xaravel leaves 0.x and switches to versions that mirror Laravel's (13.x) once `bun create xaravel` produces a working starter site with auth and a dashboard (OQ-10).
+3. **OQ-3 Symfony's test suites.** Resolved 2026-10-16: no. Parity with Symfony covers only what Laravel uses (§5.1). Laravel's suite and Oracle Differential Tests (architecture AD-22) grade the ports. Revisit only if defects keep appearing in Symfony-derived code.
+4. **OQ-4 Temporal in Bun 1.4.** On 2026-10-16, Bun 1.4.3 has a global `Temporal`, and daylight-saving arithmetic, month clamping and nanosecond instants all work. The leaning is to build the Carbon port on Temporal. A Phase 0 spike confirms completeness against what Carbon needs (FR-25). *Resolve by: the end of Phase 0.*
 5. **OQ-5 htmx 4 on npm.** Resolved 2026-10-16: htmx 4.0.0 was released on 2026-08-28 and is on npm's `next` tag. The Skeleton pins `htmx.org@4.0.0` exactly.
 6. **OQ-6 First-party packages.** Which come first after the alpha? Sanctum (API tokens) is the likeliest, and MCP OAuth depends on Sanctum or Passport. *Resolve by: Phase 9 planning.*
 7. **OQ-7 `Bun.serve` and `QUERY`.** Resolved 2026-10-16: on Bun 1.4.3, `Bun.serve`'s `fetch` handler accepts `QUERY` requests with a body. Its per-method `routes` map does not match them, so the Router dispatches from `fetch`. How `QUERY` is classified for CSRF follows Upstream at the Pin, or goes to an Escalation.
-8. **OQ-8 Bun bcrypt compatibility.** Does Bun's handling of passwords longer than 72 bytes break verification of PHP-made hashes (FR-78)? The required behaviour is fixed by FR-78; the spike confirms how to meet it. *Resolve by: the end of Phase 0.*
+8. **OQ-8 Bun bcrypt compatibility.** Found 2026-10-16: Bun's bcrypt pre-hashes passwords longer than 72 bytes, while PHP truncates them at 72 bytes, so long passwords hashed by PHP would not verify. Approach (Maintainer: accepted): truncate the UTF-8 input to 72 bytes before calling Bun. PHP `$2y$` hashes verify in Bun. A Phase 0 Differential Test confirms this against the Oracle (FR-78). *Resolve by: the end of Phase 0.*
 9. **OQ-9 Hosting the Oracle.** Resolved: the Oracle runs in Docker on GitHub Actions. Its outputs are committed as fixtures on a Protected Path, so contributors and agents need neither Docker nor PHP. *Resolve by: the end of Phase 0 (FR-6).*
-10. **OQ-10 Auth scaffolding.** Should the Skeleton offer htmx auth pages (login, register, reset), in place of Laravel's front-end starter kits? *Resolve by: the start of Phase 7 (Skeleton).*
-11. **OQ-11 Bun primitives and MCP SDK version.** Does `bun test` offer everything the harness needs? That covers `test.failing` / `skipIf`, per-test assertion counts, `setSystemTime`, and preload `afterEach`. Are the Bun built-ins this PRD names complete enough: `Bun.sql` raw bindings, `Bun.redis`, `Bun.S3Client`, `Bun.Image`, and `AsyncLocalStorage` propagation across `await`, timers, streams and `Bun.serve` callbacks? Separately, MCP TypeScript SDK v1 or v2: resolved, v2 (`@modelcontextprotocol/server` 2.3.1). A Phase 0 spike resolves the rest. *Resolve by: the end of Phase 0.*
+10. **OQ-10 Auth scaffolding.** Resolved 2026-10-16: yes. The Skeleton ships htmx auth pages (login, register, password reset) and a dashboard, delivered with Auth in Phase 8 because they depend on it.
+11. **OQ-11 Bun primitives and MCP SDK version.** Does `bun test` offer everything the harness needs? That covers `test.failing` / `skipIf`, per-test assertion counts, `setSystemTime`, and preload `afterEach`. Are the Bun built-ins this PRD names complete enough: `Bun.sql` raw bindings, `Bun.redis`, `Bun.S3Client`, `Bun.Image`, and `AsyncLocalStorage` propagation across `await`, timers, streams and `Bun.serve` callbacks? Separately, MCP TypeScript SDK v1 or v2: resolved, v2 (`@modelcontextprotocol/server` 2.3.1). A Phase 0 spike resolves the rest. *Resolve by: the end of Phase 0.* The Maintainer expects Bun to be sufficient. One gap is already mitigated: `AsyncLocalStorage` is lost in async-generator and `type: "direct"` stream bodies (architecture AD-5).
 12. **OQ-12 Upstream releases during a Phase.** Laravel ships 13.x minors weekly, and security fixes can't wait for a Phase boundary. Do security-relevant Upstream changes allow an out-of-cycle pin bump? *Resolve by: the end of Phase 0, before the first pin bump.*
 
 ## 10. Assumptions Index
