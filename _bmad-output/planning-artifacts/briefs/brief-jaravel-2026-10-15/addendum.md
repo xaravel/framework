@@ -2,6 +2,8 @@
 
 Supporting depth for downstream documents (PRD, architecture). Not part of the brief itself.
 
+> **Superseded by review (2026-10-15):** Hono was later dropped from the core stack (HTTP runs directly on `Bun.serve` with Laravel's router and middleware ported). Research sections below that mention Hono, `@hono/mcp`, or Hono middleware reflect the earlier stack. For MCP's HTTP transport, use the MCP TS SDK's Web-standard streamable-HTTP handling mounted on a Jaravel route instead of `@hono/mcp`. See "Design notes from review".
+
 ## Landscape snapshot (researched 2026-10-15)
 
 Star counts and versions pulled from GitHub/npm on 2026-10-15; other claims via web search. Uncertain items flagged.
@@ -14,7 +16,7 @@ Star counts and versions pulled from GitHub/npm on 2026-10-15; other claims via 
 |---|---|---|---|---|---|
 | AdonisJS v7.6 | Node ≥24, own HTTP server; Bun not officially supported (unverified) | Lucid (Active Record, Knex) | Ace | ~19k★, v7 Feb 2026 | The incumbent "Laravel for Node" |
 | Stacks.js | Bun only | own | Buddy (`make:*`) | ~633★, pre-1.0 | Very broad surface, low traction |
-| Guren v2.30 | Bun + **Hono** | Drizzle | `guren add` | ~34★ | Closest analogue; **Inertia/React**, not HTMX |
+| Guren v2.30 | Bun + **Hono** | Drizzle | `guren add` | ~34★ | Closest analogue; **Inertia/React**, not htmx |
 | H3ravel | H3 (Node/Bun/Deno) | Arquebus (Eloquent-like) | Musket | ~22★, last release Nov 2025 | Appears stalled |
 | Sails | Node | Waterline | sails | ~22.8k★ | Maintenance mode |
 | NestJS | Node | any | nest | ~77k★ | Angular-style DI; not Laravel in feel |
@@ -23,7 +25,7 @@ Star counts and versions pulled from GitHub/npm on 2026-10-15; other claims via 
 ### Hono
 - v4.13.x, ~32.5k★, native on Bun, rich first-party middleware, Zod/Valibot validators.
 - HonoX (official meta-framework): alpha (v0.1.x), file routing + islands; no ORM/CLI/queues/auth.
-- `hono/jsx` server-side JSX via `c.html()` with streaming. Official htmx example page; community `@lakubudavid/hono-htmx` (partial vs full-layout). No batteries-included Hono+HTMX framework found.
+- `hono/jsx` server-side JSX via `c.html()` with streaming. Official htmx example page; community `@lakubudavid/hono-htmx` (partial vs full-layout). No batteries-included Hono+htmx framework found.
 
 ### Bun (v1.4.3; 1.4 released 2026-08-20)
 Built-ins a framework can wrap instead of building: `Bun.sql` (Postgres/MySQL/SQLite), `bun:sqlite`, `Bun.redis` (cluster/streams status unverified), `bun test` (`--parallel`), `Bun.cron()`, `Bun.password`, `Bun.file`/S3, `.env` loading, single-file executables.
@@ -35,17 +37,17 @@ Built-ins a framework can wrap instead of building: `Bun.sql` (Postgres/MySQL/SQ
 
 ### Demand signals
 - Recurring "why no Laravel for JS?" discourse (largely vendor-authored).
-- Many small Laravel clones (Guren, Stacks, H3ravel) — demand exists, none broke out beyond Adonis.
+- Many small Laravel clones (Guren, Stacks, H3ravel) — demand exists, none besides Adonis has broken out.
 - htmx: ~49.6k★; htmx 4.0 released 2026-08-28 (fetch-based, streaming), but npm `latest` stays 2.x until early 2027 → must choose a target major.
 
 ### Positioning gap (as observed)
-No project combines Hono + Bun + Eloquent-style ORM + Artisan-style CLI + HTMX-first. Threats: Adonis adding Bun support; Guren adding an HTMX mode.
+No project combines Hono + Bun + Eloquent-style ORM + Artisan-style CLI + htmx-first. Threats: Adonis adding Bun support; Guren adding an htmx mode.
 
 ## Desired feature surface (user wish list, 2026-10-15)
 
-Mirrors the Laravel docs table of contents. Not yet prioritized into v1 vs later.
+Mirrors the Laravel docs table of contents. All of it is in scope (decided 2026-10-15); it is sequenced by phase, not cut. See the brief.
 
-- **The Basics:** Routing, Middleware, CSRF Protection, Controllers, Requests, Responses, Views, Sessions, Validation, Error Handling, Logging, URL Generation, Templating for HTMX
+- **The Basics:** Routing, Middleware, CSRF Protection, Controllers, Requests, Responses, Views, Sessions, Validation, Error Handling, Logging, URL Generation, Templating for htmx
 - **Digging Deeper:** Console (Artisan-style), Cache, Collections, Context, Events, File Storage, Helpers, HTTP Client, Mail, Notifications, Queues, Rate Limiting
 - **Security:** Authentication, Authorization, Password Reset, Hashing, Encryption
 - **Database:** Query Builder, Pagination, Migrations, Seeding, Redis — **explicitly no MongoDB**
@@ -53,9 +55,9 @@ Mirrors the Laravel docs table of contents. Not yet prioritized into v1 vs later
 - **Testing:** HTTP Tests, Console Tests, Browser Tests, Database, Mocking
 - **AI:** AI SDK, MCP, Boost (Laravel's AI-agent tooling equivalents)
 
-## AI layer: Laravel AI SDK, MCP, Boost (researched 2026-10-15, docs at laravel.com/docs/13.x)
+## AI layer: Laravel AI SDK, MCP, Boost (researched 2026-10-15)
 
-All three are separate Composer packages (not in laravel/framework), each with its own Pest suite — portable as conformance specs.
+Docs: laravel.com/docs/13.x. All three are separate Composer packages (not in laravel/framework), each with its own Pest suite — portable as conformance specs.
 
 | Laravel package | Version | Test files | What it is | TS building block to wrap |
 |---|---|---|---|---|
@@ -77,13 +79,13 @@ Full tables: [`research/laravel-anatomy.md`](research/laravel-anatomy.md). Sourc
 - **Biggest suites:** Database 3,703 · Foundation 1,152 · Support 1,052 · Http 751 · Validation 670 · Collections 657 · Queue 648 · Routing 556 · Cache 505 · View 454.
 - **Backends:** most DB tests need no server (grammar/SQL-string unit tests + SQLite `:memory:`); only 161 integration methods are engine-specific. Redis tests auto-skip without a server.
 
-### Suggested epic order (dependency-adjusted; total test methods)
+### Suggested phase order (dependency-adjusted; test methods per component)
 1. Foundations: Macroable 16, Conditionable 8, Contracts (interfaces), Collections 657, Reflection 24, Config 33, JsonSchema 110
 2. Container 211, Support core ~1,052 (facades/fakes deferred to their components)
 3. Pipeline 25, Encryption 29, Hashing 13, Filesystem 202, Process 76, Log 113, Translation 70, Bus 75, Events 114
 4. Database: Query/Schema grammars → Eloquent → Migrations (3,703)
 5. Pagination 50, Cache 505, Redis 159, Validation 670
-6. HTTP layer on Hono: Http 751, Cookie 32, Session 109, Routing 556
+6. HTTP layer (originally on Hono; superseded, see note above): Http 751, Cookie 32, Session 109, Routing 556
 7. View/templating 454, Console 396, Mail 211
 8. Queue 648, Concurrency 17, Broadcasting 165, Auth 313, Notifications 103, Image 291
 9. Foundation 1,152 (incl. generators), Testing 431, Jaravel Testbench
@@ -148,12 +150,12 @@ Full tables (per component, npm downloads, Bun caveats, sources): [`research/dep
 - **Bun built-ins:** Bun.sql + bun:sqlite (← PDO; SQL Server needs `mssql`), Bun.redis (← predis; no Cluster/Sentinel, Pub/Sub experimental), Bun.password (← bcrypt/argon; caveat: >72-byte bcrypt pre-hash differs from PHP, `$2y$` verify undocumented), Bun.S3Client, Bun.spawn/$ + Bun.Terminal (← symfony/process), Bun.Glob (← finder), Bun.CryptoHasher/node:crypto, Bun.randomUUIDv7, Bun.inspect, Bun.stringWidth/wrapAnsi (← termwind), Bun.Image (← gd/intervention), Bun.markdown (← commonmark; unstable, unsanitised), bun test (← PHPUnit), Temporal (reported on by default in 1.4 — completeness unverified; fallback temporal-polyfill), Bun.cron().
 - **Hono:** server adapter, cors, compress, etag, secure-headers, body-limit, conninfo, streaming/SSE, websocket, `app.request()` for tests. Hono's csrf ≠ Laravel token CSRF.
 - **npm:** nodemailer, croner, juice, uuid/ulid, decimal.js/big.js + BigInt, file-type, mime-types, @poppinss/dumper + youch, jose, @faker-js/faker, @aws-sdk/*, tough-cookie, p-limit, basic-ftp, sharp (fallback).
-- **Write ourselves:** slim HttpFoundation over Web Request/Response (parse body once before pipeline; per-request ALS); router incl. Symfony RouteCompiler port (Laravel matches, Hono gets a catch-all — *architecture decision*); Symfony-compatible console core (253 imports + `expectsQuestion()` test API; commander/citty/cac lack the I/O model); laravel/prompts port (@clack/core fallback); Carbon façade on Temporal (PHP `date()` formats, strtotime parsing, `diffForHumans`, `setTestNow`); Monolog-shaped logger; Doctrine inflector rules; portable-ascii tables; email validation (no JS spoof-check equivalent); phpdotenv grammar; Mockery-style API; PHPUnit assertion shims; container autowiring. **serializable-closure cannot be faithfully reproduced** → restricted model, divergent tests.
+- **Write ourselves:** slim HttpFoundation over Web Request/Response (parse body once before pipeline; per-request ALS); router incl. Symfony RouteCompiler port (Laravel matches, Hono gets a catch-all — *architecture decision*, superseded: Hono dropped); Symfony-compatible console core (253 imports + `expectsQuestion()` test API; commander/citty/cac lack the I/O model); laravel/prompts port (@clack/core fallback); Carbon façade on Temporal (PHP `date()` formats, strtotime parsing, `diffForHumans`, `setTestNow`); Monolog-shaped logger; Doctrine inflector rules; portable-ascii tables; email validation (no JS spoof-check equivalent); phpdotenv grammar; Mockery-style API; PHPUnit assertion shims; container autowiring. **serializable-closure cannot be faithfully reproduced** → restricted model, divergent tests.
 
 ### Templating recommendation
-Port Blade's compiler (BladeCompiler, 22 Compiles* concerns, ComponentTagCompiler) emitting JS render functions. Reasons: 63 Blade test files assert compile/render; no JS engine supports `<x-component>` + `$attributes`/`@props`/`@aware`. Edge.js 6 is the best design reference (but `@end` closers, no `@layout/@section` in v6, Bun not officially stated). hono/jsx as an optional second, typed engine. Rejected: Eta, Nunjucks (stale), stx, bladejs (dead).
+Port Blade's compiler (BladeCompiler, 22 Compiles* concerns, ComponentTagCompiler) emitting JS render functions. Reasons: 63 Blade test files assert compile/render; no JS engine supports `<x-component>` + `$attributes`/`@props`/`@aware`. Edge.js 6 is the best design reference (but `@end` closers, no `@layout/@section` in v6, Bun support not officially stated). hono/jsx as an optional second, typed engine. Rejected: Eta, Nunjucks (stale), stx, bladejs (dead).
 
-### htmx 4 must-haves (4.0.0, 2026-08-28; npm tag `next`)
+## htmx 4 must-haves (4.0.0, 2026-08-28; npm tag `next`)
 - Read: HX-Request, HX-Request-Type (full/partial), HX-Boosted, HX-Current-URL, HX-History-Restore-Request, HX-Source (replaces request HX-Trigger), HX-Target (`tag#id`), `Accept: text/html`.
 - Emit: HX-Trigger, HX-Location, HX-Redirect, HX-Refresh, HX-Retarget, HX-Reswap, HX-Reselect, HX-Push-Url, HX-Replace-Url (After-Swap/After-Settle triggers removed).
 - 4xx/5xx now swap → validation failures on htmx requests render the fragment with 422 instead of a 302 redirect.
@@ -180,4 +182,9 @@ Laravel can queue a closure: `dispatch(function () use ($podcast) { $podcast->pu
 Upstream compiler tests assert `template → exact PHP source`. Rewriting each expected string to TS would mean hand-writing expected values that no longer trace to upstream. Proposed: keep every upstream template input; assert on **rendered HTML** for a fixed data set, with expected HTML generated by running the same templates through PHP Laravel (the oracle). TS output gets snapshot tests as a secondary check. Same pattern for the 88 `make:*` generator stubs: the expected file is the TS equivalent, reviewed once and snapshotted.
 
 ### Version policy
-Laravel ships one major a year (13 now; 14 about Q1 2027) and a minor/patch about weekly (13.37.0 today). Tracking `latest` continuously means the test inventory changes under running epics. Proposed: pin an exact tag (v13.37.0) for the baseline; bump to the latest 13.x at each phase boundary; the inventory diff (added/changed/removed tests) becomes stories; Jaravel majors mirror Laravel majors; one re-sync epic per Laravel major.
+Laravel ships one major a year (13 now; 14 about Q1 2027) and a minor/patch about weekly (13.37.0 as of 2026-10-15). Tracking `latest` continuously means the test inventory changes under running epics. Proposed: pin an exact tag (v13.37.0) for the baseline; bump to the latest 13.x at each phase boundary; the inventory diff (added/changed/removed tests) becomes stories; Jaravel majors mirror Laravel majors; one re-sync epic per Laravel major.
+
+## Open questions parked for the PRD
+- **Symfony's own test suites:** Jaravel ports the parts of Symfony that Laravel builds on (HttpFoundation-style request/response, the route compiler, the console core). Should the relevant Symfony component tests be pulled in as extra conformance specs for those ports, or does Laravel's suite give enough coverage?
+- **Temporal in Bun 1.4:** research disagreed on whether it's present or complete. Spike before the Support/Carbon epic.
+- **htmx 4 on npm:** 4.x is on the `next` tag until early 2027. Decide how apps pin it.

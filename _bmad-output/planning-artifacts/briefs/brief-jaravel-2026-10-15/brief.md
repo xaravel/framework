@@ -1,6 +1,6 @@
 ---
 title: "Product Brief: Jaravel"
-status: draft
+status: final
 created: 2026-10-15
 updated: 2026-10-15
 ---
@@ -36,15 +36,15 @@ const users = await User.where('active', true).with('posts').paginate(15)
 
 - **HTTP:** directly on `Bun.serve` with Web `Request`/`Response`. Laravel's router, middleware pipeline, request/response, sessions and CSRF are ported, so their upstream tests apply. No Hono or other third-party HTTP framework.
 - **Blade:** Blade's compiler is ported to produce TypeScript/JS render functions instead of PHP: `@if`, `@foreach`, `<x-component>`, `@props`, slots and `@fragment`.
-- **htmx 4 is the front end, built into the core:** `HX-*` request and response headers, `<hx-partial>` / fragment responses, validation failures returned as a fragment with status 422 instead of a redirect, SSE and multipart streaming, and the `QUERY` method. There are no React, Svelte or Livewire integrations.
-- **Database:** SQLite in development, Postgres in production, switched by the same `.env` keys as Laravel (`DB_CONNECTION`, …). Grammars for MySQL, MariaDB and SQL Server are ported too, because their tests need no server. [ASSUMPTION: their drivers come later]
-- **Assets:** a Laravel-style `@vite` directive and manifest integration. Vite runs on Bun. [ASSUMPTION]
+- **htmx 4:** built into the core as the front end, with `HX-*` request and response headers, `<hx-partial>` / fragment responses, validation failures returned as a fragment with status 422 instead of a redirect, SSE and multipart streaming, and the `QUERY` method. There are no React, Svelte or Livewire integrations.
+- **Database:** SQLite in development, Postgres in production, switched by the same `.env` keys as Laravel (`DB_CONNECTION`, …). Grammars for MySQL, MariaDB and SQL Server are ported too, because their tests need no server. Their drivers come after SQLite and Postgres.
+- **Assets:** a Laravel-style `@vite` directive and manifest integration. Vite runs on Bun.
 - **Bun built-ins over dependencies:** `Bun.sql` / `bun:sqlite`, `Bun.redis`, `Bun.password`, `Bun.S3Client`, `Bun.spawn`, `bun test`, Temporal.
-- **Async, "sync core, async edges":** anything in memory stays synchronous, as in Laravel. Only IO is awaited. Lazy loading is off by default (Laravel's `preventLazyLoading`): relations are loaded with `with()` or `await load()`.
+- **Async model, "sync core, async edges":** anything in memory stays synchronous, as in Laravel. Only IO is awaited. Lazy loading is off by default (Laravel's `preventLazyLoading`): relations are loaded with `with()` or `await load()`.
 
 ## What Makes This Different
 
-1. **It's Laravel, and you can check.** Every "works like Laravel" claim is backed by a ported upstream test, measured against the full Laravel inventory on a public conformance dashboard.
+1. **It's Laravel, and you can check.** Every "works like Laravel" claim is backed by a ported upstream test, measured against the full inventory of Laravel's tests on a public conformance dashboard.
 2. **Bun-native and htmx-first.** It renders on the server first, has no SPA front end to keep in sync, and has no adapter layers.
 3. **Jaravel Boost.** An MCP server that exposes an app's routes (including htmx fragment routes), container bindings, config, schema, logs, the last error and structured test failures. The agents building Jaravel use it first, and the agents building apps on it use it after.
 
@@ -82,25 +82,25 @@ Scope is full. It is **sequenced** by dependency, not cut, across nine phases:
 ## How It Gets Built
 
 - **Pipeline:** pin the upstream version, then inventory every test with a stable ID. Write `PORTING.md` (the idiom and decision rules) and pilot on Support. Each story then runs: translate the tests, implement against them, and send the result to adversarial reviewers. The method and prior art are in the addendum.
-- **Agents run unattended, fanned out.** Components in the same phase are independent, so their epics run in parallel, one git worktree per story. `bmad-build-auto` runs the loop. Ed reviews each completed epic.
+- **Parallelism:** agents run unattended, fanned out. Components in the same phase are independent, so their epics run in parallel, one git worktree per story. `bmad-build-auto` runs the loop. Ed reviews each completed epic.
 - **Ratchet:** CI fails on any unexpected failure *or* unexpected pass. Every skip has a reason from a fixed list.
-- **Versioning:** the port is pinned to an exact upstream tag (v13.37.0) so the target doesn't move mid-epic. At each phase boundary the pin moves to the latest 13.x, and new or changed upstream tests become stories. Jaravel's major versions mirror Laravel's (Jaravel 13 = Laravel 13), and Laravel 14 (about Q1 2027) gets its own re-sync epic. [ASSUMPTION]
+- **Versioning:** the port is pinned to an exact upstream tag (v13.37.0) so the target doesn't move mid-epic. At each phase boundary the pin moves to the latest 13.x, and new or changed upstream tests become stories. Jaravel's major versions mirror Laravel's (Jaravel 13 = Laravel 13), and Laravel 14 (about Q1 2027) gets its own re-sync epic.
 
 ## Success Criteria
 
 - **Conformance rate:** ported upstream tests passing, out of all of Laravel 13's tests, per component. It only moves forward.
 - **Unattended throughput:** epics finished by agents that pass Ed's review without needing rework.
-- **Dogfooding:** Ed ships a real htmx app on Jaravel. [ASSUMPTION: the first milestone after the HTTP and Blade phases]
+- **Dogfooding:** Ed ships a real htmx app on Jaravel, as the first milestone after the HTTP and Blade phases.
 - **Currency:** stays within one 13.x pin step of upstream, and ships Jaravel 14 after Laravel 14.
 
 ## Risks and Unknowns
 
 - **Size:** 275k lines of PHP source and 296k lines of tests. Prior ports show the last few percent of conformance takes the longest.
 - **Breaks from Laravel that can't be avoided**, each with a decision record:
-  - **Queued closures.** JavaScript can't serialize a closure's captured variables. Jaravel will support job classes fully, plus closures that take their data as explicit arguments. [ASSUMPTION]
+  - **Queued closures.** JavaScript can't serialize a closure's captured variables. Jaravel will support job classes fully, plus closures that take their data as explicit arguments.
   - **Container autowiring.** TypeScript erases types, so explicit injection tokens are needed.
-  - **Async IO.**
-  - **Generated code.** Blade compiler tests and `make:*` stubs assert generated PHP. They become TS and rendered-HTML assertions, checked against PHP Laravel. [ASSUMPTION]
+  - **Async IO.** Only IO is awaited; see "sync core, async edges" under The Solution.
+  - **Generated code.** Blade compiler tests and `make:*` stubs assert generated PHP. They become TS and rendered-HTML assertions, checked against PHP Laravel's output.
 - **Hard parts we'd have to build ourselves:** keeping transaction state per request in a long-running server (AsyncLocalStorage), PHP-array semantics in Collections, a Symfony-compatible console, and Carbon.
 - **Open checks:** how complete Temporal is in Bun 1.4, whether `Bun.serve` accepts `QUERY`, Bun's bcrypt behaviour compared with PHP, and Bun Redis Cluster support.
 
