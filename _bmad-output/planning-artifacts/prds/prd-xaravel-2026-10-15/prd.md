@@ -138,12 +138,12 @@ Long term (2–3 years), Xaravel tracks Laravel releases within weeks once the p
   - `intentional-divergence:<DIV-N>`: that Divergence Record must exist.
   - `php-only`: needs an approved Escalation (FR-114).
   - `upstream-skip`: the Oracle also skips or fails this test at the Baseline Pin, which the harness checks.
-  - `deferred-backend:<backend>`: only for backends listed as post-alpha in §7.2.
+  - `deferred:<item>`: only for a backend or feature listed as post-alpha in §7.2.
   - `out-of-scope:<NG-N>`: must name a §7.1 Non-Goal by its ID.
 - **Quarantined:** a test whose result isn't consistent across repeated runs. It counts as not passing and always has an open Escalation.
 - **Ratchet:** the CI rule that any test result different from the Expectations File fails the build. That covers unexpected failures *and* unexpected passes.
 - **Conformance Rate:** passing Test ID × Backend Variant pairs ÷ all pairs, for one Component or overall. The denominator always includes tests that haven't been ported yet.
-- **Applicable Test IDs:** Test IDs, excluding those whose Skip Reason is `php-only`, `upstream-skip`, `deferred-backend` or `out-of-scope`. This is the denominator for the alpha gate (SM-1).
+- **Applicable Test IDs:** Test IDs, excluding those whose Skip Reason is `php-only`, `upstream-skip`, `deferred` or `out-of-scope`. This is the denominator for the alpha gate (SM-1).
 - **Fidelity Review:** a check by at least two reviewer agents, independent of the implementing agent. It confirms that Ported Tests match Upstream and that every Skip Reason is justified (FR-111).
 - **Protected Path:** a file that Story changes must not touch, such as the harness or the Test Inventory (FR-112).
 - **Escalation:** a recorded stop raised by a Framework Agent that needs the Maintainer's decision (FR-114).
@@ -221,9 +221,15 @@ The Expectations File records exactly one status for every Test ID × Backend Va
   - `intentional-divergence` must name an existing Divergence Record.
   - `php-only` must reference an approved Escalation.
   - `upstream-skip` must be confirmed by the Oracle.
-  - `deferred-backend` must name a backend listed as post-alpha.
+  - `deferred` must name a backend or feature listed as post-alpha in §7.2.
   - `out-of-scope` must name a §7.1 Non-Goal ID (NG-N).
 - A test may be `quarantined` only with an open Escalation.
+- When more than one Skip Reason could apply, the Expectations File records exactly one, chosen in this order:
+  1. `upstream-skip`, because it is machine-verified.
+  2. One that keeps the test in the SM-1 denominator: `intentional-divergence`, then `blocked-by`, then `not-ported-yet`.
+  3. Only if none of those fits, one that excludes it: `php-only`, `deferred` or `out-of-scope`.
+
+  When in doubt, the agent picks the reason that counts against conformance.
 - A `fail-known` entry blocks Epic acceptance, and the dashboard counts it separately from skips.
 
 #### FR-4: Ratchet
@@ -267,7 +273,7 @@ The Maintainer can move the Baseline Pin to a newer Upstream tag at a Phase boun
 
 #### FR-8: Porting rules exist before implementation
 
-Framework Agents work from a `PORTING.md` that holds the idiom table and the test-adaptation rules, and from the Divergence Records for DIV-1 through DIV-8.
+Framework Agents work from a `PORTING.md` that holds the idiom table and the test-adaptation rules, and from the Divergence Records for DIV-1 through DIV-10.
 
 **Consequences (testable):**
 - Phase 1 Stories are not started until `PORTING.md` and the Divergence Records are merged.
@@ -751,6 +757,8 @@ App Developers can validate with every Laravel 13 rule, rule objects, closure ru
 
 **Consequences (testable):**
 - Default error messages match the Oracle.
+- The `regex` / `not_regex` rules take JavaScript `RegExp` patterns (DIV-10).
+- `email:spoof` (look-alike character detection) comes after the alpha, and its Test IDs are recorded as `deferred:email-spoof` until then.
 
 #### FR-51: Form Requests
 
@@ -1004,6 +1012,7 @@ App Developers can send Mailables built from Blade or Markdown templates, with C
 
 **Consequences (testable):**
 - The `smtp`, `log`, `array` and `failover` transports are available at the public alpha. SES, Postmark, Resend and Mailgun come later.
+- Markdown mail renders to the same HTML as PHP Laravel (league/commonmark), verified by Differential Tests. If `Bun.markdown` differs, a CommonMark-compliant library is used instead.
 
 #### FR-90: Notifications
 
@@ -1126,6 +1135,7 @@ App Agents can query:
 - database connections and schema, plus read-only queries once enabled (FR-110)
 - log entries, the last error, and browser logs
 - absolute URL generation
+- the list of CLI commands, with their signatures
 
 #### FR-107: Test-run tool
 
@@ -1161,7 +1171,7 @@ Boost tools are read-only by default. Query, eval and write tools must be enable
 
 ### 5.1 Parity rule
 
-A Xaravel API has the same name, arguments, defaults and behaviour as its Laravel 13 counterpart. The only allowed differences are TypeScript syntax and the listed Intentional Divergences:
+A Xaravel API has the same name, arguments, defaults and behaviour as its Laravel 13 counterpart. Where Laravel exposes objects from Symfony, Carbon or Monolog, parity covers only what Laravel's public surface and Upstream tests actually use, not those libraries' full APIs (see OQ-3). Expressions inside Blade templates are TypeScript, translated from PHP by the mechanical rule in `PORTING.md` (FR-48). The only allowed differences are TypeScript syntax and the listed Intentional Divergences:
 
 - `->` and `::` become `.`.
 - Methods stay camelCase.
@@ -1199,6 +1209,12 @@ Each one has a Divergence Record, which must exist before the first Story that d
 - **DIV-6 PHP-only behaviour.** `php-only` is limited to an enumerated catalogue: PHP extensions, OPcache, `php.ini` settings, engine internals (for example `gc_*`, `opcache_*`, `declare(ticks)`), and PHP-runtime reflection with no TypeScript analogue. Type juggling is *not* `php-only`; it is ported (§5.1). Every `php-only` entry needs an approved Escalation (FR-3).
 - **DIV-7 Discovery without reflection.** Event listeners, policies and commands are found through file conventions and explicit registration, not runtime type reflection.
 - **DIV-8 Async test bodies.** Ported Tests that touch IO become `async`, and Laravel's test helpers return awaitable results.
+- **DIV-9 PHP value model.** PHP values map to TypeScript by fixed rules, which the architecture document sets out:
+  - `null` is the only PHP null, and `undefined` never escapes a public API.
+  - The int/float distinction is preserved where Laravel's behaviour depends on it.
+  - `BIGINT` columns become `bigint`.
+  - Marker interfaces become brands or symbols.
+- **DIV-10 Regular expressions.** User-supplied patterns, such as the `regex` validation rule and `Str.match` / `Str.replaceMatches`, are JavaScript `RegExp`, not PCRE. `PORTING.md` documents the PCRE features that have no equivalent. Upstream tests that depend on them are skipped as `intentional-divergence:DIV-10`.
 
 ### 5.3 Versioning and Deprecation Policy
 
@@ -1208,7 +1224,7 @@ Each one has a Divergence Record, which must exist before the first Story that d
 
 ## 6. Cross-Cutting NFRs
 
-- **NFR-1 Runtime and language:** Bun 1.4 or later, TypeScript `strict`, ESM only.
+- **NFR-1 Runtime and language:** Bun 1.4 or later, TypeScript `strict`, ESM only. At the public alpha, macOS and Linux are supported on x64 and arm64, and CI runs on both. Windows support is best-effort after the alpha.
 - **NFR-2 Dependency policy:** prefer, in this order, a Bun built-in, then a maintained npm package that works on Bun, then writing it ourselves. Every third-party dependency is recorded with a reason in the architecture document.
 - **NFR-3 Async safety:** type-aware lint rules (`no-floating-promises`, `await-thenable`, `no-misused-promises`) run in CI over the framework, the Ported Tests and the Skeleton.
 - **NFR-4 Request isolation:** under concurrent load, no request, session, auth, transaction, Context or scoped-container state crosses between requests. Dedicated concurrency tests verify this.
@@ -1226,6 +1242,9 @@ Each one has a Divergence Record, which must exist before the first Story that d
     - It uses no Laravel logo or artwork, and no domain containing "Laravel".
     - It is not a commercial product or service.
 - **NFR-9 Documentation:** each Component has documentation that mirrors Laravel 13's docs structure and calls out every divergence it is subject to. Text adapted from `laravel/docs` (MIT) keeps its copyright notice.
+  - Every public API a Story adds has docblocks before the Story is done.
+  - User-facing docs for every Component in Phases 1–8 are an alpha requirement (§7.2).
+- **NFR-11 Release authority:** only the Maintainer holds npm and GitHub publish rights. Releases are published by CI, with npm provenance, from a tag the Maintainer approves. Framework Agents never receive publish credentials.
 - **NFR-10 Agent operability:** every Story can run unattended, in its own git worktree. Its Test IDs, commands and acceptance check are machine-readable. A human is needed only for Epic review, for Escalations (FR-114) and for Infrastructure Stories that touch Protected Paths (FR-112).
 
 ## 7. Scope
@@ -1252,20 +1271,26 @@ The public alpha ends the 0.x line. It requires:
   - the Skeleton and Installer (FR-15 to FR-17), the app Testing toolkit (FR-96 to FR-101) and the Testbench, in Phase 7;
   - Auth (FR-92 to FR-95), Queue (FR-85 to FR-88), MCP (FR-104) and Boost's app tools (FR-105 to FR-107, FR-110), in Phase 8.
 - SM-1's alpha gate met.
+- User-facing docs for every Phase 1–8 Component (NFR-9).
 - The Maintainer's own htmx app running in production on Xaravel.
+
+The alpha targets **Laravel 13**, at the newest 13.x Baseline Pin reached by a freeze point. The re-sync to Laravel 14 starts after the alpha. At the end of Phase 4 (Database), the Maintainer reviews progress against this plan. That review may re-sequence work, but it never cuts scope (NG-6).
 
 **After the alpha, as Phase 9 and beyond:**
 
 - The rest of Foundation (Cloud and other integrations).
+- The Laravel 14 re-sync Epic.
 - The AI SDK (FR-103).
-- Boost documentation search (FR-108).
+- Boost documentation search (FR-108), and further Boost tools: record-rule and per-Package agent skills.
+- `email:spoof` validation.
+- Windows support.
 - Browser tests (FR-102).
 - MySQL, MariaDB and SQL Server drivers.
 - Redis Cluster.
 - Additional mail transports.
 - SQS and Beanstalkd.
 
-Tests for those backends are recorded as `deferred-backend` until then.
+Tests for those backends and features are recorded as `deferred:<item>` until then.
 
 ### 7.3 Phases
 
@@ -1306,7 +1331,7 @@ The dogfood app (SM-3) can start once Phase 7 is accepted.
 - **Size.** 275k lines of PHP source and about 13.5k test methods (the brief counts methods; the Test Inventory counts datasets, so it has more entries, and all sizing and SM-1 arithmetic use the inventory's unit), and the last few percent of conformance historically takes the longest. Mitigation: SM-1 counts against Applicable Test IDs, and post-alpha work is explicitly phased.
 - **Agents gaming the grader.** Mitigation: FR-3, FR-4, FR-111 to FR-114 and the counter-metrics.
 - **Hidden async hazards:** state leaking across concurrent requests, and missing `await`s. Mitigation: DIV-1, NFR-3 and NFR-4. Transaction and connection scoping is prototyped in the first Database Epic.
-- **Bun gaps** (Temporal, `QUERY`, bcrypt, Redis Cluster, test primitives). Mitigation: Phase 0 spikes (OQ-4, 7, 8, 11). Failing primitives become `deferred-backend` entries or Escalations.
+- **Bun gaps** (Temporal, `QUERY`, bcrypt, Redis Cluster, test primitives). Mitigation: Phase 0 spikes (OQ-4, 7, 8, 11). Failing primitives become `deferred` entries or Escalations.
 - **Upstream drift.** Laravel 14 is expected around Q1 2027. Mitigation: FR-7 pin bumps and a re-sync Epic.
 
 ## 8. Success Metrics
