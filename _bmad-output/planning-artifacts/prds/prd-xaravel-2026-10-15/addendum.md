@@ -16,11 +16,12 @@ This addendum holds the technical detail behind the PRD, for use by the architec
 
 ### Sketch of the monorepo layout
 
-This is a starting point for the architecture document, not a decision:
+This sketch is superseded by the Structural Seed in the architecture spine (`../../architecture/architecture-xaravel-2026-10-16/ARCHITECTURE-SPINE.md`). Where they differ, the spine wins:
 
 ```
 xaravel/
   packages/
+    runtime/  contracts/                              # shared primitives, all Contracts
     collections/  support/  container/  config/  ...   # one per Upstream Component → @xaravel/<name>
     htmx/  mockery/  testbench/  boost/                   # Xaravel Components
     framework/                                           # @xaravel/framework meta-package
@@ -30,12 +31,12 @@ xaravel/
     upstream/                                            # pinned Laravel checkout (read-only) + Oracle container
   docs/
   PORTING.md
-  decisions/                                             # Divergence Records (DIV-1..10) + other ADRs
+  decisions/                                             # Divergence Records (DIV-1..12) + other ADRs
 ```
 
 ### Mapping Upstream Components to Packages
 
-Mostly 1:1, from `src/Illuminate/<Name>` to `@xaravel/<name-kebab>`. Contracts are split per Component as TypeScript interfaces inside each Package, not shipped as one monolithic contracts package. `laravel/ai`, `laravel/mcp` and `laravel/boost` map to `@xaravel/ai`, `@xaravel/mcp` and `@xaravel/boost`.
+Mostly 1:1, from `src/Illuminate/<Name>` to `@xaravel/<name-kebab>`. All Contracts ship in one `@xaravel/contracts`, which depends only on `@xaravel/runtime`, mirroring `illuminate/contracts` (changed 2026-10-16 by architecture AD-1). Every Package may also depend on `@xaravel/runtime`, which holds the shared runtime primitives (AD-19). Packages with no single Upstream directory are `@xaravel/serializable-closure` (mirrors `laravel/serializable-closure`) and the neutral-named ports `@xaravel/http-foundation`, `@xaravel/mime` and `@xaravel/finder` (AD-22). Boost framework mode is the private workspace `tools/boost-framework`. `laravel/ai`, `laravel/mcp` and `laravel/boost` map to `@xaravel/ai`, `@xaravel/mcp` and `@xaravel/boost`.
 
 ## API mapping examples (parity rule, PRD §5.1)
 
@@ -43,9 +44,13 @@ Mostly 1:1, from `src/Illuminate/<Name>` to `@xaravel/<name-kebab>`. Contracts a
 |---|---|---|
 | `Route::get('/users', [UserController::class, 'index']);` | `Route.get('/users', [UserController, 'index'])` | syntax only |
 | `$users = User::where('active', 1)->with('posts')->get();` | `const users = await User.where('active', 1).with('posts').get()` | DIV-1 |
-| `$user->posts` (lazy) | `user.posts` throws unless loaded; `await user.load('posts')` | DIV-2 |
-| `public function __construct(private Mailer $mailer)` | `static inject = [Mailer]; constructor(private mailer: Mailer)` | DIV-3 (shape TBD in architecture) |
-| `dispatch(function () use ($podcast) { … })` | `dispatch(async ({ podcast }) => …, { podcast })` | DIV-4 |
+| `$user->posts` (lazy) | `user.posts` throws unless loaded; `await user.related('posts')` or `await user.load('posts')` | DIV-2 |
+| `$user->posts()->create([...])` | `await user.related('posts').create({...})` | DIV-2 |
+| `public function __construct(private Mailer $mailer)` | `@inject({ mailer: Mailer }) class X { constructor(private mailer: Mailer) {} }` | DIV-3 |
+| `dispatch(function () use ($podcast) { … })` | `dispatch(async ({ podcast }) => …, { podcast })` (facades such as `Mail` may be used inside) | DIV-4 |
+| `{{ $user->name }}` (Blade) | `{{ $user.name }}` | syntax only |
+| `new Envelope(subject: 'Hi')` | `new Envelope({ subject: 'Hi' })` | syntax only (named arguments, §5.1) |
+| `$collection[0]` | `collection.get(0)` | DIV-12 |
 | `$request->validate([...])` | `await request.validate({...})` | DIV-1 (IO rules) |
 | `collect([1, 2, 3])->map(fn ($x) => $x * 2)` | `collect([1, 2, 3]).map(x => x * 2)` | sync, no divergence |
 | `php artisan make:model Invoice -mfc` | `bun artisan make:model Invoice -mfc` | CLI name kept (NFR-8) |
