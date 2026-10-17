@@ -20,7 +20,9 @@
 //       prints <n> for `refs/heads/gh-readonly-queue/<base>/pr-<n>-<sha>`,
 //       exits 1 for any other ref
 //
-// API base `GITHUB_API_URL` (default https://api.github.com), token `GH_TOKEN`.
+// API base `GITHUB_API_URL` (default https://api.github.com). `verify`, `apply`
+// and `identity` require the token `GH_TOKEN`; unset or empty, they exit 1
+// before sending any request.
 // `--repo` defaults to `GITHUB_REPOSITORY`, then `xaravel/framework`.
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
@@ -557,8 +559,13 @@ function parseOptions(argv: readonly string[], allowed: ReadonlySet<string>): Op
 }
 
 function client(): Api {
+  const token = process.env["GH_TOKEN"] || null;
+  if (token === null) {
+    // Unauthenticated requests get partial public data, which would read as drift.
+    throw new Error('GH_TOKEN is not set, so the live rulesets cannot be read; run with GH_TOKEN="$(gh auth token)"');
+  }
   const base = (process.env["GITHUB_API_URL"] || "https://api.github.com").replace(/\/+$/, "");
-  return new Api(base, process.env["GH_TOKEN"] || null);
+  return new Api(base, token);
 }
 
 function report(title: string, violations: readonly string[]): void {

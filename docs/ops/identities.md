@@ -51,6 +51,8 @@ GH_TOKEN="$(gh auth token)" bun run ruleset:verify
 
 `verify` prints a `ruleset drift:` line for each difference and a `missing ruleset:` line for each committed ruleset with no live counterpart. It prints a `policy:` line when `main.json` is not active or does not apply to exactly the default branch, when a required check is missing or not pinned to GitHub Actions, when a rule it needs (deletion, force-push, PR with Code Owner review, linear history or the merge queue) is missing, when a bypass actor is not `OrganizationAdmin`, or when the org has an admin other than the Maintainer.
 
+Without `GH_TOKEN` (unset or empty), `verify`, `apply` and `identity` never contact GitHub. Once the committed rulesets pass their local checks, each exits 1 with `Ruleset check failed: GH_TOKEN is not set, so the live rulesets cannot be read; run with GH_TOKEN="$(gh auth token)" (AD-16)`.
+
 The workflow permissions check, `bun run workflows:check`, fails when `.github/workflows` is missing or holds no workflows.
 
 As a final check, push a throwaway branch as the agent. A `planning/…` push must be rejected, and a `story/…` push must succeed.
