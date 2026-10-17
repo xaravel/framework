@@ -49,10 +49,11 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { MAINTAINER } from "../protected-paths/protected-paths";
+import { frameworkTag, UPSTREAM_PIN_FILE } from "../upstream/upstream";
 
 /** The only tags that publish: `v0.<n>.<p>`, without leading zeros (AD-18). */
 export const PUBLISH_TAG = /^v0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-export const BASELINE_PIN_FILE = "conformance/baseline-pin";
+export const BASELINE_PIN_FILE = UPSTREAM_PIN_FILE;
 export const WORKFLOWS_DIR = ".github/workflows";
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml";
 export const RELEASE_JOB = "release";
@@ -363,17 +364,12 @@ export function releaseNotes(input: { version: string; pin: string; packages: re
   ].join("\n");
 }
 
-/** The Baseline Pin, trimmed; throws when the file is missing or empty. */
+/**
+ * The Baseline Pin: the `laravel/framework` tag in `conformance/baseline-pin`.
+ * Throws when the file is missing (`does not exist`), has no entries (`is empty`) or is malformed.
+ */
 export function baselinePin(root: string): string {
-  const file = join(root, BASELINE_PIN_FILE);
-  if (!existsSync(file)) {
-    throw new Error(`${BASELINE_PIN_FILE} does not exist`);
-  }
-  const pin = readFileSync(file, "utf8").trim();
-  if (pin === "") {
-    throw new Error(`${BASELINE_PIN_FILE} is empty`);
-  }
-  return pin;
+  return frameworkTag(root);
 }
 
 /** The public workspaces: the ones packed and published. */

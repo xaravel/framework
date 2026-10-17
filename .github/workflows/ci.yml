@@ -6,9 +6,11 @@
 # `check` runs the repository gates: `bun test`, the typecheck, the lint,
 # `scaffold:check` and `graph:check` (Epic 1 retro R1). `check` is advisory
 # until it is added to the required checks in .github/rulesets/main.json
-# (Epic 1 retro item 2). All jobs also run in the merge queue (`merge_group`),
-# so the queue never stalls on a required check. The conformance harness,
-# Ratchet and service matrix arrive in Epic 5.
+# (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
+# Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15). All
+# jobs also run in the merge queue (`merge_group`), so the queue never stalls
+# on a required check. The conformance harness, Ratchet and service matrix
+# arrive in Epic 5.
 name: ci
 
 on:
@@ -71,3 +73,18 @@ jobs:
         run: bun run scaffold:check
       - name: Check the dependency graph
         run: bun run graph:check
+
+  upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
+      - name: Check the Upstream snapshot
+        run: bun run upstream:check

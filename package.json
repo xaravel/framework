@@ -31,7 +31,9 @@
     "workflows:check": "bun tools/workflow-permissions/workflow-permissions.ts check",
     "release:stamp": "bun tools/release/release.ts stamp",
     "release:check": "bun tools/release/release.ts check",
-    "release:authority": "bun tools/release/release.ts authority"
+    "release:authority": "bun tools/release/release.ts authority",
+    "upstream:sync": "bun tools/upstream/upstream.ts sync",
+    "upstream:check": "bun tools/upstream/upstream.ts check"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",

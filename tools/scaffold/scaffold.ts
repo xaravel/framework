@@ -10,6 +10,7 @@
 // regenerated, from each package's current `package.json`.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { frameworkTag, UPSTREAM_PIN_FILE } from "../upstream/upstream";
 import { readTable, type PackageRow } from "./table";
 
 export const TABLE_PATH = "tools/scaffold/packages.jsonl";
@@ -123,8 +124,7 @@ export function generatePackageJson(rows: readonly PackageRow[], row: PackageRow
 }
 
 function readme(root: string, rows: readonly PackageRow[], row: PackageRow): string {
-  const pinPath = join(root, "conformance", "baseline-pin");
-  const pin = existsSync(pinPath) ? readFileSync(pinPath, "utf8").trim() : DEFAULT_PIN;
+  const pin = existsSync(join(root, UPSTREAM_PIN_FILE)) ? frameworkTag(root) : DEFAULT_PIN;
   const ports =
     row.upstream === null
       ? "It has no Upstream Laravel package of its own."
