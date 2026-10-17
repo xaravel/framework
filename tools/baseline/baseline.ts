@@ -637,7 +637,7 @@ export function run(root: string, options: RunOptions): { file: string; results:
       const dir = `${IMAGE_UPSTREAM_DIR}/${suite}`;
       const args = [dir, PHP_VERSION, kind, plan.files === null ? "-" : `${IMAGE_WORK}/files`];
       const command = sqlite
-        ? ["sh", "-c", 'set -e; cd "$1"; php vendor/bin/testbench package:create-sqlite-db >&2; exec php /xaravel/baseline/runner.php "$@"', "sh", ...args]
+        ? ["sh", "-c", `set -e; cd "$1"; php vendor/bin/testbench package:create-sqlite-db >&2; exec php ${IMAGE_TOOLS}/runner.php "$@"`, "sh", ...args]
         : ["php", `${IMAGE_TOOLS}/runner.php`, ...args];
       const networked: NetworkedRun = { env: VARIANT_ENV[variant]!, mounts: [{ host: resolve(root, BASELINE_DIR), container: IMAGE_TOOLS }], output: { host: work, container: IMAGE_WORK } };
       stdout = runInImageNetworked(image, networked, command);
