@@ -12,3 +12,10 @@ epic-1:
     - epic-1-retro-item-14-widen-protected-list
     - epic-1-retro-item-15-ownership-non-story-branches
     - epic-1-retro-item-9-agent-pushes-merge-queue
+epic-2:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer: []
