@@ -28,6 +28,14 @@ I, the Maintainer, approve running `tools/orchestrator/` unattended on the M1 ho
 
 The orchestrator never pushes directly to `main` and never publishes to npm. It never commits secrets or an `APP_KEY`, and never weakens the grader to make a test pass.
 
+## Amendment 2026-10-17: the protected-paths check
+
+The `protected-paths` check (Story 1.4) fails any PR that touches a Protected Path without my approving review on the head commit. The orchestrator opens PRs as my account, and GitHub does not let me approve my own PRs, so that check cannot pass on them. This ruling is my approval of those changes.
+
+- On an orchestrator PR, a `protected-paths` failure does not block the merge when every violation it reports is `needs @edanisko's approving review on the head commit`, and every other check is green. The orchestrator then merges, using `--admin` once the check is required.
+- Any other `protected-paths` violation, such as `codeowners drift` or `truncated file list`, still blocks.
+- The orchestrator never edits `conformance/protected-paths`, `tools/protected-paths/` or `.github/workflows/protected-paths.yml` to make the check pass.
+
 ## Revoking
 
 Delete this file, or create `~/.xaravel-orchestrator/STOP` on the M1.
