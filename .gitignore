@@ -25,5 +25,8 @@ Thumbs.db
 .claude/settings.local.json
 .claude/worktrees/
 
+# Upstream snapshot: fetched by `bun run upstream:sync`, never committed (FR-1)
+/conformance/upstream/
+
 # BMAD: per-user install answers (team config lives in _bmad/config.toml and _bmad/custom/config.toml)
 _bmad/config.user.toml

@@ -746,7 +746,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(ci.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(ci.on["push"]).toEqual({ branches: ["main"] });
   expect(ci.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "workflow-permissions"]);
+  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "upstream", "workflow-permissions"]);
 
   const audit = ci.jobs["audit"]!;
   expect(audit.permissions).toBeUndefined();

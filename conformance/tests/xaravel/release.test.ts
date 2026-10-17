@@ -21,11 +21,25 @@ import {
   versionMismatches,
   workspaces,
 } from "../../../tools/release/release";
+import { frameworkTag } from "../../../tools/upstream/upstream";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "release", "release.ts");
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
+
+/** A fixture `conformance/baseline-pin` in the table format, with `framework` as the laravel/framework tag. */
+function pinTable(framework: string): string {
+  const sha = (digit: string): string => digit.repeat(40);
+  return [
+    "# fixture pin",
+    `laravel/framework ${framework} ${sha("1")} ${sha("2")}`,
+    `laravel/ai v1.2.3 ${sha("3")} ${sha("4")}`,
+    `laravel/mcp v1.0.2 ${sha("5")} ${sha("6")}`,
+    `laravel/boost v2.10.3 ${sha("7")} ${sha("8")}`,
+    "",
+  ].join("\n");
+}
 
 /** A fixture monorepo: root 0.1.0, two public packages (one with workspace:* edges), a private skeleton. */
 function fixtureFiles(packageVersion = "0.0.0", rootVersion = "0.1.0"): Record<string, string> {
@@ -53,7 +67,7 @@ function fixtureFiles(packageVersion = "0.0.0", rootVersion = "0.1.0"): Record<s
     "packages/beta/src/index.ts": "export const beta = 1;\n",
     "packages/no-manifest/README.md": "not a workspace\n",
     "skeleton/package.json": json({ name: "@fixture/skeleton", version: packageVersion, private: true, type: "module" }),
-    "conformance/baseline-pin": "v13.37.0\n",
+    "conformance/baseline-pin": pinTable("v13.37.0"),
   };
 }
 
@@ -602,7 +616,7 @@ test("XT-conformance-37: the release notes state the Baseline Pin read from conf
   );
 
   // The repository's notes read the real pin.
-  expect(readFileSync(join(root, "conformance", "baseline-pin"), "utf8").trim()).toBe("v13.37.0");
+  expect(frameworkTag(root)).toBe("v13.37.0");
   const version = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { version: string }).version;
   const repo = await runCli(["notes", "--tag", `v${version}`]);
   expect(repo.code).toBe(0);
@@ -613,7 +627,7 @@ test("XT-conformance-37: the release notes state the Baseline Pin read from conf
   expect(repo.stdout).not.toContain("@xaravel/skeleton");
 
   // A fixture pin proves it reads the file; private workspaces are not listed.
-  await withRoot({ ...fixtureFiles("0.1.0"), "conformance/baseline-pin": "  v99.1.2\n\n" }, async (dir) => {
+  await withRoot({ ...fixtureFiles("0.1.0"), "conformance/baseline-pin": `\n  ${pinTable("v99.1.2")}\n\n` }, async (dir) => {
     const notes = await runCli(["notes", "--tag", "v0.1.0", "--root", dir]);
     expect(notes.code).toBe(0);
     expect(notes.stdout).toContain("Baseline Pin: laravel/framework v99.1.2\n");

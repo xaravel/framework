@@ -14,7 +14,11 @@
     "tools/escalations/**/*.ts",
     "tools/ruleset/**/*.ts",
     "tools/workflow-permissions/**/*.ts",
-    "tools/release/**/*.ts"
+    "tools/release/**/*.ts",
+    "tools/upstream/**/*.ts"
+  ],
+  "exclude": [
+    "conformance/upstream"
   ],
   "references": [
     {

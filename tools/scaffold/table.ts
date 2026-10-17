@@ -1,14 +1,16 @@
 // Builds the package table `tools/scaffold/packages.jsonl` (Story 1.2, AD-2).
 //
-//   bun tools/scaffold/table.ts --upstream <laravel/framework checkout at the Pin>
+//   bun tools/scaffold/table.ts [--root <dir>]
 //       prints the table to stdout
-//   bun tools/scaffold/table.ts --upstream <dir> --check
+//   bun tools/scaffold/table.ts [--root <dir>] --check
 //       compares it with the committed table; exits 1 with a diff summary
 //
-// `--upstream` defaults to $XARAVEL_UPSTREAM. The checkout must be
-// `laravel/framework` at the tag in `conformance/baseline-pin`.
+// It reads `laravel/framework` only from the Upstream snapshot,
+// `<root>/conformance/upstream/framework` (Story 2.1, FR-1), and never
+// fetches; run `bun run upstream:sync` first.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { upstreamPath } from "../upstream/upstream";
 
 export type Kind = "upstream" | "xaravel" | "grader" | "distribution";
 
@@ -202,7 +204,7 @@ function foundationEdges(illuminate: string, components: readonly string[]): str
 export function buildTable(upstream: string): PackageRow[] {
   const illuminate = join(upstream, "src", "Illuminate");
   if (!existsSync(illuminate)) {
-    throw new Error(`${illuminate} does not exist; --upstream must be a laravel/framework checkout`);
+    throw new Error(`${illuminate} does not exist; the Upstream must be a laravel/framework tree`);
   }
   const dirs = readdirSync(illuminate)
     .filter((entry) => statSync(join(illuminate, entry)).isDirectory())
@@ -272,12 +274,17 @@ export function readTable(path: string): PackageRow[] {
 }
 
 function main(argv: readonly string[]): number {
-  let upstream: string | null = process.env.XARAVEL_UPSTREAM ?? null;
+  let root = resolve(import.meta.dir, "..", "..");
   let check = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--upstream") {
-      upstream = argv[++i] ?? null;
+    if (arg === "--root") {
+      const value = argv[++i];
+      if (value === undefined || value === "") {
+        process.stderr.write("Usage: bun tools/scaffold/table.ts [--root <dir>] [--check]\n");
+        return 2;
+      }
+      root = resolve(value);
     } else if (arg === "--check") {
       check = true;
     } else {
@@ -285,11 +292,14 @@ function main(argv: readonly string[]): number {
       return 2;
     }
   }
-  if (upstream === null || upstream === "") {
-    process.stderr.write("Usage: bun tools/scaffold/table.ts --upstream <laravel/framework checkout> [--check]\n");
-    return 2;
+  let upstream: string;
+  try {
+    upstream = upstreamPath(root, "framework", ".");
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
   }
-  const built = serializeTable(buildTable(resolve(upstream)));
+  const built = serializeTable(buildTable(upstream));
   if (!check) {
     process.stdout.write(built);
     return 0;
@@ -297,12 +307,12 @@ function main(argv: readonly string[]): number {
   const committedPath = join(import.meta.dir, "packages.jsonl");
   const committed = existsSync(committedPath) ? readFileSync(committedPath, "utf8") : "";
   if (committed === built) {
-    process.stdout.write("packages.jsonl matches the Upstream checkout.\n");
+    process.stdout.write("packages.jsonl matches the Upstream snapshot.\n");
     return 0;
   }
   const want = new Set(built.split("\n").filter((line) => line !== ""));
   const have = new Set(committed.split("\n").filter((line) => line !== ""));
-  const lines = ["packages.jsonl differs from the table built from the Upstream checkout:"];
+  const lines = ["packages.jsonl differs from the table built from the Upstream snapshot:"];
   for (const line of have) {
     if (!want.has(line)) {
       lines.push(`- ${line}`);

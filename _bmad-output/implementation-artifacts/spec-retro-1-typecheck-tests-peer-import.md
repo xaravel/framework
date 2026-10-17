@@ -113,3 +113,5 @@ Status: done
 - **Follow-up review:** false (first pass; patched by verdict: medium 1 entry, low 2, high 0).
 - **Verification:** `scaffold:check`, `typecheck` (after `rm -rf .cache/tsc`), `lint`, `graph:check` all exit 0; `bun test` 39 pass, 0 fail.
 - **Residual risk:** deliberately ill-typed fixtures under a package `tests/` would now fail typecheck; the first Story porting fixtures will meet it.
+
+- **Later note (Story 2.1):** this spec's `XT-conformance-39` was renamed `XT-conformance-170` in Story 2.1, because `stories/2.1.md` allocates XT-conformance-39.

@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 05:07
+last_updated: 10-17-2026 05:29
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -46,8 +46,8 @@ development_status:
   1-8-lockstep-release-workflow-with-provenance: done
   epic-1-retrospective: done
 
-  epic-2: backlog
-  2-1-upstream-snapshot-and-pin-record: backlog
+  epic-2: in-progress
+  2-1-upstream-snapshot-and-pin-record: done
   2-2-oracle-container-image: backlog
   2-3-test-directory-component-map: backlog
   2-4-phpunit-test-inventory-for-laravel-framework: backlog

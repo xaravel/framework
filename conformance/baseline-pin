@@ -1,1 +1,18 @@
-v13.37.0
+# The Baseline Pin (FR-1, AD-15): one line per Upstream repository.
+#
+#   <repo> <tag> <commit> <tree>
+#
+# <commit> is the commit the tag resolves to and <tree> is that commit's git
+# tree hash (`git rev-parse <tag>^{tree}`), both full 40-hex SHAs. `bun run
+# upstream:sync` checks each repository out into conformance/upstream/<name>/
+# and `bun run upstream:check` verifies it, offline. The laravel/framework tag
+# is the Baseline Pin named in release notes and package READMEs.
+#
+# laravel/ai, laravel/mcp and laravel/boost are the versions in the product
+# brief's research addendum, the latest tags on 2026-10-17, recorded under the
+# MAINT ruling's recommended-option rule. The Maintainer can change them here
+# (docs/ops/upstream.md).
+laravel/framework v13.37.0 685f8d6c2ab4547287500bc80ccdf2ca12635109 99ed2f8f5d01a3f2f101e3156ad0bdb2a63837a1
+laravel/ai        v1.2.3   23509ff5c6c5cdc77facd6ce784274c29c76c4db c1e29f0aa61a66ec8d578feab454dc4a189022b4
+laravel/mcp       v1.0.2   26c7803551028653beab49af0e672ae38607b772 8789f20d778811e64d3e07a9e7acefe4ffcd5c70
+laravel/boost     v2.10.3  75c269a8a53e931c7252e7cd562e1a209356a7c6 7abdb1b9a81d29ad7c0135177e5bfa685c4d12a8

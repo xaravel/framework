@@ -3,6 +3,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, openSync, closeSync, readFileSync, rmSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { frameworkTag } from "../../../tools/upstream/upstream";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 
@@ -139,7 +140,7 @@ test("XT-conformance-4: .oxlintrc.json, .gitattributes (LF for *.jsonl, *.ts) an
   expect(proc.exitCode).toBe(0);
   expect(proc.stdout.toString().trim().split("\n")).toEqual(["x.ts: eol: lf", "x.jsonl: eol: lf"]);
 
-  expect(read("conformance/baseline-pin").trim()).toBe("v13.37.0");
+  expect(frameworkTag(root)).toBe("v13.37.0");
 });
 
 test("XT-conformance-5: LICENSE carries both notices, README the description and non-affiliation statement, SECURITY.md a disclosure process (legal and security baseline)", () => {

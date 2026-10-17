@@ -146,9 +146,9 @@ test("XT-conformance-6: packages.jsonl has the 53 package rows, sorted, with Pha
     expect(phaseOf.get(edge)! > foundation.phase).toBe(true);
   }
 
-  const upstreamCheckout = process.env.XARAVEL_UPSTREAM;
-  if (upstreamCheckout !== undefined && upstreamCheckout !== "") {
-    const proc = Bun.spawn([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--upstream", upstreamCheckout, "--check"], {
+  // The committed table equals the one built from the Upstream snapshot, when it has been synced.
+  if (existsSync(join(root, "conformance", "upstream", "framework"))) {
+    const proc = Bun.spawn([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--check"], {
       cwd: root,
       stdout: "pipe",
       stderr: "pipe",
@@ -158,9 +158,15 @@ test("XT-conformance-6: packages.jsonl has the 53 package rows, sorted, with Pha
       throw new Error(`table.ts --check exited ${code}:\n${stderr}`);
     }
   }
-  // Hermetic derivation check on a fixture Upstream tree (no checkout needed).
-  const fixture = mkdtempSync(join(tmpdir(), "xaravel-upstream-"));
+  // Hermetic derivation check on a fixture Upstream snapshot (no checkout needed).
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "xaravel-upstream-"));
+  const fixture = join(fixtureRoot, "conformance", "upstream", "framework");
   try {
+    // With no snapshot, table.ts fails with the sync hint.
+    const unsynced = Bun.spawnSync([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--root", fixtureRoot, "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    expect(unsynced.exitCode).toBe(1);
+    expect(unsynced.stderr.toString()).toContain("conformance/upstream/framework is missing; run bun run upstream:sync");
+
     const illuminate = join(fixture, "src", "Illuminate");
     for (const dir of Object.keys(UPSTREAM_PHASES)) {
       mkdirSync(join(illuminate, dir), { recursive: true });
@@ -191,14 +197,14 @@ test("XT-conformance-6: packages.jsonl has the 53 package rows, sorted, with Pha
     expect(fixtureRow("foundation").require).toEqual(["illuminate/collections", "illuminate/routing"]);
     expect(fixtureRow("foundation").suggest).toEqual(["illuminate/console"]);
 
-    const proc = Bun.spawn([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--upstream", fixture, "--check"], {
+    const proc = Bun.spawn([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--root", fixtureRoot, "--check"], {
       cwd: root,
       stdout: "pipe",
       stderr: "pipe",
     });
     const [code, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
     expect(code).toBe(1);
-    expect(stderr).toContain("packages.jsonl differs from the table built from the Upstream checkout");
+    expect(stderr).toContain("packages.jsonl differs from the table built from the Upstream snapshot");
     expect(stderr).toContain('- {"name":"support"');
     expect(stderr).toContain('+ {"name":"support"');
 
@@ -206,7 +212,7 @@ test("XT-conformance-6: packages.jsonl has the 53 package rows, sorted, with Pha
     rmSync(join(illuminate, "Mail", "composer.json"));
     expect(() => buildTable(fixture)).toThrow("Mail has no composer.json");
   } finally {
-    rmSync(fixture, { recursive: true, force: true });
+    rmSync(fixtureRoot, { recursive: true, force: true });
   }
 }, 60_000);
 
@@ -450,7 +456,7 @@ async function tscBuild(cwd: string): Promise<{ code: number; output: string }> 
 }
 
 test(
-  "XT-conformance-39: under tsc -b, a guarded import() of an unreferenced optional peer type-checks and stays typed, and a package's tests/ are type-checked (AD-2)",
+  "XT-conformance-170: under tsc -b, a guarded import() of an unreferenced optional peer type-checks and stays typed, and a package's tests/ are type-checked (AD-2)",
   async () => {
     const tmp = mkdtempSync(join(tmpdir(), "xaravel-peer-"));
     try {
