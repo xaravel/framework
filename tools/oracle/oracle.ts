@@ -6,11 +6,13 @@
 //       unmodified composer.json, it was resolved for PHP 8.5.11, every other
 //       Upstream package in it is at its own Pin tag and commit, and it holds
 //       the test tools (PHPUnit or Pest, Mockery, Orchestra Testbench). It
-//       also checks the Dockerfile statically (digest-pinned bases, no
-//       `composer update`, `ARG XARAVEL_ROOT_VERSIONS` with no default and
-//       the install loop `for pair in $XARAVEL_ROOT_VERSIONS;`, never a
-//       literal root-version list). It prints the build argument
-//       `oracle:build` passes, then the image tag.
+//       also checks the Dockerfile statically: digest-pinned bases, no
+//       `composer update`, `ARG XARAVEL_ROOT_VERSIONS` with no default, the
+//       install loop `for pair in $XARAVEL_ROOT_VERSIONS;` (never a literal
+//       root-version list), every `composer` command in a RUN that mounts a
+//       secret or mentions COMPOSER_AUTH has --no-plugins and --no-scripts,
+//       and a RUN with neither runs `composer install` without them. It
+//       prints the build argument `oracle:build` passes, then the image tag.
 //   bun tools/oracle/oracle.ts tag [--root <dir>]
 //       prints the image tag, `<framework tag>-<imagehash>`, offline
 //       (the hash covers the locks, the Dockerfile, its dockerignore and
@@ -22,15 +24,17 @@
 //       packages pinned by `--with`; this one needs the network
 //   bun tools/oracle/oracle.ts verify-image <image> [--root <dir>]
 //       checks that each snapshot's vendor/composer/installed.json in the
-//       image holds exactly its lock's packages, and that the image's PHP is
-//       8.5.11; prints the sorted package set
+//       image holds exactly its lock's packages, that each Pest suite holds
+//       vendor/pest-plugins.json (its Composer plugin ran), and that the
+//       image's PHP is 8.5.11; prints the sorted package set
 //   bun tools/oracle/oracle.ts build <image> [--root <dir>]
 //       builds conformance/oracle/Dockerfile twice (the second time with
 //       --no-cache), verifies both builds and fails when their package sets
 //       differ. Both builds pass `--build-arg XARAVEL_ROOT_VERSIONS=<list>`,
 //       the root-version list derived from conformance/baseline-pin
 //       (`rootVersions`). A GITHUB_TOKEN reaches Composer only as a BuildKit
-//       secret.
+//       secret, readable only in the download pass, which runs no package
+//       code.
 //
 // Only `verify-image` and `build` call `docker`; `check` and `tag` need
 // neither Docker nor the network. Other tools reach the image only through
@@ -459,11 +463,56 @@ export function rootVersions(root: string): string {
   return readPin(root).map((entry) => `${entry.name}:${stripV(entry.tag)}`).join(" ");
 }
 
+/** The Composer flags that keep plugin and script code from running. */
+const NO_PACKAGE_CODE = ["--no-plugins", "--no-scripts"] as const;
+
+interface Instruction {
+  /** The 1-indexed line the instruction starts on. */
+  line: number;
+  /** The instruction with its continuation lines joined. */
+  text: string;
+}
+
+/** Joins the Dockerfile's continuation lines into instructions, dropping comment lines. */
+function dockerInstructions(text: string): Instruction[] {
+  const instructions: Instruction[] = [];
+  let current: Instruction | null = null;
+  const lines = text.split("\n");
+  for (const [index, raw] of lines.entries()) {
+    if (raw.trimStart().startsWith("#")) {
+      continue;
+    }
+    const continued = /\\\s*$/.test(raw);
+    const part = continued ? raw.replace(/\\\s*$/, "") : raw;
+    if (current === null) {
+      if (part.trim() === "" && !continued) {
+        continue;
+      }
+      current = { line: index + 1, text: part };
+    } else {
+      current.text += ` ${part.trim()}`;
+    }
+    if (!continued) {
+      instructions.push(current);
+      current = null;
+    }
+  }
+  if (current !== null) {
+    instructions.push(current);
+  }
+  return instructions;
+}
+
 /**
  * Checks the Dockerfile statically: every base image pinned by digest, no
  * `composer update`, `ARG XARAVEL_ROOT_VERSIONS` with no default, and the
  * install loop `for pair in $XARAVEL_ROOT_VERSIONS;` (a literal list is a
- * problem: the list comes from the Pin, through `rootVersions`).
+ * problem: the list comes from the Pin, through `rootVersions`). The install
+ * runs in two passes. A `RUN` that mounts any secret or mentions
+ * `COMPOSER_AUTH` bears the token: every `composer` command in it must have
+ * `--no-plugins` and `--no-scripts`, so no package code runs while the token
+ * is readable. A `RUN` that bears no token must run `composer install`
+ * without either flag, so plugins and scripts still run.
  */
 export function checkDockerfile(root: string): string[] {
   const file = join(root, DOCKERFILE);
@@ -499,6 +548,32 @@ export function checkDockerfile(root: string): string[] {
   const wrong = loops.length === 0 ? ["none"] : loops.filter((list) => list !== `$${ROOT_VERSIONS_ARG}`).map((list) => JSON.stringify(list));
   if (wrong.length > 0) {
     problems.push(`${DOCKERFILE}: the composer install loop must be "${expected}" (oracle:build passes the Pin's root versions, never a literal list), found ${wrong.join(", ")}`);
+  }
+  const runs = dockerInstructions(text).filter((instruction) => /^\s*RUN\s/i.test(instruction.text));
+  // Every `composer` command (the word as a command, optionally by path; never /tmp/composer-home or COMPOSER_AUTH), up to the next shell separator.
+  const composerCommands = (run: Instruction): string[] => [...run.text.matchAll(/(?:^|[\s;&|()"'`])((?:[^\s;&|()"'`]*\/)?composer(?=[\s;&|()"'`]|$)[^;&|()"'`]*)/g)].map((match) => match[1]!.trim());
+  const isInstall = (command: string): boolean => /^(?:\S*\/)?composer\s+install\b/.test(command);
+  const flags = (command: string): string[] => NO_PACKAGE_CODE.filter((flag) => new RegExp(`(^|\\s)${flag}(\\s|$)`).test(command));
+  const bearsToken = (run: Instruction): boolean => /--mount=\S*\btype=secret\b/.test(run.text) || run.text.includes("COMPOSER_AUTH");
+  let fullPass = false;
+  for (const run of runs) {
+    if (bearsToken(run)) {
+      for (const command of composerCommands(run)) {
+        const missing = NO_PACKAGE_CODE.filter((flag) => !flags(command).includes(flag));
+        if (missing.length > 0) {
+          problems.push(
+            `${DOCKERFILE}:${run.line}: the RUN that mounts a secret or sets COMPOSER_AUTH runs "${command}" without ${missing.join(" and ")}; Composer plugin and script code would run while the token is readable`,
+          );
+        }
+      }
+    } else if (composerCommands(run).some((command) => isInstall(command) && flags(command).length === 0)) {
+      fullPass = true;
+    }
+  }
+  if (!fullPass) {
+    problems.push(
+      `${DOCKERFILE}: no RUN without a secret mount or COMPOSER_AUTH runs composer install without ${NO_PACKAGE_CODE.join(" and ")}; Composer plugins and scripts would never run`,
+    );
   }
   if (!existsSync(join(root, `${DOCKERFILE}.dockerignore`))) {
     problems.push(`${DOCKERFILE}.dockerignore is missing`);
@@ -717,7 +792,16 @@ export interface ImageResult {
   packages: Partial<Record<UpstreamName, LockedPackage[]>>;
 }
 
-/** Verifies a built image against the locks and the snapshot; calls `docker`. */
+/** The Composer plugin a Pest suite's lock holds, and the manifest it writes when it runs. */
+const PEST_PLUGIN = "pestphp/pest-plugin";
+const PEST_MANIFEST = "vendor/pest-plugins.json";
+
+/**
+ * Verifies a built image against the locks and the snapshot; calls `docker`.
+ * For each snapshot whose lock holds `pestphp/pest-plugin`, the image must
+ * also hold `vendor/pest-plugins.json`, which the plugin writes only when
+ * Composer runs plugins (the Dockerfile's token-less pass).
+ */
 export function verifyImage(root: string, image: string): ImageResult {
   const docker = requireDocker();
   const result: ImageResult = { lines: [], problems: [], packages: {} };
@@ -736,7 +820,17 @@ export function verifyImage(root: string, image: string): ImageResult {
       continue;
     }
     result.packages[entry.name] = installed;
-    const diff = diffPackages(expectedPackages(readFileSync(lockFile, "utf8")), installed, { expected: `${LOCKS_DIR}/${entry.name}/composer.lock`, actual: `${image} ${dir}` });
+    const locked = expectedPackages(readFileSync(lockFile, "utf8"));
+    if (locked.some((pkg) => pkg.name === PEST_PLUGIN)) {
+      try {
+        readImageFile(docker, image, `${dir}/${PEST_MANIFEST}`);
+      } catch (error) {
+        result.problems.push(
+          `${entry.name}: ${image} ${dir}/${PEST_MANIFEST} cannot be read, so ${PEST_PLUGIN} never ran (the token-less composer install pass must run plugins): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    const diff = diffPackages(locked, installed, { expected: `${LOCKS_DIR}/${entry.name}/composer.lock`, actual: `${image} ${dir}` });
     result.problems.push(...diff.map((line) => `${entry.name}: ${line}`));
     result.lines.push(...installed.map((pkg) => `${entry.name}: ${formatPackage(pkg)}`));
     const localJson = join(root, UPSTREAM_DIR, entry.name, "composer.json");
