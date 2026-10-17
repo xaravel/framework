@@ -7,9 +7,10 @@
 #
 #   bun run oracle:build <image>
 #
-# which runs `docker build --file conformance/oracle/Dockerfile .` twice and
-# verifies both builds (docs/ops/oracle.md). Dockerfile.dockerignore admits
-# only conformance/upstream/ and conformance/oracle/locks/ into the context.
+# which runs `docker build --file conformance/oracle/Dockerfile --build-arg
+# XARAVEL_ROOT_VERSIONS=<list from the Pin> .` twice and verifies both
+# builds (docs/ops/oracle.md). Dockerfile.dockerignore admits only
+# conformance/upstream/ and conformance/oracle/locks/ into the context.
 #
 # Both base images are pinned by digest. The build runs only `composer
 # install` from the committed locks, never `composer update`, and the
@@ -87,15 +88,22 @@ COPY conformance/oracle/locks/ai/composer.lock /oracle/upstream/ai/composer.lock
 COPY conformance/oracle/locks/mcp/composer.lock /oracle/upstream/mcp/composer.lock
 COPY conformance/oracle/locks/boost/composer.lock /oracle/upstream/boost/composer.lock
 
-# COMPOSER_ROOT_VERSION is each snapshot's Pin tag without the `v`, as when
-# the lock was resolved. The token file exists only during this RUN.
+# XARAVEL_ROOT_VERSIONS is `<name>:<Pin tag without the v>` for each
+# snapshot, in pin order. `oracle:build` derives it from
+# conformance/baseline-pin and passes it with --build-arg, and the image tag
+# hashes it, so a Pin move needs no edit here; the build fails when it is
+# unset or empty. COMPOSER_ROOT_VERSION is each snapshot's Pin tag without the
+# `v`, as when the lock was resolved. The token file exists only during this
+# RUN.
+ARG XARAVEL_ROOT_VERSIONS
 RUN --mount=type=secret,id=github_token \
     set -eu; \
+    : "${XARAVEL_ROOT_VERSIONS:?pass --build-arg XARAVEL_ROOT_VERSIONS (bun run oracle:build does)}"; \
     if [ -s /run/secrets/github_token ]; then \
         COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}"; \
         export COMPOSER_AUTH; \
     fi; \
-    for pair in framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3; do \
+    for pair in $XARAVEL_ROOT_VERSIONS; do \
         name="${pair%%:*}"; \
         cd "/oracle/upstream/$name"; \
         COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist; \

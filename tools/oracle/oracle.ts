@@ -7,11 +7,14 @@
 //       Upstream package in it is at its own Pin tag and commit, and it holds
 //       the test tools (PHPUnit or Pest, Mockery, Orchestra Testbench). It
 //       also checks the Dockerfile statically (digest-pinned bases, no
-//       `composer update`, its root-version list equal to the Pin), then
-//       prints the image tag.
+//       `composer update`, `ARG XARAVEL_ROOT_VERSIONS` with no default and
+//       the install loop `for pair in $XARAVEL_ROOT_VERSIONS;`, never a
+//       literal root-version list). It prints the build argument
+//       `oracle:build` passes, then the image tag.
 //   bun tools/oracle/oracle.ts tag [--root <dir>]
 //       prints the image tag, `<framework tag>-<imagehash>`, offline
-//       (the hash covers the locks, the Dockerfile and its dockerignore)
+//       (the hash covers the locks, the Dockerfile, its dockerignore and
+//       the XARAVEL_ROOT_VERSIONS build argument)
 //   bun tools/oracle/oracle.ts lock [--composer <bin>] [--root <dir>]
 //       regenerates every lock with `composer update --no-install` in a temp
 //       copy of the snapshot's composer.json, for PHP 8.5.11 (set in a temp
@@ -24,7 +27,10 @@
 //   bun tools/oracle/oracle.ts build <image> [--root <dir>]
 //       builds conformance/oracle/Dockerfile twice (the second time with
 //       --no-cache), verifies both builds and fails when their package sets
-//       differ. A GITHUB_TOKEN reaches Composer only as a BuildKit secret.
+//       differ. Both builds pass `--build-arg XARAVEL_ROOT_VERSIONS=<list>`,
+//       the root-version list derived from conformance/baseline-pin
+//       (`rootVersions`). A GITHUB_TOKEN reaches Composer only as a BuildKit
+//       secret.
 //
 // Only `verify-image` and `build` call `docker`; `check` and `tag` need
 // neither Docker nor the network. Other tools reach the image only through
@@ -442,9 +448,22 @@ export function checkLocks(root: string): CheckResult {
   return result;
 }
 
+/** The build argument that carries the root-version list into the Dockerfile. */
+export const ROOT_VERSIONS_ARG = "XARAVEL_ROOT_VERSIONS";
+
+/**
+ * The Dockerfile's root-version list, derived from the Pin:
+ * `<name>:<tag without v>` for each snapshot, in pin order, space-separated.
+ */
+export function rootVersions(root: string): string {
+  return readPin(root).map((entry) => `${entry.name}:${stripV(entry.tag)}`).join(" ");
+}
+
 /**
  * Checks the Dockerfile statically: every base image pinned by digest, no
- * `composer update`, and its root-version list equal to the Pin.
+ * `composer update`, `ARG XARAVEL_ROOT_VERSIONS` with no default, and the
+ * install loop `for pair in $XARAVEL_ROOT_VERSIONS;` (a literal list is a
+ * problem: the list comes from the Pin, through `rootVersions`).
  */
 export function checkDockerfile(root: string): string[] {
   const file = join(root, DOCKERFILE);
@@ -466,11 +485,20 @@ export function checkDockerfile(root: string): string[] {
   if (/composer\s+update/.test(lines.join("\n"))) {
     problems.push(`${DOCKERFILE} runs composer update; the image must install only from the committed locks`);
   }
-  const expected = readPin(root).map((entry) => `${entry.name}:${stripV(entry.tag)}`).join(" ");
-  const loop = /for pair in ([^;]*);/.exec(lines.join("\n"));
-  const actual = loop === null ? null : loop[1]!.trim().split(/\s+/).join(" ");
-  if (actual !== expected) {
-    problems.push(`${DOCKERFILE}: the composer install loop must be "for pair in ${expected};" (each snapshot and its Pin tag without the v), found ${actual === null ? "none" : JSON.stringify(actual)}`);
+  if (!lines.some((line) => /^\s*ARG\s+XARAVEL_ROOT_VERSIONS\s*$/.test(line))) {
+    problems.push(`${DOCKERFILE} must declare "ARG ${ROOT_VERSIONS_ARG}" with no default (oracle:build passes it from the Pin)`);
+  }
+  if (lines.some((line) => /^\s*ARG\s+XARAVEL_ROOT_VERSIONS\s*=/.test(line))) {
+    problems.push(`${DOCKERFILE} gives "ARG ${ROOT_VERSIONS_ARG}" a default; declare it with no default (oracle:build passes it from the Pin)`);
+  }
+  if (!lines.join("\n").includes(`\${${ROOT_VERSIONS_ARG}:?`)) {
+    problems.push(`${DOCKERFILE} must guard the build argument with \`: "\${${ROOT_VERSIONS_ARG}:?…}"\`, so an unset or empty list fails the build`);
+  }
+  const expected = `for pair in $${ROOT_VERSIONS_ARG};`;
+  const loops = [...lines.join("\n").matchAll(/for pair in ([^;]*);/g)].map((match) => match[1]!.trim().split(/\s+/).join(" "));
+  const wrong = loops.length === 0 ? ["none"] : loops.filter((list) => list !== `$${ROOT_VERSIONS_ARG}`).map((list) => JSON.stringify(list));
+  if (wrong.length > 0) {
+    problems.push(`${DOCKERFILE}: the composer install loop must be "${expected}" (oracle:build passes the Pin's root versions, never a literal list), found ${wrong.join(", ")}`);
   }
   if (!existsSync(join(root, `${DOCKERFILE}.dockerignore`))) {
     problems.push(`${DOCKERFILE}.dockerignore is missing`);
@@ -480,10 +508,12 @@ export function checkDockerfile(root: string): string[] {
 
 /**
  * The first 12 hex characters of the SHA-256 of the four locks in pin order,
- * then the Dockerfile, then its dockerignore, so a change to any of them gets
- * a new tag. Each input is hashed as
- * `<repository-relative path>\0<byte length>\0<bytes>`, so no byte can move
- * across a file boundary unnoticed.
+ * then the Dockerfile, then its dockerignore, then the XARAVEL_ROOT_VERSIONS
+ * build argument, so a change to any of them (an ai, mcp or boost tag moves
+ * the argument) gets a new tag. Each file is hashed as
+ * `<repository-relative path>\0<byte length>\0<bytes>`, and the argument as
+ * `build-arg XARAVEL_ROOT_VERSIONS\0<byte length>\0<value>`, so no byte can
+ * move across an input boundary unnoticed.
  */
 export function imageHash(root: string): string {
   const hash = createHash("sha256");
@@ -506,6 +536,7 @@ export function imageHash(root: string): string {
     }
     add(relative, readFileSync(file));
   }
+  add(`build-arg ${ROOT_VERSIONS_ARG}`, Buffer.from(rootVersions(root), "utf8"));
   return hash.digest("hex").slice(0, 12);
 }
 
@@ -744,7 +775,7 @@ export interface BuildResult {
 
 function dockerBuild(docker: string, root: string, args: readonly string[]): void {
   const secret = process.env["GITHUB_TOKEN"] !== undefined && process.env["GITHUB_TOKEN"] !== "" ? ["--secret", "id=github_token,env=GITHUB_TOKEN"] : [];
-  const full = ["build", "--file", DOCKERFILE, ...secret, ...args, "."];
+  const full = ["build", "--file", DOCKERFILE, "--build-arg", `${ROOT_VERSIONS_ARG}=${rootVersions(root)}`, ...secret, ...args, "."];
   const proc = Bun.spawnSync([docker, ...full], { cwd: root, env: { ...process.env, DOCKER_BUILDKIT: "1" }, stdout: "inherit", stderr: "inherit" });
   if (proc.exitCode !== 0) {
     throw new Error(`docker ${full.join(" ")} failed (exit ${proc.exitCode})`);
@@ -843,6 +874,7 @@ export function main(argv: readonly string[]): number {
         const options = parseOptions(rest, ["--root"], 0);
         const result = checkLocks(options.root);
         process.stdout.write(result.verified.map((line) => `${line}\n`).join(""));
+        process.stdout.write(`${DOCKERFILE} builds with --build-arg ${ROOT_VERSIONS_ARG}=${rootVersions(options.root)}\n`);
         if (result.problems.length > 0) {
           process.stderr.write(`Oracle lock check failed (FR-6):\n${indent(result.problems)}`);
           return 1;
