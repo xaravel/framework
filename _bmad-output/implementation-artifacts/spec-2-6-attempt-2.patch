@@ -1,0 +1,470 @@
+diff --git a/.github/workflows/baseline.yml b/.github/workflows/baseline.yml
+index dfa3db6..fd57c26 100644
+--- a/.github/workflows/baseline.yml
++++ b/.github/workflows/baseline.yml
+@@ -17,7 +17,8 @@
+ #
+ # `merge` downloads every result, runs `bun run baseline merge`, which fails
+ # on any difference between the two attempts (`oracle non-determinism: …`)
+-# or a missing result, uploads `conformance/inventory` as the `inventory`
++# other than a finding listed in conformance/inventory/oracle-nondeterminism.jsonl
++# (decisions/ESC-2.6-1.md), which gets its pinned record, or a missing result, uploads `conformance/inventory` as the `inventory`
+ # artifact, and fails when the committed Inventory differs from it. The
+ # committed `assertions` and `oracle` values are exactly that artifact
+ # (docs/ops/baseline.md). No job holds a write scope.
+diff --git a/conformance/inventory/database.jsonl b/conformance/inventory/database.jsonl
+index 7841bc6..1a5b9ad 100644
+--- a/conformance/inventory/database.jsonl
++++ b/conformance/inventory/database.jsonl
+@@ -2991,7 +2991,7 @@
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastingForSpecificEventsOnly","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentBroadcastingTest.php:73-97","hash":"841c90a0e6876f00d249403fd056cdc25ee296534803661ee526e52bf8159373","assertions":{"assertCount":1,"assertTrue":1},"oracle":{"none":"pass"}}
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastingOnModelTrashing","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentBroadcastingTest.php:54-71","hash":"8f5a85399a9acb954dbe1fcee20e02807fbc039e750fe9148b0ff87699f0a8d9","assertions":{"assertTrue":1},"oracle":{"none":"pass"}}
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testChannelRouteFormatting","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentBroadcastingTest.php:47-52","hash":"da70834be7974928055d2b9573ef9720e7e225c87fb911d78c6a23531f1cade7","assertions":{"assertSame":1},"oracle":{"none":"pass"}}
+-{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php:252-271","hash":"0c26b5744e9b0b3596245bd8090c2268c038533847f13af349ccb7fcc908d962","assertions":{"assertIsBool":3},"oracle":{"none":"pass"}}
++{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php:252-271","hash":"0c26b5744e9b0b3596245bd8090c2268c038533847f13af349ccb7fcc908d962","assertions":{"assertIsBool":2},"oracle":{"none":"pass"}}
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesCanCacheBooleans","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php:220-231","hash":"6484a3748befd92bdba94c62e3e79cbbfaf8bd55598b6ab7ddf0de595205c0c3","assertions":{"assertIsBool":1,"assertSame":11},"oracle":{"none":"pass"}}
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesCanCacheNull","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php:233-250","hash":"ca5582d990cbe8f17bb5284594dc62713947d0d93d35b52fb2e720b63a396b85","assertions":{"assertNull":1,"assertSame":14},"oracle":{"none":"pass"}}
+ {"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesCanCacheStrings","component":"database","kind":"integration","backends":["none"],"source":"framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php:209-218","hash":"3a1d20da4e2d537392366e1f4f7d4974294703192cffafe7ae403a403121338e","assertions":{"assertIsString":1,"assertSame":1},"oracle":{"none":"pass"}}
+diff --git a/conformance/inventory/oracle-nondeterminism.jsonl b/conformance/inventory/oracle-nondeterminism.jsonl
+new file mode 100644
+index 0000000..7c3acf5
+--- /dev/null
++++ b/conformance/inventory/oracle-nondeterminism.jsonl
+@@ -0,0 +1 @@
++{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans","variant":"none","attempts":[{"assertIsBool":2},{"assertIsBool":3}],"record":{"assertIsBool":2}}
+diff --git a/conformance/tests/xaravel/baseline.test.ts b/conformance/tests/xaravel/baseline.test.ts
+index 83490bb..4f61ca9 100644
+--- a/conformance/tests/xaravel/baseline.test.ts
++++ b/conformance/tests/xaravel/baseline.test.ts
+@@ -16,6 +16,8 @@ import {
+   LEGS,
+   mergeResults,
+   networkedRunArgs,
++  NONDETERMINISM_FILE,
++  parseFindings,
+   parseResults,
+   parseRunArgs,
+   planRun,
+@@ -24,10 +26,11 @@ import {
+   SQLITE_VARIANTS,
+   VARIANT_ENV,
+   variantsFor,
++  type Finding,
+   type Result,
+   type ResultsLookup,
+ } from "../../../tools/baseline/baseline";
+-import { carryOver, INVENTORY_DIR, LISTER, parseInventory, PEST_SUITES, PHP_VERSION, renderInventory, SUITES, type InventoryEntry, type RawTest, type Suite } from "../../../tools/inventory/inventory";
++import { carryOver, INVENTORY_DIR, LISTER, parseInventory, PEST_SUITES, PHP_VERSION, renderInventory, suiteInventoryFiles, SUITES, type InventoryEntry, type RawTest, type Suite } from "../../../tools/inventory/inventory";
+ 
+ const root = resolve(import.meta.dir, "..", "..", "..");
+ const CLI = join(root, "tools", "baseline", "baseline.ts");
+@@ -161,6 +164,9 @@ function committed(): InventoryEntry[] {
+   const dir = join(root, INVENTORY_DIR);
+   const entries: InventoryEntry[] = [];
+   for (const name of readdirSync(dir).sort()) {
++    if (name === NONDETERMINISM_FILE) {
++      continue;
++    }
+     const component = name.replace(/\.jsonl$/, "");
+     const suite: Suite = (PEST_SUITES as readonly string[]).includes(component) ? (component as Suite) : "framework";
+     entries.push(...parseInventory(readFileSync(join(dir, name), "utf8"), `${INVENTORY_DIR}/${name}`, suite));
+@@ -486,6 +492,61 @@ test("XT-conformance-58: two attempts on the same Pin merge into the Inventory w
+     ]);
+     expect(fx.inventory()).toEqual(before);
+ 
++    // A listed finding (decisions/ESC-2.6-1.md): attempts that differ only in counts, with the same outcome and
++    // kinds, write the pinned record.
++    const findingsPath = join(fx.dir, INVENTORY_DIR, NONDETERMINISM_FILE);
++    const finding = (fields: Partial<Finding> = {}): string =>
++      `${JSON.stringify({ id, variant: "none", attempts: [{ assertSame: 1 }, { assertSame: 2 }], record: { assertSame: 1 }, ...fields })}\n`;
++    const base = (attempt2: Result): Record<string, Result[]> => ({
++      [resultsFile("framework", "none", 1)]: [result(`${QUEUEABLE}::testOnConnection#uses string`, "pass", { assertSame: 2 }), result(id, "pass", { assertSame: 1 })],
++      [resultsFile("framework", "none", 2)]: [result(`${QUEUEABLE}::testOnConnection#uses string`, "pass", { assertSame: 2 }), attempt2],
++    });
++    writeFileSync(findingsPath, finding());
++    writeAttempts(base(result(id, "pass", { assertSame: 2 })));
++    const listedOk = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
++    expect([listedOk.code, listedOk.stderr]).toEqual([0, ""]);
++    expect(fx.inventory()["bus.jsonl"]).toContain(`${JSON.stringify(id).slice(1, -1)}","component":"bus","kind":"unit","backends":["none"],"source":"framework/tests/Bus/QueueableTest.php:1-2","hash":"${HASH}","assertions":{"assertSame":1},"oracle":{"none":"pass"}}`);
++    // The listed pair keeps its record when both attempts happen to agree on a higher count.
++    writeFileSync(findingsPath, finding({ attempts: [{ assertSame: 1 }, { assertSame: 3 }] }));
++    const agreeHigh = base(result(id, "pass", { assertSame: 3 }));
++    writeAttempts({ ...agreeHigh, [resultsFile("framework", "none", 1)]: agreeHigh[resultsFile("framework", "none", 2)]! });
++    expect((await cli(["merge", "--root", fx.dir, "--in", fx.out])).code).toBe(0);
++    expect(fx.inventory()["bus.jsonl"]).toContain(`"assertions":{"assertSame":1},"oracle":{"none":"pass"}}`);
++    expect(fx.inventory()["bus.jsonl"]).not.toContain(`"assertions":{"assertSame":3}`);
++    const listedBefore = fx.inventory();
++    // A listed pair whose outcome differs, or whose attempts do not fit the record, still fails and writes nothing.
++    writeFileSync(findingsPath, finding());
++    for (const [attempt2, shown] of [
++      [result(id, "fail", { assertSame: 2 }), `{"outcome":"fail","assertions":{"assertSame":2}}`],
++      [result(id, "pass", { assertSame: 2, assertTrue: 1 }), `{"outcome":"pass","assertions":{"assertSame":2,"assertTrue":1}}`],
++    ] as const) {
++      writeAttempts(base(attempt2));
++      const listedBad = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
++      expect([listedBad.code, listedBad.stderr]).toEqual([
++        1,
++        `Baseline merge failed: the baseline results do not merge (1 problems):\n  oracle non-determinism: ${id} on none: {"outcome":"pass","assertions":{"assertSame":1}} vs ${shown} (listed in ${INVENTORY_DIR}/${NONDETERMINISM_FILE}, but the attempts do not fit its record {"assertSame":1})\n`,
++      ]);
++      expect(fx.inventory()).toEqual({ ...listedBefore, [NONDETERMINISM_FILE]: finding() });
++    }
++    // An unlisted difference next to a listed one still fails.
++    writeAttempts({
++      ...base(result(id, "pass", { assertSame: 2 })),
++      [resultsFile("framework", "none", 2)]: [result(`${QUEUEABLE}::testOnConnection#uses string`, "pass", { assertSame: 3 }), result(id, "pass", { assertSame: 2 })],
++    });
++    const unlisted = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
++    expect([unlisted.code, unlisted.stderr]).toEqual([
++      1,
++      `Baseline merge failed: the baseline results do not merge (1 problems):\n  oracle non-determinism: ${QUEUEABLE}::testOnConnection#uses string on none: {"outcome":"pass","assertions":{"assertSame":2}} vs {"outcome":"pass","assertions":{"assertSame":3}}\n`,
++    ]);
++    // A finding that matches no entry's alpha variant fails closed.
++    writeFileSync(findingsPath, finding({ variant: "sqlite" }));
++    writeAttempts();
++    const stale = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
++    expect([stale.code, stale.stderr]).toEqual([1, `Baseline merge failed: the baseline results do not merge (1 problems):\n  ${INVENTORY_DIR}/${NONDETERMINISM_FILE}: ${id} on sqlite is not an Inventory entry's alpha variant\n`]);
++    expect(fx.inventory()).toEqual({ ...listedBefore, [NONDETERMINISM_FILE]: finding({ variant: "sqlite" }) });
++    rmSync(findingsPath);
++    writeFileSync(join(fx.dir, INVENTORY_DIR, "bus.jsonl"), before["bus.jsonl"]!);
++
+     // Identical attempts: written, and merging again changes nothing.
+     writeAttempts();
+     const ok = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
+@@ -505,6 +566,31 @@ test("XT-conformance-58: two attempts on the same Pin merge into the Inventory w
+     expect(fx.inventory()).toEqual(after);
+   });
+ 
++  // The findings file: one object per line, the attempts' kinds, a record no higher than either attempt.
++  const f = (fields: Record<string, unknown>): string => `${JSON.stringify({ id, variant: "none", attempts: [{ assertSame: 1 }, { assertSame: 2 }], record: { assertSame: 1 }, ...fields })}\n`;
++  expect([...parseFindings(f({}), "f.jsonl").values()]).toEqual([{ id, variant: "none", attempts: [{ assertSame: 1 }, { assertSame: 2 }], record: { assertSame: 1 } }]);
++  for (const [text, message] of [
++    ["{", "f.jsonl:1: malformed JSON"],
++    [`${JSON.stringify({ id, variant: "none", record: {}, attempts: [{}, {}] })}\n`, "f.jsonl:1: expected the keys id, variant, attempts, record"],
++    [f({ id: "" }), "f.jsonl:1: bad id"],
++    [f({ variant: "mysql" }), "f.jsonl:1: variant must be one of"],
++    [f({ attempts: [{ assertSame: 1 }] }), "f.jsonl:1: attempts must be the two observed assertion multisets"],
++    [f({ record: { assertSame: 0 } }), "f.jsonl:1: record must map assert* kinds to positive integers"],
++    [f({ record: { assertSame: 2 } }), "f.jsonl:1: record must have the attempts' kinds and no count above either attempt's"],
++    [f({ record: { assertTrue: 1 } }), "f.jsonl:1: record must have the attempts' kinds and no count above either attempt's"],
++    [f({}) + f({}), `f.jsonl:2: ${id} on none is not sorted after ${id} on none`],
++  ] as const) {
++    expect(() => parseFindings(text, "f.jsonl")).toThrow(message);
++  }
++
++  // The committed findings file holds exactly the ESC-2.6-1 finding, and the Inventory records its pinned floor.
++  const committedFindings = [...parseFindings(readFileSync(join(root, INVENTORY_DIR, NONDETERMINISM_FILE), "utf8"), NONDETERMINISM_FILE).values()];
++  const casting = "Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans";
++  expect(committedFindings).toEqual([{ id: casting, variant: "none", attempts: [{ assertIsBool: 2 }, { assertIsBool: 3 }], record: { assertIsBool: 2 } }]);
++  expect(committed().find((e) => e.id === casting)).toMatchObject({ assertions: { assertIsBool: 2 }, oracle: { none: "pass" } });
++  // It is not a Component's Inventory file.
++  expect(suiteInventoryFiles(root, "framework").map(([component]) => `${component}.jsonl`)).not.toContain(NONDETERMINISM_FILE);
++
+   // The CI run behind the committed files merged without a non-determinism finding: every entry with an alpha
+   // variant carries a complete oracle, which `merge` writes only when both attempts agree everywhere.
+   for (const e of committed()) {
+diff --git a/conformance/tests/xaravel/inventory.test.ts b/conformance/tests/xaravel/inventory.test.ts
+index 9f9f9b4..27460d9 100644
+--- a/conformance/tests/xaravel/inventory.test.ts
++++ b/conformance/tests/xaravel/inventory.test.ts
+@@ -17,6 +17,7 @@ import {
+   INVENTORY_DIR,
+   kindFor,
+   LISTER,
++  NONDETERMINISM_FILE,
+   normaliseTokens,
+   oracleImage,
+   parseInventory,
+@@ -166,7 +167,7 @@ function committed(): Map<string, InventoryEntry[]> {
+   const files = new Map<string, InventoryEntry[]>();
+   for (const name of readdirSync(dir).sort()) {
+     const component = name.replace(/\.jsonl$/, "");
+-    if (name.endsWith(".jsonl") && !FOREIGN_COMPONENTS.includes(component)) {
++    if (name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE && !FOREIGN_COMPONENTS.includes(component)) {
+       files.set(component, parseInventory(readFileSync(join(dir, name), "utf8"), `${INVENTORY_DIR}/${name}`));
+     }
+   }
+diff --git a/docs/ops/baseline.md b/docs/ops/baseline.md
+index 77e7519..9829c14 100644
+--- a/docs/ops/baseline.md
++++ b/docs/ops/baseline.md
+@@ -41,6 +41,21 @@ In local mode (`--local <dir>`) the lister and runner run with a local PHP 8.5.1
+ 
+ On any problem it exits 1 and writes nothing. Otherwise it sets each entry's `oracle` to attempt 1's outcome on each alpha variant, and its `assertions` to each kind's maximum count over those variants (`null` when the entry has no alpha variant). Then it rewrites the Inventory files.
+ 
++### Known non-determinism (`conformance/inventory/oracle-nondeterminism.jsonl`)
++
++Some Upstream tests are random by design, so their assertion counts differ between runs (`decisions/ESC-2.6-1.md`). Each such (test, variant) pair is listed in `conformance/inventory/oracle-nondeterminism.jsonl`, one JSON object per line, sorted by `id` and then `variant`:
++
++```
++{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans","variant":"none","attempts":[{"assertIsBool":2},{"assertIsBool":3}],"record":{"assertIsBool":2}}
++```
++
++- `attempts` holds the two assertion multisets observed when the finding was made.
++- `record` is the multiset `merge` writes: the lowest count Upstream can produce. Its kinds are the attempts' kinds, and none of its counts is above either attempt's. The test above reads a `(bool) mt_rand(0, 1)` accessor in a loop that returns as soon as two reads differ, so it makes at least 2 `assertIsBool` calls when it passes.
++
++For a listed pair, `merge` writes `record` whenever both attempts have the same outcome, `record`'s kinds and no count below `record`'s, even when the two attempts agree. Anything else on a listed pair (an outcome difference, another kind, a lower count) is still `oracle non-determinism: … (listed in conformance/inventory/oracle-nondeterminism.jsonl, but the attempts do not fit its record …)`, and a difference on an unlisted pair fails as before. A listed pair that is not one of an Inventory entry's alpha variants is a problem too, so a finding cannot outlive its test. `merge` fails on a malformed findings file, naming the line.
++
++The file is not a Component's Inventory file: `bun run inventory` never reads, rewrites or deletes it. Add a finding only with a Maintainer-approved Escalation.
++
+ ## Variants and legs
+ 
+ The alpha variants are `none`, `sqlite`, `pgsql`, `redis`, `queue-sync@none`, `queue-database@sqlite` and `queue-redis@redis`. An entry's `oracle` keys are its `backends` intersected with them. `mysql`, `mariadb`, `sqlsrv` and `queue-beanstalkd@beanstalkd` are not run, so an entry tagged only with those gets `"assertions":null,"oracle":{}`.
+@@ -95,7 +110,7 @@ The workflow runs on a pull request to `main` that touches `tools/baseline/**`,
+ After a Pin bump, a lock or image change, a change to `tools/baseline/`, or `bun run inventory` resetting entries to `null`/`{}`:
+ 
+ 1. Push the branch. The `baseline` workflow runs.
+-2. If `merge` reports `oracle non-determinism: …`, the Upstream test is not repeatable at the Pin. Investigate it before going further. Do not commit around it.
++2. If `merge` reports `oracle non-determinism: …`, the Upstream test is not repeatable at the Pin. Investigate it before going further. Do not commit around it: a pinned value in `oracle-nondeterminism.jsonl` needs an approved Escalation, as ESC-2.6-1 was.
+ 3. Download the run's `inventory` artifact, replace `conformance/inventory/` with it, and commit.
+ 4. Push again. The second run's `merge` job must pass `git diff --exit-code`, which shows that the committed data is exactly what the run produced.
+ 
+diff --git a/docs/ops/inventory.md b/docs/ops/inventory.md
+index 4f05ebd..b34a500 100644
+--- a/docs/ops/inventory.md
++++ b/docs/ops/inventory.md
+@@ -42,7 +42,7 @@ Before each provider call, the lister seeds PHP's Mersenne Twister (which Faker
+ - `assertions` maps each PHPUnit assertion kind the test made to a positive count, with keys sorted by UTF-16 code units. A kind is a `public static function assert*` method of `PHPUnit\Framework\Assert`, counted once per outermost call (a call that does not come from `Assert` itself), from `setUp`, the test and `tearDown`. When the test ran on several alpha variants, each count is the maximum over them. The value is `{}` when the test ran but asserted nothing, and `null` when it has not run on an alpha variant.
+ - `oracle` maps each alpha variant the entry is tagged with to `pass`, `skip` or `fail`, with keys sorted. The keys are exactly `backends` intersected with `none`, `sqlite`, `pgsql`, `redis`, `queue-sync@none`, `queue-database@sqlite` and `queue-redis@redis`. The value is `{}` when that intersection is empty (`mysql`, `mariadb`, `sqlsrv` and `beanstalkd` only).
+ 
+-`assertions` and `oracle` come only from the baseline run's `merge` ([baseline.md](baseline.md)). `assertions` is `null` exactly when `oracle` is `{}`.
++`assertions` and `oracle` come only from the baseline run's `merge` ([baseline.md](baseline.md)). `assertions` is `null` exactly when `oracle` is `{}`. For a pair listed in `conformance/inventory/oracle-nondeterminism.jsonl` (known Upstream non-determinism, `decisions/ESC-2.6-1.md`), `assertions` holds that file's pinned `record`. That file is not a Component's file, and generation never reads, writes or deletes it.
+ 
+ **Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. An existing file that does not parse carries nothing over.
+ 
+diff --git a/tools/baseline/baseline.ts b/tools/baseline/baseline.ts
+index b28a949..f174c34 100644
+--- a/tools/baseline/baseline.ts
++++ b/tools/baseline/baseline.ts
+@@ -20,10 +20,13 @@
+ //       conformance/inventory/*.jsonl. Any disagreement prints `oracle
+ //       non-determinism: <id> on <variant>: <attempt 1> vs <attempt 2>`, and
+ //       a missing result names the ID and variant; either exits 1 and writes
+-//       nothing.
++//       nothing. A pair listed in conformance/inventory/oracle-nondeterminism.jsonl
++//       (decisions/ESC-2.6-1.md) whose attempts share an outcome and assertion
++//       kinds, and differ at most in counts no lower than its `record`, gets
++//       that `record` instead.
+ //
+ // The pure parts (`variantsFor`, `planRun`, `collectResults`,
+-// `compareAttempts`, `mergeResults`) are exported for the tests, which need
++// `compareAttempts`, `parseFindings`, `mergeResults`) are exported for the tests, which need
+ // neither PHP nor a container runtime. docs/ops/baseline.md describes the run.
+ //
+ // Exit codes: 0 pass, 1 any failure (fail closed), 2 usage error.
+@@ -37,6 +40,7 @@ import {
+   INVENTORY_DIR,
+   LISTER,
+   listSuite,
++  NONDETERMINISM_FILE,
+   oracleImage,
+   OUTCOMES,
+   PEST_SUITES,
+@@ -55,7 +59,7 @@ import {
+ import { IMAGE_UPSTREAM_DIR, networkedRunArgs, PHP_VERSION, runInImageNetworked, type NetworkedRun } from "../oracle/oracle";
+ import { UPSTREAM_DIR, upstreamPath } from "../upstream/upstream";
+ 
+-export { ALPHA_VARIANTS, networkedRunArgs };
++export { ALPHA_VARIANTS, NONDETERMINISM_FILE, networkedRunArgs };
+ /** The baseline tool directory, relative to the repository root. */
+ export const BASELINE_DIR = "tools/baseline";
+ /** Where image mode mounts tools/baseline. */
+@@ -321,6 +325,94 @@ export function compareAttempts(id: string, variant: string, first: Result, seco
+   return a === b ? null : `oracle non-determinism: ${id} on ${variant}: ${a} vs ${b}`;
+ }
+ 
++/** One listed Oracle non-determinism finding (decisions/ESC-2.6-1.md). */
++export interface Finding {
++  id: string;
++  variant: string;
++  /** The two observed assertion multisets. */
++  attempts: [Record<string, number>, Record<string, number>];
++  /** The multiset to write: the lowest count Upstream can produce. */
++  record: Record<string, number>;
++}
++
++const FINDING_KEYS = "id,variant,attempts,record";
++
++const findingKey = (id: string, variant: string): string => `${id}\u0000${variant}`;
++
++function isMultiset(value: unknown): value is Record<string, number> {
++  return isRecord(value) && Object.entries(value).every(([kind, count]) => KIND.test(kind) && Number.isSafeInteger(count) && (count as number) >= 1);
++}
++
++const sameKinds = (a: Readonly<Record<string, number>>, b: Readonly<Record<string, number>>): boolean =>
++  Object.keys(a).sort(compareUnits).join("\u0000") === Object.keys(b).sort(compareUnits).join("\u0000");
++
++/** True when `observed` has `record`'s kinds and no count below `record`'s. */
++const fitsRecord = (observed: Readonly<Record<string, number>>, record: Readonly<Record<string, number>>): boolean =>
++  sameKinds(observed, record) && Object.entries(record).every(([kind, count]) => observed[kind]! >= count);
++
++/**
++ * Parses the findings file: one `{"id","variant","attempts","record"}` object per line, sorted by id then variant,
++ * each pair once. `variant` is an alpha variant, `attempts` the two observed multisets, and `record` a multiset with
++ * the attempts' kinds and no count above either attempt's. Throws `<file>:<line>: …` on anything else.
++ */
++export function parseFindings(text: string, file: string): Map<string, Finding> {
++  const findings = new Map<string, Finding>();
++  let previous: [string, string] | null = null;
++  text
++    .split("\n")
++    .filter((line) => line !== "")
++    .forEach((line, index) => {
++      const at = `${file}:${index + 1}`;
++      let value: unknown;
++      try {
++        value = JSON.parse(line);
++      } catch (error) {
++        throw new Error(`${at}: malformed JSON: ${error instanceof Error ? error.message : String(error)}`);
++      }
++      if (!isRecord(value) || Object.keys(value).join(",") !== FINDING_KEYS) {
++        throw new Error(`${at}: expected the keys id, variant, attempts, record`);
++      }
++      const { id, variant, attempts, record } = value;
++      if (typeof id !== "string" || id === "") {
++        throw new Error(`${at}: bad id`);
++      }
++      if (typeof variant !== "string" || !ALPHA_VARIANTS.includes(variant)) {
++        throw new Error(`${at}: variant must be one of ${ALPHA_VARIANTS.join(", ")}`);
++      }
++      if (!Array.isArray(attempts) || attempts.length !== 2 || !attempts.every(isMultiset)) {
++        throw new Error(`${at}: attempts must be the two observed assertion multisets`);
++      }
++      if (!isMultiset(record)) {
++        throw new Error(`${at}: record must map assert* kinds to positive integers`);
++      }
++      if (!attempts.every((observed) => fitsRecord(observed, record))) {
++        throw new Error(`${at}: record must have the attempts' kinds and no count above either attempt's`);
++      }
++      if (previous !== null && (compareUnits(previous[0], id) > 0 || (previous[0] === id && compareUnits(previous[1], variant) >= 0))) {
++        throw new Error(`${at}: ${id} on ${variant} is not sorted after ${previous[0]} on ${previous[1]}`);
++      }
++      previous = [id, variant];
++      findings.set(findingKey(id, variant), {
++        id,
++        variant,
++        attempts: [sortedRecord(attempts[0]), sortedRecord(attempts[1])],
++        record: sortedRecord(record),
++      });
++    });
++  return findings;
++}
++
++/**
++ * The multiset to write for a listed pair, or null when the two attempts do not fit the finding: they differ in
++ * outcome, or either has other kinds than `record` or a count below it.
++ */
++function listedRecord(finding: Finding, first: Result, second: Result): Record<string, number> | null {
++  if (first.outcome !== second.outcome) {
++    return null;
++  }
++  return fitsRecord(first.assertions, finding.record) && fitsRecord(second.assertions, finding.record) ? finding.record : null;
++}
++
+ /** Looks up a leg attempt's results; null when its file is missing. */
+ export type ResultsLookup = (suite: Suite, variant: string, attempt: 1 | 2) => ReadonlyMap<string, Result> | null;
+ 
+@@ -333,11 +425,13 @@ export interface MergeOutcome {
+ 
+ /**
+  * Sets each entry's `oracle` (alpha variant to attempt 1's outcome) and `assertions` (each kind's maximum over
+- * those variants; null without one) from the two attempts. Reports every disagreement, every missing result
+- * and every result that matches no tagged entry.
++ * those variants; null without one) from the two attempts. A pair in `findings` contributes the finding's
++ * `record` instead, when both attempts fit it. Reports every other disagreement, every missing result, every
++ * result that matches no tagged entry and every finding that matches no entry's alpha variant.
+  */
+-export function mergeResults(entries: readonly InventoryEntry[], lookup: ResultsLookup): MergeOutcome {
++export function mergeResults(entries: readonly InventoryEntry[], lookup: ResultsLookup, findings: ReadonlyMap<string, Finding> = new Map()): MergeOutcome {
+   const problems: string[] = [];
++  const listed = new Set<string>();
+   const used = new Map<string, Set<string>>();
+   const missingFiles = new Map<string, { first: string; count: number }>();
+   const merged = entries.map((entry): InventoryEntry => {
+@@ -375,13 +469,25 @@ export function mergeResults(entries: readonly InventoryEntry[], lookup: Results
+       if (attempts.length !== 2) {
+         continue;
+       }
+-      const difference = compareAttempts(entry.id, variant, attempts[0]!, attempts[1]!);
+-      if (difference !== null) {
+-        problems.push(difference);
+-        continue;
++      const finding = findings.get(findingKey(entry.id, variant));
++      let recorded: Record<string, number> = attempts[0]!.assertions;
++      if (finding !== undefined) {
++        listed.add(findingKey(entry.id, variant));
++        const record = listedRecord(finding, attempts[0]!, attempts[1]!);
++        if (record === null) {
++          problems.push(`oracle non-determinism: ${entry.id} on ${variant}: ${renderAttempt(attempts[0]!)} vs ${renderAttempt(attempts[1]!)} (listed in ${INVENTORY_DIR}/${NONDETERMINISM_FILE}, but the attempts do not fit its record ${JSON.stringify(finding.record)})`);
++          continue;
++        }
++        recorded = record;
++      } else {
++        const difference = compareAttempts(entry.id, variant, attempts[0]!, attempts[1]!);
++        if (difference !== null) {
++          problems.push(difference);
++          continue;
++        }
+       }
+       oracle[variant] = attempts[0]!.outcome;
+-      for (const [kind, count] of Object.entries(attempts[0]!.assertions)) {
++      for (const [kind, count] of Object.entries(recorded)) {
+         assertions[kind] = Math.max(assertions[kind] ?? 0, count);
+       }
+     }
+@@ -401,6 +507,11 @@ export function mergeResults(entries: readonly InventoryEntry[], lookup: Results
+       }
+     }
+   }
++  for (const finding of findings.values()) {
++    if (!listed.has(findingKey(finding.id, finding.variant))) {
++      problems.push(`${INVENTORY_DIR}/${NONDETERMINISM_FILE}: ${finding.id} on ${finding.variant} is not an Inventory entry's alpha variant`);
++    }
++  }
+   return { entries: merged, problems };
+ }
+ 
+@@ -424,7 +535,9 @@ export function merge(root: string, inDir: string): MergeResult {
+     return cache.get(name)!;
+   };
+   const entries = SUITES.flatMap((suite) => readSuiteInventory(root, suite));
+-  const { entries: merged, problems } = mergeResults(entries, lookup);
++  const findingsPath = join(root, INVENTORY_DIR, NONDETERMINISM_FILE);
++  const findings = existsSync(findingsPath) ? parseFindings(readFileSync(findingsPath, "utf8"), `${INVENTORY_DIR}/${NONDETERMINISM_FILE}`) : new Map<string, Finding>();
++  const { entries: merged, problems } = mergeResults(entries, lookup, findings);
+   if (problems.length > 0) {
+     throw new Error(`the baseline results do not merge (${problems.length} problems):\n${problems.map((line) => `  ${line}`).join("\n")}`);
+   }
+diff --git a/tools/inventory/inventory.ts b/tools/inventory/inventory.ts
+index 1519056..72fbfd1 100644
+--- a/tools/inventory/inventory.ts
++++ b/tools/inventory/inventory.ts
+@@ -49,6 +49,11 @@ export const INVENTORY_DIR = "conformance/inventory";
+ export const LISTER = "tools/inventory/lister.php";
+ /** Inventory files the framework generation never writes or deletes (the Pest suites' files). */
+ export const FOREIGN_COMPONENTS: readonly string[] = ["ai", "boost", "mcp"];
++/**
++ * The Oracle non-determinism findings file in the Inventory directory (Story 2.6, decisions/ESC-2.6-1.md). It is
++ * not a Component's Inventory file: generation never reads, writes or deletes it.
++ */
++export const NONDETERMINISM_FILE = "oracle-nondeterminism.jsonl";
+ /** The Pest suites, in generation order; each is its own Component. */
+ export const PEST_SUITES = ["ai", "mcp", "boost"] as const;
+ export type PestSuite = (typeof PEST_SUITES)[number];
+@@ -588,7 +593,7 @@ export function suiteInventoryFiles(root: string, suite: Suite): [string, string
+     return [];
+   }
+   return readdirSync(dir)
+-    .filter((name) => name.endsWith(".jsonl"))
++    .filter((name) => name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE)
+     .map((name) => name.slice(0, -".jsonl".length))
+     .filter((component) => (suite === "framework" ? !FOREIGN_COMPONENTS.includes(component) : component === suite))
+     .sort(compareUnits)
+@@ -717,7 +722,7 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
+     if (suite === "framework") {
+       for (const name of readdirSync(dir).sort(compareUnits)) {
+         const component = name.replace(/\.jsonl$/, "");
+-        if (name.endsWith(".jsonl") && !files.has(component) && !FOREIGN_COMPONENTS.includes(component)) {
++        if (name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE && !files.has(component) && !FOREIGN_COMPONENTS.includes(component)) {
+           rmSync(join(dir, name));
+           result.removed.push(`${INVENTORY_DIR}/${name}`);
+         }
