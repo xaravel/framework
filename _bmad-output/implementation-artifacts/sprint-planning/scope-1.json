@@ -1,0 +1,736 @@
+[
+  {
+    "story": "9.1",
+    "title": "Scope Frame primitive and `interleave`",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`@xaravel/runtime/scope`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "two units started with `interleave([a, b])`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "code with no active frame",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the `@xaravel/runtime` package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "9.2",
+    "title": "Frame kinds, defer list and context propagation",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a narrow frame that declares slots `x` and `y`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a child unit opened inside a `test` frame",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a unit whose `defer` list holds pending Promises",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "a frame active when a stream body, an async-generator body, a direct stream or a timer is created",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "9.3",
+    "title": "Per-Application overlays and `frameStatic`",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "two Application objects (fixtures) and one frame",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`frameStatic(Class, key)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`currentFrame()?.app`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "9.4",
+    "title": "Class Registry and `fqcn()`",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`registerClass('App\\\\Models\\\\Post', Post)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "an unregistered name",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a different class registered under an existing key",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "a PSR-4 map from `package.json` (`xaravel.autoload.psr-4`)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "9.5",
+    "title": "`PhpArray`, `Ref`, float marker and null normalisation",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a `PhpArray` built with keys `\"1\"`, `\"01\"`, `1.7`, `true` and `null`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a `PhpArray` whose keys are `0..n-1` in order",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`Ref<T>`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "a value from PHP that is a float with an integral value",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 5,
+        "given": "`normalizeNull(v)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 6,
+        "given": "`hasBrand(ClassOrInstance, Token)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 is an Oracle Differential Xaravel Test (Oracle fixtures), not an Upstream selector."
+  },
+  {
+    "story": "9.6",
+    "title": "PHP semantics helpers",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the Oracle truth tables for `==`, `<=>`, `is_numeric`, casts over scalars, numeric strings, ...",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`valueCopy(x)` on a nested array or `PhpArray`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 is an Oracle Differential Xaravel Test."
+  },
+  {
+    "story": "9.7",
+    "title": "`phpSerialize` / `phpUnserialize` codec",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "Oracle fixtures of `serialize()` over ints, floats, bools, null, UTF-8 strings, lists/maps, objects",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "those fixtures (phpUnserialize)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`phpUnserialize(s, { allowedClasses: [...] })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Oracle Differential Xaravel Tests (Story 3.4 requests)."
+  },
+  {
+    "story": "9.8",
+    "title": "`jsonEncode` / `jsonDecode` with PHP flag semantics",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "Oracle fixtures for `json_encode` with JSON_* flags and their combinations",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "an object branded with the `JsonSerializable`, `Arrayable` or `Jsonable` brand",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a `bigint`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`jsonDecode(s, assoc)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 is an Oracle Differential Xaravel Test."
+  },
+  {
+    "story": "9.9",
+    "title": "`mixin`, traits and `inject` metadata",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`class X extends mixin(Base, TraitA, TraitB)`, traits registered under Upstream FQCNs",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "trait methods `boot<Trait>` and `initialize<Trait>`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "the runtime has loaded",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`inject({ a: Foo, b: String })` as a TC39 class or method decorator, or `inject(map, fn)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "9.10",
+    "title": "PHP exception hierarchy",
+    "component": "runtime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the runtime",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`new InvalidArgumentException('m', 5, previous)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "the runtime package (Epic close: docs and async-surface.json)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "10.1",
+    "title": "Token, brand and `contract<T>()` mechanism",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a contract token `Arrayable`, with brand `Symbol.for('Illuminate\\\\Contracts\\\\Support\\\\Arrayable')`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a class that `implements Arrayable` without the brand getter",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`contract<T>('App\\\\Contracts\\\\Billing')`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`@xaravel/contracts/psr`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC2 is a compile-failure check (tsc), verified by an XT."
+  },
+  {
+    "story": "10.2",
+    "title": "Port the contracts for the core and service namespaces",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "each `Illuminate\\Contracts\\<Ns>\\*` interface in those namespaces at the Pin",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "an Upstream contract that names a concrete class, such as `Collection`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "the API-surface diff for those namespaces",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "10.3",
+    "title": "Port the contracts for the web and application namespaces",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "each remaining `Illuminate\\Contracts\\<Ns>\\*` interface at the Pin",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "the API-surface diff for all of `Illuminate\\Contracts`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "10.4",
+    "title": "Container alias table and canonical tokens",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`@xaravel/contracts/aliases`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a service with several aliases",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "an alias with no canonical contract",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "10.5",
+    "title": "Xaravel-only contracts",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`@xaravel/contracts/async`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`@xaravel/contracts/view`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`@xaravel/contracts/testing`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 also requires the async-surface tool (Story 6.4, Protected tooling) to read its thenable list from contracts; that edit is outside packages/contracts and may need an Infrastructure Story."
+  },
+  {
+    "story": "10.6",
+    "title": "Contracts complete and Protected",
+    "component": "contracts",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`packages/contracts`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "the Phase 1 acceptance decision `decisions/PHASE-1-EXIT.md`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC2 depends on the Maintainer merging PHASE-1-EXIT.md and the protected-paths check (Protected Path); it is a process/CI check rather than a package test."
+  },
+  {
+    "story": "11.1",
+    "title": "Macroable trait",
+    "component": "macroable",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Support/SupportMacroableTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Support/SupportMacroableTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`Macroable` as a runtime trait (`mixin(Base, Macroable)`)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "an Application that is `sealed`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package (Epic close: api-surface gate, docs)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Base dir conformance/upstream/framework/; selector already has tests/ prefix. File exists. AC3 (sealed Application) needs a Foundation Application; an XT may need fixtures since Foundation is later-Phase."
+  },
+  {
+    "story": "12.1",
+    "title": "Conditionable trait",
+    "component": "conditionable",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Conditionable/**` and `tests/Support/SupportConditionableTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Conditionable/**::*",
+          "framework/tests/Support/SupportConditionableTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`when(value, callback, default)`, where `value` is a closure",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "an async callback",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package (Epic close: api-surface gate, docs, async-surface.json)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "`tests/Conditionable/**` contains only ConditionableTest.php. Both files exist."
+  },
+  {
+    "story": "13.1",
+    "title": "Reflector and ReflectsClosures",
+    "component": "reflection",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Support/SupportReflectorTest.php::*` and `tests/Support/SupportReflectsClosuresTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Support/SupportReflectorTest.php::*",
+          "framework/tests/Support/SupportReflectsClosuresTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a closure or method declared with `inject({ event: OrderShipped })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a closure with no `inject` declaration",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "a test that depends on PHP-runtime reflection with no TypeScript analogue",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 5,
+        "given": "the package (Epic close: api-surface gate, docs)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Both files exist. AC2 and AC4 concern adaptation/classification of tests within the AC1 scope; judged xt (no own selector) to avoid double-claiming."
+  }
+]
