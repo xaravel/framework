@@ -1,0 +1,6 @@
+# Project overrides for bmad-build-auto (merged over the skill's customize.toml).
+
+[workflow]
+
+# Cross-epic lessons from retrospectives, kept by the orchestrator.
+persistent_facts = ["file:_bmad-output/implementation-artifacts/lessons.md"]
