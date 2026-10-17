@@ -51,7 +51,7 @@ development_status:
   2-2-oracle-container-image: done
   2-3-test-directory-component-map: done
   2-4-phpunit-test-inventory-for-laravel-framework: done
-  2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: backlog
+  2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: in-progress
   2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: backlog
   2-7-inventory-determinism-and-runner-listing-cross-check: backlog
   2-8-baseline-pin-bump-tool: backlog
