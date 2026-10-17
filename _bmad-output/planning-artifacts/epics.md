@@ -2793,7 +2793,7 @@ So that I escalate instead of guessing (FR-114, UJ-4, NFR-10).
 
 **Acceptance Criteria:**
 
-**Given** the repository's agent instructions (`AGENTS.md`, plus `CLAUDE.md` pointing to it)
+**Given** the repository's agent instructions (`AGENTS.md`; no `CLAUDE.md`, which would stop Claude Code reading `AGENTS.md`), written outside its `bmad:context` managed block
 **When** they are read
 **Then** they describe the loop: read the Story manifest, `PORTING.md` and the relevant DIVs; translate the tests; run `harness --fast --story`; implement; update your own Expectations lines; run the full Story tests; open the PR.
 
