@@ -176,7 +176,7 @@ function committed(): Map<string, InventoryEntry[]> {
 // ---------------------------------------------------------------------------
 // XT-conformance-49
 
-test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash} line per runner-listed test, and fails closed (FR-1)", async () => {
+test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
   await withFixture(async (fx) => {
     // Foreign files are never touched; a framework Component no longer generated is deleted.
     writeFiles(join(fx.dir, INVENTORY_DIR), { "ai.jsonl": "ai stays\n", "mcp.jsonl": "mcp stays\n", "boost.jsonl": "boost stays\n", "routing.jsonl": "stale\n" });
@@ -198,8 +198,8 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
     expect(support.endsWith("\n")).toBe(true);
     const lines = support.slice(0, -1).split("\n");
     expect(lines.map((line) => JSON.parse(line).id)).toEqual([`${STR}::testAscii#0`, `${STR}::testAscii#1`, `${STR}::testInherited`]);
-    expect(Object.keys(JSON.parse(lines[0]!))).toEqual(["id", "component", "kind", "backends", "source", "hash"]);
-    expect(JSON.parse(lines[0]!)).toEqual({ id: `${STR}::testAscii#0`, component: "support", kind: "unit", backends: ["none"], source: "framework/tests/Support/SupportStrTest.php:10-14", hash: testHash(TOKENS, "[0=>'a']") });
+    expect(Object.keys(JSON.parse(lines[0]!))).toEqual(["id", "component", "kind", "backends", "source", "hash", "assertions", "oracle"]);
+    expect(JSON.parse(lines[0]!)).toEqual({ id: `${STR}::testAscii#0`, component: "support", kind: "unit", backends: ["none"], source: "framework/tests/Support/SupportStrTest.php:10-14", hash: testHash(TOKENS, "[0=>'a']"), assertions: null, oracle: {} });
     // An inherited method's source is its declaring file; its id uses the concrete class.
     expect(JSON.parse(lines[2]!).source).toBe("framework/tests/Support/Concerns/BaseTests.php:3-7");
     expect(parseInventory(support, "support.jsonl").length).toBe(3);
@@ -301,7 +301,7 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
   });
 
   // parseInventory fails closed on malformed, unsorted or misordered lines.
-  const line = '{"id":"A\\\\BTest::testX","component":"support","kind":"unit","backends":["none"],"source":"framework/tests/BTest.php:1-2","hash":"' + "0".repeat(64) + '"}';
+  const line = '{"id":"A\\\\BTest::testX","component":"support","kind":"unit","backends":["none"],"source":"framework/tests/BTest.php:1-2","hash":"' + "0".repeat(64) + '","assertions":null,"oracle":{}}';
   expect(parseInventory(`${line}\n`, "f").length).toBe(1);
   expect(() => parseInventory(line, "f")).toThrow("f: the file must end with a newline");
   expect(() => parseInventory(`${line}\n${line}\n`, "f")).toThrow("f:2: A\\BTest::testX is not sorted after");

@@ -214,7 +214,7 @@ function ids(text: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-53
 
-test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
+test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
   await withFixture(async (fx) => {
     writeFiles(join(fx.dir, INVENTORY_DIR), { "routing.jsonl": "framework stays\n", "ai.jsonl": "ai stays\n", "boost.jsonl": "boost stays\n" });
 
@@ -239,8 +239,8 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
       'mcp/tests/Feature/CompletionTest.php::it takes a dataset#dataset "a"',
     ]);
     const entries = parseInventory(mcp, "mcp.jsonl", "mcp");
-    expect(Object.keys(JSON.parse(mcp.split("\n")[1]!))).toEqual(["id", "component", "kind", "backends", "source", "hash"]);
-    expect(entries[1]).toEqual({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", component: "mcp", kind: "unit", backends: ["none"], source: "mcp/tests/Feature/CompletionTest.php:10-14", hash: testHash(TOKENS, null) });
+    expect(Object.keys(JSON.parse(mcp.split("\n")[1]!))).toEqual(["id", "component", "kind", "backends", "source", "hash", "assertions", "oracle"]);
+    expect(entries[1]).toEqual({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", component: "mcp", kind: "unit", backends: ["none"], source: "mcp/tests/Feature/CompletionTest.php:10-14", hash: testHash(TOKENS, null), assertions: null, oracle: {} });
     // A closure-less arch() test: its statement's lines and tokens.
     expect(entries[0]!.source).toBe("mcp/tests/ArchTest.php:7-9");
     expect(entries[0]!.hash).toBe(testHash(ARCH_TOKENS, null));
@@ -354,7 +354,7 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
   });
 
   // parseInventory with a suite: ids, Component and source belong to that suite.
-  const line = (id: string, component: string, source: string): string => JSON.stringify({ id, component, kind: "unit", backends: ["none"], source, hash: "0".repeat(64) });
+  const line = (id: string, component: string, source: string): string => JSON.stringify({ id, component, kind: "unit", backends: ["none"], source, hash: "0".repeat(64), assertions: null, oracle: {} });
   expect(parseInventory(`${line("ai/tests/XTest.php::it x", "ai", "ai/tests/XTest.php:1-2")}\n`, "f", "ai").length).toBe(1);
   expect(() => parseInventory(`${line("ai/tests/XTest.php::it x", "ai", "framework/tests/XTest.php:1-2")}\n`, "f", "ai")).toThrow("f:1: bad source");
   expect(() => parseInventory(`${line("mcp/tests/XTest.php::it x", "ai", "ai/tests/XTest.php:1-2")}\n`, "f", "ai")).toThrow("f:1: bad id");

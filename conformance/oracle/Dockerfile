@@ -1,6 +1,7 @@
 # The Oracle image (Story 2.2, FR-6, OQ-9): PHP 8.5.11 and the Upstream
 # snapshot, each directory with its locked dev dependencies (PHPUnit, Pest,
-# Mockery, Orchestra Testbench).
+# Mockery, Orchestra Testbench), plus pdo_pgsql and phpredis for the baseline
+# run.
 #
 # Build it from the repository root, after `bun run upstream:sync`:
 #
@@ -26,13 +27,19 @@ LABEL org.opencontainers.image.source="https://github.com/xaravel/framework" \
 
 # The locks need gmp (laravel/framework's require-dev) and ftp
 # (league/flysystem-ftp) beyond the official image's extensions; unzip and git
-# let Composer unpack and, as a fallback, clone packages.
+# let Composer unpack and, as a fallback, clone packages. The baseline run
+# (Story 2.6, docs/ops/baseline.md) needs pdo_pgsql for the pgsql variant and
+# phpredis, pinned, for the redis variants.
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends git unzip libgmp-dev; \
-    docker-php-ext-install -j"$(nproc)" gmp; \
+    apt-get install -y --no-install-recommends git unzip libgmp-dev libpq-dev; \
+    docker-php-ext-install -j"$(nproc)" gmp pdo_pgsql; \
     if ! php -m | grep -qix ftp; then docker-php-ext-install -j"$(nproc)" ftp; fi; \
-    rm -rf /var/lib/apt/lists/*
+    pecl install redis-6.3.0; \
+    docker-php-ext-enable redis; \
+    php -m | grep -qix pdo_pgsql; \
+    php -m | grep -qix redis; \
+    rm -rf /var/lib/apt/lists/* /tmp/pear
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
