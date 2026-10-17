@@ -115,7 +115,7 @@ interface Fixture {
 async function withFixture(body: (fx: Fixture) => Promise<void> | void): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-inventory-checks-"));
   try {
-    for (const file of ["tools/scaffold/packages.jsonl", COMPONENT_MAP_FILE, LISTER, "conformance/baseline-pin", ...["framework", "ai", "mcp", "boost"].map((name) => `conformance/oracle/locks/${name}/composer.lock`)]) {
+    for (const file of ["tools/scaffold/packages.jsonl", COMPONENT_MAP_FILE, LISTER, "conformance/baseline-pin", "conformance/oracle/Dockerfile", "conformance/oracle/Dockerfile.dockerignore", ...["framework", "ai", "mcp", "boost"].map((name) => `conformance/oracle/locks/${name}/composer.lock`)]) {
       mkdirSync(dirname(join(dir, file)), { recursive: true });
       copyFileSync(join(root, file), join(dir, file));
     }

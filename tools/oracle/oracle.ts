@@ -10,7 +10,8 @@
 //       `composer update`, its root-version list equal to the Pin), then
 //       prints the image tag.
 //   bun tools/oracle/oracle.ts tag [--root <dir>]
-//       prints the image tag, `<framework tag>-<lockhash>`, offline
+//       prints the image tag, `<framework tag>-<imagehash>`, offline
+//       (the hash covers the locks, the Dockerfile and its dockerignore)
 //   bun tools/oracle/oracle.ts lock [--composer <bin>] [--root <dir>]
 //       regenerates every lock with `composer update --no-install` in a temp
 //       copy of the snapshot's composer.json, for PHP 8.5.11 (set in a temp
@@ -477,22 +478,40 @@ export function checkDockerfile(root: string): string[] {
   return problems;
 }
 
-/** The first 12 hex characters of the SHA-256 of the four locks' bytes, in pin order. */
-export function lockHash(root: string): string {
+/**
+ * The first 12 hex characters of the SHA-256 of the four locks in pin order,
+ * then the Dockerfile, then its dockerignore, so a change to any of them gets
+ * a new tag. Each input is hashed as
+ * `<repository-relative path>\0<byte length>\0<bytes>`, so no byte can move
+ * across a file boundary unnoticed.
+ */
+export function imageHash(root: string): string {
   const hash = createHash("sha256");
+  const add = (relative: string, bytes: Buffer): void => {
+    hash.update(`${relative}\0${bytes.length}\0`);
+    hash.update(bytes);
+  };
   for (const entry of readPin(root)) {
+    const relative = `${LOCKS_DIR}/${entry.name}/composer.lock`;
     const file = lockPath(root, entry.name);
     if (!existsSync(file)) {
-      throw new Error(`${LOCKS_DIR}/${entry.name}/composer.lock is missing; ${LOCK_HINT}`);
+      throw new Error(`${relative} is missing; ${LOCK_HINT}`);
     }
-    hash.update(readFileSync(file));
+    add(relative, readFileSync(file));
+  }
+  for (const relative of [DOCKERFILE, `${DOCKERFILE}.dockerignore`]) {
+    const file = join(root, relative);
+    if (!existsSync(file)) {
+      throw new Error(`${relative} is missing; the image tag hashes it, restore it from git`);
+    }
+    add(relative, readFileSync(file));
   }
   return hash.digest("hex").slice(0, 12);
 }
 
-/** The image tag: `<framework tag>-<lockhash>`. */
+/** The image tag: `<framework tag>-<imagehash>`. */
 export function imageTag(root: string): string {
-  return `${frameworkTag(root)}-${lockHash(root)}`;
+  return `${frameworkTag(root)}-${imageHash(root)}`;
 }
 
 /** Regenerates every lock with Composer; needs PHP, Composer and the network. */
