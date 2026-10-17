@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'blocked'
+status: 'ready-for-dev'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -48,7 +48,7 @@ deferred:
 - **Run and mapping.**
   - `run` writes `<out>/<suite>.<variant>.<attempt>.jsonl` with lines `{"id","outcome","assertions"}`, using Inventory IDs and sorted by id. A Pest suite's PHPUnit IDs map to Inventory IDs through a lister run and `inventory.ts`'s Pest ID logic.
   - `run` fails closed when a tagged ID gets no outcome, an outcome arrives for an unlisted test, the PHP version is wrong, or the recorder never loaded.
-- **Merge.** `merge` needs attempts 1 and 2 for every (entry, alpha variant). Any difference between the two attempts in outcome or assertions prints `oracle non-determinism: <id> on <variant>: <attempt 1> vs <attempt 2>` and exits 1 without writing anything. A missing result also exits 1, naming the ID and variant.
+- **Merge.** `merge` needs attempts 1 and 2 for every (entry, alpha variant). Any difference between the two attempts in outcome or assertions prints `oracle non-determinism: <id> on <variant>: <attempt 1> vs <attempt 2>` and exits 1 without writing anything, unless that (id, variant) is listed in `conformance/inventory/oracle-nondeterminism.jsonl` (one JSON object per line: `id`, `variant`, `attempts` (both observed multisets), `record` (the multiset to write, the lowest count Upstream can produce)). For a listed pair whose two attempts each differ only in assertion counts, with the same outcome and the same assertion kinds, `merge` writes `record` instead (decisions/ESC-2.6-1.md). A listed pair that differs in outcome, or an unlisted difference, still exits 1. A missing result also exits 1, naming the ID and variant.
 - **Preserving the fields.** `bun run inventory` carries `assertions` and `oracle` over for each entry whose `id`, `hash` and `backends` are all unchanged. Any other entry gets `null` and `{}`.
 - **Image.** The image gains `pdo_pgsql` and the pinned `pecl redis`. The baseline goes through `tools/oracle` (a new networked runner: `--network host`, `--env`, read-only tool mounts and a read-write output mount). Docker stays behind `tools/oracle`.
 - **Workflow.** `.github/workflows/baseline.yml` has `permissions: contents: read`, SHA-pinned actions, and triggers `pull_request` (on paths `tools/baseline/**`, `tools/oracle/**`, `conformance/oracle/**`, its own file) and `workflow_dispatch`.
@@ -72,6 +72,8 @@ deferred:
 | Non-alpha only | backends `["mysql"]` | `"assertions":null,"oracle":{}` | — |
 | Mixed | backends `["mariadb","mysql","sqlite"]` | `oracle` has only `sqlite` | — |
 | Attempts differ | attempt 2 has assertSame 3 | `oracle non-determinism: <id> on none: …` | exit 1, no write |
+| Listed finding | attempts `assertIsBool` 2 vs 3, listed with `record` `{"assertIsBool":2}` | Inventory records `{"assertIsBool":2}` | — (decisions/ESC-2.6-1.md) |
+| Listed, outcome differs | listed pair, attempt 2 `fail` | `oracle non-determinism: …` | exit 1, no write |
 | Missing result | no attempt-2 file or ID | names ID and variant | exit 1, no write |
 | Regenerate | `bun run inventory`, unchanged test | fields preserved byte-for-byte | — |
 | Changed test | new hash | `null` / `{}` | — |
@@ -119,9 +121,11 @@ deferred:
 **Acceptance Criteria:**
 - Given the baseline workflow with Postgres 18 and Redis 8.10.2 services, when it runs every leg in the Oracle image with the recorder, then every committed Inventory entry has `assertions` and `oracle`, and `oracle`'s keys are exactly its alpha variants. Every `pgsql`, `redis` and `queue-redis@redis` entry has a recorded outcome, and `merge` reproduces the committed files (XT-conformance-56).
 - Given a test that Upstream skips or fails on a variant, when results are merged, then that variant's value is `skip` or `fail`. The 8 `Illuminate\Tests\Integration\Database\Sqlite\SchemaBuilderSchemaNameTest` IDs from ESC-2.4-1 are not `pass` on `sqlite` (XT-conformance-57).
-- Given two attempts on the same Pin, when merged, then identical attempts write the Inventory, and any difference is reported as `oracle non-determinism: …` with exit 1. The CI run behind the committed files reported none (XT-conformance-58).
+- Given two attempts on the same Pin, when merged, then identical attempts write the Inventory, and any difference is reported as `oracle non-determinism: …` with exit 1, except a listed finding in `conformance/inventory/oracle-nondeterminism.jsonl`, which writes its pinned `record`. The CI run behind the committed files reported none (XT-conformance-58).
 
 ## Spec Change Log
+
+- 2026-10-17: ESC-2.6-1 approved by the Maintainer (`decisions/ESC-2.6-1.md`, option 1). Known Upstream non-determinism goes into `conformance/inventory/oracle-nondeterminism.jsonl` with the multiset to record, which is the lowest count Upstream can produce. For `DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans` on `none`, that is `{"assertIsBool":2}`. `merge` writes that value for a listed pair and still fails on anything unlisted, or on an outcome difference. The Merge rule, two matrix rows and the AC 3 line changed to match. KEEP: the implementation on branch `planning/story-2.6-attempt` (`spec-2-6-attempt.patch`), including the Inventory re-listed inside the Oracle image (16267 framework Test IDs with phpredis). Status set from `blocked` to `ready-for-dev`.
 
 ## Review Triage Log
 
