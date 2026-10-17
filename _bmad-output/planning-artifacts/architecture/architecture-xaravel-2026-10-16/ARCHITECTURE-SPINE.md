@@ -369,6 +369,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
     - `tools/`;
     - `packages/assert`, `packages/mockery` and `packages/contracts` (contracts after Phase 1);
     - the root `package.json`, `bun.lock`, the root `bunfig.toml`, the root `tsconfig*.json` and `tsconfig.base.json`, `.oxlintrc.json` and `.gitattributes`. Package `tsconfig.json` files are generated and checked (AD-2).
+    - the agent instructions: `AGENTS.md`, and `**/CLAUDE.md` (none may exist; one would stop Claude Code reading `AGENTS.md`).
   - **Enforcement.** A GitHub ruleset on `main` requires the `protected-paths` and `ratchet` checks. They come from workflows pinned to the default branch (`pull_request_target`, which treats the PR diff as data only), so a PR cannot change its own checks. A change to a Protected Path needs Maintainer Code Owner review. That review is the Infrastructure Story approval and replaces any label.
   - **Permissions.** Workflows default to `permissions: contents: read`. Write scopes are granted per job to the Oracle, dashboard and release jobs only. Agents push with an identity limited to `story/*` branches, with no ruleset bypass.
   - **Disabling lint.** An `oxlint-disable` of any rule this spine names fails CI.
