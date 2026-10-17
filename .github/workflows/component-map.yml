@@ -1,0 +1,41 @@
+# The test-directory -> Component map check (Story 2.3, FR-1, AD-16).
+#
+# `check` fetches the Upstream snapshot at the Baseline Pin, verifies its tree
+# hashes, then validates `conformance/component-map` against it
+# (`component-map:check`): every test file the runners select maps to exactly
+# one Component, and the FQCN and container-alias records match what the
+# snapshot declares. It then runs the component-map Xaravel Tests, whose
+# snapshot-backed assertions run only when the snapshot is present. It runs in
+# the merge queue too, so the queue never stalls on it.
+name: component-map
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
+      - name: Check the Upstream snapshot
+        run: bun run upstream:check
+      - name: Check the component map
+        run: bun run component-map:check
+      - name: Run the component-map Xaravel Tests against the snapshot
+        run: bun test conformance/tests/xaravel/component-map.test.ts
