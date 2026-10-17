@@ -16,7 +16,8 @@
     "tools/workflow-permissions/**/*.ts",
     "tools/release/**/*.ts",
     "tools/upstream/**/*.ts",
-    "tools/oracle/**/*.ts"
+    "tools/oracle/**/*.ts",
+    "tools/component-map/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

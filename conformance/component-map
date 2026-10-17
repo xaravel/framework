@@ -1,0 +1,64 @@
+# The test-directory -> Component map (Story 2.3, FR-1). Protected Path (AD-16):
+# a change lands only with the Maintainer's Code Owner review, which signs off
+# every entry. Validate it with `bun run component-map:check`.
+#
+# Format: one JSON record per Component, sorted by `component`, every array
+# sorted; `#` lines are ignored.
+#   {"component","tests":[{"path","tags":[]}],"namespaces":[],"classes":[],"aliases":[]}
+#
+# `component` is a `name` in tools/scaffold/packages.jsonl. A test path is
+# relative to conformance/upstream/ and starts with the repository name. It is
+# an exact file, a directory prefix ending in `/`, or a name prefix ending in
+# `*`. Precedence: a file belongs to its most specific matching entry, an exact
+# file first, then the longest prefix. Two entries with the same prefix doubly
+# map a file; a file no entry matches is unmapped; an entry that matches no
+# test file is stale; an entry overriding one with the same Component and tags
+# is redundant. All four fail the check. Tags are `deferred:<item>`.
+#
+# A Component owns the namespace prefixes in `namespaces` and the exact FQCNs
+# in `classes` (an exact class first, then the longest namespace). The shared
+# `Illuminate\Support\` namespace belongs to support; collections,
+# conditionable, macroable and reflection list their own declarations.
+# `aliases` are the container keys the Component's providers bind, plus the
+# core aliases no provider binds, owned by their first FQCN.
+{"component":"ai","tests":[{"path":"ai/tests/","tags":[]}],"namespaces":["Laravel\\Ai\\"],"classes":[],"aliases":[]}
+{"component":"auth","tests":[{"path":"framework/tests/Auth/","tags":[]},{"path":"framework/tests/Integration/Auth/","tags":[]}],"namespaces":["Illuminate\\Auth\\"],"classes":[],"aliases":["auth","auth.driver","auth.password","auth.password.broker"]}
+{"component":"boost","tests":[{"path":"boost/tests/","tags":[]}],"namespaces":["Laravel\\Boost\\"],"classes":[],"aliases":[]}
+{"component":"broadcasting","tests":[{"path":"framework/tests/Broadcasting/","tags":[]},{"path":"framework/tests/Integration/Broadcasting/","tags":[]}],"namespaces":["Illuminate\\Broadcasting\\"],"classes":[],"aliases":[]}
+{"component":"bus","tests":[{"path":"framework/tests/Bus/","tags":[]}],"namespaces":["Illuminate\\Bus\\"],"classes":[],"aliases":[]}
+{"component":"cache","tests":[{"path":"framework/tests/Cache/","tags":[]},{"path":"framework/tests/Integration/Cache/","tags":[]}],"namespaces":["Illuminate\\Cache\\"],"classes":[],"aliases":["cache","cache.psr6","cache.store","memcached.connector"]}
+{"component":"collections","tests":[{"path":"framework/tests/Support/SupportArrTest.php","tags":[]},{"path":"framework/tests/Support/SupportCollectionTest.php","tags":[]},{"path":"framework/tests/Support/SupportLazyCollectionIsLazyTest.php","tags":[]},{"path":"framework/tests/Support/SupportLazyCollectionTest.php","tags":[]}],"namespaces":[],"classes":["Illuminate\\Support\\Arr","Illuminate\\Support\\Collection","Illuminate\\Support\\Enumerable","Illuminate\\Support\\HigherOrderCollectionProxy","Illuminate\\Support\\ItemNotFoundException","Illuminate\\Support\\LazyCollection","Illuminate\\Support\\MultipleItemsFoundException","Illuminate\\Support\\Traits\\EnumeratesValues","Illuminate\\Support\\Traits\\TransformsToResourceCollection"],"aliases":[]}
+{"component":"concurrency","tests":[{"path":"framework/tests/Integration/Concurrency/","tags":[]}],"namespaces":["Illuminate\\Concurrency\\"],"classes":[],"aliases":[]}
+{"component":"conditionable","tests":[{"path":"framework/tests/Conditionable/","tags":[]},{"path":"framework/tests/Support/SupportConditionableTest.php","tags":[]}],"namespaces":[],"classes":["Illuminate\\Support\\HigherOrderWhenProxy","Illuminate\\Support\\Traits\\Conditionable"],"aliases":[]}
+{"component":"config","tests":[{"path":"framework/tests/Config/","tags":[]}],"namespaces":["Illuminate\\Config\\"],"classes":[],"aliases":["config"]}
+{"component":"console","tests":[{"path":"framework/tests/Console/","tags":[]},{"path":"framework/tests/Integration/Console/","tags":[]}],"namespaces":["Illuminate\\Console\\"],"classes":[],"aliases":[]}
+{"component":"container","tests":[{"path":"framework/tests/Container/","tags":[]},{"path":"framework/tests/Integration/Container/","tags":[]}],"namespaces":["Illuminate\\Container\\"],"classes":[],"aliases":[]}
+{"component":"contracts","tests":[],"namespaces":["Illuminate\\Contracts\\"],"classes":[],"aliases":[]}
+{"component":"cookie","tests":[{"path":"framework/tests/Cookie/","tags":[]},{"path":"framework/tests/Integration/Cookie/","tags":[]}],"namespaces":["Illuminate\\Cookie\\"],"classes":[],"aliases":["cookie"]}
+{"component":"database","tests":[{"path":"framework/tests/Database/","tags":[]},{"path":"framework/tests/Integration/Database/","tags":[]},{"path":"framework/tests/Integration/Migration/","tags":[]}],"namespaces":["Illuminate\\Database\\"],"classes":[],"aliases":["db","db.connection","db.factory","db.schema","db.transactions","migration.creator","migration.repository","migrator"]}
+{"component":"encryption","tests":[{"path":"framework/tests/Encryption/","tags":[]},{"path":"framework/tests/Integration/Encryption/","tags":[]}],"namespaces":["Illuminate\\Encryption\\"],"classes":[],"aliases":["encrypter"]}
+{"component":"events","tests":[{"path":"framework/tests/Events/","tags":[]},{"path":"framework/tests/Integration/Events/","tags":[]}],"namespaces":["Illuminate\\Events\\"],"classes":[],"aliases":["events"]}
+{"component":"filesystem","tests":[{"path":"framework/tests/Filesystem/","tags":[]},{"path":"framework/tests/Integration/Filesystem/","tags":[]}],"namespaces":["Illuminate\\Filesystem\\"],"classes":[],"aliases":["files","filesystem","filesystem.cloud","filesystem.disk"]}
+{"component":"foundation","tests":[{"path":"framework/tests/Foundation/","tags":[]},{"path":"framework/tests/Foundation/Cloud/","tags":["deferred:foundation-cloud"]},{"path":"framework/tests/Foundation/LaravelCloudJsonFormatterTest.php","tags":["deferred:foundation-cloud"]},{"path":"framework/tests/Http/Middleware/PreventRequestForgeryTest.php","tags":[]},{"path":"framework/tests/Http/Middleware/TrimStringsTest.php","tags":[]},{"path":"framework/tests/Http/Middleware/VitePreloadingTest.php","tags":[]},{"path":"framework/tests/Integration/Foundation/","tags":[]},{"path":"framework/tests/Integration/Generators/","tags":[]}],"namespaces":["Illuminate\\Foundation\\"],"classes":[],"aliases":["app","composer"]}
+{"component":"hashing","tests":[{"path":"framework/tests/Hashing/","tags":[]}],"namespaces":["Illuminate\\Hashing\\"],"classes":[],"aliases":["hash","hash.driver"]}
+{"component":"http","tests":[{"path":"framework/tests/Http/","tags":[]},{"path":"framework/tests/Integration/Http/","tags":[]}],"namespaces":["Illuminate\\Http\\"],"classes":[],"aliases":["request"]}
+{"component":"image","tests":[{"path":"framework/tests/Image/","tags":[]},{"path":"framework/tests/Integration/Image/","tags":[]}],"namespaces":["Illuminate\\Image\\"],"classes":[],"aliases":["image"]}
+{"component":"json-schema","tests":[{"path":"framework/tests/JsonSchema/","tags":[]}],"namespaces":["Illuminate\\JsonSchema\\"],"classes":[],"aliases":[]}
+{"component":"log","tests":[{"path":"framework/tests/Integration/Log/","tags":[]},{"path":"framework/tests/Log/","tags":[]}],"namespaces":["Illuminate\\Log\\"],"classes":[],"aliases":["log"]}
+{"component":"macroable","tests":[{"path":"framework/tests/Support/SupportMacroableTest.php","tags":[]}],"namespaces":[],"classes":["Illuminate\\Support\\Traits\\Macroable"],"aliases":[]}
+{"component":"mail","tests":[{"path":"framework/tests/Integration/Mail/","tags":[]},{"path":"framework/tests/Mail/","tags":[]}],"namespaces":["Illuminate\\Mail\\"],"classes":[],"aliases":["mail.manager","mailer"]}
+{"component":"mcp","tests":[{"path":"mcp/tests/","tags":[]}],"namespaces":["Laravel\\Mcp\\","Laravel\\Mcp\\Server\\"],"classes":[],"aliases":["mcp.sdk"]}
+{"component":"notifications","tests":[{"path":"framework/tests/Integration/Notifications/","tags":[]},{"path":"framework/tests/Notifications/","tags":[]}],"namespaces":["Illuminate\\Notifications\\"],"classes":[],"aliases":[]}
+{"component":"pagination","tests":[{"path":"framework/tests/Pagination/","tags":[]}],"namespaces":["Illuminate\\Pagination\\"],"classes":[],"aliases":[]}
+{"component":"pipeline","tests":[{"path":"framework/tests/Integration/Pipeline/","tags":[]},{"path":"framework/tests/Pipeline/","tags":[]}],"namespaces":["Illuminate\\Pipeline\\"],"classes":[],"aliases":["pipeline"]}
+{"component":"process","tests":[{"path":"framework/tests/Process/","tags":[]}],"namespaces":["Illuminate\\Process\\"],"classes":[],"aliases":[]}
+{"component":"queue","tests":[{"path":"framework/tests/Integration/Queue/","tags":[]},{"path":"framework/tests/Queue/","tags":[]}],"namespaces":["Illuminate\\Queue\\"],"classes":[],"aliases":["queue","queue.connection","queue.failer","queue.listener","queue.routes","queue.worker"]}
+{"component":"redis","tests":[{"path":"framework/tests/Integration/Redis/","tags":[]},{"path":"framework/tests/Redis/","tags":[]}],"namespaces":["Illuminate\\Redis\\"],"classes":[],"aliases":["redis","redis.connection"]}
+{"component":"reflection","tests":[{"path":"framework/tests/Support/SupportReflectorTest.php","tags":[]},{"path":"framework/tests/Support/SupportReflectsClosuresTest.php","tags":[]}],"namespaces":[],"classes":["Illuminate\\Support\\Reflector","Illuminate\\Support\\Traits\\ReflectsClosures"],"aliases":[]}
+{"component":"routing","tests":[{"path":"framework/tests/Integration/Routing/","tags":[]},{"path":"framework/tests/Routing/","tags":[]}],"namespaces":["Illuminate\\Routing\\"],"classes":[],"aliases":["redirect","router","routes","url"]}
+{"component":"session","tests":[{"path":"framework/tests/Integration/Session/","tags":[]},{"path":"framework/tests/Session/","tags":[]}],"namespaces":["Illuminate\\Session\\"],"classes":[],"aliases":["session","session.store"]}
+{"component":"support","tests":[{"path":"framework/tests/Integration/Support/","tags":[]},{"path":"framework/tests/Support/","tags":[]}],"namespaces":["Illuminate\\Support\\"],"classes":[],"aliases":[]}
+{"component":"testing","tests":[{"path":"framework/tests/Integration/Testing/","tags":[]},{"path":"framework/tests/Testing/","tags":[]}],"namespaces":["Illuminate\\Testing\\"],"classes":[],"aliases":[]}
+{"component":"translation","tests":[{"path":"framework/tests/Integration/Translation/","tags":[]},{"path":"framework/tests/Translation/","tags":[]}],"namespaces":["Illuminate\\Translation\\"],"classes":[],"aliases":["translation.loader","translator"]}
+{"component":"validation","tests":[{"path":"framework/tests/Integration/Validation/","tags":[]},{"path":"framework/tests/Validation/","tags":[]}],"namespaces":["Illuminate\\Validation\\"],"classes":[],"aliases":["validation.presence","validator"]}
+{"component":"view","tests":[{"path":"framework/tests/Integration/View/","tags":[]},{"path":"framework/tests/View/","tags":[]}],"namespaces":["Illuminate\\View\\"],"classes":[],"aliases":["blade.compiler","view","view.engine.resolver","view.finder"]}

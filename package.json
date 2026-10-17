@@ -38,7 +38,8 @@
     "oracle:tag": "bun tools/oracle/oracle.ts tag",
     "oracle:lock": "bun tools/oracle/oracle.ts lock",
     "oracle:verify-image": "bun tools/oracle/oracle.ts verify-image",
-    "oracle:build": "bun tools/oracle/oracle.ts build"
+    "oracle:build": "bun tools/oracle/oracle.ts build",
+    "component-map:check": "bun tools/component-map/component-map.ts check"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
