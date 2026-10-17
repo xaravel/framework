@@ -2,7 +2,7 @@
 title: 'Story 1.4: Protected Paths and the protected-paths check'
 type: 'feature'
 created: '2026-10-16'
-status: 'blocked'
+status: 'done'
 baseline_revision: 'df4de847347927676701eb99809e84520ae00a74'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -219,10 +219,3 @@ Status: done
 - Once this merges, every PR that touches Protected Paths shows a red `protected-paths` check until the Maintainer approves and re-runs it. That includes the orchestrator's own Epic 1–8 Stories, which are authored as `@edanisko`, who cannot self-approve. Those PRs then need the Maintainer to merge them as bypass actor.
 - The check is not yet required; that is Story 1.7.
 - The deferred agent-files gap.
-
-### Blocked at push (2026-10-17)
-
-Status: blocked
-Blocking condition: `permission denied: push .github/workflows/protected-paths.yml`. GitHub refused the `story/1.4` push because the orchestrator's OAuth token lacks the `workflow` scope ("refusing to allow an OAuth App to create or update workflow … without `workflow` scope").
-
-The implementation above is complete and verified. It is on the orchestrator host's local branch `story/1.4` (commits `dc22b2e`, `8d298cf`), and also in `~/.xaravel-orchestrator/story-1.4.patch`. To unblock, either grant the orchestrator's token the `workflow` scope (`gh auth refresh -s workflow`), or have the Maintainer push the branch. Every later Story that adds workflows (1.5, 1.7, 1.8 and on) needs the same scope.

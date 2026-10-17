@@ -8,7 +8,8 @@
   "include": [
     "conformance/**/*.ts",
     "tools/scaffold/**/*.ts",
-    "tools/graph/**/*.ts"
+    "tools/graph/**/*.ts",
+    "tools/protected-paths/**/*.ts"
   ],
   "references": [
     {
