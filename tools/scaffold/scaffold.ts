@@ -200,12 +200,12 @@ export function generateTsconfig(root: string, rows: readonly PackageRow[], row:
       composite: true,
       noEmit: false,
       emitDeclarationOnly: true,
-      rootDir: "src",
+      rootDir: ".",
       outDir: cache,
       tsBuildInfoFile: `${cache}/tsconfig.tsbuildinfo`,
       types: ["bun"],
     },
-    include: ["src/**/*.ts"],
+    include: ["src/**/*.ts", "tests/**/*.ts"],
     references: references.map((path) => ({ path })),
   };
 }
