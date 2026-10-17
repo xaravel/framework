@@ -12,6 +12,7 @@ import {
   isProtected,
   LIST_PATH,
   MAINTAINER,
+  markedPhases,
   parseList,
   renderCodeowners,
   type PrFile,
@@ -89,6 +90,8 @@ interface FakePr {
   head?: Record<string, string>;
   /** Endpoint paths (relative to the repo) that answer HTTP 500. */
   fail?: string[];
+  /** The `/pulls/7` body, replacing the default `{ number, head, changed_files }`. */
+  pull?: unknown;
 }
 
 const review = (login: string, state: string, commit: string): PrReview => ({ user: { login }, state, commit_id: commit });
@@ -117,6 +120,9 @@ async function runPr(pr: FakePr, rootDir: string): Promise<{ code: number; stdou
         return new Response("boom", { status: 500 });
       }
       if (url.pathname === `${base}/pulls/7`) {
+        if (pr.pull !== undefined) {
+          return Response.json(pr.pull);
+        }
         return Response.json({ number: 7, head: { sha: HEAD, ref: "story/9.1" }, changed_files: pr.changedFiles ?? pr.files.length });
       }
       if (url.pathname === `${base}/pulls/7/files`) {
@@ -226,6 +232,9 @@ test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs
   }
   // Contracts become Protected once Phase 1 exits.
   expect(isProtected(entries, PHASE_1, "packages/contracts/src/a.ts")).toBe(true);
+  // The Phases the list's after-phase markers name, distinct and ascending.
+  expect(markedPhases(entries)).toEqual([1]);
+  expect(markedPhases(parseList("/a/ after-phase:3\n/b/\n/c/ after-phase:1\n!/d/ after-phase:3\n"))).toEqual([1, 3]);
 });
 
 test("XT-conformance-18: .github/CODEOWNERS mirrors the list with every protected glob owned by the Maintainer, leaves fixtures unowned, and fails on divergence (AD-16)", async () => {
@@ -327,6 +336,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
     expect(contracts.code).toBe(1);
     expect(contracts.stderr).toContain("protected path: packages/contracts/src/a.ts");
     expect(contracts.stderr).not.toContain("codeowners drift");
+    expect(contracts.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-1-EXIT.md");
     const staleHead = await runPr({ files: [file("packages/support/src/y.ts")], head: { ...exitedHead, [CODEOWNERS_PATH]: renderCodeowners(entries, NONE) } }, exited!);
     expect(staleHead.code).toBe(1);
     expect(staleHead.stderr).toContain('codeowners drift: .github/CODEOWNERS line 16 is "/package.json @edanisko", expected "/packages/contracts/ @edanisko"');
@@ -342,6 +352,53 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
     expect(truncated.code).toBe(1);
     expect(truncated.stderr).toContain("truncated file list: the API returned 1 of 3001 changed files; failing closed");
 
+    // A malformed pull body fails closed rather than turning the truncation guard off.
+    for (const pull of [{ number: 7, head: { sha: HEAD } }, { number: 7, changed_files: 1 }, { number: 7, head: { sha: HEAD }, changed_files: "1" }]) {
+      const malformed = await runPr({ files: [file("packages/support/src/y.ts")], pull }, base!);
+      expect(malformed.code).toBe(1);
+      expect(malformed.stderr).toBe("Protected Paths check failed: GET /pulls/7: missing head.sha or changed_files\n");
+    }
+
+    // The head mirror activates every after-phase:<n> the head list marks, not only Phase 1.
+    const phase2List = listText + "/docs/ after-phase:2\n";
+    const phase2Entries = parseList(phase2List);
+    const phase2Head = {
+      [LIST_PATH]: phase2List,
+      [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([2])),
+      "decisions/PHASE-2-EXIT.md": "# Phase 2 exit\n",
+    };
+    const phase2 = await runPr({ files: [file("packages/support/src/y.ts")], head: phase2Head }, base!);
+    expect(phase2.stderr).not.toContain("codeowners drift");
+    expect(phase2.code).toBe(0);
+    expect(phase2.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-2-EXIT.md");
+    const phase2Stale = await runPr(
+      { files: [file("packages/support/src/y.ts")], head: { ...phase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
+      base!,
+    );
+    expect(phase2Stale.code).toBe(1);
+    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 25 is end of file, expected "/docs/ @edanisko"');
+    const phase2Open = await runPr(
+      { files: [file("packages/support/src/y.ts")], head: { [LIST_PATH]: phase2List, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
+      base!,
+    );
+    expect(phase2Open.stderr).not.toContain("codeowners drift");
+    expect(phase2Open.code).toBe(0);
+    const bothPhases = await runPr(
+      {
+        files: [file("packages/support/src/y.ts")],
+        head: { ...phase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([1, 2])), "decisions/PHASE-1-EXIT.md": "# Phase 1 exit\n" },
+      },
+      base!,
+    );
+    expect(bothPhases.stderr).not.toContain("codeowners drift");
+    expect(bothPhases.code).toBe(0);
+    expect(bothPhases.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-1-EXIT.md");
+    expect(bothPhases.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-2-EXIT.md");
+    // A failing exit-file probe fails closed.
+    const probeFailed = await runPr({ files: [file("packages/support/src/y.ts")], head: phase2Head, fail: ["contents/decisions/PHASE-2-EXIT.md"] }, base!);
+    expect(probeFailed.code).toBe(1);
+    expect(probeFailed.stderr).toMatch(/^Protected Paths check failed: .*HTTP 500\n$/);
+
     // Head CODEOWNERS drift: the PR edits the list without regenerating CODEOWNERS.
     const editedList = listText + "/docs/\n";
     const drift = await runPr(
@@ -350,6 +407,17 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
     );
     expect(drift.code).toBe(1);
     expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 25 is end of file, expected "/docs/ @edanisko"');
+
+    // A malformed head list is reported as drift, probes no Phase, and still lists protected files.
+    const bogus = await runPr(
+      { files: [file("bun.lock")], head: { [LIST_PATH]: listText + "/x/ bogus\n", [CODEOWNERS_PATH]: renderCodeowners(entries, NONE) } },
+      base!,
+    );
+    expect(bogus.code).toBe(1);
+    expect(bogus.stderr).toContain(`codeowners drift: ${LIST_PATH}:`);
+    expect(bogus.stderr).toContain('unknown marker "bogus"');
+    expect(bogus.stderr).toContain("protected path: bun.lock");
+    expect(bogus.paths.some((path) => path.includes("contents/decisions/PHASE-"))).toBe(false);
 
     // A head that deletes the list fails.
     const deleted = await runPr({ files: [file("packages/support/src/y.ts")], head: {} }, base!);

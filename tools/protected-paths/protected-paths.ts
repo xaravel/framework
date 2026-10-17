@@ -7,7 +7,10 @@
 //   bun tools/protected-paths/protected-paths.ts pr --repo <owner/name> --pr <n> [--root <dir>]
 //       reads the PR's files and reviews from the GitHub API (`GITHUB_API_URL`,
 //       default https://api.github.com; token from `GH_TOKEN`) as data, and
-//       decides protection from the root's own list (the base checkout)
+//       decides protection from the root's own list (the base checkout); the
+//       head's CODEOWNERS must mirror the head's list, where each Phase the head
+//       list marks `after-phase:<n>` is active when `decisions/PHASE-<n>-EXIT.md`
+//       exists at the head commit
 //
 // Exit codes: 0 pass, 1 violations, 2 usage error. Every violation kind the
 // check reports, one line each, on stderr:
@@ -125,6 +128,17 @@ export function activePhases(root: string): Set<number> {
     }
   }
   return phases;
+}
+
+/** The distinct Phases the entries' `after-phase:<n>` markers name, ascending. */
+export function markedPhases(entries: readonly Entry[]): number[] {
+  const phases = new Set<number>();
+  for (const entry of entries) {
+    if (entry.afterPhase !== null) {
+      phases.add(entry.afterPhase);
+    }
+  }
+  return [...phases].sort((a, b) => a - b);
 }
 
 function isActive(entry: Entry, phases: ReadonlySet<number>): boolean {
@@ -407,22 +421,37 @@ async function pr(options: Options): Promise<number> {
   const token = process.env["GH_TOKEN"] || null;
   const github = new GitHub(api, options.repo, token);
 
-  const pull = await github.json<{ head: { sha: string }; changed_files: number }>(`/pulls/${options.pr}`);
-  const headSha = pull.head.sha;
-  const [files, reviews, headList, headCodeowners, headExit] = await Promise.all([
+  const pull = await github.json<{ head?: { sha?: unknown } | null; changed_files?: unknown }>(`/pulls/${options.pr}`);
+  const headSha = pull.head?.sha;
+  if (typeof headSha !== "string" || typeof pull.changed_files !== "number") {
+    throw new Error(`GET /pulls/${options.pr}: missing head.sha or changed_files`);
+  }
+  const [files, reviews, headList, headCodeowners] = await Promise.all([
     github.paged<PrFile>(`/pulls/${options.pr}/files`),
     github.paged<PrReview>(`/pulls/${options.pr}/reviews`),
     github.contents(LIST_PATH, headSha),
     github.contents(CODEOWNERS_PATH, headSha),
-    github.contents("decisions/PHASE-1-EXIT.md", headSha),
   ]);
+
+  // Probe only the Phases the head list names; a missing or malformed head
+  // list probes nothing and is reported below.
+  let headMarked: number[] = [];
+  if (headList !== null) {
+    try {
+      headMarked = markedPhases(parseList(headList));
+    } catch {
+      headMarked = [];
+    }
+  }
+  const exits = await Promise.all(headMarked.map((n) => github.contents(`decisions/PHASE-${n}-EXIT.md`, headSha)));
+  const headPhases = new Set(headMarked.filter((_, i) => exits[i] !== null));
 
   const result = evaluatePr(entries, phases, { files, changedFiles: pull.changed_files, reviews, headSha });
   const violations = [...result.violations];
   if (headList === null) {
     violations.push(`missing list: the head commit ${headSha} has no ${LIST_PATH} (AD-16)`);
   } else {
-    violations.push(...checkMirror(headList, headCodeowners ?? "", headExit === null ? new Set() : new Set([1])));
+    violations.push(...checkMirror(headList, headCodeowners ?? "", headPhases));
   }
 
   if (violations.length > 0) {
