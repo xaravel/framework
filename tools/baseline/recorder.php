@@ -22,7 +22,9 @@
 //      Finished) and its outcome (Passed, Skipped, MarkedIncomplete, Failed,
 //      Errored), and the class-level outcomes (BeforeFirstTestMethodErrored,
 //      BeforeFirstTestMethodFailed, and a skipped test suite);
-//   3. at shutdown, appends one JSON line per test to the output file:
+//   3. at shutdown, appends one JSON line per test to the output file (only in
+//      the process that loaded it, never in a pcntl_fork child, which would
+//      repeat every count recorded before the fork):
 //
 //      {"test":string|null,"class":string|null,"outcome":"pass"|"skip"|"fail"|null,"assertions":{kind:count}}
 //
@@ -434,6 +436,15 @@ if (! \class_exists('PHPUnit\Framework\Assert', false) || ! AssertSource::$serve
     }
 }, true, true);
 
-\register_shutdown_function(static function (): void {
+// Only the process that loaded the recorder flushes. A child forked with
+// pcntl_fork (FilesystemTest::testSharedGet forks 20, the fork Concurrency
+// driver forks too) inherits every count recorded so far and runs this
+// shutdown function on exit; flushing there would append those counts again.
+// Upstream's PHPUnit does not count a forked child's assertions either.
+$recorderPid = \getmypid();
+\register_shutdown_function(static function () use ($recorderPid): void {
+    if (\getmypid() !== $recorderPid) {
+        return;
+    }
     Recorder::flush();
 });

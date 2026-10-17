@@ -98,6 +98,7 @@ The recipes follow Upstream's `databases.yml`, `queues.yml` and `redis.yml` work
   - A class's `BeforeFirstTestMethodErrored` or `BeforeFirstTestMethodFailed` fails all its tests, and a skipped test suite skips its tests.
   - When a test emits several outcomes, the worst wins: fail > skip > pass.
 - **Separate processes.** A test run in a separate process (`#[RunInSeparateProcess]`) records its assertions in the child process, which inherits the `-d auto_prepend_file` and finds the running test on its call stack. The parent records its outcome.
+- **Forked children.** A child forked with `pcntl_fork` inside a test (`FilesystemTest::testSharedGet` forks 20, and the `fork` Concurrency driver forks too) inherits every count recorded so far. It never flushes, so its exit cannot repeat those counts, and its own assertions are not counted, as Upstream's PHPUnit does not count them.
 - **Output.** At shutdown each process appends `{"test","class","outcome","assertions"}` lines to the output file. The extension creates `<output>.loaded` when it bootstraps.
 
 ## The workflow (`.github/workflows/baseline.yml`)

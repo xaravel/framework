@@ -345,6 +345,8 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   const recorder = readFileSync(join(root, "tools", "baseline", "recorder.php"), "utf8");
   expect(recorder).toContain("if ($callerClass === 'PHPUnit\\Framework\\Assert') {");
   expect(recorder).toContain("\\getenv('XARAVEL_BASELINE_OUT')");
+  // A pcntl_fork child (FilesystemTest::testSharedGet forks 20) never flushes, or it would repeat every count so far.
+  expect(recorder).toContain("if (\\getmypid() !== $recorderPid) {");
   for (const event of ["PreparationStarted", "Passed", "Skipped", "MarkedIncomplete", "Failed", "Errored", "BeforeFirstTestMethodErrored", "Finished"]) {
     expect(recorder).toContain(`\\PHPUnit\\Event\\Test\\${event}Subscriber`);
   }
