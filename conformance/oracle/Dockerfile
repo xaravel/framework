@@ -16,7 +16,10 @@
 # install` from the committed locks, never `composer update`, and the
 # snapshot's composer.json files are copied unmodified. A GitHub token, if
 # given, reaches Composer only through the `github_token` BuildKit secret
-# mount; it is never in an ARG, an ENV or a layer.
+# mount; it is never in an ARG, an ENV or a layer. It is readable only in the
+# download pass, which runs `composer install --no-plugins --no-scripts` and so
+# no package code; the pass that runs Composer plugins and scripts has no
+# token (`oracle:check` enforces the split).
 
 FROM composer:2.10.3@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac AS composer
 
@@ -93,8 +96,15 @@ COPY conformance/oracle/locks/boost/composer.lock /oracle/upstream/boost/compose
 # conformance/baseline-pin and passes it with --build-arg, and the image tag
 # hashes it, so a Pin move needs no edit here; the build fails when it is
 # unset or empty. COMPOSER_ROOT_VERSION is each snapshot's Pin tag without the
-# `v`, as when the lock was resolved. The token file exists only during this
-# RUN.
+# `v`, as when the lock was resolved.
+#
+# The install runs in two passes. The download pass mounts the token and runs
+# `composer install --no-plugins --no-scripts`: it only downloads and extracts
+# the locked packages, so no plugin or script code runs while the token file
+# and COMPOSER_AUTH exist, and both exist only during this RUN. It removes the
+# Composer home and cache it filled, so they never reach its layer, and it
+# creates the `oracle` user and hands it /oracle/upstream here, in the layer
+# that wrote vendor/, so no later layer copies every vendor file up again.
 ARG XARAVEL_ROOT_VERSIONS
 RUN --mount=type=secret,id=github_token \
     set -eu; \
@@ -106,13 +116,31 @@ RUN --mount=type=secret,id=github_token \
     for pair in $XARAVEL_ROOT_VERSIONS; do \
         name="${pair%%:*}"; \
         cd "/oracle/upstream/$name"; \
-        COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist; \
+        COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist --no-plugins --no-scripts; \
     done; \
     rm -rf /tmp/composer-home /tmp/composer-cache; \
     groupadd --gid 1001 oracle; \
     useradd --uid 1001 --gid 1001 --create-home --shell /bin/sh oracle; \
     chown -R 1001:1001 /oracle/upstream; \
     chmod -R u+w /oracle/upstream
+
+# The token-less pass mounts no secret and sets no COMPOSER_AUTH. It runs the
+# same `composer install` with the original flags over the populated vendor/:
+# nothing is downloaded, the installed plugins activate (pestphp/pest-plugin
+# writes vendor/pest-plugins.json), the autoloader is regenerated and the root
+# `post-autoload-dump` scripts run, as in a single-pass install. It removes the
+# Composer home and cache it wrote again, and gives the `oracle` user only the
+# files it wrote or left unwritable (a recursive chown or chmod would copy
+# every unchanged vendor file into this layer).
+RUN set -eu; \
+    for pair in $XARAVEL_ROOT_VERSIONS; do \
+        name="${pair%%:*}"; \
+        cd "/oracle/upstream/$name"; \
+        COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist; \
+    done; \
+    rm -rf /tmp/composer-home /tmp/composer-cache; \
+    find /oracle/upstream ! -user 1001 -exec chown 1001:1001 {} +; \
+    find /oracle/upstream ! -perm -u+w -exec chmod u+w {} +
 
 # Upstream's tests run as uid 1001, the GitHub runner's user, never as root
 # (docs/ops/baseline.md): tests that chmod a file and expect access to be

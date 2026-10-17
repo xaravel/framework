@@ -53,7 +53,7 @@ const pinned = (repo: string): Pkg => {
 function defaultPackages(name: string): Pkg[] {
   const packages = REQUIRED_PACKAGES[name as keyof typeof REQUIRED_PACKAGES].map(tool);
   if (name !== "framework") {
-    packages.push(pinned("laravel/framework"));
+    packages.push(pinned("laravel/framework"), tool("pestphp/pest-plugin"));
   }
   return packages;
 }
@@ -204,12 +204,15 @@ const withFakes = (fx: Fixture): Record<string, string> => ({
 /** A PATH holding only bun, so no docker is on it at all (GitHub's runners have /usr/bin/docker). */
 const noDocker = (fx: Fixture): Record<string, string> => ({ PATH: join(fx.dir, "bun-only") });
 
-/** Puts an image into the fake docker: each snapshot's installed.json and composer.json, and its php --version. */
+/** Puts an image into the fake docker: each snapshot's installed.json and composer.json (and the Pest plugin manifest when it installs pestphp/pest-plugin), and its php --version. */
 function addImage(fx: Fixture, image: string, packages: (name: string) => Pkg[], php: string = `PHP ${PHP_VERSION} (cli) (built: Sep 22 2026 13:32:06) (NTS)`): void {
   const base = join(fx.docker, "images", encodeURIComponent(image));
   for (const { name } of UPSTREAM_REPOS) {
     write(join(base, IMAGE_UPSTREAM_DIR, name, "vendor", "composer", "installed.json"), installedText(packages(name)));
     write(join(base, IMAGE_UPSTREAM_DIR, name, "composer.json"), composerJson(name));
+    if (packages(name).some((pkg) => pkg.name === "pestphp/pest-plugin")) {
+      write(join(base, IMAGE_UPSTREAM_DIR, name, "vendor", "pest-plugins.json"), '[\n    "Pest\\\\Plugins\\\\Bail"\n]');
+    }
   }
   writeFileSync(join(base, "php-version"), `${php}\nCopyright (c) The PHP Group\n`);
 }
@@ -253,6 +256,18 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
   expect(code).toMatch(/^ARG XARAVEL_ROOT_VERSIONS$/m);
   expect(code).toContain("for pair in $XARAVEL_ROOT_VERSIONS; do");
   expect(code).toContain(': "${XARAVEL_ROOT_VERSIONS:?');
+  // Two install passes: the secret RUN downloads with no plugin or script code; a token-less RUN runs plugins and scripts.
+  const runs = code.replace(/\\\n\s*/g, " ").split("\n").filter((line) => line.startsWith("RUN "));
+  const secretRuns = runs.filter((run) => run.includes("--mount=type=secret,id=github_token"));
+  expect(secretRuns.length).toBe(1);
+  expect(secretRuns[0]).toContain('COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist --no-plugins --no-scripts;');
+  expect(secretRuns[0]).toContain("COMPOSER_AUTH");
+  expect(secretRuns[0]!.match(/composer install/g)).toEqual(["composer install"]);
+  const fullRuns = runs.filter((run) => !run.includes("--mount=type=secret") && run.includes("composer install"));
+  expect(fullRuns.length).toBe(1);
+  expect(fullRuns[0]).toContain('COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist;');
+  expect(fullRuns[0]).toContain("for pair in $XARAVEL_ROOT_VERSIONS; do");
+  expect(fullRuns[0]).not.toMatch(/--no-plugins|--no-scripts|COMPOSER_AUTH|github_token/);
   expect(rootVersions(root)).toBe(PIN.map((entry) => `${entry.name}:${entry.tag.replace(/^v/, "")}`).join(" "));
   expect(code).toContain('LABEL org.opencontainers.image.source="https://github.com/xaravel/framework" \\\n      org.opencontainers.image.licenses="MIT"');
   for (const { name } of UPSTREAM_REPOS) {
@@ -446,6 +461,52 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     // Without the non-empty guard an empty list would loop zero times, so the check fails.
     writeFileSync(dockerfilePath, dockerfile.replace(/^\s*: "\$\{XARAVEL_ROOT_VERSIONS:\?[^\n]*\n/m, ""));
     expect(checkDockerfile(fx.repo)).toEqual([`${ORACLE_DIR}/Dockerfile must guard the build argument with \`: "\${XARAVEL_ROOT_VERSIONS:?…}"\`, so an unset or empty list fails the build`]);
+    // Plugins or scripts under the token: the secret RUN lacks a flag, naming the RUN and the flag.
+    const secretInstall = "composer install --no-progress --prefer-dist --no-plugins --no-scripts";
+    const secretLine = dockerfile.split("\n").findIndex((line) => line.startsWith("RUN --mount=type=secret,id=github_token")) + 1;
+    expect(secretLine).toBeGreaterThan(0);
+    const underToken = (flags: string): string =>
+      `${ORACLE_DIR}/Dockerfile:${secretLine}: the RUN that mounts a secret or sets COMPOSER_AUTH runs "${secretInstall.replace(` --no-plugins --no-scripts`, "")}${flags === "" ? "" : ` ${flags}`}" without `;
+    for (const [flags, missing] of [["", "--no-plugins and --no-scripts"], ["--no-scripts", "--no-plugins"], ["--no-plugins", "--no-scripts"]] as const) {
+      writeFileSync(dockerfilePath, dockerfile.replace(secretInstall, `composer install --no-progress --prefer-dist${flags === "" ? "" : ` ${flags}`}`));
+      expect([flags, checkDockerfile(fx.repo)]).toEqual([flags, [`${underToken(flags)}${missing}; Composer plugin and script code would run while the token is readable`]]);
+    }
+    writeFileSync(dockerfilePath, dockerfile.replace(secretInstall, "composer install --no-progress --prefer-dist"));
+    const pluginsUnderToken = await cli(["check", "--root", fx.repo], env);
+    expect(pluginsUnderToken.code).toBe(1);
+    expect(pluginsUnderToken.stderr).toContain(`${ORACLE_DIR}/Dockerfile:${secretLine}: the RUN that mounts a secret or sets COMPOSER_AUTH runs`);
+    // Any composer command under the token needs both flags, not only composer install.
+    const tokenCleanup = "    done; \\\n    rm -rf /tmp/composer-home /tmp/composer-cache; \\\n    groupadd";
+    expect(dockerfile).toContain(tokenCleanup);
+    writeFileSync(dockerfilePath, dockerfile.replace(tokenCleanup, tokenCleanup.replace("    rm -rf", "    composer dump-autoload; \\\n    rm -rf")));
+    expect(checkDockerfile(fx.repo)).toEqual([
+      `${ORACLE_DIR}/Dockerfile:${secretLine}: the RUN that mounts a secret or sets COMPOSER_AUTH runs "composer dump-autoload" without --no-plugins and --no-scripts; Composer plugin and script code would run while the token is readable`,
+    ]);
+    // No token-less pass: plugins and scripts would never run.
+    const neverRun = `${ORACLE_DIR}/Dockerfile: no RUN without a secret mount or COMPOSER_AUTH runs composer install without --no-plugins and --no-scripts; Composer plugins and scripts would never run`;
+    const fullInstall = 'composer install --no-progress --prefer-dist; \\\n    done; \\\n    rm -rf';
+    expect(dockerfile).toContain(fullInstall);
+    for (const flags of ["--no-plugins --no-scripts", "--no-plugins", "--no-scripts"]) {
+      writeFileSync(dockerfilePath, dockerfile.replace(fullInstall, fullInstall.replace("--prefer-dist", `--prefer-dist ${flags}`)));
+      expect([flags, checkDockerfile(fx.repo)]).toEqual([flags, [neverRun]]);
+    }
+    const noFullPass = await cli(["check", "--root", fx.repo], env);
+    expect(noFullPass.code).toBe(1);
+    expect(noFullPass.stderr).toContain(neverRun);
+    // COMPOSER_AUTH in the second RUN makes it token-bearing: it runs plugins under a token and is no token-less pass.
+    const fullRun = "RUN set -eu; \\\n    for pair";
+    const fullLine = dockerfile.split("\n").findIndex((line) => line.startsWith("RUN set -eu; \\")) + 1;
+    expect(fullLine).toBeGreaterThan(secretLine);
+    writeFileSync(dockerfilePath, dockerfile.replace(fullRun, 'RUN set -eu; \\\n    export COMPOSER_AUTH="$(cat /tmp/auth.json)"; \\\n    for pair'));
+    expect(checkDockerfile(fx.repo)).toEqual([
+      `${ORACLE_DIR}/Dockerfile:${fullLine}: the RUN that mounts a secret or sets COMPOSER_AUTH runs "composer install --no-progress --prefer-dist" without --no-plugins and --no-scripts; Composer plugin and script code would run while the token is readable`,
+      neverRun,
+    ]);
+    // Both installs in one secret RUN fails as plugins under the token (and leaves no token-less pass).
+    const merged = dockerfile.replace(/(chmod -R u\+w \/oracle\/upstream)\n[\s\S]*?\nRUN set -eu; \\\n/, "$1; \\\n");
+    expect(merged).not.toBe(dockerfile);
+    writeFileSync(dockerfilePath, merged);
+    expect(checkDockerfile(fx.repo)).toEqual([`${underToken("")}--no-plugins and --no-scripts; Composer plugin and script code would run while the token is readable`, neverRun]);
     writeFileSync(dockerfilePath, dockerfile);
     expect(checkDockerfile(fx.repo)).toEqual([]);
     expect(fx.calls()).toEqual([]);
@@ -497,6 +558,21 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     expect(edited2.code).toBe(1);
     expect(edited2.stderr).toContain(`mcp: ${edit} ${IMAGE_UPSTREAM_DIR}/mcp/composer.json differs from conformance/upstream/mcp/composer.json`);
     expect(edited2.stderr).toContain(`boost: ${edit} ${IMAGE_UPSTREAM_DIR}/boost/composer.json cannot be read`);
+    // A Pest suite without vendor/pest-plugins.json (its Composer plugin never ran) fails, naming each snapshot.
+    const noManifest = `${IMAGE_NAME}:no-pest-manifest`;
+    addImage(fx, noManifest, defaultPackages);
+    const manifestBase = join(fx.docker, "images", encodeURIComponent(noManifest), IMAGE_UPSTREAM_DIR);
+    expect(existsSync(join(manifestBase, "framework", "vendor", "pest-plugins.json"))).toBe(false);
+    for (const name of ["ai", "mcp", "boost"]) {
+      expect([name, existsSync(join(manifestBase, name, "vendor", "pest-plugins.json"))]).toEqual([name, true]);
+    }
+    rmSync(join(manifestBase, "mcp", "vendor", "pest-plugins.json"));
+    const missingManifest = await cli(["verify-image", noManifest, "--root", fx.repo], env);
+    expect(missingManifest.code).toBe(1);
+    expect(missingManifest.stderr).toContain(`mcp: ${noManifest} ${IMAGE_UPSTREAM_DIR}/mcp/vendor/pest-plugins.json cannot be read, so pestphp/pest-plugin never ran`);
+    expect(missingManifest.stderr).not.toContain("ai: ");
+    expect(missingManifest.stderr).not.toContain("boost: ");
+    expect(missingManifest.stderr).not.toContain("framework: ");
     // A missing local snapshot composer.json fails rather than skipping the comparison.
     const snapJson = join(fx.repo, "conformance", "upstream", "ai", "composer.json");
     rmSync(snapJson);
