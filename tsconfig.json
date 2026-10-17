@@ -10,7 +10,8 @@
     "tools/scaffold/**/*.ts",
     "tools/graph/**/*.ts",
     "tools/protected-paths/**/*.ts",
-    "tools/ownership/**/*.ts"
+    "tools/ownership/**/*.ts",
+    "tools/escalations/**/*.ts"
   ],
   "references": [
     {

@@ -23,7 +23,8 @@
     "scaffold:table": "bun tools/scaffold/table.ts",
     "graph:check": "bun tools/graph/graph.ts",
     "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners",
-    "ownership:check": "bun tools/ownership/ownership.ts manifests"
+    "ownership:check": "bun tools/ownership/ownership.ts manifests",
+    "escalations:check": "bun tools/escalations/escalations.ts check"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",

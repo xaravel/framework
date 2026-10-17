@@ -1,0 +1,55 @@
+# Escalation and decision records (Story 1.6, AD-16, FR-114).
+#
+# `escalations` runs only for PRs into main, from main's copy of this workflow
+# (`pull_request_target` runs the base branch's copy), so a PR cannot change
+# the check that judges it. It never checks out, installs or runs PR code: the
+# checkout is the base commit, and the PR's head branch, files and the content
+# of each added or changed Escalation and decision file are read from the
+# GitHub API as data. `edited` re-runs it when a PR's base is re-targeted.
+#
+# `escalation-records` validates every committed Escalation and decision on
+# the checked-out commit: the base for PRs, and main after each push.
+name: escalations
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  escalations:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Check Escalation records in the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bun tools/escalations/escalations.ts pr --repo "$REPO" --pr "$PR_NUMBER"
+
+  escalation-records:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Check Escalation and decision records
+        run: bun tools/escalations/escalations.ts check
