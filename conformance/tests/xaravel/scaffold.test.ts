@@ -1,11 +1,11 @@
 // Xaravel Tests for Story 1.2 (package scaffolder and every package scaffolded).
 // These run under plain `bun test` until the harness lands in Epic 5.
 import { expect, test } from "bun:test";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { checkTsconfigs, scaffold } from "../../../tools/scaffold/scaffold";
-import { buildTable, kebab, UPSTREAM_PHASES } from "../../../tools/scaffold/table";
+import { checkTsconfigs, generateTsconfig, scaffold } from "../../../tools/scaffold/scaffold";
+import { buildTable, kebab, UPSTREAM_PHASES, type PackageRow } from "../../../tools/scaffold/table";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const tablePath = join(root, "tools", "scaffold", "packages.jsonl");
@@ -309,7 +309,7 @@ test("XT-conformance-8: each require is a workspace:* dependency, each suggest a
 });
 
 test(
-  "XT-conformance-9: root tsc -b builds every package as its own project reference, with types [bun] and references equal to its workspace dependencies (AD-2)",
+  "XT-conformance-9: root tsc -b builds every package as its own project reference, including its tests/, with types [bun] and references equal to its workspace dependencies (AD-2)",
   async () => {
     const rows = readTableFile();
     const rootConfig = readJson<{ references?: { path: string }[] }>(join(root, "tsconfig.json"));
@@ -321,7 +321,8 @@ test(
       expect(config.compilerOptions.composite).toBe(true);
       expect(config.compilerOptions.types).toEqual(["bun"]);
       expect("experimentalDecorators" in config.compilerOptions).toBe(false);
-      expect(config.include).toEqual(["src/**/*.ts"]);
+      expect(config.compilerOptions.rootDir).toBe(".");
+      expect(config.include).toEqual(["src/**/*.ts", "tests/**/*.ts"]);
       const manifest = readJson<Manifest>(join(dir, "package.json"));
       const workspaceDeps = Object.entries(manifest.dependencies ?? {})
         .filter(([, spec]) => spec.startsWith("workspace:"))
@@ -435,4 +436,106 @@ test(
     }
   },
   60_000,
+);
+
+/** Runs the repo's pinned `tsc -b` in `cwd`; returns its exit code and combined output. */
+async function tscBuild(cwd: string): Promise<{ code: number; output: string }> {
+  const proc = Bun.spawn([process.execPath, "--bun", join(root, "node_modules", "typescript", "bin", "tsc"), "-b", "--pretty", "false"], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [code, stdout, stderr] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+  return { code, output: `${stdout}${stderr}` };
+}
+
+test(
+  "XT-conformance-39: under tsc -b, a guarded import() of an unreferenced optional peer type-checks and stays typed, and a package's tests/ are type-checked (AD-2)",
+  async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "xaravel-peer-"));
+    try {
+      copyFileSync(join(root, "tsconfig.base.json"), join(tmp, "tsconfig.base.json"));
+      const row = (name: string): PackageRow => ({
+        name,
+        dir: `packages/${name}`,
+        npm: `@xaravel/${name}`,
+        phase: 1,
+        kind: "xaravel",
+        upstream: null,
+        private: false,
+        require: [],
+        suggest: [],
+      });
+      const rows = [row("a"), row("b")];
+      const manifests: Record<string, Record<string, unknown>> = {
+        a: {
+          name: "@xaravel/a",
+          type: "module",
+          exports: { ".": "./src/index.ts" },
+          peerDependencies: { "@xaravel/b": "workspace:*" },
+          peerDependenciesMeta: { "@xaravel/b": { optional: true } },
+          devDependencies: { "@xaravel/b": "workspace:*" },
+        },
+        b: { name: "@xaravel/b", type: "module", exports: { ".": "./src/index.ts" }, dependencies: { "@xaravel/a": "workspace:*" } },
+      };
+      for (const r of rows) {
+        const dir = join(tmp, r.dir);
+        mkdirSync(join(dir, "src"), { recursive: true });
+        mkdirSync(join(dir, "tests", "xaravel"), { recursive: true });
+        writeFileSync(join(dir, "package.json"), JSON.stringify(manifests[r.name], null, 2) + "\n");
+      }
+      for (const r of rows) {
+        writeFileSync(join(tmp, r.dir, "tsconfig.json"), JSON.stringify(generateTsconfig(tmp, rows, r), null, 2) + "\n");
+      }
+      expect(readJson<{ references: unknown[] }>(join(tmp, "packages", "a", "tsconfig.json")).references).toEqual([]);
+      expect(readJson<{ references: unknown[] }>(join(tmp, "packages", "b", "tsconfig.json")).references).toEqual([{ path: "../a" }]);
+      writeFileSync(
+        join(tmp, "tsconfig.json"),
+        JSON.stringify({ extends: "./tsconfig.base.json", files: [], references: [{ path: "./packages/a" }, { path: "./packages/b" }] }, null, 2) + "\n",
+      );
+      writeFileSync(join(tmp, "packages", "b", "src", "index.ts"), "export const value: number = 1;\n");
+      mkdirSync(join(tmp, "packages", "a", "node_modules", "@xaravel"), { recursive: true });
+      symlinkSync("../../../b", join(tmp, "packages", "a", "node_modules", "@xaravel", "b"));
+      mkdirSync(join(tmp, "packages", "b", "node_modules", "@xaravel"), { recursive: true });
+      symlinkSync("../../../a", join(tmp, "packages", "b", "node_modules", "@xaravel", "a"));
+      mkdirSync(join(tmp, "node_modules"));
+      symlinkSync(join(root, "node_modules", "@types"), join(tmp, "node_modules", "@types"));
+
+      const source = (member: string) =>
+        `export async function peer(): Promise<number | null> {\n  try {\n    return (await import("@xaravel/b")).${member};\n  } catch {\n    return null;\n  }\n}\n`;
+      const aIndex = join(tmp, "packages", "a", "src", "index.ts");
+      const aTest = join(tmp, "packages", "a", "tests", "xaravel", "x.test.ts");
+
+      // Guarded peer import, no reference to b: builds.
+      writeFileSync(aIndex, source("value"));
+      const clean = await tscBuild(tmp);
+      expect(`${clean.code}\n${clean.output}`).toBe("0\n");
+
+      // The peer import is still typed: a missing member is an error.
+      writeFileSync(aIndex, source("missing"));
+      const missing = await tscBuild(tmp);
+      expect(missing.code).not.toBe(0);
+      expect(missing.output.split("\n").some((line) => line.includes("packages/a/src/index.ts") && line.includes("TS2339"))).toBe(true);
+      writeFileSync(aIndex, source("value"));
+
+      // A type error in a package test file fails the build, naming the file.
+      writeFileSync(aTest, 'const n: number = "s";\nexport { n };\n');
+      const broken = await tscBuild(tmp);
+      expect(broken.code).not.toBe(0);
+      expect(broken.output.split("\n").some((line) => line.includes("tests/xaravel/x.test.ts") && line.includes("TS2322"))).toBe(true);
+
+      // A well-typed test file importing bun:test builds.
+      writeFileSync(aTest, 'import { test } from "bun:test";\n\ntest("x", () => {});\n');
+      const tests = await tscBuild(tmp);
+      expect(`${tests.code}\n${tests.output}`).toBe("0\n");
+
+      // A test statically imports an unreferenced, cyclic workspace devDependency (b depends on a): builds.
+      writeFileSync(aTest, 'import { test } from "bun:test";\nimport { value } from "@xaravel/b";\n\nconst n: number = value;\ntest("x", () => {\n  void n;\n});\n');
+      const dev = await tscBuild(tmp);
+      expect(`${dev.code}\n${dev.output}`).toBe("0\n");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  },
+  120_000,
 );

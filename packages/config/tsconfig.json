@@ -4,7 +4,7 @@
     "composite": true,
     "noEmit": false,
     "emitDeclarationOnly": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "../../.cache/tsc/config",
     "tsBuildInfoFile": "../../.cache/tsc/config/tsconfig.tsbuildinfo",
     "types": [
@@ -12,7 +12,8 @@
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "tests/**/*.ts"
   ],
   "references": [
     {
