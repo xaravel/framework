@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 1.6 (Escalation and decision records).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -17,6 +17,7 @@ import {
   pathsToFetch,
   TRIGGERS,
 } from "../../../tools/escalations/escalations";
+import { STORIES_DIR } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -65,6 +66,34 @@ function fixtureRoot(files: Record<string, string> = {}): string {
   return tmp;
 }
 
+const STR_IS = "Illuminate\\Tests\\Support\\SupportStrTest::testIs";
+const STR_IS_UUID = "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuid";
+const story = (id: string): string => `${STORIES_DIR}/${id}.md`;
+
+/** A Story manifest owning the given Test IDs. */
+function manifest(storyId: string, testIds: string[], xaravelTestIds: string[] = []): string {
+  return recordText(
+    { story_id: storyId, epic: Number(storyId.split(".")[0]), component: "support", status: "in-progress", test_ids: testIds, xaravel_test_ids: xaravelTestIds },
+    `\n# Story ${storyId}\n`,
+  );
+}
+
+/**
+ * The base checkout `pr` judges Escalation Test IDs against: Story 9.1 owns
+ * `escalation()`'s default Test ID and an XT ID; Story 9.2 also owns
+ * `STR_IS_UUID`.
+ */
+const BASE = fixtureRoot({
+  [story("9.1")]: manifest("9.1", [STR_IS], ["XT-support-1"]),
+  [story("9.2")]: manifest("9.2", [STR_IS, STR_IS_UUID]),
+});
+afterAll(() => rmSync(BASE, { recursive: true, force: true }));
+
+/** A root path that does not exist: reading any manifest from it would fail. */
+function fixtureRootGone(): string {
+  return join(BASE, "absent");
+}
+
 async function withRoot(files: Record<string, string>, body: (dir: string) => Promise<void> | void): Promise<void> {
   const dir = fixtureRoot(files);
   try {
@@ -93,6 +122,8 @@ interface FakePr {
   fail?: string[];
   /** Head contents by path. */
   head?: Record<string, string>;
+  /** The base checkout passed as `--root` (default `BASE`). */
+  root?: string;
 }
 
 const SHA = "a".repeat(40);
@@ -132,7 +163,7 @@ async function runPr(pr: FakePr): Promise<{ code: number; stdout: string; stderr
     },
   });
   try {
-    const result = await runCli(["pr", "--repo", "xaravel/framework", "--pr", "7"], {
+    const result = await runCli(["pr", "--repo", "xaravel/framework", "--pr", "7", "--root", pr.root ?? BASE], {
       GITHUB_API_URL: `http://localhost:${server.port}`,
       GH_TOKEN: "test-token",
     });
@@ -142,10 +173,10 @@ async function runPr(pr: FakePr): Promise<{ code: number; stdout: string; stderr
   }
 }
 
-/** `evaluatePr` with head contents for every path it asks for. */
-function judge(headRef: string, files: PrFile[], head: Record<string, string>, changedFiles = files.length): string[] {
+/** `evaluatePr` with head contents for every path it asks for, against the base checkout `base`. */
+function judge(headRef: string, files: PrFile[], head: Record<string, string>, changedFiles = files.length, base = BASE): string[] {
   const contents = new Map(pathsToFetch(files).map((path) => [path, head[path] ?? null] as const));
-  return evaluatePr({ headRef, files, changedFiles, contents }).violations;
+  return evaluatePr({ root: base, headRef, files, changedFiles, contents }).violations;
 }
 
 test("XT-conformance-26: an Escalation requires test_ids, an FR-114 trigger, proposed and evidence, and a PR whose branch Story ID differs from the file's fails (FR-114, AD-16)", async () => {
@@ -240,6 +271,76 @@ test("XT-conformance-26: an Escalation requires test_ids, an FR-114 trigger, pro
   expect(broken.stderr).toContain("Escalation check failed: GET /pulls/7/files?per_page=100&page=1: HTTP 500");
   const usage = await runCli(["pr", "--repo", "xaravel/framework"]);
   expect(usage.code).toBe(2);
+
+  // Test ID ownership: a Story escalates only Test IDs in its base manifest.
+  const unowned = (id: string, testId: string, storyId = "9.1"): string =>
+    `unowned test id: ${esc(id)}: ${testId} is not in Story ${storyId}'s test_ids or xaravel_test_ids (${story(storyId)} on the base branch) (AD-16)`;
+  // Owned through test_ids, xaravel_test_ids, or both.
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation({ test_ids: [STR_IS] }) })).toEqual([]);
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation({ test_ids: ["XT-support-1"] }) })).toEqual([]);
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation({ test_ids: [STR_IS, "XT-support-1"] }) })).toEqual([]);
+  // A Test ID another Story owns (or nobody does): one line per ID, in order.
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation({ test_ids: [STR_IS_UUID, STR_IS, "XT-support-9"] }) })).toEqual([
+    unowned("ESC-9.1-1", STR_IS_UUID),
+    unowned("ESC-9.1-1", "XT-support-9"),
+  ]);
+  // A repeated unowned ID is reported once.
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation({ test_ids: [STR_IS_UUID, STR_IS_UUID] }) })).toEqual([
+    unowned("ESC-9.1-1", STR_IS_UUID),
+  ]);
+  // Two Escalations from one Story: only the foreign ID is reported.
+  expect(
+    judge("story/9.1", [added(esc("ESC-9.1-1")), added(esc("ESC-9.1-2"))], {
+      [esc("ESC-9.1-1")]: escalation({ test_ids: [STR_IS_UUID] }),
+      [esc("ESC-9.1-2")]: escalation(),
+    }),
+  ).toEqual([unowned("ESC-9.1-1", STR_IS_UUID)]);
+  // The raising Story is the Escalation's, even on the wrong branch.
+  expect(judge("story/9.1", [added(esc("ESC-9.2-1"))], { [esc("ESC-9.2-1")]: escalation({ test_ids: ["XT-support-1"] }) })).toEqual([
+    `wrong story: ${esc("ESC-9.2-1")}: branch story/9.1 may raise only ESC-9.1-<n> (AD-16)`,
+    unowned("ESC-9.2-1", "XT-support-1", "9.2"),
+  ]);
+  // No manifest on base: fail closed.
+  expect(judge("story/9.3", [added(esc("ESC-9.3-1"))], { [esc("ESC-9.3-1")]: escalation() })).toEqual([
+    `missing manifest: ${esc("ESC-9.3-1")}: Escalation ESC-9.3-1 is raised by Story 9.3, which has no ${story("9.3")} on the base branch (AD-16)`,
+  ]);
+  // An invalid manifest on base: fail closed, naming its first violation.
+  await withRoot({ [story("9.1")]: manifest("9.1", []) }, (dir) => {
+    expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation() }, 1, dir)).toEqual([
+      `missing manifest: ${esc("ESC-9.1-1")}: Escalation ESC-9.1-1 is raised by Story 9.1, whose ${story("9.1")} on the base branch is invalid: invalid manifest: ${story("9.1")}: test_ids/xaravel_test_ids are both absent or empty; a Story with no assigned tests can't be done (AD-16)`,
+    ]);
+  });
+  // A bot Escalation has no raising Story, so no manifest is read.
+  expect(judge("bot/x", [added(esc("ESC-bot-3"))], { [esc("ESC-bot-3")]: escalation({ test_ids: ["anything"] }) }, 1, fixtureRootGone())).toEqual([]);
+  // An invalid Escalation reports only its own violations.
+  expect(judge("story/9.3", [added(esc("ESC-9.3-1"))], { [esc("ESC-9.3-1")]: escalation({ trigger: "boredom" }) })).toEqual([
+    expect.stringMatching(/^invalid escalation: .*: trigger must be one of /),
+  ]);
+  // A removed Escalation is not judged.
+  expect(judge("story/9.3", [removed(esc("ESC-9.3-1"))], {})).toEqual([]);
+
+  // Through the CLI: `--root` is the base checkout, and the PR's own manifest edit does not count.
+  const widenedIds = escalation({ test_ids: [STR_IS, STR_IS_UUID] });
+  const foreign = await runPr({
+    ref: "story/9.1",
+    files: [added(esc("ESC-9.1-1")), { filename: story("9.1"), status: "modified" }],
+    head: { [esc("ESC-9.1-1")]: widenedIds, [story("9.1")]: manifest("9.1", [STR_IS, STR_IS_UUID]) },
+  });
+  expect(foreign.code).toBe(1);
+  expect(foreign.stderr).toContain(unowned("ESC-9.1-1", STR_IS_UUID));
+  expect(foreign.stderr).not.toContain(unowned("ESC-9.1-1", STR_IS));
+  // The same Escalation passes against a base whose manifest owns the ID.
+  await withRoot({ [story("9.1")]: manifest("9.1", [STR_IS, STR_IS_UUID]) }, async (dir) => {
+    const owned = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.1-1"))], head: { [esc("ESC-9.1-1")]: widenedIds }, root: dir });
+    expect(owned).toMatchObject({ code: 0, stdout: "Escalations OK: PR #7: 1 escalation/decision file(s) valid.\n" });
+  });
+  await withRoot({}, async (dir) => {
+    const bare = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.1-1"))], head: { [esc("ESC-9.1-1")]: escalation() }, root: dir });
+    expect(bare.code).toBe(1);
+    expect(bare.stderr).toContain(`missing manifest: ${esc("ESC-9.1-1")}: Escalation ESC-9.1-1 is raised by Story 9.1, which has no ${story("9.1")} on the base branch (AD-16)`);
+  });
+  const botPr = await runPr({ ref: "bot/x", files: [added(esc("ESC-bot-3"))], head: { [esc("ESC-bot-3")]: escalation({ test_ids: ["anything"] }) }, root: fixtureRootGone() });
+  expect(botPr.code).toBe(0);
 });
 
 test("XT-conformance-27: a decision file requires decision: approved | rejected and a rationale (FR-114, AD-16)", async () => {
