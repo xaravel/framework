@@ -41,6 +41,7 @@
     "oracle:build": "bun tools/oracle/oracle.ts build",
     "component-map:check": "bun tools/component-map/component-map.ts check",
     "inventory": "bun tools/inventory/inventory.ts generate",
+    "inventory:cross-check": "bun tools/inventory/cross-check.ts",
     "baseline": "bun tools/baseline/baseline.ts"
   },
   "devDependencies": {

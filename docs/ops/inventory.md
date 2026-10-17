@@ -135,6 +135,49 @@ Regenerate after a Pin bump (Story 2.8), a lock change, or a change to the liste
 
 1. `bun run upstream:sync`, then `bun run upstream:check`.
 2. `bun run inventory`. If Docker is unavailable, prepare a local install of each suite instead: `cp -R conformance/upstream/<suite> /tmp/xaravel-inv/<suite>`, make it writable, copy in `conformance/oracle/locks/<suite>/composer.lock`, run `COMPOSER_ROOT_VERSION=<version> composer install` there, where `<version>` is the suite's tag in `conformance/baseline-pin` without the `v` (at the current Pin, for example, `13.37.0` for framework and `1.0.2` for mcp), and then run `bun run inventory --local /tmp/xaravel-inv/framework` and `bun run inventory --suite <suite> --local /tmp/xaravel-inv/<suite>` for ai, mcp and boost.
-3. Run the command a second time. `git diff --stat conformance/inventory` must be empty.
+3. Run `bun run inventory --check` (with the same mode flags). It must report `Inventory check OK`; see [Checks](#checks).
 4. If any entry was added or changed (its `assertions` and `oracle` are now `null` and `{}`), rerun the baseline ([baseline.md](baseline.md#regenerating)) and commit its `inventory` artifact.
 5. `bun test`, then open a PR. `conformance/inventory/` is a Protected Path.
+
+## Checks
+
+Two checks prove that the committed Inventory is what the lister produces at the Pin, and that its Test IDs are what PHPUnit and Pest themselves list (Story 2.7). The `inventory` workflow (`.github/workflows/inventory.yml`) runs both every night, on `workflow_dispatch`, and on PRs to `main` that touch `tools/inventory/`, `tools/oracle/`, `tools/upstream/`, `tools/component-map/`, `conformance/inventory/`, `conformance/oracle/`, `conformance/baseline-pin`, `conformance/component-map`, `tools/scaffold/packages.jsonl`, `package.json`, `.bun-version`, `bun.lock` or the workflow itself. It syncs and checks the snapshot, checks the Oracle locks, builds the Oracle image as `baseline.yml` does, then runs both checks in image mode for every suite. It holds no write scope.
+
+### `--check`: byte-identical regeneration
+
+```sh
+bun run inventory --check [--suite <s>] [--image <ref> | --local <dir> [--php <bin>]]
+```
+
+It takes `generate`'s suite and mode flags, builds every selected suite's files in memory exactly as `generate` does (carry-over of `assertions` and `oracle` included), and compares them byte for byte with `conformance/inventory/`. It never writes or deletes a file, so a failing run leaves nothing behind. `oracle-nondeterminism.jsonl` is never compared. It exits 0 with `Inventory check OK: <total> tests in <n> files are byte-identical.`, and 1 with `Inventory check failed: <k> file(s) differ.` after one stderr line per problem:
+
+| Message | Meaning and fix |
+| --- | --- |
+| `inventory drift: <file> differs from the regenerated Inventory (first difference at line <n>)` | The file is not what the lister produces at the Pin: a hand edit, a stale regeneration, or a lister or rule change that was not regenerated. Regenerate ([Regenerating](#regenerating)) and review the diff. |
+| `inventory drift: <file> is missing` | A Component has tests but no file. Regenerate. |
+| `inventory drift: <file> is not generated` | A framework Component file that generation would delete. Regenerate, which deletes it. |
+
+Because carry-over keeps `assertions` and `oracle` for unchanged entries, `--check` checks the generator's output, not the baseline fields; `baseline.yml`'s `merge` checks those.
+
+### The runner-listing cross-check
+
+```sh
+bun run inventory:cross-check [--suite <s>] [--image <ref> | --local <dir> [--php <bin>]]
+```
+
+The mode rules are `generate`'s: image mode defaults to `--suite all`, and `--local` takes one suite's install (default `framework`) and makes the same snapshot-copy check. For each suite it runs the suite's own runner, `php -d memory_limit=-1 vendor/bin/phpunit --list-tests --colors=never` (framework) or `vendor/bin/pest` with the same flags (ai, mcp, boost), in the suite directory. In image mode that is `runInImage` (no network) with `sh -c 'cd "$0" && exec php -d memory_limit=-1 "vendor/bin/$1" --list-tests --colors=never' /oracle/upstream/<suite> <phpunit|pest>`. This listing is PHPUnit's own text command, independent of the lister's `--list-tests-xml` parsing, provider join and filters.
+
+- Each entry ` - <class>::<method>`, optionally followed by `#<digits>` or `"<name>"`, becomes the PHPUnit ID `<class>::<method>`, `…#<digits>` or `…#<name>`. The headers (`PHPUnit … by Sebastian Bergmann and contributors.`, `Available tests:`, Pest's `INFO  Available tests:`) and blank lines are skipped; in Pest mode one trailing `.` on the last entry is stripped.
+- The framework's PHPUnit ID is its Inventory ID. A Pest runner lists only `P\…::__pest_evaluable_…` names, so the tool also runs the lister and maps each runner ID through the lister's raw `id` to the Pest Test ID, as `tools/baseline` does.
+
+On a match it prints `<suite>: <n> runner tests match <n> Inventory entries`. Every suite is checked before the summary, and it exits 1 with `Inventory cross-check failed: <m> missing, <e> extra` after these stderr lines (2 on a usage error). A suite that does not match first prints `<suite>: <m> missing, <e> extra (<n> runner tests, <k> Inventory entries)`, then its missing and extra lines. A runner ID listed twice, or two runner IDs that map to the same Inventory ID, counts the second as extra:
+
+| Message | Meaning and fix |
+| --- | --- |
+| `missing from <runner>'s listing: <inventory id>` | The Inventory has an ID the runner does not list. |
+| `not in the Inventory: <id>` | The runner lists a test the Inventory lacks; a Pest runner ID the lister does not list is reported under its runner ID. |
+| `<suite>: <runner> --list-tests failed (exit <n>): <stderr>` | The runner failed. |
+| `<suite>: unexpected <runner> output: <line>` | The listing holds something other than headers and entries (a warning or a deprecation, for example). |
+| `<suite>: unparseable <runner> entry: <line>` / `<suite>: duplicate <runner> entry: <id>` / `<suite>: duplicate lister id: <id>` | An entry has an unknown shape, or is listed twice. |
+
+Run the cross-check in the image. A host without the `redis` extension lists phpredis-dependent tests without their provider datasets, so `--local` against the framework reports those IDs as missing and extra.

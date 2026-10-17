@@ -1,0 +1,72 @@
+# Inventory determinism and the runner-listing cross-check (Story 2.7, FR-1,
+# AD-16).
+#
+# Every night, on demand, and on PRs that touch its inputs, one job builds the
+# Oracle image (`oracle:build`, which builds it twice and verifies it) from the
+# synced and checked Upstream snapshot and the Oracle locks, then:
+#
+# - `bun run inventory --check` regenerates every suite's Inventory in the
+#   image from the same Pin, carry-over included, and fails naming each file
+#   that is not byte-identical to the committed one (`inventory drift: …`). It
+#   writes nothing.
+# - `bun run inventory:cross-check` runs `phpunit --list-tests` (framework)
+#   and `pest --list-tests` (ai, mcp, boost) in the image and fails listing
+#   every Inventory ID the runner does not list (`missing from <runner>'s
+#   listing: …`) and every runner test the Inventory lacks (`not in the
+#   Inventory: …`).
+#
+# See docs/ops/inventory.md#checks. No job holds a write scope.
+name: inventory
+
+on:
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - tools/inventory/**
+      - tools/oracle/**
+      - tools/upstream/**
+      - tools/component-map/**
+      - conformance/inventory/**
+      - conformance/oracle/**
+      - conformance/baseline-pin
+      - conformance/component-map
+      - tools/scaffold/packages.jsonl
+      - package.json
+      - .bun-version
+      - bun.lock
+      - .github/workflows/inventory.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
+      - name: Check the Upstream snapshot
+        run: bun run upstream:check
+      - name: Check the Oracle locks
+        run: bun run oracle:check
+      - name: Build the Oracle image and verify it
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(bun tools/oracle/oracle.ts tag)"
+          bun run oracle:build "xaravel-oracle:${tag}"
+      - name: Check that regenerating the Inventory is byte-identical
+        run: bun run inventory --check
+      - name: Cross-check every suite against its runner's listing
+        run: bun run inventory:cross-check
