@@ -746,7 +746,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(ci.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(ci.on["push"]).toEqual({ branches: ["main"] });
   expect(ci.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "upstream", "workflow-permissions"]);
+  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "php-fixtures", "upstream", "workflow-permissions"]);
 
   const audit = ci.jobs["audit"]!;
   expect(audit.permissions).toBeUndefined();
@@ -788,6 +788,30 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware");
   expect(checkScripts["scaffold:check"]).toBe("bun tools/scaffold/scaffold.ts --check");
   expect(checkScripts["graph:check"]).toBe("bun tools/graph/graph.ts");
+
+  // `php-fixtures` runs the PHP scripts for real against the fixtures, with a missing PHP or vendor/ failing (Epic 2 retro R5).
+  const phpFixtures = ci.jobs["php-fixtures"]!;
+  expect(phpFixtures.permissions).toEqual({ contents: "read" });
+  expect(phpFixtures["timeout-minutes"]).toBe(15);
+  for (const node of [phpFixtures, ...phpFixtures.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+    expect(node["if"]).toBeUndefined();
+  }
+  expect(phpFixtures.steps[0]).toEqual(audit.steps[0]!);
+  expect(phpFixtures.steps[1]).toEqual(audit.steps[1]!);
+  expect(phpFixtures.steps.filter((step) => step.uses !== undefined).length).toBe(3);
+  expect(phpFixtures.steps.find((step) => step.uses?.startsWith("shivammathur/setup-php@") === true)).toEqual({
+    uses: "shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962",
+    with: { "php-version": "8.5", extensions: "dom, mbstring, pcntl, tokenizer, xml", coverage: "none" },
+  });
+  expect(phpFixtures.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
+    "bun install --frozen-lockfile --ignore-scripts",
+    "bun run php-fixtures:install",
+    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts",
+  ]);
+  expect(checkScripts["php-fixtures:install"]).toBe(
+    "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest",
+  );
   expect(text).not.toContain("pull_request_target");
   expect(text).not.toMatch(/id-token|secrets\./);
 

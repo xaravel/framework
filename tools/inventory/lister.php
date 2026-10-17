@@ -546,7 +546,11 @@ function pestRun(string $root, string $rootAsGiven): never
 
     $env = getenv();
     $env['XARAVEL_INVENTORY_PEST'] = $outFile;
-    $env['XARAVEL_INVENTORY_PEST_ROOT'] = $rootAsGiven === '' ? $root : $rootAsGiven;
+    // Pest runs in $root, so a relative <suite-dir> would resolve against the
+    // wrong directory there; pass the real path instead. An absolute
+    // <suite-dir> is kept as given, so the `{root}` replacement of that
+    // spelling (a symlinked path, say) still applies.
+    $env['XARAVEL_INVENTORY_PEST_ROOT'] = $rootAsGiven === '' || ! str_starts_with($rootAsGiven, '/') ? $root : $rootAsGiven;
     $process = proc_open(
         [PHP_BINARY, '-d', 'auto_prepend_file='.__FILE__, 'vendor/bin/pest', '--colors=never', '--do-not-cache-result', '--list-tests-xml', $listFile],
         [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
