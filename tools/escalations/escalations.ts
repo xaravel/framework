@@ -9,18 +9,36 @@
 //       (`GITHUB_API_URL`, default https://api.github.com; token from
 //       `GH_TOKEN`) as data, checks each added or changed Escalation file
 //       belongs to the PR's branch, and validates every added or changed
-//       Escalation and decision file's content at the head commit
+//       Escalation and decision file's content at the head commit; for each
+//       changed Escalation it also reads `decisions/<id>.md` at the head commit
+//       and, when one exists, checks it is still bound to that Escalation
+//
+//   bun tools/escalations/escalations.ts digest <id> [--root <dir>]
+//       prints the `escalation_sha256` value a decision on Escalation <id>
+//       must carry (exit 1 when the Escalation file does not exist, 2 when the
+//       ID is malformed)
+//
+// A decision file `decisions/ESC-<id>.md` carries `decision: approved |
+// rejected`, a rationale body, and `escalation_sha256:`, the lowercase hex
+// SHA-256 of the Escalation file's text (CRLF normalised to LF) it rules on.
+// The digest binds the ruling to that exact text: once the Escalation file
+// changes, the decision is stale and the Escalation counts as open again until
+// a new decision (a Protected Path change) re-binds it.
 //
 // Library: `escalationStatus(id, root?)` answers "open", "approved" or
-// "rejected", and throws on a malformed or unknown ID (callers fail closed).
+// "rejected" (open when the decision is missing, invalid or stale), and throws on a malformed or unknown ID (callers fail closed).
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 // Every violation kind the check reports, one line each, on stderr:
 //
 //   invalid escalation:  an Escalation file name or frontmatter field is
 //                        missing or malformed, naming the file and field
-//   invalid decision:    a decision file name, its `decision` field or its
-//                        rationale is missing or malformed
+//   invalid decision:    a decision file name, its `decision` or
+//                        `escalation_sha256` field or its rationale is missing
+//                        or malformed
+//   stale decision:      a valid decision's `escalation_sha256` does not match
+//                        the current content of the Escalation it rules on
+//                        (in the root for `check`, at the head commit for `pr`)
 //   orphan decision:     `decisions/ESC-<id>.md` has no matching Escalation file
 //                        (in the root for `check`, at the head commit for `pr`)
 //   wrong story:         a PR adds or changes an Escalation whose ID does not
@@ -42,6 +60,7 @@
 //   php-only             a `php-only` skip is proposed
 //   open-question        an open question (PRD §9) blocks the work
 //   contract             a contract is missing or changed after Phase 1
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
@@ -85,6 +104,8 @@ export interface DecisionRecord {
   file: string;
   id: EscalationId;
   decision: Decision;
+  /** The `escalation_sha256` field: the digest of the Escalation text this decision rules on. */
+  digest: string;
 }
 
 export interface DecisionResult {
@@ -112,6 +133,7 @@ export interface EscalationsPrResult {
 
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
 const ESCALATION_ID = /^ESC-(?:([1-9]\d*\.[1-9]\d*)|bot)-([1-9]\d*)$/;
+const DIGEST = /^[0-9a-f]{64}$/;
 const STORY_BRANCH = "story/";
 const BOT_BRANCH = "bot/";
 
@@ -221,6 +243,19 @@ export function parseEscalation(file: string, text: string): EscalationResult {
   };
 }
 
+/** The lowercase hex SHA-256 of an Escalation file's text, with CRLF normalised to LF: a decision's `escalation_sha256`. */
+export function escalationDigest(text: string): string {
+  return createHash("sha256").update(text.replace(/\r\n/g, "\n"), "utf8").digest("hex");
+}
+
+/** The `stale decision:` violation for `decision` when it is not bound to `escalationText` (at `escalationFile`), or null when it is. */
+function staleDecision(decision: DecisionRecord, escalationFile: string, escalationText: string): string | null {
+  const actual = escalationDigest(escalationText);
+  return decision.digest === actual
+    ? null
+    : `stale decision: ${decision.file}: escalation_sha256 ${decision.digest} does not match ${escalationFile} (sha256 ${actual}); the Escalation changed after its ruling, so it counts as open until a new decision re-binds it (AD-16)`;
+}
+
 /** Whether `line` is a Markdown ATX heading. */
 function isHeading(line: string): boolean {
   return /^ {0,3}#{1,6}(?:\s|$)/.test(line);
@@ -242,13 +277,19 @@ export function parseDecision(file: string, text: string): DecisionResult {
   if (typeof decision !== "string" || !(DECISIONS as readonly string[]).includes(decision)) {
     violations.push(bad("decision", `must be one of ${DECISIONS.join(", ")}, ${describe(decision)}`));
   }
+  const digest = parsed.fields["escalation_sha256"];
+  if (typeof digest !== "string" || !DIGEST.test(digest)) {
+    violations.push(
+      bad("escalation_sha256", `must be the 64 lowercase hex character SHA-256 of the Escalation file, as a quoted string (\`digest <id>\` prints it), ${describe(digest)}`),
+    );
+  }
   if (!parsed.body.split("\n").some((line) => line.trim() !== "" && !isHeading(line))) {
     violations.push(bad("rationale", "is missing; the body after the frontmatter needs at least one line that is neither blank nor a heading"));
   }
   if (violations.length > 0 || id === null) {
     return { decision: null, violations };
   }
-  return { decision: { file, id, decision: decision as Decision }, violations: [] };
+  return { decision: { file, id, decision: decision as Decision, digest: digest as string }, violations: [] };
 }
 
 function repoRoot(): string {
@@ -257,7 +298,8 @@ function repoRoot(): string {
 
 /**
  * The status of Escalation `id` under `root`: `approved` or `rejected` once
- * `decisions/<id>.md` exists and validates, otherwise `open`. Throws on a
+ * `decisions/<id>.md` exists, validates and its `escalation_sha256` matches
+ * the Escalation file's current content, otherwise `open`. Throws on a
  * malformed ID, or when the Escalation file does not exist (even if a decision
  * file does), so callers fail closed on an unknown Escalation.
  */
@@ -276,7 +318,12 @@ export function escalationStatus(id: string, root: string = repoRoot()): Escalat
     return "open";
   }
   const parsed = parseDecision(decisionFile, readFileSync(decisionPath, "utf8"));
-  return parsed.decision === null ? "open" : parsed.decision.decision;
+  if (parsed.decision === null) {
+    return "open";
+  }
+  // A decision on different Escalation text (a stale one) does not decide.
+  const stale = staleDecision(parsed.decision, `${ESCALATIONS_DIR}/${id}.md`, readFileSync(escalationPath, "utf8"));
+  return stale === null ? parsed.decision.decision : "open";
 }
 
 function markdownFiles(dir: string): string[] {
@@ -305,6 +352,12 @@ export function checkRecords(root: string): { escalations: number; decisions: nu
     violations.push(...parsed.violations);
     if (parseEscalationId(stemOf(name)) !== null && !known.has(name)) {
       violations.push(`orphan decision: ${file} has no ${ESCALATIONS_DIR}/${name} (AD-16)`);
+    } else if (parsed.decision !== null) {
+      const escalationFile = `${ESCALATIONS_DIR}/${name}`;
+      const stale = staleDecision(parsed.decision, escalationFile, readFileSync(join(root, escalationFile), "utf8"));
+      if (stale !== null) {
+        violations.push(stale);
+      }
     }
   }
   return { escalations: escalationNames.length, decisions: decisionNames.length, violations };
@@ -334,15 +387,26 @@ function escalationFor(decisionPath: string): string | null {
   return !rest.includes("/") && parseEscalationId(stemOf(rest)) !== null ? `${ESCALATIONS_DIR}/${rest}` : null;
 }
 
-/** The paths whose head content `evaluatePr` needs, including the Escalation behind each decision. */
+/** The decision path ruling on an Escalation path, or null when the Escalation's name is not a valid ID. */
+function decisionFor(escalationPath: string): string | null {
+  const rest = escalationPath.slice(ESCALATIONS_DIR.length + 1);
+  return !rest.includes("/") && rest.endsWith(".md") && parseEscalationId(stemOf(rest)) !== null ? `${DECISIONS_DIR}/${rest}` : null;
+}
+
+/**
+ * The paths whose head content `evaluatePr` needs: the Escalation behind each
+ * decision, and the decision (which may not exist) on each Escalation.
+ */
 export function pathsToFetch(files: readonly PrFile[]): string[] {
   const { escalations, decisions } = prPaths(files);
-  const fetch = new Set(
-    escalations.filter((path) => {
-      const rest = path.slice(ESCALATIONS_DIR.length + 1);
-      return !rest.includes("/") && rest.endsWith(".md") && parseEscalationId(stemOf(rest)) !== null;
-    }),
-  );
+  const fetch = new Set<string>();
+  for (const path of escalations) {
+    const decision = decisionFor(path);
+    if (decision !== null) {
+      fetch.add(path);
+      fetch.add(decision);
+    }
+  }
   for (const path of decisions) {
     fetch.add(path);
     const escalation = escalationFor(path);
@@ -379,6 +443,8 @@ export function evaluatePr(pr: EscalationsPrInput): EscalationsPrResult {
   };
 
   const { escalations, decisions } = prPaths(pr.files);
+  // Decisions the PR changes are judged (once) in the decisions loop below.
+  const decided = new Set(decisions);
   for (const path of escalations) {
     const rest = path.slice(ESCALATIONS_DIR.length + 1);
     const id = !rest.includes("/") && rest.endsWith(".md") ? parseEscalationId(stemOf(rest)) : null;
@@ -399,15 +465,35 @@ export function evaluatePr(pr: EscalationsPrInput): EscalationsPrResult {
     if (text !== null) {
       violations.push(...parseEscalation(path, text).violations);
     }
+    // A changed Escalation that already has a decision at head must still be
+    // the text that decision rules on. No decision at head: nothing to bind.
+    const decisionPath = decisionFor(path);
+    const decisionText = decisionPath === null ? null : (pr.contents.get(decisionPath) ?? null);
+    if (decisionPath !== null && decisionText !== null && !decided.has(decisionPath)) {
+      judged.push(decisionPath);
+      const parsed = parseDecision(decisionPath, decisionText);
+      violations.push(...parsed.violations);
+      const stale = parsed.decision === null || text === null ? null : staleDecision(parsed.decision, path, text);
+      if (stale !== null) {
+        violations.push(stale);
+      }
+    }
   }
   for (const path of decisions) {
     const text = content(path);
-    if (text !== null) {
-      violations.push(...parseDecision(path, text).violations);
+    const parsed = text === null ? null : parseDecision(path, text);
+    if (parsed !== null) {
+      violations.push(...parsed.violations);
     }
     const escalation = escalationFor(path);
-    if (escalation !== null && (pr.contents.get(escalation) ?? null) === null) {
+    const escalationText = escalation === null ? null : (pr.contents.get(escalation) ?? null);
+    if (escalation !== null && escalationText === null) {
       violations.push(`orphan decision: ${path} has no ${escalation} (AD-16)`);
+    } else if (escalation !== null && escalationText !== null && parsed !== null && parsed.decision !== null) {
+      const stale = staleDecision(parsed.decision, escalation, escalationText);
+      if (stale !== null) {
+        violations.push(stale);
+      }
     }
   }
   return { judged: judged.sort(compare), violations };
@@ -493,10 +579,27 @@ async function pr(options: Options): Promise<number> {
   return 0;
 }
 
+function digest(id: string | undefined, options: Options): number {
+  if (id === undefined || id.startsWith("--")) {
+    throw new UsageError("digest needs an Escalation ID");
+  }
+  if (parseEscalationId(id) === null) {
+    throw new UsageError(`malformed Escalation ID ${JSON.stringify(id)}; expected ESC-<story-id>-<n> or ESC-bot-<n>`);
+  }
+  const file = `${ESCALATIONS_DIR}/${id}.md`;
+  const path = join(options.root, file);
+  if (!existsSync(path)) {
+    throw new Error(`unknown Escalation ${id}: ${file} does not exist (AD-16)`);
+  }
+  process.stdout.write(`${escalationDigest(readFileSync(path, "utf8"))}\n`);
+  return 0;
+}
+
 const USAGE = [
   "Usage:",
   "  bun tools/escalations/escalations.ts check [--root <dir>]",
   "  bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n>",
+  "  bun tools/escalations/escalations.ts digest <id> [--root <dir>]",
 ].join("\n");
 
 export async function main(argv: readonly string[]): Promise<number> {
@@ -507,6 +610,10 @@ export async function main(argv: readonly string[]): Promise<number> {
     }
     if (command === "pr") {
       return await pr(parseOptions(rest, new Set(["--repo", "--pr"])));
+    }
+    if (command === "digest") {
+      const [id, ...flags] = rest;
+      return digest(id, parseOptions(flags, new Set(["--root"])));
     }
     throw new UsageError(command === undefined ? "Missing command" : `Unknown command: ${command}`);
   } catch (error) {

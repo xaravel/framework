@@ -8,6 +8,7 @@ import {
   checkRecords,
   DECISIONS_DIR,
   ESCALATIONS_DIR,
+  escalationDigest,
   escalationStatus,
   evaluatePr,
   parseDecision,
@@ -46,8 +47,11 @@ function escalation(overrides: EscalationFields = {}): string {
   });
 }
 
-function decision(value: unknown, body = "\n# Ruling\n\nApproved: the extension has no Bun equivalent.\n"): string {
-  return recordText({ decision: value, decided_by: "Maintainer" }, body);
+const RULING = "\n# Ruling\n\nApproved: the extension has no Bun equivalent.\n";
+
+/** A decision bound by default to the digest of `escalation()`; `sha: { value: undefined }` omits the field. */
+function decision(value: unknown, body = RULING, sha: { value: unknown } = { value: escalationDigest(escalation()) }): string {
+  return recordText({ decision: value, decided_by: "Maintainer", escalation_sha256: sha.value }, body);
 }
 
 /** A hermetic root holding the given repo-relative files. */
@@ -214,7 +218,8 @@ test("XT-conformance-26: an Escalation requires test_ids, an FR-114 trigger, pro
   // PR name matching, through the CLI against a fake API.
   const own = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.1-2")), added("packages/support/src/A.ts")], head: { [esc("ESC-9.1-2")]: escalation() } });
   expect(own).toMatchObject({ code: 0, stdout: "Escalations OK: PR #7: 1 escalation/decision file(s) valid.\n" });
-  expect(own.refs).toEqual([SHA]);
+  // The Escalation and its (absent) decision are both read at the head commit.
+  expect(own.refs).toEqual([SHA, SHA]);
   const other = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.2-1"))], head: { [esc("ESC-9.2-1")]: escalation() } });
   expect(other.code).toBe(1);
   expect(other.stderr).toContain(`wrong story: ${esc("ESC-9.2-1")}: branch story/9.1 may raise only ESC-9.1-<n> (AD-16)`);
@@ -303,6 +308,73 @@ test("XT-conformance-27: a decision file requires decision: approved | rejected 
   const badPr = await runPr({ ref: "planning/x", files: [added(dec("ESC-9.1-1"))], head: { [dec("ESC-9.1-1")]: decision("yes"), [esc("ESC-9.1-1")]: escalation() } });
   expect(badPr.code).toBe(1);
   expect(badPr.stderr).toContain(`invalid decision: ${dec("ESC-9.1-1")}: decision must be one of approved, rejected, got "yes" (AD-16)`);
+
+  // Binding: escalation_sha256 is required, 64 lowercase hex characters.
+  expect(escalationDigest(escalation())).toMatch(/^[0-9a-f]{64}$/);
+  expect(escalationDigest(escalation().replace(/\n/g, "\r\n"))).toBe(escalationDigest(escalation()));
+  expect(escalationDigest("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  expect(parseDecision(dec("ESC-9.1-1"), decision("approved")).decision?.digest).toBe(escalationDigest(escalation()));
+  for (const bad of [undefined, "", "A".repeat(64), "a".repeat(63), "g".repeat(64), 42] as const) {
+    const violations = check(decision("approved", RULING, { value: bad }));
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toStartWith(`invalid decision: ${dec("ESC-9.1-1")}: escalation_sha256 must be `);
+    expect(violations[0]).toEndWith("(AD-16)");
+  }
+  const widened = escalation({ proposed: "Skip every SupportStrTest test as php-only." });
+  const staleLine = `stale decision: ${dec("ESC-9.1-1")}: escalation_sha256 ${escalationDigest(escalation())} does not match ${esc("ESC-9.1-1")} (sha256 ${escalationDigest(widened)})`;
+  // `check`: an Escalation edited after its ruling makes the decision stale.
+  await withRoot({ [esc("ESC-9.1-1")]: widened, [dec("ESC-9.1-1")]: decision("approved") }, async (dir) => {
+    const run = await runCli(["check", "--root", dir]);
+    expect(run.code).toBe(1);
+    expect(run.stderr).toContain(staleLine);
+    expect(checkRecords(dir).violations).toHaveLength(1);
+    expect(checkRecords(dir).violations[0]).toStartWith(staleLine);
+  });
+  // `check`: a decision without escalation_sha256 is invalid.
+  await withRoot({ [esc("ESC-9.1-1")]: escalation(), [dec("ESC-9.1-1")]: decision("approved", RULING, { value: undefined }) }, async (dir) => {
+    const run = await runCli(["check", "--root", dir]);
+    expect(run.code).toBe(1);
+    expect(run.stderr).toContain(`invalid decision: ${dec("ESC-9.1-1")}: escalation_sha256 must be `);
+  });
+  // `pr`: a changed decision bound to other text is stale.
+  expect(judge("story/9.1", [added(dec("ESC-9.1-1"))], { [dec("ESC-9.1-1")]: decision("approved"), [esc("ESC-9.1-1")]: widened })[0]).toStartWith(staleLine);
+  // `pr`: a PR changing only a decided Escalation reads the decision at head and reports it stale.
+  expect(pathsToFetch([added(esc("ESC-9.1-1"))])).toEqual([esc("ESC-9.1-1"), dec("ESC-9.1-1")]);
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: widened, [dec("ESC-9.1-1")]: decision("approved") })).toEqual([
+    expect.stringMatching(/^stale decision: /),
+  ]);
+  expect(judge("story/9.1", [added(esc("ESC-9.1-1"))], { [esc("ESC-9.1-1")]: escalation(), [dec("ESC-9.1-1")]: decision("approved") })).toEqual([]);
+  // `pr`: an unchanged decision at head on a changed Escalation is itself validated.
+  const unboundAtHead = judge("story/9.1", [added(esc("ESC-9.1-1"))], {
+    [esc("ESC-9.1-1")]: widened,
+    [dec("ESC-9.1-1")]: decision("approved", RULING, { value: undefined }),
+  });
+  expect(unboundAtHead).toHaveLength(1);
+  expect(unboundAtHead[0]).toStartWith(`invalid decision: ${dec("ESC-9.1-1")}: escalation_sha256 must be `);
+  const stalePr = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.1-1"))], head: { [esc("ESC-9.1-1")]: widened, [dec("ESC-9.1-1")]: decision("approved") } });
+  expect(stalePr.code).toBe(1);
+  expect(stalePr.stderr).toContain(staleLine);
+  expect(stalePr.refs).toEqual([SHA, SHA]);
+  // `pr`: editing an undecided Escalation passes (no decision at head, nothing to bind).
+  const undecidedPr = await runPr({ ref: "story/9.1", files: [added(esc("ESC-9.1-1"))], head: { [esc("ESC-9.1-1")]: widened } });
+  expect(undecidedPr).toMatchObject({ code: 0, stdout: "Escalations OK: PR #7: 1 escalation/decision file(s) valid.\n" });
+  // `pr`: editing a decided Escalation together with a re-bound decision passes.
+  const reboundPr = await runPr({
+    ref: "story/9.1",
+    files: [added(esc("ESC-9.1-1")), added(dec("ESC-9.1-1"))],
+    head: { [esc("ESC-9.1-1")]: widened, [dec("ESC-9.1-1")]: decision("approved", RULING, { value: escalationDigest(widened) }) },
+  });
+  expect(reboundPr).toMatchObject({ code: 0, stdout: "Escalations OK: PR #7: 2 escalation/decision file(s) valid.\n" });
+
+  // `digest <id>` prints the value to write.
+  await withRoot({ [esc("ESC-9.1-1")]: escalation() }, async (dir) => {
+    expect(await runCli(["digest", "ESC-9.1-1", "--root", dir])).toMatchObject({ code: 0, stdout: `${escalationDigest(escalation())}\n` });
+    const unknown = await runCli(["digest", "ESC-9.1-2", "--root", dir]);
+    expect(unknown.code).toBe(1);
+    expect(unknown.stderr).toContain("unknown Escalation ESC-9.1-2");
+  });
+  expect((await runCli(["digest", "ESC-9.1-01"])).code).toBe(2);
+  expect((await runCli(["digest"])).code).toBe(2);
 });
 
 test("XT-conformance-28: escalationStatus(id) is open with no decision file, and approved or rejected only once a valid decision file exists (FR-114, AD-16)", async () => {
@@ -318,6 +390,10 @@ test("XT-conformance-28: escalationStatus(id) is open with no decision file, and
       [esc("ESC-9.1-6")]: escalation(),
       [dec("ESC-9.1-6")]: decision("approved", "\n# Ruling\n"),
       [dec("ESC-9.1-5")]: decision("approved"),
+      [esc("ESC-9.1-7")]: escalation(),
+      [dec("ESC-9.1-7")]: decision("approved", RULING, { value: undefined }),
+      [esc("ESC-9.1-8")]: escalation(),
+      [dec("ESC-9.1-8")]: decision("rejected"),
     },
     (dir) => {
       expect(escalationStatus("ESC-9.1-1", dir)).toBe("open");
@@ -326,6 +402,21 @@ test("XT-conformance-28: escalationStatus(id) is open with no decision file, and
       // An invalid decision file does not decide.
       expect(escalationStatus("ESC-9.1-4", dir)).toBe("open");
       expect(escalationStatus("ESC-9.1-6", dir)).toBe("open");
+      // A decision without escalation_sha256 does not decide.
+      expect(escalationStatus("ESC-9.1-7", dir)).toBe("open");
+      // An Escalation edited after its ruling is open again (fail closed), and re-binding decides it.
+      expect(escalationStatus("ESC-9.1-8", dir)).toBe("rejected");
+      expect(escalationStatus("ESC-9.1-2", dir)).toBe("approved");
+      const widened = escalation({ proposed: "Skip every SupportStrTest test as php-only." });
+      writeFileSync(join(dir, esc("ESC-9.1-2")), widened);
+      expect(escalationStatus("ESC-9.1-2", dir)).toBe("open");
+      writeFileSync(join(dir, esc("ESC-9.1-8")), widened);
+      expect(escalationStatus("ESC-9.1-8", dir)).toBe("open");
+      writeFileSync(join(dir, dec("ESC-9.1-2")), decision("approved", RULING, { value: escalationDigest(widened) }));
+      expect(escalationStatus("ESC-9.1-2", dir)).toBe("approved");
+      // CRLF line endings do not change the binding.
+      writeFileSync(join(dir, esc("ESC-9.1-2")), widened.replace(/\n/g, "\r\n"));
+      expect(escalationStatus("ESC-9.1-2", dir)).toBe("approved");
       // A decision without its Escalation (an orphan) does not count: it throws.
       expect(() => escalationStatus("ESC-9.1-5", dir)).toThrow("unknown Escalation ESC-9.1-5");
       // Unknown or malformed IDs throw, so callers fail closed.
