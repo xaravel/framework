@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 02:22
+last_updated: 10-17-2026 03:33
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -684,6 +684,19 @@ action_items:
     epic: 1
     action: "Tighten ownership for non-story/* branches to the AD-16 bot/* rule and
       define what planning/* may touch, Escalating if it changes AD-16 (finding D3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-9-agent-pushes-merge-queue"
+    epic: 1
+    action: "Agent pushes ruleset: GitHub does not honour the refs/heads/gh-readonly-queue/**
+      exclude under the ~ALL include, so the merge queue cannot create its branches
+      (branch_protection_failure, PR #27). The Maintainer disabled the ruleset (enforcement:
+      disabled) on 2026-10-17. Redesign the include so the queue branches are not
+      covered, prove it with the rules API (GET /rules/branches/gh-readonly-queue/main/x
+      returns no creation/update) and a real queued merge, update agent-push.json,
+      ruleset:verify and identity (add a gh-readonly-queue probe), then ask the Maintainer
+      to re-run ruleset:apply."
     owner: "orchestrator"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
