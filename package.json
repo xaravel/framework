@@ -42,7 +42,8 @@
     "component-map:check": "bun tools/component-map/component-map.ts check",
     "inventory": "bun tools/inventory/inventory.ts generate",
     "inventory:cross-check": "bun tools/inventory/cross-check.ts",
-    "baseline": "bun tools/baseline/baseline.ts"
+    "baseline": "bun tools/baseline/baseline.ts",
+    "pin:bump": "bun tools/pin-bump/pin-bump.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
