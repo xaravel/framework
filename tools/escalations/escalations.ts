@@ -4,14 +4,20 @@
 //       validates every `conformance/escalations/ESC-*.md` and
 //       `decisions/ESC-*.md` in the root (either directory may be absent)
 //
-//   bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n>
+//   bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n> [--root <dir>]
 //       reads the PR's head branch, head commit and files from the GitHub API
 //       (`GITHUB_API_URL`, default https://api.github.com; token from
 //       `GH_TOKEN`) as data, checks each added or changed Escalation file
 //       belongs to the PR's branch, and validates every added or changed
 //       Escalation and decision file's content at the head commit; for each
 //       changed Escalation it also reads `decisions/<id>.md` at the head commit
-//       and, when one exists, checks it is still bound to that Escalation
+//       and, when one exists, checks it is still bound to that Escalation;
+//       for each added or changed `ESC-<story-id>-<n>` it checks every
+//       `test_ids` entry is in that Story's manifest `stories/<story-id>.md`
+//       read from the root (the base checkout, default the repo root), never
+//       the PR's copy, so a PR cannot widen its own Story's Test IDs to pass;
+//       `--root` (or, by default, the checkout this script runs from) must be
+//       the base branch, as the workflow's base-commit checkout is
 //
 //   bun tools/escalations/escalations.ts digest <id> [--root <dir>]
 //       prints the `escalation_sha256` value a decision on Escalation <id>
@@ -46,6 +52,13 @@
 //                        `ESC-<id>-<n>`, `bot/*` raises `ESC-bot-<n>`, any other
 //                        branch raises none)
 //   missing head file:   a PR file could not be read at the head commit
+//   missing manifest:    a PR adds or changes `ESC-<story-id>-<n>` but the
+//                        base checkout has no valid `stories/<story-id>.md`
+//                        (`pr` only; the check fails closed)
+//   unowned test id:     a PR adds or changes `ESC-<story-id>-<n>` listing a
+//                        Test ID outside that Story's base manifest `test_ids`
+//                        and `xaravel_test_ids` (`pr` only: `check` does not
+//                        re-judge merged records, whose manifests may change)
 //   truncated file list: the API returned fewer files than the PR's
 //                        `changed_files`; the check fails closed
 //
@@ -63,6 +76,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { type Manifest, parseManifest, STORIES_DIR } from "../ownership/ownership";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
 
 export const ESCALATIONS_DIR = "conformance/escalations";
@@ -115,6 +129,8 @@ export interface DecisionResult {
 }
 
 export interface EscalationsPrInput {
+  /** The base checkout, whose `stories/<story-id>.md` manifests own each Escalation's Test IDs. */
+  root: string;
   /** The PR's `head.ref`. */
   headRef: string;
   files: readonly PrFile[];
@@ -442,6 +458,27 @@ export function evaluatePr(pr: EscalationsPrInput): EscalationsPrResult {
     return text;
   };
 
+  // Base-checkout manifests by Story ID: the manifest, or why there is none (a
+  // `missing manifest:` line's ending).
+  const manifests = new Map<string, Manifest | string>();
+  const manifestFor = (storyId: string): Manifest | string => {
+    const cached = manifests.get(storyId);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const file = `${STORIES_DIR}/${storyId}.md`;
+    const full = join(pr.root, file);
+    let found: Manifest | string;
+    if (!existsSync(full)) {
+      found = `which has no ${file} on the base branch (AD-16)`;
+    } else {
+      const parsed = parseManifest(file, readFileSync(full, "utf8"));
+      found = parsed.manifest ?? `whose ${file} on the base branch is invalid: ${parsed.violations[0] ?? "unknown error (AD-16)"}`;
+    }
+    manifests.set(storyId, found);
+    return found;
+  };
+
   const { escalations, decisions } = prPaths(pr.files);
   // Decisions the PR changes are judged (once) in the decisions loop below.
   const decided = new Set(decisions);
@@ -462,8 +499,28 @@ export function evaluatePr(pr: EscalationsPrInput): EscalationsPrResult {
       violations.push(`wrong story: ${path}: ${expected} (AD-16)`);
     }
     const text = content(path);
-    if (text !== null) {
-      violations.push(...parseEscalation(path, text).violations);
+    const parsedEscalation = text === null ? null : parseEscalation(path, text);
+    if (parsedEscalation !== null) {
+      violations.push(...parsedEscalation.violations);
+    }
+    // A Story may escalate only the Test IDs its base manifest owns; a bot
+    // Escalation has no raising Story.
+    const raised = parsedEscalation?.escalation ?? null;
+    if (raised !== null && raised.id.storyId !== null) {
+      const storyId = raised.id.storyId;
+      const manifest = manifestFor(storyId);
+      if (typeof manifest === "string") {
+        violations.push(`missing manifest: ${path}: Escalation ${raised.id.id} is raised by Story ${storyId}, ${manifest}`);
+      } else {
+        const owned = new Set([...manifest.testIds, ...manifest.xaravelTestIds]);
+        for (const testId of new Set(raised.testIds)) {
+          if (!owned.has(testId)) {
+            violations.push(
+              `unowned test id: ${path}: ${testId} is not in Story ${storyId}'s test_ids or xaravel_test_ids (${manifest.file} on the base branch) (AD-16)`,
+            );
+          }
+        }
+      }
     }
     // A changed Escalation that already has a decision at head must still be
     // the text that decision rules on. No decision at head: nothing to bind.
@@ -569,7 +626,7 @@ async function pr(options: Options): Promise<number> {
   const files = await github.paged<PrFile>(`/pulls/${options.pr}/files`);
   const paths = pathsToFetch(files);
   const fetched = await Promise.all(paths.map(async (path) => [path, await github.contents(path, headSha)] as const));
-  const result = evaluatePr({ headRef, files, changedFiles: pull.changed_files, contents: new Map(fetched) });
+  const result = evaluatePr({ root: options.root, headRef, files, changedFiles: pull.changed_files, contents: new Map(fetched) });
 
   if (result.violations.length > 0) {
     report(result.violations);
@@ -598,7 +655,7 @@ function digest(id: string | undefined, options: Options): number {
 const USAGE = [
   "Usage:",
   "  bun tools/escalations/escalations.ts check [--root <dir>]",
-  "  bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n>",
+  "  bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n> [--root <dir>]",
   "  bun tools/escalations/escalations.ts digest <id> [--root <dir>]",
 ].join("\n");
 
@@ -609,7 +666,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       return check(parseOptions(rest, new Set(["--root"])));
     }
     if (command === "pr") {
-      return await pr(parseOptions(rest, new Set(["--repo", "--pr"])));
+      return await pr(parseOptions(rest, new Set(["--repo", "--pr", "--root"])));
     }
     if (command === "digest") {
       const [id, ...flags] = rest;
