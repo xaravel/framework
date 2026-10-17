@@ -1,0 +1,42 @@
+{
+  "name": "@xaravel/console",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/console component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*",
+    "@xaravel/view": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/bus": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/queue": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/bus": {
+      "optional": true
+    },
+    "@xaravel/container": {
+      "optional": true
+    },
+    "@xaravel/filesystem": {
+      "optional": true
+    },
+    "@xaravel/queue": {
+      "optional": true
+    }
+  }
+}

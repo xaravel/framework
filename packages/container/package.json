@@ -1,0 +1,46 @@
+{
+  "name": "@xaravel/container",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/container component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/auth": "workspace:*",
+    "@xaravel/cache": "workspace:*",
+    "@xaravel/config": "workspace:*",
+    "@xaravel/database": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/log": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/auth": {
+      "optional": true
+    },
+    "@xaravel/cache": {
+      "optional": true
+    },
+    "@xaravel/config": {
+      "optional": true
+    },
+    "@xaravel/database": {
+      "optional": true
+    },
+    "@xaravel/filesystem": {
+      "optional": true
+    },
+    "@xaravel/log": {
+      "optional": true
+    }
+  }
+}

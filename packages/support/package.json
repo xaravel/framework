@@ -1,0 +1,33 @@
+{
+  "name": "@xaravel/support",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/support component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/filesystem": {
+      "optional": true
+    },
+    "@xaravel/mockery": {
+      "optional": true
+    }
+  }
+}

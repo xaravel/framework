@@ -1,0 +1,13 @@
+{
+  "name": "@xaravel/runtime",
+  "version": "0.0.0",
+  "description": "Xaravel runtime primitives: Scope Frames, the Class Registry, PHP values and codecs.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@xaravel/pipeline",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/pipeline component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/database": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/database": {
+      "optional": true
+    }
+  }
+}

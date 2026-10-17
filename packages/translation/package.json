@@ -1,0 +1,22 @@
+{
+  "name": "@xaravel/translation",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/translation component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  }
+}

@@ -1,7 +1,173 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ]
   },
-  "include": ["conformance/**/*.ts"]
+  "include": [
+    "conformance/**/*.ts",
+    "tools/scaffold/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "./installer"
+    },
+    {
+      "path": "./packages/ai"
+    },
+    {
+      "path": "./packages/assert"
+    },
+    {
+      "path": "./packages/auth"
+    },
+    {
+      "path": "./packages/boost"
+    },
+    {
+      "path": "./packages/broadcasting"
+    },
+    {
+      "path": "./packages/bus"
+    },
+    {
+      "path": "./packages/cache"
+    },
+    {
+      "path": "./packages/collections"
+    },
+    {
+      "path": "./packages/concurrency"
+    },
+    {
+      "path": "./packages/conditionable"
+    },
+    {
+      "path": "./packages/config"
+    },
+    {
+      "path": "./packages/console"
+    },
+    {
+      "path": "./packages/container"
+    },
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/cookie"
+    },
+    {
+      "path": "./packages/database"
+    },
+    {
+      "path": "./packages/encryption"
+    },
+    {
+      "path": "./packages/events"
+    },
+    {
+      "path": "./packages/filesystem"
+    },
+    {
+      "path": "./packages/finder"
+    },
+    {
+      "path": "./packages/foundation"
+    },
+    {
+      "path": "./packages/framework"
+    },
+    {
+      "path": "./packages/hashing"
+    },
+    {
+      "path": "./packages/htmx"
+    },
+    {
+      "path": "./packages/http"
+    },
+    {
+      "path": "./packages/http-foundation"
+    },
+    {
+      "path": "./packages/image"
+    },
+    {
+      "path": "./packages/json-schema"
+    },
+    {
+      "path": "./packages/log"
+    },
+    {
+      "path": "./packages/macroable"
+    },
+    {
+      "path": "./packages/mail"
+    },
+    {
+      "path": "./packages/mcp"
+    },
+    {
+      "path": "./packages/mime"
+    },
+    {
+      "path": "./packages/mockery"
+    },
+    {
+      "path": "./packages/notifications"
+    },
+    {
+      "path": "./packages/pagination"
+    },
+    {
+      "path": "./packages/pipeline"
+    },
+    {
+      "path": "./packages/process"
+    },
+    {
+      "path": "./packages/queue"
+    },
+    {
+      "path": "./packages/redis"
+    },
+    {
+      "path": "./packages/reflection"
+    },
+    {
+      "path": "./packages/routing"
+    },
+    {
+      "path": "./packages/runtime"
+    },
+    {
+      "path": "./packages/serializable-closure"
+    },
+    {
+      "path": "./packages/session"
+    },
+    {
+      "path": "./packages/support"
+    },
+    {
+      "path": "./packages/testbench"
+    },
+    {
+      "path": "./packages/testing"
+    },
+    {
+      "path": "./packages/translation"
+    },
+    {
+      "path": "./packages/validation"
+    },
+    {
+      "path": "./packages/view"
+    },
+    {
+      "path": "./tools/boost-framework"
+    }
+  ]
 }

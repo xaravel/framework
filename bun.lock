@@ -15,8 +15,731 @@
       "name": "create-xaravel",
       "version": "0.0.0",
     },
+    "packages/ai": {
+      "name": "@xaravel/ai",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/assert": {
+      "name": "@xaravel/assert",
+      "version": "0.0.0",
+    },
+    "packages/auth": {
+      "name": "@xaravel/auth",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/http": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/queue": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/console": "workspace:*",
+        "@xaravel/session": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/console",
+        "@xaravel/session",
+      ],
+    },
+    "packages/boost": {
+      "name": "@xaravel/boost",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/broadcasting": {
+      "name": "@xaravel/broadcasting",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/bus": "workspace:*",
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/queue": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/bus": {
+      "name": "@xaravel/bus",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/pipeline": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/queue": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/queue",
+      ],
+    },
+    "packages/cache": {
+      "name": "@xaravel/cache",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/database": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/redis": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/database",
+        "@xaravel/filesystem",
+        "@xaravel/redis",
+      ],
+    },
+    "packages/collections": {
+      "name": "@xaravel/collections",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/http": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/http",
+      ],
+    },
+    "packages/concurrency": {
+      "name": "@xaravel/concurrency",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/console": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/process": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/conditionable": {
+      "name": "@xaravel/conditionable",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/config": {
+      "name": "@xaravel/config",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/console": {
+      "name": "@xaravel/console",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+        "@xaravel/view": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/bus": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/queue": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/bus",
+        "@xaravel/container",
+        "@xaravel/filesystem",
+        "@xaravel/queue",
+      ],
+    },
+    "packages/container": {
+      "name": "@xaravel/container",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/auth": "workspace:*",
+        "@xaravel/cache": "workspace:*",
+        "@xaravel/config": "workspace:*",
+        "@xaravel/database": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/log": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/auth",
+        "@xaravel/cache",
+        "@xaravel/config",
+        "@xaravel/database",
+        "@xaravel/filesystem",
+        "@xaravel/log",
+      ],
+    },
+    "packages/contracts": {
+      "name": "@xaravel/contracts",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/cookie": {
+      "name": "@xaravel/cookie",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/database": {
+      "name": "@xaravel/database",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/console": "workspace:*",
+        "@xaravel/events": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/http": "workspace:*",
+        "@xaravel/pagination": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/console",
+        "@xaravel/events",
+        "@xaravel/filesystem",
+        "@xaravel/http",
+        "@xaravel/pagination",
+      ],
+    },
+    "packages/encryption": {
+      "name": "@xaravel/encryption",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/events": {
+      "name": "@xaravel/events",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/bus": "workspace:*",
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/filesystem": {
+      "name": "@xaravel/filesystem",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/http": "workspace:*",
+        "@xaravel/image": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/http",
+        "@xaravel/image",
+      ],
+    },
+    "packages/finder": {
+      "name": "@xaravel/finder",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/foundation": {
+      "name": "@xaravel/foundation",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/bus": "workspace:*",
+        "@xaravel/cache": "workspace:*",
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/config": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/cookie": "workspace:*",
+        "@xaravel/database": "workspace:*",
+        "@xaravel/encryption": "workspace:*",
+        "@xaravel/events": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/hashing": "workspace:*",
+        "@xaravel/http": "workspace:*",
+        "@xaravel/log": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/redis": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/routing": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/session": "workspace:*",
+        "@xaravel/support": "workspace:*",
+        "@xaravel/translation": "workspace:*",
+        "@xaravel/validation": "workspace:*",
+        "@xaravel/view": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/auth": "workspace:*",
+        "@xaravel/broadcasting": "workspace:*",
+        "@xaravel/concurrency": "workspace:*",
+        "@xaravel/console": "workspace:*",
+        "@xaravel/image": "workspace:*",
+        "@xaravel/mail": "workspace:*",
+        "@xaravel/notifications": "workspace:*",
+        "@xaravel/queue": "workspace:*",
+        "@xaravel/testing": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/auth",
+        "@xaravel/broadcasting",
+        "@xaravel/concurrency",
+        "@xaravel/console",
+        "@xaravel/image",
+        "@xaravel/mail",
+        "@xaravel/notifications",
+        "@xaravel/queue",
+        "@xaravel/testing",
+      ],
+    },
+    "packages/framework": {
+      "name": "@xaravel/framework",
+      "version": "0.0.0",
+    },
+    "packages/hashing": {
+      "name": "@xaravel/hashing",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/htmx": {
+      "name": "@xaravel/htmx",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/http": {
+      "name": "@xaravel/http",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/session": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/image": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/image",
+      ],
+    },
+    "packages/http-foundation": {
+      "name": "@xaravel/http-foundation",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/image": {
+      "name": "@xaravel/image",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/http": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/json-schema": {
+      "name": "@xaravel/json-schema",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/log": {
+      "name": "@xaravel/log",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/macroable": {
+      "name": "@xaravel/macroable",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/mail": {
+      "name": "@xaravel/mail",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/http": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/http",
+      ],
+    },
+    "packages/mcp": {
+      "name": "@xaravel/mcp",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/mime": {
+      "name": "@xaravel/mime",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/mockery": {
+      "name": "@xaravel/mockery",
+      "version": "0.0.0",
+    },
+    "packages/notifications": {
+      "name": "@xaravel/notifications",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/broadcasting": "workspace:*",
+        "@xaravel/bus": "workspace:*",
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/mail": "workspace:*",
+        "@xaravel/queue": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/database": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/database",
+      ],
+    },
+    "packages/pagination": {
+      "name": "@xaravel/pagination",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/pipeline": {
+      "name": "@xaravel/pipeline",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/database": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/database",
+      ],
+    },
+    "packages/process": {
+      "name": "@xaravel/process",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/queue": {
+      "name": "@xaravel/queue",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/console": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/database": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/pipeline": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/redis": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/redis",
+      ],
+    },
+    "packages/redis": {
+      "name": "@xaravel/redis",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/reflection": {
+      "name": "@xaravel/reflection",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/routing": {
+      "name": "@xaravel/routing",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/http": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/pipeline": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/session": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/console": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/console",
+      ],
+    },
+    "packages/runtime": {
+      "name": "@xaravel/runtime",
+      "version": "0.0.0",
+    },
+    "packages/serializable-closure": {
+      "name": "@xaravel/serializable-closure",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/session": {
+      "name": "@xaravel/session",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/console": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/console",
+      ],
+    },
+    "packages/support": {
+      "name": "@xaravel/support",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/filesystem",
+        "@xaravel/mockery",
+      ],
+    },
+    "packages/testbench": {
+      "name": "@xaravel/testbench",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+      },
+    },
+    "packages/testing": {
+      "name": "@xaravel/testing",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/console": "workspace:*",
+        "@xaravel/database": "workspace:*",
+        "@xaravel/http": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/console",
+        "@xaravel/database",
+        "@xaravel/http",
+      ],
+    },
+    "packages/translation": {
+      "name": "@xaravel/translation",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
+    "packages/validation": {
+      "name": "@xaravel/validation",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+        "@xaravel/translation": "workspace:*",
+      },
+      "peerDependencies": {
+        "@xaravel/database": "workspace:*",
+      },
+      "optionalPeers": [
+        "@xaravel/database",
+      ],
+    },
+    "packages/view": {
+      "name": "@xaravel/view",
+      "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/collections": "workspace:*",
+        "@xaravel/conditionable": "workspace:*",
+        "@xaravel/container": "workspace:*",
+        "@xaravel/contracts": "workspace:*",
+        "@xaravel/events": "workspace:*",
+        "@xaravel/filesystem": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
+        "@xaravel/reflection": "workspace:*",
+        "@xaravel/runtime": "workspace:*",
+        "@xaravel/support": "workspace:*",
+      },
+    },
     "skeleton": {
       "name": "@xaravel/skeleton",
+      "version": "0.0.0",
+    },
+    "tools/boost-framework": {
+      "name": "@xaravel/boost-framework",
       "version": "0.0.0",
     },
   },
@@ -115,7 +838,111 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
+    "@xaravel/ai": ["@xaravel/ai@workspace:packages/ai"],
+
+    "@xaravel/assert": ["@xaravel/assert@workspace:packages/assert"],
+
+    "@xaravel/auth": ["@xaravel/auth@workspace:packages/auth"],
+
+    "@xaravel/boost": ["@xaravel/boost@workspace:packages/boost"],
+
+    "@xaravel/boost-framework": ["@xaravel/boost-framework@workspace:tools/boost-framework"],
+
+    "@xaravel/broadcasting": ["@xaravel/broadcasting@workspace:packages/broadcasting"],
+
+    "@xaravel/bus": ["@xaravel/bus@workspace:packages/bus"],
+
+    "@xaravel/cache": ["@xaravel/cache@workspace:packages/cache"],
+
+    "@xaravel/collections": ["@xaravel/collections@workspace:packages/collections"],
+
+    "@xaravel/concurrency": ["@xaravel/concurrency@workspace:packages/concurrency"],
+
+    "@xaravel/conditionable": ["@xaravel/conditionable@workspace:packages/conditionable"],
+
+    "@xaravel/config": ["@xaravel/config@workspace:packages/config"],
+
+    "@xaravel/console": ["@xaravel/console@workspace:packages/console"],
+
+    "@xaravel/container": ["@xaravel/container@workspace:packages/container"],
+
+    "@xaravel/contracts": ["@xaravel/contracts@workspace:packages/contracts"],
+
+    "@xaravel/cookie": ["@xaravel/cookie@workspace:packages/cookie"],
+
+    "@xaravel/database": ["@xaravel/database@workspace:packages/database"],
+
+    "@xaravel/encryption": ["@xaravel/encryption@workspace:packages/encryption"],
+
+    "@xaravel/events": ["@xaravel/events@workspace:packages/events"],
+
+    "@xaravel/filesystem": ["@xaravel/filesystem@workspace:packages/filesystem"],
+
+    "@xaravel/finder": ["@xaravel/finder@workspace:packages/finder"],
+
+    "@xaravel/foundation": ["@xaravel/foundation@workspace:packages/foundation"],
+
+    "@xaravel/framework": ["@xaravel/framework@workspace:packages/framework"],
+
+    "@xaravel/hashing": ["@xaravel/hashing@workspace:packages/hashing"],
+
+    "@xaravel/htmx": ["@xaravel/htmx@workspace:packages/htmx"],
+
+    "@xaravel/http": ["@xaravel/http@workspace:packages/http"],
+
+    "@xaravel/http-foundation": ["@xaravel/http-foundation@workspace:packages/http-foundation"],
+
+    "@xaravel/image": ["@xaravel/image@workspace:packages/image"],
+
+    "@xaravel/json-schema": ["@xaravel/json-schema@workspace:packages/json-schema"],
+
+    "@xaravel/log": ["@xaravel/log@workspace:packages/log"],
+
+    "@xaravel/macroable": ["@xaravel/macroable@workspace:packages/macroable"],
+
+    "@xaravel/mail": ["@xaravel/mail@workspace:packages/mail"],
+
+    "@xaravel/mcp": ["@xaravel/mcp@workspace:packages/mcp"],
+
+    "@xaravel/mime": ["@xaravel/mime@workspace:packages/mime"],
+
+    "@xaravel/mockery": ["@xaravel/mockery@workspace:packages/mockery"],
+
+    "@xaravel/notifications": ["@xaravel/notifications@workspace:packages/notifications"],
+
+    "@xaravel/pagination": ["@xaravel/pagination@workspace:packages/pagination"],
+
+    "@xaravel/pipeline": ["@xaravel/pipeline@workspace:packages/pipeline"],
+
+    "@xaravel/process": ["@xaravel/process@workspace:packages/process"],
+
+    "@xaravel/queue": ["@xaravel/queue@workspace:packages/queue"],
+
+    "@xaravel/redis": ["@xaravel/redis@workspace:packages/redis"],
+
+    "@xaravel/reflection": ["@xaravel/reflection@workspace:packages/reflection"],
+
+    "@xaravel/routing": ["@xaravel/routing@workspace:packages/routing"],
+
+    "@xaravel/runtime": ["@xaravel/runtime@workspace:packages/runtime"],
+
+    "@xaravel/serializable-closure": ["@xaravel/serializable-closure@workspace:packages/serializable-closure"],
+
+    "@xaravel/session": ["@xaravel/session@workspace:packages/session"],
+
     "@xaravel/skeleton": ["@xaravel/skeleton@workspace:skeleton"],
+
+    "@xaravel/support": ["@xaravel/support@workspace:packages/support"],
+
+    "@xaravel/testbench": ["@xaravel/testbench@workspace:packages/testbench"],
+
+    "@xaravel/testing": ["@xaravel/testing@workspace:packages/testing"],
+
+    "@xaravel/translation": ["@xaravel/translation@workspace:packages/translation"],
+
+    "@xaravel/validation": ["@xaravel/validation@workspace:packages/validation"],
+
+    "@xaravel/view": ["@xaravel/view@workspace:packages/view"],
 
     "bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 

@@ -1,0 +1,34 @@
+{
+  "name": "@xaravel/routing",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/routing component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/http": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/pipeline": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/session": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/console": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/console": {
+      "optional": true
+    }
+  }
+}

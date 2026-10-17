@@ -1,0 +1,80 @@
+{
+  "name": "@xaravel/foundation",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/foundation component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/bus": "workspace:*",
+    "@xaravel/cache": "workspace:*",
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/config": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/cookie": "workspace:*",
+    "@xaravel/database": "workspace:*",
+    "@xaravel/encryption": "workspace:*",
+    "@xaravel/events": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/hashing": "workspace:*",
+    "@xaravel/http": "workspace:*",
+    "@xaravel/log": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/redis": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/routing": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/session": "workspace:*",
+    "@xaravel/support": "workspace:*",
+    "@xaravel/translation": "workspace:*",
+    "@xaravel/validation": "workspace:*",
+    "@xaravel/view": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/auth": "workspace:*",
+    "@xaravel/broadcasting": "workspace:*",
+    "@xaravel/concurrency": "workspace:*",
+    "@xaravel/console": "workspace:*",
+    "@xaravel/image": "workspace:*",
+    "@xaravel/mail": "workspace:*",
+    "@xaravel/notifications": "workspace:*",
+    "@xaravel/queue": "workspace:*",
+    "@xaravel/testing": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/auth": {
+      "optional": true
+    },
+    "@xaravel/broadcasting": {
+      "optional": true
+    },
+    "@xaravel/concurrency": {
+      "optional": true
+    },
+    "@xaravel/console": {
+      "optional": true
+    },
+    "@xaravel/image": {
+      "optional": true
+    },
+    "@xaravel/mail": {
+      "optional": true
+    },
+    "@xaravel/notifications": {
+      "optional": true
+    },
+    "@xaravel/queue": {
+      "optional": true
+    },
+    "@xaravel/testing": {
+      "optional": true
+    }
+  }
+}

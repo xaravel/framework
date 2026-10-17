@@ -1,0 +1,17 @@
+{
+  "name": "@xaravel/htmx",
+  "version": "0.0.0",
+  "description": "The htmx 4 Integration for Xaravel.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/runtime": "workspace:*"
+  }
+}
