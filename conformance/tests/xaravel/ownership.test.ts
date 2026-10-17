@@ -1,10 +1,10 @@
 // Xaravel Tests for Story 1.5 (Story manifests and edit-ownership check).
 // These run under plain `bun test` until the harness lands in Epic 5.
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { allowedPath, checkDuplicates, evaluatePr, parseManifest, readManifests, STORIES_DIR, type Manifest } from "../../../tools/ownership/ownership";
+import { allowedPath, applySprintStatus, checkDuplicates, evaluatePr, parseManifest, readManifests, SPRINT_STATUS, STORIES_DIR, type Manifest } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -15,6 +15,7 @@ interface ManifestFields {
   epic?: unknown;
   component?: unknown;
   status?: unknown;
+  sprint_key?: unknown;
   test_ids?: unknown;
   xaravel_test_ids?: unknown;
 }
@@ -31,14 +32,24 @@ function story(id: string, overrides: ManifestFields = {}): ManifestFields {
   return { story_id: id, epic: Number(id.split(".")[0]), component: "support", status: "backlog", test_ids: [`T-${id}`], ...overrides };
 }
 
-/** A hermetic root holding `stories/<id>.md` for each manifest. */
-function fixtureRoot(stories: Record<string, ManifestFields | string> = {}): string {
+/** A hermetic root holding `stories/<id>.md` for each manifest, plus sprint status when `sprintStatus` is given. */
+function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null): string {
   const tmp = mkdtempSync(join(tmpdir(), "xaravel-ownership-"));
   mkdirSync(join(tmp, STORIES_DIR), { recursive: true });
   for (const [id, fields] of Object.entries(stories)) {
     writeFileSync(join(tmp, STORIES_DIR, `${id}.md`), typeof fields === "string" ? fields : manifestText(fields));
   }
+  if (sprintStatus !== null) {
+    mkdirSync(dirname(join(tmp, SPRINT_STATUS)), { recursive: true });
+    writeFileSync(join(tmp, SPRINT_STATUS), sprintStatus);
+  }
   return tmp;
+}
+
+/** Sprint status text whose `development_status` maps each key to its value. */
+function sprintStatusText(entries: Record<string, string>): string {
+  const lines = Object.entries(entries).map(([key, value]) => `  ${key}: ${value}`);
+  return `project: xaravel\ndevelopment_status:\n${lines.join("\n")}\n`;
 }
 
 async function withRoots(roots: string[], body: (dirs: string[]) => Promise<void> | void): Promise<void> {
@@ -138,12 +149,13 @@ async function runPr(pr: FakePr, rootDir: string): Promise<{ code: number; stdou
   }
 }
 
-const manifest = (id: string, ids: string[], status: Manifest["status"] = "backlog", xt: string[] = []): Manifest => ({
+const manifest = (id: string, ids: string[], status: Manifest["status"] = "backlog", xt: string[] = [], sprintKey: string | null = null): Manifest => ({
   file: `${STORIES_DIR}/${id}.md`,
   storyId: id,
   epic: Number(id.split(".")[0]),
   component: "support",
   status,
+  sprintKey,
   testIds: ids,
   xaravelTestIds: xt,
 });
@@ -158,9 +170,15 @@ test("XT-conformance-22: every Story manifest requires story_id, epic, component
   expect(own.violations).toEqual([]);
   expect(own.manifest).toMatchObject({ storyId: "1.5", epic: 1, component: "conformance" });
   expect(own.manifest!.xaravelTestIds).toEqual(["XT-conformance-22", "XT-conformance-23", "XT-conformance-24", "XT-conformance-25"]);
+  expect(committed.manifests.every((m) => m.sprintKey !== null)).toBe(true);
+  expect(existsSync(join(root, SPRINT_STATUS))).toBe(true);
+  const resolved = applySprintStatus(root, committed.manifests);
+  expect(resolved.violations).toEqual([]);
+  expect(checkDuplicates(resolved.manifests)).toEqual([]);
+  const openCount = resolved.manifests.filter((m) => m.status !== "done").length;
   const live = await runCli(["manifests"]);
   expect(live.code).toBe(0);
-  expect(live.stdout).toStartWith("Ownership OK: ");
+  expect(live.stdout).toBe(`Ownership OK: ${resolved.manifests.length} manifest(s) valid, ${openCount} open, no duplicate Test IDs.\n`);
 
   const check = (fields: ManifestFields | string, name = "stories/9.1.md") =>
     parseManifest(name, typeof fields === "string" ? fields : manifestText(fields)).violations;
@@ -196,6 +214,14 @@ test("XT-conformance-22: every Story manifest requires story_id, epic, component
   expect(check(story("9.1", { test_ids: [" T1"] }))[0]).toContain("test_ids must be a list of non-empty strings without surrounding whitespace");
   expect(check(story("01.5", { epic: 1 }), "stories/01.5.md")[0]).toContain("story_id must be a string matching <epic>.<story>");
   expect(check("# no frontmatter\n")[0]).toContain("frontmatter is missing");
+  // sprint_key is optional; when present it must be a non-empty string.
+  expect(parseManifest("stories/9.1.md", manifestText(story("9.1", { sprint_key: "9-1-x" }))).manifest!.sprintKey).toBe("9-1-x");
+  expect(parseManifest("stories/9.1.md", manifestText(story("9.1"))).manifest!.sprintKey).toBeNull();
+  for (const sprintKey of [7, "", "  ", " 9-1-x", null, ["9-1-x"]]) {
+    expect(check(story("9.1", { sprint_key: sprintKey }))).toEqual([
+      `invalid manifest: stories/9.1.md: sprint_key must be a non-empty string without surrounding whitespace when present, got ${JSON.stringify(sprintKey)} (AD-16)`,
+    ]);
+  }
   expect(check("---\n: [\n---\n")[0]).toContain("frontmatter is not valid YAML");
 
   // The CLI fails, one stderr line per violation.
@@ -469,6 +495,93 @@ test("XT-conformance-25: a Test ID listed by two open Stories fails, naming both
       expect(failing.code).toBe(1);
       expect(failing.stderr).toBe("Ownership violations (AD-16):\n  duplicate test id: T1 is listed by open Story 9.1, Story 9.2 (AD-16)\n");
       expect(await runCli(["manifests", "--root", done!])).toMatchObject({ code: 0 });
+    },
+  );
+
+  // Sprint status is the authority for whether a Story is open, read through sprint_key.
+  const apply = (manifests: Manifest[], sprintStatus: string | null) => {
+    const dir = fixtureRoot({}, sprintStatus);
+    try {
+      return applySprintStatus(dir, manifests);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const pair = (firstStatus: Manifest["status"]) => [manifest("9.1", ["T1"], firstStatus, [], "9-1-x"), manifest("9.2", ["T1"])];
+  // Sprint says done: the manifest's backlog is overridden, so 9.1 no longer holds T1.
+  const sprintDone = apply(pair("backlog"), sprintStatusText({ "9-1-x": "done" }));
+  expect(sprintDone.violations).toEqual([]);
+  expect(sprintDone.manifests.map((m) => m.status)).toEqual(["done", "backlog"]);
+  expect(checkDuplicates(sprintDone.manifests)).toEqual([]);
+  // Sprint says open: the manifest's done is overridden, so the duplicate is reported.
+  const sprintOpen = apply(pair("done"), sprintStatusText({ "9-1-x": "in-progress" }));
+  expect(sprintOpen.violations).toEqual([]);
+  expect(checkDuplicates(sprintOpen.manifests)).toEqual(["duplicate test id: T1 is listed by open Story 9.1, Story 9.2 (AD-16)"]);
+  // Unknown key.
+  expect(apply(pair("backlog"), sprintStatusText({ "9-2-y": "done" })).violations).toEqual([
+    `unknown sprint key: stories/9.1.md: sprint_key "9-1-x" is not in ${SPRINT_STATUS} development_status (AD-16)`,
+  ]);
+  // A value outside the Story statuses.
+  expect(apply(pair("backlog"), sprintStatusText({ "9-1-x": "optional" })).violations).toEqual([
+    `invalid sprint status: ${SPRINT_STATUS}: development_status.9-1-x must be one of backlog, ready-for-dev, in-progress, review, done, blocked, got "optional" (AD-16)`,
+  ]);
+  // A bad file fails closed.
+  for (const [text, problem] of [
+    ["development_status: [\n", "is unreadable or not valid YAML"],
+    ["- a\n- b\n", "must be a YAML mapping"],
+    ["project: xaravel\n", "development_status must be a mapping, missing"],
+    ["development_status: [a]\n", 'development_status must be a mapping, got ["a"]'],
+  ] as const) {
+    const result = apply(pair("backlog"), text);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]).toStartWith(`invalid sprint status: ${SPRINT_STATUS}: ${problem}`);
+  }
+  // No sprint status file: the manifest status is used, as before.
+  expect(apply(pair("done"), null)).toEqual({ manifests: pair("done"), violations: [] });
+  // No sprint_key with sprint status present: the manifest status is used.
+  const keyless = [manifest("9.1", ["T1"], "done"), manifest("9.2", ["T1"])];
+  expect(apply(keyless, sprintStatusText({ "9-1-x": "in-progress" }))).toEqual({ manifests: keyless, violations: [] });
+
+  // The same rows through the CLI.
+  const keyed = (status: string) => ({ "9.1": story("9.1", { test_ids: ["T1"], status, sprint_key: "9-1-x" }), "9.2": story("9.2", { test_ids: ["T1"] }) });
+  await withRoots(
+    [
+      fixtureRoot(keyed("backlog"), sprintStatusText({ "9-1-x": "done" })),
+      fixtureRoot(keyed("done"), sprintStatusText({ "9-1-x": "in-progress" })),
+      fixtureRoot(keyed("backlog"), sprintStatusText({ "9-2-y": "done" })),
+      fixtureRoot(keyed("backlog"), sprintStatusText({ "9-1-x": "optional" })),
+      fixtureRoot(keyed("backlog"), "development_status: [\n"),
+      fixtureRoot(keyed("backlog"), "project: xaravel\n"),
+      fixtureRoot(keyed("done")),
+      fixtureRoot({ "9.1": story("9.1", { test_ids: ["T1"], status: "done" }), "9.2": story("9.2", { test_ids: ["T2"] }) }, sprintStatusText({ "9-1-x": "in-progress" })),
+    ],
+    async ([sprintDoneRoot, sprintOpenRoot, unknownRoot, badValueRoot, badYamlRoot, noMappingRoot, noFileRoot, noKeyRoot]) => {
+      expect(await runCli(["manifests", "--root", sprintDoneRoot!])).toMatchObject({
+        code: 0,
+        stdout: "Ownership OK: 2 manifest(s) valid, 1 open, no duplicate Test IDs.\n",
+      });
+      const open = await runCli(["manifests", "--root", sprintOpenRoot!]);
+      expect(open.code).toBe(1);
+      expect(open.stderr).toBe("Ownership violations (AD-16):\n  duplicate test id: T1 is listed by open Story 9.1, Story 9.2 (AD-16)\n");
+      const unknown = await runCli(["manifests", "--root", unknownRoot!]);
+      expect(unknown.code).toBe(1);
+      expect(unknown.stderr).toContain(`unknown sprint key: stories/9.1.md: sprint_key "9-1-x" is not in ${SPRINT_STATUS} development_status (AD-16)`);
+      const badValue = await runCli(["manifests", "--root", badValueRoot!]);
+      expect(badValue.code).toBe(1);
+      expect(badValue.stderr).toContain(`invalid sprint status: ${SPRINT_STATUS}: development_status.9-1-x must be one of`);
+      for (const dir of [badYamlRoot!, noMappingRoot!]) {
+        const failing = await runCli(["manifests", "--root", dir]);
+        expect(failing.code).toBe(1);
+        expect(failing.stderr).toContain(`invalid sprint status: ${SPRINT_STATUS}: `);
+      }
+      expect(await runCli(["manifests", "--root", noFileRoot!])).toMatchObject({
+        code: 0,
+        stdout: "Ownership OK: 2 manifest(s) valid, 1 open, no duplicate Test IDs.\n",
+      });
+      expect(await runCli(["manifests", "--root", noKeyRoot!])).toMatchObject({
+        code: 0,
+        stdout: "Ownership OK: 2 manifest(s) valid, 1 open, no duplicate Test IDs.\n",
+      });
     },
   );
 });

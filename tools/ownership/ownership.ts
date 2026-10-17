@@ -2,7 +2,11 @@
 //
 //   bun tools/ownership/ownership.ts manifests [--root <dir>]
 //       validates every `stories/*.md` manifest and fails when two open Stories
-//       list the same Test ID
+//       list the same Test ID. When the root has
+//       `_bmad-output/implementation-artifacts/sprint-status.yaml`, it is the
+//       authority for whether a Story is open: a manifest with a `sprint_key`
+//       takes its status from `development_status[<sprint_key>]`. Without that
+//       file, or without a `sprint_key`, the manifest's own `status` is used.
 //
 //   bun tools/ownership/ownership.ts pr --repo <owner/name> --pr <n> [--root <dir>]
 //       reads the PR's head branch and files from the GitHub API
@@ -17,6 +21,12 @@
 //                        file and field
 //   duplicate test id:   a Test ID listed by two or more open Stories (naming
 //                        each), or twice inside one manifest
+//   unknown sprint key:  a manifest's `sprint_key` is not in sprint status's
+//                        `development_status`
+//   invalid sprint status: sprint status is unreadable, not YAML, not a
+//                        mapping, has no `development_status` mapping, or maps
+//                        a manifest's `sprint_key` to a value outside the
+//                        Story statuses; the check fails closed
 //   missing manifest:    a `story/<id>` branch has no `stories/<id>.md` on base
 //   out of scope:        a PR file (or a renamed file's previous name) outside
 //                        the Story's allowed paths
@@ -32,6 +42,9 @@ import { GitHub, type PrFile } from "../protected-paths/protected-paths";
 
 export const STORIES_DIR = "stories";
 
+/** Repo-relative path of sprint status, the authority for whether a Story is open. */
+export const SPRINT_STATUS = "_bmad-output/implementation-artifacts/sprint-status.yaml";
+
 export const STATUSES = ["backlog", "ready-for-dev", "in-progress", "review", "done", "blocked"] as const;
 export type Status = (typeof STATUSES)[number];
 
@@ -42,6 +55,8 @@ export interface Manifest {
   epic: number;
   component: string;
   status: Status;
+  /** The manifest's `sprint_key` (its entry in sprint status), or null when absent. */
+  sprintKey: string | null;
   testIds: string[];
   xaravelTestIds: string[];
 }
@@ -143,6 +158,11 @@ export function parseManifest(file: string, text: string): ManifestResult {
     violations.push(bad("status", `must be one of ${STATUSES.join(", ")}, ${describe(status)}`));
   }
 
+  const sprintKey = fields["sprint_key"];
+  if (sprintKey !== undefined && (typeof sprintKey !== "string" || sprintKey.trim() === "" || sprintKey !== sprintKey.trim())) {
+    violations.push(bad("sprint_key", `must be a non-empty string without surrounding whitespace when present, ${describe(sprintKey)}`));
+  }
+
   const list = (field: string): string[] | null => {
     const value = fields[field];
     if (value === undefined || value === null) {
@@ -170,6 +190,7 @@ export function parseManifest(file: string, text: string): ManifestResult {
       epic: epic as number,
       component: component as string,
       status: status as Status,
+      sprintKey: sprintKey === undefined ? null : (sprintKey as string),
       testIds: testIds!,
       xaravelTestIds: xaravelTestIds!,
     },
@@ -194,6 +215,59 @@ export function readManifests(root: string): ManifestsResult {
     }
   }
   return { manifests, violations };
+}
+
+/**
+ * Resolves each manifest's effective status from sprint status under `root`
+ * (`development_status[<sprint_key>]`). Without a sprint status file the
+ * manifests are returned unchanged; a manifest without a `sprint_key` keeps its
+ * own `status`. A bad file, an unknown key or an invalid value is a violation.
+ */
+export function applySprintStatus(root: string, manifests: readonly Manifest[]): ManifestsResult {
+  const path = join(root, SPRINT_STATUS);
+  if (!existsSync(path)) {
+    return { manifests: [...manifests], violations: [] };
+  }
+  const bad = (problem: string): ManifestsResult => ({
+    manifests: [...manifests],
+    violations: [`invalid sprint status: ${SPRINT_STATUS}: ${problem} (AD-16)`],
+  });
+  let data: unknown;
+  try {
+    data = Bun.YAML.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    return bad(`is unreadable or not valid YAML: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return bad("must be a YAML mapping");
+  }
+  const development = (data as Record<string, unknown>)["development_status"];
+  if (development === null || typeof development !== "object" || Array.isArray(development)) {
+    return bad(`development_status must be a mapping, ${describe(development)}`);
+  }
+  const entries = development as Record<string, unknown>;
+  const resolved: Manifest[] = [];
+  const violations: string[] = [];
+  for (const manifest of manifests) {
+    const key = manifest.sprintKey;
+    if (key === null) {
+      resolved.push(manifest);
+      continue;
+    }
+    if (!Object.hasOwn(entries, key)) {
+      violations.push(`unknown sprint key: ${manifest.file}: sprint_key ${JSON.stringify(key)} is not in ${SPRINT_STATUS} development_status (AD-16)`);
+      resolved.push(manifest);
+      continue;
+    }
+    const value = entries[key];
+    if (typeof value !== "string" || !(STATUSES as readonly string[]).includes(value)) {
+      violations.push(`invalid sprint status: ${SPRINT_STATUS}: development_status.${key} must be one of ${STATUSES.join(", ")}, ${describe(value)} (AD-16)`);
+      resolved.push(manifest);
+      continue;
+    }
+    resolved.push({ ...manifest, status: value as Status });
+  }
+  return { manifests: resolved, violations };
 }
 
 /** Fails a Test ID listed by two or more open Stories, or repeated inside one manifest. */
@@ -344,8 +418,9 @@ function report(violations: readonly string[]): void {
 }
 
 function manifests(options: Options): number {
-  const result = readManifests(options.root);
-  const violations = [...result.violations, ...checkDuplicates(result.manifests)];
+  const read = readManifests(options.root);
+  const result = applySprintStatus(options.root, read.manifests);
+  const violations = [...read.violations, ...result.violations, ...checkDuplicates(result.manifests)];
   if (violations.length > 0) {
     report(violations);
     return 1;
