@@ -42,7 +42,7 @@ development_status:
   1-4-protected-paths-and-the-protected-paths-check: done
   1-5-story-manifests-and-edit-ownership-check: done
   1-6-escalation-and-decision-records: done
-  1-7-repository-ruleset-workflow-permissions-and-dependency-audit: in-progress
+  1-7-repository-ruleset-workflow-permissions-and-dependency-audit: done
   1-8-lockstep-release-workflow-with-provenance: backlog
   epic-1-retrospective: optional
 

@@ -86,11 +86,11 @@ export function checkWorkflow(file: string, text: string): string[] {
   return out;
 }
 
-/** Checks every workflow under `root`. */
+/** Checks every workflow under `root`. A root without the workflows directory is a violation (fail closed). */
 export function checkWorkflows(root: string): { files: string[]; violations: string[] } {
   const dir = join(root, WORKFLOWS_DIR);
   if (!existsSync(dir)) {
-    return { files: [], violations: [] };
+    return { files: [], violations: [`workflow permissions: ${WORKFLOWS_DIR} does not exist (AD-16)`] };
   }
   const files = readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.ya?ml$/.test(entry.name))

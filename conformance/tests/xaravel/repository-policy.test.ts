@@ -10,8 +10,11 @@ import {
   normalize,
   policyViolations,
   prFromMergeGroupRef,
+  readCommitted,
+  requestBody,
   REQUIRED_CHECKS,
   type ActiveRule,
+  type Json,
 } from "../../../tools/ruleset/ruleset";
 import { ALLOWED_WRITE_JOBS, checkWorkflow, checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
 
@@ -23,6 +26,11 @@ type Ruleset = Record<string, unknown> & { rules: Record<string, unknown>[]; byp
 
 function committed(name: string): Ruleset {
   return JSON.parse(readFileSync(join(root, ".github", "rulesets", name), "utf8")) as Ruleset;
+}
+
+/** The request body `apply` must send for a committed ruleset. */
+function bodyOf(ruleset: Ruleset): Record<string, Json> {
+  return requestBody(ruleset as Record<string, Json>);
 }
 
 function byString(a: unknown, b: unknown): number {
@@ -92,13 +100,15 @@ interface FakeGitHub {
   roles?: Record<string, string>;
   /** Paths (after `/repos/xaravel/framework`, or absolute for `/orgs/...`) that answer HTTP 500. */
   fail?: string[];
+  /** Every successful POST or PUT, in order (filled in by the fake). */
+  writes?: { method: string; path: string; body: unknown }[];
 }
 
 /** Runs the ruleset CLI against a `Bun.serve` fake of the GitHub API on port 0. */
 async function runRuleset(args: string[], fake: FakeGitHub, token = "test-token"): Promise<{ code: number; stdout: string; stderr: string }> {
   const server = Bun.serve({
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       const url = new URL(request.url);
       if (request.headers.get("authorization") !== "Bearer test-token") {
         return new Response("unauthorized", { status: 401 });
@@ -110,7 +120,27 @@ async function runRuleset(args: string[], fake: FakeGitHub, token = "test-token"
       }
       const page = Number(url.searchParams.get("page") ?? "1");
       const paged = (items: unknown[]): Response => Response.json(page === 1 ? items : []);
-      const rulesets = fake.rulesets ?? {};
+      const rulesets = (fake.rulesets ??= {});
+      if (request.method === "POST" && rel === "/rulesets") {
+        // Create: a new id, stored like a live ruleset.
+        const body = (await request.json()) as Record<string, unknown>;
+        const id = Math.max(900, ...Object.keys(rulesets).map(Number)) + 1;
+        rulesets[id] = { id, ...body };
+        (fake.writes ??= []).push({ method: "POST", path: rel, body });
+        return Response.json(rulesets[id], { status: 201 });
+      }
+      const put = request.method === "PUT" ? /^\/rulesets\/(\d+)$/.exec(rel) : null;
+      if (put !== null) {
+        // Update: replace the stored ruleset.
+        const id = Number(put[1]);
+        if (rulesets[id] === undefined) {
+          return new Response("not found", { status: 404 });
+        }
+        const body = (await request.json()) as Record<string, unknown>;
+        rulesets[id] = { id, ...body };
+        (fake.writes ??= []).push({ method: "PUT", path: rel, body });
+        return Response.json(rulesets[id]);
+      }
       if (request.method !== "GET") {
         return new Response("method not allowed", { status: 405 });
       }
@@ -177,6 +207,20 @@ function checksOf(ruleset: Ruleset): { context: string; integration_id: number }
 }
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
+
+/** A hermetic root holding the given committed rulesets. */
+async function withRulesets(files: Record<string, unknown>, body: (dir: string) => Promise<void> | void): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-rulesets-"));
+  try {
+    mkdirSync(join(dir, ".github", "rulesets"), { recursive: true });
+    for (const [name, ruleset] of Object.entries(files)) {
+      writeFileSync(join(dir, ".github", "rulesets", name), JSON.stringify(ruleset));
+    }
+    await body(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and requires protected-paths and ownership, linear history, the merge queue and only the Maintainer as bypass; any difference exits 1 naming it (AD-16, AD-28)", async () => {
   // The committed main ruleset carries every invariant.
@@ -269,6 +313,54 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   ]);
   expect(policyViolations(MAIN, {}, ["EdAnisko"])).toEqual([]);
   expect(policyViolations(MAIN, {}, [])).toHaveLength(1);
+  // Policy: a required check not pinned to GitHub Actions, so any status writer could satisfy it.
+  for (const check of REQUIRED_CHECKS) {
+    for (const integrationId of [undefined, 1]) {
+      const unpinned = clone(MAIN);
+      const entry = checksOf(unpinned).find((item) => item.context === check)!;
+      if (integrationId === undefined) {
+        delete (entry as { integration_id?: number }).integration_id;
+      } else {
+        entry.integration_id = integrationId;
+      }
+      expect(policyViolations(unpinned, {}, ["edanisko"])).toEqual([
+        `policy: .github/rulesets/main.json does not pin the \`${check}\` check to GitHub Actions (\`integration_id: 15368\`); any status writer could satisfy it (AD-16)`,
+      ]);
+    }
+  }
+  // Policy: main not enforced, a missing deletion, force-push or PR rule, a PR rule without Code Owner review.
+  for (const enforcement of ["evaluate", "disabled"]) {
+    expect(policyViolations({ ...clone(MAIN), enforcement }, {}, ["edanisko"])).toEqual([
+      `policy: .github/rulesets/main.json enforcement is "${enforcement}", not "active" (AD-16)`,
+    ]);
+  }
+  const unenforced: Record<string, unknown> = clone(MAIN);
+  delete unenforced["enforcement"];
+  expect(policyViolations(unenforced, {}, ["edanisko"])).toEqual(['policy: .github/rulesets/main.json enforcement is missing, not "active" (AD-16)']);
+  for (const type of ["pull_request", "non_fast_forward", "deletion"]) {
+    const dropped = clone(MAIN);
+    dropped.rules = dropped.rules.filter((rule) => rule["type"] !== type);
+    expect(policyViolations(dropped, {}, ["edanisko"])).toEqual([`policy: .github/rulesets/main.json has no \`${type}\` rule (AD-16)`]);
+  }
+  for (const value of [false, undefined, "true"]) {
+    const noCodeOwners = clone(MAIN);
+    const parameters = ruleOf(noCodeOwners, "pull_request")["parameters"] as Record<string, unknown>;
+    if (value === undefined) {
+      delete parameters["require_code_owner_review"];
+    } else {
+      parameters["require_code_owner_review"] = value;
+    }
+    expect(policyViolations(noCodeOwners, {}, ["edanisko"])).toEqual([
+      "policy: .github/rulesets/main.json `pull_request` rule does not set `require_code_owner_review: true` (AD-16)",
+    ]);
+  }
+  // The committed main.json, as read from disk, still yields no policy lines.
+  expect(policyViolations(committed("main.json"), {}, ["edanisko"])).toEqual([]);
+
+  // Two committed files naming the same ruleset are refused, naming both.
+  await withRulesets({ "a.json": PUSH, "b.json": { ...PUSH, target: "tag" } }, (dir) => {
+    expect(() => readCommitted(dir)).toThrow('.github/rulesets/a.json and .github/rulesets/b.json both name the ruleset "Agent pushes"');
+  });
 
   // verify against the fake API: match.
   const ok = await runRuleset(["verify"], { rulesets: liveSet(), admins: ["edanisko"] });
@@ -306,6 +398,35 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   const unauthorized = await runRuleset(["verify"], { rulesets: liveSet(), admins: ["edanisko"] }, "wrong-token");
   expect(unauthorized.code).toBe(1);
   expect(unauthorized.stderr).toContain("HTTP 401");
+
+  // apply: creates the committed ruleset missing live and replaces the others, matched by name.
+  await withRulesets({ "main.json": MAIN, "agent-push.json": PUSH, "agent-tags.json": TAGS }, async (dir) => {
+    const fake: FakeGitHub = { rulesets: liveSet({ tags: null }), admins: ["edanisko"] };
+    const applied = await runRuleset(["apply", "--root", dir], fake);
+    expect(applied.stderr).toBe("");
+    expect(applied.code).toBe(0);
+    const writes = fake.writes ?? [];
+    expect(writes.filter((write) => write.method === "POST")).toEqual([{ method: "POST", path: "/rulesets", body: bodyOf(TAGS) }]);
+    expect(writes.filter((write) => write.method === "PUT").sort((a, b) => byString(a.path, b.path))).toEqual([
+      { method: "PUT", path: "/rulesets/101", body: bodyOf(PUSH) },
+      { method: "PUT", path: "/rulesets/25223480", body: bodyOf(MAIN) },
+    ]);
+    expect(writes).toHaveLength(3);
+    // After apply, verify passes against the same fake.
+    expect(await runRuleset(["verify", "--root", dir], fake)).toMatchObject({ code: 0, stderr: "" });
+
+    // Two live rulesets share a committed name: nothing is written.
+    const ambiguous: FakeGitHub = { rulesets: { ...liveSet(), 103: liveOf(MAIN, 103) }, admins: ["edanisko"] };
+    const refused = await runRuleset(["apply", "--root", dir], ambiguous);
+    expect(refused.code).toBe(1);
+    expect(refused.stderr).toContain('2 live rulesets are named "Protect main"');
+    expect(ambiguous.writes ?? []).toEqual([]);
+
+    // A failing write fails closed.
+    const failing = await runRuleset(["apply", "--root", dir], { rulesets: liveSet(), admins: ["edanisko"], fail: ["/rulesets/101"] });
+    expect(failing.code).toBe(1);
+    expect(failing.stderr).toMatch(/^Ruleset check failed: PUT \/repos\/xaravel\/framework\/rulesets\/101: HTTP 500.*\(AD-16\)\n$/);
+  });
 
   // merge-group-pr.
   expect(prFromMergeGroupRef(`refs/heads/gh-readonly-queue/main/pr-12-${SHA}`)).toBe(12);
@@ -398,6 +519,17 @@ test("XT-conformance-31: every workflow's top-level permissions are contents: re
     rmSync(fixture, { recursive: true, force: true });
   }
   expect((await run(WORKFLOWS_CLI, ["check", "--bogus"])).code).toBe(2);
+  // A root without .github/workflows (a mistyped --root) fails closed.
+  const empty = mkdtempSync(join(tmpdir(), "xaravel-workflows-"));
+  try {
+    expect(checkWorkflows(empty)).toEqual({ files: [], violations: ["workflow permissions: .github/workflows does not exist (AD-16)"] });
+    const missing = await run(WORKFLOWS_CLI, ["check", "--root", empty]);
+    expect(missing.code).toBe(1);
+    expect(missing.stdout).toBe("");
+    expect(missing.stderr).toContain("workflow permissions: .github/workflows does not exist (AD-16)");
+  } finally {
+    rmSync(empty, { recursive: true, force: true });
+  }
 
   // The repository's own workflows pass.
   expect(checkWorkflows(root).violations).toEqual([]);
@@ -435,6 +567,10 @@ test("XT-conformance-32: the agent push identity is limited to story/* by live r
   // No tags ruleset, or an inactive one.
   expect(identityViolations(OK_RULES, null)).toEqual(['identity: there is no live "Agent tags" ruleset (AD-16)']);
   expect(identityViolations(OK_RULES, { ...tags, enforcement: "evaluate" })).toEqual(['identity: "Agent tags" enforcement is "evaluate", not "active" (AD-16)']);
+  // A tags ruleset that excludes some tags leaves them open.
+  expect(identityViolations(OK_RULES, { ...tags, conditions: { ref_name: { include: ["~ALL"], exclude: ["refs/tags/**"] } } })).toEqual([
+    'identity: "Agent tags" excludes ["refs/tags/**"], which leaves those tags open to the agent (AD-16)',
+  ]);
   // Admin agent.
   expect(identityViolations(OK_RULES, tags, { login: "bot", roleName: "admin", orgAdmin: true })).toEqual([
     'identity: agent bot has repository role "admin"; it must be write or triage (AD-16)',
@@ -492,15 +628,22 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   const ci = Bun.YAML.parse(text) as {
     on: Record<string, unknown>;
     permissions: unknown;
-    jobs: Record<string, { permissions?: unknown; steps: { uses?: string; with?: Record<string, unknown>; run?: string }[] }>;
+    jobs: Record<string, Record<string, unknown> & { permissions?: unknown; steps: (Record<string, unknown> & { uses?: string; with?: Record<string, unknown>; run?: string })[] }>;
   };
   expect(Object.keys(ci.on).sort(byString)).toEqual(["merge_group", "pull_request", "push"]);
+  expect(ci.on["pull_request"]).toEqual({ branches: ["main"] });
+  expect(ci.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(ci.on["push"]).toEqual({ branches: ["main"] });
   expect(ci.permissions).toEqual({ contents: "read" });
   expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "workflow-permissions"]);
 
   const audit = ci.jobs["audit"]!;
   expect(audit.permissions).toBeUndefined();
+  // Nothing lets the audit pass without running or past a failure.
+  for (const node of [audit, ...audit.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+    expect(node["if"]).toBeUndefined();
+  }
   const runs = audit.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
   expect(runs).toEqual(["bun install --frozen-lockfile --ignore-scripts", "bun audit --audit-level=high"]);
   expect(audit.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });

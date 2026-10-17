@@ -29,6 +29,10 @@ Each ruleset has exactly one bypass actor, `OrganizationAdmin`. CI never holds a
 
    `apply` matches each committed ruleset to the live one by name. It updates the live ruleset when one exists and creates it otherwise. Run it again whenever a file under `.github/rulesets/` changes on `main`.
 
+## Bootstrapping
+
+The PR that first adds `tools/ruleset/` and the `merge_group` triggers (Story 1.7) can't pass the merge queue. Its merge group checks out a base commit that doesn't have that tool yet, so the `protected-paths` and `ownership` checks fail there. An org admin merges that one PR with the bypass. After that, queue runs work.
+
 ## Checking the setup
 
 Run the identity check, with any token that can read the repository and the org's members:
@@ -37,7 +41,7 @@ Run the identity check, with any token that can read the repository and the org'
 GH_TOKEN="$(gh auth token)" bun run ruleset:identity --agent <login>
 ```
 
-It reads the rules active on the probe refs `planning/probe`, `bot/probe` and `release/probe`; each must have `creation` and `update`. `main` must have `pull_request`, and `story/probe` must have none of the three. It also checks that the live **Agent tags** ruleset is active. With `--agent`, it checks that the login's repository role is `write` or `triage` and that the login is not an org admin. It exits 0 when everything holds. Otherwise it exits 1 and prints one `identity:` line per problem.
+It reads the rules active on the probe refs `planning/probe`, `bot/probe` and `release/probe`; each must have `creation` and `update`. `main` must have `pull_request`, and `story/probe` must have none of `creation`, `update` and `pull_request`. It also checks that the live **Agent tags** ruleset is active and excludes no tags. With `--agent`, it checks that the login's repository role is `write` or `triage` and that the login is not an org admin. To read the role, `--agent` also calls `GET /repos/<repo>/collaborators/<login>/permission`, which needs a token with push access to the repository. It exits 0 when everything holds. Otherwise it exits 1 and prints one `identity:` line per problem.
 
 To confirm the committed rulesets match the live ones, run:
 
@@ -45,6 +49,6 @@ To confirm the committed rulesets match the live ones, run:
 GH_TOKEN="$(gh auth token)" bun run ruleset:verify
 ```
 
-`verify` prints a `ruleset drift:` line for each difference and a `missing ruleset:` line for each committed ruleset with no live counterpart. It prints a `policy:` line when a required check, linear history or the merge queue is missing, when a bypass actor is not `OrganizationAdmin`, or when the org has an admin other than the Maintainer.
+`verify` prints a `ruleset drift:` line for each difference and a `missing ruleset:` line for each committed ruleset with no live counterpart. It prints a `policy:` line when `main.json` is not active, when a required check is missing or not pinned to GitHub Actions, when a rule it needs (deletion, force-push, PR with Code Owner review, linear history or the merge queue) is missing, when a bypass actor is not `OrganizationAdmin`, or when the org has an admin other than the Maintainer.
 
 As a final check, push a throwaway branch as the agent. A `planning/…` push must be rejected, and a `story/…` push must succeed.

@@ -3,7 +3,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   activePhases,
   CODEOWNERS_PATH,
@@ -60,6 +60,25 @@ async function runCli(args: string[], env: Record<string, string> = {}): Promise
   });
   const [code, stdout, stderr] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
   return { code, stdout, stderr };
+}
+
+/** Runs a workflow step's `run` text as the runner does (`bash -e`) from the repo root; returns its exit code and `$GITHUB_OUTPUT`. */
+async function runStep(run: string, env: Record<string, string>): Promise<{ code: number; output: string }> {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-step-"));
+  try {
+    const output = join(dir, "github-output");
+    writeFileSync(output, "");
+    const proc = Bun.spawn(["bash", "-e", "-c", run], {
+      cwd: root,
+      env: { PATH: `${dirname(process.execPath)}:${process.env["PATH"] ?? ""}`, GITHUB_OUTPUT: output, ...env },
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    const code = await proc.exited;
+    return { code, output: readFileSync(output, "utf8") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 interface FakePr {
@@ -358,7 +377,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
   });
 });
 
-test("XT-conformance-20: the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", () => {
+test("XT-conformance-20: the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", async () => {
   // A PR changing the workflow itself is a Protected Path change.
   const workflowFile = [file(".github/workflows/protected-paths.yml")];
   const own = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files: workflowFile, changedFiles: 1, reviews, headSha: HEAD });
@@ -399,7 +418,26 @@ test("XT-conformance-20: the protected-paths workflow triggers only on pull_requ
     EVENT_PR: "${{ github.event.pull_request.number }}",
     QUEUE_REF: "${{ github.event.merge_group.head_ref }}",
   });
-  expect(findPr!.run).toContain('bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF"');
+  expect(findPr!.run).toBe(
+    [
+      'if [ "$EVENT_NAME" = merge_group ]; then',
+      '  number="$(bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF")"',
+      "else",
+      '  number="$EVENT_PR"',
+      "fi",
+      'echo "number=$number" >> "$GITHUB_OUTPUT"',
+      "",
+    ].join("\n"),
+  );
+  // The step, run as the runner runs it, names the queued PR or the event's PR under the key the check step reads.
+  const queued = await runStep(findPr!.run!, { EVENT_NAME: "merge_group", QUEUE_REF: "refs/heads/gh-readonly-queue/main/pr-12-0123456789abcdef0123456789abcdef01234567", EVENT_PR: "" });
+  expect(queued).toEqual({ code: 0, output: "number=12\n" });
+  const direct = await runStep(findPr!.run!, { EVENT_NAME: "pull_request_target", QUEUE_REF: "", EVENT_PR: "34" });
+  expect(direct).toEqual({ code: 0, output: "number=34\n" });
+  // A queue ref that names no PR fails the step rather than passing an empty number on.
+  expect(await runStep(findPr!.run!, { EVENT_NAME: "merge_group", QUEUE_REF: "refs/heads/main", EVENT_PR: "" })).toEqual({ code: 1, output: "" });
+  const outputKey = queued.output.slice(0, queued.output.indexOf("="));
+  expect(check!.env!["PR_NUMBER"]).toBe(`\${{ steps.${findPr!.id}.outputs.${outputKey} }}`);
   expect(check!.uses).toBeUndefined();
   expect(check!.run).toBe('bun tools/protected-paths/protected-paths.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
   expect(check!.env).toEqual({

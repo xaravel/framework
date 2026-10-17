@@ -49,6 +49,10 @@ export const TAGS_RULESET = "Agent tags";
 export const COMPARED_FIELDS = ["name", "target", "enforcement", "conditions", "rules", "bypass_actors"] as const;
 /** The checks main.json must require (AD-16, NFR-5). */
 export const REQUIRED_CHECKS = ["protected-paths", "ownership", "audit"] as const;
+/** The GitHub Actions app: each required check is pinned to it, so no other status writer can satisfy it. */
+export const ACTIONS_INTEGRATION_ID = 15368;
+/** Rules main.json must hold besides the required checks (AD-16). */
+export const MAIN_RULES = ["deletion", "non_fast_forward", "pull_request", "required_linear_history", "merge_queue"] as const;
 export const ALLOWED_BYPASS = "OrganizationAdmin";
 /** Probe refs the agent must be able to push without restriction. */
 export const STORY_PROBE = "story/probe";
@@ -232,20 +236,32 @@ function rulesOf(ruleset: JsonObject): JsonObject[] {
  */
 export function policyViolations(main: unknown, rulesets: Readonly<Record<string, unknown>>, admins: readonly string[]): string[] {
   const out: string[] = [];
-  const mainRules = rulesOf(normalize(main));
+  const normalizedMain = normalize(main);
+  if (normalizedMain["enforcement"] !== "active") {
+    out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} enforcement is ${show(normalizedMain["enforcement"])}, not "active" (AD-16)`);
+  }
+  const mainRules = rulesOf(normalizedMain);
   const statusChecks = mainRules.find((rule) => rule["type"] === "required_status_checks");
   const parameters = statusChecks !== undefined && isObject(statusChecks["parameters"]) ? statusChecks["parameters"] : {};
-  const checks = Array.isArray(parameters["required_status_checks"]) ? parameters["required_status_checks"] : [];
-  const contexts = new Set(checks.filter(isObject).map((check) => check["context"]));
+  const checks = (Array.isArray(parameters["required_status_checks"]) ? parameters["required_status_checks"] : []).filter(isObject);
+  const contexts = new Set(checks.map((check) => check["context"]));
   for (const check of REQUIRED_CHECKS) {
     if (!contexts.has(check)) {
       out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} does not require the \`${check}\` check (AD-16)`);
+    } else if (checks.some((item) => item["context"] === check && item["integration_id"] !== ACTIONS_INTEGRATION_ID)) {
+      out.push(
+        `policy: ${RULESETS_DIR}/${MAIN_FILE} does not pin the \`${check}\` check to GitHub Actions (\`integration_id: ${ACTIONS_INTEGRATION_ID}\`); any status writer could satisfy it (AD-16)`,
+      );
     }
   }
-  for (const type of ["required_linear_history", "merge_queue"]) {
+  for (const type of MAIN_RULES) {
     if (!mainRules.some((rule) => rule["type"] === type)) {
       out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} has no \`${type}\` rule (AD-16)`);
     }
+  }
+  const pullRequest = mainRules.find((rule) => rule["type"] === "pull_request");
+  if (pullRequest !== undefined && !(isObject(pullRequest["parameters"]) && pullRequest["parameters"]["require_code_owner_review"] === true)) {
+    out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} \`pull_request\` rule does not set \`require_code_owner_review: true\` (AD-16)`);
   }
   for (const label of Object.keys(rulesets).sort(compare)) {
     const ruleset = rulesets[label];
@@ -328,6 +344,10 @@ export function identityViolations(
     if (!include.includes("~ALL")) {
       out.push(`identity: "${TAGS_RULESET}" does not include ~ALL (AD-16)`);
     }
+    const exclude = conditions["exclude"];
+    if (Array.isArray(exclude) && exclude.length > 0) {
+      out.push(`identity: "${TAGS_RULESET}" excludes ${JSON.stringify(exclude)}, which leaves those tags open to the agent (AD-16)`);
+    }
     const ruleTypes = new Set(rulesOf(tags).map((rule) => rule["type"]));
     for (const type of ["creation", "update", "deletion"]) {
       if (!ruleTypes.has(type)) {
@@ -359,7 +379,7 @@ export interface CommittedRuleset {
   ruleset: JsonObject;
 }
 
-/** Every committed ruleset under `root`, sorted by file. Throws on unreadable or malformed files. */
+/** Every committed ruleset under `root`, sorted by file. Throws on unreadable or malformed files, or a repeated name. */
 export function readCommitted(root: string): CommittedRuleset[] {
   const dir = join(root, RULESETS_DIR);
   if (!existsSync(dir)) {
@@ -369,6 +389,7 @@ export function readCommitted(root: string): CommittedRuleset[] {
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
     .map((entry) => entry.name)
     .sort(compare);
+  const fileByName = new Map<string, string>();
   return names.map((name) => {
     const file = `${RULESETS_DIR}/${name}`;
     let data: unknown;
@@ -380,6 +401,11 @@ export function readCommitted(root: string): CommittedRuleset[] {
     if (!isObject(data) || typeof data["name"] !== "string" || data["name"] === "") {
       throw new Error(`${file} must be a JSON object with a non-empty "name"`);
     }
+    const other = fileByName.get(data["name"]);
+    if (other !== undefined) {
+      throw new Error(`${other} and ${file} both name the ruleset "${data["name"]}"`);
+    }
+    fileByName.set(data["name"], file);
     return { file, name: data["name"], ruleset: data };
   });
 }
@@ -571,17 +597,20 @@ async function apply(options: Options): Promise<number> {
   const committed = readCommitted(options.root);
   const api = client();
   const summaries = await liveSummaries(api, options.repo);
-  for (const item of committed) {
+  // Match every committed ruleset before writing any, so an ambiguous name writes nothing.
+  const plan = committed.map((item) => {
     const matches = summaries.filter((summary) => summary.name === item.name);
     if (matches.length > 1) {
       throw new Error(`${matches.length} live rulesets are named "${item.name}"; resolve by hand`);
     }
+    return { item, id: matches.length === 0 ? null : matches[0]!.id };
+  });
+  for (const { item, id } of plan) {
     const body = requestBody(item.ruleset);
-    if (matches.length === 0) {
+    if (id === null) {
       const created = await api.request<{ id: number }>("POST", `/repos/${options.repo}/rulesets`, body);
       process.stdout.write(`Created "${item.name}" (${created.id}) from ${item.file}.\n`);
     } else {
-      const id = matches[0]!.id;
       await api.request<unknown>("PUT", `/repos/${options.repo}/rulesets/${id}`, body);
       process.stdout.write(`Updated "${item.name}" (${id}) from ${item.file}.\n`);
     }
