@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans","variant":"none","attempts":[{"assertIsBool":2},{"assertIsBool":3}],"record":{"assertIsBool":2}}

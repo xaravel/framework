@@ -19,7 +19,13 @@
 //
 // An entry is one JSON line, keys in this order:
 //
-//   {"id","component","kind","backends","source","hash"}
+//   {"id","component","kind","backends","source","hash","assertions","oracle"}
+//
+// `assertions` and `oracle` come from the baseline run (Story 2.6,
+// tools/baseline). Generation carries them over for each entry whose `id`,
+// `hash` and `backends` are unchanged in the existing files (a file that does
+// not parse carries nothing); any other entry gets
+// `"assertions":null,"oracle":{}` until the next baseline run.
 //
 // Lines are sorted by `id` (UTF-16 code units); the files are UTF-8 with LF
 // line endings and a trailing newline. A framework Component's file that is
@@ -43,6 +49,11 @@ export const INVENTORY_DIR = "conformance/inventory";
 export const LISTER = "tools/inventory/lister.php";
 /** Inventory files the framework generation never writes or deletes (the Pest suites' files). */
 export const FOREIGN_COMPONENTS: readonly string[] = ["ai", "boost", "mcp"];
+/**
+ * The Oracle non-determinism findings file in the Inventory directory (Story 2.6, decisions/ESC-2.6-1.md). It is
+ * not a Component's Inventory file: generation never reads, writes or deletes it.
+ */
+export const NONDETERMINISM_FILE = "oracle-nondeterminism.jsonl";
 /** The Pest suites, in generation order; each is its own Component. */
 export const PEST_SUITES = ["ai", "mcp", "boost"] as const;
 export type PestSuite = (typeof PEST_SUITES)[number];
@@ -64,6 +75,14 @@ export const DATABASE_DIRECTORIES: Readonly<Record<string, string>> = {
 export const QUEUE_BACKENDS: readonly string[] = ["queue-beanstalkd@beanstalkd", "queue-database@sqlite", "queue-redis@redis", "queue-sync@none"];
 
 export type Kind = "unit" | "integration";
+/** An Oracle outcome (Story 2.6). */
+export type Outcome = "pass" | "skip" | "fail";
+export const OUTCOMES: readonly Outcome[] = ["pass", "skip", "fail"];
+/**
+ * The alpha Backend Variants the baseline runs (Story 2.6), sorted. An entry's `oracle` keys are its
+ * `backends` intersected with these.
+ */
+export const ALPHA_VARIANTS: readonly string[] = ["none", "pgsql", "queue-database@sqlite", "queue-redis@redis", "queue-sync@none", "redis", "sqlite"];
 
 /** One raw line from the lister. Paths are relative to the framework directory. */
 export interface RawTest {
@@ -95,6 +114,10 @@ export interface InventoryEntry {
   backends: string[];
   source: string;
   hash: string;
+  /** Kind to positive count, keys sorted; `{}` when the test asserted nothing, null when it has not run on an alpha variant. */
+  assertions: Record<string, number> | null;
+  /** Alpha variant to outcome, keys sorted; `{}` when it has not run (or has no alpha variant). */
+  oracle: Record<string, Outcome>;
 }
 
 export { PHP_VERSION };
@@ -124,11 +147,12 @@ export interface GenerateResult {
 }
 
 const SNAPSHOT_HINT = "run bun run upstream:sync";
-const ENTRY_KEYS = ["id", "component", "kind", "backends", "source", "hash"] as const;
+const ENTRY_KEYS = ["id", "component", "kind", "backends", "source", "hash", "assertions", "oracle"] as const;
 const RAW_KEYS = ["id", "class", "method", "dataset", "file", "source", "tokens", "data", "requiresDatabase", "redis"] as const;
 const PEST_RAW_KEYS = ["id", "class", "method", "dataset", "file", "describe", "name", "source", "tokens", "data", "requiresDatabase", "redis"] as const;
 
-function compareUnits(a: string, b: string): number {
+/** Compares by UTF-16 code units. */
+export function compareUnits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
@@ -339,6 +363,8 @@ export function buildEntries(raws: readonly RawTest[], map: ComponentMap): Inven
       backends: backendsFor(raw),
       source: `framework/${raw.source.file}:${raw.source.start}-${raw.source.end}`,
       hash: testHash(raw.tokens, raw.data),
+      assertions: null,
+      oracle: {},
     });
   }
   return entries.sort((a, b) => compareUnits(a.id, b.id));
@@ -372,13 +398,38 @@ export function buildPestEntries(suite: PestSuite, raws: readonly PestRawTest[],
       backends: backendsFor(raw, suite),
       source: `${suite}/${raw.source.file}:${raw.source.start}-${raw.source.end}`,
       hash: testHash(raw.tokens, raw.data),
+      assertions: null,
+      oracle: {},
     });
   }
   return entries.sort((a, b) => compareUnits(a.id, b.id));
 }
 
+/** `record`'s entries with keys sorted by UTF-16 code units. */
+export function sortedRecord<T>(record: Readonly<Record<string, T>>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const key of Object.keys(record).sort(compareUnits)) {
+    out[key] = record[key]!;
+  }
+  return out;
+}
+
+/** The entry's `backends` intersected with the alpha variants, sorted. */
+export function alphaVariants(backends: readonly string[]): string[] {
+  return ALPHA_VARIANTS.filter((variant) => backends.includes(variant));
+}
+
 function renderEntry(entry: InventoryEntry): string {
-  return JSON.stringify({ id: entry.id, component: entry.component, kind: entry.kind, backends: entry.backends, source: entry.source, hash: entry.hash });
+  return JSON.stringify({
+    id: entry.id,
+    component: entry.component,
+    kind: entry.kind,
+    backends: entry.backends,
+    source: entry.source,
+    hash: entry.hash,
+    assertions: entry.assertions === null ? null : sortedRecord(entry.assertions),
+    oracle: sortedRecord(entry.oracle),
+  });
 }
 
 /** The file text for each Component, keyed by Component in sorted order. */
@@ -430,7 +481,7 @@ export function parseInventory(text: string, file: string, suite: Suite = "frame
     if (!isRecord(value) || Object.keys(value).join(",") !== ENTRY_KEYS.join(",")) {
       throw new Error(`${at}: expected the keys ${ENTRY_KEYS.join(", ")} in that order`);
     }
-    const { id, component, kind, backends, source, hash } = value;
+    const { id, component, kind, backends, source, hash, assertions, oracle } = value;
     if (typeof id !== "string" || !/^[^:\s][^\n]*::[^:#\s][^#\n]*(?:#.*)?$/.test(id) || (suite !== "framework" && !id.startsWith(`${suite}/tests/`))) {
       throw new Error(`${at}: bad id ${JSON.stringify(id)}`);
     }
@@ -450,11 +501,26 @@ export function parseInventory(text: string, file: string, suite: Suite = "frame
     if (typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash)) {
       throw new Error(`${at}: hash must be 64 lowercase hex characters`);
     }
+    if (!isRecord(oracle) || Object.keys(oracle).join("\n") !== Object.keys(oracle).sort(compareUnits).join("\n") || Object.values(oracle).some((outcome) => !OUTCOMES.includes(outcome as Outcome))) {
+      throw new Error(`${at}: oracle must be an object of pass, skip or fail with sorted keys`);
+    }
+    const variants = alphaVariants(backends);
+    if (Object.keys(oracle).length > 0 && Object.keys(oracle).join("\n") !== variants.join("\n")) {
+      throw new Error(`${at}: oracle keys must be exactly the alpha variants in backends (${variants.join(", ") || "none of them"}), or {} before a baseline run`);
+    }
+    if (assertions !== null) {
+      if (!isRecord(assertions) || Object.keys(assertions).join("\n") !== Object.keys(assertions).sort(compareUnits).join("\n") || Object.entries(assertions).some(([name, count]) => !/^assert[A-Za-z0-9_]*$/.test(name) || !Number.isSafeInteger(count) || (count as number) < 1)) {
+        throw new Error(`${at}: assertions must be null or an object of assert* kinds to positive integer counts with sorted keys`);
+      }
+    }
+    if ((assertions === null) !== (Object.keys(oracle).length === 0)) {
+      throw new Error(`${at}: assertions must be null exactly when oracle is {}`);
+    }
     const previous = entries.at(-1);
     if (previous !== undefined && compareUnits(previous.id, id) >= 0) {
       throw new Error(`${at}: ${id} is not sorted after ${previous.id}`);
     }
-    entries.push({ id, component, kind, backends, source: source as string, hash });
+    entries.push({ id, component, kind, backends, source: source as string, hash, assertions: assertions as Record<string, number> | null, oracle: oracle as Record<string, Outcome> });
   });
   return entries;
 }
@@ -520,8 +586,56 @@ function runLister(command: string[]): string {
   return proc.stdout.toString();
 }
 
+/** The Inventory files a suite owns, as `[component, path]` pairs sorted by component: every framework Component's, or `<suite>.jsonl`. */
+export function suiteInventoryFiles(root: string, suite: Suite): [string, string][] {
+  const dir = join(root, INVENTORY_DIR);
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE)
+    .map((name) => name.slice(0, -".jsonl".length))
+    .filter((component) => (suite === "framework" ? !FOREIGN_COMPONENTS.includes(component) : component === suite))
+    .sort(compareUnits)
+    .map((component): [string, string] => [component, join(dir, `${component}.jsonl`)]);
+}
+
+/** The committed entries of one suite, parsed and validated, sorted by id. */
+export function readSuiteInventory(root: string, suite: Suite): InventoryEntry[] {
+  const entries: InventoryEntry[] = [];
+  for (const [component, path] of suiteInventoryFiles(root, suite)) {
+    entries.push(...parseInventory(readFileSync(path, "utf8"), `${INVENTORY_DIR}/${component}.jsonl`, suite));
+  }
+  return entries.sort((a, b) => compareUnits(a.id, b.id));
+}
+
+/** The existing entries of one suite to carry fields over from; a file that does not parse carries nothing. */
+function previousEntries(root: string, suite: Suite): InventoryEntry[] {
+  const entries: InventoryEntry[] = [];
+  for (const [component, path] of suiteInventoryFiles(root, suite)) {
+    try {
+      entries.push(...parseInventory(readFileSync(path, "utf8"), `${INVENTORY_DIR}/${component}.jsonl`, suite));
+    } catch {
+      // Not a valid Inventory file (for example, one written before Story 2.6): nothing to carry over.
+    }
+  }
+  return entries;
+}
+
+/** Carries `assertions` and `oracle` over from `previous` for each entry whose id, hash and backends are unchanged. */
+export function carryOver(entries: readonly InventoryEntry[], previous: readonly InventoryEntry[]): InventoryEntry[] {
+  const byId = new Map(previous.map((entry) => [entry.id, entry]));
+  return entries.map((entry) => {
+    const old = byId.get(entry.id);
+    if (old !== undefined && old.hash === entry.hash && old.backends.join("\n") === entry.backends.join("\n")) {
+      return { ...entry, assertions: old.assertions, oracle: old.oracle };
+    }
+    return { ...entry, assertions: null, oracle: {} };
+  });
+}
+
 /** Runs the lister for one suite and checks every raw source against the snapshot. */
-function listSuite(root: string, suite: Suite, snapshot: string, lister: string, options: GenerateOptions): RawTest[] | PestRawTest[] {
+export function listSuite(root: string, suite: Suite, snapshot: string, lister: string, options: GenerateOptions): RawTest[] | PestRawTest[] {
   const pest = suite === "framework" ? [] : ["pest"];
   let stdout: string;
   if (options.local !== undefined) {
@@ -587,7 +701,8 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
   const generated: { suite: Suite; files: Map<string, string>; total: number }[] = [];
   for (const suite of suites) {
     const raws = listSuite(root, suite, snapshots.get(suite)!, lister, options);
-    const entries = suite === "framework" ? buildEntries(raws, map) : buildPestEntries(suite, raws as PestRawTest[], map);
+    const built = suite === "framework" ? buildEntries(raws, map) : buildPestEntries(suite, raws as PestRawTest[], map);
+    const entries = carryOver(built, previousEntries(root, suite));
     generated.push({ suite, files: renderInventory(entries), total: entries.length });
   }
 
@@ -607,7 +722,7 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
     if (suite === "framework") {
       for (const name of readdirSync(dir).sort(compareUnits)) {
         const component = name.replace(/\.jsonl$/, "");
-        if (name.endsWith(".jsonl") && !files.has(component) && !FOREIGN_COMPONENTS.includes(component)) {
+        if (name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE && !files.has(component) && !FOREIGN_COMPONENTS.includes(component)) {
           rmSync(join(dir, name));
           result.removed.push(`${INVENTORY_DIR}/${name}`);
         }

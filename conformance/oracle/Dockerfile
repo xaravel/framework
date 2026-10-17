@@ -1,6 +1,7 @@
 # The Oracle image (Story 2.2, FR-6, OQ-9): PHP 8.5.11 and the Upstream
 # snapshot, each directory with its locked dev dependencies (PHPUnit, Pest,
-# Mockery, Orchestra Testbench).
+# Mockery, Orchestra Testbench), plus Upstream's Linux CI extension set for
+# the baseline run.
 #
 # Build it from the repository root, after `bun run upstream:sync`:
 #
@@ -26,13 +27,49 @@ LABEL org.opencontainers.image.source="https://github.com/xaravel/framework" \
 
 # The locks need gmp (laravel/framework's require-dev) and ftp
 # (league/flysystem-ftp) beyond the official image's extensions; unzip and git
-# let Composer unpack and, as a fallback, clone packages.
+# let Composer unpack and, as a fallback, clone packages. The baseline run
+# (Story 2.6, docs/ops/baseline.md) needs Upstream's Linux CI extension set
+# (conformance/upstream/framework/.github/workflows/tests.yml), so no test
+# records an image-caused skip: pdo_mysql, pdo_pgsql, intl, zip, pcntl and gd
+# (freetype, jpeg, webp), plus the PECL extensions igbinary, msgpack,
+# memcached, imagick and redis, at pinned versions. Each PECL source is
+# downloaded from pecl.php.net and checked against its pinned sha256 before it
+# is built; igbinary and msgpack are built first, and redis is configured as
+# Upstream's CI configures it (igbinary, msgpack, lzf, zstd, lz4). The build
+# fails unless `php -m` lists every extension.
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends git unzip libgmp-dev; \
-    docker-php-ext-install -j"$(nproc)" gmp; \
+    apt-get install -y --no-install-recommends git unzip curl ca-certificates pkg-config \
+        libgmp-dev libpq-dev libicu-dev libzip-dev libfreetype-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
+        libmemcached-dev zlib1g-dev libmagickwand-dev liblz4-dev liblzf-dev libzstd-dev; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp; \
+    docker-php-ext-install -j"$(nproc)" gmp pdo_mysql pdo_pgsql intl zip pcntl gd; \
     if ! php -m | grep -qix ftp; then docker-php-ext-install -j"$(nproc)" ftp; fi; \
-    rm -rf /var/lib/apt/lists/*
+    pecl_build() { \
+        name="$1"; version="$2"; sha="$3"; shift 3; \
+        mkdir -p /tmp/pecl; \
+        curl -fsSL -o "/tmp/pecl/$name.tgz" "https://pecl.php.net/get/$name-$version.tgz"; \
+        echo "$sha  /tmp/pecl/$name.tgz" | sha256sum -c -; \
+        mkdir "/tmp/pecl/$name"; \
+        tar -xzf "/tmp/pecl/$name.tgz" -C "/tmp/pecl/$name" --strip-components=1; \
+        cd "/tmp/pecl/$name"; \
+        phpize; \
+        ./configure "$@"; \
+        make -j"$(nproc)"; \
+        make install; \
+        cd /; \
+        docker-php-ext-enable "$name"; \
+    }; \
+    pecl_build igbinary 3.2.17RC1 91da821443db125282a6aea039f24588dd28ff5d71e8187f6ecc41165bceafbc; \
+    pecl_build msgpack 3.0.1 e30be355ab79aaea4568692fbd6073fd7c7f50ea8d3cf12edce40fc0c921d868; \
+    pecl_build redis 6.3.0 0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5 \
+        --enable-redis --enable-redis-igbinary --enable-redis-msgpack --enable-redis-lzf --with-liblzf --enable-redis-zstd --with-libzstd --enable-redis-lz4 --with-liblz4; \
+    pecl_build memcached 3.4.0 c163434eb0da97c8f45c7ad41d979d381f8b81c49402b1b90b063987fb37972e; \
+    pecl_build imagick 3.8.1 3a3587c0a524c17d0dad9673a160b90cd776e836838474e173b549ed864352ee; \
+    for ext in gmp ftp pdo_mysql pdo_pgsql intl zip pcntl gd igbinary msgpack redis memcached imagick; do \
+        php -m | grep -qix "$ext"; \
+    done; \
+    rm -rf /var/lib/apt/lists/* /tmp/pecl /tmp/pear
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
@@ -63,7 +100,17 @@ RUN --mount=type=secret,id=github_token \
         cd "/oracle/upstream/$name"; \
         COMPOSER_ROOT_VERSION="${pair#*:}" composer install --no-progress --prefer-dist; \
     done; \
-    rm -rf /tmp/composer-home /tmp/composer-cache
+    rm -rf /tmp/composer-home /tmp/composer-cache; \
+    groupadd --gid 1001 oracle; \
+    useradd --uid 1001 --gid 1001 --create-home --shell /bin/sh oracle; \
+    chown -R 1001:1001 /oracle/upstream; \
+    chmod -R u+w /oracle/upstream
 
+# Upstream's tests run as uid 1001, the GitHub runner's user, never as root
+# (docs/ops/baseline.md): tests that chmod a file and expect access to be
+# denied pass only for a non-root user. Root is used only for the build steps
+# above. /oracle/upstream, where the tests write, belongs to that user and is
+# writable by it, as a CI checkout is (the snapshot is copied read-only).
+USER 1001:1001
 WORKDIR /oracle/upstream
 CMD ["php", "--version"]

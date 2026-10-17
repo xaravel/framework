@@ -2,8 +2,8 @@
 title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
-baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'ready-for-dev'
+baseline_revision: 'dfbe94c8ccf792539c5e7f48d2bdb57ccebe6fce'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -291,3 +291,23 @@ To resume:
 1. Apply both patches.
 2. Make the amendment and the patch items.
 3. Push, run `baseline.yml`, and commit its `inventory` artifact.
+
+
+### Resumed run (2026-10-17, third run)
+
+Status: done
+
+Applied both patches on `story/2.6`, then the amendment and the patch items:
+- **Non-root Oracle.** The Dockerfile creates `oracle` (uid/gid 1001), `chown -R 1001:1001` and `chmod -R u+w` on `/oracle/upstream` (the snapshot is copied in read-only, so ownership alone left the tests unable to write their fixtures), and ends with `USER 1001:1001`. `networkedRunArgs` passes `--user 1001:1001` (`IMAGE_USER` in `tools/oracle/oracle.ts`); the run's work directory is mode 0755. XT-conformance-56 asserts both.
+- **Patch items.** The `merge` job runs `git add --intent-to-add conformance/inventory` before `git diff --exit-code`; XT-conformance-49 checks that `generate` keeps `oracle-nondeterminism.jsonl`; `mergeResults` marks a listed finding before the missing-attempt `continue` (with a fixture assertion); the XT-conformance-58 comment, the `baseline.yml` header and the `docs/ops/baseline.md` workflow section (now with the `inventory` job) are fixed.
+
+Found during this run and fixed (outside the review list):
+- **The recorder over-counted assertions after a `pcntl_fork`.** A forked child inherits the recorder's counts and ran its shutdown flush on exit, appending them again. `FilesystemTest::testSharedGet` forks 20 children, so every test that ran before it in a leg was recorded with 21× its assertions (4505 entries), and the fork Concurrency driver gave 3× (271) and 2× (1). The committed data from run 39045666471 carried this. The recorder now flushes only in the process that loaded it (Upstream's PHPUnit does not count a forked child's assertions either); reproduced and verified locally with the old and new recorder on `DatabaseAbstractSchemaGrammarTest` + `FilesystemTest`. XT-conformance-56 has a source needle for the guard. The deferred recorder self-test would have caught this.
+
+Verification:
+- CI run 39059935351 (PR #56): every leg green on both attempts; `merge` reported no non-determinism beyond the listed ESC-2.6-1 finding. Its `inventory` artifact is the committed Inventory: 22070 entries, 294 non-alpha-only entries with `null` assertions.
+- Against the previous data: exactly the 8 permission tests the review named went `fail` → `pass` (`FilesystemTest::testIsReadable`/`testIsWritable`, `FilesystemAdapterTest::testThrowExceptionsForPut`/`testReportExceptionsForPut`, three boost `InstallCommandSkillSyncTest` tests and `GuidelineWriterTest`); every other assertions change is an exact 21×, 3× or 2× reduction.
+- Outcomes: none 20617/452/2 (pass/skip/fail; the fails are boost `SearchDocsTest` "advertises itself as a read-only tool" and `ImageTest::test_extension_returns_avif_for_avif`), redis 363/42/0, pgsql 92/0/0, sqlite 61/35/0, queue-database@sqlite 311/14/0, queue-redis@redis 311/14/0, queue-sync@none 276/49/0.
+- Locally: `bun test` 60 pass; `typecheck`, `lint`, `workflows:check`, `protected-paths:codeowners --check`, `component-map:check`, `upstream:check` and `oracle:check` clean; `bun run baseline run --suite mcp --variant none --local …` matches the committed mcp data exactly. A framework `--local` run on this host fails closed by design (the host lacks phpredis, so its listing is not the image's Inventory).
+
+Residual risks: the recorder/runner still have no executed self-test outside CI (deferred); the `ownership` and `protected-paths` PR checks need the Maintainer (Protected Paths, Infrastructure Story).

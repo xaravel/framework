@@ -26,7 +26,10 @@
 //       differ. A GITHUB_TOKEN reaches Composer only as a BuildKit secret.
 //
 // Only `verify-image` and `build` call `docker`; `check` and `tag` need
-// neither Docker nor the network.
+// neither Docker nor the network. Other tools reach the image only through
+// `runInImage` (no network, read-only mounts) and `runInImageNetworked`
+// (host network, environment, read-only tool mounts and one read-write
+// output mount, as the non-root `IMAGE_USER`; the baseline run, Story 2.6).
 //
 // Exit codes: 0 pass, 1 any failure (fail closed), 2 usage error.
 import { createHash } from "node:crypto";
@@ -44,6 +47,12 @@ export const IMAGE_NAME = "xaravel-oracle";
 export const PHP_VERSION = "8.5.11";
 /** Where the image holds each snapshot, as `<IMAGE_UPSTREAM_DIR>/<name>/`. */
 export const IMAGE_UPSTREAM_DIR = "/oracle/upstream";
+/**
+ * The user Upstream's tests run as in the image: uid and gid 1001, the GitHub
+ * runner's user, never root (the Dockerfile's `USER`). Tests that chmod a file
+ * and expect access to be denied pass only for a non-root user.
+ */
+export const IMAGE_USER = "1001:1001";
 /** The test tools each lock must hold, by snapshot. */
 export const REQUIRED_PACKAGES: Readonly<Record<UpstreamName, readonly string[]>> = {
   framework: ["phpunit/phpunit", "mockery/mockery", "orchestra/testbench-core"],
@@ -592,6 +601,55 @@ export function runInImage(image: string, mounts: readonly ReadOnlyMount[], comm
   const proc = Bun.spawnSync([docker, ...args], { env: process.env, stdout: "pipe", stderr: "pipe", stdin: "ignore" });
   if (proc.exitCode !== 0) {
     throw new Error(`${command.join(" ")} in ${image} failed (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
+  }
+  return proc.stdout.toString();
+}
+
+/** A networked run in the Oracle image: environment, read-only tool mounts and one read-write output mount. */
+export interface NetworkedRun {
+  /** Passed with `--env <name>=<value>`, in key order. */
+  env: Readonly<Record<string, string>>;
+  /** Mounted read-only. */
+  mounts: readonly ReadOnlyMount[];
+  /** Mounted read-write. */
+  output: ReadOnlyMount;
+}
+
+/** The `docker run` arguments of a networked run (without the `docker` binary); it runs as `IMAGE_USER`, never root. */
+export function networkedRunArgs(image: string, run: NetworkedRun, command: readonly string[]): string[] {
+  return [
+    "run",
+    "--rm",
+    "--network",
+    "host",
+    "--user",
+    IMAGE_USER,
+    ...Object.keys(run.env)
+      .sort()
+      .flatMap((name) => ["--env", `${name}=${run.env[name]!}`]),
+    ...run.mounts.flatMap((mount) => ["--volume", `${mount.host}:${mount.container}:ro`]),
+    "--volume",
+    `${run.output.host}:${run.output.container}:rw`,
+    image,
+    ...command,
+  ];
+}
+
+/**
+ * Runs `command` in `image` with `docker run --rm --network host`, the given
+ * environment, read-only mounts and one read-write output mount, and returns
+ * its stdout; its stderr streams to ours. Throws with its exit code when it
+ * fails. The baseline run (Story 2.6) reaches the CI service containers
+ * (Postgres, Redis) on the host network through this.
+ */
+export function runInImageNetworked(image: string, run: NetworkedRun, command: readonly string[]): string {
+  const docker = Bun.which("docker", { PATH: process.env["PATH"] ?? "" });
+  if (docker === null) {
+    throw new Error("docker is not on PATH; running in the Oracle image needs Docker");
+  }
+  const proc = Bun.spawnSync([docker, ...networkedRunArgs(image, run, command)], { env: process.env, stdout: "pipe", stderr: "inherit", stdin: "ignore" });
+  if (proc.exitCode !== 0) {
+    throw new Error(`${command.join(" ")} in ${image} failed (exit ${proc.exitCode ?? "signal"}); its stderr is above`);
   }
   return proc.stdout.toString();
 }
