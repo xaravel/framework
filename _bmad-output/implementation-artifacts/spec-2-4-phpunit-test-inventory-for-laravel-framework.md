@@ -3,7 +3,7 @@ title: 'Story 2.4: PHPUnit Test Inventory for `laravel/framework`'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '4a67783af49778fce1946b6cef607ee50ce3924a'
-status: 'blocked'
+status: 'ready-for-dev'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -32,7 +32,7 @@ deferred: []
   - `#[RequiresDatabase]` (Testbench's attribute, repeatable, on the class hierarchy and the method): the intersection of every attribute's drivers;
   - `framework/tests/Integration/Database/<Engine>/`: MySql → `mysql`, MariaDb → `mariadb`, Postgres → `pgsql`, SqlServer → `sqlsrv`, Sqlite → `sqlite`.
 
-  When both database sources are present, they intersect, and an empty intersection fails. The union then adds:
+  When both database sources are present, they intersect. When the intersection is empty, the value is the directory's engine, or `none` when there is no engine directory: Upstream skips such a test on every engine, and Story 2.6's Oracle run records that `skip` (decisions/ESC-2.4-1.md). The union then adds:
   - `redis` when the class hierarchy uses `InteractsWithRedis`, directly or through a trait;
   - `queue-beanstalkd@beanstalkd`, `queue-database@sqlite`, `queue-redis@redis` and `queue-sync@none` under `framework/tests/Integration/Queue/`, the suite that Upstream's queues and redis workflows run once per `QUEUE_CONNECTION`.
 
@@ -58,7 +58,7 @@ deferred: []
 | Generate | real snapshot, locked install | per-Component files; prints counts; exit 0 | — |
 | Dataset | provider with `'uses string'` and list keys | `…#uses string`, `…#0`, `…#1` as separate entries | — |
 | Unmapped | raw test file that no map entry matches | exit 1 `unmapped test file: <path>` | — |
-| DB conflict | `Postgres/` dir + `#[RequiresDatabase('mysql')]` | exit 1 naming the id | — |
+| DB conflict | `Postgres/` dir + `#[RequiresDatabase('mysql')]` | `backends` `["pgsql"]`; with no engine dir, `["none"]` | — (decisions/ESC-2.4-1.md) |
 | Bad raw line | malformed JSON or missing field from the lister | exit 1 with line number | — |
 | Lister fails | non-zero exit / stray PHPUnit output | exit 1 with its stderr | — |
 | Stale local copy | `--local` file differs from snapshot | exit 1 naming the file | — |
@@ -93,6 +93,8 @@ deferred: []
 - Given an entry's `hash`, when it is computed, then it covers the method's code tokens and the dataset export. Whitespace or comment-only token changes keep it, and a code-token or dataset change alters it. Two generations of the same input are byte-identical (XT-conformance-52).
 
 ## Spec Change Log
+
+- 2026-10-17: ESC-2.4-1 approved (`decisions/ESC-2.4-1.md`, option 1). An empty `RequiresDatabase` × engine-directory intersection now records the directory's engine, or `none`, instead of failing. The backend rule and the "DB conflict" matrix row changed to match. Status set from `blocked` to `ready-for-dev`.
 
 ## Review Triage Log
 
