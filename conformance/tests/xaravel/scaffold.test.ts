@@ -233,6 +233,12 @@ function assertPackagesGenerated(base: string): void {
     expect(manifest.exports).toEqual({ ".": "./src/index.ts" });
     expect("sideEffects" in manifest).toBe(false);
     expect(manifest.private === true).toBe(row.private);
+    const repository = (manifest as unknown as Record<string, unknown>)["repository"];
+    if (row.private) {
+      expect(repository).toBeUndefined();
+    } else {
+      expect(repository).toEqual({ type: "git", url: "git+https://github.com/xaravel/framework.git", directory: row.dir });
+    }
 
     const readme = readFileSync(join(dir, "README.md"), "utf8");
     expect(readme).toContain(row.npm);

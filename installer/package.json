@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "The Xaravel Installer: `bun create xaravel <app>`.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xaravel/framework.git",
+    "directory": "installer"
+  },
   "type": "module",
   "engines": {
     "bun": ">=1.4"

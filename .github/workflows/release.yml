@@ -1,0 +1,108 @@
+# The lockstep release (Story 1.8, AD-18, FR-13, NFR-11).
+#
+# Every pushed tag runs `gate`, so every tag gets an explanation. `gate`
+# decides from the tag and the root package.json version, then reads the live
+# `release` environment and refuses unless every required reviewer is the
+# Maintainer (GitHub would otherwise create a missing environment unprotected).
+# The decision also goes to the run's step summary.
+# Any other tag, or any failure, writes `publish=false` and the reason.
+#
+# `release` runs only when `gate` decides to publish, in the protected
+# `release` environment, so it waits for the Maintainer's approval. It packs
+# each public package with `bun pm pack`, fails on any `workspace:` left in a
+# packed manifest (or an internal dependency off the root version, or a wrong
+# `repository`), publishes each tarball with `npm publish --provenance`
+# through trusted publishing (OIDC, `id-token: write`; there is no npm token),
+# and creates the GitHub release with notes stating the Baseline Pin. A
+# re-run skips what npm and GitHub already have. It is
+# the only job that may hold `id-token: write` or publish (release-checks.yml).
+name: release
+
+on:
+  push:
+    tags: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Decide whether this tag publishes
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          bun tools/release/release.ts gate --tag "$TAG" --repo "$REPO" --github-output "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    concurrency: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check every package carries the root version
+        run: bun tools/release/release.ts check
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - name: Install the npm CLI for trusted publishing
+        run: npm install -g --ignore-scripts npm@11.5.1
+      - name: Pack every public package
+        run: bun tools/release/release.ts pack --out dist
+      # Safe to re-run: a version npm already has is skipped, so a re-run
+      # finishes the packages a failed run did not reach.
+      - name: Publish with provenance
+        run: |
+          set -euo pipefail
+          for tgz in dist/*.tgz; do
+            manifest="$(tar -xzOf "$tgz" package/package.json)"
+            name="$(jq -r .name <<<"$manifest")"
+            version="$(jq -r .version <<<"$manifest")"
+            if [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ]; then
+              echo "Skipping $name@$version: npm already has it"
+              continue
+            fi
+            npm publish "$tgz" --provenance --access public
+          done
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Skipping the GitHub release: $TAG already has one"
+            exit 0
+          fi
+          bun tools/release/release.ts notes --tag "$TAG" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
