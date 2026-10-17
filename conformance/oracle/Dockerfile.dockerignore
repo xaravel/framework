@@ -1,0 +1,6 @@
+# The Oracle image's build context (Story 2.2): the repository root, cut down
+# to the Upstream snapshot and the committed locks. Nothing else, and no
+# secret, can reach a layer.
+*
+!conformance/upstream/
+!conformance/oracle/locks/
