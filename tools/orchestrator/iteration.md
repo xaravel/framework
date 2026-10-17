@@ -66,7 +66,8 @@ E. **Checkpoint approval.** For each CHECKPOINT EPIC `N` whose retrospective is 
 
    Outcome `progress`. If there is no such comment, the checkpoint is still closed, and F skips Stories in later epics.
 
-F. **Next Story.** Read STATUS. Pick the first Story in file order whose status is `backlog`, `ready-for-dev` or `in-progress`. Skip any Story that is `blocked`, any whose PR is open and waiting on the Maintainer, and any whose prerequisites (the Story's dependencies in `epics.md`, or earlier Stories of its epic) are not `done`. Also skip any Story in epic `M` if some epic `N < M` hits any of these gates:
+F. **Next Story.** Read STATUS. Pick the first Story in file order whose status is `backlog`, `ready-for-dev` or `in-progress`. Skip any Story that is `blocked`, any whose PR is open and waiting on the Maintainer, and any whose prerequisites (the Story's dependencies in `epics.md`, or earlier Stories of its epic) are not `done`. Epics run strictly in order, so a later epic never starts before an earlier one is finished and reviewed. Also skip any Story in epic `M` if some epic `N < M` hits any of these gates:
+   - epic N has any Story that is not `done`. A blocked Story therefore idles the loop instead of letting a later epic start;
    - epic N is `done` but its retrospective is not `done`;
    - GATES has epic N `blocked: true`, or `rejected` and still in its fix pass;
    - epic N has action items that are `open` or `in-progress` and not in `waiting_on_maintainer`;
@@ -83,7 +84,7 @@ G. **Escalations you may rule on.** If an open Escalation in `conformance/escala
 
 H. **Paused at a checkpoint.** If the only thing stopping F is a closed checkpoint, comment on ISSUE once (skip it if your last comment already says this): `🤖 Paused after the epic <N> retrospective (<doc link>). Reply "go" on this issue to start epic <N+1>.` Outcome `idle`.
 
-I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Maintainer or on an `AGENTS.md` change. Comment on ISSUE with what is waiting and why, but only if that differs from your last comment there. Outcome `idle`.
+I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Maintainer or on an `AGENTS.md` change. This includes a blocked Story in the current epic, which holds back every later epic. Comment on ISSUE with what is waiting and why, but only if that differs from your last comment there. Outcome `idle`.
 
 ## 3. Rules while working
 
