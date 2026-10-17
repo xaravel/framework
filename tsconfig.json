@@ -18,7 +18,8 @@
     "tools/upstream/**/*.ts",
     "tools/oracle/**/*.ts",
     "tools/component-map/**/*.ts",
-    "tools/inventory/**/*.ts"
+    "tools/inventory/**/*.ts",
+    "tools/pin-bump/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

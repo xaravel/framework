@@ -34,7 +34,27 @@ Only `upstream:sync` touches the network. The check and the reader API (`readUps
 
 ## Changing a tag (Maintainer)
 
-`conformance/baseline-pin` is a Protected Path, so a tag changes only through a Maintainer-approved change. The `laravel/framework` Pin moves only at a freeze point, and only through Story 2.8's `bun run pin:bump <tag>` once that tool exists; do not edit its line by hand. To change the tag for `laravel/ai`, `laravel/mcp` or `laravel/boost`:
+`conformance/baseline-pin` is a Protected Path, so a tag changes only through a Maintainer-approved change.
+
+### The `laravel/framework` Pin: `bun run pin:bump <tag>`
+
+The framework Pin moves only at a freeze point, and only through `bun run pin:bump <tag> [--from <rev>] [--apply] [--remote <base>] [--root <dir>]` (`tools/pin-bump/pin-bump.ts`, Story 2.8, `decisions/ESC-2.8-1.md`). Do not edit its line by hand. The tool refuses (exit 1, nothing written) while any `epic-<N>` key under `development_status` in `_bmad-output/implementation-artifacts/sprint-status.yaml` is `in-progress`, and lists those Epics. It never touches the `laravel/ai`, `laravel/mcp` or `laravel/boost` lines. The flow has four steps:
+
+1. **Move.** Run `bun run pin:bump <tag>` while the framework line still names the old tag. The tool resolves the commit and the tree exactly as steps 1 and 2 below describe (the `^{}` line wins; the clone's commit must match), from `--remote <base>` (default `https://github.com`). It rewrites only the framework line as `laravel/framework <tag> <commit> <tree>`, runs `upstream:sync` and prints the regeneration steps. A missing tag or a commit mismatch exits 1 and leaves the Pin unchanged. This step writes no record, stubs or Expectations, even with `--apply`.
+2. **Regenerate.** Run `bun run oracle:lock`, `bun run oracle:build`, `bun run inventory` and `bun run baseline`. They need a container runtime and the network, so the tool never runs them itself.
+3. **Report.** Run `bun run pin:bump <tag>` again, now that the line names `<tag>`. The tool diffs the Inventory at `--from <rev>` (default `HEAD`, read with `git show`) against the working tree, and never touches the network. It prints the `Added`, `Changed` (same Test ID, different `hash`), `Removed` and `Renamed` IDs. A rename is a removed and an added ID with the same `hash` and `component`, where no other removed or added ID shares that hash. It writes the bump record `conformance/pin-bumps/<old>-to-<new>.jsonl`: a header line `{"from","to","from_rev","applied"}`, then one line per ID with the Expectations lines found for it (shard, variant, status, reason). The record is the history of every reset, rename and retirement. If `--from` already pins `<tag>`, the tool exits 1; pass the revision before the move.
+4. **Apply.** Run `bun run pin:bump <tag> --apply`. The tool also edits every shard under `conformance/expectations/` in place:
+   - a changed ID's lines become `skip` / `not-ported-yet`, with `adapted` and `escalation` set to null (the shard path is the link to the previous Ported Test);
+   - a renamed ID's lines get the new ID and keep everything else;
+   - a removed ID's lines are deleted, and so is a shard left empty.
+
+   It writes one backlog stub per Component with added, changed or renamed IDs, at `_bmad-output/implementation-artifacts/pin-bump/<new>/<component>.md`, and the record with `applied:true`. It never writes `stories/*.md` or sprint status. An applied record is never overwritten: a second `--apply` exits 1.
+
+Then open a PR with the Pin, the regenerated files, the record, the shard edits and the stubs.
+
+### `laravel/ai`, `laravel/mcp` and `laravel/boost`
+
+To change the tag for `laravel/ai`, `laravel/mcp` or `laravel/boost`:
 
 1. Get the commit the new tag resolves to. For an annotated tag, use the `^{}` line:
 
