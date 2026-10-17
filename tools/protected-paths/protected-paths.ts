@@ -346,7 +346,7 @@ function codeowners(options: Options): number {
   return 0;
 }
 
-class GitHub {
+export class GitHub {
   constructor(
     private readonly api: string,
     private readonly repo: string,
