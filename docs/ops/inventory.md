@@ -44,7 +44,7 @@ Before each provider call, the lister seeds PHP's Mersenne Twister (which Faker 
 
 `assertions` and `oracle` come only from the baseline run's `merge` ([baseline.md](baseline.md)). `assertions` is `null` exactly when `oracle` is `{}`. For a pair listed in `conformance/inventory/oracle-nondeterminism.jsonl` (known Upstream non-determinism, `decisions/ESC-2.6-1.md`), `assertions` holds that file's pinned `record`. That file is not a Component's file, and generation never reads, writes or deletes it.
 
-**Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. An existing file that does not parse carries nothing over.
+**Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. An existing file that does not parse carries nothing over. After a Pin move, the carried-over values are the old Pin's until the baseline's `inventory` artifact is committed. The guard is `baseline.yml`'s `merge` job, which fails when the committed Inventory differs from its output; it is not yet a required check (Epic 1 item 2).
 
 Keys are always in this order. Each file covers one Component, and its lines are sorted by `id`, compared by UTF-16 code units. Files are UTF-8, with LF line endings and a trailing newline. The lines are written with `JSON.stringify`, because they are tool data, not framework values. When a framework Component no longer has tests, its file is deleted.
 
@@ -69,7 +69,7 @@ When none of these applies, `backends` is `["none"]`. Tests directly under `Inte
 - `codeTokens` are the method's tokens from `function` to its closing brace, as PHP's tokenizer lexes them, with whitespace and comment tokens dropped. Attributes and the docblock come before `function`, so they are not covered, and a dataset change shows up through `data` instead.
 - `data` is the dataset's export, or `null` for a test with no dataset. The export is deterministic: arrays with their keys, enums as `Class::Case`, objects as their class and mangled properties, and closures by location (`{root}/<file>:<start>-<end>`) plus the code tokens of those lines. The framework directory is replaced by `{root}`, and strings that are not valid UTF-8 are exported as hex.
 
-Only the method itself and its dataset are covered. `setUp`/`tearDown`, helper methods, class properties and traits are not, so an edit to them leaves the hash unchanged.
+Only the method itself and its dataset are covered. `setUp`/`tearDown`, helper methods, class properties and traits are not, so an edit to them leaves the hash unchanged. A Pin bump's `Changed` list compares hashes ([upstream.md](upstream.md#the-laravelframework-pin-bun-run-pinbump-tag)), so it misses a test whose only Upstream change is in those parts, and that test's Expectations are not reset.
 
 A whitespace-only or comment-only edit leaves the hash unchanged. A code-token or dataset change alters it. Generating twice from the same input gives byte-identical files.
 

@@ -6,7 +6,7 @@
 // sprint status and, for move mode, local `file://` remotes. Nothing here
 // touches the network.
 import { expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
@@ -159,9 +159,11 @@ const read = (fx: Fixture, path: string): string => readFileSync(join(fx.root, p
 const records = (text: string): Record<string, unknown>[] => text.trimEnd().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
 const RECORD = "conformance/pin-bumps/v1.0.0-to-v1.1.0.jsonl";
 const SHARD_STR = "conformance/expectations/support/Support/SupportStrTest.jsonl";
+/** The Oracle Dockerfile; this file reaches the Oracle tool only through `bun run` scripts, offline. */
+const DOCKERFILE = "conformance/oracle/Dockerfile";
 const SHARD_STR2 = "conformance/expectations/support/Support/SupportStrExtraTest.jsonl";
 
-/** Four fixture remotes; framework has `v1.0.0` (lightweight) and `v1.1.0` (annotated, a later commit). */
+/** Four fixture remotes; framework has `v1.0.0` (lightweight) and `v1.1.0` (annotated, a later commit). The repo holds the real Oracle Dockerfile and its dockerignore. */
 function moveFixture(sprint = SPRINT_DONE): Fixture & { base: string; pin: string; commits: Record<string, string>; trees: Record<string, string> } {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-pin-bump-"));
   const home = join(dir, "home");
@@ -197,6 +199,8 @@ function moveFixture(sprint = SPRINT_DONE): Fixture & { base: string; pin: strin
     "conformance/baseline-pin": pin,
     "conformance/inventory/support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1")]),
     "_bmad-output/implementation-artifacts/sprint-status.yaml": sprint,
+    [DOCKERFILE]: readFileSync(join(root, DOCKERFILE), "utf8"),
+    [`${DOCKERFILE}.dockerignore`]: readFileSync(join(root, `${DOCKERFILE}.dockerignore`), "utf8"),
   });
   git(repo, home, "add", "-A");
   git(repo, home, "commit", "--quiet", "-m", "pin v1.0.0");
@@ -215,16 +219,86 @@ test("XT-conformance-62: given two Pins, bun run pin:bump <tag> moves the framew
     expect(missing.stderr).toContain("v9.9.9");
     expect(read(mv, "conformance/baseline-pin")).toBe(mv.pin);
 
+    const fromRev = git(mv.root, mv.home, "rev-parse", "HEAD");
+    const dockerfile = read(mv, DOCKERFILE);
     const moved = await bump(mv, "v1.1.0", "--remote", `file://${mv.base}`, "--apply");
     expect(moved.stderr).toBe("");
     expect(moved.code).toBe(0);
     const frameworkLine = mv.pin.split("\n").find((line) => line.startsWith("laravel/framework"))!;
     expect(read(mv, "conformance/baseline-pin")).toBe(mv.pin.replace(frameworkLine, `laravel/framework v1.1.0 ${mv.commits["v1.1.0"]} ${mv.trees["v1.1.0"]}`));
     expect(readFileSync(join(mv.root, "conformance", "upstream", "framework", "src", "New.php"), "utf8")).toBe("<?php\n");
-    expect(moved.stdout).toContain("1. bun run oracle:lock\n  2. bun run oracle:build\n  3. bun run inventory\n  4. bun run baseline\n  5. bun run pin:bump v1.1.0\n");
+    // The Dockerfile needs no edit: its root-version list comes from the Pin.
+    // oracle:check (offline) passes it and derives the moved build argument;
+    // its only problems are the fixture's missing locks.
+    expect(read(mv, DOCKERFILE)).toBe(dockerfile);
+    const check = Bun.spawnSync([process.execPath, "run", "oracle:check", "--root", mv.root], { cwd: root, env: { PATH: process.env["PATH"] ?? "", HOME: mv.home }, stdout: "pipe", stderr: "pipe" });
+    expect(check.exitCode).toBe(1);
+    expect(check.stdout.toString()).toContain(`${DOCKERFILE} builds with --build-arg XARAVEL_ROOT_VERSIONS=framework:1.1.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3\n`);
+    expect(check.stderr.toString()).toContain("conformance/oracle/locks/framework/composer.lock is missing");
+    expect(check.stderr.toString()).not.toContain(DOCKERFILE);
+    // The printed steps: exact commands, the tag and the pre-move revision substituted.
+    expect(fromRev).toMatch(/^[0-9a-f]{40}$/);
+    const steps = [
+      "bun run oracle:lock",
+      'tag="$(bun run --silent oracle:tag)" && bun run oracle:build "xaravel-oracle:$tag"',
+      "bun run inventory",
+      'b="$(git branch --show-current)" && test -n "$b" && test "$b" != main && git add conformance/baseline-pin conformance/oracle/locks conformance/inventory && git commit -m "pin bump: laravel/framework v1.1.0, regenerated locks and Inventory" && git push -u origin HEAD && gh workflow run baseline.yml --ref "$b"',
+      `sleep 15 && run="$(gh run list --workflow baseline.yml --event workflow_dispatch --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId --jq '.[0].databaseId')" && test -n "$run" && gh run watch "$run"`,
+      'test -n "$run" && dl="$(mktemp -d)" && gh run download "$run" --name inventory --dir "$dl" && rm -rf conformance/inventory && mv "$dl" conformance/inventory',
+      'git add conformance/inventory && git commit -m "pin bump: laravel/framework v1.1.0, baselined Inventory" && git push',
+      `bun run pin:bump v1.1.0 --from ${fromRev}`,
+    ];
+    expect(moved.stdout).toEndWith(`\nThe Pin moved. Regenerate, then report the diff, by running these lines in order in one shell at the repository root:\n\n${steps.map((step) => `${step}\n`).join("")}`);
+    // The dispatch and download steps rely on baseline.yml: a workflow_dispatch
+    // trigger, and a merge job that uploads conformance/inventory/ as the
+    // artifact the download step names, before its committed-equals-output check.
+    const workflow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "baseline.yml"), "utf8")) as {
+      on: Record<string, unknown>;
+      jobs: { merge: { steps: { uses?: string; run?: string; with?: Record<string, unknown> }[] } };
+    };
+    expect(Object.keys(workflow.on)).toContain("workflow_dispatch");
+    const mergeSteps = workflow.jobs.merge.steps;
+    const upload = mergeSteps.findIndex((step) => (step.uses ?? "").startsWith("actions/upload-artifact@") && step.with?.["name"] === "inventory");
+    const committedCheck = mergeSteps.findIndex((step) => (step.run ?? "").includes("git diff --exit-code --stat conformance/inventory"));
+    expect(upload).toBeGreaterThanOrEqual(0);
+    expect(mergeSteps[upload]!.with?.["path"]).toBe("conformance/inventory/");
+    expect(committedCheck).toBeGreaterThan(upload);
+    const download = steps.find((step) => step.includes("gh run download"))!;
+    expect(/--name (\S+)/.exec(download)![1]).toBe(String(mergeSteps[upload]!.with?.["name"]));
     // Move mode writes no record, stubs or Expectations, even with --apply.
     expect(existsSync(join(mv.root, "conformance", "pin-bumps"))).toBe(false);
     expect(existsSync(join(mv.root, "_bmad-output", "implementation-artifacts", "pin-bump"))).toBe(false);
+
+    // The printed steps run: the shell parses them, and each `bun run` step
+    // names a real script whose CLI accepts its arguments. Each runs from the
+    // repository root with `--root <fixture>` appended and only bun, git and
+    // sh on PATH (no container runtime, no Composer), so the steps that need
+    // them fail closed (exit 1), never with a usage error (exit 2).
+    const syntax = Bun.spawnSync(["sh", "-n", "-c", steps.join("\n")], { stdout: "pipe", stderr: "pipe" });
+    expect([syntax.exitCode, syntax.stderr.toString()]).toEqual([0, ""]);
+    const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
+    const bin = join(mv.dir, "bin");
+    mkdirSync(bin);
+    for (const name of ["git", "sh"]) {
+      symlinkSync(Bun.which(name)!, join(bin, name));
+    }
+    symlinkSync(process.execPath, join(bin, "bun"));
+    expect(readdirSync(bin).sort()).toEqual(["bun", "git", "sh"]);
+    const runs = steps.filter((step) => /(^|&& )bun run /.test(step));
+    expect(runs.length).toBe(4);
+    for (const step of runs) {
+      for (const [, script] of step.matchAll(/bun run (?:--silent )?([\w:-]+)/g)) {
+        expect([script, scripts[script!] !== undefined]).toEqual([script, true]);
+      }
+      const proc = Bun.spawnSync([join(bin, "sh"), "-c", `${step} --root "$FIXTURE_ROOT"`], {
+        cwd: root,
+        env: { PATH: bin, HOME: mv.home, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", FIXTURE_ROOT: mv.root },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const output = `${proc.stdout.toString()}${proc.stderr.toString()}`;
+      expect([step, proc.exitCode !== 2, output.includes("Usage:")]).toEqual([step, true, false]);
+    }
   });
 
   // Diff mode: the working tree already names v1.1.0; --from HEAD~1 names v1.0.0.

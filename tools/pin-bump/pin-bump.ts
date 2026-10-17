@@ -14,8 +14,17 @@
 //       docs/ops/upstream.md describes, from `<base>/laravel/framework.git`
 //       (default base https://github.com). It rewrites only the framework
 //       line, keeping every other byte of the file, runs `upstream:sync` and
-//       prints the regeneration steps. It writes no record, stubs or
-//       Expectations, even with `--apply`.
+//       prints the regeneration steps (`regenerationSteps`): exact commands,
+//       with <tag> and the pre-move revision (`git rev-parse HEAD`, taken
+//       before the write) substituted, that run in order in one POSIX shell
+//       from the repository root. They regenerate the locks, build the
+//       Oracle image (whose root-version list comes from the Pin, so the
+//       Dockerfile needs no edit), regenerate the Inventory, commit, push and
+//       dispatch `baseline.yml` (only on a named branch other than main),
+//       replace the Inventory with its `inventory` artifact only after a
+//       successful download, commit and push that, then run diff mode with
+//       `--from <pre-move revision>`. It writes no record,
+//       stubs or Expectations, even with `--apply`.
 //   diff mode (the line already names <tag>)
 //       reads the old Pin and Inventory with `git show <rev>:<path>` at
 //       `--from` (default HEAD) and the new ones from the working tree, and
@@ -51,8 +60,28 @@ export const STUBS_DIR = "_bmad-output/implementation-artifacts/pin-bump";
 const FRAMEWORK_REPO = "laravel/framework";
 /** AD-15's Expectations fields, in order. */
 export const EXPECTATION_KEYS = ["id", "variant", "status", "reason", "adapted", "escalation"] as const;
-/** The regeneration chain the Maintainer runs between move mode and diff mode (ESC-2.8-1). */
-export const REGENERATION_STEPS = ["bun run oracle:lock", "bun run oracle:build", "bun run inventory", "bun run baseline"] as const;
+/**
+ * The regeneration chain the Maintainer runs between move mode and diff mode
+ * (ESC-2.8-1), as exact commands for one POSIX shell at the repository root:
+ * no placeholder, <tag> and the pre-move revision `fromRev` (a full SHA)
+ * substituted. The baseline run needs the CI's services, so it runs as the
+ * `baseline.yml` dispatch on the pushed branch; its `merge` job uploads the
+ * `inventory` artifact before its committed-equals-output check, so the
+ * artifact exists even when that check fails on the not-yet-baselined
+ * Inventory. The last step passes `--from`, because HEAD then pins <tag>.
+ */
+export function regenerationSteps(tag: string, fromRev: string): string[] {
+  return [
+    "bun run oracle:lock",
+    'tag="$(bun run --silent oracle:tag)" && bun run oracle:build "xaravel-oracle:$tag"',
+    "bun run inventory",
+    `b="$(git branch --show-current)" && test -n "$b" && test "$b" != main && git add conformance/baseline-pin conformance/oracle/locks conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, regenerated locks and Inventory" && git push -u origin HEAD && gh workflow run baseline.yml --ref "$b"`,
+    `sleep 15 && run="$(gh run list --workflow baseline.yml --event workflow_dispatch --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId --jq '.[0].databaseId')" && test -n "$run" && gh run watch "$run"`,
+    'test -n "$run" && dl="$(mktemp -d)" && gh run download "$run" --name inventory --dir "$dl" && rm -rf conformance/inventory && mv "$dl" conformance/inventory',
+    `git add conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, baselined Inventory" && git push`,
+    `bun run pin:bump ${tag} --from ${fromRev}`,
+  ];
+}
 /** The tag form upstream.ts's pin parser accepts. */
 const TAG = /^[A-Za-z0-9_][A-Za-z0-9_.\-/]*$/;
 const SHA = /^[0-9a-f]{40}$/;
@@ -507,6 +536,7 @@ function moveMode(root: string, tag: string, remoteBase: string): number {
   const { commit, tree } = resolveTag(remoteBase, tag);
   const file = join(root, UPSTREAM_PIN_FILE);
   const before = frameworkEntry(readPin(root)).tag;
+  const fromRev = git(["rev-parse", "--verify", "HEAD^{commit}"], root);
   writeFileSync(file, rewriteFrameworkLine(readFileSync(file, "utf8"), tag, commit, tree));
   process.stdout.write(`${UPSTREAM_PIN_FILE}: ${FRAMEWORK_REPO} ${before} -> ${tag} ${commit} ${tree}\n`);
   const result = sync(root, { remoteBase });
@@ -515,7 +545,7 @@ function moveMode(root: string, tag: string, remoteBase: string): number {
     process.stderr.write(`Upstream sync failed (the Pin was moved; re-run bun run upstream:sync):\n${result.failures.map((line) => `  ${line}\n`).join("")}`);
     return 1;
   }
-  process.stdout.write(`\nThe Pin moved. Regenerate, then report the diff:\n${[...REGENERATION_STEPS, `bun run pin:bump ${tag}`].map((step, i) => `  ${i + 1}. ${step}\n`).join("")}`);
+  process.stdout.write(`\nThe Pin moved. Regenerate, then report the diff, by running these lines in order in one shell at the repository root:\n\n${regenerationSteps(tag, fromRev).map((step) => `${step}\n`).join("")}`);
   return 0;
 }
 
@@ -530,7 +560,7 @@ function diffMode(root: string, tag: string, from: string, apply: boolean): numb
   const diff = diffInventories(readInventoryAt(root, fromRev), readWorkingInventory(root));
   const shards = readExpectations(root);
   if (apply && diff.added.length + diff.changed.length + diff.removed.length + diff.renamed.length === 0) {
-    process.stderr.write(`the Inventory matches --from ${from}; regenerate it first (${REGENERATION_STEPS.join(", ")}); nothing was written\n`);
+    process.stderr.write(`the Inventory matches --from ${from}; regenerate it first (the steps move mode printed); nothing was written\n`);
     return 1;
   }
   const record = recordPath(oldTag, tag);

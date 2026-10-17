@@ -24,6 +24,7 @@ import {
   ORACLE_DIR,
   PHP_VERSION,
   REQUIRED_PACKAGES,
+  rootVersions,
   runInImage,
 } from "../../../tools/oracle/oracle";
 import { readPin, UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
@@ -248,6 +249,11 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
   expect(code).toContain("--mount=type=secret,id=github_token");
   expect(code).not.toMatch(/^\s*(ARG|ENV)\b[^\n]*(TOKEN|AUTH)/im);
   expect(code).toContain("docker-php-ext-install");
+  // The root-version list is a build argument derived from the Pin, never a literal list.
+  expect(code).toMatch(/^ARG XARAVEL_ROOT_VERSIONS$/m);
+  expect(code).toContain("for pair in $XARAVEL_ROOT_VERSIONS; do");
+  expect(code).toContain(': "${XARAVEL_ROOT_VERSIONS:?');
+  expect(rootVersions(root)).toBe(PIN.map((entry) => `${entry.name}:${entry.tag.replace(/^v/, "")}`).join(" "));
   expect(code).toContain('LABEL org.opencontainers.image.source="https://github.com/xaravel/framework" \\\n      org.opencontainers.image.licenses="MIT"');
   for (const { name } of UPSTREAM_REPOS) {
     expect(code).toContain(`COPY conformance/upstream/${name} ${IMAGE_UPSTREAM_DIR}/${name}\n`);
@@ -301,7 +307,9 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
 
     // The tag: the framework Pin, then the first 12 hex of the SHA-256 of the
     // four locks in pin order, then the Dockerfile, then its dockerignore,
-    // each framed as `<relative path>\0<byte length>\0<bytes>`.
+    // each framed as `<relative path>\0<byte length>\0<bytes>`, then the
+    // XARAVEL_ROOT_VERSIONS build argument framed as
+    // `build-arg XARAVEL_ROOT_VERSIONS\0<byte length>\0<value>`.
     const all = createHash("sha256");
     const inputs = [
       ...UPSTREAM_REPOS.map(({ name }) => `${LOCKS_DIR}/${name}/composer.lock`),
@@ -313,6 +321,10 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
       all.update(`${relative}\0${bytes.length}\0`);
       all.update(bytes);
     }
+    const versions = Buffer.from("framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3");
+    expect(rootVersions(fx.repo)).toBe(versions.toString());
+    all.update(`build-arg XARAVEL_ROOT_VERSIONS\0${versions.length}\0`);
+    all.update(versions);
     expect(imageHash(fx.repo)).toBe(all.digest("hex").slice(0, 12));
     expect(imageTag(fx.repo)).toBe(`v13.37.0-${imageHash(fx.repo)}`);
     expect((await cli(["tag", "--root", fx.repo], env)).stdout).toBe(`${imageTag(fx.repo)}\n`);
@@ -320,6 +332,16 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     setLock(fx, "boost", [...defaultPackages("boost"), tool("extra/package")]);
     expect(imageTag(fx.repo)).not.toBe(before);
     setLock(fx, "boost", defaultPackages("boost"));
+    expect(imageTag(fx.repo)).toBe(before);
+    // Only the ai Pin tag moving (the build argument changes) moves the tag; restoring it restores the tag.
+    const pinFile = join(fx.repo, "conformance", "baseline-pin");
+    const pinBytes = readFileSync(pinFile, "utf8");
+    const aiTag = PIN.find((entry) => entry.name === "ai")!.tag;
+    writeFileSync(pinFile, pinBytes.replace(new RegExp(`^(laravel/ai\\s+)${aiTag.replace(/\./g, "\\.")}(\\s)`, "m"), "$1v1.2.4$2"));
+    expect(rootVersions(fx.repo)).toBe("framework:13.37.0 ai:1.2.4 mcp:1.0.2 boost:2.10.3");
+    expect(imageTag(fx.repo)).not.toBe(before);
+    expect(imageTag(fx.repo).startsWith("v13.37.0-")).toBe(true);
+    writeFileSync(pinFile, pinBytes);
     expect(imageTag(fx.repo)).toBe(before);
     // A Dockerfile or dockerignore edit moves the tag; restoring it restores the tag.
     for (const relative of [`${ORACLE_DIR}/Dockerfile`, `${ORACLE_DIR}/Dockerfile.dockerignore`]) {
@@ -397,13 +419,35 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
 
     // A Dockerfile that drifts from the Pin or the rules fails the check.
     const dockerfilePath = join(fx.repo, ORACLE_DIR, "Dockerfile");
-    writeFileSync(dockerfilePath, dockerfile.replace("ai:1.2.3", "ai:1.2.2").replace(/@sha256:[0-9a-f]{64} AS composer/, " AS composer").replace("composer install --no-progress", "composer update --no-progress"));
+    writeFileSync(
+      dockerfilePath,
+      dockerfile
+        .replace("for pair in $XARAVEL_ROOT_VERSIONS;", "for pair in framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3;")
+        .replace(/@sha256:[0-9a-f]{64} AS composer/, " AS composer")
+        .replace("composer install --no-progress", "composer update --no-progress"),
+    );
     const badDockerfile = await cli(["check", "--root", fx.repo], env);
     expect(badDockerfile.code).toBe(1);
-    expect(badDockerfile.stderr).toContain(`the composer install loop must be "for pair in framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3;"`);
+    expect(badDockerfile.stderr).toContain(`the composer install loop must be "for pair in $XARAVEL_ROOT_VERSIONS;"`);
+    expect(badDockerfile.stderr).toContain(`found "framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3"`);
     expect(badDockerfile.stderr).toContain("base image is not pinned by digest: FROM composer:2.10.3 AS composer");
     expect(badDockerfile.stderr).toContain("runs composer update");
+    expect(badDockerfile.stderr).not.toContain("ARG XARAVEL_ROOT_VERSIONS");
+    // Without the ARG (or with a default) the check fails, naming it.
+    for (const arg of ["", "ARG XARAVEL_ROOT_VERSIONS=framework:13.37.0"]) {
+      writeFileSync(dockerfilePath, dockerfile.replace("ARG XARAVEL_ROOT_VERSIONS\n", arg === "" ? "" : `${arg}\n`));
+      const noArg = await cli(["check", "--root", fx.repo], env);
+      expect([arg, noArg.code]).toEqual([arg, 1]);
+      expect(noArg.stderr).toContain(`${ORACLE_DIR}/Dockerfile must declare "ARG XARAVEL_ROOT_VERSIONS" with no default`);
+    }
+    // A second ARG line with a default beside the bare one fails, naming it.
+    writeFileSync(dockerfilePath, dockerfile.replace("ARG XARAVEL_ROOT_VERSIONS\n", "ARG XARAVEL_ROOT_VERSIONS\nARG XARAVEL_ROOT_VERSIONS=framework:13.37.0\n"));
+    expect(checkDockerfile(fx.repo)).toEqual([`${ORACLE_DIR}/Dockerfile gives "ARG XARAVEL_ROOT_VERSIONS" a default; declare it with no default (oracle:build passes it from the Pin)`]);
+    // Without the non-empty guard an empty list would loop zero times, so the check fails.
+    writeFileSync(dockerfilePath, dockerfile.replace(/^\s*: "\$\{XARAVEL_ROOT_VERSIONS:\?[^\n]*\n/m, ""));
+    expect(checkDockerfile(fx.repo)).toEqual([`${ORACLE_DIR}/Dockerfile must guard the build argument with \`: "\${XARAVEL_ROOT_VERSIONS:?…}"\`, so an unset or empty list fails the build`]);
     writeFileSync(dockerfilePath, dockerfile);
+    expect(checkDockerfile(fx.repo)).toEqual([]);
     expect(fx.calls()).toEqual([]);
 
     // verify-image: an image holding exactly the locks on PHP 8.5.11 passes and prints the sorted set.
@@ -473,8 +517,8 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     expect(built.stdout).toContain(`build A (${image}) and build B (sha256:rebuilt) installed the same package sets`);
     const builds = fx.calls().filter((call) => call.args[0] === "build");
     expect(builds.map((call) => call.args)).toEqual([
-      ["build", "--file", `${ORACLE_DIR}/Dockerfile`, "--secret", "id=github_token,env=GITHUB_TOKEN", "--tag", image, "."],
-      ["build", "--file", `${ORACLE_DIR}/Dockerfile`, "--secret", "id=github_token,env=GITHUB_TOKEN", "--no-cache", "--iidfile", builds[1]!.args[7]!, "."],
+      ["build", "--file", `${ORACLE_DIR}/Dockerfile`, "--build-arg", "XARAVEL_ROOT_VERSIONS=framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3", "--secret", "id=github_token,env=GITHUB_TOKEN", "--tag", image, "."],
+      ["build", "--file", `${ORACLE_DIR}/Dockerfile`, "--build-arg", "XARAVEL_ROOT_VERSIONS=framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3", "--secret", "id=github_token,env=GITHUB_TOKEN", "--no-cache", "--iidfile", builds[1]!.args[9]!, "."],
     ]);
     expect(builds.every((call) => call.token === "ghs_fixturetoken")).toBe(true);
     expect(JSON.stringify(fx.calls().map((call) => call.args))).not.toContain("ghs_fixturetoken");
@@ -497,7 +541,7 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     writeFileSync(join(fx.docker, "build-fails"), "");
     const broken = await cli(["build", image, "--root", fx.repo], env);
     expect(broken.code).toBe(1);
-    expect(broken.stderr).toContain("docker build --file conformance/oracle/Dockerfile --tag");
+    expect(broken.stderr).toContain("docker build --file conformance/oracle/Dockerfile --build-arg XARAVEL_ROOT_VERSIONS=framework:13.37.0 ai:1.2.3 mcp:1.0.2 boost:2.10.3 --tag");
     rmSync(join(fx.docker, "build-fails"));
     rmSync(join(fx.docker, "calls.log"));
     writeFileSync(aiJson, edited);
