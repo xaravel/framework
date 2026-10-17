@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 07:15
+last_updated: 10-17-2026 14:59
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -55,7 +55,7 @@ development_status:
   2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: done
   2-7-inventory-determinism-and-runner-listing-cross-check: done
   2-8-baseline-pin-bump-tool: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   epic-3: backlog
   3-1-oracle-request-format-and-mechanical-extraction: backlog
@@ -700,3 +700,74 @@ action_items:
     owner: "orchestrator"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-1-oracle-tag-hashes-dockerfile"
+    epic: 2
+    action: "Include conformance/oracle/Dockerfile (and its dockerignore) in the Oracle
+      imageTag hash so an image change always gets a new tag (finding R1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-2-pin-bump-regeneration-runnable"
+    epic: 2
+    action: "Derive the Dockerfile root-version list from conformance/baseline-pin
+      (or have pin-bump move mode rewrite it), make REGENERATION_STEPS and docs/ops/upstream.md
+      exact runnable commands, test with a fixture Dockerfile, and document the hash
+      scope in docs/ops/inventory.md (findings R2, R8, S6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-3-oracle-build-token-isolation"
+    epic: 2
+    action: "Keep the GHCR write token away from Composer code in the Oracle build:
+      composer install --no-plugins --no-scripts plus dump-autoload, or build with
+      a read-only token and push separately; Escalate if Oracle outcomes change (finding
+      R3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-4-execute-php-lister-recorder"
+    epic: 2
+    action: "Add a tiny PHPUnit and Pest fixture project that bun test runs through
+      lister.php, recorder.php and runner.php with real PHP when php is present, skipping
+      otherwise (finding R5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-5-carry-over-fails-loudly"
+    epic: 2
+    action: "Make Inventory carry-over fail loudly on a malformed committed line instead
+      of silently resetting assertions and oracle (finding R6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-6-escalate-none-leg-services"
+    epic: 2
+    action: "File an Escalation for the baseline none leg lacking Upstream memcached,
+      DynamoDB and MySQL services, so service-caused skips are not recorded as Upstream
+      skips (finding S4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-7-cleanup-2-6-patches-and-nightly"
+    epic: 2
+    action: "Delete the applied spec-2-6 attempt patches and the stale planning/story-2.6-attempt
+      branch, and record the first scheduled inventory run result for AC 2.7/1 (findings
+      P3, S5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-8-spine-oracle-field"
+    epic: 2
+    action: "Add the oracle field to AD-15 Inventory fields in the architecture spine
+      (finding S3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-9-confirm-pest-suite-tags"
+    epic: 2
+    action: "Confirm or change the laravel/ai, laravel/mcp and laravel/boost tags
+      in conformance/baseline-pin, which Story 2.1 AC1 says the Maintainer records
+      (finding S2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
