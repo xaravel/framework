@@ -1,0 +1,16 @@
+{
+  "name": "@xaravel/contracts",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/contracts component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/runtime": "workspace:*"
+  }
+}

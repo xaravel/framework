@@ -1,0 +1,34 @@
+{
+  "name": "@xaravel/notifications",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/notifications component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/broadcasting": "workspace:*",
+    "@xaravel/bus": "workspace:*",
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/mail": "workspace:*",
+    "@xaravel/queue": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/database": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/database": {
+      "optional": true
+    }
+  }
+}

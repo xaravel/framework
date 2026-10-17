@@ -1,0 +1,43 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/events",
+    "tsBuildInfoFile": "../../.cache/tsc/events/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../bus"
+    },
+    {
+      "path": "../collections"
+    },
+    {
+      "path": "../container"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../reflection"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../support"
+    }
+  ]
+}

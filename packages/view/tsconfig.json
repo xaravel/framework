@@ -1,0 +1,49 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/view",
+    "tsBuildInfoFile": "../../.cache/tsc/view/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../collections"
+    },
+    {
+      "path": "../conditionable"
+    },
+    {
+      "path": "../container"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../events"
+    },
+    {
+      "path": "../filesystem"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../reflection"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../support"
+    }
+  ]
+}

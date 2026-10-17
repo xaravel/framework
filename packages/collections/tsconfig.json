@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/collections",
+    "tsBuildInfoFile": "../../.cache/tsc/collections/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../conditionable"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../runtime"
+    }
+  ]
+}

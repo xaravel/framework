@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/pipeline",
+    "tsBuildInfoFile": "../../.cache/tsc/pipeline/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../conditionable"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../support"
+    }
+  ]
+}

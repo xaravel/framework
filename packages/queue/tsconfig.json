@@ -1,0 +1,49 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/queue",
+    "tsBuildInfoFile": "../../.cache/tsc/queue/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../collections"
+    },
+    {
+      "path": "../console"
+    },
+    {
+      "path": "../container"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../database"
+    },
+    {
+      "path": "../filesystem"
+    },
+    {
+      "path": "../pipeline"
+    },
+    {
+      "path": "../reflection"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../support"
+    }
+  ]
+}

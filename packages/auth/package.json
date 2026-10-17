@@ -1,0 +1,34 @@
+{
+  "name": "@xaravel/auth",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/auth component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/http": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/queue": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/console": "workspace:*",
+    "@xaravel/session": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/console": {
+      "optional": true
+    },
+    "@xaravel/session": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@xaravel/boost",
+  "version": "0.0.0",
+  "description": "Xaravel's port of laravel/boost: app tools for AI agents.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/runtime": "workspace:*"
+  }
+}

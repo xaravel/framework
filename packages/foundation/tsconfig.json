@@ -1,0 +1,94 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/foundation",
+    "tsBuildInfoFile": "../../.cache/tsc/foundation/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../bus"
+    },
+    {
+      "path": "../cache"
+    },
+    {
+      "path": "../collections"
+    },
+    {
+      "path": "../conditionable"
+    },
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../container"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../cookie"
+    },
+    {
+      "path": "../database"
+    },
+    {
+      "path": "../encryption"
+    },
+    {
+      "path": "../events"
+    },
+    {
+      "path": "../filesystem"
+    },
+    {
+      "path": "../hashing"
+    },
+    {
+      "path": "../http"
+    },
+    {
+      "path": "../log"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../redis"
+    },
+    {
+      "path": "../reflection"
+    },
+    {
+      "path": "../routing"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../support"
+    },
+    {
+      "path": "../translation"
+    },
+    {
+      "path": "../validation"
+    },
+    {
+      "path": "../view"
+    }
+  ]
+}

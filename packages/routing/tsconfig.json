@@ -1,0 +1,52 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/tsc/routing",
+    "tsBuildInfoFile": "../../.cache/tsc/routing/tsconfig.tsbuildinfo",
+    "types": [
+      "bun"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../collections"
+    },
+    {
+      "path": "../conditionable"
+    },
+    {
+      "path": "../container"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../http"
+    },
+    {
+      "path": "../macroable"
+    },
+    {
+      "path": "../pipeline"
+    },
+    {
+      "path": "../reflection"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../support"
+    }
+  ]
+}

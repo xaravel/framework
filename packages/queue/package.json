@@ -1,0 +1,33 @@
+{
+  "name": "@xaravel/queue",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/queue component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/console": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/database": "workspace:*",
+    "@xaravel/filesystem": "workspace:*",
+    "@xaravel/pipeline": "workspace:*",
+    "@xaravel/reflection": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/redis": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/redis": {
+      "optional": true
+    }
+  }
+}

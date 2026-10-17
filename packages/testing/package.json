@@ -1,0 +1,37 @@
+{
+  "name": "@xaravel/testing",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/testing component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/console": "workspace:*",
+    "@xaravel/database": "workspace:*",
+    "@xaravel/http": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/console": {
+      "optional": true
+    },
+    "@xaravel/database": {
+      "optional": true
+    },
+    "@xaravel/http": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@xaravel/hashing",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/hashing component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*"
+  }
+}

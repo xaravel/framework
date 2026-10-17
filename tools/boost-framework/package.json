@@ -1,0 +1,14 @@
+{
+  "name": "@xaravel/boost-framework",
+  "version": "0.0.0",
+  "description": "Boost framework mode: an MCP server over Xaravel's conformance data (private tooling).",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@xaravel/ai",
+  "version": "0.0.0",
+  "description": "Xaravel's port of laravel/ai, the Laravel AI SDK.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/runtime": "workspace:*"
+  }
+}

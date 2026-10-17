@@ -1,0 +1,31 @@
+{
+  "name": "@xaravel/validation",
+  "version": "0.0.0",
+  "description": "Xaravel's port of Laravel's illuminate/validation component.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xaravel/collections": "workspace:*",
+    "@xaravel/conditionable": "workspace:*",
+    "@xaravel/container": "workspace:*",
+    "@xaravel/contracts": "workspace:*",
+    "@xaravel/macroable": "workspace:*",
+    "@xaravel/runtime": "workspace:*",
+    "@xaravel/support": "workspace:*",
+    "@xaravel/translation": "workspace:*"
+  },
+  "peerDependencies": {
+    "@xaravel/database": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@xaravel/database": {
+      "optional": true
+    }
+  }
+}
