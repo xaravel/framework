@@ -571,6 +571,31 @@ function dockerOutput(docker: string, args: readonly string[]): string {
   return proc.stdout.toString();
 }
 
+/** A host path mounted read-only into a container. */
+export interface ReadOnlyMount {
+  host: string;
+  container: string;
+}
+
+/**
+ * Runs `command` in `image` with `docker run --rm --network none` and the
+ * given read-only mounts, and returns its stdout; throws with its exit code
+ * and stderr when it fails. Other tools reach the Oracle image only through
+ * this, so Docker stays behind tools/oracle (the Inventory, Story 2.4).
+ */
+export function runInImage(image: string, mounts: readonly ReadOnlyMount[], command: readonly string[]): string {
+  const docker = Bun.which("docker", { PATH: process.env["PATH"] ?? "" });
+  if (docker === null) {
+    throw new Error("docker is not on PATH; running in the Oracle image needs Docker");
+  }
+  const args = ["run", "--rm", "--network", "none", ...mounts.flatMap((mount) => ["--volume", `${mount.host}:${mount.container}:ro`]), image, ...command];
+  const proc = Bun.spawnSync([docker, ...args], { env: process.env, stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  if (proc.exitCode !== 0) {
+    throw new Error(`${command.join(" ")} in ${image} failed (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
+  }
+  return proc.stdout.toString();
+}
+
 function readImageFile(docker: string, image: string, path: string): string {
   return dockerOutput(docker, ["run", "--rm", "--network", "none", "--entrypoint", "cat", image, path]);
 }

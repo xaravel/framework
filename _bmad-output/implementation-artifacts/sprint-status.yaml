@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 05:29
+last_updated: 10-17-2026 07:15
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -50,7 +50,7 @@ development_status:
   2-1-upstream-snapshot-and-pin-record: done
   2-2-oracle-container-image: done
   2-3-test-directory-component-map: done
-  2-4-phpunit-test-inventory-for-laravel-framework: ready-for-dev  # ESC-2.4-1 approved (decisions/ESC-2.4-1.md)
+  2-4-phpunit-test-inventory-for-laravel-framework: done
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: backlog
   2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: backlog
   2-7-inventory-determinism-and-runner-listing-cross-check: backlog

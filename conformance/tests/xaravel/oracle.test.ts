@@ -24,6 +24,7 @@ import {
   ORACLE_DIR,
   PHP_VERSION,
   REQUIRED_PACKAGES,
+  runInImage,
 } from "../../../tools/oracle/oracle";
 import { readPin, UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
 import { ALLOWED_WRITE_JOBS, checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
@@ -159,6 +160,7 @@ if (args[0] === "run") {
   };
   if (entrypoint === "cat") serve(join(base, command[0]));
   if (command.join(" ") === "php --version") serve(join(base, "php-version"));
+  if (command[0] === "echo") { process.stdout.write(command.slice(1).join(" ") + "\\n"); process.exit(0); }
 }
 process.stderr.write("fake docker: unexpected call\\n");
 process.exit(2);
@@ -634,6 +636,26 @@ test("XT-conformance-44: for a contributor without Docker, bun test, oracle:chec
     expect((await cli(["check", "--root", fx.repo], noDocker(fx))).code).toBe(0);
     expect((await cli(["tag", "--root", fx.repo], noDocker(fx))).code).toBe(0);
     expect(fx.calls()).toEqual([]);
+
+    // runInImage (the Inventory's image mode): docker run --rm --network none with read-only mounts; stdout passes through.
+    const saved = { PATH: process.env["PATH"], FAKE_DOCKER_DIR: process.env["FAKE_DOCKER_DIR"] };
+    try {
+      Object.assign(process.env, withFakes(fx));
+      const mounts = [{ host: "/h/lister.php", container: "/c/lister.php" }, { host: "/h/b", container: "/c/b" }];
+      expect(runInImage("img:1", mounts, ["echo", "hello", "world"])).toBe("hello world\n");
+      expect(fx.calls().map((call) => call.args)).toEqual([["run", "--rm", "--network", "none", "--volume", "/h/lister.php:/c/lister.php:ro", "--volume", "/h/b:/c/b:ro", "img:1", "echo", "hello", "world"]]);
+      expect(() => runInImage("img:1", [], ["php", "x"])).toThrow("php x in img:1 failed (exit 2): fake docker: unexpected call");
+      process.env["PATH"] = noDocker(fx).PATH;
+      expect(() => runInImage("img:1", [], ["echo"])).toThrow("docker is not on PATH; running in the Oracle image needs Docker");
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
   } finally {
     cleanup(fx);
   }
