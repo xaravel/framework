@@ -1,0 +1,8 @@
+# Orchestrator record of each epic's retrospective (tools/orchestrator/iteration.md, step C).
+epic-1:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer: []
