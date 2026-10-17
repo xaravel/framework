@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'blocked'
+status: 'ready-for-dev'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -124,6 +124,12 @@ deferred:
 - Given two attempts on the same Pin, when merged, then identical attempts write the Inventory, and any difference is reported as `oracle non-determinism: …` with exit 1, except a listed finding in `conformance/inventory/oracle-nondeterminism.jsonl`, which writes its pinned `record`. The CI run behind the committed files reported none (XT-conformance-58).
 
 ## Spec Change Log
+
+- 2026-10-17 (review loopback, second run; written by the Maintainer session after auto mode refused the agent's file overwrite). Triggering finding: the Oracle runs Upstream's tests as root, so tests that `chmod` a file and expect access to be denied record `fail`, though Upstream's CI (a non-root runner) passes them. Examples: `FilesystemTest::testIsReadable`/`testIsWritable`, `FilesystemAdapterTest::testThrowExceptionsForPut`/`testReportExceptionsForPut`, and likely boost `GuidelineWriterTest`/`InstallCommandSkillSyncTest`. Amended:
+  - **Run the baseline as a non-root user.** Every Upstream test run inside the Oracle image runs as uid 1001 (matching the GitHub runner) with `/oracle/upstream` and the run's working directories owned by that user. Root is used only for image build steps. XT-conformance-56 asserts it on the Dockerfile, and on the run invocation in `runInImageNetworked`.
+  - **Patch items from the same review**, to apply in this run: the `merge` job's last step checks untracked files too (`git add -N` before `git diff --exit-code`); a `generate` test keeps `oracle-nondeterminism.jsonl`; in `mergeResults`, a listed finding is marked before the missing-attempt `continue`; fix the XT-conformance-58 comment about "no non-determinism finding", the garbled `baseline.yml` header comment, and the `docs/ops/baseline.md` workflow section that omits the `inventory` job.
+  - Known-bad state avoided: a baseline that records `fail` for permission tests Upstream passes, which would make the Oracle disagree with Upstream.
+  - KEEP: apply `spec-2-6-attempt.patch`, then `spec-2-6-attempt-2.patch` (the ESC-2.6-1 option 1 implementation: `conformance/inventory/oracle-nondeterminism.jsonl`, `parseFindings`, `mergeResults` `findings`), on top of branch `planning/story-2.6-attempt`. Then push, run `baseline.yml`, and commit its `inventory` artifact. Status set from `blocked` to `ready-for-dev`.
 
 - 2026-10-17: ESC-2.6-1 approved by the Maintainer (`decisions/ESC-2.6-1.md`, option 1). Known Upstream non-determinism goes into `conformance/inventory/oracle-nondeterminism.jsonl` with the multiset to record, which is the lowest count Upstream can produce. For `DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans` on `none`, that is `{"assertIsBool":2}`. `merge` writes that value for a listed pair and still fails on anything unlisted, or on an outcome difference. The Merge rule, two matrix rows and the AC 3 line changed to match. KEEP: the implementation on branch `planning/story-2.6-attempt` (`spec-2-6-attempt.patch`), including the Inventory re-listed inside the Oracle image (16267 framework Test IDs with phpredis). Status set from `blocked` to `ready-for-dev`.
 

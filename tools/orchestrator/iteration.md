@@ -90,6 +90,7 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 ## 3. Rules while working
 
 - One unit of work per iteration. Don't start a second Story.
+- Change an existing tracked file in place, with the Edit tool or by applying a patch. Never replace it wholesale with `cp`, `mv` or a shell redirect (`>`): auto mode refuses that as irreversible local destruction, which blocks the Story. This includes a spec rewritten during a review loopback; edit its sections in place.
 - Branch names: `story/<story-id>` for Stories and `planning/<topic>` for everything else. Never commit on `main`.
 - A Story edits only what AGENTS.md allows it to. Never touch `AGENTS.md` or create a `CLAUDE.md`. If work requires that, mark it blocked for the Maintainer.
 - Never weaken the grader. Never stub another Component; mark the Story `blocked-by:<component>`.
