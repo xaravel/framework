@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 03:33
+last_updated: 10-17-2026 03:40
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -582,7 +582,7 @@ action_items:
     action: "Add a CI workflow job running bun test, typecheck, lint, scaffold:check
       and graph:check on pull_request, merge_group and push to main (finding R1)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
   - id: "epic-1-retro-item-2-require-remaining-checks"
     epic: 1

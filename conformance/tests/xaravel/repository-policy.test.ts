@@ -678,7 +678,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(ci.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(ci.on["push"]).toEqual({ branches: ["main"] });
   expect(ci.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "workflow-permissions"]);
+  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "workflow-permissions"]);
 
   const audit = ci.jobs["audit"]!;
   expect(audit.permissions).toBeUndefined();
@@ -693,6 +693,33 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(audit.steps[1]).toEqual({ uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } });
   const permissionsJob = ci.jobs["workflow-permissions"]!;
   expect(permissionsJob.steps.map((step) => step.run).filter(Boolean)).toEqual(["bun tools/workflow-permissions/workflow-permissions.ts check"]);
+
+  // `check` runs every repository gate on the frozen lockfile (Epic 1 retro R1), with nothing to skip a gate or pass past a failure.
+  const check = ci.jobs["check"]!;
+  expect(check.permissions).toBeUndefined();
+  for (const node of [check, ...check.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+    expect(node["if"]).toBeUndefined();
+  }
+  expect(check.steps[0]).toEqual(audit.steps[0]!);
+  expect(check.steps[1]).toEqual(audit.steps[1]!);
+  expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
+    "bun install --frozen-lockfile --ignore-scripts",
+    "bun run test",
+    "bun run typecheck",
+    "bun run lint",
+    "bun run scaffold:check",
+    "bun run graph:check",
+  ]);
+  expect(check.steps.filter((step) => step.uses !== undefined).length).toBe(2);
+  expect(check["timeout-minutes"]).toBe(30);
+  // The gates run through package.json scripts, so pin what each script runs.
+  const checkScripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
+  expect(checkScripts["test"]).toBe("bun test");
+  expect(checkScripts["typecheck"]).toBe("bun --bun tsc -b");
+  expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware");
+  expect(checkScripts["scaffold:check"]).toBe("bun tools/scaffold/scaffold.ts --check");
+  expect(checkScripts["graph:check"]).toBe("bun tools/graph/graph.ts");
   expect(text).not.toContain("pull_request_target");
   expect(text).not.toMatch(/id-token|secrets\./);
 
