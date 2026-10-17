@@ -50,7 +50,7 @@ development_status:
   2-1-upstream-snapshot-and-pin-record: done
   2-2-oracle-container-image: done
   2-3-test-directory-component-map: done
-  2-4-phpunit-test-inventory-for-laravel-framework: in-progress
+  2-4-phpunit-test-inventory-for-laravel-framework: blocked  # intent gap: empty RequiresDatabase intersection for 8 Test IDs; ESC-2.4-1
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: backlog
   2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: backlog
   2-7-inventory-determinism-and-runner-listing-cross-check: backlog
