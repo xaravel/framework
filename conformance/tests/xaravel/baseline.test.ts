@@ -369,7 +369,7 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   // used only for the build steps before it.
   const code = dockerfile.split("\n").filter((line) => !line.trimStart().startsWith("#")).join("\n");
   expect(code).toContain("useradd --uid 1001 --gid 1001 --create-home --shell /bin/sh oracle;");
-  expect(code).toContain("chown -R 1001:1001 /oracle/upstream\n");
+  expect(code).toContain("chown -R 1001:1001 /oracle/upstream; \\\n    chmod -R u+w /oracle/upstream\n");
   const users = [...code.matchAll(/^USER (\S+)$/gm)].map((m) => m[1]);
   expect(users).toEqual(["1001:1001"]);
   expect(code.lastIndexOf("\nRUN ")).toBeLessThan(code.indexOf("\nUSER 1001:1001\n"));

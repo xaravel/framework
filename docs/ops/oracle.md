@@ -10,7 +10,7 @@ The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Storie
 
   The build fails unless `php -m` lists every extension.
 - Composer 2.10.3, copied from the digest-pinned `composer:2.10.3` image.
-- A non-root user, `oracle` (uid and gid 1001, the GitHub runner's user). It is the image's `USER` and owns `/oracle/upstream`, so Upstream's tests never run as root (the baseline run, [baseline.md](baseline.md)). Root is used only for the build steps.
+- A non-root user, `oracle` (uid and gid 1001, the GitHub runner's user). It is the image's `USER` and owns `/oracle/upstream`, which is writable by it as a CI checkout is (the snapshot is copied in read-only), so Upstream's tests never run as root (the baseline run, [baseline.md](baseline.md)). Root is used only for the build steps.
 - The Upstream snapshot at `/oracle/upstream/{framework,ai,mcp,boost}/`, copied unmodified from `conformance/upstream/`. Each directory has its dev dependencies installed into its own `vendor/` from its own lock: PHPUnit, Mockery and Orchestra Testbench Core for `laravel/framework`, and Pest, PHPUnit, Mockery and Orchestra Testbench for `laravel/ai`, `laravel/mcp` and `laravel/boost`.
 
 There is one lock per snapshot because Composer installs dev dependencies only for a root package, and Pest is only in the ai, mcp and boost dev dependencies. The image build runs only `composer install`, never `composer update`. `Dockerfile.dockerignore` admits only `conformance/upstream/` and `conformance/oracle/locks/` into the build context.

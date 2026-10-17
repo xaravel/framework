@@ -103,12 +103,14 @@ RUN --mount=type=secret,id=github_token \
     rm -rf /tmp/composer-home /tmp/composer-cache; \
     groupadd --gid 1001 oracle; \
     useradd --uid 1001 --gid 1001 --create-home --shell /bin/sh oracle; \
-    chown -R 1001:1001 /oracle/upstream
+    chown -R 1001:1001 /oracle/upstream; \
+    chmod -R u+w /oracle/upstream
 
 # Upstream's tests run as uid 1001, the GitHub runner's user, never as root
 # (docs/ops/baseline.md): tests that chmod a file and expect access to be
 # denied pass only for a non-root user. Root is used only for the build steps
-# above; /oracle/upstream, where the tests write, belongs to that user.
+# above. /oracle/upstream, where the tests write, belongs to that user and is
+# writable by it, as a CI checkout is (the snapshot is copied read-only).
 USER 1001:1001
 WORKDIR /oracle/upstream
 CMD ["php", "--version"]
