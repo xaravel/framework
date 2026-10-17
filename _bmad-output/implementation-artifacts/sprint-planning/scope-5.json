@@ -1,0 +1,1257 @@
+[
+ {
+  "story": "41.1",
+  "title": "Redis manager and connections over `Bun.redis`",
+  "component": "redis",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Redis/{RedisConnectionTest,RedisConnectorTest,RedisManagerExtensionTest,RedisEventsTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Redis/RedisConnectionTest.php::*",
+     "framework/tests/Redis/RedisConnectorTest.php::*",
+     "framework/tests/Redis/RedisManagerExtensionTest.php::*",
+     "framework/tests/Redis/RedisEventsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "tests/Redis/{PhpRedisConnectorTest,PredisConnectorTest}.php, which test the PHP client libraries",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Redis/PhpRedisConnectorTest.php::*",
+     "framework/tests/Redis/PredisConnectorTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "tests/Redis/Connections/PhpRedisClusterConnectionTest.php",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Redis/Connections/PhpRedisClusterConnectionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a command method on a connection",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Runs on the `redis` variant. AC2: PhpRedis/Predis connector tests are in scope but expected to stay not-ported-yet pending an Escalation (adaptation clause vs intentional-divergence). AC3: cluster test is expected deferred:redis-cluster. Epic says all Cluster tests are deferred:redis-cluster; only the named file is selected here."
+ },
+ {
+  "story": "41.2",
+  "title": "Transactions, pipelines, WATCH and Pub/Sub on leases",
+  "component": "redis",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "two units interleaved at every `await`, one inside `Redis.transaction(async (tx) => \u2026)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Redis.subscribe(['ch'], cb)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a CI leg on Redis 7.2, as the spine's Deferred table asks",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors; all ACs are Xaravel Tests (AC1 explicitly says Xaravel Tests). AC3 is a CI-matrix check, not really a test."
+ },
+ {
+  "story": "41.3",
+  "title": "Redis limiters",
+  "component": "redis",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Redis/{DurationLimiterTest,ConcurrencyLimiterTest,ConcurrentLimiterTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Redis/DurationLimiterTest.php::*",
+     "framework/tests/Redis/ConcurrencyLimiterTest.php::*",
+     "framework/tests/Redis/ConcurrentLimiterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the limiters' Lua scripts",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close: api-surface gate, async-surface, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Runs on the `redis` variant. tests/Cache/ConcurrencyLimiterTest.php is a different file, claimed by Story 42.3."
+ },
+ {
+  "story": "42.1",
+  "title": "Repository, array store, events and the memo driver",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cache/{CacheRepositoryTest,CacheArrayStoreTest,...,LimitTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheRepositoryTest.php::*",
+     "framework/tests/Cache/CacheArrayStoreTest.php::*",
+     "framework/tests/Cache/CacheNullStoreTest.php::*",
+     "framework/tests/Cache/CacheEventsTest.php::*",
+     "framework/tests/Cache/CacheManagerTest.php::*",
+     "framework/tests/Cache/CacheSpyMemoTest.php::*",
+     "framework/tests/Cache/CacheMemoizedStoreTest.php::*",
+     "framework/tests/Cache/LimitTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Cache.get('k')` on the array store",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Cache.remember('k', 60, async () => compute())`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 is about the uniform async interface (DIV-1 adaptation marks on translated tests); treated as xt. tests/Integration/Cache/** is blocked-by:testbench and not in scope."
+ },
+ {
+  "story": "42.2",
+  "title": "File, database, storage and failover stores",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cache/{CacheFileStoreTest,CacheDatabaseStoreTest,CacheStorageStoreTest,CacheFailoverStoreTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheFileStoreTest.php::*",
+     "framework/tests/Cache/CacheDatabaseStoreTest.php::*",
+     "framework/tests/Cache/CacheStorageStoreTest.php::*",
+     "framework/tests/Cache/CacheFailoverStoreTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a value written by PHP Laravel's file or database store (Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "42.3",
+  "title": "Tags, locks and the Redis store",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cache/{CacheTaggedCacheTest,CacheRedisStoreTest,CacheRedisTaggedCacheTest,ConcurrencyLimiterTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheTaggedCacheTest.php::*",
+     "framework/tests/Cache/CacheRedisStoreTest.php::*",
+     "framework/tests/Cache/CacheRedisTaggedCacheTest.php::*",
+     "framework/tests/Cache/ConcurrencyLimiterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a lock held by one unit",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "42.4",
+  "title": "RateLimiter",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cache/{CacheRateLimiterTest,RateLimiterTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheRateLimiterTest.php::*",
+     "framework/tests/Cache/RateLimiterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`RateLimiter.for('api', fn)` called at runtime inside a request frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "RateLimiter covers FR-36; component kept as cache (Epic 42 package)."
+ },
+ {
+  "story": "42.5",
+  "title": "Non-alpha stores and the cache commands",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cache/{CacheMemcachedConnectorTest,...,CacheDynamoDbStoreTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheMemcachedConnectorTest.php::*",
+     "framework/tests/Cache/CacheMemcachedStoreTest.php::*",
+     "framework/tests/Cache/CacheMemcachedLockTest.php::*",
+     "framework/tests/Cache/CacheApcStoreTest.php::*",
+     "framework/tests/Cache/CacheDynamoDbStoreTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "tests/Cache/{CacheSessionStoreTest,ClearCommandTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cache/CacheSessionStoreTest.php::*",
+     "framework/tests/Cache/ClearCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close: api-surface gate with deferred stores in exceptions.jsonl, async-surface, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1: Memcached/APC/DynamoDB tests are expected to be classified pending an Escalation asking for new deferred items (deferred:memcached/apc/dynamodb are not in PRD 7.2). AC2: CacheSessionStoreTest may be blocked-by:session (re-verified in Story 45.2), ClearCommandTest may be blocked-by:console."
+ },
+ {
+  "story": "43.1",
+  "title": "Validator engine, rule parsing and messages",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "every VVT Test ID whose method doesn't start with testValidate, plus {ValidationRuleParserTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Validation/ValidationValidatorTest.php::*",
+     "framework/tests/Validation/ValidationRuleParserTest.php::*",
+     "framework/tests/Validation/ValidationFactoryTest.php::*",
+     "framework/tests/Validation/ValidationExceptionTest.php::*",
+     "framework/tests/Validation/ValidationMacroTest.php::*",
+     "framework/tests/Validation/ValidationAddFailureTest.php::*",
+     "framework/tests/Validation/ValidatorAfterRuleTest.php::*",
+     "framework/tests/Validation/ValidationForEachTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidate*"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the default English messages for every rule, with attribute and value placeholders",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a rule set; passes()/fails()/validate()/validated() return Promises",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "'VVT methods not starting with testValidate' is encoded as include VVT::* with exclude VVT::testValidate*. AC2 (messages vs Oracle fixtures) treated as xt (Oracle Differential check). Epic: selectors apply in Story order; unmatched VVT goes to 43.5. tests/Integration/Validation/** is blocked-by:testbench."
+ },
+ {
+  "story": "43.2",
+  "title": "Email, URL and network rules",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "VVT::{testValidateEmail*,testValidateUrl*,testValidateActive*,testValidateIp*,testValidateMac*} and ValidationEmailRuleTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateEmail*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateUrl*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateActive*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateIp*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateMac*",
+     "framework/tests/Validation/ValidationEmailRuleTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Oracle fixtures from egulias/email-validator over a corpus of addresses",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`email:spoof` (classified deferred:email-spoof)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`email:dns` and `active_url` (network backend tag Escalation)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3/AC4 are classification ACs about Test IDs already in AC1's scope (email:spoof -> deferred:email-spoof; email:dns/active_url stay not-ported-yet pending the network-tag Escalation); they name no separate test selectors so are marked xt. AC2 is an Oracle Differential check of the egulias port."
+ },
+ {
+  "story": "43.3",
+  "title": "File, image and MIME rules",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "VVT::{testValidateImage*,testValidateMime*,testValidateFile,testValidateExtension*} and {ValidationFileRuleTest,ValidationImageFileRuleTest,ValidationDimensionsRuleTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateImage*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateMime*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateFile",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateExtension*",
+     "framework/tests/Validation/ValidationFileRuleTest.php::*",
+     "framework/tests/Validation/ValidationImageFileRuleTest.php::*",
+     "framework/tests/Validation/ValidationDimensionsRuleTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an `UploadedFile` from `@xaravel/http-foundation`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "`testValidateFile` is an exact method name (no glob) as written in the Epic."
+ },
+ {
+  "story": "43.4",
+  "title": "Database rules and async validation",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "VVT::{testValidateUnique*,testValidateExists*} and {ValidationExistsRuleTest,ValidationUniqueRuleTest,ValidationDatabasePresenceVerifierTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateUnique*",
+     "framework/tests/Validation/ValidationValidatorTest.php::testValidateExists*",
+     "framework/tests/Validation/ValidationExistsRuleTest.php::*",
+     "framework/tests/Validation/ValidationUniqueRuleTest.php::*",
+     "framework/tests/Validation/ValidationDatabasePresenceVerifierTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a rule set that contains exists, unique or a querying closure rule; validateSync() throws",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a rule set with no IO rules; validateSync() returns synchronously",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "43.5",
+  "title": "Built-in rules",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "every VVT Test ID not matched by Stories 43.1\u201343.4",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Validation/ValidationValidatorTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`regex:/^\\p{Lu}/u` and `not_regex`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the `timezone` rule with its groups and countries",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Residual of VVT. AC3 (timezone set vs Oracle fixtures of DateTimeZone::listIdentifiers) treated as xt."
+ },
+ {
+  "story": "43.6",
+  "title": "Rule objects and fluent rule builders",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": "Inventory Test IDs with trailing whitespace (Upstream data-set names) fail the manifest validator (tools/ownership, Story 1.5); needs a fix before this manifest can list them",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Validation/{ValidationNumericRuleTest,...,ValidationRequiredUnlessRuleTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Validation/ValidationNumericRuleTest.php::*",
+     "framework/tests/Validation/ValidationAnyOfRuleTest.php::*",
+     "framework/tests/Validation/ValidationExcludeIfTest.php::*",
+     "framework/tests/Validation/ValidationProhibitedIfTest.php::*",
+     "framework/tests/Validation/ValidationInArrayKeysTest.php::*",
+     "framework/tests/Validation/ValidationProhibitedUnlessRuleTest.php::*",
+     "framework/tests/Validation/ValidationEnumRuleTest.php::*",
+     "framework/tests/Validation/ValidationStringRuleTest.php::*",
+     "framework/tests/Validation/ValidationDateRuleTest.php::*",
+     "framework/tests/Validation/ValidationRuleCanTest.php::*",
+     "framework/tests/Validation/ValidationRequiredIfTest.php::*",
+     "framework/tests/Validation/ValidationExcludeUnlessRuleTest.php::*",
+     "framework/tests/Validation/ValidationArrayKeysRuleTest.php::*",
+     "framework/tests/Validation/ValidationPasswordRuleTest.php::*",
+     "framework/tests/Validation/ValidationNotPwnedVerifierTest.php::*",
+     "framework/tests/Validation/ValidationArrayRuleTest.php::*",
+     "framework/tests/Validation/ValidationInRuleTest.php::*",
+     "framework/tests/Validation/ValidationRuleBuilderMethodTest.php::*",
+     "framework/tests/Validation/ValidationInvokableRuleTest.php::*",
+     "framework/tests/Validation/ValidationRuleDoesntContainTest.php::*",
+     "framework/tests/Validation/ValidationRuleContainsTest.php::*",
+     "framework/tests/Validation/ValidationInArrayRuleTest.php::*",
+     "framework/tests/Validation/ValidationNotInRuleTest.php::*",
+     "framework/tests/Validation/ValidationRequiredUnlessRuleTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an invokable or closure rule that returns a Promise",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close: api-surface gate, async-surface, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "24 files. ValidationRuleCanTest is expected blocked-by:auth and ValidationNotPwnedVerifierTest blocked-by:http (re-verified in Story 47.4); both remain in this Story's include scope."
+ },
+ {
+  "story": "43.7",
+  "title": "Phase 5 `blocked-by` sweep",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": "Scope is Expectations entries blocked-by Phase 5 components (pagination, redis, cache, validation), resolved when planned; one manifest per owning Component",
+  "acs": [
+   {
+    "n": 1,
+    "given": "every Expectations entry whose reason is blocked-by:<c> for c in {pagination, redis, cache, validation}",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Expectations File after this Story merges (Phase-completion check)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Sweep Story spanning many components; component set to validation only as the Epic's home (manifests are per owning Component, including Container's Cache() descriptor). Kind kept upstream since it re-runs Upstream Test IDs, but there are no static selectors."
+ },
+ {
+  "story": "44.1",
+  "title": "CookieJar, queued cookies and cookie encryption",
+  "component": "cookie",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Cookie/{CookieTest,Middleware/EncryptCookiesTest,Middleware/AddQueuedCookiesToResponseTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Cookie/CookieTest.php::*",
+     "framework/tests/Cookie/Middleware/EncryptCookiesTest.php::*",
+     "framework/tests/Cookie/Middleware/AddQueuedCookiesToResponseTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Cookie.queue(...)` in one unit; concurrent unit's response",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a cookie encrypted by PHP Laravel with the same APP_KEY (Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the package (Epic close: api-surface gate, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "tests/Integration/Cookie/** is blocked-by:testbench."
+ },
+ {
+  "story": "45.1",
+  "title": "Session store and handlers",
+  "component": "session",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Session/{SessionStoreTest,...,EncryptedSessionStoreTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Session/SessionStoreTest.php::*",
+     "framework/tests/Session/ArraySessionHandlerTest.php::*",
+     "framework/tests/Session/FileSessionHandlerTest.php::*",
+     "framework/tests/Session/CacheBasedSessionHandlerTest.php::*",
+     "framework/tests/Session/SessionManagerTest.php::*",
+     "framework/tests/Session/EncryptedSessionStoreTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the database and redis handlers on session-database@sqlite/pgsql and session-redis@redis variants",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a session payload written by PHP Laravel at the Pin (Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 explicitly says Xaravel Tests on variants session-database@sqlite, session-database@pgsql, session-redis@redis."
+ },
+ {
+  "story": "45.2",
+  "title": "StartSession, flash data and the loaded-once session",
+  "component": "session",
+  "kind": "upstream",
+  "deferred": "AC4 re-verifies CacheSessionStoreTest Test IDs owned by Story 42.5 (component: cache)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "a request through `StartSession`; session()/old()/flash are synchronous",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "two concurrent requests with different session cookies (Xaravel Tests)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the test scope tests/Session/Middleware/AuthenticateSessionTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Session/Middleware/AuthenticateSessionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the CacheSessionStoreTest Test IDs (blocked-by:session since Story 42.5), re-verified with component: cache",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "the package (Epic close: api-surface gate, async-surface, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 AuthenticateSessionTest may be blocked-by:auth. AC4 is a re-verification of tests owned by Story 42.5 (tests/Cache/CacheSessionStoreTest.php), so not listed as an include here; it spans a second component (cache)."
+ },
+ {
+  "story": "46.1",
+  "title": "Request",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Http/{HttpRequestTest,HttpUploadedFileTest,HttpTestingFileFactoryTest,HttpMimeTypeTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/HttpRequestTest.php::*",
+     "framework/tests/Http/HttpUploadedFileTest.php::*",
+     "framework/tests/Http/HttpTestingFileFactoryTest.php::*",
+     "framework/tests/Http/HttpMimeTypeTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`testMagic*` (`$request->title`) translated as request.input('title')",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a request whose body has been loaded; input accessors are synchronous",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "an uploaded file; request.file('avatar').store('avatars')",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 names testMagic* but it is a translation rule (adapted:DIV-12) for tests already in AC1's HttpRequestTest scope; marked xt to avoid double-claiming. tests/Integration/Http/** is blocked-by:testbench. Component 'http' (Http slice: requests & responses)."
+ },
+ {
+  "story": "46.2",
+  "title": "Responses, redirects and JSON resources",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies blocked-by:http resource tests owned by Stories 36.6 and 40.2 (manifests for database and pagination)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Http/{HttpResponseTest,HttpJsonResponseTest,HttpRedirectResponseTest,JsonResourceTest,Resources/JsonApi/JsonApiResourceTest,Resources/JsonApi/RelationResolverTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/HttpResponseTest.php::*",
+     "framework/tests/Http/HttpJsonResponseTest.php::*",
+     "framework/tests/Http/HttpRedirectResponseTest.php::*",
+     "framework/tests/Http/JsonResourceTest.php::*",
+     "framework/tests/Http/Resources/JsonApi/JsonApiResourceTest.php::*",
+     "framework/tests/Http/Resources/JsonApi/RelationResolverTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a controller that returns a string, an array, a model or a collection",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the resource tests blocked-by:http since Stories 36.6 and 40.2, re-verified with component: database / pagination",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 re-verification spans components database and pagination; Test IDs come from Expectations entries, resolved when planned."
+ },
+ {
+  "story": "46.3",
+  "title": "Http middleware",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Http/Middleware/{TrustProxiesTest,CacheTest,PrefersJsonResponsesTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/Middleware/TrustProxiesTest.php::*",
+     "framework/tests/Http/Middleware/CacheTest.php::*",
+     "framework/tests/Http/Middleware/PrefersJsonResponsesTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "ValidatePostSize, TrustProxies, HandleCors preflight and PreventRequestsDuringMaintenance carry BeforeBody",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a request whose Content-Length exceeds post_max_size, or a chunked body that grows past it",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the Http request and response slice closes (API-surface diff, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream HandleCors/ValidatePostSize test files are named; their behaviour is xt."
+ },
+ {
+  "story": "47.1",
+  "title": "PendingRequest core, fakes and recording",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "HCT::{test*Fake*,test*Stray*,test*Assert*,test*Sequence*,test*Record*,test*Prevent*,test*Stub*,testAllowing*,testRequest*,testResponse*}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/HttpClientTest.php::test*Fake*",
+     "framework/tests/Http/HttpClientTest.php::test*Stray*",
+     "framework/tests/Http/HttpClientTest.php::test*Assert*",
+     "framework/tests/Http/HttpClientTest.php::test*Sequence*",
+     "framework/tests/Http/HttpClientTest.php::test*Record*",
+     "framework/tests/Http/HttpClientTest.php::test*Prevent*",
+     "framework/tests/Http/HttpClientTest.php::test*Stub*",
+     "framework/tests/Http/HttpClientTest.php::testAllowing*",
+     "framework/tests/Http/HttpClientTest.php::testRequest*",
+     "framework/tests/Http/HttpClientTest.php::testResponse*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`await Http.withToken(t).post(url, data)` goes through fetch; PendingRequest is thenable",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Http.fake()` with preventStrayRequests() in one test; next test is not faked",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 47: HCT selectors apply in Story order (47.1 before 47.2/47.3); a Test ID matched by both 47.1 and a later Story (e.g. testFakeRetr..., testAssertPool...) belongs to 47.1. Unmatched HCT goes to 47.4. Component 'http' (client slice of @xaravel/http)."
+ },
+ {
+  "story": "47.2",
+  "title": "Retries, timeouts and exceptions",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "HCT::{test*Retr*,test*Timeout*,test*Throw*,test*Exception*,testTooMany*,...,testNetwork*}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/HttpClientTest.php::test*Retr*",
+     "framework/tests/Http/HttpClientTest.php::test*Timeout*",
+     "framework/tests/Http/HttpClientTest.php::test*Throw*",
+     "framework/tests/Http/HttpClientTest.php::test*Exception*",
+     "framework/tests/Http/HttpClientTest.php::testTooMany*",
+     "framework/tests/Http/HttpClientTest.php::testUnauthorized*",
+     "framework/tests/Http/HttpClientTest.php::testForbidden*",
+     "framework/tests/Http/HttpClientTest.php::testNotFound*",
+     "framework/tests/Http/HttpClientTest.php::testConflict*",
+     "framework/tests/Http/HttpClientTest.php::testUnprocessable*",
+     "framework/tests/Http/HttpClientTest.php::testPayment*",
+     "framework/tests/Http/HttpClientTest.php::testBad*",
+     "framework/tests/Http/HttpClientTest.php::testConnect*",
+     "framework/tests/Http/HttpClientTest.php::testNetwork*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`retry(3, 100)` under the test clock with fake 500, 500, 200",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Story order: Test IDs already matched by 47.1 selectors are not in this Story's scope even if a 47.2 glob matches them."
+ },
+ {
+  "story": "47.3",
+  "title": "Pools, batches, async requests and middleware",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "HCT::{test*Pool*,test*Batch*,test*Async*,test*Concurren*,test*Middleware*,testGlobal*}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/HttpClientTest.php::test*Pool*",
+     "framework/tests/Http/HttpClientTest.php::test*Batch*",
+     "framework/tests/Http/HttpClientTest.php::test*Async*",
+     "framework/tests/Http/HttpClientTest.php::test*Concurren*",
+     "framework/tests/Http/HttpClientTest.php::test*Middleware*",
+     "framework/tests/Http/HttpClientTest.php::testGlobal*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a pool of requests runs concurrently; Promise.all listed in PORTING.md",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Story order: Test IDs matched by 47.1 or 47.2 selectors stay with those Stories."
+ },
+ {
+  "story": "47.4",
+  "title": "Remaining client behaviour and re-verifications",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies blocked-by:http entries owned by Stories 20.6 (support) and 43.6 (validation), with separate manifests",
+  "acs": [
+   {
+    "n": 1,
+    "given": "every HCT Test ID not matched by Stories 47.1\u201347.3",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Http/HttpClientTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "the blocked-by:http entries from SupportFacadesHttpTest (20.6) and ValidationNotPwnedVerifierTest (43.6), re-verified",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the client slice closes (API-surface diff, docs, @xaravel/http gate)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Residual of HCT. AC2 re-verification Test IDs are tests/Support/SupportFacadesHttpTest.php (component support) and tests/Validation/ValidationNotPwnedVerifierTest.php (component validation); not listed as includes because other Stories own them."
+ },
+ {
+  "story": "48.1",
+  "title": "Route registration, groups and the `QUERY` verb",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Routing/{RouteRegistrarTest,RouteCollectionTest,RouteActionTest,RouteUriTest,RouteSignatureParametersTest,RoutingControllerAttributeTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Routing/RouteRegistrarTest.php::*",
+     "framework/tests/Routing/RouteCollectionTest.php::*",
+     "framework/tests/Routing/RouteActionTest.php::*",
+     "framework/tests/Routing/RouteUriTest.php::*",
+     "framework/tests/Routing/RouteSignatureParametersTest.php::*",
+     "framework/tests/Routing/RoutingControllerAttributeTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Route.query('/search', [SearchController, 'index'])` with an htmx hx-query QUERY request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "controller attributes such as #[Middleware] become TC39 decorators",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "route registration after sealed inside a request frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "tests/Integration/Routing/** (198 methods) is blocked-by:testbench."
+ },
+ {
+  "story": "48.2",
+  "title": "Route compiler, matching and dispatch",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "every RRT Test ID not matched by Story 48.3",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Routing/RoutingRouteTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "the symfony/routing RouteCompiler port compiles Upstream's route fixtures (Oracle)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a controller action with no inject declaration",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "an action declared with inject; called through callAsync",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Residual of RRT (Epic: any RRT Test ID matched by no selector belongs to 48.2; 48.3's RRT selectors take precedence). Note 48.2 precedes 48.3 in file order but has no explicit RRT selectors of its own, so 'Story order' does not conflict."
+ },
+ {
+  "story": "48.3",
+  "title": "Route model binding and resource controllers",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "RRT::{testImplicitBinding*,...,testApiResource*} and {ImplicitRouteBindingTest,RouteBindingTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Routing/RoutingRouteTest.php::testImplicitBinding*",
+     "framework/tests/Routing/RoutingRouteTest.php::testModelBinding*",
+     "framework/tests/Routing/RoutingRouteTest.php::testRouteBinding*",
+     "framework/tests/Routing/RoutingRouteTest.php::testResolvingBinding*",
+     "framework/tests/Routing/RoutingRouteTest.php::testParentChild*",
+     "framework/tests/Routing/RoutingRouteTest.php::testOptionalBacked*",
+     "framework/tests/Routing/RoutingRouteTest.php::testShallowResource*",
+     "framework/tests/Routing/RoutingRouteTest.php::testResourceRout*",
+     "framework/tests/Routing/RoutingRouteTest.php::testApiResource*",
+     "framework/tests/Routing/ImplicitRouteBindingTest.php::*",
+     "framework/tests/Routing/RouteBindingTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`show(post)` declared with inject({ post: Post }) on /posts/{post}",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a missing model",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "48.4",
+  "title": "URL generation, signed URLs, Redirector and ResponseFactory",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Routing/{RoutingUrlGeneratorTest,RoutingRedirectorTest,RoutingResponseFactoryTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Routing/RoutingUrlGeneratorTest.php::*",
+     "framework/tests/Routing/RoutingRedirectorTest.php::*",
+     "framework/tests/Routing/RoutingResponseFactoryTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a signed URL generated by PHP Laravel with the same key (Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a tampered signed URL through ValidateSignature",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "UrlGenerator and Redirector read the current request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "48.5",
+  "title": "Routing middleware, throttling and `route:cache`",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Routing/RoutingSortedMiddlewareTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Routing/RoutingSortedMiddlewareTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`throttle:api` backed by RateLimiter.for('api') of 2/min (Xaravel Tests)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`route:cache` serialization",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`QUERY` requests; CSRF classification",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "the package (Epic close: api-surface gate, async-surface, docs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 and AC4 may produce Escalations (closure route caching per spine Deferred table; QUERY CSRF per OQ-7)."
+ }
+]

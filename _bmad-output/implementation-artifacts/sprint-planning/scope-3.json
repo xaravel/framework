@@ -1,0 +1,1191 @@
+[
+  {
+    "story": "21.1",
+    "title": "Request and parameter bags over Web `Request`",
+    "component": "http-foundation",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a scan of the Symfony HttpFoundation and HttpKernel classes and members referenced in Upstream",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a Web `Request` with a method, URL, headers and a body",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`await request.loadBody({ maxBytes })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "an `application/x-www-form-urlencoded` or `multipart/form-data` body with nested `a[b][]` keys",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "21.2",
+    "title": "Response family and conversion to Web `Response`",
+    "component": "http-foundation",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "each response class",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`HeaderUtils.makeDisposition` with non-ASCII, empty and `%`-containing filenames",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a `StreamedResponse` created inside a unit frame",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "21.3",
+    "title": "UploadedFile, File and HttpKernel exceptions",
+    "component": "http-foundation",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a multipart upload",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`HttpException`, `NotFoundHttpException`, `AccessDeniedHttpException`, ... and the rest",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`surface.jsonl`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "22.1",
+    "title": "MIME types and addresses",
+    "component": "mime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "Symfony's extension-to-type map at the Pin's version",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "file contents with known signatures (png, jpg, pdf, gif, svg, zip)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`Address.create('\"Name\" <a@b.c>')`, IDN domains and invalid strings",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "22.2",
+    "title": "Email message model and rendering",
+    "component": "mime",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "messages with text and HTML alternatives, attachments, inline parts, UTF-8 subjects...",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "23.1",
+    "title": "Finder over `Bun.Glob`",
+    "component": "finder",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a fixture directory tree containing dotfiles, nested directories and symlinks",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "every Finder member referenced in Upstream `src/`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "24.1",
+    "title": "Pipeline and Hub",
+    "component": "pipeline",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Pipeline/{PipelineTest,HubTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Pipeline/PipelineTest.php::*",
+          "framework/tests/Pipeline/HubTest.php::*",
+          "framework/tests/Integration/Pipeline/**::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a pipe that returns a Promise",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "string pipes with parameters (`'throttle:60,1'`)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 'And tests/Integration/Pipeline/** is blocked-by:testbench' names those tests in the AC, so included (expected outcome blocked-by:testbench, not pass). Drop Integration/Pipeline/** if the resolver should only count the primary scope."
+  },
+  {
+    "story": "25.1",
+    "title": "Encrypter",
+    "component": "encryption",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Encryption/EncrypterTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Encryption/EncrypterTest.php::*",
+          "framework/tests/Integration/Encryption/**::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`@xaravel/encryption`'s `AppKey`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a payload that fails MAC verification, or uses an unsupported cipher",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 'And tests/Integration/Encryption/** is blocked-by:testbench' included as in 24.1 (expected blocked-by:testbench)."
+  },
+  {
+    "story": "25.2",
+    "title": "PHP interoperability",
+    "component": "encryption",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "Oracle fixtures of `Crypt::encrypt` (serialized) and `encryptString` (unserialized)...",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "Xaravel-encrypted payloads, submitted as a Story 3.4 Oracle request",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a payload encrypted with a previous key",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "No Upstream selectors; all ACs are Oracle interop Xaravel Tests."
+  },
+  {
+    "story": "26.1",
+    "title": "Hasher drivers and PHP compatibility",
+    "component": "hashing",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Hashing/HasherTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Hashing/HasherTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "Oracle `$2y$` hashes of passwords of 0, 71, 72, 73 and 200 bytes",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "argon2id hashes from the Oracle, with its memory, time and threads options",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`hashing.verify = true` and a hash from a different algorithm",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 5,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "27.1",
+    "title": "The local `Filesystem` class",
+    "component": "filesystem",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Filesystem/{FilesystemTest,JoinPathsHelperTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Filesystem/FilesystemTest.php::*",
+          "framework/tests/Filesystem/JoinPathsHelperTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a sync Upstream method such as `File.exists` or `File.get`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Epic header: tests/Integration/Filesystem/** is blocked-by:testbench and named by no AC, so not in scope of any Epic 27 Story."
+  },
+  {
+    "story": "27.2",
+    "title": "flysystem port and the local disk adapter",
+    "component": "filesystem",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope: every `FAT` Test ID not matched by Stories 27.3 and 27.4",
+        "verify": "selectors",
+        "include": [],
+        "exclude": [],
+        "residual": [
+          "framework/tests/Filesystem/FilesystemAdapterTest.php"
+        ]
+      },
+      {
+        "n": 2,
+        "given": "`put`, `get`, `readStream` / `writeStream`, `copy`, `move`, `delete`, `visibility`...",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testThrowExceptionsFor*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testReportExceptionsFor*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a path containing `..` that escapes the root or prefix",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC2 names testThrowExceptionsFor*/testReportExceptionsFor* explicitly; they are also in AC1's residual (same Story). AC3 path-traversal behaviour corresponds to FAT::testPathRejectsTraversal* (covered by AC1 residual), left xt since the AC names no test."
+  },
+  {
+    "story": "27.3",
+    "title": "S3 disk and temporary URLs over `Bun.S3Client`",
+    "component": "filesystem",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `FAT::{test*S3*,testProvidesTemporaryU*,testTemporaryU*,...}`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::test*S3*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testProvidesTemporaryU*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testTemporaryU*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testPrefixesUrls",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testUsesRightSeperator*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testCreateFtpDriver"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "Upstream S3 tests that mock the AWS SDK client",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a local S3-compatible service in CI (Xaravel Tests)",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`ftp` and `sftp` drivers",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC2 refers to the S3 tests of AC1 (needs a DIV clause via Escalation; those IDs stay not-ported-yet until then) but names no selector; marked xt. AC3 needs a local S3-compatible service in CI. AC4 ftp/sftp are deferred: items pending Maintainer. All AC1 globs verified against FAT methods ('Seperator' is Upstream's spelling)."
+  },
+  {
+    "story": "27.4",
+    "title": "FilesystemManager, `Storage.fake` and file responses",
+    "component": "filesystem",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Filesystem/FilesystemManagerTest.php::*` and `FAT::{testResponse,...}`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Filesystem/FilesystemManagerTest.php::*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testResponse",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testMimeTypeIsNotCalled*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testSizeIsNotCalled*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testFallbackName*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testDownload*",
+          "framework/tests/Filesystem/FilesystemAdapterTest.php::testAssertEmpty*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`Storage.fake('avatars')` in a test",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "28.1",
+    "title": "Real processes, output, timeouts and pipes",
+    "component": "process",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `PT::{testSuccessfulProcess,testOutputCanBeRetrieved*,testReal*,...}`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Process/ProcessTest.php::testSuccessfulProcess",
+          "framework/tests/Process/ProcessTest.php::testOutputCanBeRetrieved*",
+          "framework/tests/Process/ProcessTest.php::testReal*",
+          "framework/tests/Process/ProcessTest.php::testQuietProcessesReturnEmptyOutput",
+          "framework/tests/Process/ProcessTest.php::testQuietProcessesCanThrow",
+          "framework/tests/Process/ProcessTest.php::testATimeout*",
+          "framework/tests/Process/ProcessTest.php::testASubSecond*",
+          "framework/tests/Process/ProcessTest.php::testGeneralTimeouts*",
+          "framework/tests/Process/ProcessTest.php::testIdleTimeouts*",
+          "framework/tests/Process/ProcessTest.php::testTimedOutProcesses*",
+          "framework/tests/Process/ProcessTest.php::testProcessPipe*",
+          "framework/tests/Process/ProcessTest.php::testProcessSimplePipe*",
+          "framework/tests/Process/ProcessTest.php::testProcessWithMultipleEnvironmentVariablesAndSequences"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a process that exceeds its timeout",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "28.2",
+    "title": "Process pools",
+    "component": "process",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `PT::{testProcessPool*,testInvokedProcessPool*,testQuietProcessesInPoolsCanThrow}`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Process/ProcessTest.php::testProcessPool*",
+          "framework/tests/Process/ProcessTest.php::testInvokedProcessPool*",
+          "framework/tests/Process/ProcessTest.php::testQuietProcessesInPoolsCanThrow"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a pool",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "28.3",
+    "title": "Process fakes and assertions",
+    "component": "process",
+    "kind": "upstream",
+    "deferred": "AC3 re-verifies Support Test IDs owned by Story 20.5 (component: support manifest); exact IDs are the blocked-by:process Expectations entries",
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope: every `PT` Test ID not matched by Stories 28.1 and 28.2",
+        "verify": "selectors",
+        "include": [],
+        "exclude": [],
+        "residual": [
+          "framework/tests/Process/ProcessTest.php"
+        ]
+      },
+      {
+        "n": 2,
+        "given": "`Process.fake()` in one test",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`SupportComposerTest` and `SupportNodePackageManagerTest` (`blocked-by:process` since Story 20.5)",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Support/SupportComposerTest.php::*",
+          "framework/tests/Support/SupportNodePackageManagerTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC3 has a separate manifest with component: support; whole files given as selectors but only the blocked-by:process entries are in scope. PT residual (AC1) excludes everything claimed by 28.1/28.2."
+  },
+  {
+    "story": "29.1",
+    "title": "Monolog port",
+    "component": "log",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "`Logger`, `StreamHandler`, `RotatingFileHandler`, ... and the level model",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a log call",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "No Upstream selectors; Monolog Oracle Differential Xaravel Tests."
+  },
+  {
+    "story": "29.2",
+    "title": "Log manager and channels",
+    "component": "log",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Log/LogLoggerTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Log/LogLoggerTest.php::*",
+          "framework/tests/Integration/Log/LogManagerTest.php::*",
+          "framework/tests/Integration/Log/JsonFormatterTest.php::*",
+          "framework/tests/Integration/Log/LoggingIntegrationTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "each built-in driver, configured as in Laravel's default `config/logging.php`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`Log.withContext({...})` inside one unit",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 explicitly says the three Integration/Log files are translated and recorded as blocked-by:testbench, so included (expected outcome blocked-by:testbench, re-verified in Epic 60)."
+  },
+  {
+    "story": "29.3",
+    "title": "Context",
+    "component": "log",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Integration/Log/{ContextTest,ContextIntegrationTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Integration/Log/ContextTest.php::*",
+          "framework/tests/Integration/Log/ContextIntegrationTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "two units interleaved at every `await`, with `Context.add` in each",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a log entry written while Context holds visible and hidden values",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`Context.dehydrating(fn)`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 5,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "AC1 tests are translated and recorded as blocked-by:testbench (not expected to pass). Component 'log' assumed for Context (api-surface:gate log covers Log and Context)."
+  },
+  {
+    "story": "30.1",
+    "title": "Translation file loaders",
+    "component": "translation",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Translation/TranslationFileLoaderTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Translation/TranslationFileLoaderTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "Upstream's PHP-array language files",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Epic header: tests/Integration/Translation/** is blocked-by:testbench, named by no AC, not in scope."
+  },
+  {
+    "story": "30.2",
+    "title": "Translator and pluralization",
+    "component": "translation",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Translation/{TranslationTranslatorTest,TranslationMessageSelectorTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Translation/TranslationTranslatorTest.php::*",
+          "framework/tests/Translation/TranslationMessageSelectorTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`App.setLocale('fr')` inside one unit",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`trans_choice` with interval and range syntax across the plural-rule locales",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "31.1",
+    "title": "Closure analysis and capture rejection",
+    "component": "serializable-closure",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a closure's source, parsed with the parser chosen under NFR-2",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`dispatch(async ({ podcast }) => podcast.publish(), { podcast })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`dispatch(async () => podcast.publish())`, where `podcast` is an outer variable",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "closures that use `this`, `arguments`, `import()` or an imported binding",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "31.2",
+    "title": "Signed payload codec and worker reconstruction",
+    "component": "serializable-closure",
+    "kind": "xaravel",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "an accepted closure and its arguments",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a payload with an invalid signature",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a valid payload on a worker",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "the package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "32.1",
+    "title": "Dispatcher, PendingDispatch and Queueable",
+    "component": "bus",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Bus/{BusDispatcherTest,BusPendingDispatchTest,QueueableTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Bus/BusDispatcherTest.php::*",
+          "framework/tests/Bus/BusPendingDispatchTest.php::*",
+          "framework/tests/Bus/QueueableTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`dispatch(job).onQueue('emails').delay(10)`, called synchronously",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a `PendingDispatch` created outside any frame",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "job middleware",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": ""
+  },
+  {
+    "story": "32.2",
+    "title": "Chains and batches",
+    "component": "bus",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Bus/{BusPendingBatchTest,BusBatchTest,BusBatchableTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Bus/BusPendingBatchTest.php::*",
+          "framework/tests/Bus/BusBatchTest.php::*",
+          "framework/tests/Bus/BusBatchableTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "`Bus.batch([...]).then(cb).catch(cb).finally(cb).dispatch()`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "`PendingChain` / `PendingBatch` `dispatch`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Database-batch-repository tests in AC1 are expected blocked-by:database."
+  },
+  {
+    "story": "32.3",
+    "title": "Re-verify Support's Bus fake",
+    "component": "support",
+    "kind": "upstream",
+    "deferred": "AC1 re-verifies Support Test IDs (blocked-by:bus) owned by an Epic 20 Story, under a component: support manifest",
+    "acs": [
+      {
+        "n": 1,
+        "given": "a manifest with `component: support` and the test scope `tests/Support/SupportTestingBusFakeTest.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Support/SupportTestingBusFakeTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "the Bus package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Component set to 'support' because AC1's manifest is component: support and BusFake lives in Support; AC2 is the Bus Epic close (api-surface:gate bus), so the Story spans support and bus. The selector is concrete (whole file), so it could be resolved directly if re-verification of another Story's IDs is acceptable."
+  },
+  {
+    "story": "33.1",
+    "title": "Event dispatcher",
+    "component": "events",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Events/{EventsDispatcherTest,EventsSubscriberTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Events/EventsDispatcherTest.php::*",
+          "framework/tests/Events/EventsSubscriberTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "three listeners, one of them async",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "an event object",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "`Event.listen(...)` called at runtime inside a request frame after `sealed`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Epic header: tests/Integration/Events/** blocked-by:testbench, named by no AC, not in scope."
+  },
+  {
+    "story": "33.2",
+    "title": "Listener discovery without reflection",
+    "component": "events",
+    "kind": "upstream",
+    "deferred": null,
+    "acs": [
+      {
+        "n": 1,
+        "given": "a listener class whose `handle` is declared with `inject({ event: OrderShipped })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "an invokable listener with `__invoke` declared with `inject`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "a listener without `inject` metadata on its `handle`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 4,
+        "given": "a union `inject({ event: oneOf(A, B) })`",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "No Upstream selectors (DIV-7 discovery replaces reflection); all ACs xt."
+  },
+  {
+    "story": "33.3",
+    "title": "Queued and broadcast events, and Support's Event fake",
+    "component": "events",
+    "kind": "upstream",
+    "deferred": "AC2 is a re-verification manifest (component: support) of Support Test IDs owned by an Epic 20 Story",
+    "acs": [
+      {
+        "n": 1,
+        "given": "the test scope `tests/Events/{QueuedEventsTest,BroadcastedEventsTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Events/QueuedEventsTest.php::*",
+          "framework/tests/Events/BroadcastedEventsTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "a re-verification manifest with `component: support` and the test scope `tests/Support/{SupportTestingEventFakeTest,SupportFacadesEventTest}.php::*`",
+        "verify": "selectors",
+        "include": [
+          "framework/tests/Support/SupportTestingEventFakeTest.php::*",
+          "framework/tests/Support/SupportFacadesEventTest.php::*"
+        ],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 3,
+        "given": "the Events package",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Story spans two manifests: events (AC1, IDs may be recorded blocked-by:queue / blocked-by:broadcasting) and support (AC2)."
+  },
+  {
+    "story": "33.4",
+    "title": "Phase 3 `blocked-by` sweep",
+    "component": "phase-3-sweep",
+    "kind": "upstream",
+    "deferred": "Scope is Expectations entries blocked-by any Phase 3 Component, resolved when the Story is planned, one manifest per owning Component",
+    "acs": [
+      {
+        "n": 1,
+        "given": "every Expectations entry whose reason is `blocked-by:<c>`, for <c> in Phase 3 Components...",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      },
+      {
+        "n": 2,
+        "given": "the Expectations File after this Story merges",
+        "verify": "xt",
+        "include": [],
+        "exclude": [],
+        "residual": []
+      }
+    ],
+    "notes": "Component placeholder 'phase-3-sweep': the Story spans one manifest per owning Component (incl. Container's Storage()/Log() descriptors from Story 17.2). AC1 marked xt because it names no Upstream selector; AC2 is a Phase-completion check."
+  }
+]

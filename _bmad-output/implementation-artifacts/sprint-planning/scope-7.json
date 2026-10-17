@@ -1,0 +1,1098 @@
+[
+ {
+  "story": "56.1",
+  "title": "Transports",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a local SMTP sink used as a test fixture",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the `failover` transport with a failing first transport",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "each transport's `send`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors named; all ACs are Xaravel Tests (AC1 says 'Xaravel Tests' explicitly). Upstream tests/Mail has no smtp/log/array/failover transport test files."
+ },
+ {
+  "story": "56.2",
+  "title": "Mailables, envelopes, content and attachments",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Mail/{MailMailableTest,...,MailMailableAssertionsTest}.php",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Mail/MailMailableTest.php::*",
+     "framework/tests/Mail/MailableAlternativeSyntaxTest.php::*",
+     "framework/tests/Mail/MailMailableDataTest.php::*",
+     "framework/tests/Mail/MailMailableHeadersTest.php::*",
+     "framework/tests/Mail/AttachableTest.php::*",
+     "framework/tests/Mail/AttachmentTest.php::*",
+     "framework/tests/Mail/MailMailableAssertionsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`new Envelope({ subject: 'Hi' })` and `new Content({ markdown: 'mail.invoice' })",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "56.3",
+  "title": "Markdown mail and CSS inlining",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "Laravel's mail component templates, ported to Xaravel Blade",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Oracle Differential check (byte-identical HTML/text vs Oracle); no Upstream selector, so XT."
+ },
+ {
+  "story": "56.4",
+  "title": "Mailer, messages, queued mail and the Mail fake",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies SupportTestingMailFakeTest, owned by Story 20.6 (component: support) and recorded blocked-by:mail",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Mail/{MailMailerTest,MailMessageTest,MailableQueuedTest}.p",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Mail/MailMailerTest.php::*",
+     "framework/tests/Mail/MailMessageTest.php::*",
+     "framework/tests/Mail/MailableQueuedTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`SupportTestingMailFakeTest` (`blocked-by:mail` since Story 20.6)",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportTestingMailFakeTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 file framework/tests/Support/SupportTestingMailFakeTest.php exists; it belongs to Story 20.6 / component support, so this Story's manifest would span mail and support. AC1 alone is resolvable."
+ },
+ {
+  "story": "56.5",
+  "title": "Non-alpha transports",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Mail/{MailSesTransportTest,...,MailCloudflareTransportTest",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Mail/MailSesTransportTest.php::*",
+     "framework/tests/Mail/MailSesV2TransportTest.php::*",
+     "framework/tests/Mail/MailResendTransportTest.php::*",
+     "framework/tests/Mail/MailCloudflareTransportTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 Test IDs are classified deferred:mail-transports (Expectations entries), but the scope itself is resolvable from selectors, so deferred=null. AC2 (api-surface gate, async-surface, docs) is XT."
+ },
+ {
+  "story": "57.1",
+  "title": "The Pest-style app test shape and HTTP test calls",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/Testing/{Concerns/MakesHttpRequestsTest,...}` a",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Testing/Concerns/MakesHttpRequestsTest.php::*",
+     "framework/tests/Foundation/Testing/Concerns/InteractsWithContainerTest.php::*",
+     "framework/tests/Foundation/Testing/Concerns/InteractsWithViewsTest.php::*",
+     "framework/tests/Foundation/Testing/BootTraitsTest.php::*",
+     "framework/tests/Testing/Concerns/TestViewsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a test file that calls `uses(TestCase, RefreshDatabase)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`this.post(...)` inside a test",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "chained assertions on a `PendingTestResponse`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component 'testing' chosen for all of Epic 57; Epic header says Testing plus Foundation's testing slice (tests/Foundation/Testing/** are Illuminate\\Foundation\\Testing). If manifests must name 'foundation' for those files, Stories 57.1, 57.5, 57.6 would span two components."
+ },
+ {
+  "story": "57.2",
+  "title": "TestResponse: status, headers, cookies, session, redirects and views",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "every `TRT` Test ID not matched by Story 57.3, plus SeeInHtml/AssertRedirectTo* ",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Testing/SeeInHtmlTest.php::*",
+     "framework/tests/Testing/AssertRedirectToRouteTest.php::*",
+     "framework/tests/Testing/AssertRedirectToActionTest.php::*",
+     "framework/tests/Testing/AssertRedirectToSignedRouteTest.php::*"
+    ],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Testing/TestResponseTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "an assertion that takes a predicate (`assertSessionHas('k', (v) => \u2026)`)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "TRT residual: framework/tests/Testing/TestResponseTest.php, minus Story 57.3's TRT method selectors."
+ },
+ {
+  "story": "57.3",
+  "title": "JSON assertions and AssertableJson",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `TRT::{testAssertJson*,testAssertExact*,testAssertSimilar*,testJs",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Testing/TestResponseTest.php::testAssertJson*",
+     "framework/tests/Testing/TestResponseTest.php::testAssertExact*",
+     "framework/tests/Testing/TestResponseTest.php::testAssertSimilar*",
+     "framework/tests/Testing/TestResponseTest.php::testJson*",
+     "framework/tests/Testing/Fluent/AssertTest.php::*",
+     "framework/tests/Testing/AssertTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "JSON with integer-like keys and nested lists",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "57.4",
+  "title": "Console tests",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Testing/{Console/RouteListCommandTest,...,ParallelConsoleO",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Testing/Console/RouteListCommandTest.php::*",
+     "framework/tests/Testing/Console/ConfigShowCommandTest.php::*",
+     "framework/tests/Testing/ParallelConsoleOutputTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`this.artisan('invoice:send').expectsQuestion('Which?', 'all').assertExitCode(0)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "57.5",
+  "title": "Database testing",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationInteractsWithDatabaseTest,...}` and ",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationInteractsWithDatabaseTest.php::*",
+     "framework/tests/Foundation/Testing/DatabaseTruncationTest.php::*",
+     "framework/tests/Foundation/Testing/DatabaseMigrationsTest.php::*",
+     "framework/tests/Foundation/Testing/DatabaseTransactionsManagerTest.php::*",
+     "framework/tests/Foundation/Testing/LazilyRefreshDatabaseTest.php::*",
+     "framework/tests/Foundation/Testing/RefreshDatabaseTest.php::*",
+     "framework/tests/Foundation/Testing/Traits/CanConfigureMigrationCommandsTest.php::*",
+     "framework/tests/Testing/Concerns/InteractsWithDatabaseTest.php::*",
+     "framework/tests/Testing/Concerns/TestDatabasesTest.php::*",
+     "framework/tests/Testing/Concerns/TestCachesTest.php::*",
+     "framework/tests/Testing/ParallelTestingTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`RefreshDatabase`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "Laravel's parallel-testing hooks",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "tests/Foundation/FoundationInteractsWithDatabaseTest.php is Foundation's testing slice (InteractsWithDatabase concern); assigned to component testing per Epic header."
+ },
+ {
+  "story": "57.6",
+  "title": "Fakes, time travel and the NFR-7 resets",
+  "component": "testing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationInteractsWithTimeTest,Testing/Wormho",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationInteractsWithTimeTest.php::*",
+     "framework/tests/Foundation/Testing/WormholeTest.php::*",
+     "framework/tests/Testing/Concerns/InteractsWithDeprecationHandlingTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "each NFR-7 item (the clock, every facade fake, Mockery expectations, ...)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Testing package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 explicitly one XT-testing-<n> per NFR-7 item (clock, each facade fake, Mockery, Str factories, Sleep, Once, Lottery)."
+ },
+ {
+  "story": "58.1",
+  "title": "`assertHxTrigger`, `assertFragment`, `assertHxLocation` and friends",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`@xaravel/testing` installed as an optional peer of `@xaravel/htmx`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "UJ-2's invoice form fixture",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a non-htmx response",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the htmx Component",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "59.1",
+  "title": "The Testbench application and TestCase",
+  "component": "testbench",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a TestCase that extends `Orchestra\\Testbench\\TestCase`'s Xaravel equivalent",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Testbench package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "59.2",
+  "title": "Testbench attributes and helpers",
+  "component": "testbench",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "each attribute as a TC39 decorator on a class or a method (AD-26)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`@RequiresDatabase('pgsql')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`@RequiresDatabase('mysql')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "60.1",
+  "title": "Small Components' integration suites",
+  "component": "container",
+  "kind": "upstream",
+  "deferred": "one manifest per Component, spanning 7 components (container, cookie, encryption, pipeline, redis, session, translation)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/{Container,...,Translation}/**`, one manifest ",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Container/**::*",
+     "framework/tests/Integration/Cookie/**::*",
+     "framework/tests/Integration/Encryption/**::*",
+     "framework/tests/Integration/Pipeline/**::*",
+     "framework/tests/Integration/Redis/**::*",
+     "framework/tests/Integration/Session/**::*",
+     "framework/tests/Integration/Translation/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component field set to 'container' only as a placeholder; Story spans container, cookie, encryption, pipeline, redis, session, translation. Epic 60 Stories are re-verification of blocked-by:testbench entries, but Epic 60 owns tests/Integration/** (per Epic 56/57 headers), so single-component Epic 60 Stories are not marked deferred."
+ },
+ {
+  "story": "60.2",
+  "title": "Validation and View integration",
+  "component": "validation",
+  "kind": "upstream",
+  "deferred": "one manifest each, spanning 2 components (validation, view)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Validation/**` and `tests/Integration/View/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Validation/**::*",
+     "framework/tests/Integration/View/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component placeholder 'validation'; also spans view."
+ },
+ {
+  "story": "60.3",
+  "title": "Filesystem and Events integration",
+  "component": "filesystem",
+  "kind": "upstream",
+  "deferred": "one manifest each, spanning 2 components (filesystem, events)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Filesystem/**` and `tests/Integration/Events/*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Filesystem/**::*",
+     "framework/tests/Integration/Events/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component placeholder 'filesystem'; also spans events. Queue-dependent tests are blocked-by:queue."
+ },
+ {
+  "story": "60.4",
+  "title": "Support integration",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Support/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Support/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "60.5",
+  "title": "Log and Context integration",
+  "component": "log",
+  "kind": "upstream",
+  "deferred": "every tests/Integration/Log Test ID is already owned by Stories 29.2 and 29.3; re-verification, resolve when the Story is planned",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Log/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Log/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Context lives in Illuminate\\Log\\Context, so component log. Context-into-jobs tests blocked-by:queue."
+ },
+ {
+  "story": "60.6",
+  "title": "Cache integration",
+  "component": "cache",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Cache/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Cache/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Variants none/sqlite/pgsql/redis; phpredis, DynamoDB and Memcached files follow Stories 41.1 and 42.5 rulings (classification, not scope change)."
+ },
+ {
+  "story": "60.7",
+  "title": "Database integration: queries, schema, connections and locks",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Database/{QueryBuilderTest,...,RefreshCommandT",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Database/QueryBuilderTest.php::*",
+     "framework/tests/Integration/Database/QueryBuilderUpdateTest.php::*",
+     "framework/tests/Integration/Database/QueryBuilderWhereLikeTest.php::*",
+     "framework/tests/Integration/Database/QueryingWithEnumsTest.php::*",
+     "framework/tests/Integration/Database/SchemaBuilderTest.php::*",
+     "framework/tests/Integration/Database/SchemaBuilderSchemaNameTest.php::*",
+     "framework/tests/Integration/Database/DatabaseConnectionsTest.php::*",
+     "framework/tests/Integration/Database/DatabaseLockTest.php::*",
+     "framework/tests/Integration/Database/DatabaseCacheStoreTest.php::*",
+     "framework/tests/Integration/Database/DatabaseTransactionsTest.php::*",
+     "framework/tests/Integration/Database/AfterQueryTest.php::*",
+     "framework/tests/Integration/Database/ConnectionThreadsCountTest.php::*",
+     "framework/tests/Integration/Database/DatabaseExplainTest.php::*",
+     "framework/tests/Integration/Database/EventConnectionEstablishedTest.php::*",
+     "framework/tests/Integration/Database/TimestampTypeTest.php::*",
+     "framework/tests/Integration/Database/UniqueConstraintViolationTest.php::*",
+     "framework/tests/Integration/Database/MigrateWithRealpathTest.php::*",
+     "framework/tests/Integration/Database/MigrationServiceProviderTest.php::*",
+     "framework/tests/Integration/Database/MigratorEventsTest.php::*",
+     "framework/tests/Integration/Database/RefreshCommandTest.php::*",
+     "framework/tests/Integration/Migration/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "tests/Integration/Migration/** assigned to component database. DatabaseCacheStoreTest is under Database/ though it tests a cache store; kept in database per Story text."
+ },
+ {
+  "story": "60.8",
+  "title": "Database integration: Eloquent relationships, Strict Loading and auto-eager-loading",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Database/{EloquentBelongsToManyTest,...,Eloque",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Database/EloquentBelongsToManyTest.php::*",
+     "framework/tests/Integration/Database/EloquentBelongsToTest.php::*",
+     "framework/tests/Integration/Database/EloquentHasManyTest.php::*",
+     "framework/tests/Integration/Database/EloquentHasManyThroughTest.php::*",
+     "framework/tests/Integration/Database/EloquentHasOneIsTest.php::*",
+     "framework/tests/Integration/Database/EloquentHasOneOfManyTest.php::*",
+     "framework/tests/Integration/Database/EloquentThroughTest.php::*",
+     "framework/tests/Integration/Database/EloquentMorph*Test.php::*",
+     "framework/tests/Integration/Database/EloquentWhereHas*Test.php::*",
+     "framework/tests/Integration/Database/EloquentWhereTest.php::*",
+     "framework/tests/Integration/Database/EloquentWithCountTest.php::*",
+     "framework/tests/Integration/Database/EloquentAggregateTest.php::*",
+     "framework/tests/Integration/Database/EloquentEagerLoadingLimitTest.php::*",
+     "framework/tests/Integration/Database/EloquentLazyEagerLoadingTest.php::*",
+     "framework/tests/Integration/Database/EloquentMultiDimensionalArrayEagerLoadingTest.php::*",
+     "framework/tests/Integration/Database/EloquentCollection*Test.php::*",
+     "framework/tests/Integration/Database/EloquentModelLoad*Test.php::*",
+     "framework/tests/Integration/Database/EloquentModelRelationAutoloadTest.php::*",
+     "framework/tests/Integration/Database/EloquentStrictLoadingTest.php::*",
+     "framework/tests/Integration/Database/EloquentTouchParentWithGlobalScopeTest.php::*",
+     "framework/tests/Integration/Database/EloquentPivot*Test.php::*",
+     "framework/tests/Integration/Database/EloquentCustomPivotCastTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Path globs EloquentMorph*Test, EloquentWhereHas*Test, EloquentCollection*Test, EloquentModelLoad*Test, EloquentPivot*Test kept as globs (EloquentWhereHas*Test also matches EloquentWhereHasMorphTest). Note EloquentHasOneIsTest/EloquentMorphOneIsTest/EloquentMorphToIsTest match."
+ },
+ {
+  "story": "60.9",
+  "title": "Database integration: models, casts, events, pagination and the rest",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "every `tests/Integration/Database/*.php` Test ID not covered by Stories 60.7 and",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Integration/Database/DatabaseCustomCastsTest.php",
+     "framework/tests/Integration/Database/DatabaseEloquentBroadcastingTest.php",
+     "framework/tests/Integration/Database/DatabaseEloquentModelAttributeCastingTest.php",
+     "framework/tests/Integration/Database/DatabaseEloquentModelCustomCastingTest.php",
+     "framework/tests/Integration/Database/DatabaseTestCase.php",
+     "framework/tests/Integration/Database/EloquentCursorPaginateTest.php",
+     "framework/tests/Integration/Database/EloquentDeleteTest.php",
+     "framework/tests/Integration/Database/EloquentMassPrunableTest.php",
+     "framework/tests/Integration/Database/EloquentModelCustomEventsTest.php",
+     "framework/tests/Integration/Database/EloquentModelDateCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelDecimalCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelEncryptedCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelEncryptedDirtyTest.php",
+     "framework/tests/Integration/Database/EloquentModelEnumCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelHashedCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelImmutableDateCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelJsonCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelRefreshTest.php",
+     "framework/tests/Integration/Database/EloquentModelScopeTest.php",
+     "framework/tests/Integration/Database/EloquentModelStringCastingTest.php",
+     "framework/tests/Integration/Database/EloquentModelTest.php",
+     "framework/tests/Integration/Database/EloquentModelWithoutEventsTest.php",
+     "framework/tests/Integration/Database/EloquentNamedScopeAttributeTest.php",
+     "framework/tests/Integration/Database/EloquentPaginateTest.php",
+     "framework/tests/Integration/Database/EloquentPrunableTest.php",
+     "framework/tests/Integration/Database/EloquentPushTest.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitTest.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitTests.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitUsingDatabaseMigrationsTest.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitUsingDatabaseTransactionsTest.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitUsingRefreshDatabaseOnMultipleConnectionsTest.php",
+     "framework/tests/Integration/Database/EloquentTransactionWithAfterCommitUsingRefreshDatabaseTest.php",
+     "framework/tests/Integration/Database/EloquentUniqueStringPrimaryKeysTest.php",
+     "framework/tests/Integration/Database/EloquentUpdateTest.php",
+     "framework/tests/Integration/Database/ModelInspectorTest.php",
+     "framework/tests/Integration/Database/Queue/BatchableTransactionTest.php",
+     "framework/tests/Integration/Database/Queue/QueueTransactionTest.php"
+    ]
+   }
+  ],
+  "notes": "Residual enumerated as every top-level tests/Integration/Database/*.php file not matched by a 60.7/60.8 selector, plus Queue/*.php (QueueTransactionTest, BatchableTransactionTest). Includes non-Test helper files (DatabaseTestCase.php, EloquentTransactionWithAfterCommitTests.php) which carry no own Test IDs or are trait-like. Broadcasting/Queue dependents are blocked-by:<c>."
+ },
+ {
+  "story": "60.10",
+  "title": "Database integration: engine-specific suites",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": "Inventory Test IDs with trailing whitespace (Upstream data-set names) fail the manifest validator (tools/ownership, Story 1.5); needs a fix before this manifest can list them",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Database/{Sqlite,Postgres}/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Database/Sqlite/**::*",
+     "framework/tests/Integration/Database/Postgres/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`tests/Integration/Database/{MySql,MariaDb,SqlServer}/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Database/MySql/**::*",
+     "framework/tests/Integration/Database/MariaDb/**::*",
+     "framework/tests/Integration/Database/SqlServer/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 Test IDs are classified deferred:<engine>-driver; scope still resolvable."
+ },
+ {
+  "story": "60.11",
+  "title": "Http integration",
+  "component": "http",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Http/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Http/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "60.12",
+  "title": "Routing integration",
+  "component": "routing",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Routing/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Routing/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "60.13",
+  "title": "Foundation integration",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Foundation/**`, excluding `CloudBootstrapperTe",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Foundation/**::*"
+    ],
+    "exclude": [
+     "framework/tests/Integration/Foundation/CloudBootstrapperTest.php::*"
+    ],
+    "residual": []
+   }
+  ],
+  "notes": "CloudBootstrapperTest (framework/tests/Integration/Foundation/CloudBootstrapperTest.php, exists) excluded as deferred:foundation-cloud; it presumably needs its own classification owner."
+ },
+ {
+  "story": "60.14",
+  "title": "Generator integration",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Generators/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Generators/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component guessed as foundation (make:* commands live in Illuminate\\Foundation\\Console); confirm. Queue/Notifications generators blocked-by:queue / blocked-by:notifications."
+ },
+ {
+  "story": "60.15",
+  "title": "Console integration",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Console/**`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Console/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Job scheduling tests blocked-by:queue."
+ },
+ {
+  "story": "60.16",
+  "title": "Mail and Testing integration, and the Phase 7 gate",
+  "component": "mail",
+  "kind": "upstream",
+  "deferred": "one manifest each, spanning 2 components (mail, testing); AC2 is a gate over the whole Expectations File",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Integration/Mail/**` and `tests/Integration/Testing/**`, o",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Mail/**::*",
+     "framework/tests/Integration/Testing/**::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the whole Expectations File",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component placeholder 'mail'; also spans testing. AC2 (zero blocked-by:testbench entries) is a XT/check."
+ },
+ {
+  "story": "61.1",
+  "title": "`@xaravel/framework` meta-package",
+  "component": "framework",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`packages/framework`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "every Story 55.3 reference file",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "61.2",
+  "title": "Laravel-shaped Skeleton",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`skeleton/`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`.env.example`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Skeleton's `bunfig.toml`, entry scripts and lint config",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 61 header says XT-skeleton-<n> / XT-installer-<n>; 61.1 (packages/framework) uses component 'framework' though the header names only skeleton/installer test prefixes."
+ },
+ {
+  "story": "61.3",
+  "title": "htmx-ready layout and welcome page",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the base layout",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the welcome page",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "61.4",
+  "title": "Skeleton test suite on SQLite and Postgres",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the Skeleton's Pest-style tests (welcome page, Fragment request, user factory, .",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "UJ-1's path (create the app, `bun artisan serve`, `make:model Invoice -mfc`, `mi",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "61.5",
+  "title": "Installer",
+  "component": "installer",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`bun create xaravel invoices`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Bun older than 1.4",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Installer's post-install steps",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "61.6",
+  "title": "Production entry and deployment guide",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the Skeleton's production entry (`server.ts`)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the deployment guide",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Skeleton and Installer",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 covers both skeleton and installer xt:coverage; component set to skeleton."
+ }
+]

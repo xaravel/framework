@@ -1,0 +1,1213 @@
+[
+ {
+  "story": "62.1",
+  "title": "Job payloads, model serialization and the sync driver",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Queue/{QueueSyncQueueTest,...}.php::* and tests/Integration/Queue/{ModelSerializationTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Queue/QueueSyncQueueTest.php::*",
+     "framework/tests/Queue/QueueManagerTest.php::*",
+     "framework/tests/Queue/QueueAttributesTest.php::*",
+     "framework/tests/Queue/QueueRoutesTest.php::*",
+     "framework/tests/Queue/InteractsWithQueueTest.php::*",
+     "framework/tests/Queue/QueueExceptionTest.php::*",
+     "framework/tests/Queue/BeforeCommitContractTest.php::*",
+     "framework/tests/Integration/Queue/ModelSerializationTest.php::*",
+     "framework/tests/Integration/Queue/CallQueuedHandlerTest.php::*",
+     "framework/tests/Integration/Queue/CustomPayloadTest.php::*",
+     "framework/tests/Integration/Queue/PreparesForDispatchTest.php::*",
+     "framework/tests/Integration/Queue/JobEncryptionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a job holding a model",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a payload produced by PHP Laravel for the same job class FQCN (an Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "Context set when a job is dispatched",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "62.2",
+  "title": "Database and Redis drivers and failed jobs",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Queue/{QueueDatabaseQueueUnitTest,...}.php::* and tests/Integration/Queue/{RedisQueueTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Queue/QueueDatabaseQueueUnitTest.php::*",
+     "framework/tests/Queue/QueueDatabaseQueueIntegrationTest.php::*",
+     "framework/tests/Queue/QueueRedisQueueTest.php::*",
+     "framework/tests/Queue/QueueRedisJobTest.php::*",
+     "framework/tests/Queue/DatabaseFailedJobProviderTest.php::*",
+     "framework/tests/Queue/DatabaseUuidFailedJobProviderTest.php::*",
+     "framework/tests/Queue/FileFailedJobProviderTest.php::*",
+     "framework/tests/Queue/FailoverQueueTest.php::*",
+     "framework/tests/Integration/Queue/RedisQueueTest.php::*",
+     "framework/tests/Integration/Queue/QueueConnectionTest.php::*",
+     "framework/tests/Integration/Queue/QueueDelayTest.php::*",
+     "framework/tests/Integration/Queue/QueueSizeTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "two workers popping from one database queue concurrently",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a blocking Redis pop",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 runs on every queue variant (none, queue-database@sqlite, queue-database@pgsql, queue-redis@redis)."
+ },
+ {
+  "story": "62.3",
+  "title": "Workers, the timeout supervisor and queue commands",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Queue/{QueueWorkerTest,...}.php::* and tests/Integration/Queue/{WorkCommandTest,QueueRestartCommandTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Queue/QueueWorkerTest.php::*",
+     "framework/tests/Queue/QueueListenerTest.php::*",
+     "framework/tests/Queue/QueuePauseResumeTest.php::*",
+     "framework/tests/Queue/QueueRetryCommandTest.php::*",
+     "framework/tests/Queue/QueueClearCommandTest.php::*",
+     "framework/tests/Queue/QueueListFailedCommandTest.php::*",
+     "framework/tests/Queue/ListFailedCommandTest.php::*",
+     "framework/tests/Queue/QueueForgetFailedCommandTest.php::*",
+     "framework/tests/Queue/RetryBatchCommandTest.php::*",
+     "framework/tests/Queue/PruneBatchesCommandTest.php::*",
+     "framework/tests/Integration/Queue/WorkCommandTest.php::*",
+     "framework/tests/Integration/Queue/QueueRestartCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "queue:work --timeout=2 and a job that runs a sync loop for 5 seconds",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "SIGTERM to queue:work",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "queue:table, queue:failed-table and queue:batches-table",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2: timeout tests use a spawned fixture app, marked adapted:DIV-11.<k>; they are within AC1 scope, AC2 is still verified by an XT. AC4 compares against Story 55.3 reference migrations (not Upstream tests), so xt."
+ },
+ {
+  "story": "62.4",
+  "title": "Chains, batches, job middleware, unique and rate-limited jobs",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Integration/Queue/{JobChainingTest,...,DeleteMailableWhenMissingModelTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Queue/JobChainingTest.php::*",
+     "framework/tests/Integration/Queue/UniqueJobTest.php::*",
+     "framework/tests/Integration/Queue/UniqueUntilProcessingJobTest.php::*",
+     "framework/tests/Integration/Queue/DebouncedJobTest.php::*",
+     "framework/tests/Integration/Queue/DebouncedListenerTest.php::*",
+     "framework/tests/Integration/Queue/RateLimitedTest.php::*",
+     "framework/tests/Integration/Queue/RateLimitedWithRedisTest.php::*",
+     "framework/tests/Integration/Queue/ThrottlesExceptionsTest.php::*",
+     "framework/tests/Integration/Queue/ThrottlesExceptionsWithRedisTest.php::*",
+     "framework/tests/Integration/Queue/ReleaseMiddlewareTest.php::*",
+     "framework/tests/Integration/Queue/SkipMiddlewareTest.php::*",
+     "framework/tests/Integration/Queue/SkipIfBatchCancelledTest.php::*",
+     "framework/tests/Integration/Queue/WithoutOverlappingJobsTest.php::*",
+     "framework/tests/Integration/Queue/FailOnExceptionMiddlewareTest.php::*",
+     "framework/tests/Integration/Queue/JobDispatchingTest.php::*",
+     "framework/tests/Integration/Queue/QueueFakeTest.php::*",
+     "framework/tests/Integration/Queue/QueuedListenersTest.php::*",
+     "framework/tests/Integration/Queue/DeleteModelWhenMissingTest.php::*",
+     "framework/tests/Integration/Queue/DeleteMailableWhenMissingModelTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "tests/Integration/Queue/DynamoBatchTest.php",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Queue/DynamoBatchTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 classifies DynamoBatchTest per the Story 42.5 DynamoDB ruling (likely a deferred/skip reason, not a pass)."
+ },
+ {
+  "story": "62.5",
+  "title": "Dispatching closures",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Integration/Queue/SerializableClosureV1QueueTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Queue/SerializableClosureV1QueueTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a queued closure",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a payload whose signature was altered",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a closure that captures an outer variable",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "a rebuilt closure on the worker",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 allows a valid reason under DIV-4 (not only non-not-ported-yet)."
+ },
+ {
+  "story": "62.6",
+  "title": "Non-alpha drivers and the `blocked-by:queue` sweep",
+  "component": "queue",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies Expectations entries blocked-by:queue owned by other Components (one manifest per owning Component)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Queue/{QueueSqsConnectorTest,...,DynamoDbFailedJobProviderTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Queue/QueueSqsConnectorTest.php::*",
+     "framework/tests/Queue/QueueSqsQueueTest.php::*",
+     "framework/tests/Queue/QueueSqsJobTest.php::*",
+     "framework/tests/Queue/QueueBeanstalkdQueueTest.php::*",
+     "framework/tests/Queue/QueueBeanstalkdJobTest.php::*",
+     "framework/tests/Queue/DynamoDbFailedJobProviderTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "every Expectations entry with blocked-by:queue (Stories 20.6, 29.3, 32.x, 33.3, 38.6, 56.4, 60.x), one manifest per owning Component",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is classification only (deferred:sqs, deferred:beanstalkd, or Story 42.5 DynamoDB ruling). AC2 has no static selectors; scope = Expectations entries with blocked-by:queue at planning time. AC3 is api-surface gate/async-surface/docs (xt)."
+ },
+ {
+  "story": "63.1",
+  "title": "Concurrency drivers",
+  "component": "concurrency",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Integration/Concurrency/{ConcurrencyTest,Console/InvokeSerializedClosureCommandTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Concurrency/ConcurrencyTest.php::*",
+     "framework/tests/Integration/Concurrency/Console/InvokeSerializedClosureCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the process driver",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a task closure that captures outer variables",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the fork driver, which depends on pcntl / spatie/fork",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 (fork driver) is an Escalation (php-only under DIV-6 or map onto process driver); it names no Upstream test file, so xt. Fork-driver Test IDs, if any, sit inside ConcurrencyTest (AC1 scope)."
+ },
+ {
+  "story": "64.1",
+  "title": "Broadcast manager, channels and authorization",
+  "component": "broadcasting",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Broadcasting/{BroadcasterTest,...}.php::* and tests/Integration/Broadcasting/{BroadcastManagerTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Broadcasting/BroadcasterTest.php::*",
+     "framework/tests/Broadcasting/BroadcastEventTest.php::*",
+     "framework/tests/Broadcasting/UsePusherChannelsNamesTest.php::*",
+     "framework/tests/Integration/Broadcasting/BroadcastManagerTest.php::*",
+     "framework/tests/Integration/Broadcasting/SendingBroadcastsViaAnonymousEventTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "broadcast(new OrderShipped(order)).toOthers(), not awaited",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "an async channel authorization callback",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "64.2",
+  "title": "Pusher-protocol and Redis broadcasters",
+  "component": "broadcasting",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Broadcasting/{PusherBroadcasterTest,RedisBroadcasterTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Broadcasting/PusherBroadcasterTest.php::*",
+     "framework/tests/Broadcasting/RedisBroadcasterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Upstream's Pusher tests, which mock the Pusher PHP SDK",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Broadcasting/PusherBroadcasterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a broadcast to a Pusher-protocol test server (Xaravel Test)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 interpreted as PusherBroadcasterTest (the Pusher tests in AC1 scope); it requires an Escalation and those Test IDs stay not-ported-yet until the ruling, so AC1 cannot fully close before then. Duplicates an AC1 selector."
+ },
+ {
+  "story": "64.3",
+  "title": "Other broadcasters and the `blocked-by:broadcasting` sweep",
+  "component": "broadcasting",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies Expectations entries blocked-by:broadcasting owned by other Components (one manifest per owning Component)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Broadcasting/{AblyBroadcasterTest,...}.php::* and tests/Integration/Broadcasting/MercureFrankenPhpHubTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Broadcasting/AblyBroadcasterTest.php::*",
+     "framework/tests/Broadcasting/CachingTokenProviderTest.php::*",
+     "framework/tests/Broadcasting/MercureBroadcasterTest.php::*",
+     "framework/tests/Broadcasting/MercureChannelEncrypterTest.php::*",
+     "framework/tests/Integration/Broadcasting/MercureFrankenPhpHubTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "every blocked-by:broadcasting entry (Stories 33.3, 55.2, 60.9, ...), one manifest per owning Component",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is classification via Escalation (deferred:ably / deferred:mercure pending Maintainer ruling). AC2 has no static selectors."
+ },
+ {
+  "story": "65.1",
+  "title": "Channel manager, sender, on-demand and queued notifications",
+  "component": "notifications",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies tests owned by other Components (support, queue) as blocked-by:notifications entries; manifests span support and queue",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Notifications/{NotificationChannelManagerTest,...}.php::* and tests/Integration/Notifications/SendingNotificationsViaAnonymousNotifiableTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Notifications/NotificationChannelManagerTest.php::*",
+     "framework/tests/Notifications/NotificationSenderTest.php::*",
+     "framework/tests/Notifications/NotificationSendQueuedNotificationTest.php::*",
+     "framework/tests/Notifications/NotificationRoutesNotificationsTest.php::*",
+     "framework/tests/Notifications/NotificationActionTest.php::*",
+     "framework/tests/Notifications/NotificationMessageTest.php::*",
+     "framework/tests/Integration/Notifications/SendingNotificationsViaAnonymousNotifiableTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "via declared as a method or as a property",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "SupportTestingNotificationFakeTest (blocked-by:notifications since Story 20.6) and tests/Integration/Queue/DeleteNotificationWhenMissingModelTest.php",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportTestingNotificationFakeTest.php::*",
+     "framework/tests/Integration/Queue/DeleteNotificationWhenMissingModelTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3: SupportTestingNotificationFakeTest path assumed tests/Support/ (Epic gives only the class name); owned by Story 20.6 (component support). DeleteNotificationWhenMissingModelTest is component queue. The resolver should not reassign ownership of these Test IDs to this Story."
+ },
+ {
+  "story": "65.2",
+  "title": "Mail channel and MailMessage",
+  "component": "notifications",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Notifications/NotificationMailMessageTest.php::* and tests/Integration/Notifications/{SendingMailNotificationsTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Notifications/NotificationMailMessageTest.php::*",
+     "framework/tests/Integration/Notifications/SendingMailNotificationsTest.php::*",
+     "framework/tests/Integration/Notifications/SendingMailableNotificationsTest.php::*",
+     "framework/tests/Integration/Notifications/SendingNotificationsWithLocaleTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a MailMessage notification",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "65.3",
+  "title": "Database and broadcast channels",
+  "component": "notifications",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies the blocked-by:notifications generator tests from Story 60.14 with component: foundation (Expectations entries owned by another Component)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Notifications/{NotificationDatabaseChannelTest,NotificationBroadcastChannelTest}.php::* and tests/Integration/Notifications/DatabaseNotificationTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Notifications/NotificationDatabaseChannelTest.php::*",
+     "framework/tests/Notifications/NotificationBroadcastChannelTest.php::*",
+     "framework/tests/Integration/Notifications/DatabaseNotificationTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "notifications:table",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2's main check (migration equals Story 55.3 reference) is xt; its And-clause re-verifies Story 60.14 generator tests (no file named), so verify left as xt with empty lists."
+ },
+ {
+  "story": "66.1",
+  "title": "Guards and user providers",
+  "component": "auth",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Auth/{AuthGuardTest,...}.php::* and tests/Integration/Auth/{AuthenticationTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Auth/AuthGuardTest.php::*",
+     "framework/tests/Auth/AuthTokenGuardTest.php::*",
+     "framework/tests/Auth/AuthEloquentUserProviderTest.php::*",
+     "framework/tests/Auth/AuthDatabaseUserProviderTest.php::*",
+     "framework/tests/Auth/AuthenticatableTest.php::*",
+     "framework/tests/Integration/Auth/AuthenticationTest.php::*",
+     "framework/tests/Integration/Auth/RehashOnLogoutOtherDevicesTest.php::*",
+     "framework/tests/Integration/Auth/ApiAuthenticationWithEloquentTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a request after StartSession, with the guard's user resolved into the frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a guard that was never resolved",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "two concurrent requests for different users",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "66.2",
+  "title": "Authentication middleware and password confirmation",
+  "component": "auth",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Auth/{AuthenticateMiddlewareTest,...}.php::* and tests/Integration/Auth/Middleware/{RequirePasswordTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Auth/AuthenticateMiddlewareTest.php::*",
+     "framework/tests/Auth/RedirectIfAuthenticatedMiddlewareTest.php::*",
+     "framework/tests/Integration/Auth/Middleware/RequirePasswordTest.php::*",
+     "framework/tests/Integration/Auth/Middleware/RedirectIfAuthenticatedTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an unauthenticated htmx Request to an auth route",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "66.3",
+  "title": "Gates, policies and authorization responses",
+  "component": "auth",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Auth/{AuthAccessGateTest,...}.php::* and tests/Integration/Auth/GatePolicyResolutionTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Auth/AuthAccessGateTest.php::*",
+     "framework/tests/Auth/AuthAccessResponseTest.php::*",
+     "framework/tests/Auth/AuthHandlesAuthorizationTest.php::*",
+     "framework/tests/Auth/AuthorizeMiddlewareTest.php::*",
+     "framework/tests/Auth/AuthorizesResourcesTest.php::*",
+     "framework/tests/Integration/Auth/GatePolicyResolutionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a gate or policy method that returns a Promise",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "App\\Models\\Post",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "Gate.define called at runtime inside a request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "66.4",
+  "title": "Password reset",
+  "component": "auth",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Auth/{AuthPasswordBrokerTest,...}.php::* and tests/Integration/Auth/{ForgotPasswordTest,...}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Auth/AuthPasswordBrokerTest.php::*",
+     "framework/tests/Auth/AuthPasswordBrokerManagerTest.php::*",
+     "framework/tests/Auth/AuthDatabaseTokenRepositoryTest.php::*",
+     "framework/tests/Integration/Auth/ForgotPasswordTest.php::*",
+     "framework/tests/Integration/Auth/ForgotPasswordWithoutDefaultRoutesTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a token created by PHP Laravel's broker with the same key (an Oracle fixture)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "66.5",
+  "title": "Email verification and the `blocked-by:auth` sweep",
+  "component": "auth",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies Expectations entries blocked-by:auth owned by other Components (one manifest per owning Component)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Auth/{EnsureEmailIsVerifiedTest,AuthListenersSendEmailVerificationNotificationHandleFunctionTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Auth/EnsureEmailIsVerifiedTest.php::*",
+     "framework/tests/Auth/AuthListenersSendEmailVerificationNotificationHandleFunctionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an unverified user",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "every blocked-by:auth entry (Stories 17.2, 43.6, 45.2, 49.4, 51.6, ...), one manifest per owning Component",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 has no static selectors. Residual Auth/Integration-Auth Test IDs not named by any 66.x selector are unassigned (Epic 66 states no residual rule)."
+ },
+ {
+  "story": "67.1",
+  "title": "Image API and manager",
+  "component": "image",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Image/{ImageTest,ImageManagerTest}.php::* and tests/Integration/Image/ImageTest.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Image/ImageTest.php::*",
+     "framework/tests/Image/ImageManagerTest.php::*",
+     "framework/tests/Integration/Image/ImageTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an operation whose output pixels are asserted",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "67.2",
+  "title": "The GD and Imagick driver suites",
+  "component": "image",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope tests/Image/Drivers/{GdDriverTest,ImagickDriverTest}.php::*",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Image/Drivers/GdDriverTest.php::*",
+     "framework/tests/Image/Drivers/ImagickDriverTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is classification via Escalation (php-only under DIV-6, or adaptation onto Bun.Image)."
+ },
+ {
+  "story": "68.1",
+  "title": "Servers, Tools, Resources and Prompts",
+  "component": "mcp",
+  "kind": "upstream",
+  "deferred": "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the Pest suites under conformance/upstream/mcp/tests/ for servers, tools, resources and prompts",
+    "verify": "selectors",
+    "include": [
+     "mcp/tests/Unit/ServerTest.php::*",
+     "mcp/tests/Unit/ServerContextTest.php::*",
+     "mcp/tests/Unit/Server/**::*",
+     "mcp/tests/Unit/Tools/**::*",
+     "mcp/tests/Unit/Resources/**::*",
+     "mcp/tests/Unit/Prompts/**::*"
+    ],
+    "exclude": [
+     "mcp/tests/Unit/Server/Transport/**::*"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a Tool's input schema, built with @xaravel/json-schema",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Includes are a best-effort topical mapping onto mcp/tests dirs, NOT stated in the text. Many mcp suites (Unit/Methods, Content, Completions, Pagination, Schema, Support, Ui, Primitive, Enums, Exceptions, Client, Response*/Request*/Icon/Attributes tests, Feature/CompletionTest, CustomRequestTest, Feature/Console Make*CommandTest, ArchTest) fit no 68.x story explicitly and Epic 68 has no residual rule; needs a human decision."
+ },
+ {
+  "story": "68.2",
+  "title": "HTTP and stdio transports, with guards",
+  "component": "mcp",
+  "kind": "upstream",
+  "deferred": "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the laravel/mcp transport and conformance suites",
+    "verify": "selectors",
+    "include": [
+     "mcp/tests/Unit/Transport/**::*",
+     "mcp/tests/Unit/Server/Transport/**::*",
+     "mcp/tests/Feature/Server/**::*",
+     "mcp/tests/Feature/Console/StartCommandTest.php::*",
+     "mcp/tests/Unit/Console/Commands/StartCommandTest.php::*",
+     "mcp/tests/Conformance/**::*"
+    ],
+    "exclude": [
+     "mcp/tests/Feature/Server/OAuthChallengeTest.php::*"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Mcp.web(...).middleware('auth:api')",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "Mcp.local(...)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Best-effort mapping, not stated in text. OAuth suites are out-of-scope:NG-5 (excluded here: Feature/Server/OAuthChallengeTest.php; also Unit/Client/OAuth/** if considered). mcp/tests/Conformance has no *Test.php files (ConformanceServer.php, run.sh, score.php, conformance-baseline.yml) - it is a script-driven conformance suite, may not produce Pest Test IDs. Feature/Server/{CachingTest,SubscriptionsTest,Middleware/**} may belong to 68.1 instead."
+ },
+ {
+  "story": "68.3",
+  "title": "MCP testing helpers and inspector",
+  "component": "mcp",
+  "kind": "upstream",
+  "deferred": "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the laravel/mcp testing suites",
+    "verify": "selectors",
+    "include": [
+     "mcp/tests/Feature/Testing/**::*",
+     "mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Best-effort mapping to mcp/tests/Feature/Testing/** (Prompts, Resources, Tools). Added Unit/Console/Commands/McpInspectorCommandTest.php for mcp:inspector."
+ },
+ {
+  "story": "69.1",
+  "title": "`boost:install` and agent guidelines",
+  "component": "boost",
+  "kind": "upstream",
+  "deferred": "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the applicable laravel/boost install suites",
+    "verify": "selectors",
+    "include": [
+     "boost/tests/Unit/Install/**::*",
+     "boost/tests/Feature/Install/**::*",
+     "boost/tests/Feature/Console/InstallCommand*Test.php::*",
+     "boost/tests/Unit/Console/InstallCommand*Test.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "boost:install",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Installer's post-install list (Story 61.5)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 69 is a Xaravel Component, but this Story ports Upstream boost Pest tests, so kind set to upstream (AC1 selectors); ACs 2-3 are XT-boost. Includes are a best-effort mapping, not stated in text; many (Herd, Sail, Nightwatch, Inertia, specific agents like Junie/Kiro) may be not applicable. Note AC2 writes CLAUDE.md for the app being installed, not this repo."
+ },
+ {
+  "story": "69.2",
+  "title": "App, route, container and config introspection",
+  "component": "boost",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "each tool, called against a fixture app",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a route whose action returns view(...).fragment(...), or that declares .fragment(...)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 69 says applicable boost Pest tests (e.g. boost/tests/Feature/Mcp/Tools/**) are ported, but this Story names none; all xt. Possibly ported boost tool tests should be assigned at sprint planning."
+ },
+ {
+  "story": "69.3",
+  "title": "Database, logs, last error and browser logs",
+  "component": "boost",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the database schema tool",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the read-only query tool, enabled",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the last-error and log tools",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Same as 69.2: no Upstream selector named although boost/tests/Feature/Mcp/Tools/** likely covers these tools."
+ },
+ {
+  "story": "69.4",
+  "title": "Test-run tool",
+  "component": "boost",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test-run tool with a filter",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a passing run",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "69.5",
+  "title": "Safe by default",
+  "component": "boost",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a default config",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the query, eval (tinker) or write tools, enabled in config",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Boost package, when the Epic closes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "70.1",
+  "title": "htmx auth pages",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the Skeleton's auth routes, controllers, Form Requests and views",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the same pages without JavaScript",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 runs Skeleton feature tests on SQLite and Postgres."
+ },
+ {
+  "story": "70.2",
+  "title": "Authenticated dashboard",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a logged-in user",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a guest",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "bun create xaravel with these pages",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 also needs the Maintainer to record decisions/OQ-2-TRIGGER.md (a human step)."
+ },
+ {
+  "story": "70.3",
+  "title": "Phase 8 sweep and alpha-gate readiness",
+  "component": "skeleton",
+  "kind": "xaravel",
+  "deferred": "AC1 re-verifies remaining blocked-by entries for Phase 8 Components across many owning Components (one manifest per owning Component)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every remaining blocked-by:<c> entry for a Phase 8 Component, one manifest per owning Component",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Expectations File",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "every Phase 1-8 package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Component set to skeleton because Epic 70 is the Skeleton Epic, but this is a Maintainer cross-cutting sweep/alpha-readiness Story (likely conformance tooling); needs a human decision on its component. AC1 names Upstream tests by Expectations status, kept xt because the Epic says every AC is XT-skeleton."
+ }
+]

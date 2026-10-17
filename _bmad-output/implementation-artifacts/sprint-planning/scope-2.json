@@ -1,0 +1,1360 @@
+[
+ {
+  "story": "14.1",
+  "title": "Enumerable core: construction, conversion and serialization",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope SCT::{testCollectionIsConstructed,testMake*,...,testCanAddMethods",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testCollectionIsConstructed",
+     "framework/tests/Support/SupportCollectionTest.php::testMake*",
+     "framework/tests/Support/SupportCollectionTest.php::testWrap*",
+     "framework/tests/Support/SupportCollectionTest.php::testUnwrap*",
+     "framework/tests/Support/SupportCollectionTest.php::testTimesMethod",
+     "framework/tests/Support/SupportCollectionTest.php::testRangeMethod",
+     "framework/tests/Support/SupportCollectionTest.php::testEmptyMethod",
+     "framework/tests/Support/SupportCollectionTest.php::testFromJson*",
+     "framework/tests/Support/SupportCollectionTest.php::testConstruct*",
+     "framework/tests/Support/SupportCollectionTest.php::testGetArrayableItems",
+     "framework/tests/Support/SupportCollectionTest.php::testToArray*",
+     "framework/tests/Support/SupportCollectionTest.php::testJsonSerialize*",
+     "framework/tests/Support/SupportCollectionTest.php::testToJson*",
+     "framework/tests/Support/SupportCollectionTest.php::testToPrettyJson*",
+     "framework/tests/Support/SupportCollectionTest.php::testCastingToString*",
+     "framework/tests/Support/SupportCollectionTest.php::testLazyReturnsLazyCollection",
+     "framework/tests/Support/SupportCollectionTest.php::testCountable*",
+     "framework/tests/Support/SupportCollectionTest.php::testIterable",
+     "framework/tests/Support/SupportCollectionTest.php::testCachingIterator",
+     "framework/tests/Support/SupportCollectionTest.php::testOffset*",
+     "framework/tests/Support/SupportCollectionTest.php::testArrayAccess*",
+     "framework/tests/Support/SupportCollectionTest.php::testBehavesLikeAnArray*",
+     "framework/tests/Support/SupportCollectionTest.php::testEmptyCollection*",
+     "framework/tests/Support/SupportCollectionTest.php::testCollect*",
+     "framework/tests/Support/SupportCollectionTest.php::testEnsure*",
+     "framework/tests/Support/SupportCollectionTest.php::testDump",
+     "framework/tests/Support/SupportCollectionTest.php::testMacroable",
+     "framework/tests/Support/SupportCollectionTest.php::testCanAddMethodsToProxy"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "integer-like string keys and mixed keys",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`$collection[0]`-style tests",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`LazyCollection.make()` from an array, an `Arrayable`, a generator function or a",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 cites testDoesNotCreateCollectionFromGenerator, which lives in SupportLazyCollectionTest.php (SLCT, owned by Story 14.7's SLCT::*); treated as a behavioural reference and kept xt rather than claiming the SLCT test for 14.1."
+ },
+ {
+  "story": "14.2",
+  "title": "Retrieval, search and mutation methods",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope SCT::{testFirst*,testLast*,...,testSplice}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testFirst*",
+     "framework/tests/Support/SupportCollectionTest.php::testLast*",
+     "framework/tests/Support/SupportCollectionTest.php::testSole*",
+     "framework/tests/Support/SupportCollectionTest.php::testHasSole",
+     "framework/tests/Support/SupportCollectionTest.php::testHasMany",
+     "framework/tests/Support/SupportCollectionTest.php::testValue*",
+     "framework/tests/Support/SupportCollectionTest.php::testGetOrPut*",
+     "framework/tests/Support/SupportCollectionTest.php::testGetPluckValueWithAccessors",
+     "framework/tests/Support/SupportCollectionTest.php::testHas*",
+     "framework/tests/Support/SupportCollectionTest.php::testContains*",
+     "framework/tests/Support/SupportCollectionTest.php::testDoesntContain*",
+     "framework/tests/Support/SupportCollectionTest.php::testSome",
+     "framework/tests/Support/SupportCollectionTest.php::testSearch*",
+     "framework/tests/Support/SupportCollectionTest.php::testBefore*",
+     "framework/tests/Support/SupportCollectionTest.php::testAfter*",
+     "framework/tests/Support/SupportCollectionTest.php::testNth*",
+     "framework/tests/Support/SupportCollectionTest.php::testRandom*",
+     "framework/tests/Support/SupportCollectionTest.php::testPluck*",
+     "framework/tests/Support/SupportCollectionTest.php::testKeys",
+     "framework/tests/Support/SupportCollectionTest.php::testValues*",
+     "framework/tests/Support/SupportCollectionTest.php::testOnly",
+     "framework/tests/Support/SupportCollectionTest.php::testExcept*",
+     "framework/tests/Support/SupportCollectionTest.php::testSelect*",
+     "framework/tests/Support/SupportCollectionTest.php::testPop*",
+     "framework/tests/Support/SupportCollectionTest.php::testShift*",
+     "framework/tests/Support/SupportCollectionTest.php::testPull*",
+     "framework/tests/Support/SupportCollectionTest.php::testPut*",
+     "framework/tests/Support/SupportCollectionTest.php::testPush*",
+     "framework/tests/Support/SupportCollectionTest.php::testPrepend",
+     "framework/tests/Support/SupportCollectionTest.php::testUnshift*",
+     "framework/tests/Support/SupportCollectionTest.php::testAdd",
+     "framework/tests/Support/SupportCollectionTest.php::testForget*",
+     "framework/tests/Support/SupportCollectionTest.php::testSplice"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`contains('1')` on `collect([1])` and `containsStrict('1')` on the same collecti",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`sole()` with zero or several matches, and `firstOrFail()` with zero matches",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "testValue* here precedes 14.5's testValueRetriever*, so under Story-order resolution any testValueRetriever* IDs go to 14.2, not 14.5 (likely unintended). testHas* also overlaps testHasSole/testHasMany (harmless)."
+ },
+ {
+  "story": "14.3",
+  "title": "Filtering, slicing and conditional methods",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope SCT::{testFilter,testReject*,...,testUnless*}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testFilter",
+     "framework/tests/Support/SupportCollectionTest.php::testReject*",
+     "framework/tests/Support/SupportCollectionTest.php::testWhere*",
+     "framework/tests/Support/SupportCollectionTest.php::testBetween",
+     "framework/tests/Support/SupportCollectionTest.php::testUnique*",
+     "framework/tests/Support/SupportCollectionTest.php::testDuplicates*",
+     "framework/tests/Support/SupportCollectionTest.php::testSkip*",
+     "framework/tests/Support/SupportCollectionTest.php::testTake*",
+     "framework/tests/Support/SupportCollectionTest.php::testSlice*",
+     "framework/tests/Support/SupportCollectionTest.php::testEvery",
+     "framework/tests/Support/SupportCollectionTest.php::testPartition*",
+     "framework/tests/Support/SupportCollectionTest.php::testHigherOrder*",
+     "framework/tests/Support/SupportCollectionTest.php::testHigh*",
+     "framework/tests/Support/SupportCollectionTest.php::testWhen*",
+     "framework/tests/Support/SupportCollectionTest.php::testUnless*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`filter()` on a list",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a sync API such as `filter` or `map`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "testHigherOrder*/testHigh* claim higher-order tests for other methods (e.g. testHigherOrderKeyBy, testHigherOrderCollectionGroupBy/Map, testHigherOrderSole) before 14.2/14.5 would; Story-order rule gives them to 14.3."
+ },
+ {
+  "story": "14.4",
+  "title": "Set operations and combining",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope SCT::{testMerge*,testReplace*,...,testUndot}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testMerge*",
+     "framework/tests/Support/SupportCollectionTest.php::testReplace*",
+     "framework/tests/Support/SupportCollectionTest.php::testUnion*",
+     "framework/tests/Support/SupportCollectionTest.php::testDiff*",
+     "framework/tests/Support/SupportCollectionTest.php::testIntersect*",
+     "framework/tests/Support/SupportCollectionTest.php::testCombine*",
+     "framework/tests/Support/SupportCollectionTest.php::testConcat*",
+     "framework/tests/Support/SupportCollectionTest.php::testCross*",
+     "framework/tests/Support/SupportCollectionTest.php::testZip",
+     "framework/tests/Support/SupportCollectionTest.php::testPad*",
+     "framework/tests/Support/SupportCollectionTest.php::testCollapse*",
+     "framework/tests/Support/SupportCollectionTest.php::testFlatten*",
+     "framework/tests/Support/SupportCollectionTest.php::testFlip*",
+     "framework/tests/Support/SupportCollectionTest.php::testJoin",
+     "framework/tests/Support/SupportCollectionTest.php::testImplode*",
+     "framework/tests/Support/SupportCollectionTest.php::testMultiply*",
+     "framework/tests/Support/SupportCollectionTest.php::testDot*",
+     "framework/tests/Support/SupportCollectionTest.php::testUndot"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`merge()` with integer keys and with string keys",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`implode` on a collection of models (`testImplodeModels`)",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testImplodeModels"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 names testImplodeModels (already within AC1's testImplode*); listed as selectors; expected classification blocked-by:database until Epic 36. Not deferred since the ID resolves today."
+ },
+ {
+  "story": "14.5",
+  "title": "Mapping, grouping, sorting, chunking and aggregates",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope SCT::{testMap*,...,testPaginate}, plus every SCT Test ID no earli",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testMap*",
+     "framework/tests/Support/SupportCollectionTest.php::testFlat*",
+     "framework/tests/Support/SupportCollectionTest.php::testTransform",
+     "framework/tests/Support/SupportCollectionTest.php::testGroup*",
+     "framework/tests/Support/SupportCollectionTest.php::testKey*",
+     "framework/tests/Support/SupportCollectionTest.php::testCount*",
+     "framework/tests/Support/SupportCollectionTest.php::testSort*",
+     "framework/tests/Support/SupportCollectionTest.php::testNatural*",
+     "framework/tests/Support/SupportCollectionTest.php::testReverse",
+     "framework/tests/Support/SupportCollectionTest.php::testChunk*",
+     "framework/tests/Support/SupportCollectionTest.php::testSplit*",
+     "framework/tests/Support/SupportCollectionTest.php::testSliding",
+     "framework/tests/Support/SupportCollectionTest.php::testGetting*",
+     "framework/tests/Support/SupportCollectionTest.php::testCanSum*",
+     "framework/tests/Support/SupportCollectionTest.php::testValueRetriever*",
+     "framework/tests/Support/SupportCollectionTest.php::testMedian*",
+     "framework/tests/Support/SupportCollectionTest.php::testMode*",
+     "framework/tests/Support/SupportCollectionTest.php::testEven*",
+     "framework/tests/Support/SupportCollectionTest.php::testWith*",
+     "framework/tests/Support/SupportCollectionTest.php::testPercentage*",
+     "framework/tests/Support/SupportCollectionTest.php::testReduce*",
+     "framework/tests/Support/SupportCollectionTest.php::testPipe*",
+     "framework/tests/Support/SupportCollectionTest.php::testEach*",
+     "framework/tests/Support/SupportCollectionTest.php::testTap*",
+     "framework/tests/Support/SupportCollectionTest.php::testPaginate"
+    ],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Support/SupportCollectionTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`sortBy` with `SORT_NUMERIC` / `SORT_NATURAL` flags and with multiple sort keys",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`mapInto` with int- and string-backed enums",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`mapAsync` / `eachAsync`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Residual SCT per Epic 14 selector rules. testFlat* here would match testFlatten* but 14.4 claims those first; testCountable* is claimed by 14.1 first."
+ },
+ {
+  "story": "14.6",
+  "title": "`Arr` helpers",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/SupportArrTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportArrTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Arr.get` / `set` / `has` / `forget` with dot notation on nested `PhpArray`s",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`testPluckWithCarbonKeys`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportArrTest.php::testPluckWithCarbonKeys"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 names testPluckWithCarbonKeys (SupportArrTest, within AC1); expected blocked-by:support, re-verified by Story 19.3. Component assumed collections (Arr is in Epic 14 / @xaravel/collections)."
+ },
+ {
+  "story": "14.7",
+  "title": "LazyCollection behaviour",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `SLCT::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportLazyCollectionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`remember()` with two concurrent enumerations",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`takeUntilTimeout`, `throttle` and `withHeartbeat`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3: clock-dependent SLCT IDs may be blocked-by:support until Story 19.4 re-verifies them; they stay in AC1's scope."
+ },
+ {
+  "story": "14.8",
+  "title": "LazyCollection laziness guarantees",
+  "component": "collections",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `SLCLT::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportLazyCollectionIsLazyTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a source that counts its enumerations",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 is the Epic-close gate (no not-ported-yet in SCT/SLCT/SLCLT/SupportArrTest, api-surface gate, docs, standalone install); xt."
+ },
+ {
+  "story": "15.1",
+  "title": "Config Repository",
+  "component": "config",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Config/RepositoryTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Config/RepositoryTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `config([...])` set on a sealed Application inside a unit frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a config value holding a class or an FQCN string",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "15.2",
+  "title": "phpdotenv grammar port",
+  "component": "config",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "Oracle fixtures from phpdotenv at the Pin, covering grammar cases",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "immutable and mutable repository modes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors; Oracle Differential XTs (AD-22). Component assumed config (Epic 15 package); phpdotenv port location not stated."
+ },
+ {
+  "story": "15.3",
+  "title": "Bun's `.env` autoload neutralised",
+  "component": "config",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a fixture app with `.env`, `.env.local` and `.env.production`, and Bun's autoloa",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an entry script missing `--no-env-file`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors. Touches root/Skeleton bunfig.toml and an entry-script lint, which may be Protected Paths or other components; component set to config by Epic."
+ },
+ {
+  "story": "16.1",
+  "title": "Schema types and serializer",
+  "component": "json-schema",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/JsonSchema/{TypeTest,...,SerializerTest}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/JsonSchema/TypeTest.php::*",
+     "framework/tests/JsonSchema/StringTypeTest.php::*",
+     "framework/tests/JsonSchema/IntegerTypeTest.php::*",
+     "framework/tests/JsonSchema/NumberTypeTest.php::*",
+     "framework/tests/JsonSchema/BooleanTypeTest.php::*",
+     "framework/tests/JsonSchema/ArrayTypeTest.php::*",
+     "framework/tests/JsonSchema/ObjectTypeTest.php::*",
+     "framework/tests/JsonSchema/AnyOfTypeTest.php::*",
+     "framework/tests/JsonSchema/UnionTypeTest.php::*",
+     "framework/tests/JsonSchema/SerializerTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a schema built with the fluent API",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "16.2",
+  "title": "Schema deserializer",
+  "component": "json-schema",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/JsonSchema/DeserializerTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/JsonSchema/DeserializerTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "any schema produced in Story 16.1's tests",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the package (Epic close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "17.1",
+  "title": "Binding and resolution core",
+  "component": "container",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Container/{ContainerTest,UtilTest,...}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Container/ContainerTest.php::*",
+     "framework/tests/Container/UtilTest.php::*",
+     "framework/tests/Container/RewindableGeneratorTest.php::*",
+     "framework/tests/Container/ContainerResolveNonInstantiableTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a class declared with `@inject({ mailer: Mailer, retries: Number })`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a string abstract (`'cache'`), a concrete class or a contract token",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a class with constructor parameters but no `inject` declaration",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "tests/Integration/Container/** is blocked-by:testbench per Epic header and excluded (cleared in Epic 60)."
+ },
+ {
+  "story": "17.2",
+  "title": "Contextual binding and contextual attributes",
+  "component": "container",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Container/{ContextualBindingTest,ContextualAttributeBindin",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Container/ContextualBindingTest.php::*",
+     "framework/tests/Container/ContextualAttributeBindingTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`when(Consumer).needs('$timeout').give(30)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the descriptors `Config('app.timezone')`, `Give(X)`, `Tag('reports')`, ...",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Per Epic header, ContextualAttributeBindingTest IDs that use later-Component attributes (Storage, DB, Cache, Log, CurrentUser...) will be blocked-by:<component>; they remain in scope."
+ },
+ {
+  "story": "17.3",
+  "title": "Calling, extending, tagging and resolving hooks",
+  "component": "container",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Container/{ContainerCallTest,...,AfterResolvingAttributeCa",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Container/ContainerCallTest.php::*",
+     "framework/tests/Container/ContainerExtendTest.php::*",
+     "framework/tests/Container/ContainerTaggingTest.php::*",
+     "framework/tests/Container/ResolvingCallbackTest.php::*",
+     "framework/tests/Container/AfterResolvingAttributeCallbackTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`app.call([Controller, 'show'], { id: 5 })` on a method declared with `inject`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a `resolving` callback that returns a Promise",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "17.4",
+  "title": "Scoped bindings and Scope Frame write rules",
+  "component": "container",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a `scoped(Cart)` binding and two units run with `interleave`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a container whose owning Application is `sealed`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a base singleton whose constructor resolves a frame-owned binding",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the package (Epic close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors; all ACs are Xaravel Tests. Kind kept upstream (Upstream Component Epic)."
+ },
+ {
+  "story": "18.1",
+  "title": "Inflector port and Pluralizer",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/SupportPluralizerTest.php::*` and `SST::{testPlura",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportPluralizerTest.php::*",
+     "framework/tests/Support/SupportStrTest.php::testPlural*",
+     "framework/tests/Support/SupportStrTest.php::testSingular"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Oracle fixtures for `Pluralizer::plural` / `singular` over a word list",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`tests/Integration/Support/PluralizerPortugueseTest.php`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Integration/Support/PluralizerPortugueseTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 names Integration PluralizerPortugueseTest (exists); included as selectors but expected blocked-by:testbench, cleared in Epic 60. Epic 20 header says tests/Integration/Support/** is blocked-by:testbench; this AC explicitly claims this file for 18.1."
+ },
+ {
+  "story": "18.2",
+  "title": "UUIDs, ULIDs and binary codecs",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `SST::{testUuid,...,testResetFactoryState}` and SupportBinaryCode",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportStrTest.php::testUuid",
+     "framework/tests/Support/SupportStrTest.php::testIsUuid*",
+     "framework/tests/Support/SupportStrTest.php::testIsUlid",
+     "framework/tests/Support/SupportStrTest.php::testItCanFreezeU*",
+     "framework/tests/Support/SupportStrTest.php::testItCreatesU*",
+     "framework/tests/Support/SupportStrTest.php::testItCanSpecifyASequenceOfU*",
+     "framework/tests/Support/SupportStrTest.php::testItCanSpecifyAFallbackForA*Sequence",
+     "framework/tests/Support/SupportStrTest.php::testResetFactoryState",
+     "framework/tests/Support/SupportBinaryCodecTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Str.orderedUuid()` and `Str.ulid()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a UUID or ULID factory set inside a test frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "testItCanSpecifyAFallbackForA*Sequence also matches testItCanSpecifyAFallbackForARandomStringSequence and testItCanSpecifyAFallbackForASequence - the random-string one is likely meant for 18.4; kept as written."
+ },
+ {
+  "story": "18.3",
+  "title": "Transliteration, slugs and markdown",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `SST::{testStringAscii*,testAsciiNull,testSlug,...}`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportStrTest.php::testStringAscii*",
+     "framework/tests/Support/SupportStrTest.php::testAsciiNull",
+     "framework/tests/Support/SupportStrTest.php::testSlug",
+     "framework/tests/Support/SupportStrTest.php::testTransliterate*",
+     "framework/tests/Support/SupportStrTest.php::testMarkdown",
+     "framework/tests/Support/SupportStrTest.php::testInlineMarkdown"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Oracle fixtures for `Str::ascii` (with and without a locale) and `Str::slug`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "an XSS payload suite (`<script>`, `javascript:` links, `onerror` attributes, ...",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the markdown backend",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "18.4",
+  "title": "Str: the remaining methods",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every `SST` Test ID not matched by Stories 18.1–18.3",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Support/SupportStrTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "multibyte input to `length`, `substr`, `limit`, `padBoth`, `wordWrap`, ...",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Str.is`, `match`, `replaceMatches` and `isMatch` with patterns from Upstream te",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is purely residual over SST (no explicit includes)."
+ },
+ {
+  "story": "18.5",
+  "title": "Stringable, HtmlString and Js",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportStringableTest,SupportHtmlStringTest,Suppo",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportStringableTest.php::*",
+     "framework/tests/Support/SupportHtmlStringTest.php::*",
+     "framework/tests/Support/SupportJsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `Stringable`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Js.from(value)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "this slice (close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "19.1",
+  "title": "Carbon core: construction, arithmetic and comparison",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "Oracle fixtures for Carbon covering construction, timezones, DST, overflow, ...",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "mutable `Carbon` and `CarbonImmutable`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors; Carbon port verified by Oracle Differential XTs (XT-support-<n>). Kind upstream (Support slice)."
+ },
+ {
+  "story": "19.2",
+  "title": "Formatting, parsing and `diffForHumans`",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "Oracle fixtures for every PHP `date()` format character, `createFromFormat`, `pa",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a relative-time string that PHP's `strtotime` accepts but the port doesn't suppo",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors; Oracle Differential XTs."
+ },
+ {
+  "story": "19.3",
+  "title": "Support Carbon, the Date facade and duration helpers",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies a Test ID owned by Story 14.6 (blocked-by:support entry)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportCarbonTest,DateFacadeTest,SupportDurationF",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCarbonTest.php::*",
+     "framework/tests/Support/DateFacadeTest.php::*",
+     "framework/tests/Support/SupportDurationFunctionsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Date.use(CarbonImmutable)` or `Date.useCallable(fn)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`testPluckWithCarbonKeys` (`blocked-by:support` since Story 14.6)",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportArrTest.php::testPluckWithCarbonKeys"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 re-verifies SupportArrTest::testPluckWithCarbonKeys, owned by Story 14.6; listed in include for reference but ownership stays with 14.6 (resolver must not reassign it)."
+ },
+ {
+  "story": "19.4",
+  "title": "Test clock",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies blocked-by:support SLCT entries owned by Story 14.7 (set known only from Expectations)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "`Carbon.setTestNow(t)` inside a test frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a test that set the test clock",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the clock-dependent LazyCollection Test IDs (`blocked-by:support` since Story 14",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "this slice (close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 re-verifies the blocked-by:support SLCT IDs from Story 14.7; which IDs is only known from Expectations once 14.7 lands, so left as xt with no selectors."
+ },
+ {
+  "story": "20.1",
+  "title": "Facade base, forwarding and higher-order proxies",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportFacadeTest,ForwardsCallsTest,...,SupportOp",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportFacadeTest.php::*",
+     "framework/tests/Support/ForwardsCallsTest.php::*",
+     "framework/tests/Support/HigherOrderProxyTest.php::*",
+     "framework/tests/Support/SupportTappableTest.php::*",
+     "framework/tests/Support/SupportOptionalTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`conformance/scans/facades.jsonl`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a facade",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`Facade.shouldReceive('m')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "20.2",
+  "title": "Global helpers and `env()`",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportHelpersTest,SupportEnumValueFunctionTest}.",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportHelpersTest.php::*",
+     "framework/tests/Support/SupportEnumValueFunctionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`retry`, `rescue`, `tap`, `value`, `transform` and `with`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`env('X')` with values `'true'`, `'(false)'`, `'empty'`, `'null'` and quoted str",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the PHP 8.4 lazy-object helpers (`lazy()`, `proxy()`, `testLazy*` / `testProxy*`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 names testLazy*/testProxy*/testClosureOnly* but does not say which file (presumably SupportHelpersTest, already in AC1); kept xt to avoid inventing a path. May trigger Escalations (adapted/php-only)."
+ },
+ {
+  "story": "20.3",
+  "title": "Fluent, Number, Uri, MessageBag and ValidatedInput",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportFluentTest,...,ValidatedInputTest}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportFluentTest.php::*",
+     "framework/tests/Support/SupportNumberTest.php::*",
+     "framework/tests/Support/SupportUriTest.php::*",
+     "framework/tests/Support/SupportMessageBagTest.php::*",
+     "framework/tests/Support/SupportViewErrorBagTest.php::*",
+     "framework/tests/Support/ValidatedInputTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Number.format`, `currency`, `percentage`, `fileSize`, `forHumans` and `spell`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Uri.of(url)` with mutations to the query, path, fragment and user info",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "20.4",
+  "title": "Sleep, Lottery, Once, Benchmark and Timebox",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SleepTest,LotteryTest,OnceTest,SupportBenchmarkTe",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SleepTest.php::*",
+     "framework/tests/Support/LotteryTest.php::*",
+     "framework/tests/Support/OnceTest.php::*",
+     "framework/tests/Support/SupportBenchmarkTest.php::*",
+     "framework/tests/Support/SupportTimeboxTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Sleep.fake()`, `Lottery.alwaysWin()` or a cached `once()` value set in one test",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Sleep.for(1).second()`, not awaited",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "20.5",
+  "title": "ServiceProvider, Manager and environment utilities",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportServiceProviderTest,...,SupportCapsuleMana",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportServiceProviderTest.php::*",
+     "framework/tests/Support/SupportNamespacedItemResolverTest.php::*",
+     "framework/tests/Support/ConfigurationUrlParserTest.php::*",
+     "framework/tests/Support/SupportComposerTest.php::*",
+     "framework/tests/Support/SupportNodePackageManagerTest.php::*",
+     "framework/tests/Support/SupportCapsuleManagerTraitTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `Manager` subclass with `create<Name>Driver` methods",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`ConfigurationUrlParser`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "SupportComposerTest and SupportNodePackageManagerTest are in scope but expected blocked-by:process until Epic 28."
+ },
+ {
+  "story": "20.6",
+  "title": "Port the testing-fake and component-facade suites",
+  "component": "support",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Support/{SupportTestingBusFakeTest,...,SupportFacadesEvent",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportTestingBusFakeTest.php::*",
+     "framework/tests/Support/SupportTestingQueueFakeTest.php::*",
+     "framework/tests/Support/SupportTestingMailFakeTest.php::*",
+     "framework/tests/Support/SupportTestingNotificationFakeTest.php::*",
+     "framework/tests/Support/SupportTestingEventFakeTest.php::*",
+     "framework/tests/Support/SupportFacadesQueueTest.php::*",
+     "framework/tests/Support/SupportFacadesHttpTest.php::*",
+     "framework/tests/Support/SupportFacadesEventTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "this slice and Epics 18 and 19 (Support Phase 2 close checks)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Selectors resolve today; most IDs are expected to be recorded blocked-by:bus/queue/mail/notifications/events/http. Support files not claimed by any Epic 14/18/19/20 story: SupportConditionableTest, SupportMacroableTest, SupportReflectorTest, SupportReflectsClosuresTest (likely owned by conditionable/macroable/reflection packages elsewhere)."
+ }
+]

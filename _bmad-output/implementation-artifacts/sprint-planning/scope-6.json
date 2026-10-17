@@ -1,0 +1,1544 @@
+[
+ {
+  "story": "49.1",
+  "title": "Compiler pipeline, module cache and `view:cache`",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/{ViewBladeCompilerTest,ViewCompilerEngineTest,ViewEng",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/ViewBladeCompilerTest.php::*",
+     "framework/tests/View/ViewCompilerEngineTest.php::*",
+     "framework/tests/View/ViewEngineResolverTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a template",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`{{ $user.name }}` with data `{ user }`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`tests/View/ViewPhpEngineTest.php`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/ViewPhpEngineTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 is a classification AC (intentional-divergence:DIV-5), not a pass/fail scope; included as a selector since it names an Upstream file. Epic 49: tests/Integration/View/** is blocked-by:testbench and not in scope."
+ },
+ {
+  "story": "49.2",
+  "title": "Echo, escaping and the XSS suite",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/{BladeEchoTest,...,BladeJsTest}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeEchoTest.php::*",
+     "framework/tests/View/Blade/BladeEscapedTest.php::*",
+     "framework/tests/View/Blade/BladeEchoHandlerTest.php::*",
+     "framework/tests/View/Blade/BladeExpressionTest.php::*",
+     "framework/tests/View/Blade/BladeVerbatimTest.php::*",
+     "framework/tests/View/Blade/BladeCommentsTest.php::*",
+     "framework/tests/View/Blade/BladeJsonTest.php::*",
+     "framework/tests/View/Blade/BladeJsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Xaravel XSS suite (Xaravel Test IDs)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "an expression that evaluates to a Promise or thenable",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 XSS suite is Xaravel Tests with Oracle-generated expected values, not counted in Conformance Rate."
+ },
+ {
+  "story": "49.3",
+  "title": "Control-flow, loop and form directives",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/{BladeIfStatementsTest,...,BladeHelpersTest}.ph",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeIfStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeElseStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeElseIfStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeUnlessStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeIfIssetStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeIfEmptyStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeForStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeForeachStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeForelseStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeWhileStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeBreakStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeContinueStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeBoolTest.php::*",
+     "framework/tests/View/Blade/BladePhpStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeUnsetStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeUseTest.php::*",
+     "framework/tests/View/Blade/BladeInjectTest.php::*",
+     "framework/tests/View/Blade/BladeCheckedStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeClassTest.php::*",
+     "framework/tests/View/Blade/BladeStyleTest.php::*",
+     "framework/tests/View/Blade/BladeErrorTest.php::*",
+     "framework/tests/View/Blade/BladeEnvironmentStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeSessionTest.php::*",
+     "framework/tests/View/Blade/BladeLangTest.php::*",
+     "framework/tests/View/Blade/BladeContextTest.php::*",
+     "framework/tests/View/Blade/BladeHelpersTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a directive condition or loop iterable that evaluates to a thenable",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`@php … @endphp`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "49.4",
+  "title": "Layouts, sections, stacks, includes and auth directives",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/{BladeExtendsTest,...}.php::*` and ManagesStack",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeExtendsTest.php::*",
+     "framework/tests/View/Blade/BladeSectionTest.php::*",
+     "framework/tests/View/Blade/BladeYieldTest.php::*",
+     "framework/tests/View/Blade/BladeShowTest.php::*",
+     "framework/tests/View/Blade/BladeStopSectionTest.php::*",
+     "framework/tests/View/Blade/BladeEndSectionsTest.php::*",
+     "framework/tests/View/Blade/BladeOverwriteSectionTest.php::*",
+     "framework/tests/View/Blade/BladeAppendTest.php::*",
+     "framework/tests/View/Blade/BladeHasSectionTest.php::*",
+     "framework/tests/View/Blade/BladeSectionMissingTest.php::*",
+     "framework/tests/View/Blade/BladeStackTest.php::*",
+     "framework/tests/View/Blade/BladePushTest.php::*",
+     "framework/tests/View/Blade/BladePrependTest.php::*",
+     "framework/tests/View/Blade/BladeHasStackTest.php::*",
+     "framework/tests/View/Blade/BladeIncludesTest.php::*",
+     "framework/tests/View/Blade/BladeIfAuthStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeElseAuthStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeIfGuestStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeElseGuestStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeCanStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeCannotStatementsTest.php::*",
+     "framework/tests/View/Blade/BladeCananyStatementsTest.php::*",
+     "framework/tests/View/Concerns/ManagesStacksTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "sections, stacks and the `@once` set",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`@can('update', $post)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1: renders that need a Gate are blocked-by:auth (still in scope; individual Test IDs not identified by the text)."
+ },
+ {
+  "story": "49.5",
+  "title": "View factory, finder, sharing and composers",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/{ViewFactoryTest,ViewTest,ViewFileViewFinderTest}.php",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/ViewFactoryTest.php::*",
+     "framework/tests/View/ViewTest.php::*",
+     "framework/tests/View/ViewFileViewFinderTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`View.share('x', 1)` at runtime inside a request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`` `${view('x')}` `` or `view('x').toString()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "an unloaded relation read during rendering",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "49.6",
+  "title": "Custom directives and the emitted-code ABI",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/BladeCustomTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeCustomTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a directive handler",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Blade.directive` registered after `sealed` inside a request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "50.1",
+  "title": "Component tag compiler",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/{BladeComponentTagCompilerTest,...,BladePropsTe",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeComponentTagCompilerTest.php::*",
+     "framework/tests/View/Blade/BladeComponentFirstTest.php::*",
+     "framework/tests/View/Blade/BladeComponentsTest.php::*",
+     "framework/tests/View/Blade/BladePropsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a component tag whose class or view is resolved through the Class Registry or th",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "50.2",
+  "title": "Component classes, attribute bags, slots and `@aware`",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/{ComponentTest,ViewComponentTest,ViewComponentAttribu",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/ComponentTest.php::*",
+     "framework/tests/View/ViewComponentTest.php::*",
+     "framework/tests/View/ViewComponentAttributeBagTest.php::*",
+     "framework/tests/View/DynamicComponentTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a component whose `data()` returns a Promise",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`$attributes.merge({ class: 'btn' })` with an incoming `class`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "50.3",
+  "title": "Fragments and render-target seams",
+  "component": "view",
+  "kind": "upstream",
+  "deferred": "AC4 re-verifies blocked-by:view pagination entries owned by Story 40.2 (component: pagination)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/View/Blade/BladeFragmentTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/View/Blade/BladeFragmentTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`view('invoices.index', data).fragment('row')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`ViewFactory.renderTargetResolver(fn)`, and the `lastRenderedView` frame slot",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the pagination views (`blocked-by:view` since Story 40.2)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "the View package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 re-verifies pagination tests owned by Story 40.2 (blocked-by:view entries), in a manifest with component: pagination; left as xt with empty lists since no selector is stated. AC5 is Epic-close (api-surface gate, docs)."
+ },
+ {
+  "story": "51.1",
+  "title": "Application lifecycle, providers and environment bootstrap",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationApplicationTest,...,Bootstrap/LoadCo",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationApplicationTest.php::*",
+     "framework/tests/Foundation/FoundationAliasLoaderTest.php::*",
+     "framework/tests/Foundation/FoundationProviderRepositoryTest.php::*",
+     "framework/tests/Foundation/FoundationPackageManifestTest.php::*",
+     "framework/tests/Foundation/FoundationEnvironmentDetectorTest.php::*",
+     "framework/tests/Foundation/Bootstrap/LoadEnvironmentVariablesTest.php::*",
+     "framework/tests/Foundation/Bootstrap/LoadConfigurationTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an Application",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a deferred provider",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`.env`, `.env.testing`, `APP_ENV=testing` and real environment variables (fixtur",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "a package whose `package.json` declares `\"xaravel\": { \"providers\": [...] }`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 51: tests/Integration/Foundation/** is blocked-by:testbench and not in scope."
+ },
+ {
+  "story": "51.2",
+  "title": "`bootstrap/app.ts` and the ApplicationBuilder",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationApplicationBuilderTest,Configuration",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationApplicationBuilderTest.php::*",
+     "framework/tests/Foundation/Configuration/MiddlewareTest.php::*",
+     "framework/tests/Foundation/Configuration/ExceptionsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`withMiddleware((m) => m.web({ append: [X] }).alias({ admin: Y }).priority([...]",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "51.3",
+  "title": "HTTP kernel on `Bun.serve`",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/Http/KernelTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Http/KernelTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "50 concurrent requests, each carrying distinct session, auth-like and scoped-con",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a route that accepts a WebSocket upgrade",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 5,
+    "given": "SIGTERM",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 6,
+    "given": "every package's dependencies",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "51.4",
+  "title": "Foundation middleware and maintenance mode",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{Http/Middleware/TrimStringsTest,...}.php::*` a",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Http/Middleware/TrimStringsTest.php::*",
+     "framework/tests/Foundation/Http/Middleware/ConvertEmptyStringsToNullTest.php::*",
+     "framework/tests/Foundation/Http/Middleware/TransformsRequestTest.php::*",
+     "framework/tests/Foundation/Http/Middleware/ValidatePathEncodingTest.php::*",
+     "framework/tests/Foundation/FoundationArrayMaintenanceModeTest.php::*",
+     "framework/tests/Foundation/FoundationCacheBasedMaintenanceModeTest.php::*",
+     "framework/tests/Http/Middleware/TrimStringsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the app is in maintenance mode, with a secret bypass cookie",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 includes the 'remapped' tests/Http/Middleware/TrimStringsTest.php (outside the Epic base dir; remapped to Foundation)."
+ },
+ {
+  "story": "51.5",
+  "title": "CSRF: token and origin checks",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the remapped test scope `tests/Http/Middleware/PreventRequestForgeryTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Http/Middleware/PreventRequestForgeryTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a POST without a valid token (Xaravel Tests)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "an htmx Request carrying `HX-Request: true` and the token in an `X-CSRF-TOKEN` h",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`@csrf` and `csrf_token()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is a 'remapped' Http test assigned to Foundation."
+ },
+ {
+  "story": "51.6",
+  "title": "Form Requests and Foundation helpers",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationFormRequestTest,...,FoundationAuthen",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationFormRequestTest.php::*",
+     "framework/tests/Foundation/FoundationHelpersTest.php::*",
+     "framework/tests/Foundation/FoundationAuthorizesRequestsTraitTest.php::*",
+     "framework/tests/Foundation/FoundationAuthenticationTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a controller method declared with `inject({ request: StoreInvoiceRequest })`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`await request.validate({...})`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "Foundation's core slice",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1: FoundationAuthorizesRequestsTraitTest and FoundationAuthenticationTest are expected blocked-by:auth (kept in scope as the AC names them). AC4 is Epic-close (API-surface diff, docs)."
+ },
+ {
+  "story": "52.1",
+  "title": "Exception handler and `withExceptions`",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationExceptionsHandlerTest,Bootstrap/Hand",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationExceptionsHandlerTest.php::*",
+     "framework/tests/Foundation/Bootstrap/HandleExceptionsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a request that `expectsJson()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Handler.fallbackRenderable(fn)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 52 states no base dir; selectors are given with full tests/Foundation/ paths."
+ },
+ {
+  "story": "52.2",
+  "title": "Debug and production error pages",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{Exceptions/Renderer/FrameTest,Exceptions/Rende",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Exceptions/Renderer/FrameTest.php::*",
+     "framework/tests/Foundation/Exceptions/Renderer/ListenerTest.php::*",
+     "framework/tests/Foundation/Http/HtmlDumperTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`APP_ENV=local` and `APP_DEBUG=true`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`APP_ENV=production`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 52 owns the symfony/error-handler port."
+ },
+ {
+  "story": "52.3",
+  "title": "Vite and CSP nonces",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{FoundationViteTest,FoundationViteFontsTest}.ph",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationViteTest.php::*",
+     "framework/tests/Foundation/FoundationViteFontsTest.php::*",
+     "framework/tests/Http/Middleware/VitePreloadingTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Vite.useCspNonce()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a page served with `Content-Security-Policy: script-src 'nonce-<n>'`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 includes the 'remapped' tests/Http/Middleware/VitePreloadingTest.php."
+ },
+ {
+  "story": "52.4",
+  "title": "Foundation Cloud classification",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/Cloud/**` and `tests/Foundation/LaravelCloudJso",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Cloud/**::*",
+     "framework/tests/Foundation/LaravelCloudJsonFormatterTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "this Epic",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 is a classification scope: every Test ID is deferred:foundation-cloud (not pass/fail). AC2 is Epic-close docs."
+ },
+ {
+  "story": "53.1",
+  "title": "htmx Request detection",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the htmx provider",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "requests with and without each `HX-*` header",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "an htmx Request that sends `Accept: text/html`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.2",
+  "title": "htmx response helpers",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`response(html).hxTrigger('invoiceCreated', { id: 5 })`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the response mixin",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.3",
+  "title": "Fragment responses and full-versus-partial rendering",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`return view('invoices.index', data)` on a route",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`view(...).fragments(['row', 'totals'])`, or Fragments wrapped in `<hx-partial>`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "any response through the view or response seams, htmx or not",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.4",
+  "title": "htmx-aware redirects",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the same controller action",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`redirect().route('home').with('status', 'ok')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`redirect().route('login').hxRedirect()` on an htmx Request",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.5",
+  "title": "Validation failure on htmx Requests",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a Form Request or route that declares `.fragment('invoices.create', 'form')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "no declared Fragment",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "no declared or matching Fragment",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the same route requested without htmx",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.6",
+  "title": "Error Fragments for htmx Requests",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "an htmx Request whose handler throws a 404, a 403 or an unhandled error",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "an app renderable registered for the exception",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test."
+ },
+ {
+  "story": "53.7",
+  "title": "Streaming: SSE, `multipart/mixed` and WebSockets",
+  "component": "htmx",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "a controller that streams server-sent events, with an `await` between events",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `multipart/mixed` response writer",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a WebSocket route (served by Story 51.3)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the htmx package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Xaravel Component: every AC is an XT-htmx-<n> test. AC4 is Epic-close (xt:coverage htmx, docs)."
+ },
+ {
+  "story": "53.8",
+  "title": "Phase 6 `blocked-by` sweep",
+  "component": "htmx",
+  "kind": "upstream",
+  "deferred": "Scope is Expectations blocked-by:<phase-6 component> entries, resolved when planned; one manifest per owning Component (cookie, session, http, routing, view, foundation)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "every Expectations entry whose reason is `blocked-by:<c>`, for <c> in {cookie, s",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Expectations File after this Story merges",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Sweep Story placed in Epic 53 (htmx, a Xaravel Component) but its scope is Upstream Expectations entries for cookie, session, http, routing, view, foundation with one manifest per owning Component; 'component: htmx' is nominal (judgment call), and kind set to upstream because the scope is Upstream Test IDs. AC1 marked verify=selectors with empty include since it is resolved from Expectations at planning time."
+ },
+ {
+  "story": "54.1",
+  "title": "symfony/console core port",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Console/{ConsoleApplicationTest,ConsoleParserTest,CommandS",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Console/ConsoleApplicationTest.php::*",
+     "framework/tests/Console/ConsoleParserTest.php::*",
+     "framework/tests/Console/CommandSignatureTest.php::*",
+     "framework/tests/Console/OutputStyleTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "tables, progress bars, styled output and `OutputStyle` sections, at a fixed term",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a signature such as `mail:send {user} {--queue=} {--force} {ids*}`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 54: tests/Integration/Console/** is owned by Epic 60, not here. AC2 is Oracle Differential Xaravel Tests."
+ },
+ {
+  "story": "54.2",
+  "title": "Command class, IO, signals and mutexes",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Console/{CommandTest,Concerns/InteractsWithIOTest,CommandT",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Console/CommandTest.php::*",
+     "framework/tests/Console/Concerns/InteractsWithIOTest.php::*",
+     "framework/tests/Console/CommandTrapTest.php::*",
+     "framework/tests/Console/SignalsTest.php::*",
+     "framework/tests/Console/CommandMutexTest.php::*",
+     "framework/tests/Console/CacheCommandMutexTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`handle()` declared with `inject({...})`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`this.trap([SIGTERM], fn)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "54.3",
+  "title": "Prompts",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Console/{ConfiguresPromptsTest,PromptsForMissingInputTest}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Console/ConfiguresPromptsTest.php::*",
+     "framework/tests/Console/PromptsForMissingInputTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "each prompt, driven by scripted keystrokes in a virtual terminal (Oracle Differe",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a non-interactive terminal",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 notes expectsQuestion/expectsChoice support for prompts is verified in Story 57.4, not here."
+ },
+ {
+  "story": "54.4",
+  "title": "Termwind and console view components",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Console/View/ComponentsTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Console/View/ComponentsTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the termwind port (over `Bun.stringWidth` and `Bun.wrapAnsi`)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "54.5",
+  "title": "Task scheduling",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Console/{ConsoleEventSchedulerTest,...,Scheduling/CacheEve",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Console/ConsoleEventSchedulerTest.php::*",
+     "framework/tests/Console/ConsoleScheduledEventTest.php::*",
+     "framework/tests/Console/Scheduling/FrequencyTest.php::*",
+     "framework/tests/Console/Scheduling/ScheduleTest.php::*",
+     "framework/tests/Console/Scheduling/EventTest.php::*",
+     "framework/tests/Console/Scheduling/ScheduleWorkCommandTest.php::*",
+     "framework/tests/Console/Scheduling/CacheSchedulingMutexTest.php::*",
+     "framework/tests/Console/Scheduling/CacheEventMutexTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the cron-expression port",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Schedule.call(inject({ reports: ReportService }, async (reports) => …)).daily()",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`withoutOverlapping()` and `onOneServer()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "54.6",
+  "title": "Re-verify the command suites",
+  "component": "console",
+  "kind": "upstream",
+  "deferred": "Re-verifies blocked-by:console Expectations entries owned by Stories 38.4, 39.3, 42.5; manifests span database and cache",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the `blocked-by:console` entries from Stories 38.4 (prune), 39.3 and 42.5 (`cach",
+    "verify": "selectors",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 re-verifies blocked-by:console entries owned by Stories 38.4, 39.3, 42.5, in manifests with component: database and component: cache; verify=selectors with empty include. AC2 is Epic-close (api-surface gate console, docs)."
+ },
+ {
+  "story": "55.1",
+  "title": "Console kernel and the `bun artisan` entry",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/{Console/KernelTest,...,FoundationDevListComman",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Console/KernelTest.php::*",
+     "framework/tests/Foundation/Console/AboutCommandTest.php::*",
+     "framework/tests/Foundation/Console/CliDumperTest.php::*",
+     "framework/tests/Foundation/Console/ServeCommandTest.php::*",
+     "framework/tests/Foundation/Console/ServeCommandLogParserTest.php::*",
+     "framework/tests/Foundation/Console/DevCommandTest.php::*",
+     "framework/tests/Foundation/FoundationDevCommandsTest.php::*",
+     "framework/tests/Foundation/FoundationDevCommandTest.php::*",
+     "framework/tests/Foundation/FoundationDevListCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a Skeleton-shaped fixture app",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`bun artisan serve`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`tests/Foundation/FoundationDocsCommandTest.php` (`docs` opens laravel.com)",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/FoundationDocsCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC4 is a classification AC requiring an Escalation (adapt to Xaravel docs URL or intentional-divergence); included as selector since it names the file. Epic 55: tests/Integration/Generators/** owned by Epic 60."
+ },
+ {
+  "story": "55.2",
+  "title": "Framework caching and maintenance commands",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Foundation/Console/{RouteListCommandTest,ChannelListComman",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Foundation/Console/RouteListCommandTest.php::*",
+     "framework/tests/Foundation/Console/ChannelListCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a config holding a class value",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`optimize`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`key:generate`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1: ChannelListCommandTest is expected blocked-by:broadcasting (kept in scope as the AC names it)."
+ },
+ {
+  "story": "55.3",
+  "title": "Generator reference files (Infrastructure Story)",
+  "component": "conformance",
+  "kind": "xaravel",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the 88 `.stub` files at the Pin (Foundation 63, Routing 13, Database 5, Queue 3,",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "each reference file",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Infrastructure Story inside an Upstream Epic: writes conformance/fixtures/generators/<stub>.ts (Protected Path, Maintainer review). No Upstream selectors; component set to 'conformance' and kind 'xaravel' as a judgment call."
+ },
+ {
+  "story": "55.4",
+  "title": "Generators for models, the database and app classes",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": "One manifest per owning Component spanning foundation, routing, database, cache, session (AC3)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "each listed command, run against a fixture app",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`make:model Invoice -mfc`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "commands that live in other packages (`make:controller` in Routing; ...)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors named (generator conformance is graded against Story 55.3 reference files; tests/Integration/Generators/** belongs to Epic 60). AC3 requires separate manifests for routing, database, cache, session."
+ },
+ {
+  "story": "55.5",
+  "title": "Generators for HTTP, console and messaging, plus `stub:publish`",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "each listed command, run against a fixture app",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`make:test InvoiceTest`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`stub:publish`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors named; all ACs are Xaravel Tests against Story 55.3 references."
+ },
+ {
+  "story": "55.6",
+  "title": "`bun artisan tinker`",
+  "component": "foundation",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "`bun artisan tinker` in a fixture app (Xaravel Tests, run through a pseudo-termi",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the expression `await User.first()`, or plain `User.first()`, which returns a th",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "this Epic",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selectors named. AC3 is Epic-close (docs, API-surface diff for Foundation\\Console\\*)."
+ }
+]

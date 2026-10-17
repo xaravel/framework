@@ -1,0 +1,1579 @@
+[
+ {
+  "story": "34.1",
+  "title": "PDO-compatible driver shim over `bun:sqlite` and `Bun.sql`",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the seam (`Pdo`, `PdoStatement`), with the methods Upstream calls",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Upstream tests that `m::mock(PDO::class)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a `BIGINT` column holding 2^53 + 1 with no lossless hint",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "No Upstream selector in this Story; all ACs are XT. AC2 refers to Upstream tests that mock PDO generically (no file/selector named), so treated as xt (Escalation process check); those Test IDs are owned by the Stories whose selectors match them."
+ },
+ {
+  "story": "34.2",
+  "title": "Connection: statements, events, query log and errors",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseConnectionTest,...}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseConnectionTest.php::*",
+     "framework/tests/Database/DatabaseQueryExceptionTest.php::*",
+     "framework/tests/Database/QueryDurationThresholdTest.php::*",
+     "framework/tests/Database/DatabaseConnectionLostTest.php::*",
+     "framework/tests/Database/DatabasePostgresConnectionTest.php::*",
+     "framework/tests/Database/DatabaseProcessorTest.php::*",
+     "framework/tests/Database/DatabaseSQLiteProcessorTest.php::*",
+     "framework/tests/Database/DatabasePostgresProcessorTest.php::*",
+     "framework/tests/Database/DatabaseMySqlProcessorTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbProcessorTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`DB.listen(fn)` and `DB.enableQueryLog()` inside one unit",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "every statement method",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "34.3",
+  "title": "Connectors, factory, manager and read/write splitting",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseConnectionFactoryTest,...}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseConnectionFactoryTest.php::*",
+     "framework/tests/Database/DatabaseConnectorTest.php::*",
+     "framework/tests/Database/DatabaseManagerTest.php::*",
+     "framework/tests/Database/DatabaseIntegrationTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a connection configured with `read` and `write` hosts and `sticky: true`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`DB_CONNECTION=mysql` at the alpha",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "34.4",
+  "title": "Query builder: selects, wheres and havings",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `QBT::{testBasicSelect*,...}`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicSelect*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testAddingSelects",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testSelect*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testAlias*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicAlias",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicTable*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testFrom*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testOrWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicOr*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testNestedWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawOr*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testEmptyWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testArrayWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testDynamicWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testJsonWhere*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testJsonPath*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testDateBased*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testHaving*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testHavings*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawHavings",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testNestedHaving*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBitwise*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testAddBinding*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBindingOrder*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawExpressions",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawValue",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testCaseInsensitive*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testPassingArray*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testProvidingNull*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testSubSelect*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testSubqueriesBindings",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testWhenCallback*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testUnlessCallback*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testTapCallback",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testPipeCallback"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the same builder chain compiled by each of the five grammars",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`testDynamicWhere*` (`whereEmail()`)",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testDynamicWhere*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 names QBT::testDynamicWhere*, already included in AC1; kept as a selector AC (classification check: intentional-divergence:DIV-12). Resolver should dedupe. Epic 34 header: selectors apply in Story order (34.4 before 34.5 before 34.6). AC2 (five-grammar Oracle fixtures) is XT."
+ },
+ {
+  "story": "34.5",
+  "title": "Query builder: joins, unions, ordering, aggregates, pagination and chunking",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `QBT::{testBasicJoins,...}` and DatabaseConcernsBuildsQueriesTrai",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testBasicJoins",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::test*Join*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testUnion*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testUnions",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testMultipleUnion*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testOrderBy*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testOrderBys*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testInOrder*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testInRandom*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testReorder",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testLatest",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testOldest",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testGroupBys",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testLimitsAnd*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testForPage*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testGetCount*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testAggregate*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testPaginate*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testCursorPaginate*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testChunk*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testFind*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testFirst*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testValue*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testPluck*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testImplode",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testExistsOr*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testDoesntExists*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testClone*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testMergeBuilders*",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testMergeWheres",
+     "framework/tests/Database/DatabaseQueryBuilderTest.php::testToRaw",
+     "framework/tests/Database/DatabaseConcernsBuildsQueriesTraitTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`const users = await DB.table('users').where('active', 1).get()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`cursor()` and `lazy()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`chunk(n, cb)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Selectors apply in Story order: any QBT ID matched by both 34.4 and 34.5 (e.g. test*Join* vs testWhere*) goes to 34.4."
+ },
+ {
+  "story": "34.6",
+  "title": "Query builder: writes, locks, index hints and driver-specific SQL",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every `QBT` Test ID not matched by Stories 34.4 and 34.5, plus g",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseQueryGrammarTest.php::*",
+     "framework/tests/Database/DatabaseSQLiteQueryGrammarTest.php::*",
+     "framework/tests/Database/DatabasePostgresQueryGrammarTest.php::*",
+     "framework/tests/Database/DatabaseMySqlQueryGrammarTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbQueryGrammarTest.php::*",
+     "framework/tests/Database/DatabaseSqlServerQueryGrammarTest.php::*"
+    ],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Database/DatabaseQueryBuilderTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`insertGetId` on SQLite and Postgres",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`lockForUpdate()` / `sharedLock()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "QBT residual: every QBT ID not matched by 34.4/34.5 selectors."
+ },
+ {
+  "story": "34.7",
+  "title": "Transactions and connection leases",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseTransactionsTest,DatabaseTransactionsManagerTest}.php::",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseTransactionsTest.php::*",
+     "framework/tests/Database/DatabaseTransactionsManagerTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "two units interleaved at every `await`, one inside `BEGIN \u2026 await \u2026 COMMIT`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`afterCommit(cb)` registered inside nested transactions",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a narrow `DB.transaction` frame",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "35.1",
+  "title": "Blueprint and the schema builders",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseSchemaBlueprintTest,...,SqlServerBuilderTest}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseSchemaBlueprintTest.php::*",
+     "framework/tests/Database/DatabaseSchemaBuilderTest.php::*",
+     "framework/tests/Database/DatabaseAbstractSchemaGrammarTest.php::*",
+     "framework/tests/Database/DatabaseSchemaBuilderIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseSQLiteBuilderTest.php::*",
+     "framework/tests/Database/DatabasePostgresBuilderTest.php::*",
+     "framework/tests/Database/DatabaseMySqlBuilderTest.php::*",
+     "framework/tests/Database/DatabaseMySQLSchemaBuilderTest.php::*",
+     "framework/tests/Database/DatabasePostgresSchemaBuilderTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbBuilderTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbSchemaBuilderTest.php::*",
+     "framework/tests/Database/SqlServerBuilderTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `Blueprint` built by a migration",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "35.2",
+  "title": "SQLite and Postgres schema grammars",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseSQLiteSchemaGrammarTest,DatabasePostgresSchemaGrammarTe",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseSQLiteSchemaGrammarTest.php::*",
+     "framework/tests/Database/DatabasePostgresSchemaGrammarTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "SQLite table alterations that need a table rebuild",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 (rebuild statement sequence) has no named tests; XT."
+ },
+ {
+  "story": "35.3",
+  "title": "MySQL, MariaDB and SQL Server schema grammars",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseMySqlSchemaGrammarTest,...}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseMySqlSchemaGrammarTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbSchemaGrammarTest.php::*",
+     "framework/tests/Database/DatabaseSqlServerSchemaGrammarTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a grammar test that needs a live server",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 is a classification rule over AC1's tests, no named selector; XT."
+ },
+ {
+  "story": "35.4",
+  "title": "Schema state and `schema:dump` support",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseSqliteSchemaStateTest,...}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseSqliteSchemaStateTest.php::*",
+     "framework/tests/Database/DatabasePostgresSchemaStateTest.php::*",
+     "framework/tests/Database/DatabaseMySqlSchemaStateTest.php::*",
+     "framework/tests/Database/DatabaseMariaDbSchemaStateTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`SchemaState.dump()` / `load()` on SQLite and Postgres",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "36.1",
+  "title": "Model core: attributes, fill, guard and dirty tracking",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EMT::{testDirty*,...}`, HasAttributes/PreventsCircularRecursion,",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDirty*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testClean*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testFill*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testFillable*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGuarded*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGlobalGuarded",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUnguard*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testForceFill",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testSetAttribute",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testSettingAttributes",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testAttributeManipulation",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGetOriginal",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDiscardChanges",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCloneModel*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testReplicate*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testNewInstance*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMakeMethod",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUnderscoreProperties",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testIssetBehaves*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testArrayAccess",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testModelAttribute*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCalculatedAttributes",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasAttribute",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGetKey",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testIntKey",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testStringKey",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testIntAnd*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testFloatAnd*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testNonExisting*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUnsavedModel*",
+     "framework/tests/Database/DatabaseConcernsHasAttributesTest.php::*",
+     "framework/tests/Database/DatabaseConcernsPreventsCircularRecursionTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod"
+    ],
+    "residual": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`class Post extends Model { declare title: string; published = false; }`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a subclass field that is neither config, nor `declare`, nor a known default",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a colliding Upstream method (`fillable(arr)` or `touches(rel)`)",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "EMT residual = EMT IDs matched by no selector in Epics 36 and 37 (Epic 37's relationship selectors in 37.1/37.4/37.5 are explicit, so residual excludes them). Exclude = Epic 36 header's full EMT relationship-selector list, applied to every Epic 36 EMT AC. AC4 adapted:DIV-12 tests are not named specifically; XT."
+ },
+ {
+  "story": "36.2",
+  "title": "Persistence: save, update, delete, timestamps and refresh",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EMT::{testInsert*,...}` and DatabaseEloquentTimestampsTest",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testInsert*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUpdate*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testSaveIs*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDelete*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDestroy*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testPush*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testIncrement*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDecrement*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testTouch*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testTimestamps*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testNotTouching*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutTouching*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCreateMethod",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testForceCreate",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testFindMethod",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRefresh*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testConnection*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testQualifyColumn",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRouteKey*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRouteName",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDateTime*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testFromDate*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testModelDate*",
+     "framework/tests/Database/DatabaseEloquentTimestampsTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`await post.save()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "a model with a `'bigint'` cast on its key",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Epic 36 selectors apply in Story order; IDs matched by 36.1 explicit selectors stay with 36.1."
+ },
+ {
+  "story": "36.3",
+  "title": "Eloquent Builder (non-relationship)",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every `EBT` Test ID not reserved for Epic 37, plus CreateOrFirst",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentBuilderCreateOrFirstTest.php::*",
+     "framework/tests/Database/DatabaseEloquentWithAttributesTest.php::*",
+     "framework/tests/Database/DatabaseEloquentWithAttributesPendingTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::test*Has*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWit*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereHas*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testDoesntHave*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testOrDoesnt*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereDoesnt*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereMorphed*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereAttached*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereBelongs*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testEagerLoad*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testRelationshipEager*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testGetRelation*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testSelfHas*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testRealNested*"
+    ],
+    "residual": [
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`User.where('active', 1).first()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`firstOrFail()` / `findOrFail()` with no match",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "EBT expressed as residual: works because Story 37.5 claims the reserved EBT relationship selectors explicitly. Exclude lists the reserved EBT selectors for safety."
+ },
+ {
+  "story": "36.4",
+  "title": "Casts, accessors and mutators",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EMT::{test*Cast*,...}` and cast/attribute test files",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::test*Cast*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCastsMethod",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeCasts",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUnsetCast",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasCasts",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testJsonCasting",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testTheMutator*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGetMutated*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testUsing*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeingStringable*",
+     "framework/tests/Database/DatabaseEloquentModelAttributesTest.php::*",
+     "framework/tests/Database/DatabaseEloquentAsBinaryCastTest.php::*",
+     "framework/tests/Database/DatabaseEloquentAsVectorCastTest.php::*",
+     "framework/tests/Database/EloquentModelCustomCastingTest.php::*",
+     "framework/tests/Database/DatabaseEloquentWithCastsTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`@attribute(() => Attribute.make({ get, set })) accessor title!: string`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the `encrypted*`, `hashed`, `AsStringable`, enum and date casts",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`casts` declared either as a field or as a method",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "'testMergeingStringable*' matches Upstream's own spelling (testMergeingStringableObjectCastUSesStringRepresentation). Story-order: test*Cast* IDs already claimed by 36.1/36.2 stay there."
+ },
+ {
+  "story": "36.5",
+  "title": "Model events and observers",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EMT::{testModelObservers*,...}`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testModelObservers*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEventsCan*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutEvent*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testSetObservable",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testAddObservable",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testAddMultiple*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRemoveObservable",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRemoveMultiple*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBootedCallbacks",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCallbacksCan*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testReplicatingEvent"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a `saving` listener that returns `false`, or resolves to `false`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`@ObservedBy([PostObserver])` on a model",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the model event dispatcher",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "testReplicatingEvent may already be claimed by 36.1's testReplicate* (Story order)."
+ },
+ {
+  "story": "36.6",
+  "title": "Serialization and API resources",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EMT::{testToArray*,...}` and Resource tests",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testToArray*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testModelJson*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testModelTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHidden*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testVisible*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMakeHidden*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMakeVisible*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeHidden",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeVisible",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeAppends",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasAppended*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutAppends",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithHidden",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDynamicHidden",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testDynamicVisible",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testAppendingOf*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testVisibleCreates*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testOnly",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testExcept",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGetArrayable*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testGetQueueable*",
+     "framework/tests/Database/DatabaseEloquentResourceCollectionTest.php::*",
+     "framework/tests/Database/DatabaseEloquentResourceModelTest.php::*"
+    ],
+    "exclude": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod"
+    ],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a model",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`toJson()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "this slice",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "testWithHidden falls under Epic 37's reserved EMT testWith*; the exclude list removes it, so effectively it goes to Epic 37 (37.5). Human may want to confirm intent. JsonResource-dependent tests are blocked-by:http (Skip Reason, still in scope). AC4 (API-surface diff) is XT."
+ },
+ {
+  "story": "37.1",
+  "title": "Relationship definition, `related()` and Strict Loading",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope relation test files and `EMT::{testHasOne,testHasMany,...}`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentRelationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasManyTest.php::*",
+     "framework/tests/Database/DatabaseEloquentBelongsToTest.php::*",
+     "framework/tests/Database/DatabaseEloquentRelationNoConstraintsTest.php::*",
+     "framework/tests/Database/DatabaseEloquentRelationshipsTest.php::*",
+     "framework/tests/Database/DatabaseEloquentDynamicRelationsTest.php::*",
+     "framework/tests/Database/DatabaseEloquentIrregularPluralTest.php::*",
+     "framework/tests/Database/DatabaseEloquentComparesRelatedModelsTest.php::*",
+     "framework/tests/Database/EloquentHasOneOrManyDeprecationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneOrManyWithAttributesTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneOrManyWithAttributesPendingTest.php::*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`@hasMany(() => Post) accessor posts!: Collection<Post>`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`user.related('posts').where('published', true)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "a Laravel test that uses `$m->rel()` or lazy `$m->rel`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Strict Loading / auto-eager-load Upstream tests live in tests/Integration/Database (blocked-by:testbench, Epic 60); XTs cover them here."
+ },
+ {
+  "story": "37.2",
+  "title": "BelongsToMany and pivots",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseEloquentBelongsToMany*Test,DatabaseEloquentPivotTest}.p",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentBelongsToMany*Test.php::*",
+     "framework/tests/Database/DatabaseEloquentPivotTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`await user.related('roles').sync([1, 2])`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Path glob DatabaseEloquentBelongsToMany*Test.php matches 16 files in the snapshot."
+ },
+ {
+  "story": "37.3",
+  "title": "Through relationships and one-of-many",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope through/one-of-many test files",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentHasManyThroughIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneThroughIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneThroughOfManyTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasOneOfManyTest.php::*",
+     "framework/tests/Database/DatabaseEloquentMorphOneOfManyTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasManyThroughCreateOrFirstTest.php::*",
+     "framework/tests/Database/DatabaseEloquentHasManyCreateOrFirstTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a relationship callback that returns a different Relation",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "37.4",
+  "title": "Polymorphic and inverse relationships",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope morph/polymorphic/inverse test files and `EMT::{testMorph*,testCo",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentMorphTest.php::*",
+     "framework/tests/Database/DatabaseEloquentMorphToTest.php::*",
+     "framework/tests/Database/DatabaseEloquentMorphToManyTest.php::*",
+     "framework/tests/Database/DatabaseEloquentPolymorphicIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentPolymorphicRelationsIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseEloquentStrictMorphsTest.php::*",
+     "framework/tests/Database/DatabaseEloquentInverseRelation*Test.php::*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a morph type stored as an FQCN, or as an alias from `Relation.morphMap`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Path glob DatabaseEloquentInverseRelation*Test.php matches 5 files (incl. DatabaseEloquentInverseRelationTest)."
+ },
+ {
+  "story": "37.5",
+  "title": "Eager loading, existence queries, aggregates and Eloquent Collections",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: reserved EBT/EMT relationship selectors not yet claimed, plus Co",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testBelongsTo*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testCorrectMorph*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelations*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testRelationship*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+     "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::test*Has*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWith*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWit*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereHas*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testDoesntHave*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testOrDoesnt*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereDoesnt*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereMorphed*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereAttached*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereBelongs*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testEagerLoad*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testRelationshipEager*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testGetRelation*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testSelfHas*",
+     "framework/tests/Database/DatabaseEloquentBuilderTest.php::testRealNested*",
+     "framework/tests/Database/DatabaseEloquentCollectionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`await users.load('posts')`, `loadMissing` and `fresh` on an Eloquent Collection",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Model.automaticallyEagerLoadRelationships()`, enabled, and a collection of 10 u",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "`handleLazyLoadingViolationUsing()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Include = all reserved EMT+EBT relationship selectors from Epic 36 header; relies on Story-order resolution so 37.1 (testHasOne, testHasMany, testBelongsTo*, testRelations*, testRelationship*) and 37.4 (testMorph*, testCorrectMorph*) claim theirs first. AC4 is an Escalation step (no named test); XT."
+ },
+ {
+  "story": "38.1",
+  "title": "Model factories",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Database/DatabaseEloquentFactoryTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentFactoryTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`HasFactory` on a model and `Database\\Factories\\PostFactory`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "Upstream assertions on exact strings that PHP Faker produced",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the clause is merged",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "38.2",
+  "title": "Local and global scopes",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `{DatabaseEloquentGlobalScopesTest,DatabaseEloquentLocalScopesTes",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentGlobalScopesTest.php::*",
+     "framework/tests/Database/DatabaseEloquentLocalScopesTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`@scope static published(query)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "38.3",
+  "title": "Soft deletes",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope soft-deleting test files",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseSoftDeletingScopeTest.php::*",
+     "framework/tests/Database/DatabaseSoftDeletingTest.php::*",
+     "framework/tests/Database/DatabaseSoftDeletingTraitTest.php::*",
+     "framework/tests/Database/DatabaseEloquentSoftDeletesIntegrationTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`class Post extends mixin(Model, SoftDeletes)`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "38.4",
+  "title": "Pruning",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Database/PruneCommandTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/PruneCommandTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`prunable()` on a model (Xaravel Tests, until Epic 60 clears the integration tes",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 allows blocked-by:console (Epic 54 re-verifies; not this Story)."
+ },
+ {
+  "story": "38.5",
+  "title": "Eloquent integration suite: queries, writes and pagination",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `EIT::{testBasic*,...}` and IntegrationWithTablePrefixTest",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testBasic*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testCreate*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testUpdate*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testSave*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testFirstOr*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testFindOr*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testCheckAnd*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testPluck*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testChunk*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testLazy*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testEachBy*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testPaginated*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testCursor*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testPrevious*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testForPage*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testCountFor*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testAggregated*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testMultiInserts*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testNested*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testTimestamps*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testIncrementing*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testDefault*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testConfigured*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testSpecial*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testToArray*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testFill*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testCanFill*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testFresh*",
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php::testIsAfter*",
+     "framework/tests/Database/DatabaseEloquentIntegrationWithTablePrefixTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Runs on sqlite variant only. Pagination tests blocked-by:pagination (re-verified in Story 40.2)."
+ },
+ {
+  "story": "38.6",
+  "title": "Eloquent integration suite: relationships and the rest",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": "AC2 re-verifies testImplodeModels owned by Story 14.4 (component: collections)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every `EIT` Test ID not matched by Story 38.5, plus CollectionQu",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseEloquentCollectionQueueableTest.php::*"
+    ],
+    "exclude": [],
+    "residual": [
+     "framework/tests/Database/DatabaseEloquentIntegrationTest.php"
+    ]
+   },
+   {
+    "n": 2,
+    "given": "`testImplodeModels`, which has been `blocked-by:database` since Story 14.4",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Support/SupportCollectionTest.php::testImplodeModels"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the Eloquent slices",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC2 test located at framework/tests/Support/SupportCollectionTest.php::testImplodeModels (owned by Story 14.4; re-verified here with component: collections). Queueable-collection tests blocked-by:queue. AC3 (docs + API-surface diff) is XT."
+ },
+ {
+  "story": "39.1",
+  "title": "Migrator, repository and migration creator",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope migrator/repository/creator test files",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseMigratorTest.php::*",
+     "framework/tests/Database/DatabaseMigratorIntegrationTest.php::*",
+     "framework/tests/Database/DatabaseMigrationRepositoryTest.php::*",
+     "framework/tests/Database/DatabaseMigrationCreatorTest.php::*",
+     "framework/tests/Database/TableGuesserTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`MigrationCreator.create('create_flights_table')`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "migrations under `database/migrations/*.ts`, each with `export default class`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "39.2",
+  "title": "Seeders",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Database/DatabaseSeederTest.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseSeederTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "`Database\\Seeders\\DatabaseSeeder`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "39.3",
+  "title": "Database command suites",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope migrate/seed/db command test files",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Database/DatabaseMigrationInstallCommandTest.php::*",
+     "framework/tests/Database/DatabaseMigrationMakeCommandTest.php::*",
+     "framework/tests/Database/DatabaseMigrationMigrateCommandTest.php::*",
+     "framework/tests/Database/DatabaseMigrationRefreshCommandTest.php::*",
+     "framework/tests/Database/DatabaseMigrationResetCommandTest.php::*",
+     "framework/tests/Database/DatabaseMigrationRollbackCommandTest.php::*",
+     "framework/tests/Database/SeedCommandTest.php::*",
+     "framework/tests/Database/DatabaseConsoleDirectConnectionTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Database Component",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC1 allows blocked-by:console. AC2 (Epic close: no not-ported-yet, api-surface gate, docs) is XT/gate check."
+ },
+ {
+  "story": "39.4",
+  "title": "Phase 4 `blocked-by` sweep",
+  "component": "database",
+  "kind": "upstream",
+  "deferred": "Expectations blocked-by:database entries, resolved by sprint planning when planned; one manifest per owning Component",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope: every Expectations entry whose reason is `blocked-by:<c>`, for d",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "the Expectations File after this Story merges",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "Scope spans multiple components (e.g. bus database batch repository tests from Story 32.2, Container's DB() descriptor). component set to database as nominal owner."
+ },
+ {
+  "story": "40.1",
+  "title": "Paginators, cursors and URL windows",
+  "component": "pagination",
+  "kind": "upstream",
+  "deferred": null,
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Pagination/{PaginatorTest,...,UrlWindowTest}.php::*`",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Pagination/PaginatorTest.php::*",
+     "framework/tests/Pagination/LengthAwarePaginatorTest.php::*",
+     "framework/tests/Pagination/CursorPaginatorTest.php::*",
+     "framework/tests/Pagination/CursorTest.php::*",
+     "framework/tests/Pagination/UrlWindowTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "a paginator",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "`Cursor.encode()` / `fromEncoded()`",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": ""
+ },
+ {
+  "story": "40.2",
+  "title": "Eloquent pagination, resources and views",
+  "component": "pagination",
+  "kind": "upstream",
+  "deferred": "AC3 re-verifies blocked-by:pagination tests owned by Story 38.5 (component: database)",
+  "acs": [
+   {
+    "n": 1,
+    "given": "the test scope `tests/Pagination/{PaginatorLoadMorphTest,...,CursorResourceTest}",
+    "verify": "selectors",
+    "include": [
+     "framework/tests/Pagination/PaginatorLoadMorphTest.php::*",
+     "framework/tests/Pagination/PaginatorLoadMorphCountTest.php::*",
+     "framework/tests/Pagination/CursorPaginatorLoadMorphTest.php::*",
+     "framework/tests/Pagination/CursorPaginatorLoadMorphCountTest.php::*",
+     "framework/tests/Pagination/PaginatorResourceTest.php::*",
+     "framework/tests/Pagination/CursorResourceTest.php::*"
+    ],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 2,
+    "given": "Upstream's pagination Blade views",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 3,
+    "given": "the pagination tests that have been `blocked-by:pagination` since Story 38.5",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   },
+   {
+    "n": 4,
+    "given": "the package",
+    "verify": "xt",
+    "include": [],
+    "exclude": [],
+    "residual": []
+   }
+  ],
+  "notes": "AC3 scope = Expectations entries blocked-by:pagination from Story 38.5; resolved at planning time. AC1 allows blocked-by:http; view rendering blocked-by:view until Epic 49."
+ }
+]

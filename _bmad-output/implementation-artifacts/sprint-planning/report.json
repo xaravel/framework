@@ -1,0 +1,443 @@
+{
+ "written": 0,
+ "widened": [
+  [
+   "34.4",
+   "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawExpressions",
+   1
+  ],
+  [
+   "34.4",
+   "framework/tests/Database/DatabaseQueryBuilderTest.php::testRawValue",
+   1
+  ],
+  [
+   "34.5",
+   "framework/tests/Database/DatabaseQueryBuilderTest.php::testMergeWheres",
+   1
+  ],
+  [
+   "34.5",
+   "framework/tests/Database/DatabaseQueryBuilderTest.php::testToRaw",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testForceFill",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testSetAttribute",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testSettingAttributes",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testGetOriginal",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testMakeMethod",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testUnderscoreProperties",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testArrayAccess",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testGetKey",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testIntKey",
+   1
+  ],
+  [
+   "36.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testStringKey",
+   1
+  ],
+  [
+   "36.2",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testCreateMethod",
+   1
+  ],
+  [
+   "36.2",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testForceCreate",
+   1
+  ],
+  [
+   "36.2",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testFindMethod",
+   1
+  ],
+  [
+   "36.2",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testRouteName",
+   1
+  ],
+  [
+   "36.4",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testCastsMethod",
+   2
+  ],
+  [
+   "36.4",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeCasts",
+   2
+  ],
+  [
+   "36.4",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testUnsetCast",
+   1
+  ],
+  [
+   "36.4",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testHasCasts",
+   1
+  ],
+  [
+   "36.4",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testJsonCasting",
+   1
+  ],
+  [
+   "36.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testSetObservable",
+   1
+  ],
+  [
+   "36.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testAddObservable",
+   1
+  ],
+  [
+   "36.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testRemoveObservable",
+   1
+  ],
+  [
+   "36.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testBootedCallbacks",
+   1
+  ],
+  [
+   "36.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testReplicatingEvent",
+   1
+  ],
+  [
+   "36.6",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeHidden",
+   1
+  ],
+  [
+   "36.6",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeVisible",
+   1
+  ],
+  [
+   "36.6",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testMergeAppends",
+   1
+  ],
+  [
+   "36.6",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutAppends",
+   1
+  ],
+  [
+   "37.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+   1
+  ],
+  [
+   "37.1",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+   1
+  ],
+  [
+   "37.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testHasOne",
+   1
+  ],
+  [
+   "37.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testHasMany",
+   1
+  ],
+  [
+   "37.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testEagerLoading",
+   1
+  ],
+  [
+   "37.5",
+   "framework/tests/Database/DatabaseEloquentModelTest.php::testWithoutMethod",
+   1
+  ]
+ ],
+ "deferred": [
+  [
+   "19.3",
+   "Support Carbon, the Date facade and duration helpers",
+   "AC3 re-verifies a Test ID owned by Story 14.6 (blocked-by:support entry)"
+  ],
+  [
+   "19.4",
+   "Test clock",
+   "AC3 re-verifies blocked-by:support SLCT entries owned by Story 14.7 (set known only from Expectations)"
+  ],
+  [
+   "28.3",
+   "Process fakes and assertions",
+   "AC3 re-verifies Support Test IDs owned by Story 20.5 (component: support manifest); exact IDs are the blocked-by:process Expectations entries"
+  ],
+  [
+   "32.3",
+   "Re-verify Support's Bus fake",
+   "AC1 re-verifies Support Test IDs (blocked-by:bus) owned by an Epic 20 Story, under a component: support manifest"
+  ],
+  [
+   "33.3",
+   "Queued and broadcast events, and Support's Event fake",
+   "AC2 is a re-verification manifest (component: support) of Support Test IDs owned by an Epic 20 Story"
+  ],
+  [
+   "33.4",
+   "Phase 3 `blocked-by` sweep",
+   "Scope is Expectations entries blocked-by any Phase 3 Component, resolved when the Story is planned, one manifest per owning Component"
+  ],
+  [
+   "38.6",
+   "Eloquent integration suite: relationships and the rest",
+   "AC2 re-verifies testImplodeModels owned by Story 14.4 (component: collections)"
+  ],
+  [
+   "39.4",
+   "Phase 4 `blocked-by` sweep",
+   "Expectations blocked-by:database entries, resolved by sprint planning when planned; one manifest per owning Component"
+  ],
+  [
+   "40.2",
+   "Eloquent pagination, resources and views",
+   "AC3 re-verifies blocked-by:pagination tests owned by Story 38.5 (component: database)"
+  ],
+  [
+   "43.6",
+   "Rule objects and fluent rule builders",
+   "Inventory Test IDs with trailing whitespace (Upstream data-set names) fail the manifest validator (tools/ownership, Story 1.5); needs a fix before this manifest can list them"
+  ],
+  [
+   "43.7",
+   "Phase 5 `blocked-by` sweep",
+   "Scope is Expectations entries blocked-by Phase 5 components (pagination, redis, cache, validation), resolved when planned; one manifest per owning Component"
+  ],
+  [
+   "45.2",
+   "StartSession, flash data and the loaded-once session",
+   "AC4 re-verifies CacheSessionStoreTest Test IDs owned by Story 42.5 (component: cache)"
+  ],
+  [
+   "46.2",
+   "Responses, redirects and JSON resources",
+   "AC3 re-verifies blocked-by:http resource tests owned by Stories 36.6 and 40.2 (manifests for database and pagination)"
+  ],
+  [
+   "47.4",
+   "Remaining client behaviour and re-verifications",
+   "AC2 re-verifies blocked-by:http entries owned by Stories 20.6 (support) and 43.6 (validation), with separate manifests"
+  ],
+  [
+   "50.3",
+   "Fragments and render-target seams",
+   "AC4 re-verifies blocked-by:view pagination entries owned by Story 40.2 (component: pagination)"
+  ],
+  [
+   "53.8",
+   "Phase 6 `blocked-by` sweep",
+   "Scope is Expectations blocked-by:<phase-6 component> entries, resolved when planned; one manifest per owning Component (cookie, session, http, routing, view, foundation)"
+  ],
+  [
+   "54.6",
+   "Re-verify the command suites",
+   "Re-verifies blocked-by:console Expectations entries owned by Stories 38.4, 39.3, 42.5; manifests span database and cache"
+  ],
+  [
+   "55.4",
+   "Generators for models, the database and app classes",
+   "One manifest per owning Component spanning foundation, routing, database, cache, session (AC3)"
+  ],
+  [
+   "56.4",
+   "Mailer, messages, queued mail and the Mail fake",
+   "AC2 re-verifies SupportTestingMailFakeTest, owned by Story 20.6 (component: support) and recorded blocked-by:mail"
+  ],
+  [
+   "60.1",
+   "Small Components' integration suites",
+   "one manifest per Component, spanning 7 components (container, cookie, encryption, pipeline, redis, session, translation)"
+  ],
+  [
+   "60.2",
+   "Validation and View integration",
+   "one manifest each, spanning 2 components (validation, view)"
+  ],
+  [
+   "60.3",
+   "Filesystem and Events integration",
+   "one manifest each, spanning 2 components (filesystem, events)"
+  ],
+  [
+   "60.5",
+   "Log and Context integration",
+   "every tests/Integration/Log Test ID is already owned by Stories 29.2 and 29.3; re-verification, resolve when the Story is planned"
+  ],
+  [
+   "60.10",
+   "Database integration: engine-specific suites",
+   "Inventory Test IDs with trailing whitespace (Upstream data-set names) fail the manifest validator (tools/ownership, Story 1.5); needs a fix before this manifest can list them"
+  ],
+  [
+   "60.16",
+   "Mail and Testing integration, and the Phase 7 gate",
+   "one manifest each, spanning 2 components (mail, testing); AC2 is a gate over the whole Expectations File"
+  ],
+  [
+   "62.6",
+   "Non-alpha drivers and the `blocked-by:queue` sweep",
+   "AC2 re-verifies Expectations entries blocked-by:queue owned by other Components (one manifest per owning Component)"
+  ],
+  [
+   "64.3",
+   "Other broadcasters and the `blocked-by:broadcasting` sweep",
+   "AC2 re-verifies Expectations entries blocked-by:broadcasting owned by other Components (one manifest per owning Component)"
+  ],
+  [
+   "65.1",
+   "Channel manager, sender, on-demand and queued notifications",
+   "AC3 re-verifies tests owned by other Components (support, queue) as blocked-by:notifications entries; manifests span support and queue"
+  ],
+  [
+   "65.3",
+   "Database and broadcast channels",
+   "AC2 re-verifies the blocked-by:notifications generator tests from Story 60.14 with component: foundation (Expectations entries owned by another Component)"
+  ],
+  [
+   "66.5",
+   "Email verification and the `blocked-by:auth` sweep",
+   "AC3 re-verifies Expectations entries blocked-by:auth owned by other Components (one manifest per owning Component)"
+  ],
+  [
+   "68.1",
+   "Servers, Tools, Resources and Prompts",
+   "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned"
+  ],
+  [
+   "68.2",
+   "HTTP and stdio transports, with guards",
+   "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned"
+  ],
+  [
+   "68.3",
+   "MCP testing helpers and inspector",
+   "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned"
+  ],
+  [
+   "69.1",
+   "`boost:install` and agent guidelines",
+   "test scope named by topic only, no Upstream selector in epics.md; resolve when the Story is planned"
+  ],
+  [
+   "70.3",
+   "Phase 8 sweep and alpha-gate readiness",
+   "AC1 re-verifies remaining blocked-by entries for Phase 8 Components across many owning Components (one manifest per owning Component)"
+  ]
+ ],
+ "problems": [],
+ "zero": [
+  [
+   "37.5",
+   "framework/tests/Database/DatabaseEloquentBuilderTest.php::testWhereHas*"
+  ],
+  [
+   "43.4",
+   "framework/tests/Validation/ValidationValidatorTest.php::testValidateExists*"
+  ],
+  [
+   "60.9",
+   "residual framework/tests/Integration/Database/DatabaseTestCase.php"
+  ]
+ ],
+ "counts": {},
+ "unclaimed_framework": 1751,
+ "xt_next": {
+  "htmx": 26,
+  "session": 3,
+  "view": 17,
+  "conditionable": 4,
+  "auth": 9,
+  "routing": 16,
+  "conformance": 173,
+  "serializable-closure": 9,
+  "filesystem": 8,
+  "process": 3,
+  "skeleton": 16,
+  "contracts": 18,
+  "bus": 6,
+  "boost": 17,
+  "http": 11,
+  "pipeline": 4,
+  "foundation": 36,
+  "encryption": 7,
+  "events": 8,
+  "broadcasting": 4,
+  "log": 9,
+  "translation": 5,
+  "image": 3,
+  "reflection": 5,
+  "cookie": 4,
+  "testbench": 7,
+  "mail": 7,
+  "collections": 17,
+  "support": 29,
+  "container": 12,
+  "validation": 11,
+  "cache": 7,
+  "concurrency": 5,
+  "database": 56,
+  "mockery": 7,
+  "redis": 7,
+  "mime": 6,
+  "testing": 11,
+  "console": 11,
+  "runtime": 38,
+  "assert": 15,
+  "http-foundation": 11,
+  "queue": 13,
+  "config": 8,
+  "finder": 3,
+  "json-schema": 4,
+  "framework": 3,
+  "installer": 4,
+  "pagination": 3,
+  "hashing": 5,
+  "macroable": 4,
+  "notifications": 2
+ }
+}
