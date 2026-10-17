@@ -15,7 +15,8 @@
     "tools/ruleset/**/*.ts",
     "tools/workflow-permissions/**/*.ts",
     "tools/release/**/*.ts",
-    "tools/upstream/**/*.ts"
+    "tools/upstream/**/*.ts",
+    "tools/oracle/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

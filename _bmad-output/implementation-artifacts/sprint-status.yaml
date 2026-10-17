@@ -48,7 +48,7 @@ development_status:
 
   epic-2: in-progress
   2-1-upstream-snapshot-and-pin-record: done
-  2-2-oracle-container-image: backlog
+  2-2-oracle-container-image: done
   2-3-test-directory-component-map: backlog
   2-4-phpunit-test-inventory-for-laravel-framework: backlog
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: backlog

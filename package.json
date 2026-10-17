@@ -33,7 +33,12 @@
     "release:check": "bun tools/release/release.ts check",
     "release:authority": "bun tools/release/release.ts authority",
     "upstream:sync": "bun tools/upstream/upstream.ts sync",
-    "upstream:check": "bun tools/upstream/upstream.ts check"
+    "upstream:check": "bun tools/upstream/upstream.ts check",
+    "oracle:check": "bun tools/oracle/oracle.ts check",
+    "oracle:tag": "bun tools/oracle/oracle.ts tag",
+    "oracle:lock": "bun tools/oracle/oracle.ts lock",
+    "oracle:verify-image": "bun tools/oracle/oracle.ts verify-image",
+    "oracle:build": "bun tools/oracle/oracle.ts build"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
