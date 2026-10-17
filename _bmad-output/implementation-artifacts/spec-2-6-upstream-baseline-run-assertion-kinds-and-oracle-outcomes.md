@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'ready-for-dev'
+status: 'blocked'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -251,3 +251,37 @@ The confirming baseline re-run on PR #51 (CI run 39046988875, same Pin) reported
 
 - The attempted implementation (everything except the generated Inventory) is in [spec-2-6-attempt.patch](spec-2-6-attempt.patch). The full tree, including the Inventory merged from CI run 39045666471, is on branch `planning/story-2.6-attempt` (commit c66c357).
 - After the ruling: re-apply the patch, implement the chosen option in `merge`, re-run `baseline.yml`, and commit its `inventory` artifact.
+
+
+### Blocked during the review (2026-10-17, second run)
+
+Status: blocked
+Blocking condition: permission denied: overwriting this spec file with the amended copy during the review loopback.
+
+This run re-applied [spec-2-6-attempt.patch](spec-2-6-attempt.patch) and implemented ESC-2.6-1 option 1. That delta is in [spec-2-6-attempt-2.patch](spec-2-6-attempt-2.patch), applied on top of branch `planning/story-2.6-attempt`. It adds `conformance/inventory/oracle-nondeterminism.jsonl`, `parseFindings`, and a `findings` argument to `mergeResults`, and it keeps the findings file out of `bun run inventory`. `database.jsonl` records `{"assertIsBool":2}`, from a local `merge` over the legs of CI run 39046988875. Locally: `bun test` 60 pass, and `typecheck`, `lint`, `workflows:check`, `protected-paths:codeowners --check`, `component-map:check` and `upstream:check` are clean.
+
+The review then found a spec-level defect, routed `bad_spec`:
+- **The Oracle runs Upstream's tests as root.** Neither the Dockerfile nor `runInImageNetworked` sets a user. Tests that `chmod` a file and expect access to be denied therefore record `fail`, though Upstream's CI (a non-root runner) passes them. This affects `FilesystemTest::testIsReadable` and `::testIsWritable`, and `FilesystemAdapterTest::testThrowExceptionsForPut` and `::testReportExceptionsForPut`. It likely also affects the boost `GuidelineWriterTest` and `InstallCommandSkillSyncTest` fails.
+- **Amendment needed** (outside the intent contract):
+  - run the baseline as a non-root user (uid 1001, matching the GitHub runner), with `/oracle/upstream` owned by that user;
+  - add a Dockerfile assertion in XT-conformance-56.
+
+The loopback reverted the code to `606c9d2bc9c16834d5b371763b5e0e3bc9cb983f`. Writing the amended spec back was then denied, so the re-derivation did not run.
+
+The same review also found these patch items, to apply on the next run:
+- Check the `merge` job's final step against untracked files too (`git add -N` before `git diff --exit-code`).
+- Add a `generate` test that keeps `oracle-nondeterminism.jsonl`.
+- In `mergeResults`, mark a listed finding before the missing-attempt `continue`.
+- Fix the XT-conformance-58 comment about "no non-determinism finding", the garbled `baseline.yml` header comment, and the `docs/ops/baseline.md` workflow section, which omits the `inventory` job.
+
+Deferred:
+- `none`-tagged DynamoDB and memcached integration tests skip without Upstream's services. Their `backends` tagging comes from Story 2.4, and the intent fixes `none` as "no extra env".
+- The avif, heic and jxl codec skips and the `ImageTest` avif fail are unverified against Upstream's runner.
+- The recorder and runner self-test is carried over from the earlier deferral.
+
+Refuted: the phpredis compression skips are faithful. Those tests need the `lzf`, `zstd` and `lz4` PHP extensions (`#[RequiresPhpExtension]`), which Upstream's CI does not load either.
+
+To resume:
+1. Apply both patches.
+2. Make the amendment and the patch items.
+3. Push, run `baseline.yml`, and commit its `inventory` artifact.

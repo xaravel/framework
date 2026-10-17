@@ -52,7 +52,7 @@ development_status:
   2-3-test-directory-component-map: done
   2-4-phpunit-test-inventory-for-laravel-framework: done
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: done
-  2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: ready-for-dev  # ESC-2.6-1 approved (decisions/ESC-2.6-1.md)
+  2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: blocked  # permission denied: overwriting the spec during the review loopback (see spec Auto Run Result)
   2-7-inventory-determinism-and-runner-listing-cross-check: backlog
   2-8-baseline-pin-bump-tool: backlog
   epic-2-retrospective: optional
