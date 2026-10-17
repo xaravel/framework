@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -12,7 +12,14 @@ context:
   - '{project-root}/docs/ops/inventory.md'
   - '{project-root}/docs/ops/oracle.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      recorder.php and runner.php are checked by bun test only through source-text needles; no executed fixture self-test exists.
+    evidence: |-
+      bun test must not need PHP (intent Never list). The CI legs execute both for real on every baseline run, but a regression in counting or outcome mapping that still produces well-formed output would be committed through the artifact flow unnoticed. A PHP-gated recorder self-test step in baseline.yml would close it.
+    location: >-
+      tools/baseline/recorder.php
+    severity: medium
 ---
 
 <intent-contract>
@@ -165,3 +172,68 @@ Example line: `{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#us
 - `bun run baseline run --suite framework --variant none --attempt 1 --local /tmp/xaravel-inv/framework --out /tmp/xaravel-bl` -- expected: exit 0 with an outcome for every `none` ID; repeat for `sqlite` and for a Pest suite.
 - `bun test`, `bun run typecheck`, `bun run lint`, `bun run workflows:check`, `bun run protected-paths:codeowners --check`, `bun run component-map:check`, `bun run upstream:check` -- expected: clean.
 - On the PR: `baseline` workflow green, with the committed Inventory equal to the `merge` output.
+
+## Auto Run Result
+
+Status: done (2026-10-17)
+
+**Summary.** `tools/baseline/` runs every Upstream suite in the Oracle image once per alpha Backend Variant with a recorder, and writes `assertions` (kind → count of outermost `PHPUnit\Framework\Assert::assert*` calls) and `oracle` (variant → pass/skip/fail) into every Inventory entry. `.github/workflows/baseline.yml` does the following:
+- an `inventory` job lists every suite in the image;
+- 10 legs × 2 attempts run with the Postgres 18 and Redis 8.10.2 services;
+- a `merge` job fails on any attempt disagreement (`oracle non-determinism: …`) or on drift from the committed files.
+
+The committed Inventory is the `merge` artifact of run 39045666471: 22070 entries and no non-determinism findings.
+
+**Files changed:**
+- `tools/baseline/baseline.ts`, `runner.php` and `recorder.php`: the `run`/`merge` CLI, the generated PHPUnit config, and the recorder (prepend file plus PHPUnit extension, used under PHPUnit and Pest).
+- `tools/inventory/inventory.ts`: 8-key entries; `generate` carries `assertions`/`oracle` over for unchanged entries.
+- `tools/oracle/oracle.ts`: the networked image runner.
+- `conformance/oracle/Dockerfile`: Upstream's Linux CI extension set, with PECL sources sha256-verified.
+- `.github/workflows/baseline.yml`: the baseline workflow (read-only).
+- `package.json`: the `baseline` script.
+- `conformance/inventory/*.jsonl`: the CI merge artifact.
+- `conformance/tests/xaravel/baseline.test.ts`: XT-conformance-56..58.
+- `inventory.test.ts` and `pest-inventory.test.ts`: the new keys, carry-over steps, and the framework count 16216 → 16267.
+- `docs/ops/baseline.md` (new), `inventory.md` and `oracle.md`.
+
+**Deviations from the spec text (outside the intent contract):**
+- The recorder serves the rewritten `Assert.php` through a one-include `file` stream wrapper instead of `eval`. PHPUnit's preload `require_once` would otherwise redeclare the class.
+- The recorder also handles `BeforeFirstTestMethodFailed` and skipped test suites.
+- The runner uses `memory_limit=-1`.
+- The framework run also uses the lister for file mapping.
+- The image gained Upstream's full Linux extension set, not only `pdo_pgsql` and `redis`. The first CI run showed the framework listing fails without `pdo_mysql`.
+- The Inventory is re-listed in the image before the legs run. With phpredis loaded, PHPUnit calls 51 redis provider datasets that the host-generated Inventory (Story 2.4) had as 17 dataset-less IDs. Framework IDs go from 16216 to 16267, which is what FR-1 requires (the IDs equal the runner's listing inside the Oracle). The two count pins were raised to match.
+
+**Review:** 28 findings: 1 high, 9 medium, 14 low, 2 false, 2 maybe-false.
+- **Patched:**
+  - high: the image extension set;
+  - medium: workflow triggers, PECL checksums, committing the CI data;
+  - low: `CACHE_STORE=redis`, the carry-over tests through `generate()`, the merge-problem test, the docs example, the json_encode flags.
+- **Deferred:** the recorder/runner executable self-test (medium).
+- **Rejected:** the remaining low, false and maybe-false findings, each with its reason in the Review Triage Log.
+
+**Follow-up review recommended:** `true`. A high was patched (the image extension set and the re-listed Inventory). The named unverified risk is that the Oracle image change alters which tests the Inventory lists. This run handled it for redis datasets, but Story 2.7's runner cross-check should confirm the image listing is complete. Patched by verdict: high 1, medium 3 entries, low 5.
+
+**Verification:**
+- CI run 39045666471: every leg green on both attempts; `merge` wrote 22070 entries with zero problems.
+- Outcomes:
+
+  | Variant | pass | skip | fail |
+  | --- | --- | --- | --- |
+  | none | 20609 | 452 | 10 |
+  | redis | 363 | 42 | 0 |
+  | pgsql | 92 | 0 | 0 |
+  | sqlite | 61 | 35 | 0 |
+  | queue-database@sqlite | 311 | 14 | 0 |
+  | queue-redis@redis | 311 | 14 | 0 |
+  | queue-sync@none | 276 | 49 | 0 |
+
+- 294 non-alpha-only entries have `null` assertions.
+- Locally: `bun test` 60 pass, 0 fail; `typecheck`, `lint` and `workflows:check` are clean. Local `--local` runs of framework none/sqlite/queue-database and of ai/mcp/boost matched the tool's expectations.
+- Matrix audit: every row is covered by a passing test in `baseline.test.ts` or the inventory tests.
+
+**Residual risks:**
+- The recorder's PHP has no executed test outside CI (deferred).
+- Each leg builds the image (cost).
+- The image now lists more IDs than a bare host, and Story 2.7's nightly regeneration must run in the image.
+

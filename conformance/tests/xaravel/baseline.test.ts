@@ -382,7 +382,7 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   // The committed Inventory: every entry has both fields, oracle keyed by exactly its alpha variants, and every
   // pgsql, redis and queue-redis@redis entry has an outcome there.
   const all = committed();
-  expect(all.length).toBe(16216 + 3381 + 1284 + 1138);
+  expect(all.length).toBe(16267 + 3381 + 1284 + 1138);
   for (const e of all) {
     const variants = variantsFor(e.backends);
     expect(Object.keys(e.oracle)).toEqual(variants);

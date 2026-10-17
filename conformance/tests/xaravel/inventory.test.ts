@@ -321,11 +321,11 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
   expect(() => parseInventory(`${line.replace("framework/tests/BTest.php", "framework/src/B.php")}\n`, "f")).toThrow("f:1: bad source");
   expect(() => parseInventory(`${line.replace('["none"]', '["redis","none"]')}\n`, "f")).toThrow("f:1: backends");
 
-  // The committed Inventory: exactly 16216 unique ids, sorted and well-formed, each source inside the snapshot.
+  // The committed Inventory: exactly 16267 unique ids (16216 listed on a host without phpredis, plus 51 redis provider datasets the Oracle image lists; Story 2.6), sorted and well-formed, each source inside the snapshot.
   const inventory = committed();
   const all = [...inventory.values()].flat();
-  expect(all.length).toBe(16216);
-  expect(new Set(all.map((entry) => entry.id)).size).toBe(16216);
+  expect(all.length).toBe(16267);
+  expect(new Set(all.map((entry) => entry.id)).size).toBe(16267);
   for (const [component, entries] of inventory) {
     expect(entries.length).toBeGreaterThan(0);
     for (const entry of entries) {
