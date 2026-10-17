@@ -5,7 +5,7 @@ created: '2026-10-16'
 status: 'done'
 baseline_revision: 'df4de847347927676701eb99809e84520ae00a74'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
   - '{project-root}/stories/1.4.md'
@@ -15,6 +15,13 @@ deferred:
       AD-16's list doesn't protect `.claude/` (settings, hooks, skills) or case variants of `CLAUDE.md`, which agents load as instructions.
     evidence: |-
       `.claude/skills/` and settings drive every agent run, and on macOS a `claude.md` resolves case-insensitively. The spec forbids entries beyond AD-16, so widening the list needs an Escalation (AD-16 list change) for the Maintainer.
+    location: >-
+      conformance/protected-paths
+    severity: medium
+  - summary: >-
+      `.bun-version`, which pins the toolchain the grader runs on, is not in AD-16's Protected list.
+    evidence: |-
+      The workflows read it through `bun-version-file`, so a Story could change the Bun version unreviewed. Widening the list is an AD-16 change; retro epic-1 item 14 asks the Maintainer to rule on it.
     location: >-
       conformance/protected-paths
     severity: medium
@@ -150,6 +157,44 @@ deferred:
   - `[false]` `[reject]` (intent) PRs authored as `@edanisko` can't get the approving review — GitHub forbids self-approval, so the Maintainer merges as bypass actor; this is the Design Notes' operational effect, not a defect.
   - `[false]` `[reject]` (intent) nothing runs `codeowners --check` on main, and inactive contracts aren't in CODEOWNERS — every PR's head is mirror-checked, so main can't drift through a PR; "every protected glob" means every active one until `after-phase:1` fires, which Story 10.6's AC confirms.
 
+### 2026-10-17 — Follow-up review pass
+Scoped to the Story's squash commit (`47a4927`, excluding `_bmad-output/`), because `followup_review_recommended` was `true` (retro epic-1 item 11, finding R9). Findings were verified against `main` at `09f2efd`, which includes retro items 8 and 10.
+- verdicts: 29 findings — high 0, medium 3, low 10, false 16, maybe-false 0
+- findings:
+  - Blind Hunter
+    - `[false]` `[reject]` The head mirror probes only Phase 1. — Fixed on `main` by retro item 10 (#39): `pr()` probes every `after-phase:<n>` the head list names (`protected-paths.ts:436-447`), and XT-19 covers Phase 2.
+    - `[false]` `[reject]` `changed_files` and `head.sha` are unvalidated. — Fixed by #39: `pr()` throws on a non-string head SHA or non-number `changed_files` (`protected-paths.ts:424-427`).
+    - `[false]` `[reject]` The check ignores the branch type. — carried: the rule applies to every PR whatever its branch, by contract.
+    - `[medium]` `[defer]` `.bun-version` is not in the Protected list. — A Protected-list change outside AD-16 is the Maintainer's; tracked as retro item 14 (waiting on the Maintainer). Recorded in `deferred`.
+    - `[medium]` `[defer]` `.claude/`, case variants of `CLAUDE.md` and nested `AGENTS.md` are unprotected. — carried: the existing deferred agent-files item; retro item 14.
+    - `[false]` `[reject]` Nothing makes the check binding. — Story 1.7 made `protected-paths` a required check (`.github/rulesets/main.json`); this Story's spec excluded the ruleset.
+    - `[low]` `[reject]` Files and the head SHA are read at different moments. — carried: head SHA pinning; each push starts a fresh run on the new head.
+    - `[low]` `[reject]` Fail-closed is tested on only two endpoints. — Every endpoint goes through the same `json`/`paged` helpers, which throw on non-2xx; more fixtures add little.
+    - `[low]` `[reject]` A malformed head list is labelled `codeowners drift`. — It still fails closed and the message names the list line and the error; XT-19 pins the wording. Cosmetic.
+    - `[false]` `[reject]` Duplicate or redundant entries (`/tsconfig*.json` vs `/tsconfig.base.json`). — The list is exactly AD-16's, by contract; dropping the line would diverge from AD-16.
+    - `[low]` `[reject]` One workflow comment line is unwrapped, and `edited` fires on title edits. — Cosmetic; a re-run on a title edit is harmless.
+  - Edge Case Hunter
+    - `[false]` `[reject]` Phase n ≠ 1 at the head. — Fixed by #39 (see above).
+    - `[false]` `[reject]` `changed_files` missing or non-numeric. — Fixed by #39 (see above).
+    - `[false]` `[reject]` `head.sha` missing. — Fixed by #39 (see above).
+    - `[low]` `[reject]` A malformed head list is labelled as drift. — Same as the Blind Hunter row; same reason.
+    - `[low]` `[reject]` Unbounded pagination. — carried: no page cap; GitHub caps the files list at 3000.
+    - `[low]` `[reject]` A head path that is a directory. — The list and CODEOWNERS are Protected files; making either a directory needs the Maintainer, and the check then fails closed on drift.
+    - `[false]` `[reject]` A Maintainer-authored PR can never pass. — carried: self-approval; handled by the MAINT ruling and `--admin`.
+    - `[low]` `[reject]` A `copied` file's unchanged source is flagged. — Fails closed, and the PR files API rarely reports `copied`; a status branch adds complexity for a rare false alarm.
+    - `[low]` `[reject]` `GH_TOKEN` unset runs unauthenticated. — The workflow always sets it from `github.token`; only a local run can hit this.
+  - Verification Gap
+    - `[medium]` `[patch]` Nothing tests that the base list, not the head list, judges the PR. — Added a XT-19 case: the head drops `/tools/` and `/conformance/` with a matching CODEOWNERS; the PR still fails on `tools/x.ts` and the list, with no drift reported.
+    - `[low]` `[reject]` Reviews past the first page are never exercised. — Needs over 100 reviews on one PR; `paged` is shared with files, which XT-19 pages.
+    - `[false]` `[reject]` (other) The head mirror probes only Phase 1. — Fixed by #39, as the reviewer noted.
+  - Intent Alignment
+    - `[false]` `[reject]` `edited` and `branches: [main]` are not in the intent's trigger list. — carried: the first pass added both to close the re-targeting hole and keep "the default branch's version".
+    - `[false]` `[reject]` Only Phase 1 is detected at the head. — Fixed by #39.
+    - `[false]` `[reject]` XT-17/18/20 read the committed list and workflow. — The tests assert the committed artifacts by design; every PR run uses temp roots and the port-0 fake.
+    - `[false]` `[reject]` CODEOWNERS has a third header line. — It explains the unowned-line convention; XT-18 pins the renderer's output.
+    - `[false]` `[reject]` The fake models `DISMISSED` as a separate review. — `evaluatePr` takes the latest decisive state, so a dismissed approval read as `DISMISSED` fails either way.
+    - `[false]` `[reject]` The `tsconfig.json` include is not in the intent. — It type-checks the new tool, which `bun run typecheck` requires.
+
 ## Design Notes
 
 **`.github/CODEOWNERS`, not the root.** The Structural Seed shows a root `CODEOWNERS`, but AD-16's list doesn't cover the root file. Under `.github/` it is protected by `/.github/` without adding an entry. GitHub reads `.github/CODEOWNERS` first.
@@ -219,3 +264,13 @@ Status: done
 - Once this merges, every PR that touches Protected Paths shows a red `protected-paths` check until the Maintainer approves and re-runs it. That includes the orchestrator's own Epic 1–8 Stories, which are authored as `@edanisko`, who cannot self-approve. Those PRs then need the Maintainer to merge them as bypass actor.
 - The check is not yet required; that is Story 1.7.
 - The deferred agent-files gap.
+
+### Follow-up review (2026-10-17)
+
+Run for retro epic-1 item 11 (finding R9), scoped to `47a4927` and verified against `main` at `09f2efd`. 29 findings: 3 medium, 10 low, 16 false.
+- Patched (medium 1): XT-19 now proves the base list judges the PR, using a head list that drops `/tools/` and `/conformance/`.
+- Deferred: `.bun-version` outside AD-16's list (retro item 14, with the Maintainer).
+- Rejected: the rest, with reasons in the Review Triage Log; five were already fixed on `main` by retro item 10.
+- The first pass's unverified risk is retired: the workflow has run live on every PR since #17 (for example #39), and its expected `needs @edanisko's approving review` failures match the design.
+- **Follow-up review recommendation:** false. No high was patched, so the work has converged.
+- Verification: `bun test` 39 pass, 0 fail; `typecheck`, `lint`, `graph:check`, `scaffold:check` and `codeowners --check` exit 0.

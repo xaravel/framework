@@ -408,6 +408,17 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
     expect(drift.code).toBe(1);
     expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 25 is end of file, expected "/docs/ @edanisko"');
 
+    // The base list judges the PR: a head list that drops `/tools/` and `/conformance/`, with a matching CODEOWNERS, still fails.
+    const weakenedList = listText.split("\n").filter((line) => !line.startsWith("/tools/") && !line.startsWith("/conformance/")).join("\n");
+    const weakened = await runPr(
+      { files: [file("tools/x.ts"), file(LIST_PATH)], head: { [LIST_PATH]: weakenedList, [CODEOWNERS_PATH]: renderCodeowners(parseList(weakenedList), NONE) } },
+      base!,
+    );
+    expect(weakened.code).toBe(1);
+    expect(weakened.stderr).toContain("protected path: tools/x.ts");
+    expect(weakened.stderr).toContain(`protected path: ${LIST_PATH}`);
+    expect(weakened.stderr).not.toContain("codeowners drift");
+
     // A malformed head list is reported as drift, probes no Phase, and still lists protected files.
     const bogus = await runPr(
       { files: [file("bun.lock")], head: { [LIST_PATH]: listText + "/x/ bogus\n", [CODEOWNERS_PATH]: renderCodeowners(entries, NONE) } },

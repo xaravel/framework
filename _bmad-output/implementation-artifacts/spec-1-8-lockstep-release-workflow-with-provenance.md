@@ -5,7 +5,7 @@ created: '2026-10-17'
 baseline_revision: '12b1e25223ad4c41d6afe2f938b1038cba3d149a'
 status: 'done'
 review_loop_iteration: 1
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
   - '{project-root}/stories/1.8.md'
@@ -45,6 +45,13 @@ deferred:
       No test executes the shell in release.yml. Closing it means moving the loop into `release.ts` behind an injectable npm command.
     location: >-
       .github/workflows/release.yml Publish with provenance
+    severity: medium
+  - summary: >-
+      A release can end half-published when one public package was never bootstrapped or has no Trusted Publisher.
+    evidence: |-
+      The publish loop goes package by package, so packages before the failing one stay on npm at the new version. A pre-check that every public name exists on npm before the first publish would stop it early; it needs the live npm setup (retro epic-1 item 13).
+    location: >-
+      .github/workflows/release.yml
     severity: medium
 ---
 
@@ -263,6 +270,55 @@ deferred:
     - `[false]` `[reject]` The spec is not in the diff. — carried.
     - `[low]` `[reject]` A `v0.0.0` tag after the bootstrap would skip every package and create only a GitHub release. — Harmless and idempotent; the docs say the first CI release is a newer version.
 
+### 2026-10-17 — Follow-up review pass
+Scoped to the Story's squash commit (`f6450b9`, excluding `_bmad-output/` and the one-field `repository` additions to `packages/*/package.json` and `installer/package.json`), because `followup_review_recommended` was `true` (retro epic-1 item 11, finding R9). Findings were verified against `main` at `09f2efd`, which includes retro item 7 (#36). This pass covers the `can_admins_bypass` refusal and the source-manifest `repository` rule that the last pass had not reviewed.
+- verdicts: 40 findings — high 0, medium 5, low 21, false 13, maybe-false 1
+- findings:
+  - Verification Gap
+    - `[medium]` `[defer]` The publish loop's re-run skips are checked only as YAML text. — carried: the existing deferred item.
+    - `[low]` `[patch]` `notes` refusing a mismatched or non-v0 tag is untested. — XT-37 now runs `notes --tag v0.2.0` and `v1.0.0` on a 0.1.0 fixture and asserts exit 1, no stdout, and the tag in stderr.
+    - `[low]` `[reject]` (other) `authority` ignores `uses:` publish actions. — A `uses:` action can only publish with a stored token, which the Never list bans and the repo has none of, or with `id-token: write`, which `authority` already confines to the release job.
+  - Edge Case Hunter
+    - `[medium]` `[patch]` An internal `gate` failure writes no `publish=false` or reason, contradicting the `release.yml` header. — `gateCommand` now records `publish=false` and `reason=gate failed: …` in the output and stdout before failing with exit 1; XT-36 asserts both on an unreadable root.
+    - `[medium]` `[patch]` A non-v0 tag on a commit with a broken root `package.json` fails with no explanation. — Same root cause and fix as the row above: the failure is now recorded.
+    - `[false]` `[reject]` `stamp` re-serializes the whole file. — The intent mandates `JSON.stringify(x, null, 2) + "\n"`, and the scaffolder writes every manifest in that form; `scaffold:check` holds it.
+    - `[low]` `[reject]` A manifest with no `version` gets it appended last. — The scaffolder writes `version` in every manifest; unlikely.
+    - `[low]` `[reject]` A failed lockfile refresh leaves manifests stamped. — It exits 1 with the error, and a stamp is a local, reviewed PR change; rerunning fixes it.
+    - `[low]` `[reject]` Negation globs in `workspaces`. — The root has none; adding one is a Protected `package.json` change.
+    - `[low]` `[reject]` `pack()` with a relative `out`. — The CLI resolves `--out` (`release.ts:622`); no library caller passes a relative path.
+    - `[false]` `[reject]` `bun pm pack` prints a relative path. — XT-36 packs real fixtures and the repo pack produced 52 tarballs; the path resolves.
+    - `[low]` `[reject]` `uses:` publish actions and composite actions evade `authority`. — Same reason as the verification-gap row.
+    - `[low]` `[reject]` A line continuation splits `npm \ publish`. — Publishing still needs OIDC (`id-token: write`, confined) or a token (banned); the regex is a backstop, not the gate.
+    - `[low]` `[reject]` A quoted or variable tool name evades `authority`. — Same reason.
+    - `[low]` `[reject]` `prevent_self_review: true` would leave the release waiting forever. — A visible pending deployment, fixed in the Maintainer's environment settings; `docs/ops/release.md` owns that setup.
+    - `[low]` `[reject]` `deployment_branch_policy` is not verified. — Defence in depth only: the release job runs only after `gate` accepts the tag pattern, the root version and (since #36) the tag commit being on `main`.
+    - `[false]` `[reject]` A matching tag on a commit off `main` publishes. — Fixed by retro item 7 (#36): `gate` refuses a tag whose commit is not reachable from `main`.
+    - `[low]` `[reject]` Zero tarballs leave `dist/*.tgz` unexpanded. — There are 52 public packages; the step fails loudly anyway.
+    - `[low]` `[reject]` `npm view … || true` hides transient errors. — The following `npm publish` then fails loudly; nothing is published wrongly.
+  - Blind Hunter
+    - `[medium]` `[patch]` `gate` writes nothing when it errors. — Same root cause as the edge row; patched there.
+    - `[false]` `[reject]` Nothing checks where the tag points. — Fixed by #36.
+    - `[low]` `[reject]` `gate` does not check the deployment-tag policy. — Same as the edge row.
+    - `[low]` `[reject]` The publish-command check is easy to get around. — Same reason as the `uses:` rows; `my-npm publish` false positives fail closed.
+    - `[medium]` `[defer]` A run can leave a release half-published when a package was never bootstrapped. — Needs a live npm pre-check; part of the Maintainer's release setup (retro item 13). Recorded in `deferred`.
+    - `[low]` `[reject]` `pack` allows a dependency on a private workspace. — `graph:check` governs package dependencies, and no public package depends on a private one.
+    - `[low]` `[reject]` No check on tarball contents or `LICENSE`. — `bun pm pack` includes `LICENSE`, and `scaffold:check` holds each package's `LICENSE`.
+    - `[low]` `[reject]` `stamp` rewrites whole files; the root version shape is unchecked. — The first is false (see the edge row); a malformed root version is refused by `gate`.
+    - `[false]` `[reject]` The doc's two gaps are untracked. — Both are tracked: retro items 2 and 13, and this spec's `deferred`.
+    - `[low]` `[reject]` Node and npm are used with no cited exception. — The intent allows them in the `release` job only, and `authority` plus XT-38 enforce that; a comment adds nothing.
+    - `[maybe-false]` `[reject]` The bootstrap steps run `pack` with no `bun install` first. — Would be settled by a bootstrap dry run on a clean clone; if true, it is low (a doc step the Maintainer runs once, and `pack` fails loudly).
+    - `[low]` `[reject]` `concurrency: release` replaces a pending run. — Needs two release tags pushed while one awaits approval; the Maintainer pushes both.
+    - `[low]` `[reject]` `check`'s success line names only versions. — Cosmetic.
+  - Intent Alignment
+    - `[false]` `[reject]` `gate` refuses a Maintainer-plus-other reviewer and `can_admins_bypass` true. — The intent's purpose is guaranteed Maintainer approval; the stricter reading is the safe one.
+    - `[false]` `[reject]` `stamp` writes `bun.lock`. — carried: the pass-1 bad_spec fix for a stale lock packing old versions.
+    - `[false]` `[reject]` `check` enforces `repository`. — carried: provenance needs it (pass-1 bad_spec).
+    - `[false]` `[reject]` `pack` has extra failure classes. — Each fails closed on a manifest that would publish wrongly.
+    - `[false]` `[reject]` `notes` validates the tag. — Consistent with `gate`; now tested (see the patch row).
+    - `[false]` `[reject]` The docs tell the Maintainer to run `npm publish` locally. — The intent names the bootstrap publish as the Maintainer's documented step; the Never binds the agent.
+    - `[false]` `[reject]` The workflows are checked only statically. — carried: the deferred live-surface and publish-loop items.
+    - `[false]` `[reject]` The fake API writes its own environment schema. — carried: the deferred live-surface item; the first live `gate` run settles it.
+
 ## Design Notes
 
 **Why the gate checks the environment.** GitHub creates a missing environment on first use, with no protection. A tag pushed before the Maintainer sets up `release` would then publish without approval. The `gate` job reads the environment first and refuses, so the approval requirement holds even before the setup is done.
@@ -315,3 +371,15 @@ Status: done
 - The live environment, the Trusted Publishers and the bootstrap publish are Maintainer steps; `gate` refuses until they are done.
 - The workflow shell has never run on Actions.
 - No `bun test` in CI until Epic 5.
+
+### Follow-up review (2026-10-17)
+
+Run for retro epic-1 item 11 (finding R9), scoped to `f6450b9` and verified against `main` at `09f2efd`. 40 findings: 5 medium, 21 low, 13 false, 1 maybe-false.
+- Patched (medium 1 entry from 3 rows, low 1):
+  - `tools/release/release.ts`: `gate` records `publish=false` and `reason=gate failed: …` before an internal failure exits 1, as the `release.yml` header promises.
+  - `conformance/tests/xaravel/release.test.ts`: XT-36 asserts that record on an unreadable root; XT-37 asserts `notes` refuses a mismatched and a non-v0 tag.
+- Deferred: a partial publish when a package was never bootstrapped (Maintainer release setup, retro item 13).
+- Rejected: the rest, with reasons in the Review Triage Log; two were already fixed on `main` by retro item 7.
+- **Follow-up review recommendation:** false. No high was patched, so the work has converged.
+- Verification: `bun test` 39 pass, 0 fail; `typecheck`, `lint`, `graph:check`, `scaffold:check`, `release:check` and `release:authority` exit 0.
+- Residual risks: unchanged from the first pass's `deferred` list.
