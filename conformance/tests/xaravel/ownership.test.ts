@@ -365,7 +365,15 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
   const workflow = Bun.YAML.parse(text) as {
     on: Record<string, { types?: string[]; branches?: string[] }>;
     permissions: Record<string, string>;
-    jobs: Record<string, { if?: string; permissions?: Record<string, string>; steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
+    jobs: Record<
+      string,
+      {
+        if?: string;
+        permissions?: Record<string, string>;
+        "continue-on-error"?: unknown;
+        steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
+      }
+    >;
   };
   expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group", "push"]);
   expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "edited", "synchronize", "reopened", "ready_for_review"] });
@@ -376,6 +384,10 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
   const job = workflow.jobs["ownership"]!;
   expect(job.if).toBe("github.event_name == 'pull_request_target' || github.event_name == 'merge_group'");
   expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
+  // A required check: nothing lets it pass past a failure.
+  for (const node of [job, ...job.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+  }
   expect(workflow.jobs["manifests"]!.permissions).toBeUndefined();
   const checkout = { uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } };
   const setupBun = { uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } };

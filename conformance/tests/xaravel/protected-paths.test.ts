@@ -391,7 +391,14 @@ test("XT-conformance-20: the protected-paths workflow triggers only on pull_requ
   const workflow = Bun.YAML.parse(text) as {
     on: Record<string, { types: string[]; branches?: string[] }>;
     permissions: Record<string, string>;
-    jobs: Record<string, { permissions: Record<string, string>; steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
+    jobs: Record<
+      string,
+      {
+        permissions: Record<string, string>;
+        "continue-on-error"?: unknown;
+        steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
+      }
+    >;
   };
   // Story 1.7: the required check also reports in the merge queue.
   expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group"]);
@@ -403,6 +410,10 @@ test("XT-conformance-20: the protected-paths workflow triggers only on pull_requ
   expect(Object.keys(workflow.jobs)).toEqual(["protected-paths"]);
   const job = workflow.jobs["protected-paths"]!;
   expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
+  // A required check: nothing lets it pass past a failure.
+  for (const node of [job, ...job.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+  }
 
   const [checkout, setupBun, findPr, check, ...rest] = job.steps;
   expect(rest).toEqual([]);

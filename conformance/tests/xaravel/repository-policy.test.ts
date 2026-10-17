@@ -354,6 +354,21 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
       "policy: .github/rulesets/main.json `pull_request` rule does not set `require_code_owner_review: true` (AD-16)",
     ]);
   }
+  // Policy: main.json applies to the default branch and nothing else.
+  expect(policyViolations({ ...clone(MAIN), target: "tag" }, {}, ["edanisko"])).toEqual(['policy: .github/rulesets/main.json target is "tag", not "branch" (AD-16)']);
+  for (const include of [["refs/heads/main"], [], "~DEFAULT_BRANCH"]) {
+    expect(policyViolations({ ...clone(MAIN), conditions: { ref_name: { include, exclude: [] } } }, {}, ["edanisko"])).toEqual([
+      "policy: .github/rulesets/main.json does not include ~DEFAULT_BRANCH (AD-16)",
+    ]);
+  }
+  for (const exclude of [["refs/heads/main"], "refs/heads/main", null]) {
+    expect(policyViolations({ ...clone(MAIN), conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude } } }, {}, ["edanisko"])).toEqual([
+      `policy: .github/rulesets/main.json excludes ${JSON.stringify(exclude)}, which leaves the default branch unguarded (AD-16)`,
+    ]);
+  }
+  // Null admins (apply) skip only the org-admin check.
+  expect(policyViolations(MAIN, {}, null)).toEqual([]);
+  expect(policyViolations({ ...clone(MAIN), target: "tag" }, {}, null)).toHaveLength(1);
   // The committed main.json, as read from disk, still yields no policy lines.
   expect(policyViolations(committed("main.json"), {}, ["edanisko"])).toEqual([]);
 
@@ -426,6 +441,20 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
     const failing = await runRuleset(["apply", "--root", dir], { rulesets: liveSet(), admins: ["edanisko"], fail: ["/rulesets/101"] });
     expect(failing.code).toBe(1);
     expect(failing.stderr).toMatch(/^Ruleset check failed: PUT \/repos\/xaravel\/framework\/rulesets\/101: HTTP 500.*\(AD-16\)\n$/);
+  });
+
+  // apply: a committed main.json that breaks policy (an unpinned check) is refused before any write.
+  const unpinnedMain = clone(MAIN);
+  delete (checksOf(unpinnedMain).find((item) => item.context === "audit") as { integration_id?: number }).integration_id;
+  await withRulesets({ "main.json": unpinnedMain, "agent-push.json": PUSH, "agent-tags.json": TAGS }, async (dir) => {
+    const fake: FakeGitHub = { rulesets: liveSet(), admins: ["edanisko"] };
+    const refused = await runRuleset(["apply", "--root", dir], fake);
+    expect(refused.code).toBe(1);
+    expect(refused.stdout).toBe("");
+    expect(refused.stderr).toBe(
+      "Ruleset violations (AD-16):\n  policy: .github/rulesets/main.json does not pin the `audit` check to GitHub Actions (`integration_id: 15368`); any status writer could satisfy it (AD-16)\n",
+    );
+    expect(fake.writes ?? []).toEqual([]);
   });
 
   // merge-group-pr.
@@ -527,6 +556,14 @@ test("XT-conformance-31: every workflow's top-level permissions are contents: re
     expect(missing.code).toBe(1);
     expect(missing.stdout).toBe("");
     expect(missing.stderr).toContain("workflow permissions: .github/workflows does not exist (AD-16)");
+    // So does a .github/workflows that holds no workflows.
+    mkdirSync(join(empty, ".github", "workflows"), { recursive: true });
+    writeFileSync(join(empty, ".github", "workflows", "README.md"), "not a workflow\n");
+    expect(checkWorkflows(empty)).toEqual({ files: [], violations: ["workflow permissions: .github/workflows has no workflows (AD-16)"] });
+    const none = await run(WORKFLOWS_CLI, ["check", "--root", empty]);
+    expect(none.code).toBe(1);
+    expect(none.stdout).toBe("");
+    expect(none.stderr).toContain("workflow permissions: .github/workflows has no workflows (AD-16)");
   } finally {
     rmSync(empty, { recursive: true, force: true });
   }
@@ -571,6 +608,12 @@ test("XT-conformance-32: the agent push identity is limited to story/* by live r
   expect(identityViolations(OK_RULES, { ...tags, conditions: { ref_name: { include: ["~ALL"], exclude: ["refs/tags/**"] } } })).toEqual([
     'identity: "Agent tags" excludes ["refs/tags/**"], which leaves those tags open to the agent (AD-16)',
   ]);
+  // So does any other exclude that is not an empty array.
+  for (const exclude of ["refs/tags/**", null, {}]) {
+    expect(identityViolations(OK_RULES, { ...tags, conditions: { ref_name: { include: ["~ALL"], exclude } } })).toEqual([
+      `identity: "Agent tags" excludes ${JSON.stringify(exclude)}, which leaves those tags open to the agent (AD-16)`,
+    ]);
+  }
   // Admin agent.
   expect(identityViolations(OK_RULES, tags, { login: "bot", roleName: "admin", orgAdmin: true })).toEqual([
     'identity: agent bot has repository role "admin"; it must be write or triage (AD-16)',

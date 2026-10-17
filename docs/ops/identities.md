@@ -27,15 +27,15 @@ Each ruleset has exactly one bypass actor, `OrganizationAdmin`. CI never holds a
    GH_TOKEN="$(gh auth token)" bun run ruleset:apply
    ```
 
-   `apply` matches each committed ruleset to the live one by name. It updates the live ruleset when one exists and creates it otherwise. Run it again whenever a file under `.github/rulesets/` changes on `main`.
+   `apply` matches each committed ruleset to the live one by name. It updates the live ruleset when one exists and creates it otherwise. `apply` and `verify` refuse two committed files with the same ruleset name, and `apply` matches every name and checks the policy of `main.json` before it writes anything, so an ambiguous live name or a policy violation writes nothing. Run it again whenever a file under `.github/rulesets/` changes on `main`.
 
 ## Bootstrapping
 
-The PR that first adds `tools/ruleset/` and the `merge_group` triggers (Story 1.7) can't pass the merge queue. Its merge group checks out a base commit that doesn't have that tool yet, so the `protected-paths` and `ownership` checks fail there. An org admin merges that one PR with the bypass. After that, queue runs work.
+The PR that first added `tools/ruleset/` and the `merge_group` triggers (Story 1.7) couldn't pass the merge queue. Its merge group checked out a base commit that didn't have that tool yet, so the `protected-paths` and `ownership` checks failed there. An org admin merged that one PR with the bypass. After that, queue runs work. A later PR that moves or renames `tools/ruleset/ruleset.ts`, or changes how the workflows call `merge-group-pr`, needs the same bypass, because the merge group runs the base commit's copy of the tool.
 
 ## Checking the setup
 
-Run the identity check, with any token that can read the repository and the org's members:
+Run the identity check. Without `--agent`, any token that can read the repository works. With `--agent`, the token must also read the org's members and have push access to the repository:
 
 ```sh
 GH_TOKEN="$(gh auth token)" bun run ruleset:identity --agent <login>
@@ -49,6 +49,8 @@ To confirm the committed rulesets match the live ones, run:
 GH_TOKEN="$(gh auth token)" bun run ruleset:verify
 ```
 
-`verify` prints a `ruleset drift:` line for each difference and a `missing ruleset:` line for each committed ruleset with no live counterpart. It prints a `policy:` line when `main.json` is not active, when a required check is missing or not pinned to GitHub Actions, when a rule it needs (deletion, force-push, PR with Code Owner review, linear history or the merge queue) is missing, when a bypass actor is not `OrganizationAdmin`, or when the org has an admin other than the Maintainer.
+`verify` prints a `ruleset drift:` line for each difference and a `missing ruleset:` line for each committed ruleset with no live counterpart. It prints a `policy:` line when `main.json` is not active or does not apply to exactly the default branch, when a required check is missing or not pinned to GitHub Actions, when a rule it needs (deletion, force-push, PR with Code Owner review, linear history or the merge queue) is missing, when a bypass actor is not `OrganizationAdmin`, or when the org has an admin other than the Maintainer.
+
+The workflow permissions check, `bun run workflows:check`, fails when `.github/workflows` is missing or holds no workflows.
 
 As a final check, push a throwaway branch as the agent. A `planning/…` push must be rejected, and a `story/…` push must succeed.

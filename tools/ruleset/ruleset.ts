@@ -6,8 +6,10 @@
 //
 //   bun tools/ruleset/ruleset.ts apply [--repo <owner/name>] [--root <dir>]
 //       creates (POST) or updates (PUT) each committed ruleset, matched by
-//       name. Only the Maintainer or the orchestrator runs it, from an admin
-//       token; CI never does
+//       name. It checks main.json's policy and matches every name first, so a
+//       policy violation or an ambiguous name writes nothing. Only the
+//       Maintainer or the orchestrator runs it, from an admin token; CI never
+//       does
 //
 //   bun tools/ruleset/ruleset.ts identity [--repo <owner/name>] [--agent <login>]
 //       reads the rules active on probe refs and checks that only `story/*`
@@ -232,13 +234,25 @@ function rulesOf(ruleset: JsonObject): JsonObject[] {
 /**
  * The `policy:` lines for the committed main ruleset, every ruleset's bypass
  * actors (keyed by a label such as `agent-push.json` or `live "Agent pushes"`),
- * and the org's admin logins.
+ * and the org's admin logins; null admins skip the org-admin check (`apply`).
  */
-export function policyViolations(main: unknown, rulesets: Readonly<Record<string, unknown>>, admins: readonly string[]): string[] {
+export function policyViolations(main: unknown, rulesets: Readonly<Record<string, unknown>>, admins: readonly string[] | null): string[] {
   const out: string[] = [];
   const normalizedMain = normalize(main);
   if (normalizedMain["enforcement"] !== "active") {
     out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} enforcement is ${show(normalizedMain["enforcement"])}, not "active" (AD-16)`);
+  }
+  if (normalizedMain["target"] !== "branch") {
+    out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} target is ${show(normalizedMain["target"])}, not "branch" (AD-16)`);
+  }
+  const conditions = normalizedMain["conditions"];
+  const refName = isObject(conditions) && isObject(conditions["ref_name"]) ? conditions["ref_name"] : {};
+  if (!(Array.isArray(refName["include"]) && refName["include"].includes("~DEFAULT_BRANCH"))) {
+    out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} does not include ~DEFAULT_BRANCH (AD-16)`);
+  }
+  const exclude = refName["exclude"];
+  if (exclude !== undefined && !(Array.isArray(exclude) && exclude.length === 0)) {
+    out.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} excludes ${JSON.stringify(exclude)}, which leaves the default branch unguarded (AD-16)`);
   }
   const mainRules = rulesOf(normalizedMain);
   const statusChecks = mainRules.find((rule) => rule["type"] === "required_status_checks");
@@ -273,10 +287,12 @@ export function policyViolations(main: unknown, rulesets: Readonly<Record<string
       }
     }
   }
-  const maintainer = MAINTAINER.replace(/^@/, "").toLowerCase();
-  const logins = [...new Set(admins.map((login) => login.toLowerCase()))].sort(compare);
-  if (logins.length !== 1 || logins[0] !== maintainer) {
-    out.push(`policy: the org's admins are ${JSON.stringify(logins)}; they must be exactly ["${maintainer}"] (the Maintainer) (AD-16)`);
+  if (admins !== null) {
+    const maintainer = MAINTAINER.replace(/^@/, "").toLowerCase();
+    const logins = [...new Set(admins.map((login) => login.toLowerCase()))].sort(compare);
+    if (logins.length !== 1 || logins[0] !== maintainer) {
+      out.push(`policy: the org's admins are ${JSON.stringify(logins)}; they must be exactly ["${maintainer}"] (the Maintainer) (AD-16)`);
+    }
   }
   return out;
 }
@@ -345,7 +361,7 @@ export function identityViolations(
       out.push(`identity: "${TAGS_RULESET}" does not include ~ALL (AD-16)`);
     }
     const exclude = conditions["exclude"];
-    if (Array.isArray(exclude) && exclude.length > 0) {
+    if (exclude !== undefined && !(Array.isArray(exclude) && exclude.length === 0)) {
       out.push(`identity: "${TAGS_RULESET}" excludes ${JSON.stringify(exclude)}, which leaves those tags open to the agent (AD-16)`);
     }
     const ruleTypes = new Set(rulesOf(tags).map((rule) => rule["type"]));
@@ -549,6 +565,13 @@ function report(title: string, violations: readonly string[]): void {
   process.stderr.write(`${title} (AD-16):\n${violations.map((line) => `  ${line}`).join("\n")}\n`);
 }
 
+/** The `policy:` lines for the committed main.json (one when it is absent) and the given rulesets and admins. */
+function committedPolicy(committed: readonly CommittedRuleset[], rulesets: Readonly<Record<string, unknown>>, admins: readonly string[] | null): string[] {
+  const main = committed.find((item) => item.file === `${RULESETS_DIR}/${MAIN_FILE}`);
+  const missing = main === undefined ? [`policy: ${RULESETS_DIR}/${MAIN_FILE} does not exist (AD-16)`] : [];
+  return [...missing, ...policyViolations(main?.ruleset ?? {}, rulesets, admins)];
+}
+
 async function verify(options: Options): Promise<number> {
   const committed = readCommitted(options.root);
   const api = client();
@@ -577,13 +600,9 @@ async function verify(options: Options): Promise<number> {
     labelled[`live "${summary.name}" (${summary.id})`] = live.get(summary.id);
   }
 
-  const main = committed.find((item) => item.file === `${RULESETS_DIR}/${MAIN_FILE}`);
-  if (main === undefined) {
-    violations.push(`policy: ${RULESETS_DIR}/${MAIN_FILE} does not exist (AD-16)`);
-  }
   const org = options.repo.split("/")[0]!;
   const admins = await orgAdmins(api, org);
-  violations.push(...policyViolations(main?.ruleset ?? {}, labelled, admins));
+  violations.push(...committedPolicy(committed, labelled, admins));
 
   if (violations.length > 0) {
     report("Ruleset violations", violations);
@@ -595,6 +614,12 @@ async function verify(options: Options): Promise<number> {
 
 async function apply(options: Options): Promise<number> {
   const committed = readCommitted(options.root);
+  // Check policy before any write, so a main.json that verify would reject never goes live.
+  const violations = committedPolicy(committed, Object.fromEntries(committed.map((item) => [item.file, item.ruleset])), null);
+  if (violations.length > 0) {
+    report("Ruleset violations", violations);
+    return 1;
+  }
   const api = client();
   const summaries = await liveSummaries(api, options.repo);
   // Match every committed ruleset before writing any, so an ambiguous name writes nothing.

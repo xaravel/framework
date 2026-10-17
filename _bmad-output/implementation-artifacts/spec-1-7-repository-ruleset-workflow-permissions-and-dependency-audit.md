@@ -5,7 +5,7 @@ created: '2026-10-17'
 baseline_revision: '41da75aa4fcaebeafc4f40f64e9d4e110a13b207'
 status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
   - '{project-root}/stories/1.7.md'
@@ -206,6 +206,38 @@ Run by the Maintainer's session after the live apply, resuming this spec at step
     - `[medium]` `[patch]` `workflow-permissions` exits 0 with no workflows dir. — Grouped; patched.
     - `[false]` `[reject]` `manifests` skipped on `merge_group`. — Intended: no PR checkout in the queue, and the manifest check already ran on the PR.
 
+### 2026-10-17 — Follow-up review pass
+Scoped to the first pass's patch commit (`3d3390f..1e60dd8`, excluding `_bmad-output/`), because `followup_review_recommended` was `true`.
+- verdicts: 23 findings — high 0, medium 6, low 14, false 3, maybe-false 0
+- findings:
+  - Verification Gap
+    - `[low]` `[defer]` No CI workflow runs `bun test`, so the new assertions only gate locally. — Pre-existing; the harness and CI pipeline arrive in Epic 5. Every changed behaviour has an executed test (no gaps found).
+  - Blind Hunter
+    - `[low]` `[patch]` `identities.md` gives two token requirements for `identity`. — Opening reworded: read access without `--agent`, push access with it.
+    - `[medium]` `[patch]` `apply` writes a committed `main.json` that breaks policy. — `apply` runs `policyViolations` on the committed rulesets first and writes nothing on a violation; test added.
+    - `[low]` `[reject]` carried: partial apply after earlier writes succeed is not itemised. — Same claim as the first pass's rejected row; still adds complexity for an unlikely case.
+    - `[medium]` `[patch]` `policy` does not check that `main.json` targets the default branch. — `policy:` lines for `target`, `include ~DEFAULT_BRANCH` and a non-empty `exclude`; tests added. `required_approving_review_count: 0` is rejected: the intent fixes 0 approvals with Code Owner review.
+    - `[false]` `[reject]` `ownership.yml`/`ci.yml` can be rewritten by a PR in the queue untested. — All of `.github/` is a Protected Path (covered by the Story 1.4 tests), so the base copy's `pull_request_target` run gates any edit.
+    - `[false]` `[reject]` "Find the PR" writes an empty number. — `EVENT_PR` is always set on `pull_request_target`, and an empty or non-queue ref makes `merge-group-pr` exit 1 under `bash -e` (tested).
+    - `[low]` `[reject]` `runStep` duplicated across two test files and discards output. — Each test file is self-contained by convention; cosmetic.
+    - `[low]` `[patch]` `continue-on-error` only asserted for `audit`. — Also asserted for the `protected-paths` and `ownership` jobs and steps.
+    - `[low]` `[patch]` Bootstrapping section: tense, rename caveat. — Past tense, plus the same-bypass note for moving `tools/ruleset/ruleset.ts`. A separate decision record is rejected: the MAINT ruling covers the bypass.
+    - `[medium]` `[patch]` `checkWorkflows` passes when the workflows dir holds no workflows. — Now a violation; test added.
+    - `[low]` `[patch]` `identities.md` does not describe the new refusals. — One paragraph added.
+  - Edge Case Hunter
+    - `[low]` `[reject]` carried: partial apply state. — Grouped with the carried row above.
+    - `[medium]` `[patch]` `apply` skips the policy check. — Grouped with the Blind Hunter row.
+    - `[medium]` `[patch]` main target/conditions unchecked. — Grouped with the Blind Hunter row.
+    - `[low]` `[patch]` Agent tags `exclude` that is a non-array value slips through. — Any present, non-empty-array `exclude` is flagged.
+    - `[medium]` `[patch]` Empty workflows dir fails open. — Grouped with the Blind Hunter row.
+  - Intent Alignment
+    - `[low]` `[reject]` New policy cases tested at function level, not through `verify`. — `verify` passes the same committed `main` into `policyViolations`, and a `verify` round trip already runs.
+    - `[false]` `[reject]` `verify` now throws on duplicate committed names instead of reporting them. — It fails closed with exit 1 and a failure line, the tools' convention.
+    - `[low]` `[reject]` Identity `exclude` tested at function level only. — The CLI calls the same function.
+    - `[low]` `[reject]` "Find the PR" runs from the working tree, not the base checkout; the output key is compared as a string. — The base checkout has the same tool path, and the key comparison is exact.
+    - `[low]` `[reject]` Workflow comments don't name why the base run gates the PR. — The Design Notes and `identities.md` explain it (`.github/` is Protected).
+    - `[low]` `[patch]` Token contradiction in `identities.md`. — Grouped with the Blind Hunter row.
+
 ## Design Notes
 
 **Merge queue vs `pull_request_target`.** A required check has to report on the merge group, or the queue stalls. Re-running the same `pr` command for the PR named in the queue ref keeps the guarantee (the same files, and the same Maintainer review on the same head commit) without running PR code. The workflow file itself is the merge group's copy, and that file is a Protected Path, so changing it already needs the Maintainer's review.
@@ -251,3 +283,7 @@ Status: done
 - AC 3 is verified by the live rules and `identity` without `--agent`; no separate agent account exists yet (Maintainer choice), so the push rejection has not been tried with a real agent login.
 - Live enforcement is ahead of `main` until this PR merges: `main`'s workflows lack `merge_group` and `ci.yml`, so open PRs need the org-admin bypass. This PR is merged that way, by design.
 - The orchestrator runs as the Maintainer, an org admin, so it bypasses every ruleset; the MAINT ruling and its amendments govern when it may.
+
+**Follow-up review (2026-10-17).** Scoped to the first pass's patch commit. 23 findings (high 0, medium 6, low 14, false 3). Patched: `apply` runs the policy check before writing and writes nothing on a violation; `policy` checks that `main.json` targets the default branch (`target`, `include ~DEFAULT_BRANCH`, empty `exclude`); a workflows dir with no workflows fails; any non-empty-array Agent tags `exclude` is flagged; `continue-on-error` is asserted absent on the `protected-paths` and `ownership` jobs; `identities.md` fixes the token wording, puts Bootstrapping in the past tense with the rename caveat, and documents the refusals. Patched counts: medium 6, low 6. Deferred: CI does not run `bun test` until Epic 5. The rest are rejected with reasons in the triage log. No high was patched, so the work has converged: `followup_review_recommended: false`.
+
+Verification after the follow-up: `bun test` 33 pass, 0 fail (4764 assertions); all eight checks exit 0; live `ruleset:verify` → "Rulesets OK … policy holds."; live `ruleset:identity` → "Identity OK".

@@ -86,7 +86,7 @@ export function checkWorkflow(file: string, text: string): string[] {
   return out;
 }
 
-/** Checks every workflow under `root`. A root without the workflows directory is a violation (fail closed). */
+/** Checks every workflow under `root`. A root without the workflows directory, or one holding no workflows, is a violation (fail closed). */
 export function checkWorkflows(root: string): { files: string[]; violations: string[] } {
   const dir = join(root, WORKFLOWS_DIR);
   if (!existsSync(dir)) {
@@ -96,6 +96,9 @@ export function checkWorkflows(root: string): { files: string[]; violations: str
     .filter((entry) => entry.isFile() && /\.ya?ml$/.test(entry.name))
     .map((entry) => `${WORKFLOWS_DIR}/${entry.name}`)
     .sort(compare);
+  if (files.length === 0) {
+    return { files, violations: [`workflow permissions: ${WORKFLOWS_DIR} has no workflows (AD-16)`] };
+  }
   const violations = files.flatMap((file) => checkWorkflow(file, readFileSync(join(root, file), "utf8")));
   return { files, violations };
 }
