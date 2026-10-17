@@ -2,8 +2,8 @@
 title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
-baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'ready-for-dev'
+baseline_revision: 'dfbe94c8ccf792539c5e7f48d2bdb57ccebe6fce'
+status: 'in-progress'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
