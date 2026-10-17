@@ -1,0 +1,19 @@
+{
+  "name": "Agent tags",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~ALL"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "creation" },
+    { "type": "update" },
+    { "type": "deletion" }
+  ],
+  "bypass_actors": [
+    { "actor_id": null, "actor_type": "OrganizationAdmin", "bypass_mode": "always" }
+  ]
+}
