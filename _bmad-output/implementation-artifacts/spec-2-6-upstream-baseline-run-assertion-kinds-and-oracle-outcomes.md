@@ -2,8 +2,8 @@
 title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
-baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'ready-for-dev'
+baseline_revision: 'dfbe94c8ccf792539c5e7f48d2bdb57ccebe6fce'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -19,6 +19,20 @@ deferred:
       bun test must not need PHP (intent Never list). The CI legs execute both for real on every baseline run, but a regression in counting or outcome mapping that still produces well-formed output would be committed through the artifact flow unnoticed. A PHP-gated recorder self-test step in baseline.yml would close it.
     location: >-
       tools/baseline/recorder.php
+    severity: medium
+  - summary: >-
+      The none leg runs without Upstream's memcached, DynamoDB and MySQL services, so none-tagged tests that need them record service-caused skips that Story 5.2's upstream-skip check will read as Upstream's own.
+    evidence: |-
+      Upstream's linux_tests job (conformance/upstream/framework/.github/workflows/tests.yml) starts memcached, mysql, redis and dynamodb-local and sets DYNAMODB_* and AWS_* env; baseline.yml's leg job starts only postgres and redis, and the intent fixes none as "no extra env". The backends tagging comes from Story 2.4. No Story's ACs currently cover it; it needs a Maintainer ruling (tag those tests with their service, or add the services to the none leg).
+    location: >-
+      .github/workflows/baseline.yml
+    severity: medium
+  - summary: >-
+      bun run inventory carries assertions and oracle over while id, hash and backends are unchanged, so after a Pin move or a recorder change, unchanged tests keep values from the old run.
+    evidence: |-
+      hash covers only the test's own tokens and data, not the framework source, vendor locks, the image or tools/baseline. The carry-over rule is the intent's; Story 2.8 (Pin bump) must re-run the baseline when it moves the Pin, and its ACs should be checked to say so.
+    location: >-
+      tools/inventory/inventory.ts
     severity: medium
 ---
 
@@ -167,6 +181,42 @@ deferred:
   - `[medium]` `[patch]` (edge-case) committed data — same root as the intent-alignment row.
   - `[false]` `[reject]` (edge-case) the recorder uses a stream wrapper rather than the spec's `eval` — a deliberate deviation (PHPUnit preload `require_once` would redeclare the class); the fix would edit the spec; recorded in the Auto Run Result.
 
+### 2026-10-17 — Review pass
+- verdicts: 32 findings — high 0, medium 4, low 14, false 10, maybe-false 4
+- findings:
+  - `[low]` `[reject]` (intent-alignment) the framework ID count moves 16216 → 16267 although the intent says not to edit Story 2.4 IDs — the Maintainer's Spec Change Log entry (ESC-2.6-1) keeps "the Inventory re-listed inside the Oracle image (16267 framework Test IDs with phpredis)"; undoing it would edit the spec.
+  - `[false]` `[reject]` (intent-alignment) the image adds Upstream's whole Linux extension set, not only `pdo_pgsql` and redis — carried: the earlier pass's high patch (listing failed without `pdo_mysql`), kept by the change log.
+  - `[false]` `[reject]` (intent-alignment) `USER 1001` / `--user 1001:1001` are not in the intent — the Maintainer's non-root amendment in the Spec Change Log requires them.
+  - `[false]` `[reject]` (intent-alignment) `CACHE_STORE=redis` on the `redis` variant — carried: the earlier pass's low patch, from Upstream's redis.yml.
+  - `[false]` `[reject]` (intent-alignment) wider `baseline.yml` path triggers — carried: the earlier pass's medium patch.
+  - `[false]` `[reject]` (intent-alignment) `listedRecord` writes `record` even when the attempts agree, and fails on a count below `record` — decisions/ESC-2.6-1.md: "For a listed test, `merge` records the file's pinned multiset", the lowest count Upstream can produce; a count below it means the finding is wrong and failing loudly is correct.
+  - `[false]` `[reject]` (intent-alignment) `BeforeFirstTestMethodFailed` and skipped suites are class-level outcomes — carried deviation in the Auto Run Result; both map to `fail`/`skip` under the intent's outcome rules.
+  - `[false]` `[reject]` (intent-alignment) `parseInventory` accepts `null`/`{}` on alpha entries — the intent's carry-over rule gives "any other entry" `null` and `{}`, so the parser must accept it; XT-conformance-56 enforces the strict form on committed data.
+  - `[medium]` `[defer]` (intent-alignment) the counting rules are not executed by any test — carried: the existing `deferred` recorder/runner self-test item.
+  - `[medium]` `[defer]` (blind) the `none` leg lacks Upstream's memcached, DynamoDB and MySQL services, so those `none`-tagged tests record service-caused skips — carried from the second run's deferred list; the intent fixes `none` as "no extra env" and `backends` comes from Story 2.4; added to frontmatter `deferred` (PHP 8's default `error_reporting` is already `E_ALL`).
+  - `[low]` `[reject]` (blind) `assertions` counts skip/fail attempts — carried: the spec's maximum-over-variants rule.
+  - `[low]` `[reject]` (blind) a Pest entry with a non-`none` variant has no leg — none exists at the Pin, and `merge` fails loudly with `missing result`; the fix adds machinery.
+  - `[medium]` `[defer]` (blind) carried-over `assertions`/`oracle` keep values from an old Pin or recorder when the test's `hash` is unchanged — the carry-over rule is the intent's; re-baselining on a Pin move belongs to Story 2.8 (Pin bump); added to frontmatter `deferred`.
+  - `[medium]` `[defer]` (blind) the recorder and runner have no executed self-test, and source needles would not catch the fork over-count — carried: existing `deferred` item.
+  - `[maybe-false]` `[reject]` (blind) `AfterLastTestMethodErrored/Failed` not recorded — carried: the tests themselves passed; would only be low.
+  - `[false]` `[reject]` (blind) Story status disagrees between files — `in-review` is the transient review state and becomes `done` at finalization; the MAINT 2026-10-17 amendments approve the Protected Path and ownership changes.
+  - `[low]` `[reject]` (blind) `oracle-nondeterminism.jsonl` sits in `conformance/inventory/` — the path is fixed by decisions/ESC-2.6-1.md and the intent; moving it edits the spec.
+  - `[low]` `[reject]` (blind) the findings file's `attempts` field is never compared with a run — informational per the decision; a check adds machinery for no named harm.
+  - `[low]` `[reject]` (blind) 21 image builds per run, no `concurrency:` group, paths filter misses `.bun-version`/`package.json`/the component map — cost carried; attempts on separately built images are not a variation source because `oracle:build` builds twice and verifies a reproducible image; filter drift is caught by Story 2.7's nightly regeneration.
+  - `[low]` `[patch]` (blind) the sqlite image command hard-codes `/xaravel/baseline/runner.php` instead of `IMAGE_TOOLS` — both branches now use `IMAGE_TOOLS`.
+  - `[low]` `[reject]` (blind) `runner.php` writes a fixed generated-config name — carried: single-user local tool.
+  - `[maybe-false]` `[reject]` (edge-case) `tearDownAfterClass` failures are not recorded — carried, as above.
+  - `[low]` `[reject]` (edge-case) a failed append from an isolated child drops its counts silently — not observed in CI (the drift check passes on a re-run); a guard adds branches.
+  - `[low]` `[reject]` (edge-case) asserts in `setUpBeforeClass`/`tearDownAfterClass` are uncounted — the intent counts setUp, the test and tearDown; class hooks have no single test to attribute to.
+  - `[maybe-false]` `[reject]` (edge-case) a leg with zero tagged entries writes an empty file list — carried: fails loudly; would only be low.
+  - `[maybe-false]` `[reject]` (edge-case) two lister raws mapping to one Inventory ID overwrite each other — would need a duplicate Inventory ID, which the Inventory format rejects; would only be low.
+  - `[low]` `[reject]` (edge-case) umask 077 hides the files list from uid 1001 — CI runners use umask 022; a host-only concern.
+  - `[false]` `[reject]` (edge-case) local mode inherits host `DB_*`/`REDIS_*` env — carried: developer-run concern only.
+  - `[low]` `[reject]` (edge-case) a mount path containing `:` or `,` breaks `--volume` — paths are CI temp and checkout dirs.
+  - `[low]` `[reject]` (edge-case) stray result files in `--in` are ignored — `merge` reads exactly the legs it needs; harmless.
+  - `[false]` `[reject]` (edge-case) a stale listed finding overrides identical observed counts — the ESC-2.6-1 decision; same as the intent-alignment row.
+  - `[low]` `[reject]` (edge-case) a missing results file names only its first ID plus a count — it names an ID and the variant, as the intent asks.
+
 ## Design Notes
 
 - **Why CI, not a local run.** Postgres and Redis exist only as CI services. The host has neither, and no Docker. The orchestrator pushes the branch, waits for `baseline.yml`, downloads the `inventory` artifact and commits it. A second CI run then passes `git diff --exit-code`, which proves the committed data is exactly what the run produced.
@@ -291,3 +341,37 @@ To resume:
 1. Apply both patches.
 2. Make the amendment and the patch items.
 3. Push, run `baseline.yml`, and commit its `inventory` artifact.
+
+
+### Resumed run (2026-10-17, third run)
+
+Status: done
+
+Applied both patches on `story/2.6`, then the amendment and the patch items:
+- **Non-root Oracle.** The Dockerfile creates `oracle` (uid/gid 1001), `chown -R 1001:1001` and `chmod -R u+w` on `/oracle/upstream` (the snapshot is copied in read-only, so ownership alone left the tests unable to write their fixtures), and ends with `USER 1001:1001`. `networkedRunArgs` passes `--user 1001:1001` (`IMAGE_USER` in `tools/oracle/oracle.ts`); the run's work directory is mode 0755. XT-conformance-56 asserts both.
+- **Patch items.** The `merge` job runs `git add --intent-to-add conformance/inventory` before `git diff --exit-code`; XT-conformance-49 checks that `generate` keeps `oracle-nondeterminism.jsonl`; `mergeResults` marks a listed finding before the missing-attempt `continue` (with a fixture assertion); the XT-conformance-58 comment, the `baseline.yml` header and the `docs/ops/baseline.md` workflow section (now with the `inventory` job) are fixed.
+
+Found during this run and fixed (outside the review list):
+- **The recorder over-counted assertions after a `pcntl_fork`.** A forked child inherits the recorder's counts and ran its shutdown flush on exit, appending them again. `FilesystemTest::testSharedGet` forks 20 children, so every test that ran before it in a leg was recorded with 21× its assertions (4505 entries), and the fork Concurrency driver gave 3× (271) and 2× (1). The committed data from run 39045666471 carried this. The recorder now flushes only in the process that loaded it (Upstream's PHPUnit does not count a forked child's assertions either); reproduced and verified locally with the old and new recorder on `DatabaseAbstractSchemaGrammarTest` + `FilesystemTest`. XT-conformance-56 has a source needle for the guard. The deferred recorder self-test would have caught this.
+
+Verification:
+- CI run 39059935351 (PR #56): every leg green on both attempts; `merge` reported no non-determinism beyond the listed ESC-2.6-1 finding. Its `inventory` artifact is the committed Inventory: 22070 entries, 294 non-alpha-only entries with `null` assertions.
+- Against the previous data: exactly the 8 permission tests the review named went `fail` → `pass` (`FilesystemTest::testIsReadable`/`testIsWritable`, `FilesystemAdapterTest::testThrowExceptionsForPut`/`testReportExceptionsForPut`, three boost `InstallCommandSkillSyncTest` tests and `GuidelineWriterTest`); every other assertions change is an exact 21×, 3× or 2× reduction.
+- Confirming CI run 39061205394 on the commit holding that Inventory: `merge` green, so `git diff --exit-code` (untracked files included) passed and no unlisted non-determinism was reported. (Its first attempt was cancelled after one leg sat 33 minutes in GitHub's "Initialize containers"; the re-run of that leg passed.)
+- Outcomes: none 20617/452/2 (pass/skip/fail; the fails are boost `SearchDocsTest` "advertises itself as a read-only tool" and `ImageTest::test_extension_returns_avif_for_avif`), redis 363/42/0, pgsql 92/0/0, sqlite 61/35/0, queue-database@sqlite 311/14/0, queue-redis@redis 311/14/0, queue-sync@none 276/49/0.
+- Locally: `bun test` 60 pass; `typecheck`, `lint`, `workflows:check`, `protected-paths:codeowners --check`, `component-map:check`, `upstream:check` and `oracle:check` clean; `bun run baseline run --suite mcp --variant none --local …` matches the committed mcp data exactly. A framework `--local` run on this host fails closed by design (the host lacks phpredis, so its listing is not the image's Inventory).
+
+Residual risks: the recorder/runner still have no executed self-test outside CI (deferred); the `ownership` and `protected-paths` PR checks need the Maintainer (Protected Paths, Infrastructure Story).
+
+### Review pass (2026-10-17, third run)
+
+Status: done
+
+**Review:** 32 findings: 0 high, 4 medium, 14 low, 10 false, 4 maybe-false (Review Triage Log, second "Review pass" entry).
+- **Patched (1, low):** `tools/baseline/baseline.ts` builds the sqlite image command's runner path from `IMAGE_TOOLS` instead of a hard-coded copy. The command it runs is unchanged.
+- **Deferred (2 new, medium):** the `none` leg's missing memcached/DynamoDB/MySQL services (needs a Maintainer ruling; no Story covers it), and carried-over Oracle data surviving a Pin move or recorder change (Story 2.8). Two more rows are carried onto the existing recorder/runner self-test deferral.
+- **Rejected:** every other finding, each with its reason in the triage log. Most are carried from the earlier passes, or are fixed by the Maintainer's Spec Change Log entries and decisions/ESC-2.6-1.md.
+
+**Follow-up review recommended:** `false`. This pass patched one low entry only.
+
+**Verification after the patch:** `bun test` 60 pass, 0 fail. `typecheck`, `lint`, `workflows:check`, `protected-paths:codeowners --check`, `component-map:check` and `upstream:check` are clean. The patch touches `tools/baseline/**`, so pushing it re-runs `baseline.yml`, whose `merge` drift check must stay green on the committed Inventory.

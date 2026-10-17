@@ -40,7 +40,8 @@
     "oracle:verify-image": "bun tools/oracle/oracle.ts verify-image",
     "oracle:build": "bun tools/oracle/oracle.ts build",
     "component-map:check": "bun tools/component-map/component-map.ts check",
-    "inventory": "bun tools/inventory/inventory.ts generate"
+    "inventory": "bun tools/inventory/inventory.ts generate",
+    "baseline": "bun tools/baseline/baseline.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
