@@ -16,9 +16,9 @@ import {
   expectedPackages,
   IMAGE_NAME,
   IMAGE_UPSTREAM_DIR,
+  imageHash,
   imageTag,
   installedPackages,
-  lockHash,
   lockPath,
   LOCKS_DIR,
   ORACLE_DIR,
@@ -299,18 +299,56 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
     expect(ok.code).toBe(0);
     expect(ok.stdout).toContain(`Oracle locks OK: 4 locks current. Image tag: ${imageTag(fx.repo)}`);
 
-    // The tag: the framework Pin, then the first 12 hex of the SHA-256 of the four locks in pin order.
+    // The tag: the framework Pin, then the first 12 hex of the SHA-256 of the
+    // four locks in pin order, then the Dockerfile, then its dockerignore,
+    // each framed as `<relative path>\0<byte length>\0<bytes>`.
     const all = createHash("sha256");
-    for (const { name } of UPSTREAM_REPOS) {
-      all.update(readFileSync(lockPath(fx.repo, name)));
+    const inputs = [
+      ...UPSTREAM_REPOS.map(({ name }) => `${LOCKS_DIR}/${name}/composer.lock`),
+      `${ORACLE_DIR}/Dockerfile`,
+      `${ORACLE_DIR}/Dockerfile.dockerignore`,
+    ];
+    for (const relative of inputs) {
+      const bytes = readFileSync(join(fx.repo, relative));
+      all.update(`${relative}\0${bytes.length}\0`);
+      all.update(bytes);
     }
-    expect(lockHash(fx.repo)).toBe(all.digest("hex").slice(0, 12));
-    expect(imageTag(fx.repo)).toBe(`v13.37.0-${lockHash(fx.repo)}`);
+    expect(imageHash(fx.repo)).toBe(all.digest("hex").slice(0, 12));
+    expect(imageTag(fx.repo)).toBe(`v13.37.0-${imageHash(fx.repo)}`);
     expect((await cli(["tag", "--root", fx.repo], env)).stdout).toBe(`${imageTag(fx.repo)}\n`);
     const before = imageTag(fx.repo);
     setLock(fx, "boost", [...defaultPackages("boost"), tool("extra/package")]);
     expect(imageTag(fx.repo)).not.toBe(before);
     setLock(fx, "boost", defaultPackages("boost"));
+    expect(imageTag(fx.repo)).toBe(before);
+    // A Dockerfile or dockerignore edit moves the tag; restoring it restores the tag.
+    for (const relative of [`${ORACLE_DIR}/Dockerfile`, `${ORACLE_DIR}/Dockerfile.dockerignore`]) {
+      const file = join(fx.repo, relative);
+      const original = readFileSync(file);
+      writeFileSync(file, Buffer.concat([original, Buffer.from("\n")]));
+      expect([relative, imageTag(fx.repo) === before]).toEqual([relative, false]);
+      writeFileSync(file, original);
+      expect(imageTag(fx.repo)).toBe(before);
+    }
+    // A missing Dockerfile makes the hash throw, naming it.
+    const oracleDockerfile = join(fx.repo, ORACLE_DIR, "Dockerfile");
+    const dockerfileBytes = readFileSync(oracleDockerfile);
+    rmSync(oracleDockerfile);
+    expect(() => imageHash(fx.repo)).toThrow(`${ORACLE_DIR}/Dockerfile is missing`);
+    const noDockerfile = await cli(["tag", "--root", fx.repo], env);
+    expect(noDockerfile.code).toBe(1);
+    expect(noDockerfile.stderr).toContain(`${ORACLE_DIR}/Dockerfile is missing`);
+    writeFileSync(oracleDockerfile, dockerfileBytes);
+    expect(imageTag(fx.repo)).toBe(before);
+    // A missing dockerignore makes the hash throw, naming it.
+    const oracleDockerignore = join(fx.repo, ORACLE_DIR, "Dockerfile.dockerignore");
+    const dockerignoreBytes = readFileSync(oracleDockerignore);
+    rmSync(oracleDockerignore);
+    expect(() => imageHash(fx.repo)).toThrow(`${ORACLE_DIR}/Dockerfile.dockerignore is missing`);
+    const noDockerignore = await cli(["tag", "--root", fx.repo], env);
+    expect(noDockerignore.code).toBe(1);
+    expect(noDockerignore.stderr).toContain(`${ORACLE_DIR}/Dockerfile.dockerignore is missing`);
+    writeFileSync(oracleDockerignore, dockerignoreBytes);
     expect(imageTag(fx.repo)).toBe(before);
 
     // Drifted lock: the snapshot composer.json changed.
@@ -504,7 +542,7 @@ test("XT-conformance-42: the image built from conformance/oracle/Dockerfile and 
   }
 }, 30_000);
 
-test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<lockhash>, and only oracle.yml#oracle holds packages: write or pushes (FR-6, AD-16)", () => {
+test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>, and only oracle.yml#oracle holds packages: write or pushes (FR-6, AD-16)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "oracle.yml"), "utf8");
   type Step = Record<string, unknown> & { uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; if?: string };
   const workflow = Bun.YAML.parse(text) as {
@@ -564,9 +602,9 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<lockhash>,
   expect(ALLOWED_WRITE_JOBS).toContain("oracle.yml#oracle");
   expect(checkWorkflows(root).violations).toEqual([]);
 
-  // The tag is `<Pin>-<lockhash>`.
+  // The tag is `<Pin>-<imagehash>` (locks, Dockerfile and dockerignore).
   expect(imageTag(root)).toMatch(/^v13\.37\.0-[0-9a-f]{12}$/);
-  expect(imageTag(root)).toBe(`${PIN[0]!.tag}-${lockHash(root)}`);
+  expect(imageTag(root)).toBe(`${PIN[0]!.tag}-${imageHash(root)}`);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["oracle:check"]).toBe("bun tools/oracle/oracle.ts check");
   expect(scripts["oracle:tag"]).toBe("bun tools/oracle/oracle.ts tag");

@@ -17,7 +17,7 @@ There is one lock per snapshot because Composer installs dev dependencies only f
 
 ## The tag
 
-The image tag is `<framework Pin>-<lockhash>`, for example `v13.37.0-924c1faf964b`. `<lockhash>` is the first 12 hex characters of the SHA-256 of the four locks' bytes, in pin order (framework, ai, mcp, boost). `bun run oracle:tag` prints it, offline. CI publishes the image as `ghcr.io/<owner>/xaravel-oracle:<tag>`.
+The image tag is `<framework Pin>-<imagehash>`, for example `v13.37.0-7a508f1c8287`. `<imagehash>` is the first 12 hex characters of the SHA-256 of the four locks in pin order (framework, ai, mcp, boost), then `conformance/oracle/Dockerfile`, then `conformance/oracle/Dockerfile.dockerignore`. Each input is hashed as `<repository-relative path>\0<byte length>\0<bytes>`. So a change to a lock, the Dockerfile or the dockerignore gets a new tag. The Upstream snapshot is not hashed: its framework tag is in the tag, and `oracle:check` pins every snapshot tag through the Dockerfile's `for pair in …` list. `bun run oracle:tag` prints it, offline. CI publishes the image as `ghcr.io/<owner>/xaravel-oracle:<tag>`.
 
 ## Commands
 

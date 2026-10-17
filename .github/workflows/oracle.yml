@@ -7,8 +7,10 @@
 #
 # `oracle` does the same on a push to main or a manual run from main, then
 # logs in to GHCR and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`, where the
-# tag is `<framework Pin>-<lockhash>` (`oracle:tag`). It is the only job that
-# holds `packages: write`, logs in to GHCR or pushes; the workflow
+# tag is `<framework Pin>-<imagehash>` (`oracle:tag`); the hash covers the four
+# locks, the Dockerfile and its dockerignore, so a change to any of them gets
+# a new tag. It is the only job that holds `packages: write`, logs in to GHCR
+# or pushes; the workflow
 # permissions check allows a write scope only in `oracle.yml#oracle`. The
 # GitHub token reaches Composer only as a BuildKit secret (docs/ops/oracle.md).
 name: oracle
