@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Install: sed "s|__HOME__|$HOME|g" tools/orchestrator/com.xaravel.orchestrator.plist > ~/Library/LaunchAgents/com.xaravel.orchestrator.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.xaravel.orchestrator</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__HOME__/repos/xaravel/tools/orchestrator/run.sh</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>300</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/.xaravel-orchestrator/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.xaravel-orchestrator/launchd.log</string>
+</dict>
+</plist>
