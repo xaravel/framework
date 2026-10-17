@@ -2,7 +2,7 @@
 title: 'Story 2.8: Baseline Pin bump tool'
 type: 'feature'
 created: '2026-10-17'
-status: 'blocked'
+status: 'draft'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
   - '{project-root}/stories/2.8.md'
