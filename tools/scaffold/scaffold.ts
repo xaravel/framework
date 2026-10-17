@@ -103,6 +103,9 @@ export function generatePackageJson(rows: readonly PackageRow[], row: PackageRow
   };
   if (row.private) {
     manifest.private = true;
+  } else {
+    // `npm publish --provenance` rejects a manifest whose repository does not match the building repo (AD-18).
+    manifest.repository = { type: "git", url: "git+https://github.com/xaravel/framework.git", directory: row.dir };
   }
   manifest.type = "module";
   manifest.engines = { bun: ">=1.4" };

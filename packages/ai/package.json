@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "Xaravel's port of laravel/ai, the Laravel AI SDK.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xaravel/framework.git",
+    "directory": "packages/ai"
+  },
   "type": "module",
   "engines": {
     "bun": ">=1.4"

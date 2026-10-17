@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "The htmx 4 Integration for Xaravel.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xaravel/framework.git",
+    "directory": "packages/htmx"
+  },
   "type": "module",
   "engines": {
     "bun": ">=1.4"

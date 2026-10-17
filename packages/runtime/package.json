@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "Xaravel runtime primitives: Scope Frames, the Class Registry, PHP values and codecs.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xaravel/framework.git",
+    "directory": "packages/runtime"
+  },
   "type": "module",
   "engines": {
     "bun": ">=1.4"

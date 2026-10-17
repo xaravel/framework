@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "Xaravel's port of Laravel's illuminate/macroable component.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xaravel/framework.git",
+    "directory": "packages/macroable"
+  },
   "type": "module",
   "engines": {
     "bun": ">=1.4"

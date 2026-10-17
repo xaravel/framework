@@ -28,7 +28,10 @@
     "ruleset:verify": "bun tools/ruleset/ruleset.ts verify",
     "ruleset:apply": "bun tools/ruleset/ruleset.ts apply",
     "ruleset:identity": "bun tools/ruleset/ruleset.ts identity",
-    "workflows:check": "bun tools/workflow-permissions/workflow-permissions.ts check"
+    "workflows:check": "bun tools/workflow-permissions/workflow-permissions.ts check",
+    "release:stamp": "bun tools/release/release.ts stamp",
+    "release:check": "bun tools/release/release.ts check",
+    "release:authority": "bun tools/release/release.ts authority"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",

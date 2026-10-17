@@ -13,7 +13,8 @@
     "tools/ownership/**/*.ts",
     "tools/escalations/**/*.ts",
     "tools/ruleset/**/*.ts",
-    "tools/workflow-permissions/**/*.ts"
+    "tools/workflow-permissions/**/*.ts",
+    "tools/release/**/*.ts"
   ],
   "references": [
     {
