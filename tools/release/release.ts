@@ -9,13 +9,16 @@
 //       entry's version, differs from the root's, or a public workspace's
 //       package.json lacks the `repository` that provenance needs
 //   bun tools/release/release.ts gate --tag <tag> --repo <owner/name>
+//                                     --sha <commit>
 //                                     [--github-output <file>] [--root <dir>]
 //       decides whether a pushed tag publishes; appends `publish=…` and
-//       `reason=…` to the file and prints the reason. It reads the live
-//       `release` environment (`GITHUB_API_URL`, default
-//       https://api.github.com; token from `GH_TOKEN`) and refuses unless it
-//       has required reviewers, every one is the Maintainer, and
-//       administrators cannot bypass them (`can_admins_bypass: false`)
+//       `reason=…` to the file and prints the reason. After the tag check it
+//       asks the GitHub API (`GITHUB_API_URL`, default https://api.github.com;
+//       token from `GH_TOKEN`) to compare `main...<commit>`, and refuses
+//       unless the tagged commit is on `main` (`identical` or `behind`). Then
+//       it reads the live `release` environment and refuses unless it has
+//       required reviewers, every one is the Maintainer, and administrators
+//       cannot bypass them (`can_admins_bypass: false`)
 //   bun tools/release/release.ts notes --tag <tag> [--root <dir>]
 //       prints the release notes, stating the Baseline Pin read from
 //       `conformance/baseline-pin`
@@ -54,6 +57,10 @@ export const WORKFLOWS_DIR = ".github/workflows";
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml";
 export const RELEASE_JOB = "release";
 export const RELEASE_ENVIRONMENT = "release";
+/** The branch a tagged commit must be on to publish; fixed, never read from the API (AD-16). */
+export const MAIN_BRANCH = "main";
+/** A full commit SHA, as `gate --sha` takes it. */
+export const COMMIT_SHA = /^[0-9a-f]{40}$/;
 /** The `repository.url` every public manifest needs; `npm publish --provenance` rejects any other. */
 export const REPOSITORY_URL = "git+https://github.com/xaravel/framework.git";
 /**
@@ -254,6 +261,62 @@ export function environmentDecision(json: unknown): Decision {
   return { publish: true, reason: `the ${RELEASE_ENVIRONMENT} environment requires the Maintainer's (${MAINTAINER}) approval` };
 }
 
+function apiHeaders(token: string): Record<string, string> {
+  return {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${token}`,
+    "User-Agent": "xaravel-release",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+/**
+ * Whether commit `sha` is on `main`, from the API's JSON for
+ * `GET /repos/<repo>/compare/main...<sha>`: `identical` (it is main's tip) or
+ * `behind` (an ancestor of main) publish; `ahead`, `diverged` or anything else
+ * refuses, since the commit then holds changes main lacks.
+ */
+export function mainDecision(sha: string, json: unknown): Decision {
+  const compared = `compare ${MAIN_BRANCH}...${sha}`;
+  const status = isObject(json) && typeof json["status"] === "string" ? json["status"] : null;
+  if (status === null) {
+    return { publish: false, reason: `${compared} returned no status, so commit ${sha} cannot be verified to be on ${MAIN_BRANCH} and nothing is published` };
+  }
+  if (status === "identical" || status === "behind") {
+    return { publish: true, reason: `commit ${sha} is on ${MAIN_BRANCH} (${compared}: ${status})` };
+  }
+  return { publish: false, reason: `commit ${sha} is not on ${MAIN_BRANCH} (${compared}: ${status}), so nothing is published` };
+}
+
+/** Asks the API whether the tagged commit is on `main` and decides; any failure refuses. */
+async function liveMainDecision(api: string, repo: string, sha: string, token: string | null): Promise<Decision> {
+  const unverified = `commit ${sha} cannot be verified to be on ${MAIN_BRANCH} and nothing is published`;
+  if (token === null) {
+    return { publish: false, reason: `GH_TOKEN is not set, so ${unverified}` };
+  }
+  // `refs/heads/` so a tag named `main` cannot stand in for the branch.
+  const path = `/repos/${repo}/compare/refs/heads/${MAIN_BRANCH}...${sha}`;
+  let response: Response;
+  try {
+    response = await fetch(`${api}${path}`, { headers: apiHeaders(token) });
+  } catch (error) {
+    return { publish: false, reason: `GET ${path} failed (${error instanceof Error ? error.message : String(error)}), so ${unverified}` };
+  }
+  if (response.status === 404) {
+    return { publish: false, reason: `commit ${sha} is unknown or shares no history with ${MAIN_BRANCH} (GET ${path}: HTTP 404), so nothing is published` };
+  }
+  if (!response.ok) {
+    return { publish: false, reason: `GET ${path}: HTTP ${response.status}, so ${unverified}` };
+  }
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    return { publish: false, reason: `GET ${path} did not return JSON, so ${unverified}` };
+  }
+  return mainDecision(sha, json);
+}
+
 /** Reads the live `release` environment and decides; any failure refuses. */
 async function liveEnvironmentDecision(api: string, repo: string, token: string | null): Promise<Decision> {
   if (token === null) {
@@ -262,14 +325,7 @@ async function liveEnvironmentDecision(api: string, repo: string, token: string 
   const path = `/repos/${repo}/environments/${RELEASE_ENVIRONMENT}`;
   let response: Response;
   try {
-    response = await fetch(`${api}${path}`, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "User-Agent": "xaravel-release",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
+    response = await fetch(`${api}${path}`, { headers: apiHeaders(token) });
   } catch (error) {
     return { publish: false, reason: `GET ${path} failed (${error instanceof Error ? error.message : String(error)}), so nothing is published` };
   }
@@ -530,12 +586,13 @@ interface Options {
   root: string;
   tag: string | null;
   repo: string | null;
+  sha: string | null;
   githubOutput: string | null;
   out: string | null;
 }
 
 function parseOptions(argv: readonly string[], allowed: readonly string[]): Options {
-  const options: Options = { root: repoRoot(), tag: null, repo: null, githubOutput: null, out: null };
+  const options: Options = { root: repoRoot(), tag: null, repo: null, sha: null, githubOutput: null, out: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (!allowed.includes(arg)) {
@@ -554,6 +611,11 @@ function parseOptions(argv: readonly string[], allowed: readonly string[]): Opti
         throw new UsageError(`--repo must be <owner/name>, got ${JSON.stringify(value)}`);
       }
       options.repo = value;
+    } else if (arg === "--sha") {
+      if (!COMMIT_SHA.test(value)) {
+        throw new UsageError(`--sha must be a 40-character lowercase hex commit, got ${JSON.stringify(value)}`);
+      }
+      options.sha = value;
     } else if (arg === "--github-output") {
       options.githubOutput = resolve(value);
     } else if (arg === "--out") {
@@ -596,18 +658,24 @@ function checkCommand(options: Options): number {
 }
 
 async function gateCommand(options: Options): Promise<number> {
-  if (options.tag === null || options.repo === null) {
-    throw new UsageError("gate needs --tag <tag> and --repo <owner/name>");
+  if (options.tag === null || options.repo === null || options.sha === null) {
+    throw new UsageError("gate needs --tag <tag>, --repo <owner/name> and --sha <commit>");
   }
+  // Tag, then main, then environment: a bad tag never reaches the API.
   let decision = tagDecision(options.tag, rootVersion(options.root));
   if (decision.publish) {
     const api = (process.env["GITHUB_API_URL"] || "https://api.github.com").replace(/\/+$/, "");
     const token = process.env["GH_TOKEN"] || null;
-    const environment = await liveEnvironmentDecision(api, options.repo, token);
-    if (!environment.publish) {
-      decision = environment;
+    const main = await liveMainDecision(api, options.repo, options.sha, token);
+    if (!main.publish) {
+      decision = main;
     } else {
-      decision = { publish: true, reason: `${decision.reason}, and ${environment.reason}` };
+      const environment = await liveEnvironmentDecision(api, options.repo, token);
+      if (!environment.publish) {
+        decision = environment;
+      } else {
+        decision = { publish: true, reason: `${decision.reason}, ${main.reason}, and ${environment.reason}` };
+      }
     }
   }
   const reason = decision.reason.replace(/[\r\n]+/g, " ");
@@ -659,7 +727,7 @@ const USAGE = [
   "Usage:",
   "  bun tools/release/release.ts stamp [--root <dir>]",
   "  bun tools/release/release.ts check [--root <dir>]",
-  "  bun tools/release/release.ts gate --tag <tag> --repo <owner/name> [--github-output <file>] [--root <dir>]",
+  "  bun tools/release/release.ts gate --tag <tag> --repo <owner/name> --sha <commit> [--github-output <file>] [--root <dir>]",
   "  bun tools/release/release.ts notes --tag <tag> [--root <dir>]",
   "  bun tools/release/release.ts pack --out <dir> [--root <dir>]",
   "  bun tools/release/release.ts authority [--root <dir>]",
@@ -674,7 +742,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       case "check":
         return checkCommand(parseOptions(rest, ["--root"]));
       case "gate":
-        return await gateCommand(parseOptions(rest, ["--tag", "--repo", "--github-output", "--root"]));
+        return await gateCommand(parseOptions(rest, ["--tag", "--repo", "--sha", "--github-output", "--root"]));
       case "notes":
         return notesCommand(parseOptions(rest, ["--tag", "--root"]));
       case "pack":
