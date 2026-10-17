@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'in-progress'
+status: 'in-review'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -117,6 +117,38 @@ deferred: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+### 2026-10-17 — Review pass
+- verdicts: 28 findings — high 1, medium 9, low 14, false 2, maybe-false 2
+- findings:
+  - `[medium]` `[patch]` (intent-alignment) the committed Inventory still holds `null`/`{}` everywhere, so XT-56..58 fail and the diff delivers only the tooling — planned flow: the CI `merge` artifact is committed onto the PR before merge; done in the Auto Run Result.
+  - `[low]` `[patch]` (verification-gap) no test runs `generate()` over a valid baselined file — XT-49 and XT-53 now seed one and check carry-over and the changed-hash reset.
+  - `[medium]` `[patch]` (verification-gap) baseline.yml's path filter omits the Inventory, `tools/inventory`, the pin and `tools/upstream`, so a hand edit is never checked — paths added; the test expectation updated.
+  - `[medium]` `[defer]` (verification-gap) recorder.php and runner.php are checked only by source needles — `bun test` may not need PHP; the CI legs run them for real, but no fixture self-test exists.
+  - `[medium]` `[patch]` (blind) committed-data assertions fail on the branch — same root as the intent-alignment row.
+  - `[medium]` `[patch]` (blind) path filter — same root as the verification-gap row.
+  - `[high]` `[patch]` (blind) the image lacks extensions Upstream's CI loads, so outcomes reflect the image — confirmed by CI: every framework leg failed listing (`Class "Pdo\Mysql" not found`); the image now matches Upstream's Linux set (pdo_mysql, intl, zip, pcntl, gd, igbinary, msgpack, memcached, imagick, redis with Upstream's configure options).
+  - `[low]` `[patch]` (blind) the `redis` variant omits `CACHE_STORE=redis` that Upstream's redis.yml sets for Cache tests — added to `redis` only.
+  - `[false]` `[reject]` (blind) `phpunit.xml.dist` sets REDIS_HOST so `none` tests reach Redis — those lines are commented out in the snapshot; redis-using tests are tagged `redis`. Local env leakage is a developer-run concern only.
+  - `[medium]` `[defer]` (blind) recorder/runner have no executable coverage — same root as the verification-gap defer.
+  - `[low]` `[reject]` (blind) a process-killing Upstream test discards the whole leg — fails loudly with the missing IDs named, which is fail-closed; none at the Pin (every leg completes).
+  - `[low]` `[reject]` (blind) `previousEntries` swallows a malformed existing file — committed files are parse-checked by `bun test`, so the state is not reachable on main; fail-closed would add a migration flag.
+  - `[low]` `[reject]` (blind) `assertions` maximum includes skip/fail variants — the spec's chosen rule ("each kind's maximum over those variants"); changing it is a spec decision.
+  - `[low]` `[reject]` (blind) 20 jobs each build the image twice — cost only; runs on relevant PRs and dispatch.
+  - `[low]` `[patch]` (blind) the `not an Inventory entry tagged` merge problem is untested — fixture assertion added.
+  - `[low]` `[patch]` (blind) docs/ops/inventory.md's Pest example lacks the new keys — added.
+  - `[low]` `[patch]` (blind) recorder's two json_encode calls use different flags — unified.
+  - `[low]` `[reject]` (blind) obfuscated test literals and a duplicated total count — the literals avoid XT-conformance-44's scan for `tools/oracle`; the count is pinned the same way in sibling tests.
+  - `[medium]` `[patch]` (edge-case) path filter — same root as the verification-gap row.
+  - `[maybe-false]` `[reject]` (edge-case) a leg with zero tagged entries writes an empty file list — every leg has tagged entries at the Pin; it fails loudly if not; would only be low.
+  - `[low]` `[reject]` (edge-case) a failed run leaves an earlier results file in `--out` — CI uses fresh directories; local-only.
+  - `[maybe-false]` `[reject]` (edge-case) `tearDownAfterClass` errors are not recorded — the tests themselves passed and PHPUnit reports them passed; would only be low.
+  - `[low]` `[reject]` (edge-case) merge over an empty root exits 0 — not reachable from the workflow (the Inventory is committed).
+  - `[low]` `[reject]` (edge-case) a write failure part-way leaves a half-merged Inventory — git restores it; atomic rename adds machinery.
+  - `[low]` `[reject]` (edge-case) concurrent local runs share the generated config name — single-user local tool.
+  - `[medium]` `[patch]` (edge-case) `pecl install redis-6.3.0` is fetched without a checksum — every PECL tarball is now sha256-verified before building.
+  - `[medium]` `[patch]` (edge-case) committed data — same root as the intent-alignment row.
+  - `[false]` `[reject]` (edge-case) the recorder uses a stream wrapper rather than the spec's `eval` — a deliberate deviation (PHPUnit preload `require_once` would redeclare the class); the fix would edit the spec; recorded in the Auto Run Result.
 
 ## Design Notes
 

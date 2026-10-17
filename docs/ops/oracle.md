@@ -4,7 +4,11 @@ The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Storie
 
 ## What the image holds
 
-- PHP 8.5.11: `php:8.5.11-cli-trixie`, pinned by digest, plus the `gmp` extension (and `ftp` if the base lacks it), which the locks need, and `pdo_pgsql` and phpredis (`pecl install redis-6.3.0`), which the baseline run's `pgsql` and redis variants need.
+- PHP 8.5.11: `php:8.5.11-cli-trixie`, pinned by digest, plus the `gmp` extension (and `ftp` if the base lacks it), which the locks need. For the baseline run ([baseline.md](baseline.md)) it also has Upstream's Linux CI extension set (`conformance/upstream/framework/.github/workflows/tests.yml`), so no Upstream test records a skip the image caused:
+  - `pdo_mysql`, `pdo_pgsql`, `intl`, `zip`, `pcntl` and `gd` (with freetype, jpeg and webp), built with `docker-php-ext-install`;
+  - the PECL extensions igbinary 3.2.17RC1, msgpack 3.0.1, redis 6.3.0, memcached 3.4.0 and imagick 3.8.1. Each source is downloaded from `https://pecl.php.net/get/<name>-<version>.tgz` and checked against its pinned SHA-256 before it is built. igbinary and msgpack are built first, and redis is configured as Upstream's CI configures it: `--enable-redis-igbinary --enable-redis-msgpack --enable-redis-lzf --with-liblzf --enable-redis-zstd --with-libzstd --enable-redis-lz4 --with-liblz4`.
+
+  The build fails unless `php -m` lists every extension.
 - Composer 2.10.3, copied from the digest-pinned `composer:2.10.3` image.
 - The Upstream snapshot at `/oracle/upstream/{framework,ai,mcp,boost}/`, copied unmodified from `conformance/upstream/`. Each directory has its dev dependencies installed into its own `vendor/` from its own lock: PHPUnit, Mockery and Orchestra Testbench Core for `laravel/framework`, and Pest, PHPUnit, Mockery and Orchestra Testbench for `laravel/ai`, `laravel/mcp` and `laravel/boost`.
 

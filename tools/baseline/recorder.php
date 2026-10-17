@@ -122,7 +122,7 @@ final class Recorder
         $classes = \array_keys(self::$classOutcomes);
         \sort($classes, \SORT_STRING);
         foreach ($classes as $class) {
-            $lines .= \json_encode(['test' => null, 'class' => $class, 'outcome' => self::$classOutcomes[$class], 'assertions' => new \stdClass], \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR)."\n";
+            $lines .= \json_encode(['test' => null, 'class' => $class, 'outcome' => self::$classOutcomes[$class], 'assertions' => new \stdClass], \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_INVALID_UTF8_SUBSTITUTE | \JSON_THROW_ON_ERROR)."\n";
         }
         if ($lines !== '' && \file_put_contents(self::$out, $lines, \FILE_APPEND | \LOCK_EX) === false) {
             \fwrite(\STDERR, 'recorder: cannot write '.self::$out."\n");

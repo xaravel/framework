@@ -232,6 +232,18 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
       }),
     ).toThrow("the lister failed: php /xaravel/lister.php in x failed (exit 1): lister: expected PHP 8.5.11, running PHP 8.4.0");
 
+    // Carry-over (Story 2.6): a baselined entry whose id, hash and backends are unchanged keeps assertions and
+    // oracle byte for byte; an entry whose hash changed comes back null / {}.
+    const baselined = files["support.jsonl"]!.replaceAll('"assertions":null,"oracle":{}', '"assertions":{"assertSame":2,"assertTrue":1},"oracle":{"none":"pass"}');
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), baselined);
+    const changed = RAWS.map((entry) => (entry.id === `${STR}::testAscii#1` ? { ...entry, data: "[0=>'c']" } : entry));
+    generate(fx.dir, { runner: () => rawText(changed) });
+    const carried = fx.inventory()["support.jsonl"]!.split("\n");
+    const before = baselined.split("\n");
+    expect([carried[0], carried[2]]).toEqual([before[0], before[2]]);
+    expect(JSON.parse(carried[1]!)).toMatchObject({ id: `${STR}::testAscii#1`, hash: testHash(TOKENS, "[0=>'c']"), assertions: null, oracle: {} });
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), files["support.jsonl"]!);
+
     // Unmapped: a raw test file no map entry matches.
     fx.setRaw([...RAWS, raw({ class: "Illuminate\\Tests\\Nowhere\\XTest", method: "testX", file: "tests/Nowhere/XTest.php" })]);
     writeFiles(join(fx.dir, "conformance", "upstream", "framework"), { "tests/Nowhere/XTest.php": "<?php\n".repeat(20) });

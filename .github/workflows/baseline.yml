@@ -23,7 +23,11 @@ on:
     paths:
       - tools/baseline/**
       - tools/oracle/**
+      - tools/inventory/**
+      - tools/upstream/**
       - conformance/oracle/**
+      - conformance/inventory/**
+      - conformance/baseline-pin
       - .github/workflows/baseline.yml
   workflow_dispatch:
 

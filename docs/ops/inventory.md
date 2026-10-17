@@ -78,7 +78,7 @@ A whitespace-only or comment-only edit leaves the hash unchanged. A code-token o
 `laravel/ai`, `laravel/mcp` and `laravel/boost` are tested with Pest 4 (on PHPUnit 12). Each suite is one Component of the same name, so its entries go to `ai.jsonl`, `mcp.jsonl` or `boost.jsonl`, and every entry's `component` is `componentForTest(map, "<suite>/<test file>")`, which must equal the suite. A file the map gives to another Component fails the run. The record, its key order (with `assertions` and `oracle`), the sorting, the file format and the hash formula are the framework's.
 
 ```
-{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it filters by prefix and returns all when empty","component":"mcp","kind":"unit","backends":["none"],"source":"mcp/tests/Feature/CompletionTest.php:250-260","hash":"…"}
+{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it filters by prefix and returns all when empty","component":"mcp","kind":"unit","backends":["none"],"source":"mcp/tests/Feature/CompletionTest.php:250-260","hash":"…","assertions":{"assertSame":2},"oracle":{"none":"pass"}}
 ```
 
 ### What the lister does in Pest mode

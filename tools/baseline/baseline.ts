@@ -74,7 +74,7 @@ export const VARIANT_ENV: Readonly<Record<string, Readonly<Record<string, string
   "queue-database@sqlite": { ...SQLITE, QUEUE_CONNECTION: "database" },
   "queue-redis@redis": { ...REDIS, QUEUE_CONNECTION: "redis" },
   "queue-sync@none": { QUEUE_CONNECTION: "sync" },
-  redis: REDIS,
+  redis: { ...REDIS, CACHE_STORE: "redis" },
   sqlite: SQLITE,
 };
 /** The variants whose run first creates Testbench's SQLite database (`vendor/bin/testbench package:create-sqlite-db`). */

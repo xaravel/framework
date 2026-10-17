@@ -50,8 +50,8 @@ The alpha variants are `none`, `sqlite`, `pgsql`, `redis`, `queue-sync@none`, `q
 | `none` | none |
 | `sqlite` | `DB_CONNECTION=sqlite`, after `vendor/bin/testbench package:create-sqlite-db` |
 | `pgsql` | `DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=laravel DB_USERNAME=forge DB_PASSWORD=password` |
-| `redis` | `REDIS_CLIENT=phpredis REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_CACHE_CONNECTION=cache REDIS_CACHE_LOCK_CONNECTION=cache` |
-| `queue-<driver>@<backend>` | the backend's environment plus `QUEUE_CONNECTION=<driver>` |
+| `redis` | `REDIS_CLIENT=phpredis REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_CACHE_CONNECTION=cache REDIS_CACHE_LOCK_CONNECTION=cache CACHE_STORE=redis` (Upstream's redis workflow runs the Cache suite with `CACHE_STORE=redis`) |
+| `queue-<driver>@<backend>` | the backend's environment plus `QUEUE_CONNECTION=<driver>`; `queue-redis@redis` uses the `redis` environment without `CACHE_STORE` |
 
 The recipes follow Upstream's `databases.yml`, `queues.yml` and `redis.yml` workflows. `phpunit.xml.dist` sets `DB_CONNECTION=testing` without `force`, so the variant's value wins. The legs are the framework on each alpha variant (7) and ai, mcp and boost on `none` (3). The Pest suites have only `none` entries.
 
@@ -85,7 +85,7 @@ The recipes follow Upstream's `databases.yml`, `queues.yml` and `redis.yml` work
 
 ## The workflow (`.github/workflows/baseline.yml`)
 
-The workflow runs on a pull request to `main` that touches `tools/baseline/**`, `tools/oracle/**`, `conformance/oracle/**` or the workflow itself, and on `workflow_dispatch`. Its permissions are `contents: read` and no job holds a write scope.
+The workflow runs on a pull request to `main` that touches `tools/baseline/**`, `tools/oracle/**`, `tools/inventory/**`, `tools/upstream/**`, `conformance/oracle/**`, `conformance/inventory/**`, `conformance/baseline-pin` or the workflow itself, and on `workflow_dispatch`. Its permissions are `contents: read` and no job holds a write scope.
 
 - **`leg`.** A matrix of the 10 legs × attempt {1, 2}, with the services `postgres:18` (database `laravel`, user `forge`, password `password`) and `redis:8.10.2` on their default ports. Each job builds and verifies the Oracle image with `bun run oracle:build "xaravel-oracle:<tag>"`, then runs `bun run baseline run --suite <s> --variant <v> --attempt <n> --out baseline-results`, and uploads the result as the artifact `baseline-<suite>.<variant>.<attempt>`.
 - **`merge`.** It downloads every `baseline-*` artifact into one directory, then runs `bun run baseline merge --in baseline-results`. It uploads `conformance/inventory/` as the `inventory` artifact, and fails when the committed Inventory differs from it (`git diff --exit-code conformance/inventory`).

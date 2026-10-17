@@ -266,6 +266,18 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
     expect(generate(fx.dir, { runner: suiteRunner(framework) }).counts).toEqual({ support: 1 });
     expect(framework.length).toBe(1);
 
+    // Carry-over (Story 2.6): a baselined entry whose id, hash and backends are unchanged keeps assertions and
+    // oracle byte for byte; an entry whose hash changed comes back null / {}.
+    const baselined = mcp.replaceAll('"assertions":null,"oracle":{}', '"assertions":{"assertSame":1},"oracle":{"none":"skip"}');
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "mcp.jsonl"), baselined);
+    const changed = PEST_RAWS.mcp.map((entry) => (entry.name === "it x" ? { ...entry, tokens: [...entry.tokens, "cfoo"] } : entry));
+    generate(fx.dir, { suite: "mcp", runner: () => rawText(changed) });
+    const carried = fx.inventory()["mcp.jsonl"]!.split("\n");
+    const baselinedLines = baselined.split("\n");
+    expect([carried[0], carried[2], carried[3]]).toEqual([baselinedLines[0], baselinedLines[2], baselinedLines[3]]);
+    expect(JSON.parse(carried[1]!)).toMatchObject({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", assertions: null, oracle: {} });
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "mcp.jsonl"), mcp);
+
     // kind: Integration/ is integration; backends: attribute drivers plus redis, no directory or queue rules.
     const ai = parseInventory(fx.inventory()["ai.jsonl"]!, "ai.jsonl", "ai");
     expect(ai.map((entry) => [entry.id, entry.kind])).toEqual([

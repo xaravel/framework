@@ -182,10 +182,10 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(VARIANT_ENV["none"]).toEqual({});
   expect(VARIANT_ENV["sqlite"]).toEqual({ DB_CONNECTION: "sqlite" });
   expect(VARIANT_ENV["pgsql"]).toEqual({ DB_CONNECTION: "pgsql", DB_HOST: "127.0.0.1", DB_PORT: "5432", DB_DATABASE: "laravel", DB_USERNAME: "forge", DB_PASSWORD: "password" });
-  expect(VARIANT_ENV["redis"]).toEqual({ REDIS_CLIENT: "phpredis", REDIS_HOST: "127.0.0.1", REDIS_PORT: "6379", REDIS_CACHE_CONNECTION: "cache", REDIS_CACHE_LOCK_CONNECTION: "cache" });
+  expect(VARIANT_ENV["redis"]).toEqual({ REDIS_CLIENT: "phpredis", REDIS_HOST: "127.0.0.1", REDIS_PORT: "6379", REDIS_CACHE_CONNECTION: "cache", REDIS_CACHE_LOCK_CONNECTION: "cache", CACHE_STORE: "redis" });
   expect(VARIANT_ENV["queue-sync@none"]).toEqual({ QUEUE_CONNECTION: "sync" });
   expect(VARIANT_ENV["queue-database@sqlite"]).toEqual({ DB_CONNECTION: "sqlite", QUEUE_CONNECTION: "database" });
-  expect(VARIANT_ENV["queue-redis@redis"]).toEqual({ ...VARIANT_ENV["redis"], QUEUE_CONNECTION: "redis" });
+  expect(VARIANT_ENV["queue-redis@redis"]).toEqual({ REDIS_CLIENT: "phpredis", REDIS_HOST: "127.0.0.1", REDIS_PORT: "6379", REDIS_CACHE_CONNECTION: "cache", REDIS_CACHE_LOCK_CONNECTION: "cache", QUEUE_CONNECTION: "redis" });
   expect(SQLITE_VARIANTS).toEqual(["queue-database@sqlite", "sqlite"]);
   expect(LEGS as readonly { suite: string; variant: string }[]).toEqual([...ALPHA_VARIANTS.map((variant) => ({ suite: "framework", variant })), { suite: "ai", variant: "none" }, { suite: "mcp", variant: "none" }, { suite: "boost", variant: "none" }]);
 
@@ -342,16 +342,21 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(runnerPhp).toContain("'--do-not-cache-result'");
   expect(runnerPhp).toContain("Xaravel\\\\Baseline\\\\Extension");
 
-  // The image: pdo_pgsql and a pinned phpredis.
+  // The image: Upstream's Linux CI extension set, PECL sources checked against pinned sha256, redis configured as Upstream does.
   const dockerfile = readFileSync(join(root, "conformance", "oracle", "Dockerfile"), "utf8");
-  expect(dockerfile).toMatch(/-php-ext-install -j"\$\(nproc\)" gmp pdo_pgsql;/);
-  expect(dockerfile).toMatch(/pecl install redis-\d+\.\d+\.\d+;/);
-  expect(dockerfile).toMatch(/-php-ext-enable redis;/);
+  expect(dockerfile).toMatch(/-php-ext-install -j"\$\(nproc\)" gmp pdo_mysql pdo_pgsql intl zip pcntl gd;/);
+  expect(dockerfile).toMatch(/-php-ext-configure gd --with-freetype --with-jpeg --with-webp;/);
+  expect(dockerfile).toContain('echo "$sha  /tmp/pecl/$name.tgz" | sha256sum -c -;');
+  const pecl = [...dockerfile.matchAll(/pecl_build (\w+) (\S+) ([0-9a-f]{64})/g)].map((m) => `${m[1]}-${m[2]}`);
+  expect(pecl).toEqual(["igbinary-3.2.17RC1", "msgpack-3.0.1", "redis-6.3.0", "memcached-3.4.0", "imagick-3.8.1"]);
+  expect(dockerfile).toContain("--enable-redis --enable-redis-igbinary --enable-redis-msgpack --enable-redis-lzf --with-liblzf --enable-redis-zstd --with-libzstd --enable-redis-lz4 --with-liblz4;");
+  expect(dockerfile).toContain("for ext in gmp ftp pdo_mysql pdo_pgsql intl zip pcntl gd igbinary msgpack redis memcached imagick; do");
+  expect(dockerfile).not.toContain("pecl install");
 
   // The workflow: read-only, SHA-pinned, its triggers, legs x attempts, the services, the merge job.
   const wf = workflow();
   expect(wf["permissions"]).toEqual({ contents: "read" });
-  expect(wf["on"]).toEqual({ pull_request: { branches: ["main"], paths: ["tools/baseline/**", ["tools", "oracle", "**"].join("/"), "conformance/oracle/**", ".github/workflows/baseline.yml"] }, workflow_dispatch: null });
+  expect(wf["on"]).toEqual({ pull_request: { branches: ["main"], paths: ["tools/baseline/**", ["tools", "oracle", "**"].join("/"), "tools/inventory/**", "tools/upstream/**", "conformance/oracle/**", "conformance/inventory/**", "conformance/baseline-pin", ".github/workflows/baseline.yml"] }, workflow_dispatch: null });
   const jobs = wf["jobs"] as Record<string, Record<string, unknown>>;
   expect(Object.keys(jobs)).toEqual(["leg", "merge"]);
   const matrix = (jobs["leg"]!["strategy"] as { matrix: { attempt: number[]; leg: { suite: string; variant: string }[] } }).matrix;
@@ -465,6 +470,16 @@ test("XT-conformance-58: two attempts on the same Pin merge into the Inventory w
     writeAttempts({ [resultsFile("framework", "none", 2)]: [result(id, "pass", { assertSame: 1 })] });
     const noId = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
     expect([noId.code, noId.stderr]).toEqual([1, `Baseline merge failed: the baseline results do not merge (1 problems):\n  missing result: ${QUEUEABLE}::testOnConnection#uses string on none (attempt 2, framework.none.2.jsonl)\n`]);
+    expect(fx.inventory()).toEqual(before);
+
+    // A result for an ID the Inventory does not tag with that variant: named, exit 1, nothing written.
+    const extra = [result(`${QUEUEABLE}::testOnConnection#uses string`, "pass", { assertSame: 2 }), result(id, "pass", { assertSame: 1 }), result(`${PGSQL_TEST}::testWhereFulltext`, "pass")];
+    writeAttempts({ [resultsFile("framework", "none", 1)]: extra, [resultsFile("framework", "none", 2)]: extra });
+    const untagged = await cli(["merge", "--root", fx.dir, "--in", fx.out]);
+    expect([untagged.code, untagged.stderr]).toEqual([
+      1,
+      `Baseline merge failed: the baseline results do not merge (2 problems):\n  framework.none.1.jsonl: ${PGSQL_TEST}::testWhereFulltext is not an Inventory entry tagged none\n  framework.none.2.jsonl: ${PGSQL_TEST}::testWhereFulltext is not an Inventory entry tagged none\n`,
+    ]);
     expect(fx.inventory()).toEqual(before);
 
     // Identical attempts: written, and merging again changes nothing.
