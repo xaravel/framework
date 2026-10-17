@@ -46,7 +46,7 @@ development_status:
   1-8-lockstep-release-workflow-with-provenance: done
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done
   2-1-upstream-snapshot-and-pin-record: done
   2-2-oracle-container-image: done
   2-3-test-directory-component-map: done
@@ -54,7 +54,7 @@ development_status:
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: done
   2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: done
   2-7-inventory-determinism-and-runner-listing-cross-check: done
-  2-8-baseline-pin-bump-tool: in-progress  # ESC-2.8-1 approved (decisions/ESC-2.8-1.md)
+  2-8-baseline-pin-bump-tool: done
   epic-2-retrospective: optional
 
   epic-3: backlog
