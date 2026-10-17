@@ -52,7 +52,7 @@ development_status:
   2-3-test-directory-component-map: done
   2-4-phpunit-test-inventory-for-laravel-framework: done
   2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: done
-  2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: backlog
+  2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: blocked  # Oracle non-determinism: an Upstream test makes a random number of assertions; ESC-2.6-1 (implementation on PR #51)
   2-7-inventory-determinism-and-runner-listing-cross-check: backlog
   2-8-baseline-pin-bump-tool: backlog
   epic-2-retrospective: optional
