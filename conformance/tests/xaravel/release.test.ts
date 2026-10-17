@@ -581,7 +581,15 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
     expect(bad.code).toBe(2);
     expect(bad.stderr).toContain("--sha must be a 40-character lowercase hex commit");
   }
-  expect((await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y", "--sha", SHA, "--root", join(tmpdir(), "xaravel-release-missing")])).code).toBe(1);
+  // It still records `publish=false` and the reason before failing.
+  await withRoot({}, async (dir) => {
+    const outputFile = join(dir, "github-output");
+    const unreadable = await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y", "--sha", SHA, "--github-output", outputFile, "--root", join(dir, "missing")]);
+    expect(unreadable.code).toBe(1);
+    expect(readFileSync(outputFile, "utf8")).toMatch(/^publish=false\nreason=gate failed: [^\n]+\n$/);
+    expect(unreadable.stdout).toMatch(/^Not publishing: gate failed: /);
+    expect(unreadable.stderr).toContain("Release gate failed: ");
+  });
 
   // release.yml triggers on every tag, and only on tags.
   const { data } = workflow("release.yml");
@@ -612,6 +620,15 @@ test("XT-conformance-37: the release notes state the Baseline Pin read from conf
     expect(notes.stdout).toContain("- `@fixture/alpha@0.1.0`\n- `@fixture/beta@0.1.0`\n");
     expect(notes.stdout).not.toContain("skeleton");
     expect(notes.stdout).not.toContain("v13.37.0");
+  });
+  // A tag that is not the root version, or not a v0 tag, gets no notes.
+  await withRoot(fixtureFiles("0.1.0"), async (dir) => {
+    for (const tag of ["v0.2.0", "v1.0.0"]) {
+      const refused = await runCli(["notes", "--tag", tag, "--root", dir]);
+      expect(refused.code).toBe(1);
+      expect(refused.stdout).toBe("");
+      expect(refused.stderr).toContain(tag);
+    }
   });
   // A missing or empty pin fails.
   const files = fixtureFiles("0.1.0");

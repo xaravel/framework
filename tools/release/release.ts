@@ -661,16 +661,34 @@ async function gateCommand(options: Options): Promise<number> {
   if (options.tag === null || options.repo === null || options.sha === null) {
     throw new UsageError("gate needs --tag <tag>, --repo <owner/name> and --sha <commit>");
   }
+  try {
+    return await decideGate(options, options.tag, options.repo, options.sha);
+  } catch (error) {
+    // An internal failure still records `publish=false` and why, then fails the job (exit 1).
+    writeGate(options, { publish: false, reason: `gate failed: ${error instanceof Error ? error.message : String(error)}` });
+    throw error;
+  }
+}
+
+function writeGate(options: Options, decision: Decision): void {
+  const reason = decision.reason.replace(/[\r\n]+/g, " ");
+  if (options.githubOutput !== null) {
+    appendFileSync(options.githubOutput, `publish=${decision.publish}\nreason=${reason}\n`);
+  }
+  process.stdout.write(`${decision.publish ? "Publishing" : "Not publishing"}: ${reason}\n`);
+}
+
+async function decideGate(options: Options, tag: string, repo: string, sha: string): Promise<number> {
   // Tag, then main, then environment: a bad tag never reaches the API.
-  let decision = tagDecision(options.tag, rootVersion(options.root));
+  let decision = tagDecision(tag, rootVersion(options.root));
   if (decision.publish) {
     const api = (process.env["GITHUB_API_URL"] || "https://api.github.com").replace(/\/+$/, "");
     const token = process.env["GH_TOKEN"] || null;
-    const main = await liveMainDecision(api, options.repo, options.sha, token);
+    const main = await liveMainDecision(api, repo, sha, token);
     if (!main.publish) {
       decision = main;
     } else {
-      const environment = await liveEnvironmentDecision(api, options.repo, token);
+      const environment = await liveEnvironmentDecision(api, repo, token);
       if (!environment.publish) {
         decision = environment;
       } else {
@@ -678,11 +696,7 @@ async function gateCommand(options: Options): Promise<number> {
       }
     }
   }
-  const reason = decision.reason.replace(/[\r\n]+/g, " ");
-  if (options.githubOutput !== null) {
-    appendFileSync(options.githubOutput, `publish=${decision.publish}\nreason=${reason}\n`);
-  }
-  process.stdout.write(`${decision.publish ? "Publishing" : "Not publishing"}: ${reason}\n`);
+  writeGate(options, decision);
   return 0;
 }
 
