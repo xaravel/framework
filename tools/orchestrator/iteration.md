@@ -24,6 +24,7 @@ Every comment you post on ISSUE starts with `🤖 `. Comments without that prefi
 A. **Open orchestrator PR.** If an open PR exists from a `story/*` or `planning/*` branch that this orchestrator opened (its body ends with `Opened by the Xaravel orchestrator.`), finish it before you start anything new:
    - Check out its branch.
    - If checks are still running, wait for them: `gh pr checks <n> --watch --fail-fast`, up to 30 minutes.
+   - A `protected-paths` failure that section 4 step 3 calls expected is not a failure here.
    - If checks fail, read the failing logs, fix the cause on the branch, commit, push and wait again. If a branch has failed three iterations in a row (count the earlier `[orchestrator fix]` commits on it), stop retrying: mark the Story `blocked` in sprint status and comment on ISSUE.
    - If it is green and mergeable, merge it (see section 4). Outcome `progress`.
    - If it can't be merged because it waits on the Maintainer, leave it open and move on to B–I.
@@ -100,7 +101,9 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 1. `git push -u origin <branch>`.
 2. `gh pr create --title "<story-id>: <title>" --body "<what changed, how it was verified, the Story spec path>\n\nOpened by the Xaravel orchestrator."`
 3. Wait for checks: `gh pr checks <n> --watch`. If the PR has no checks yet (before CI exists), your own verification is the gate.
-4. `gh pr merge <n> --squash --delete-branch`. If the ruleset blocks it and the MAINT ruling allows it, retry once with `--admin`. Never use `--admin` on a PR that touches `AGENTS.md`. If the merge is still refused, leave the PR open and comment on ISSUE: `🤖 Waiting on Maintainer: #<n> <reason>`.
+   - **Expected `protected-paths` failure.** The `protected-paths` check fails any PR that touches a Protected Path without an approving review from `edanisko` on the head commit. You open PRs as `edanisko`, and GitHub does not allow approving your own PR, so on Stories that touch Protected Paths this check cannot pass. The 2026-10-17 amendment to the MAINT ruling is the Maintainer's approval of those changes. Read the check's log (`gh run view <run-id> --log-failed`). If every violation it reports is `protected path: <path> needs @edanisko's approving review on the head commit (…); re-run this check after approving (AD-16)`, and every other check is green, treat the PR as green and go to step 4. Any other violation, for example `codeowners drift` or `truncated file list`, is a real failure: fix it as in step A.
+   - Never edit `conformance/protected-paths`, `tools/protected-paths/` or `.github/workflows/protected-paths.yml` to make this check pass. Change them only when the Story itself requires it.
+4. `gh pr merge <n> --squash --delete-branch`. If the ruleset blocks it and the MAINT ruling allows it, retry once with `--admin`. This includes a ruleset that requires `protected-paths` when that check's only failure is the expected one above. Never use `--admin` on a PR that touches `AGENTS.md`. If the merge is still refused, leave the PR open and comment on ISSUE: `🤖 Waiting on Maintainer: #<n> <reason>`.
 5. Comment on ISSUE in one line: `🤖 Merged #<n>: <story-id> <title>`. For a blocked Story, write `🤖 Blocked <story-id>: <reason>`.
 
 ## 5. Finish
