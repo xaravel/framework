@@ -102,14 +102,17 @@ interface FakeGitHub {
   fail?: string[];
   /** Every successful POST or PUT, in order (filled in by the fake). */
   writes?: { method: string; path: string; body: unknown }[];
+  /** Every request received, authorised or not (counted by the fake). */
+  requests?: number;
 }
 
 /** Runs the ruleset CLI against a `Bun.serve` fake of the GitHub API on port 0. */
-async function runRuleset(args: string[], fake: FakeGitHub, token = "test-token"): Promise<{ code: number; stdout: string; stderr: string }> {
+async function runRuleset(args: string[], fake: FakeGitHub, token: string | null = "test-token"): Promise<{ code: number; stdout: string; stderr: string }> {
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
+      fake.requests = (fake.requests ?? 0) + 1;
       if (request.headers.get("authorization") !== "Bearer test-token") {
         return new Response("unauthorized", { status: 401 });
       }
@@ -169,7 +172,7 @@ async function runRuleset(args: string[], fake: FakeGitHub, token = "test-token"
   try {
     return await run(RULESET_CLI, [...args, "--repo", "xaravel/framework"], {
       GITHUB_API_URL: `http://localhost:${server.port}`,
-      GH_TOKEN: token,
+      ...(token === null ? {} : { GH_TOKEN: token }),
     });
   } finally {
     await server.stop(true);
@@ -177,6 +180,8 @@ async function runRuleset(args: string[], fake: FakeGitHub, token = "test-token"
 }
 
 const MAIN = committed("main.json");
+/** What verify, apply and identity print when GH_TOKEN is unset or empty. */
+const NO_TOKEN = 'Ruleset check failed: GH_TOKEN is not set, so the live rulesets cannot be read; run with GH_TOKEN="$(gh auth token)" (AD-16)\n';
 const PUSH = committed("agent-push.json");
 const TAGS = committed("agent-tags.json");
 
@@ -413,6 +418,21 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   const unauthorized = await runRuleset(["verify"], { rulesets: liveSet(), admins: ["edanisko"] }, "wrong-token");
   expect(unauthorized.code).toBe(1);
   expect(unauthorized.stderr).toContain("HTTP 401");
+
+  // No token (empty or unset): verify and apply fail closed before any request.
+  await withRulesets({ "main.json": MAIN, "agent-push.json": PUSH, "agent-tags.json": TAGS }, async (dir) => {
+    for (const args of [["verify"], ["apply", "--root", dir]]) {
+      for (const token of ["", null]) {
+        const fake: FakeGitHub = { rulesets: liveSet(), admins: ["edanisko"] };
+        const result = await runRuleset(args, fake, token);
+        expect(result.code).toBe(1);
+        expect(result.stderr).toBe(NO_TOKEN);
+        expect(result.stdout).toBe("");
+        expect(fake.requests ?? 0).toBe(0);
+        expect(fake.writes ?? []).toEqual([]);
+      }
+    }
+  });
 
   // apply: creates the committed ruleset missing live and replaces the others, matched by name.
   await withRulesets({ "main.json": MAIN, "agent-push.json": PUSH, "agent-tags.json": TAGS }, async (dir) => {
@@ -678,6 +698,16 @@ test("XT-conformance-32: the agent push identity is limited to story/* by live r
   const broken = await runRuleset(["identity"], { rulesets: liveSet(), branchRules: OK_RULES, fail: ["/rules/branches/main"] });
   expect(broken.code).toBe(1);
   expect(broken.stderr).toContain("HTTP 500");
+  // No token (empty or unset): identity fails closed before any request.
+  for (const token of ["", null]) {
+    const fake: FakeGitHub = { rulesets: liveSet(), admins: ["edanisko"], branchRules: OK_RULES };
+    const result = await runRuleset(["identity"], fake, token);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(NO_TOKEN);
+    expect(result.stdout).toBe("");
+    expect(fake.requests ?? 0).toBe(0);
+    expect(fake.writes ?? []).toEqual([]);
+  }
 
   // The agent-push ruleset excludes exactly story/**, main and the merge queue's branches; tags are closed too.
   expect(PUSH["name"]).toBe("Agent pushes");
