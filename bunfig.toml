@@ -1,0 +1,6 @@
+# Xaravel root Bun config (Protected Path, AD-16).
+#
+# Bun's .env autoload is off: env files are read only by Xaravel's own loader
+# (AGENTS.md, "Conventions that differ from defaults"). Keep `env` at the top
+# level of this file; it has no effect inside a section.
+env = false
