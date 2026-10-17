@@ -358,7 +358,9 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(wf["permissions"]).toEqual({ contents: "read" });
   expect(wf["on"]).toEqual({ pull_request: { branches: ["main"], paths: ["tools/baseline/**", ["tools", "oracle", "**"].join("/"), "tools/inventory/**", "tools/upstream/**", "conformance/oracle/**", "conformance/inventory/**", "conformance/baseline-pin", ".github/workflows/baseline.yml"] }, workflow_dispatch: null });
   const jobs = wf["jobs"] as Record<string, Record<string, unknown>>;
-  expect(Object.keys(jobs)).toEqual(["leg", "merge"]);
+  expect(Object.keys(jobs)).toEqual(["inventory", "leg", "merge"]);
+  expect(jobs["leg"]!["needs"]).toBe("inventory");
+  expect(jobs["merge"]!["needs"]).toBe("leg");
   const matrix = (jobs["leg"]!["strategy"] as { matrix: { attempt: number[]; leg: { suite: string; variant: string }[] } }).matrix;
   expect(matrix.attempt).toEqual([1, 2]);
   expect([...matrix.leg].sort((a, b) => `${a.suite}.${a.variant}`.localeCompare(`${b.suite}.${b.variant}`))).toEqual([...LEGS].sort((a, b) => `${a.suite}.${a.variant}`.localeCompare(`${b.suite}.${b.variant}`)));
@@ -372,6 +374,8 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(text).toContain('bun run baseline run --suite "$SUITE" --variant "$VARIANT" --attempt "$ATTEMPT" --out baseline-results');
   expect(text).toContain("bun run baseline merge --in baseline-results");
   expect(text).toContain("name: inventory");
+  expect(text).toContain("run: bun run inventory\n");
+  expect(text.match(/name: inventory-listing\n/g)?.length).toBe(3);
   expect(text).toContain("git diff --exit-code --stat conformance/inventory");
   expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts.baseline).toBe("bun tools/baseline/baseline.ts");
 
