@@ -1,0 +1,578 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-16-2026 22:58
+last_updated: 10-16-2026 22:58
+project: xaravel
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-root-workspace-and-repository-baseline: backlog
+  1-2-package-scaffolder-and-every-package-scaffolded: backlog
+  1-3-dependency-graph-check: backlog
+  1-4-protected-paths-and-the-protected-paths-check: backlog
+  1-5-story-manifests-and-edit-ownership-check: backlog
+  1-6-escalation-and-decision-records: backlog
+  1-7-repository-ruleset-workflow-permissions-and-dependency-audit: backlog
+  1-8-lockstep-release-workflow-with-provenance: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-upstream-snapshot-and-pin-record: backlog
+  2-2-oracle-container-image: backlog
+  2-3-test-directory-component-map: backlog
+  2-4-phpunit-test-inventory-for-laravel-framework: backlog
+  2-5-pest-test-inventory-for-laravel-ai-laravel-mcp-and-laravel-b: backlog
+  2-6-upstream-baseline-run-assertion-kinds-and-oracle-outcomes: backlog
+  2-7-inventory-determinism-and-runner-listing-cross-check: backlog
+  2-8-baseline-pin-bump-tool: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-oracle-request-format-and-mechanical-extraction: backlog
+  3-2-batch-fixture-generation-and-ed25519-signing: backlog
+  3-3-fixture-signature-verification-in-ci: backlog
+  3-4-per-story-oracle-requests: backlog
+  3-5-api-surface-export: backlog
+  3-6-upstream-scans-facades-singletons-and-boot-only-state: backlog
+  3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-php-comparison-core: backlog
+  4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: backlog
+  4-3-core-phpunit-assertions: backlog
+  4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog
+  4-5-mockery-core: backlog
+  4-6-mockery-advanced-and-api-coverage: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-variant-vocabulary-and-expectations-file: backlog
+  5-2-skip-reason-rule-checks: backlog
+  5-3-harness-runner-and-greppable-report: backlog
+  5-4-fast-mode-seeds-and-filters: backlog
+  5-5-backend-isolation-per-worktree: backlog
+  5-6-ratchet-and-expectations-line-ownership: backlog
+  5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: backlog
+  5-8-promotion-and-quarantine-bots: backlog
+  5-9-xaravel-test-coverage-check-and-the-story-done-check: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-type-aware-async-safety-lint: backlog
+  6-2-lint-rules-for-identity-values-and-test-hygiene: backlog
+  6-3-lint-rules-for-async-signatures-frame-state-and-declarations: backlog
+  6-4-async-surface-json-generator-and-drift-check: backlog
+  6-5-api-surface-diff: backlog
+  6-6-duplicate-fqcn-and-registration-scan: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-conformance-aggregator: backlog
+  7-2-public-dashboard-and-epic-review-view: backlog
+  7-3-boost-framework-mode-mcp-server: backlog
+  7-4-framework-mode-is-read-only: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-divergence-records-div-1-to-div-12: backlog
+  8-2-porting-md: backlog
+  8-3-bun-primitive-probes-oq-11: backlog
+  8-4-temporal-and-bcrypt-spikes-and-the-oq-12-decision: backlog
+  8-5-fidelity-review-workflow: backlog
+  8-6-framework-agent-operating-instructions-and-stop-rules: backlog
+  8-7-porting-md-pilot-on-support-and-collections: backlog
+  8-8-phase-1-gate: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-scope-frame-primitive-and-interleave: backlog
+  9-2-frame-kinds-defer-list-and-context-propagation: backlog
+  9-3-per-application-overlays-and-framestatic: backlog
+  9-4-class-registry-and-fqcn: backlog
+  9-5-phparray-ref-float-marker-and-null-normalisation: backlog
+  9-6-php-semantics-helpers: backlog
+  9-7-phpserialize-phpunserialize-codec: backlog
+  9-8-jsonencode-jsondecode-with-php-flag-semantics: backlog
+  9-9-mixin-traits-and-inject-metadata: backlog
+  9-10-php-exception-hierarchy: backlog
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-token-brand-and-contract-t-mechanism: backlog
+  10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
+  10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
+  10-4-container-alias-table-and-canonical-tokens: backlog
+  10-5-xaravel-only-contracts: backlog
+  10-6-contracts-complete-and-protected: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-macroable-trait: backlog
+  epic-11-retrospective: optional
+
+  epic-12: backlog
+  12-1-conditionable-trait: backlog
+  epic-12-retrospective: optional
+
+  epic-13: backlog
+  13-1-reflector-and-reflectsclosures: backlog
+  epic-13-retrospective: optional
+
+  epic-14: backlog
+  14-1-enumerable-core-construction-conversion-and-serialization: backlog
+  14-2-retrieval-search-and-mutation-methods: backlog
+  14-3-filtering-slicing-and-conditional-methods: backlog
+  14-4-set-operations-and-combining: backlog
+  14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
+  14-6-arr-helpers: backlog
+  14-7-lazycollection-behaviour: backlog
+  14-8-lazycollection-laziness-guarantees: backlog
+  epic-14-retrospective: optional
+
+  epic-15: backlog
+  15-1-config-repository: backlog
+  15-2-phpdotenv-grammar-port: backlog
+  15-3-bun-s-env-autoload-neutralised: backlog
+  epic-15-retrospective: optional
+
+  epic-16: backlog
+  16-1-schema-types-and-serializer: backlog
+  16-2-schema-deserializer: backlog
+  epic-16-retrospective: optional
+
+  epic-17: backlog
+  17-1-binding-and-resolution-core: backlog
+  17-2-contextual-binding-and-contextual-attributes: backlog
+  17-3-calling-extending-tagging-and-resolving-hooks: backlog
+  17-4-scoped-bindings-and-scope-frame-write-rules: backlog
+  epic-17-retrospective: optional
+
+  epic-18: backlog
+  18-1-inflector-port-and-pluralizer: backlog
+  18-2-uuids-ulids-and-binary-codecs: backlog
+  18-3-transliteration-slugs-and-markdown: backlog
+  18-4-str-the-remaining-methods: backlog
+  18-5-stringable-htmlstring-and-js: backlog
+  epic-18-retrospective: optional
+
+  epic-19: backlog
+  19-1-carbon-core-construction-arithmetic-and-comparison: backlog
+  19-2-formatting-parsing-and-diffforhumans: backlog
+  19-3-support-carbon-the-date-facade-and-duration-helpers: backlog
+  19-4-test-clock: backlog
+  epic-19-retrospective: optional
+
+  epic-20: backlog
+  20-1-facade-base-forwarding-and-higher-order-proxies: backlog
+  20-2-global-helpers-and-env: backlog
+  20-3-fluent-number-uri-messagebag-and-validatedinput: backlog
+  20-4-sleep-lottery-once-benchmark-and-timebox: backlog
+  20-5-serviceprovider-manager-and-environment-utilities: backlog
+  20-6-port-the-testing-fake-and-component-facade-suites: backlog
+  epic-20-retrospective: optional
+
+  epic-21: backlog
+  21-1-request-and-parameter-bags-over-web-request: backlog
+  21-2-response-family-and-conversion-to-web-response: backlog
+  21-3-uploadedfile-file-and-httpkernel-exceptions: backlog
+  epic-21-retrospective: optional
+
+  epic-22: backlog
+  22-1-mime-types-and-addresses: backlog
+  22-2-email-message-model-and-rendering: backlog
+  epic-22-retrospective: optional
+
+  epic-23: backlog
+  23-1-finder-over-bun-glob: backlog
+  epic-23-retrospective: optional
+
+  epic-24: backlog
+  24-1-pipeline-and-hub: backlog
+  epic-24-retrospective: optional
+
+  epic-25: backlog
+  25-1-encrypter: backlog
+  25-2-php-interoperability: backlog
+  epic-25-retrospective: optional
+
+  epic-26: backlog
+  26-1-hasher-drivers-and-php-compatibility: backlog
+  epic-26-retrospective: optional
+
+  epic-27: backlog
+  27-1-the-local-filesystem-class: backlog
+  27-2-flysystem-port-and-the-local-disk-adapter: backlog
+  27-3-s3-disk-and-temporary-urls-over-bun-s3client: backlog
+  27-4-filesystemmanager-storage-fake-and-file-responses: backlog
+  epic-27-retrospective: optional
+
+  epic-28: backlog
+  28-1-real-processes-output-timeouts-and-pipes: backlog
+  28-2-process-pools: backlog
+  28-3-process-fakes-and-assertions: backlog
+  epic-28-retrospective: optional
+
+  epic-29: backlog
+  29-1-monolog-port: backlog
+  29-2-log-manager-and-channels: backlog
+  29-3-context: backlog
+  epic-29-retrospective: optional
+
+  epic-30: backlog
+  30-1-translation-file-loaders: backlog
+  30-2-translator-and-pluralization: backlog
+  epic-30-retrospective: optional
+
+  epic-31: backlog
+  31-1-closure-analysis-and-capture-rejection: backlog
+  31-2-signed-payload-codec-and-worker-reconstruction: backlog
+  epic-31-retrospective: optional
+
+  epic-32: backlog
+  32-1-dispatcher-pendingdispatch-and-queueable: backlog
+  32-2-chains-and-batches: backlog
+  32-3-re-verify-support-s-bus-fake: backlog
+  epic-32-retrospective: optional
+
+  epic-33: backlog
+  33-1-event-dispatcher: backlog
+  33-2-listener-discovery-without-reflection: backlog
+  33-3-queued-and-broadcast-events-and-support-s-event-fake: backlog
+  33-4-phase-3-blocked-by-sweep: backlog
+  epic-33-retrospective: optional
+
+  epic-34: backlog
+  34-1-pdo-compatible-driver-shim-over-bun-sqlite-and-bun-sql: backlog
+  34-2-connection-statements-events-query-log-and-errors: backlog
+  34-3-connectors-factory-manager-and-read-write-splitting: backlog
+  34-4-query-builder-selects-wheres-and-havings: backlog
+  34-5-query-builder-joins-unions-ordering-aggregates-pagination-an: backlog
+  34-6-query-builder-writes-locks-index-hints-and-driver-specific-s: backlog
+  34-7-transactions-and-connection-leases: backlog
+  epic-34-retrospective: optional
+
+  epic-35: backlog
+  35-1-blueprint-and-the-schema-builders: backlog
+  35-2-sqlite-and-postgres-schema-grammars: backlog
+  35-3-mysql-mariadb-and-sql-server-schema-grammars: backlog
+  35-4-schema-state-and-schema-dump-support: backlog
+  epic-35-retrospective: optional
+
+  epic-36: backlog
+  36-1-model-core-attributes-fill-guard-and-dirty-tracking: backlog
+  36-2-persistence-save-update-delete-timestamps-and-refresh: backlog
+  36-3-eloquent-builder-non-relationship: backlog
+  36-4-casts-accessors-and-mutators: backlog
+  36-5-model-events-and-observers: backlog
+  36-6-serialization-and-api-resources: backlog
+  epic-36-retrospective: optional
+
+  epic-37: backlog
+  37-1-relationship-definition-related-and-strict-loading: backlog
+  37-2-belongstomany-and-pivots: backlog
+  37-3-through-relationships-and-one-of-many: backlog
+  37-4-polymorphic-and-inverse-relationships: backlog
+  37-5-eager-loading-existence-queries-aggregates-and-eloquent-coll: backlog
+  epic-37-retrospective: optional
+
+  epic-38: backlog
+  38-1-model-factories: backlog
+  38-2-local-and-global-scopes: backlog
+  38-3-soft-deletes: backlog
+  38-4-pruning: backlog
+  38-5-eloquent-integration-suite-queries-writes-and-pagination: backlog
+  38-6-eloquent-integration-suite-relationships-and-the-rest: backlog
+  epic-38-retrospective: optional
+
+  epic-39: backlog
+  39-1-migrator-repository-and-migration-creator: backlog
+  39-2-seeders: backlog
+  39-3-database-command-suites: backlog
+  39-4-phase-4-blocked-by-sweep: backlog
+  epic-39-retrospective: optional
+
+  epic-40: backlog
+  40-1-paginators-cursors-and-url-windows: backlog
+  40-2-eloquent-pagination-resources-and-views: backlog
+  epic-40-retrospective: optional
+
+  epic-41: backlog
+  41-1-redis-manager-and-connections-over-bun-redis: backlog
+  41-2-transactions-pipelines-watch-and-pub-sub-on-leases: backlog
+  41-3-redis-limiters: backlog
+  epic-41-retrospective: optional
+
+  epic-42: backlog
+  42-1-repository-array-store-events-and-the-memo-driver: backlog
+  42-2-file-database-storage-and-failover-stores: backlog
+  42-3-tags-locks-and-the-redis-store: backlog
+  42-4-ratelimiter: backlog
+  42-5-non-alpha-stores-and-the-cache-commands: backlog
+  epic-42-retrospective: optional
+
+  epic-43: backlog
+  43-1-validator-engine-rule-parsing-and-messages: backlog
+  43-2-email-url-and-network-rules: backlog
+  43-3-file-image-and-mime-rules: backlog
+  43-4-database-rules-and-async-validation: backlog
+  43-5-built-in-rules: backlog
+  43-6-rule-objects-and-fluent-rule-builders: backlog
+  43-7-phase-5-blocked-by-sweep: backlog
+  epic-43-retrospective: optional
+
+  epic-44: backlog
+  44-1-cookiejar-queued-cookies-and-cookie-encryption: backlog
+  epic-44-retrospective: optional
+
+  epic-45: backlog
+  45-1-session-store-and-handlers: backlog
+  45-2-startsession-flash-data-and-the-loaded-once-session: backlog
+  epic-45-retrospective: optional
+
+  epic-46: backlog
+  46-1-request: backlog
+  46-2-responses-redirects-and-json-resources: backlog
+  46-3-http-middleware: backlog
+  epic-46-retrospective: optional
+
+  epic-47: backlog
+  47-1-pendingrequest-core-fakes-and-recording: backlog
+  47-2-retries-timeouts-and-exceptions: backlog
+  47-3-pools-batches-async-requests-and-middleware: backlog
+  47-4-remaining-client-behaviour-and-re-verifications: backlog
+  epic-47-retrospective: optional
+
+  epic-48: backlog
+  48-1-route-registration-groups-and-the-query-verb: backlog
+  48-2-route-compiler-matching-and-dispatch: backlog
+  48-3-route-model-binding-and-resource-controllers: backlog
+  48-4-url-generation-signed-urls-redirector-and-responsefactory: backlog
+  48-5-routing-middleware-throttling-and-route-cache: backlog
+  epic-48-retrospective: optional
+
+  epic-49: backlog
+  49-1-compiler-pipeline-module-cache-and-view-cache: backlog
+  49-2-echo-escaping-and-the-xss-suite: backlog
+  49-3-control-flow-loop-and-form-directives: backlog
+  49-4-layouts-sections-stacks-includes-and-auth-directives: backlog
+  49-5-view-factory-finder-sharing-and-composers: backlog
+  49-6-custom-directives-and-the-emitted-code-abi: backlog
+  epic-49-retrospective: optional
+
+  epic-50: backlog
+  50-1-component-tag-compiler: backlog
+  50-2-component-classes-attribute-bags-slots-and-aware: backlog
+  50-3-fragments-and-render-target-seams: backlog
+  epic-50-retrospective: optional
+
+  epic-51: backlog
+  51-1-application-lifecycle-providers-and-environment-bootstrap: backlog
+  51-2-bootstrap-app-ts-and-the-applicationbuilder: backlog
+  51-3-http-kernel-on-bun-serve: backlog
+  51-4-foundation-middleware-and-maintenance-mode: backlog
+  51-5-csrf-token-and-origin-checks: backlog
+  51-6-form-requests-and-foundation-helpers: backlog
+  epic-51-retrospective: optional
+
+  epic-52: backlog
+  52-1-exception-handler-and-withexceptions: backlog
+  52-2-debug-and-production-error-pages: backlog
+  52-3-vite-and-csp-nonces: backlog
+  52-4-foundation-cloud-classification: backlog
+  epic-52-retrospective: optional
+
+  epic-53: backlog
+  53-1-htmx-request-detection: backlog
+  53-2-htmx-response-helpers: backlog
+  53-3-fragment-responses-and-full-versus-partial-rendering: backlog
+  53-4-htmx-aware-redirects: backlog
+  53-5-validation-failure-on-htmx-requests: backlog
+  53-6-error-fragments-for-htmx-requests: backlog
+  53-7-streaming-sse-multipart-mixed-and-websockets: backlog
+  53-8-phase-6-blocked-by-sweep: backlog
+  epic-53-retrospective: optional
+
+  epic-54: backlog
+  54-1-symfony-console-core-port: backlog
+  54-2-command-class-io-signals-and-mutexes: backlog
+  54-3-prompts: backlog
+  54-4-termwind-and-console-view-components: backlog
+  54-5-task-scheduling: backlog
+  54-6-re-verify-the-command-suites: backlog
+  epic-54-retrospective: optional
+
+  epic-55: backlog
+  55-1-console-kernel-and-the-bun-artisan-entry: backlog
+  55-2-framework-caching-and-maintenance-commands: backlog
+  55-3-generator-reference-files-infrastructure-story: backlog
+  55-4-generators-for-models-the-database-and-app-classes: backlog
+  55-5-generators-for-http-console-and-messaging-plus-stub-publish: backlog
+  55-6-bun-artisan-tinker: backlog
+  epic-55-retrospective: optional
+
+  epic-56: backlog
+  56-1-transports: backlog
+  56-2-mailables-envelopes-content-and-attachments: backlog
+  56-3-markdown-mail-and-css-inlining: backlog
+  56-4-mailer-messages-queued-mail-and-the-mail-fake: backlog
+  56-5-non-alpha-transports: backlog
+  epic-56-retrospective: optional
+
+  epic-57: backlog
+  57-1-the-pest-style-app-test-shape-and-http-test-calls: backlog
+  57-2-testresponse-status-headers-cookies-session-redirects-and-vi: backlog
+  57-3-json-assertions-and-assertablejson: backlog
+  57-4-console-tests: backlog
+  57-5-database-testing: backlog
+  57-6-fakes-time-travel-and-the-nfr-7-resets: backlog
+  epic-57-retrospective: optional
+
+  epic-58: backlog
+  58-1-asserthxtrigger-assertfragment-asserthxlocation-and-friends: backlog
+  epic-58-retrospective: optional
+
+  epic-59: backlog
+  59-1-the-testbench-application-and-testcase: backlog
+  59-2-testbench-attributes-and-helpers: backlog
+  epic-59-retrospective: optional
+
+  epic-60: backlog
+  60-1-small-components-integration-suites: backlog
+  60-2-validation-and-view-integration: backlog
+  60-3-filesystem-and-events-integration: backlog
+  60-4-support-integration: backlog
+  60-5-log-and-context-integration: backlog
+  60-6-cache-integration: backlog
+  60-7-database-integration-queries-schema-connections-and-locks: backlog
+  60-8-database-integration-eloquent-relationships-strict-loading-a: backlog
+  60-9-database-integration-models-casts-events-pagination-and-the: backlog
+  60-10-database-integration-engine-specific-suites: backlog
+  60-11-http-integration: backlog
+  60-12-routing-integration: backlog
+  60-13-foundation-integration: backlog
+  60-14-generator-integration: backlog
+  60-15-console-integration: backlog
+  60-16-mail-and-testing-integration-and-the-phase-7-gate: backlog
+  epic-60-retrospective: optional
+
+  epic-61: backlog
+  61-1-xaravel-framework-meta-package: backlog
+  61-2-laravel-shaped-skeleton: backlog
+  61-3-htmx-ready-layout-and-welcome-page: backlog
+  61-4-skeleton-test-suite-on-sqlite-and-postgres: backlog
+  61-5-installer: backlog
+  61-6-production-entry-and-deployment-guide: backlog
+  epic-61-retrospective: optional
+
+  epic-62: backlog
+  62-1-job-payloads-model-serialization-and-the-sync-driver: backlog
+  62-2-database-and-redis-drivers-and-failed-jobs: backlog
+  62-3-workers-the-timeout-supervisor-and-queue-commands: backlog
+  62-4-chains-batches-job-middleware-unique-and-rate-limited-jobs: backlog
+  62-5-dispatching-closures: backlog
+  62-6-non-alpha-drivers-and-the-blocked-by-queue-sweep: backlog
+  epic-62-retrospective: optional
+
+  epic-63: backlog
+  63-1-concurrency-drivers: backlog
+  epic-63-retrospective: optional
+
+  epic-64: backlog
+  64-1-broadcast-manager-channels-and-authorization: backlog
+  64-2-pusher-protocol-and-redis-broadcasters: backlog
+  64-3-other-broadcasters-and-the-blocked-by-broadcasting-sweep: backlog
+  epic-64-retrospective: optional
+
+  epic-65: backlog
+  65-1-channel-manager-sender-on-demand-and-queued-notifications: backlog
+  65-2-mail-channel-and-mailmessage: backlog
+  65-3-database-and-broadcast-channels: backlog
+  epic-65-retrospective: optional
+
+  epic-66: backlog
+  66-1-guards-and-user-providers: backlog
+  66-2-authentication-middleware-and-password-confirmation: backlog
+  66-3-gates-policies-and-authorization-responses: backlog
+  66-4-password-reset: backlog
+  66-5-email-verification-and-the-blocked-by-auth-sweep: backlog
+  epic-66-retrospective: optional
+
+  epic-67: backlog
+  67-1-image-api-and-manager: backlog
+  67-2-the-gd-and-imagick-driver-suites: backlog
+  epic-67-retrospective: optional
+
+  epic-68: backlog
+  68-1-servers-tools-resources-and-prompts: backlog
+  68-2-http-and-stdio-transports-with-guards: backlog
+  68-3-mcp-testing-helpers-and-inspector: backlog
+  epic-68-retrospective: optional
+
+  epic-69: backlog
+  69-1-boost-install-and-agent-guidelines: backlog
+  69-2-app-route-container-and-config-introspection: backlog
+  69-3-database-logs-last-error-and-browser-logs: backlog
+  69-4-test-run-tool: backlog
+  69-5-safe-by-default: backlog
+  epic-69-retrospective: optional
+
+  epic-70: backlog
+  70-1-htmx-auth-pages: backlog
+  70-2-authenticated-dashboard: backlog
+  70-3-phase-8-sweep-and-alpha-gate-readiness: backlog
+  epic-70-retrospective: optional
+
+  epic-71: backlog
+  71-1-visit-and-the-browser-test-lifecycle-on-playwright: backlog
+  71-2-interactions-assertions-screenshots-and-device-emulation: backlog
+  71-3-assertions-after-htmx-swaps-settle: backlog
+  epic-71-retrospective: optional
+
+  epic-72: backlog
+  72-1-agent-classes-tools-and-structured-output: backlog
+  72-2-streaming-including-the-vercel-data-protocol: backlog
+  72-3-embeddings-reranking-images-audio-and-files: backlog
+  72-4-conversation-memory-provider-failover-and-ai-fake: backlog
+  epic-72-retrospective: optional
+
+  epic-73: backlog
+  73-1-versioned-local-docs-index-shipped-with-the-package: backlog
+  73-2-offline-search-tool: backlog
+  epic-73-retrospective: optional
+
+  epic-74: backlog
+  74-1-laravel-14-pin-bump-and-inventory-diff: backlog
+  74-2-divergence-and-contract-review-for-laravel-14: backlog
+  74-3-versioning-switch: backlog
+  epic-74-retrospective: optional
