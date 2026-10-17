@@ -3,7 +3,7 @@ title: 'Story 2.6: Upstream baseline run: assertion kinds and Oracle outcomes'
 type: 'feature'
 created: '2026-10-17'
 baseline_revision: '31c23e164a8298099c89c7a97d37fe9d16ff1955'
-status: 'done'
+status: 'blocked'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -237,3 +237,13 @@ The committed Inventory is the `merge` artifact of run 39045666471: 22070 entrie
 - Each leg builds the image (cost).
 - The image now lists more IDs than a bare host, and Story 2.7's nightly regeneration must run in the image.
 
+
+### Blocked after the HALT (2026-10-17)
+
+Status: blocked
+Blocking condition: Oracle non-determinism in an Upstream test (ESC-2.6-1).
+
+The confirming baseline re-run on PR #51 (CI run 39046988875, same Pin) reported `oracle non-determinism: Illuminate\Tests\Integration\Database\DatabaseEloquentModelAttributeCastingTest::testAttributesByDefaultDontCacheBooleans on none: {"outcome":"pass","assertions":{"assertIsBool":2}} vs {"outcome":"pass","assertions":{"assertIsBool":3}}`. The test reads a `(bool) mt_rand(0, 1)` accessor in a loop that returns early, so its assertion count is random. `merge` correctly refuses to write it (AC 3), and no reproducible `assertions` value exists for it. Every way to record it lowers its FR-113 floor or masks the non-determinism, and both of those need the Maintainer.
+
+- The attempted implementation (everything except the generated Inventory) is in [spec-2-6-attempt.patch](spec-2-6-attempt.patch). The full tree, including the Inventory merged from CI run 39045666471, is on branch `planning/story-2.6-attempt` (commit c66c357).
+- After the ruling: re-apply the patch, implement the chosen option in `merge`, re-run `baseline.yml`, and commit its `inventory` artifact.

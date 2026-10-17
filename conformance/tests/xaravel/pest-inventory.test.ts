@@ -214,7 +214,7 @@ function ids(text: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-53
 
-test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
+test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
   await withFixture(async (fx) => {
     writeFiles(join(fx.dir, INVENTORY_DIR), { "routing.jsonl": "framework stays\n", "ai.jsonl": "ai stays\n", "boost.jsonl": "boost stays\n" });
 
@@ -239,8 +239,8 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
       'mcp/tests/Feature/CompletionTest.php::it takes a dataset#dataset "a"',
     ]);
     const entries = parseInventory(mcp, "mcp.jsonl", "mcp");
-    expect(Object.keys(JSON.parse(mcp.split("\n")[1]!))).toEqual(["id", "component", "kind", "backends", "source", "hash", "assertions", "oracle"]);
-    expect(entries[1]).toEqual({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", component: "mcp", kind: "unit", backends: ["none"], source: "mcp/tests/Feature/CompletionTest.php:10-14", hash: testHash(TOKENS, null), assertions: null, oracle: {} });
+    expect(Object.keys(JSON.parse(mcp.split("\n")[1]!))).toEqual(["id", "component", "kind", "backends", "source", "hash"]);
+    expect(entries[1]).toEqual({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", component: "mcp", kind: "unit", backends: ["none"], source: "mcp/tests/Feature/CompletionTest.php:10-14", hash: testHash(TOKENS, null) });
     // A closure-less arch() test: its statement's lines and tokens.
     expect(entries[0]!.source).toBe("mcp/tests/ArchTest.php:7-9");
     expect(entries[0]!.hash).toBe(testHash(ARCH_TOKENS, null));
@@ -265,18 +265,6 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
     const framework: { image: string; mounts: unknown; command: readonly string[] }[] = [];
     expect(generate(fx.dir, { runner: suiteRunner(framework) }).counts).toEqual({ support: 1 });
     expect(framework.length).toBe(1);
-
-    // Carry-over (Story 2.6): a baselined entry whose id, hash and backends are unchanged keeps assertions and
-    // oracle byte for byte; an entry whose hash changed comes back null / {}.
-    const baselined = mcp.replaceAll('"assertions":null,"oracle":{}', '"assertions":{"assertSame":1},"oracle":{"none":"skip"}');
-    writeFileSync(join(fx.dir, INVENTORY_DIR, "mcp.jsonl"), baselined);
-    const changed = PEST_RAWS.mcp.map((entry) => (entry.name === "it x" ? { ...entry, tokens: [...entry.tokens, "cfoo"] } : entry));
-    generate(fx.dir, { suite: "mcp", runner: () => rawText(changed) });
-    const carried = fx.inventory()["mcp.jsonl"]!.split("\n");
-    const baselinedLines = baselined.split("\n");
-    expect([carried[0], carried[2], carried[3]]).toEqual([baselinedLines[0], baselinedLines[2], baselinedLines[3]]);
-    expect(JSON.parse(carried[1]!)).toMatchObject({ id: "mcp/tests/Feature/CompletionTest.php::A > B > it x", assertions: null, oracle: {} });
-    writeFileSync(join(fx.dir, INVENTORY_DIR, "mcp.jsonl"), mcp);
 
     // kind: Integration/ is integration; backends: attribute drivers plus redis, no directory or queue rules.
     const ai = parseInventory(fx.inventory()["ai.jsonl"]!, "ai.jsonl", "ai");
@@ -366,7 +354,7 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
   });
 
   // parseInventory with a suite: ids, Component and source belong to that suite.
-  const line = (id: string, component: string, source: string): string => JSON.stringify({ id, component, kind: "unit", backends: ["none"], source, hash: "0".repeat(64), assertions: null, oracle: {} });
+  const line = (id: string, component: string, source: string): string => JSON.stringify({ id, component, kind: "unit", backends: ["none"], source, hash: "0".repeat(64) });
   expect(parseInventory(`${line("ai/tests/XTest.php::it x", "ai", "ai/tests/XTest.php:1-2")}\n`, "f", "ai").length).toBe(1);
   expect(() => parseInventory(`${line("ai/tests/XTest.php::it x", "ai", "framework/tests/XTest.php:1-2")}\n`, "f", "ai")).toThrow("f:1: bad source");
   expect(() => parseInventory(`${line("mcp/tests/XTest.php::it x", "ai", "ai/tests/XTest.php:1-2")}\n`, "f", "ai")).toThrow("f:1: bad id");

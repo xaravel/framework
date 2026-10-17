@@ -176,7 +176,7 @@ function committed(): Map<string, InventoryEntry[]> {
 // ---------------------------------------------------------------------------
 // XT-conformance-49
 
-test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
+test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash} line per runner-listed test, and fails closed (FR-1)", async () => {
   await withFixture(async (fx) => {
     // Foreign files are never touched; a framework Component no longer generated is deleted.
     writeFiles(join(fx.dir, INVENTORY_DIR), { "ai.jsonl": "ai stays\n", "mcp.jsonl": "mcp stays\n", "boost.jsonl": "boost stays\n", "routing.jsonl": "stale\n" });
@@ -198,8 +198,8 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
     expect(support.endsWith("\n")).toBe(true);
     const lines = support.slice(0, -1).split("\n");
     expect(lines.map((line) => JSON.parse(line).id)).toEqual([`${STR}::testAscii#0`, `${STR}::testAscii#1`, `${STR}::testInherited`]);
-    expect(Object.keys(JSON.parse(lines[0]!))).toEqual(["id", "component", "kind", "backends", "source", "hash", "assertions", "oracle"]);
-    expect(JSON.parse(lines[0]!)).toEqual({ id: `${STR}::testAscii#0`, component: "support", kind: "unit", backends: ["none"], source: "framework/tests/Support/SupportStrTest.php:10-14", hash: testHash(TOKENS, "[0=>'a']"), assertions: null, oracle: {} });
+    expect(Object.keys(JSON.parse(lines[0]!))).toEqual(["id", "component", "kind", "backends", "source", "hash"]);
+    expect(JSON.parse(lines[0]!)).toEqual({ id: `${STR}::testAscii#0`, component: "support", kind: "unit", backends: ["none"], source: "framework/tests/Support/SupportStrTest.php:10-14", hash: testHash(TOKENS, "[0=>'a']") });
     // An inherited method's source is its declaring file; its id uses the concrete class.
     expect(JSON.parse(lines[2]!).source).toBe("framework/tests/Support/Concerns/BaseTests.php:3-7");
     expect(parseInventory(support, "support.jsonl").length).toBe(3);
@@ -231,18 +231,6 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
         },
       }),
     ).toThrow("the lister failed: php /xaravel/lister.php in x failed (exit 1): lister: expected PHP 8.5.11, running PHP 8.4.0");
-
-    // Carry-over (Story 2.6): a baselined entry whose id, hash and backends are unchanged keeps assertions and
-    // oracle byte for byte; an entry whose hash changed comes back null / {}.
-    const baselined = files["support.jsonl"]!.replaceAll('"assertions":null,"oracle":{}', '"assertions":{"assertSame":2,"assertTrue":1},"oracle":{"none":"pass"}');
-    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), baselined);
-    const changed = RAWS.map((entry) => (entry.id === `${STR}::testAscii#1` ? { ...entry, data: "[0=>'c']" } : entry));
-    generate(fx.dir, { runner: () => rawText(changed) });
-    const carried = fx.inventory()["support.jsonl"]!.split("\n");
-    const before = baselined.split("\n");
-    expect([carried[0], carried[2]]).toEqual([before[0], before[2]]);
-    expect(JSON.parse(carried[1]!)).toMatchObject({ id: `${STR}::testAscii#1`, hash: testHash(TOKENS, "[0=>'c']"), assertions: null, oracle: {} });
-    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), files["support.jsonl"]!);
 
     // Unmapped: a raw test file no map entry matches.
     fx.setRaw([...RAWS, raw({ class: "Illuminate\\Tests\\Nowhere\\XTest", method: "testX", file: "tests/Nowhere/XTest.php" })]);
@@ -313,7 +301,7 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
   });
 
   // parseInventory fails closed on malformed, unsorted or misordered lines.
-  const line = '{"id":"A\\\\BTest::testX","component":"support","kind":"unit","backends":["none"],"source":"framework/tests/BTest.php:1-2","hash":"' + "0".repeat(64) + '","assertions":null,"oracle":{}}';
+  const line = '{"id":"A\\\\BTest::testX","component":"support","kind":"unit","backends":["none"],"source":"framework/tests/BTest.php:1-2","hash":"' + "0".repeat(64) + '"}';
   expect(parseInventory(`${line}\n`, "f").length).toBe(1);
   expect(() => parseInventory(line, "f")).toThrow("f: the file must end with a newline");
   expect(() => parseInventory(`${line}\n${line}\n`, "f")).toThrow("f:2: A\\BTest::testX is not sorted after");
@@ -321,11 +309,11 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
   expect(() => parseInventory(`${line.replace("framework/tests/BTest.php", "framework/src/B.php")}\n`, "f")).toThrow("f:1: bad source");
   expect(() => parseInventory(`${line.replace('["none"]', '["redis","none"]')}\n`, "f")).toThrow("f:1: backends");
 
-  // The committed Inventory: exactly 16267 unique ids (16216 listed on a host without phpredis, plus 51 redis provider datasets the Oracle image lists; Story 2.6), sorted and well-formed, each source inside the snapshot.
+  // The committed Inventory: exactly 16216 unique ids, sorted and well-formed, each source inside the snapshot.
   const inventory = committed();
   const all = [...inventory.values()].flat();
-  expect(all.length).toBe(16267);
-  expect(new Set(all.map((entry) => entry.id)).size).toBe(16267);
+  expect(all.length).toBe(16216);
+  expect(new Set(all.map((entry) => entry.id)).size).toBe(16216);
   for (const [component, entries] of inventory) {
     expect(entries.length).toBeGreaterThan(0);
     for (const entry of entries) {

@@ -1,6 +1,6 @@
 # The Test Inventory
 
-`conformance/inventory/<component>.jsonl` lists every test case in `laravel/framework`'s PHPUnit suite and in the Pest suites of `laravel/ai`, `laravel/mcp` and `laravel/boost` at the Baseline Pin, one entry per case (FR-1). It is the conformance denominator. Expectations, the Ratchet and Story selectors key on its Test IDs, and FR-7 uses its `hash` to find changed tests. The tool is `tools/inventory/inventory.ts`, and it runs the PHP lister `tools/inventory/lister.php`. The framework writes one file per framework Component; each Pest suite writes only `ai.jsonl`, `mcp.jsonl` or `boost.jsonl` (see [The Pest suites](#the-pest-suites)). The baseline run (Story 2.6, [baseline.md](baseline.md)) fills each entry's `assertions` and `oracle`.
+`conformance/inventory/<component>.jsonl` lists every test case in `laravel/framework`'s PHPUnit suite and in the Pest suites of `laravel/ai`, `laravel/mcp` and `laravel/boost` at the Baseline Pin, one entry per case (FR-1). It is the conformance denominator. Expectations, the Ratchet and Story selectors key on its Test IDs, and FR-7 uses its `hash` to find changed tests. The tool is `tools/inventory/inventory.ts`, and it runs the PHP lister `tools/inventory/lister.php`. The framework writes one file per framework Component; each Pest suite writes only `ai.jsonl`, `mcp.jsonl` or `boost.jsonl` (see [The Pest suites](#the-pest-suites)). Story 2.6 adds `assertions` and `oracle`.
 
 ## The two modes
 
@@ -30,7 +30,7 @@ Before each provider call, the lister seeds PHP's Mersenne Twister (which Faker 
 ## The record (framework)
 
 ```
-{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses string","component":"bus","kind":"unit","backends":["none"],"source":"framework/tests/Bus/QueueableTest.php:20-27","hash":"…","assertions":{"assertSame":1},"oracle":{"none":"pass"}}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses string","component":"bus","kind":"unit","backends":["none"],"source":"framework/tests/Bus/QueueableTest.php:20-27","hash":"…"}
 ```
 
 - `id` is PHPUnit's `testMethod@id`, verbatim: `<FQCN>::<method>`, or `<FQCN>::<method>#<dataset>`. An unnamed dataset is its numeric index. For an inherited test, the FQCN is the concrete class.
@@ -39,12 +39,6 @@ Before each provider call, the lister seeds PHP's Mersenne Twister (which Faker 
 - `backends` is described in the next section.
 - `source` is `framework/<declaring file>:<start>-<end>`. The declaring file is the parent class or trait when the method is inherited. It always lies inside the snapshot's `tests/`.
 - `hash` is described below.
-- `assertions` maps each PHPUnit assertion kind the test made to a positive count, with keys sorted by UTF-16 code units. A kind is a `public static function assert*` method of `PHPUnit\Framework\Assert`, counted once per outermost call (a call that does not come from `Assert` itself), from `setUp`, the test and `tearDown`. When the test ran on several alpha variants, each count is the maximum over them. The value is `{}` when the test ran but asserted nothing, and `null` when it has not run on an alpha variant.
-- `oracle` maps each alpha variant the entry is tagged with to `pass`, `skip` or `fail`, with keys sorted. The keys are exactly `backends` intersected with `none`, `sqlite`, `pgsql`, `redis`, `queue-sync@none`, `queue-database@sqlite` and `queue-redis@redis`. The value is `{}` when that intersection is empty (`mysql`, `mariadb`, `sqlsrv` and `beanstalkd` only).
-
-`assertions` and `oracle` come only from the baseline run's `merge` ([baseline.md](baseline.md)). `assertions` is `null` exactly when `oracle` is `{}`.
-
-**Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. An existing file that does not parse carries nothing over.
 
 Keys are always in this order. Each file covers one Component, and its lines are sorted by `id`, compared by UTF-16 code units. Files are UTF-8, with LF line endings and a trailing newline. The lines are written with `JSON.stringify`, because they are tool data, not framework values. When a framework Component no longer has tests, its file is deleted.
 
@@ -75,10 +69,10 @@ A whitespace-only or comment-only edit leaves the hash unchanged. A code-token o
 
 ## The Pest suites
 
-`laravel/ai`, `laravel/mcp` and `laravel/boost` are tested with Pest 4 (on PHPUnit 12). Each suite is one Component of the same name, so its entries go to `ai.jsonl`, `mcp.jsonl` or `boost.jsonl`, and every entry's `component` is `componentForTest(map, "<suite>/<test file>")`, which must equal the suite. A file the map gives to another Component fails the run. The record, its key order (with `assertions` and `oracle`), the sorting, the file format and the hash formula are the framework's.
+`laravel/ai`, `laravel/mcp` and `laravel/boost` are tested with Pest 4 (on PHPUnit 12). Each suite is one Component of the same name, so its entries go to `ai.jsonl`, `mcp.jsonl` or `boost.jsonl`, and every entry's `component` is `componentForTest(map, "<suite>/<test file>")`, which must equal the suite. A file the map gives to another Component fails the run. The record, its key order, the sorting, the file format and the hash formula are the framework's.
 
 ```
-{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it filters by prefix and returns all when empty","component":"mcp","kind":"unit","backends":["none"],"source":"mcp/tests/Feature/CompletionTest.php:250-260","hash":"…","assertions":{"assertSame":2},"oracle":{"none":"pass"}}
+{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it filters by prefix and returns all when empty","component":"mcp","kind":"unit","backends":["none"],"source":"mcp/tests/Feature/CompletionTest.php:250-260","hash":"…"}
 ```
 
 ### What the lister does in Pest mode
@@ -136,5 +130,4 @@ Regenerate after a Pin bump (Story 2.8), a lock change, or a change to the liste
 1. `bun run upstream:sync`, then `bun run upstream:check`.
 2. `bun run inventory`. If Docker is unavailable, prepare a local install of each suite instead: `cp -R conformance/upstream/<suite> /tmp/xaravel-inv/<suite>`, make it writable, copy in `conformance/oracle/locks/<suite>/composer.lock`, run `COMPOSER_ROOT_VERSION=<version> composer install` there, where `<version>` is the suite's tag in `conformance/baseline-pin` without the `v` (at the current Pin, for example, `13.37.0` for framework and `1.0.2` for mcp), and then run `bun run inventory --local /tmp/xaravel-inv/framework` and `bun run inventory --suite <suite> --local /tmp/xaravel-inv/<suite>` for ai, mcp and boost.
 3. Run the command a second time. `git diff --stat conformance/inventory` must be empty.
-4. If any entry was added or changed (its `assertions` and `oracle` are now `null` and `{}`), rerun the baseline ([baseline.md](baseline.md#regenerating)) and commit its `inventory` artifact.
-5. `bun test`, then open a PR. `conformance/inventory/` is a Protected Path.
+4. `bun test`, then open a PR. `conformance/inventory/` is a Protected Path.
