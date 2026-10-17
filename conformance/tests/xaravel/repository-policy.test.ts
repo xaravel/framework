@@ -501,7 +501,7 @@ function workflow(top: string, jobs = "  build:\n    runs-on: ubuntu-latest\n   
 const READ = "permissions:\n  contents: read\n";
 
 test("XT-conformance-31: every workflow's top-level permissions are contents: read, and write scopes appear only in the oracle, dashboard and release jobs (AD-16, AD-28)", async () => {
-  expect([...ALLOWED_WRITE_JOBS]).toEqual(["oracle", "dashboard", "release"]);
+  expect([...ALLOWED_WRITE_JOBS]).toEqual(["oracle.yml#oracle", "dashboard.yml#dashboard", "release.yml#release"]);
   const check = (text: string) => checkWorkflow(".github/workflows/x.yml", text);
 
   expect(check(workflow(READ))).toEqual([]);
@@ -515,22 +515,54 @@ test("XT-conformance-31: every workflow's top-level permissions are contents: re
   // A job write outside the allow-list.
   const job = (id: string, permissions: string) => `  ${id}:\n    runs-on: ubuntu-latest\n    permissions:${permissions}\n    steps:\n      - run: echo hi\n`;
   expect(check(workflow(READ, job("build", "\n      contents: write")))).toEqual([
-    "workflow permissions: .github/workflows/x.yml job build holds contents: write; write scopes are allowed only in oracle, dashboard, release (AD-16)",
+    "workflow permissions: .github/workflows/x.yml job build holds contents: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
   ]);
   expect(check(workflow(READ, job("build", " write-all")))).toHaveLength(1);
   expect(check(workflow(READ, job("build", "\n      id-token: write\n      contents: read")))[0]).toContain("job build holds id-token: write");
   expect(check(workflow(READ, job("build", "\n      contents: read\n      pull-requests: read")))).toEqual([]);
   expect(check(workflow(READ, job("build", " read-all")))).toEqual([]);
   expect(check(workflow(READ, job("build", "\n      contents: admin")))[0]).toContain("job build has malformed permissions");
-  // Allowed jobs may hold write scopes.
-  for (const id of ALLOWED_WRITE_JOBS) {
-    expect(check(workflow(READ, job(id, "\n      id-token: write\n      contents: write")))).toEqual([]);
+  // Allowed jobs may hold write scopes, each in its own workflow file.
+  for (const key of ALLOWED_WRITE_JOBS) {
+    const [name, id] = key.split("#") as [string, string];
+    expect(checkWorkflow(`.github/workflows/${name}`, workflow(READ, job(id, "\n      id-token: write\n      contents: write")))).toEqual([]);
+  }
+  expect(checkWorkflow(".github/workflows/release.yml", workflow(READ, job("release", "\n      id-token: write")))).toEqual([]);
+  // An allowed job id in another file, another job in an allowed file, and a .yaml twin are all rejected.
+  expect(check(workflow(READ, job("release", "\n      contents: write")))).toEqual([
+    "workflow permissions: .github/workflows/x.yml job release holds contents: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
+  ]);
+  for (const id of ["oracle", "dashboard"]) {
+    expect(check(workflow(READ, job(id, " write-all")))).toEqual([
+      `workflow permissions: .github/workflows/x.yml job ${id} holds write-all; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)`,
+    ]);
+  }
+  expect(checkWorkflow(".github/workflows/release.yml", workflow(READ, job("gate", "\n      contents: write")))).toEqual([
+    "workflow permissions: .github/workflows/release.yml job gate holds contents: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
+  ]);
+  expect(checkWorkflow(".github/workflows/release.yaml", workflow(READ, job("release", "\n      id-token: write")))).toEqual([
+    "workflow permissions: .github/workflows/release.yaml job release holds id-token: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
+  ]);
+  // Read-only scopes pass in any file, under any job id.
+  for (const file of ["x.yml", "release.yml", "release.yaml"]) {
+    for (const id of ["build", "release", "oracle"]) {
+      expect(checkWorkflow(`.github/workflows/${file}`, workflow(READ, job(id, "\n      contents: read\n      id-token: none")))).toEqual([]);
+    }
   }
   expect(check("jobs: [unclosed\n")[0]).toContain("is not valid YAML");
 
   // Fixture roots, through the library and the CLI (.yml and .yaml).
-  await withWorkflows({ "a.yml": workflow(READ), "b.yaml": workflow(READ, job("release", "\n      id-token: write")) }, (dir) => {
-    expect(checkWorkflows(dir)).toEqual({ files: [".github/workflows/a.yml", ".github/workflows/b.yaml"], violations: [] });
+  await withWorkflows(
+    { "a.yml": workflow(READ), "c.yaml": workflow(READ, job("build", " read-all")), "release.yml": workflow(READ, job("release", "\n      id-token: write")) },
+    (dir) => {
+      expect(checkWorkflows(dir)).toEqual({ files: [".github/workflows/a.yml", ".github/workflows/c.yaml", ".github/workflows/release.yml"], violations: [] });
+    },
+  );
+  // A job named release outside release.yml may not hold a write scope.
+  await withWorkflows({ "a.yml": workflow(READ), "x.yml": workflow(READ, job("release", "\n      contents: write")) }, (dir) => {
+    expect(checkWorkflows(dir).violations).toEqual([
+      "workflow permissions: .github/workflows/x.yml job release holds contents: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
+    ]);
   });
   await withWorkflows({ "a.yml": workflow(READ), "b.yaml": workflow("permissions: write-all\n") }, (dir) => {
     const result = checkWorkflows(dir);
@@ -544,6 +576,12 @@ test("XT-conformance-31: every workflow's top-level permissions are contents: re
     const bad = await run(WORKFLOWS_CLI, ["check", "--root", fixture]);
     expect(bad.code).toBe(1);
     expect(bad.stderr).toContain("workflow permissions: .github/workflows/bad.yml job build holds contents: write");
+    writeFileSync(join(fixture, ".github", "workflows", "bad.yml"), workflow(READ, job("release", "\n      contents: write")));
+    const misplaced = await run(WORKFLOWS_CLI, ["check", "--root", fixture]);
+    expect(misplaced.code).toBe(1);
+    expect(misplaced.stderr).toContain(
+      "workflow permissions: .github/workflows/bad.yml job release holds contents: write; write scopes are allowed only in oracle.yml#oracle, dashboard.yml#dashboard, release.yml#release (AD-16)",
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

@@ -5,16 +5,18 @@
 //
 // Rules: a workflow's top-level `permissions` must be exactly
 // `{contents: read}`. A job may hold a `write` scope, `write-all` or
-// `id-token: write` only when its id is in ALLOWED_WRITE_JOBS.
+// `id-token: write` only when `<file base name>#<job id>` is in
+// ALLOWED_WRITE_JOBS (an exact match: `release.yaml#release` is not
+// `release.yml#release`).
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 // Violations go to stderr, one `workflow permissions: <file> …` line each.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 export const WORKFLOWS_DIR = ".github/workflows";
-/** The only jobs that may hold a write scope (AD-16, AD-18). */
-export const ALLOWED_WRITE_JOBS = ["oracle", "dashboard", "release"] as const;
+/** The only jobs that may hold a write scope, keyed `<workflow file name>#<job id>` (AD-16, AD-18). */
+export const ALLOWED_WRITE_JOBS = ["oracle.yml#oracle", "dashboard.yml#dashboard", "release.yml#release"] as const;
 
 function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -58,6 +60,7 @@ export function checkWorkflow(file: string, text: string): string[] {
     return [bad("must be a YAML mapping")];
   }
   const out: string[] = [];
+  const name = basename(file);
   const top = data["permissions"];
   const topOk = isObject(top) && Object.keys(top).length === 1 && top["contents"] === "read";
   if (!topOk) {
@@ -79,7 +82,7 @@ export function checkWorkflow(file: string, text: string): string[] {
       continue;
     }
     const grants = writeGrants(permissions);
-    if (grants.length > 0 && !(ALLOWED_WRITE_JOBS as readonly string[]).includes(id)) {
+    if (grants.length > 0 && !(ALLOWED_WRITE_JOBS as readonly string[]).includes(`${name}#${id}`)) {
       out.push(bad(`job ${id} holds ${grants.join(", ")}; write scopes are allowed only in ${ALLOWED_WRITE_JOBS.join(", ")}`));
     }
   }
