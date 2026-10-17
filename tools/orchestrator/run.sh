@@ -37,18 +37,6 @@ while :; do
   case "$outcome" in
     progress) sleep 60 ;;
     idle)     sleep 1800 ;;
-    say "git sync failed; see $log"; sleep 900; continue
-  fi
-
-  (cd "$REPO" && claude -p "$(cat tools/orchestrator/iteration.md)" \
-      --permission-mode auto --output-format stream-json --verbose) >>"$log" 2>&1
-  rc=$?
-  outcome="$(tr -d '[:space:]' < "$STATE/outcome" 2>/dev/null || true)"
-  say "rc=$rc outcome=${outcome:-none} log=$log"
-
-  case "$outcome" in
-    progress) sleep 60 ;;
-    idle)     sleep 1800 ;;
     stop)     touch "$STATE/STOP"; exit 0 ;;
     *)        sleep 900 ;;   # crash, rate limit or no outcome: back off
   esac

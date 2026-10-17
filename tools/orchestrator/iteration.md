@@ -12,7 +12,10 @@ Find the open issue with label `orchestrator` and title `Orchestrator status`: `
 
 ## 2. Pick one unit of work, in this order
 
-A. **Open orchestrator PR.** If an open PR exists from a `story/*` or `planning/*` branch that this orchestrator opened (its body ends with `Opened by the Xaravel orchestrator.`), finishpush and wait again. If a branch has failed three iterations in a row (count the earlier `[orchestrator fix]` commits on it), stop retrying: mark the Story `blocked` in sprint status and comment on ISSUE.
+A. **Open orchestrator PR.** If an open PR exists from a `story/*` or `planning/*` branch that this orchestrator opened (its body ends with `Opened by the Xaravel orchestrator.`), finish it before you start anything new:
+   - Check out its branch.
+   - If checks are still running, wait for them: `gh pr checks <n> --watch --fail-fast`, up to 30 minutes.
+   - If checks fail, read the failing logs, fix the cause on the branch, commit, push and wait again. If a branch has failed three iterations in a row (count the earlier `[orchestrator fix]` commits on it), stop retrying: mark the Story `blocked` in sprint status and comment on ISSUE.
    - If it is green and mergeable, merge it (see section 4). Outcome `progress`.
    - If it can't be merged because it waits on the Maintainer, leave it open and move on to B–E.
 
@@ -25,7 +28,14 @@ B. **No sprint plan.** If `_bmad-output/implementation-artifacts/sprint-status.y
 C. **Next Story.** Read `sprint-status.yaml`. Pick the first Story in file order whose status is `backlog`, `ready-for-dev` or `in-progress`. Skip any Story whose prerequisites (the Story's dependencies in `epics.md`, or earlier Stories of its epic) are not `done`, any Story that is `blocked`, and any Story whose PR is open and waiting on the Maintainer. Then:
    - Create branch `story/<story-id>` from `main`.
    - Set the Story `in-progress` in sprint status.
-   - Invoke the `bmad-build-auto` skill with the Story as intent, for example `Story 1.1 from epics.m
+   - Invoke the `bmad-build-auto` skill with the Story as intent, for example `Story 1.1 from epics.md: Root workspace and repository baseline`. Follow it to its HALT.
+   - On `done`: set the Story to `done` in sprint status. When it was the last Story of its epic, set the epic to `done` too. Run whatever verification the repo has at this point (`bun install`, `bun test`, `tsc`, oxlint and the harness, once they exist). Commit everything, open a PR and merge it (section 4). Outcome `progress`.
+   - On `blocked`: keep the spec file and any Escalation, and set the Story `blocked` in sprint status with the reason. Commit, open a PR and merge it, so the block is recorded on `main`. Comment on ISSUE with the blocking condition. Outcome `progress`.
+
+D. **Escalations you may rule on.** If an open Escalation in `conformance/escalations/` has no decision file, and the MAINT ruling lets the orchestrator decide it, write the decision on a `planning/esc-<id>` branch, unblock the Story, and open and merge the PR. Outcome `progress`.
+
+E. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Maintainer or on an `AGENTS.md` change. Comment on ISSUE with what is waiting and why, but only if that differs from your last comment there. Outcome `idle`.
+
 ## 3. Rules while working
 
 - One unit of work per iteration. Don't start a second Story.
