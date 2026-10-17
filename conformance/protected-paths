@@ -1,0 +1,36 @@
+# Protected Paths (AD-16). This file is itself Protected, by `/conformance/`.
+#
+# One CODEOWNERS-style pattern per line; `#` comments and blank lines are
+# ignored. A `!` prefix marks an exclusion: the last active entry that matches a
+# path decides it. A trailing ` after-phase:<n>` marks an entry that is active
+# only once `decisions/PHASE-<n>-EXIT.md` exists.
+#
+# `.github/CODEOWNERS` is generated from this list:
+#   bun run protected-paths:codeowners
+
+/conformance/
+!/conformance/expectations/
+!/conformance/escalations/
+!/conformance/oracle-requests/
+!/conformance/fixtures/
+
+/decisions/
+/PORTING.md
+/stories/
+/.github/
+/tools/
+
+/packages/assert/
+/packages/mockery/
+/packages/contracts/ after-phase:1
+
+/package.json
+/bun.lock
+/bunfig.toml
+/tsconfig*.json
+/tsconfig.base.json
+/.oxlintrc.json
+/.gitattributes
+
+/AGENTS.md
+**/CLAUDE.md

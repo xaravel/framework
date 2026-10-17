@@ -1,0 +1,24 @@
+# Generated from conformance/protected-paths (AD-16). Do not edit by hand.
+# Regenerate with: bun run protected-paths:codeowners
+# An entry with no owner leaves the path unowned.
+/conformance/ @edanisko
+/conformance/expectations/
+/conformance/escalations/
+/conformance/oracle-requests/
+/conformance/fixtures/
+/decisions/ @edanisko
+/PORTING.md @edanisko
+/stories/ @edanisko
+/.github/ @edanisko
+/tools/ @edanisko
+/packages/assert/ @edanisko
+/packages/mockery/ @edanisko
+/package.json @edanisko
+/bun.lock @edanisko
+/bunfig.toml @edanisko
+/tsconfig*.json @edanisko
+/tsconfig.base.json @edanisko
+/.oxlintrc.json @edanisko
+/.gitattributes @edanisko
+/AGENTS.md @edanisko
+**/CLAUDE.md @edanisko
