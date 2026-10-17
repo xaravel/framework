@@ -1,0 +1,55 @@
+# The edit-ownership check (Story 1.5, AD-16, AD-21).
+#
+# `ownership` runs only for PRs into main, from main's copy of this workflow
+# (`pull_request_target` runs the base branch's copy), so a PR cannot change
+# the check that judges it. It never checks out, installs or runs PR code: the
+# checkout is the base commit, the Story manifest is read from it, and the PR's
+# head branch and files are read from the GitHub API as data. `edited` re-runs
+# it when a PR's base is re-targeted.
+#
+# `manifests` validates every committed manifest and the duplicate Test ID
+# rule on the checked-out commit: the base for PRs, and main after each push.
+name: ownership
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ownership:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Check edit ownership
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Check Story manifests
+        run: bun tools/ownership/ownership.ts manifests

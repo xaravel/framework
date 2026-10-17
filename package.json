@@ -22,7 +22,8 @@
     "scaffold:check": "bun tools/scaffold/scaffold.ts --check",
     "scaffold:table": "bun tools/scaffold/table.ts",
     "graph:check": "bun tools/graph/graph.ts",
-    "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners"
+    "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners",
+    "ownership:check": "bun tools/ownership/ownership.ts manifests"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
