@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 02:30
+last_updated: 10-17-2026 02:22
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -44,7 +44,7 @@ development_status:
   1-6-escalation-and-decision-records: done
   1-7-repository-ruleset-workflow-permissions-and-dependency-audit: done
   1-8-lockstep-release-workflow-with-provenance: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-upstream-snapshot-and-pin-record: backlog
@@ -576,3 +576,114 @@ development_status:
   74-2-divergence-and-contract-review-for-laravel-14: backlog
   74-3-versioning-switch: backlog
   epic-74-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-ci-test-typecheck-lint-job"
+    epic: 1
+    action: "Add a CI workflow job running bun test, typecheck, lint, scaffold:check
+      and graph:check on pull_request, merge_group and push to main (finding R1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-2-require-remaining-checks"
+    epic: 1
+    action: "Add the new CI job, workflow-permissions, escalations (after adding merge_group),
+      versions and release-authority to main.json required checks and run ruleset:apply
+      (finding R2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-3-bind-decision-to-escalation"
+    epic: 1
+    action: "Decision files record the approved Escalation content hash or commit,
+      and the escalations check fails when a decided Escalation file changes (finding
+      D1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-4-escalation-test-ids-vs-manifest"
+    epic: 1
+    action: "Check an Escalation test_ids against the raising Story manifest test_ids
+      in tools/escalations (finding D4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-5-manifest-status-sync"
+    epic: 1
+    action: "Keep stories/<id>.md status in sync with sprint status, set Epic 1 manifests
+      to done, and make the duplicate Test ID check consider only Stories that are
+      not done (finding D5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-6-write-scope-allow-list-by-file-job"
+    epic: 1
+    action: "Key the workflow write-scope allow-list by file#job instead of job id
+      (finding D6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-7-release-gate-tag-on-main"
+    epic: 1
+    action: "Make release gate refuse a tag whose commit is not reachable from main
+      (finding D7)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-8-ruleset-verify-no-token"
+    epic: 1
+    action: "Make ruleset:verify fail fast with a no-token error when GH_TOKEN is
+      unset instead of reporting drift (finding D8)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-9-typecheck-tests-and-peer-import"
+    epic: 1
+    action: "Typecheck package tests/** and probe a guarded optional-peer import()
+      under tsc -b, fixing scaffolder references if it fails (finding D9)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-10-harden-protected-paths-pr"
+    epic: 1
+    action: "Validate changed_files in protected-paths pr and derive the head mirror
+      from every after-phase marker (finding D10)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-11-followup-reviews-1-4-1-8"
+    epic: 1
+    action: "Run the follow-up reviews spec-1-4 and spec-1-8 still recommend and clear
+      followup_review_recommended (finding R9)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-12-agent-identity-decision"
+    epic: 1
+    action: "Create a non-admin agent account or rule AD-16 identity waived while
+      the orchestrator runs as the Maintainer, and reconcile story/*-only pushes with
+      planning/* (findings R3, D2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-13-release-live-setup-and-version-pins"
+    epic: 1
+    action: "Before the first tag: set up the release environment, npm Trusted Publishing
+      and bootstrap publish, and rule on the 0.0.0 pins in XT-1 and XT-7 (findings
+      R4, R5)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-14-widen-protected-list"
+    epic: 1
+    action: "Rule on widening the AD-16 Protected list to .claude/, CLAUDE.md case
+      variants, .bun-version and the root LICENSE (finding D11)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
+  - id: "epic-1-retro-item-15-ownership-non-story-branches"
+    epic: 1
+    action: "Tighten ownership for non-story/* branches to the AD-16 bot/* rule and
+      define what planning/* may touch, Escalating if it changes AD-16 (finding D3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
