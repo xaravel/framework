@@ -2,15 +2,36 @@
 title: 'Story 2.4: PHPUnit Test Inventory for `laravel/framework`'
 type: 'feature'
 created: '2026-10-17'
-baseline_revision: '4a67783af49778fce1946b6cef607ee50ce3924a'
-status: 'ready-for-dev'
+baseline_revision: 'bc4b46b1fa41552fe787e433cae79b2117d376c4'
+status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
   - '{project-root}/stories/2.4.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      The committed Inventory's source-range check runs only when the snapshot is present, and no CI job runs inventory.test.ts after upstream:sync.
+    evidence: |-
+      HAS_SNAPSHOT is false in ci.yml's check job (conformance/upstream is gitignored), so the per-entry range assertions are skipped in CI. The intent forbids adding a CI workflow in this Story; Story 2.7 adds the Inventory workflow.
+    location: >-
+      conformance/tests/xaravel/inventory.test.ts:352
+    severity: medium
+  - summary: >-
+      The PHP lister's logic (listing, tokenizing, dataset export, attribute and trait discovery, fail-closed checks) is not exercised by bun test.
+    evidence: |-
+      bun test must not need PHP (intent Never list), so XT-50 only checks lister.php for key strings and the committed output's properties. Story 2.7's determinism and runner-listing cross-check is the place to run the real lister.
+    location: >-
+      tools/inventory/lister.php
+    severity: medium
+  - summary: >-
+      Tests gated on non-database services or environment (DynamoDB, memcached, RequiresEnv, RequiresPhpExtension, RequiresOperatingSystem) are recorded with backends ["none"].
+    evidence: |-
+      e.g. Illuminate\Tests\Integration\Cache\DynamoDbStoreTest needs dynamodb-local. The intent fixes the backend vocabulary, so widening it belongs to Epic 5's Variant work (conformance/variants).
+    location: >-
+      tools/inventory/inventory.ts backendsFor
+    severity: medium
 ---
 
 <intent-contract>
@@ -98,6 +119,43 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-17 — Review pass
+- verdicts: 33 findings — high 0, medium 7, low 20, false 6, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` (verification-gap) `runInImage` is never executed by a test; its docker argv (`--network none`, `:ro`) is unpinned — added a recording-fake-docker test for argv, stdout, failure message and no-docker error.
+  - `[medium]` `[defer]` (verification-gap) the committed-Inventory source-range check runs only with a snapshot, which CI's `check` job lacks — the fix adds a CI workflow, which the intent's Never list assigns to Story 2.7.
+  - `[low]` `[patch]` (verification-gap) the `--local` "is missing" branch is untested — added the missing-file case to the stale-copy block.
+  - `[low]` `[patch]` (verification-gap) XT-52's comment claims inherited copies share a source, unasserted — dropped the claim from the comment.
+  - `[false]` `[reject]` (verification-gap) docs/code disagree on the missing-snapshot message — `upstreamPath` throws `conformance/upstream/framework is missing; run bun run upstream:sync` first, matching docs and test (test passes).
+  - `[medium]` `[defer]` (intent-alignment) the lister's PHP logic (listing, tokens, export, attribute discovery, fail-closed checks) is not exercised by `bun test` — the intent forbids `bun test` needing PHP; Story 2.7's determinism and runner-listing cross-check covers it.
+  - `[false]` `[reject]` (intent-alignment) hard-coded 16216 total — the AC requires exactly 16216 at the Pin; a Pin bump (Story 2.8) updates it.
+  - `[false]` `[reject]` (blind) status values disagree across tracking files — mid-run state; spec, sprint status and manifest all move to `done` at finalization.
+  - `[medium]` `[defer]` (blind) tests needing DynamoDB/memcached/env/extension gates get `["none"]` — the intent fixes the backend vocabulary ("If nothing applies, `["none"]`"); Epic 5 Variants own wider gating.
+  - `[false]` `[reject]` (blind) `#[RequiresDatabase]` on traits is ignored — no trait under the snapshot's `tests/` declares the attribute (grep), so no entry is affected.
+  - `[low]` `[reject]` (blind) local mode does not check vendor against the committed lock — the regeneration procedure installs from that lock; a check adds a new guard for an undemonstrated state.
+  - `[low]` `[reject]` (blind) image mode does not check the image's framework copy against the snapshot — the image tag derives from the Pin and locks; a check adds a new guard.
+  - `[false]` `[reject]` (blind) randomness pinning misses clock/random_int — no dataset export contains a current date or unseeded value; two real generations were byte-identical.
+  - `[medium]` `[patch]` (blind) hashes depend on test order through global state — confirmed via Carbon's `constructedObjectId` (spl_object_id) in 3 exports; grouped with the export fix below.
+  - `[low]` `[patch]` (blind) hash scope narrower than FR-7 (setUp, helpers, properties, traits) — the intent defines the hash; documented the exclusions in docs/ops/inventory.md.
+  - `[low]` `[reject]` (blind) `{root}` replacement is a plain substring replace with a relative dir — inventory.ts always passes an absolute path; direct relative use is unlikely and the fix adds a branch.
+  - `[low]` `[defer]` (blind) none of the PHP lister's logic is tested — same root as the intent-alignment lister finding; deferred with it.
+  - `[low]` `[patch]` (blind) `runInImage` untested and its error text differs from the docs — test added (see above); docs row now gives the image-mode form.
+  - `[low]` `[patch]` (blind) failure table incomplete, "nothing is written" too strong — reworded to "every validation runs before any file is written".
+  - `[low]` `[patch]` (blind) test comments overstate (`committed()` null docstring, XT-52 clause) — both corrected.
+  - `[low]` `[reject]` (blind) duplicate outside-`tests/` check in `buildEntries` and `generate` — harmless defence for the exported `buildEntries`; no user-facing harm.
+  - `[low]` `[reject]` (blind) "cache: 1 tests" wording — cosmetic; pinned by XT-49.
+  - `[medium]` `[patch]` (edge-case) `DateTime`/`DateTimeImmutable`/`ArrayObject` export as `Class{}` so their changes leave the hash unchanged (confirmed: CacheRepositoryTest::testGetSeconds#1/#2, ValidationEnumRuleTest) — `export()` now formats `DateTimeInterface` values and exports `ArrayObject` contents; Inventory regenerated.
+  - `[medium]` `[patch]` (edge-case) Carbon exports `constructedObjectId`, allocation-order dependent — fixed by the same `DateTimeInterface` branch.
+  - `[false]` `[reject]` (edge-case) providers using random_int/uniqid/now() change every generation — none at the Pin; two real generations byte-identical.
+  - `[low]` `[reject]` (edge-case) generate writes entries that `parseInventory` would reject — not reachable at the Pin (committed files parse); fix adds a pass.
+  - `[low]` `[patch]` (edge-case) partial write on an I/O failure contradicts the docs — docs reworded (same as the failure-table row).
+  - `[low]` `[reject]` (edge-case) local vendor from another lock — same as the blind finding; rejected.
+  - `[low]` `[reject]` (edge-case) `--image` framework differs from snapshot — same as the blind finding; rejected.
+  - `[low]` `[reject]` (edge-case) symlink loop in local tests/ or src/ — unlikely in a composer install; fix adds a guard.
+  - `[low]` `[reject]` (edge-case) `:` or `,` in the host lister path breaks `--volume` — unlikely repository path; fix changes mount syntax.
+  - `[low]` `[reject]` (edge-case) relative root in direct lister use — same as the blind finding; rejected.
+  - `[low]` `[reject]` (edge-case) a `:` in a source path truncates the `..` check — sources come from reflection under the snapshot; generate already checks existence under `tests/`.
+
 ## Design Notes
 
 The IDs come from PHPUnit's runtime listing because providers are computed (research G-26). Story 2.7 then cross-checks them independently, for determinism and against the JUnit output. Tests directly under `Integration/Database/` that have no attribute are `none`, as the AC literally says. Upstream also runs them on every engine in its databases workflow; Epic 5's Variant work can widen that through an Escalation. `mysql`, `mariadb`, `sqlsrv` and `beanstalkd` are recorded faithfully (PRD §FR-1 line 208). They are post-alpha backends, and `conformance/variants` (Epic 5) decides whether they become Variants.
@@ -111,10 +169,51 @@ The IDs come from PHPUnit's runtime listing because providers are computed (rese
 
 ## Auto Run Result
 
+Status: done (2026-10-17, resumed after ESC-2.4-1 was approved)
+
+### Resumed run (2026-10-17)
+
+**Summary.** The run applied the saved attempt and changed the empty-intersection branch of `backendsFor`, as `decisions/ESC-2.4-1.md` directs: the test keeps the directory's engine, or gets no database backend when there is no engine directory. The 8 escalated `SchemaBuilderSchemaNameTest` IDs now carry `["sqlite"]`. Review then fixed the dataset export of `DateTimeInterface` and `ArrayObject` values: they used to export as an empty `Class{}`, and Carbon's export also included an allocation-dependent `constructedObjectId`. The Inventory was regenerated afterwards: 16216 tests in 37 files.
+
+**Files changed:**
+- `tools/inventory/inventory.ts`: new. The generator and the CLI.
+- `tools/inventory/lister.php`: new. The PHP lister, which runs inside the Oracle image or against a locked local install.
+- `tools/oracle/oracle.ts`: new `runInImage` (`docker run --rm --network none` with read-only mounts). It reads PATH and the environment at call time.
+- `conformance/inventory/*.jsonl`: the generated Inventory, 37 framework Component files.
+- `conformance/tests/xaravel/inventory.test.ts`: new. XT-conformance-49..52, plus the matrix.
+- `conformance/tests/xaravel/oracle.test.ts`: adds `runInImage` coverage inside XT-conformance-44, which is the only test file allowed to import `tools/oracle`.
+- `docs/ops/inventory.md`: new operator note. `docs/ops/oracle.md`: one sentence on `runInImage`.
+- `package.json`: the `inventory` script. `tsconfig.json`: includes `tools/inventory`.
+- `_bmad-output/implementation-artifacts/spec-2-4-attempt.patch`: removed now that it is applied.
+
+**Review:** 33 findings: 7 medium, 20 low, 6 false.
+- **Patched:** 2 medium entries (the `runInImage` test, and the date and ArrayObject export, which grouped 3 findings), plus 7 low (the missing-file test, two test comments, and four docs corrections).
+- **Deferred:** 3 medium:
+  - a CI run of the snapshot-guarded checks (Story 2.7);
+  - the lister's PHP logic, which `bun test` does not exercise (Story 2.7);
+  - service and environment gates beyond databases and redis (Epic 5).
+- **Rejected:** 13 low and 6 false. Each one's reason is in the Review Triage Log.
+
+**Follow-up review recommended:** `true`. Two medium entries were patched (counted at entry verdict: medium 2). The unverified risk: the lister's new `DateTimeInterface`/`ArrayObject` export branches are checked only through the regenerated committed hashes. No test runs `export()`.
+
+**Verification:**
+- `bun run inventory --local /tmp/xaravel-inv/framework` exits 0 with 16216 tests. It was run again after the patches, and the output was byte-identical (`diff -r`).
+- `bun test`: 54 pass, 0 fail.
+- `typecheck`, `lint`, `workflows:check`, `protected-paths:codeowners --check`, `component-map:check` and `upstream:check`: all exit 0.
+- Matrix audit: every row is covered by a passing test in XT-49 or XT-51.
+
+**Residual risks:**
+- Image mode has not been run against a real Oracle image, because this host has no Docker.
+- A provider's hashed values come from pinned randomness, not from the values a real run draws.
+- The deferred items above.
+
+
+### First run (2026-10-17)
+
 Status: blocked
 Blocking condition: intent gap. The intent contract says an empty `RequiresDatabase` × engine-directory intersection fails the run. At the Pin, 8 Test IDs hit this rule, so `bun run inventory` exits 1, which contradicts this spec's Verification (exit 0, 16216 entries). The 8 IDs are the inherited `testForeignKeys`, `testComment`, `testAutoIncrementStartingValue` and `testHasTable` × 2 datasets on `Illuminate\Tests\Integration\Database\Sqlite\SchemaBuilderSchemaNameTest`; Upstream skips them on every engine. Raised as `conformance/escalations/ESC-2.4-1.md`. Every other ID derived cleanly.
 
-**Attempted implementation:** saved as `_bmad-output/implementation-artifacts/spec-2-4-attempt.patch`; it applies to the baseline with `git apply`. The code was reverted. Once the Escalation is ruled on, apply the patch, change the empty-intersection branch of `backendsFor` in `tools/inventory/inventory.ts`, regenerate twice with `--local`, and commit `conformance/inventory/*.jsonl`.
+**Attempted implementation:** saved as `_bmad-output/implementation-artifacts/spec-2-4-attempt.patch`; it applies to the baseline with `git apply`. The code was reverted. Once the Escalation is ruled on, apply the patch (`spec-2-4-attempt.patch`, removed once applied in the resumed run), change the empty-intersection branch of `backendsFor` in `tools/inventory/inventory.ts`, regenerate twice with `--local`, and commit `conformance/inventory/*.jsonl`.
 
 **Contents of the patch:**
 - `tools/inventory/lister.php` and `tools/inventory/inventory.ts`.

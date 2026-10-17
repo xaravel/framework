@@ -1,6 +1,6 @@
 # The Oracle image
 
-The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build` and `oracle:verify-image` call `docker`, and `bun test` never does.
+The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image` and the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)) call `docker`, and `bun test` never does.
 
 ## What the image holds
 

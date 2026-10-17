@@ -17,7 +17,8 @@
     "tools/release/**/*.ts",
     "tools/upstream/**/*.ts",
     "tools/oracle/**/*.ts",
-    "tools/component-map/**/*.ts"
+    "tools/component-map/**/*.ts",
+    "tools/inventory/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"
