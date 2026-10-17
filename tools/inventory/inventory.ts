@@ -13,6 +13,13 @@
 //       `--php <bin>`); every test and source file there must equal the
 //       snapshot's copy.
 //
+//   bun tools/inventory/inventory.ts generate --check [same suite and mode flags]
+//       builds every selected suite's files in memory exactly as `generate`
+//       does (carry-over included) and compares them byte for byte with
+//       `conformance/inventory/` (Story 2.7). It never writes or deletes a
+//       file; each drifted file is one `inventory drift: …` line on stderr.
+//       The Oracle non-determinism file is never compared.
+//
 // The framework writes one file per framework Component. A Pest suite writes
 // only `<suite>.jsonl`, and every entry's Component must be the suite. Pest
 // Test IDs are `<suite>/<test file>::<describe> > … > <test name>#<dataset>`.
@@ -136,6 +143,8 @@ export interface GenerateOptions {
   php?: string;
   /** Runs the lister in the image; default `runInImage`. */
   runner?: ImageRunner;
+  /** Compare the in-memory build with the committed files instead of writing them (Story 2.7). */
+  check?: boolean;
 }
 
 export interface GenerateResult {
@@ -144,6 +153,8 @@ export interface GenerateResult {
   total: number;
   written: string[];
   removed: string[];
+  /** With `check`: one `inventory drift: …` line per file that differs, is missing or is not generated. */
+  drift: string[];
 }
 
 const SNAPSHOT_HINT = "run bun run upstream:sync";
@@ -544,7 +555,7 @@ function walk(base: string, dir: string, out: string[]): void {
 }
 
 /** Fails naming every test or source file (and phpunit.xml.dist) that differs between the local install and the snapshot. */
-function checkLocalCopy(snapshot: string, local: string, suite: Suite): void {
+export function checkLocalCopy(snapshot: string, local: string, suite: Suite): void {
   const files = (base: string): string[] => {
     const out: string[] = [];
     walk(base, join(base, "tests"), out);
@@ -671,10 +682,36 @@ export function listSuite(root: string, suite: Suite, snapshot: string, lister: 
   return raws;
 }
 
+/** The 1-based line of the first difference between two texts. */
+function firstDifference(a: string, b: string): number {
+  const left = a.split("\n");
+  const right = b.split("\n");
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i++) {
+    if (left[i] !== right[i]) {
+      return i + 1;
+    }
+  }
+  return length;
+}
+
+/** The framework Component files in `dir` that a framework generation of `files` would delete, sorted. */
+function strayFrameworkFiles(dir: string, files: ReadonlyMap<string, string>): string[] {
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir)
+    .sort(compareUnits)
+    .filter((name) => {
+      const component = name.replace(/\.jsonl$/, "");
+      return name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE && !files.has(component) && !FOREIGN_COMPONENTS.includes(component);
+    });
+}
+
 /**
  * Runs the lister and writes the Inventory files under `root`: per framework Component for `framework`,
  * `<suite>.jsonl` for a Pest suite, all four for `all`. Every suite is listed and validated before any file
- * is written.
+ * is written. With `check`, it writes and deletes nothing, and reports each drifted file in `drift` instead.
  */
 export function generate(root: string, options: GenerateOptions = {}): GenerateResult {
   const selected = options.suite ?? "framework";
@@ -707,8 +744,33 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
   }
 
   const dir = join(root, INVENTORY_DIR);
+  const result: GenerateResult = { counts: {}, total: 0, written: [], removed: [], drift: [] };
+  if (options.check === true) {
+    for (const { suite, files, total } of generated) {
+      result.total += total;
+      for (const [component, text] of files) {
+        const file = join(dir, `${component}.jsonl`);
+        const name = `${INVENTORY_DIR}/${component}.jsonl`;
+        if (!existsSync(file)) {
+          result.drift.push(`inventory drift: ${name} is missing`);
+        } else {
+          const committed = readFileSync(file, "utf8");
+          if (committed !== text) {
+            result.drift.push(`inventory drift: ${name} differs from the regenerated Inventory (first difference at line ${firstDifference(committed, text)})`);
+          }
+        }
+        result.written.push(name);
+        result.counts[component] = text.split("\n").length - 1;
+      }
+      if (suite === "framework") {
+        for (const name of strayFrameworkFiles(dir, files)) {
+          result.drift.push(`inventory drift: ${INVENTORY_DIR}/${name} is not generated`);
+        }
+      }
+    }
+    return result;
+  }
   mkdirSync(dir, { recursive: true });
-  const result: GenerateResult = { counts: {}, total: 0, written: [], removed: [] };
   for (const { suite, files, total } of generated) {
     result.total += total;
     for (const [component, text] of files) {
@@ -720,12 +782,9 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
       result.counts[component] = text.split("\n").length - 1;
     }
     if (suite === "framework") {
-      for (const name of readdirSync(dir).sort(compareUnits)) {
-        const component = name.replace(/\.jsonl$/, "");
-        if (name.endsWith(".jsonl") && name !== NONDETERMINISM_FILE && !files.has(component) && !FOREIGN_COMPONENTS.includes(component)) {
-          rmSync(join(dir, name));
-          result.removed.push(`${INVENTORY_DIR}/${name}`);
-        }
+      for (const name of strayFrameworkFiles(dir, files)) {
+        rmSync(join(dir, name));
+        result.removed.push(`${INVENTORY_DIR}/${name}`);
       }
     }
   }
@@ -735,22 +794,27 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
 // ---------------------------------------------------------------------------
 // CLI
 
-class UsageError extends Error {}
+export class UsageError extends Error {}
 
-const USAGE = ["Usage:", "  bun tools/inventory/inventory.ts generate [--suite <framework|ai|mcp|boost|all>] [--root <dir>] [--image <ref> | --local <dir> [--php <bin>]]"].join("\n");
+const USAGE = ["Usage:", "  bun tools/inventory/inventory.ts generate [--check] [--suite <framework|ai|mcp|boost|all>] [--root <dir>] [--image <ref> | --local <dir> [--php <bin>]]"].join("\n");
 
-function parseOptions(argv: readonly string[]): { root: string } & GenerateOptions {
+/** Parses `generate`'s flags (and the cross-check's, which takes no `--check`). */
+export function parseOptions(argv: readonly string[], allowCheck = true): { root: string } & GenerateOptions {
   const options: { root: string } & GenerateOptions = { root: resolve(import.meta.dir, "..", "..") };
   const seen = new Set<string>();
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
-    if (!["--suite", "--root", "--image", "--local", "--php"].includes(arg)) {
+    if (!["--suite", "--root", "--image", "--local", "--php", ...(allowCheck ? ["--check"] : [])].includes(arg)) {
       throw new UsageError(`Unknown argument: ${arg}`);
     }
     if (seen.has(arg)) {
       throw new UsageError(`${arg} given twice`);
     }
     seen.add(arg);
+    if (arg === "--check") {
+      options.check = true;
+      continue;
+    }
     const value = argv[++i];
     if (value === undefined || value.startsWith("--")) {
       throw new UsageError(`${arg} needs a value`);
@@ -792,6 +856,15 @@ export function main(argv: readonly string[]): number {
     }
     const { root, ...options } = parseOptions(rest);
     const result = generate(root, options);
+    if (options.check === true) {
+      process.stderr.write(result.drift.map((line) => `${line}\n`).join(""));
+      if (result.drift.length > 0) {
+        process.stderr.write(`Inventory check failed: ${result.drift.length} file(s) differ.\n`);
+        return 1;
+      }
+      process.stdout.write(`Inventory check OK: ${result.total} tests in ${result.written.length} files are byte-identical.\n`);
+      return 0;
+    }
     const lines = Object.entries(result.counts).map(([component, count]) => `${component}: ${count} tests`);
     lines.push(...result.removed.map((file) => `removed ${file}`));
     lines.push(`Inventory: ${result.total} tests in ${result.written.length} files.`);
