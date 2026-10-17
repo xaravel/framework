@@ -43,7 +43,7 @@ development_status:
   1-5-story-manifests-and-edit-ownership-check: done
   1-6-escalation-and-decision-records: done
   1-7-repository-ruleset-workflow-permissions-and-dependency-audit: done
-  1-8-lockstep-release-workflow-with-provenance: backlog
+  1-8-lockstep-release-workflow-with-provenance: in-progress
   epic-1-retrospective: optional
 
   epic-2: backlog
