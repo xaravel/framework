@@ -10,6 +10,7 @@ import {
   environmentDecision,
   internalVersionMismatches,
   lockedVersions,
+  mainDecision,
   manifestLeaks,
   PUBLISH_COMMAND,
   repositoryProblems,
@@ -94,11 +95,28 @@ interface FakeEnvironment {
   body?: unknown;
 }
 
+/** The fake compare answer: an HTTP status, a JSON body, or a raw (non-JSON) text body; default `identical`. */
+interface FakeCompare {
+  status?: number;
+  body?: unknown;
+  text?: string;
+}
+
+/** The tagged commit `runGate` passes by default. */
+const SHA = "0123456789abcdef0123456789abcdef01234567";
+const COMPARE_PATH = `/repos/xaravel/framework/compare/refs/heads/main...${SHA}`;
+
+interface GateOptions {
+  token?: string | null;
+  root?: string;
+  compare?: FakeCompare;
+}
+
 /** Runs `gate` against a `Bun.serve` fake of the GitHub API; returns the result and the GITHUB_OUTPUT lines. */
 async function runGate(
   tag: string,
   environment: FakeEnvironment,
-  options: { token?: string | null; root?: string } = {},
+  options: GateOptions = {},
 ): Promise<{ code: number; stdout: string; stderr: string; output: string; hits: string[] }> {
   const hits: string[] = [];
   const server = Bun.serve({
@@ -108,6 +126,16 @@ async function runGate(
       hits.push(url.pathname);
       if (request.headers.get("authorization") !== "Bearer test-token") {
         return new Response("unauthorized", { status: 401 });
+      }
+      if (url.pathname === COMPARE_PATH) {
+        const compare = options.compare ?? {};
+        if (compare.status !== undefined) {
+          return new Response("status", { status: compare.status });
+        }
+        if (compare.text !== undefined) {
+          return new Response(compare.text, { headers: { "content-type": "text/html" } });
+        }
+        return Response.json(compare.body ?? { status: "identical" });
       }
       if (url.pathname === "/repos/xaravel/framework/environments/release") {
         return environment.status !== undefined ? new Response("status", { status: environment.status }) : Response.json(environment.body ?? PROTECTED);
@@ -119,7 +147,7 @@ async function runGate(
   const outputFile = join(dir, "github-output");
   try {
     const token = options.token === undefined ? "test-token" : options.token;
-    const args = ["gate", "--tag", tag, "--repo", "xaravel/framework", "--github-output", outputFile];
+    const args = ["gate", "--tag", tag, "--repo", "xaravel/framework", "--sha", SHA, "--github-output", outputFile];
     if (options.root !== undefined) {
       args.push("--root", options.root);
     }
@@ -265,6 +293,10 @@ test("XT-conformance-35: a v0.<n>.<p> tag equal to the root version publishes, i
   }
   expect(environmentDecision(PROTECTED).publish).toBe(true);
   expect(environmentDecision({ can_admins_bypass: false, protection_rules: [{ type: "required_reviewers", reviewers: [{ type: "User", reviewer: { login: "EdAnisko" } }] }] }).publish).toBe(true);
+  // The tagged commit is main's tip or an ancestor of main.
+  for (const status of ["identical", "behind"]) {
+    expect(mainDecision(SHA, { status, ahead_by: 0 })).toEqual({ publish: true, reason: `commit ${SHA} is on main (compare main...${SHA}: ${status})` });
+  }
 
   // gate against the fake API, on the repository root at its own version.
   const rootVersion = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { version: string }).version;
@@ -273,7 +305,12 @@ test("XT-conformance-35: a v0.<n>.<p> tag equal to the root version publishes, i
   expect(ok.code).toBe(0);
   expect(ok.output).toStartWith("publish=true\nreason=");
   expect(ok.stdout).toStartWith("Publishing: ");
-  expect(ok.hits).toEqual(["/repos/xaravel/framework/environments/release"]);
+  expect(ok.hits).toEqual([COMPARE_PATH, "/repos/xaravel/framework/environments/release"]);
+  expect(ok.output).toContain(`commit ${SHA} is on main (compare main...${SHA}: identical)`);
+  // behind (an ancestor of main) publishes too.
+  const behind = await runGate(`v${rootVersion}`, {}, { compare: { body: { status: "behind" } } });
+  expect(behind.output).toStartWith("publish=true\n");
+  expect(behind.hits).toEqual([COMPARE_PATH, "/repos/xaravel/framework/environments/release"]);
 
   // pack on a fixture with workspace:* edges.
   await withRoot(fixtureFiles("0.1.0"), async (dir) => {
@@ -403,8 +440,11 @@ test("XT-conformance-35: a v0.<n>.<p> tag equal to the root version publishes, i
   expect(JSON.stringify(gate)).not.toMatch(/setup-node|\bnpm\b|\bnode\b|pnpm/);
   expect(gate.permissions).toEqual({ contents: "read", actions: "read" });
   expect(gate.steps.map((step) => step.run).filter(Boolean)).toEqual([
-    'set -euo pipefail\nbun tools/release/release.ts gate --tag "$TAG" --repo "$REPO" --github-output "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"\n',
+    'set -euo pipefail\nbun tools/release/release.ts gate --tag "$TAG" --repo "$REPO" --sha "$SHA" --github-output "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"\n',
   ]);
+  // The tagged commit comes from github.sha.
+  const decide = gate.steps.find((step) => step.run !== undefined)!;
+  expect(decide.env).toEqual({ GH_TOKEN: "${{ github.token }}", TAG: "${{ github.ref_name }}", REPO: "${{ github.repository }}", SHA: "${{ github.sha }}" });
 });
 
 test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal the root version, exits without publishing and says why (AD-18, FR-13)", async () => {
@@ -450,9 +490,20 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
     expect(decision.reason).toContain("@edanisko");
   }
 
+  // Main decisions: a commit main lacks, or no usable status, refuses and names the commit and main.
+  for (const status of ["ahead", "diverged"]) {
+    expect(mainDecision(SHA, { status })).toEqual({ publish: false, reason: `commit ${SHA} is not on main (compare main...${SHA}: ${status}), so nothing is published` });
+  }
+  for (const body of [{}, null, [], "identical", { status: 1 }, { status: "unknown" }, { status: "Behind" }]) {
+    const decision = mainDecision(SHA, body);
+    expect(decision.publish).toBe(false);
+    expect(decision.reason).toContain(`commit ${SHA}`);
+    expect(decision.reason).toContain("main");
+  }
+
   // Through gate: each refuses with exit 0, publish=false and a reason.
   await withRoot(fixtureFiles("0.1.0"), async (dir) => {
-    const cases: [string, FakeEnvironment, { token?: string | null; root?: string }, RegExp][] = [
+    const cases: [string, FakeEnvironment, GateOptions, RegExp][] = [
       ["v1.0.0", {}, { root: dir }, /does not match/],
       ["v0.1", {}, { root: dir }, /does not match/],
       ["v0.01.0", {}, { root: dir }, /does not match/],
@@ -477,6 +528,13 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
         /required reviewer Team maintainers, but only the Maintainer/,
       ],
       ["v0.1.0", {}, { root: dir, token: null }, /GH_TOKEN is not set/],
+      // The tagged commit is not on main, or main cannot be verified.
+      ["v0.1.0", {}, { root: dir, compare: { body: { status: "ahead" } } }, new RegExp(`commit ${SHA} is not on main \\(compare main\\.\\.\\.${SHA}: ahead\\)`)],
+      ["v0.1.0", {}, { root: dir, compare: { body: { status: "diverged" } } }, new RegExp(`commit ${SHA} is not on main \\(compare main\\.\\.\\.${SHA}: diverged\\)`)],
+      ["v0.1.0", {}, { root: dir, compare: { status: 404 } }, new RegExp(`commit ${SHA} .*main.*HTTP 404`)],
+      ["v0.1.0", {}, { root: dir, compare: { status: 500 } }, new RegExp(`HTTP 500, so commit ${SHA} cannot be verified to be on main`)],
+      ["v0.1.0", {}, { root: dir, compare: { text: "<html>not json</html>" } }, new RegExp(`did not return JSON, so commit ${SHA} cannot be verified to be on main`)],
+      ["v0.1.0", {}, { root: dir, compare: { body: { ahead_by: 0 } } }, new RegExp(`returned no status, so commit ${SHA} cannot be verified to be on main`)],
     ];
     for (const [tag, environment, options, reason] of cases) {
       const result = await runGate(tag, environment, options);
@@ -491,6 +549,21 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
     }
     // A bad tag never reaches the API.
     expect((await runGate("v1.0.0", {}, { root: dir })).hits).toEqual([]);
+    // A commit off main never reaches the environment check.
+    expect((await runGate("v0.1.0", {}, { root: dir, compare: { body: { status: "ahead" } } })).hits).toEqual([COMPARE_PATH]);
+    expect((await runGate("v0.1.0", {}, { root: dir, compare: { status: 404 } })).hits).toEqual([COMPARE_PATH]);
+    // No token: nothing is fetched at all.
+    expect((await runGate("v0.1.0", {}, { root: dir, token: null })).hits).toEqual([]);
+    // The compare request itself fails (nothing listens): refused, exit 0.
+    const outputFile = join(dir, "github-output");
+    const unreachable = await runCli(["gate", "--tag", "v0.1.0", "--repo", "xaravel/framework", "--sha", SHA, "--github-output", outputFile, "--root", dir], {
+      GITHUB_API_URL: "http://127.0.0.1:1",
+      GH_TOKEN: "test-token",
+    });
+    expect(unreachable.code).toBe(0);
+    const unreachableLines = readFileSync(outputFile, "utf8").split("\n");
+    expect(unreachableLines[0]).toBe("publish=false");
+    expect(unreachableLines[1]).toMatch(new RegExp(`^reason=GET .* failed \\(.*\\), so commit ${SHA} cannot be verified to be on main`));
     // And the fixture's matching tag passes, so the refusals above are not vacuous.
     expect((await runGate("v0.1.0", {}, { root: dir })).output).toStartWith("publish=true\n");
   });
@@ -499,7 +572,16 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
   expect((await runCli(["gate", "--tag", "v0.1.0"])).code).toBe(2);
   expect((await runCli(["gate", "--tag", "v0.1.0", "--repo", "not a repo"])).code).toBe(2);
   expect((await runCli(["nope"])).code).toBe(2);
-  expect((await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y", "--root", join(tmpdir(), "xaravel-release-missing")])).code).toBe(1);
+  // --sha is required, and must be 40 lowercase hex characters.
+  const noSha = await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y"]);
+  expect(noSha.code).toBe(2);
+  expect(noSha.stderr).toContain("--sha <commit>");
+  for (const sha of ["abc", SHA.toUpperCase(), `${SHA}0`, SHA.slice(1), `g${SHA.slice(1)}`]) {
+    const bad = await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y", "--sha", sha]);
+    expect(bad.code).toBe(2);
+    expect(bad.stderr).toContain("--sha must be a 40-character lowercase hex commit");
+  }
+  expect((await runCli(["gate", "--tag", "v0.1.0", "--repo", "x/y", "--sha", SHA, "--root", join(tmpdir(), "xaravel-release-missing")])).code).toBe(1);
 
   // release.yml triggers on every tag, and only on tags.
   const { data } = workflow("release.yml");

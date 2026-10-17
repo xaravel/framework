@@ -1,7 +1,9 @@
 # The lockstep release (Story 1.8, AD-18, FR-13, NFR-11).
 #
 # Every pushed tag runs `gate`, so every tag gets an explanation. `gate`
-# decides from the tag and the root package.json version, then reads the live
+# decides from the tag and the root package.json version, then asks the GitHub
+# API whether the tagged commit is on `main` (compare main...<sha>: identical
+# or behind) and refuses a commit that never merged, then reads the live
 # `release` environment and refuses unless every required reviewer is the
 # Maintainer (GitHub would otherwise create a missing environment unprotected).
 # The decision also goes to the run's step summary.
@@ -47,9 +49,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          bun tools/release/release.ts gate --tag "$TAG" --repo "$REPO" --github-output "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+          bun tools/release/release.ts gate --tag "$TAG" --repo "$REPO" --sha "$SHA" --github-output "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
 
   release:
     needs: gate
