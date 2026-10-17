@@ -11,7 +11,9 @@
     "tools/graph/**/*.ts",
     "tools/protected-paths/**/*.ts",
     "tools/ownership/**/*.ts",
-    "tools/escalations/**/*.ts"
+    "tools/escalations/**/*.ts",
+    "tools/ruleset/**/*.ts",
+    "tools/workflow-permissions/**/*.ts"
   ],
   "references": [
     {

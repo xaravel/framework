@@ -1,17 +1,24 @@
 # The protected-paths check (Story 1.4, AD-16).
 #
-# Runs only for PRs into main, from main's copy of this workflow
+# Runs for PRs into main, from main's copy of this workflow
 # (`pull_request_target` runs the base branch's copy), so a PR cannot change
 # the check that judges it. `edited` re-runs it when a PR's base is re-targeted. It never checks out, installs or runs PR
 # code: the checkout is the base commit, and the PR's files, reviews and head
 # CODEOWNERS are read from the GitHub API as data. Reviews do not re-trigger
 # this workflow; after approving, the Maintainer re-runs the check.
+#
+# In the merge queue (`merge_group`, Story 1.7) the check must report on the
+# merge group too. It checks out the group's base commit, never the group
+# itself, takes the PR number from the queue ref with `merge-group-pr` on that
+# base checkout, and runs the same `pr` command for that PR.
 name: protected-paths
 
 on:
   pull_request_target:
     branches: [main]
     types: [opened, edited, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -25,13 +32,27 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.merge_group.base_sha || github.sha }}
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: Find the PR
+        id: pr
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          if [ "$EVENT_NAME" = merge_group ]; then
+            number="$(bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF")"
+          else
+            number="$EVENT_PR"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
       - name: Check Protected Paths
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: bun tools/protected-paths/protected-paths.ts pr --repo "$REPO" --pr "$PR_NUMBER"

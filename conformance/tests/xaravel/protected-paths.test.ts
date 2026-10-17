@@ -358,7 +358,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
   });
 });
 
-test("XT-conformance-20: the protected-paths workflow triggers only on pull_request_target, never checks out or runs PR code, and takes PR data only from the API (AD-16)", () => {
+test("XT-conformance-20: the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", () => {
   // A PR changing the workflow itself is a Protected Path change.
   const workflowFile = [file(".github/workflows/protected-paths.yml")];
   const own = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files: workflowFile, changedFiles: 1, reviews, headSha: HEAD });
@@ -370,38 +370,51 @@ test("XT-conformance-20: the protected-paths workflow triggers only on pull_requ
 
   const text = readFileSync(join(root, ".github", "workflows", "protected-paths.yml"), "utf8");
   const workflow = Bun.YAML.parse(text) as {
-    on: Record<string, { types: string[]; branches: string[] }>;
+    on: Record<string, { types: string[]; branches?: string[] }>;
     permissions: Record<string, string>;
-    jobs: Record<string, { permissions: Record<string, string>; steps: { uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
+    jobs: Record<string, { permissions: Record<string, string>; steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
   };
-  expect(Object.keys(workflow.on)).toEqual(["pull_request_target"]);
+  // Story 1.7: the required check also reports in the merge queue.
+  expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group"]);
   expect(workflow.on["pull_request_target"]!.types).toEqual(["opened", "edited", "synchronize", "reopened", "ready_for_review"]);
   // Only main's copy of the workflow judges a PR; re-targeting the base (`edited`) re-runs it.
   expect(workflow.on["pull_request_target"]!.branches).toEqual(["main"]);
+  expect(workflow.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
   expect(Object.keys(workflow.jobs)).toEqual(["protected-paths"]);
   const job = workflow.jobs["protected-paths"]!;
   expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
 
-  const [checkout, setupBun, check, ...rest] = job.steps;
+  const [checkout, setupBun, findPr, check, ...rest] = job.steps;
   expect(rest).toEqual([]);
-  expect(checkout).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
+  // The base commit only: the merge group's base, or the PR's base branch (the pull_request_target default).
+  expect(checkout).toEqual({
+    uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    with: { ref: "${{ github.event.merge_group.base_sha || github.sha }}", "persist-credentials": false },
+  });
   expect(setupBun).toEqual({ uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } });
+  expect(findPr!.id).toBe("pr");
+  expect(findPr!.env).toEqual({
+    EVENT_NAME: "${{ github.event_name }}",
+    EVENT_PR: "${{ github.event.pull_request.number }}",
+    QUEUE_REF: "${{ github.event.merge_group.head_ref }}",
+  });
+  expect(findPr!.run).toContain('bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF"');
   expect(check!.uses).toBeUndefined();
   expect(check!.run).toBe('bun tools/protected-paths/protected-paths.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
   expect(check!.env).toEqual({
     GH_TOKEN: "${{ github.token }}",
     REPO: "${{ github.repository }}",
-    PR_NUMBER: "${{ github.event.pull_request.number }}",
+    PR_NUMBER: "${{ steps.pr.outputs.number }}",
   });
 
-  for (const step of job.steps) {
-    // No step checks out a PR ref, installs, or interpolates PR values into a script.
+  for (const step of job.steps.slice(1)) {
+    // No later step checks out a ref, installs, or interpolates values into a script.
     expect(step.with?.["ref"]).toBeUndefined();
     expect(step.run ?? "").not.toContain("${{");
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);
   }
-  expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|id-token/);
+  expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
 });
 
 test("XT-conformance-21: an Infrastructure PR touching Protected Paths passes only with the Maintainer's latest decisive review approving the head commit (AD-16)", async () => {

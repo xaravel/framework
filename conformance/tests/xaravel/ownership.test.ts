@@ -341,42 +341,56 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
     expect((await runCli(["pr", "--repo", "xaravel/framework", "--pr", "x"])).code).toBe(2);
   });
 
-  // The workflow: pull_request_target and push to main, base checkout only, PR values through env.
+  // The workflow: pull_request_target, merge_group (Story 1.7) and push to main, base checkout only, PR values through env.
   const text = readFileSync(join(root, ".github", "workflows", "ownership.yml"), "utf8");
   const workflow = Bun.YAML.parse(text) as {
-    on: Record<string, { types?: string[]; branches: string[] }>;
+    on: Record<string, { types?: string[]; branches?: string[] }>;
     permissions: Record<string, string>;
-    jobs: Record<string, { if?: string; permissions?: Record<string, string>; steps: { uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
+    jobs: Record<string, { if?: string; permissions?: Record<string, string>; steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string> }[] }>;
   };
-  expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "push"]);
+  expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group", "push"]);
   expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "edited", "synchronize", "reopened", "ready_for_review"] });
+  expect(workflow.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(workflow.on["push"]).toEqual({ branches: ["main"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
   expect(Object.keys(workflow.jobs)).toEqual(["ownership", "manifests"]);
   const job = workflow.jobs["ownership"]!;
-  expect(job.if).toBe("github.event_name == 'pull_request_target'");
+  expect(job.if).toBe("github.event_name == 'pull_request_target' || github.event_name == 'merge_group'");
   expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
   expect(workflow.jobs["manifests"]!.permissions).toBeUndefined();
   const checkout = { uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } };
   const setupBun = { uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } };
-  expect(job.steps.slice(0, 2)).toEqual([checkout, setupBun]);
-  expect(job.steps).toHaveLength(3);
-  expect(job.steps[2]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
+  // The base commit only: the merge group's base, or the PR's base branch (the pull_request_target default).
+  expect(job.steps.slice(0, 2)).toEqual([
+    { uses: checkout.uses, with: { ref: "${{ github.event.merge_group.base_sha || github.sha }}", "persist-credentials": false } },
+    setupBun,
+  ]);
+  expect(job.steps).toHaveLength(4);
+  expect(job.steps[2]!.id).toBe("pr");
   expect(job.steps[2]!.env).toEqual({
+    EVENT_NAME: "${{ github.event_name }}",
+    EVENT_PR: "${{ github.event.pull_request.number }}",
+    QUEUE_REF: "${{ github.event.merge_group.head_ref }}",
+  });
+  expect(job.steps[2]!.run).toContain('bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF"');
+  expect(job.steps[3]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
+  expect(job.steps[3]!.env).toEqual({
     GH_TOKEN: "${{ github.token }}",
     REPO: "${{ github.repository }}",
-    PR_NUMBER: "${{ github.event.pull_request.number }}",
+    PR_NUMBER: "${{ steps.pr.outputs.number }}",
   });
   const manifestsJob = workflow.jobs["manifests"]!;
+  // The merge group's own commit is never checked out.
+  expect(manifestsJob.if).toBe("github.event_name != 'merge_group'");
   expect(manifestsJob.steps.slice(0, 2)).toEqual([checkout, setupBun]);
   expect(manifestsJob.steps).toHaveLength(3);
   expect(manifestsJob.steps[2]!.run).toBe("bun tools/ownership/ownership.ts manifests");
-  for (const step of [...job.steps, ...manifestsJob.steps]) {
+  for (const step of [...job.steps.slice(1), ...manifestsJob.steps]) {
     expect(step.with?.["ref"]).toBeUndefined();
     expect(step.run ?? "").not.toContain("${{");
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);
   }
-  expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|id-token/);
+  expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
 });
 
 test("XT-conformance-25: a Test ID listed by two open Stories fails, naming both; Stories marked done no longer hold their IDs (AD-16, AD-21)", async () => {
