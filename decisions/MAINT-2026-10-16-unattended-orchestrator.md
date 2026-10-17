@@ -36,6 +36,14 @@ The `protected-paths` check (Story 1.4) fails any PR that touches a Protected Pa
 - Any other `protected-paths` violation, such as `codeowners drift` or `truncated file list`, still blocks.
 - The orchestrator never edits `conformance/protected-paths`, `tools/protected-paths/` or `.github/workflows/protected-paths.yml` to make the check pass.
 
+## Amendment 2026-10-17 (2): the ownership check
+
+The `ownership` check (Story 1.5) allows a Story to edit only `packages/<component>/**`, its Expectations, its oracle requests and its Escalations. Phase 0 Stories are infrastructure and must edit more than that, and every orchestrator Story also updates its own records in `_bmad-output/implementation-artifacts/`. This ruling is my approval of both.
+
+- On an orchestrator PR, an `ownership` failure does not block the merge when every violation is `out of scope:` and is either a path in a Story from Epics 1–8, or a path under `_bmad-output/implementation-artifacts/` in any Story. The other merge conditions still apply.
+- A `missing manifest` violation, or an out-of-scope path outside `_bmad-output/implementation-artifacts/` in a Story from Epic 9 on, still blocks.
+- The orchestrator never edits `tools/ownership/`, a manifest's `component`, or `.github/workflows/ownership.yml` to make the check pass.
+
 ## Revoking
 
 Delete this file, or create `~/.xaravel-orchestrator/STOP` on the M1.
