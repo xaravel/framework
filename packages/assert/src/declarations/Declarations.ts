@@ -7,7 +7,18 @@
 // - Reporter protocol (ESC-4.2-1): `globalThis[Symbol.for('xaravel.harness.report')]`,
 //   when a function, receives one frozen report per finished test, passing or
 //   failing; its result is awaited. It is read at test run time, never imported.
+// - Skips (Story 4.4): a test whose run ends with PHPUnit's `SkippedTest`
+//   (`markTestSkipped`) as its error ends as skipped. That is a skip thrown
+//   from setUp or the body, or from tearDown when nothing failed before it
+//   (the first error wins). Bun 1.4.3 has
+//   no run-time skip, so bun records a pass; the zero-assertion rule does not
+//   apply, and its report gets a fifth key, `skipped: <message>` (ESC-4.4-2
+//   item 1). Every other report has exactly the four keys.
+// - Risky (Story 4.4): a test that recorded `expectNotToPerformAssertions` and
+//   any other kind passes, with PHPUnit's risky warning on stderr (Laravel's
+//   phpunit.xml.dist does not fail risky tests).
 import { test } from "bun:test";
+import { isSkippedTest } from "../Framework/Exception/SkippedWithMessageException";
 import { type CountedRun, runCounted } from "./AssertionCounter";
 
 const REPORT = Symbol.for("xaravel.harness.report");
@@ -21,6 +32,8 @@ export interface TestReport {
   readonly id: string;
   readonly consequence: string | null;
   readonly assertions: Readonly<Record<string, number>>;
+  /** Only on a skipped test: the skip message. */
+  readonly skipped?: string;
 }
 
 /** A test ready to register: its bun:test label, its full Test ID (reported), and its body. */
@@ -54,17 +67,27 @@ export function registerTests(
   for (const { label, id, run } of planned) {
     test(label, async () => {
       const result: CountedRun = await runCounted(run);
+      const skip = result.error !== null && isSkippedTest(result.error.value) ? result.error.value.getMessage() : null;
       let reportError: { value: unknown } | null = null;
       try {
-        await sendReport(Object.freeze({ type, id, consequence, assertions: result.assertions }));
+        const report: TestReport = skip === null ? { type, id, consequence, assertions: result.assertions } : { type, id, consequence, assertions: result.assertions, skipped: skip };
+        await sendReport(Object.freeze(report));
       } catch (thrown) {
         reportError = { value: thrown };
       }
-      if (result.error !== null) {
+      if (result.error !== null && skip === null) {
         throw result.error.value;
       }
       if (reportError !== null) {
         throw reportError.value;
+      }
+      if (skip !== null) {
+        return;
+      }
+      const expectedNone = result.assertions["expectNotToPerformAssertions"] ?? 0;
+      if (expectedNone > 0 && result.total > expectedNone) {
+        const performed = result.total - expectedNone;
+        process.stderr.write(`${label}: risky: This test is not expected to perform assertions but performed ${performed} assertion${performed > 1 ? "s" : ""}\n`);
       }
       if (zeroAssertionsFail && result.total === 0) {
         throw new Error(`${label}: Ported Test executed zero assertions (FR-113)`);

@@ -72,7 +72,7 @@ development_status:
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: done
   4-5-mockery-core: done
-  4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog  # ESC-4.4-1 approved (decisions/ESC-4.4-1.md); prerequisite: 4-5-mockery-core
+  4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
   4-6-mockery-advanced-and-api-coverage: backlog
   epic-4-retrospective: optional
 

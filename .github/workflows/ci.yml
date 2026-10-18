@@ -116,6 +116,8 @@ jobs:
         run: bun run scaffold:check
       - name: Check the dependency graph
         run: bun run graph:check
+      - name: Report assertion coverage
+        run: bun run assert:coverage
 
   upstream:
     runs-on: ubuntu-latest

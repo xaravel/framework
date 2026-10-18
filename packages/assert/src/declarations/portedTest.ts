@@ -11,7 +11,15 @@
 //   3. `inner` follows PHPUnit's `runBare`: it builds `new options.case()` (when
 //      given) as `this`, awaits its `setUp()` and the body, then always its
 //      `tearDown()`, even after a failing `setUp`; the first error wins. No
-//      other lifecycle hook runs here (AD-25 belongs to @xaravel/testing's TestCase);
+//      other lifecycle hook runs here (AD-25 belongs to @xaravel/testing's TestCase).
+//      When `this` is a `PHPUnit\Framework\TestCase` (Story 4.4), `inner` runs
+//      PHPUnit 13.4.3's `runLifecycle` order instead: start the output buffer,
+//      `setUp`, the body (`runTest`: a throw that `shouldBeVerifiedFor` the
+//      exception expectation is verified against it, any other propagates; a
+//      body that returns runs `assertWasRaised`), then, when nothing failed and
+//      an output expectation exists, stop the buffer and assert the output,
+//      then `tearDown` (the first error wins), then stop the buffer if it still
+//      runs (unexpected output is written through);
 //   4. if `globalThis[Symbol.for('xaravel.mockery.run')]` is a function
 //      (installed by @xaravel/mockery on load), `inner` runs through it, inside
 //      the frame: Mockery's container is closed and verified when `inner`
@@ -21,7 +29,10 @@
 //      (ESC-4.5-1 item 1);
 //   5. the report goes to the harness reporter, passing or failing;
 //   6. a body or lifecycle error fails the test, then a reporter error;
-//      otherwise zero recorded assertions fail the test (FR-113).
+//      otherwise zero recorded assertions fail the test (FR-113). A
+//      `SkippedTest` (`markTestSkipped`) ends the test as skipped instead
+//      (Declarations.ts).
+import { testCaseState, type TestCaseState } from "../Framework/TestCase";
 import { registerTests } from "./Declarations";
 
 const SCOPE_RUN = Symbol.for("xaravel.scope.run");
@@ -71,6 +82,11 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
     const label = key === null ? id : `${id}#${key}`;
     const inner = async (): Promise<void> => {
       const self = testCase === undefined ? undefined : (new (testCase as new () => T)() as T & Lifecycle);
+      const state = testCaseState(self);
+      if (state !== null) {
+        await runLifecycle(self as T & Lifecycle, state, () => body.apply(self as T, args));
+        return;
+      }
       let first: { value: unknown } | null = null;
       try {
         if (typeof self?.setUp === "function") {
@@ -102,6 +118,59 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
     return { label, id: label, run };
   });
   registerTests("portedTest()", "ported", null, planned, true);
+}
+
+/** PHPUnit 13.4.3's `runLifecycle` for a TestCase instance (Story 4.4): see the header, step 3. */
+async function runLifecycle(self: Lifecycle, state: TestCaseState, body: () => unknown): Promise<void> {
+  let first: { value: unknown } | null = null;
+  state.output.start();
+  let outputStopped = false;
+  try {
+    try {
+      if (typeof self.setUp === "function") {
+        await (self.setUp as () => unknown).call(self);
+      }
+      // runTest
+      let threw = false;
+      try {
+        await body();
+      } catch (thrown) {
+        threw = true;
+        if (!state.exception.shouldBeVerifiedFor(thrown)) {
+          throw thrown;
+        }
+        state.exception.verify(thrown);
+      }
+      if (!threw) {
+        state.exception.assertWasRaised();
+      }
+    } catch (thrown) {
+      first = { value: thrown };
+    }
+    if (first === null && state.output.hasExpectation()) {
+      outputStopped = true;
+      state.output.stop();
+      try {
+        state.output.performAssertions();
+      } catch (thrown) {
+        first = { value: thrown };
+      }
+    }
+    if (typeof self.tearDown === "function") {
+      try {
+        await (self.tearDown as () => unknown).call(self);
+      } catch (thrown) {
+        first ??= { value: thrown };
+      }
+    }
+  } finally {
+    if (!outputStopped) {
+      state.output.stop();
+    }
+  }
+  if (first !== null) {
+    throw first.value;
+  }
 }
 
 /**

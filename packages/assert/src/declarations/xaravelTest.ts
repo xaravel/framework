@@ -3,7 +3,8 @@
 // The label is `<id>: <consequence>`. Its assertions are counted and reported
 // (ESC-4.2-1), but a Xaravel Test never fails for executing none. Its body
 // runs through Mockery's test-finish protocol when @xaravel/mockery is loaded,
-// as a Ported Test's does (ESC-4.5-1 item 1).
+// as a Ported Test's does (ESC-4.5-1 item 1). A `markTestSkipped` ends it as
+// skipped, as it ends a Ported Test (Declarations.ts, Story 4.4).
 import { registerTests } from "./Declarations";
 import { runWithMockery } from "./portedTest";
 

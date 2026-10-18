@@ -26,6 +26,9 @@
     "packages/assert": {
       "name": "@xaravel/assert",
       "version": "0.0.0",
+      "devDependencies": {
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/auth": {
       "name": "@xaravel/auth",

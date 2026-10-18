@@ -1,4 +1,4 @@
-// PHPUnit 13.4.3's `ExpectationFailedException` (Story 4.3): a failed assertion.
+// PHPUnit 13.4.3's `ExpectationFailedException` (Stories 4.3 and 4.4): a failed assertion.
 //
 // `getMessage()` is PHPUnit's `getMessage()`, exactly. When a ComparisonFailure
 // with exported values is attached, the JS `message` also names both values, as
@@ -14,8 +14,8 @@ export class ExpectationFailedException extends AssertionFailedError {
 
   readonly #comparisonFailure: ComparisonFailure | null;
 
-  constructor(message: string, comparisonFailure: ComparisonFailure | null = null) {
-    super(message);
+  constructor(message: string, comparisonFailure: ComparisonFailure | null = null, previous: Error | null = null) {
+    super(message, 0, previous);
     this.name = "ExpectationFailedException";
     this.#comparisonFailure = comparisonFailure;
     const expected = comparisonFailure?.getExpectedAsString() ?? "";
