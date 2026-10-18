@@ -14,7 +14,7 @@
 // stand-in.
 import { expect, test } from "bun:test";
 import { createHash, generateKeyPairSync, type KeyObject } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { checkRecords, parseEscalation } from "../../../tools/escalations/escalations";
@@ -195,6 +195,9 @@ test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha2
     mkdirSync(join(out, "support"), { recursive: true });
     writeFileSync(join(out, "support", `${"0".repeat(64)}.json`), "stale\n");
     writeFileSync(join(out, "support", "notes.txt"), "not a fixture\n");
+    // A Component whose request file is gone keeps no fixtures.
+    mkdirSync(join(out, "gone"), { recursive: true });
+    writeFileSync(join(out, "gone", `${"1".repeat(64)}.json`), "stale\n");
 
     const stand = standIn();
     const result = run(fx, {}, stand);
@@ -203,7 +206,7 @@ test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha2
     expect(result.escalation).toBeNull();
     expect(result.exempt).toBe(1);
     expect(result.counts).toEqual({ database: 1, support: 1, view: 1 });
-    expect(result.removed).toEqual([`support/${"0".repeat(64)}.json`]);
+    expect(result.removed).toEqual([`support/${"0".repeat(64)}.json`, `gone/${"1".repeat(64)}.json`]);
 
     // Image mode: evaluate.php and the request directory mounted read-only, the image's framework, the Pin's PHP, twice.
     expect(stand.calls).toHaveLength(2);
@@ -242,6 +245,17 @@ test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha2
       expect(verifyFixture(text.replace(/"signature":"[^"]*"/, `"signature":"${Buffer.alloc(64).toString("base64")}"`), pubPem)).toEqual(["the signature does not verify"]);
       expect(verifyFixture(`${text.slice(0, -1)}\r\n`, pubPem)).toContain("the file is not in canonical form (one compact line, output in canonical JSON, LF)");
       expect(verifyFixture("{}", pubPem)).toEqual(["expected an object with the keys sha256, output, signature in that order"]);
+      // A public key that is not an Ed25519 PEM is a problem, not a throw.
+      expect(verifyFixture(text, "not a pem")[0]).toStartWith("the public key is not a PEM public key");
+      const rsaPub = generateKeyPairSync("rsa", { modulusLength: 2048 }).publicKey.export({ type: "spki", format: "pem" }).toString();
+      expect(verifyFixture(text, rsaPub)).toEqual(["the public key is not an Ed25519 key (it is rsa)"]);
+      // A signature in non-canonical base64 (trailing bits set) or not 64 bytes long is malformed.
+      const signature = fixture.signature;
+      const last = signature.at(-3)!;
+      const loose = `${signature.slice(0, -3)}${String.fromCharCode(last.charCodeAt(0) + 1)}==`;
+      expect(Buffer.from(loose, "base64").equals(Buffer.from(signature, "base64"))).toBe(true);
+      expect(verifyFixture(text.replace(signature, loose), pubPem)).toEqual(["signature is not the canonical base64 of 64 bytes"]);
+      expect(verifyFixture(text.replace(signature, Buffer.alloc(63).toString("base64")), pubPem)).toEqual(["signature is not the canonical base64 of 64 bytes"]);
     }
 
     // The committed request files are what the batch reads.
@@ -331,7 +345,7 @@ function phpTest(name: string, body: () => void): void {
   const reason = phpUnmet() ?? (existsSync(join(LOCAL_INSTALL, "vendor", "autoload.php")) ? null : `${LOCAL_INSTALL} is not a locked local install`);
   if (reason === null) {
     test(name, body, TIMEOUT);
-  } else if (REQUIRE && PHP === null) {
+  } else if (REQUIRE) {
     test(name, () => {
       throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
     });
@@ -347,15 +361,17 @@ phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each
   const kinds = ["php-expr", "sql-grammar", "blade-render", "validation-message", "date-format"] as const;
   const picked = kinds.map((kind) => committed.find((request) => request.kind === kind && !listed.has(request.sha256))!);
   const extra = [
-    makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: [], exprs: ["\\Illuminate\\Support\\Str::of('a')->doesNotExist()", "\\Illuminate\\Support\\Str::upper('b')", "1.5", "[1 => 'x']", "__DIR__"] }),
+    makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: [], exprs: ["\\Illuminate\\Support\\Str::of('a')->doesNotExist()", "\\Illuminate\\Support\\Str::upper('b')", "1.5", "[1 => 'x']", "(new \\ReflectionClass(\\Illuminate\\Support\\Str::class))->getFileName()"] }),
     makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: ["throw new \\RuntimeException('boom');"], exprs: ["1"] }),
   ];
   const dir = mkdtempSync(join(tmpdir(), "xaravel-evaluate-"));
   try {
-    const file = join(dir, "requests.jsonl");
-    writeFileSync(file, [...picked, ...extra].map((request) => `${JSON.stringify(request)}\n`).join(""));
+    // Two request files: evaluate.php answers file by file, line by line.
+    const files = [join(dir, "a.jsonl"), join(dir, "b.jsonl")];
+    writeFileSync(files[0]!, picked.map((request) => `${JSON.stringify(request)}\n`).join(""));
+    writeFileSync(files[1]!, extra.map((request) => `${JSON.stringify(request)}\n`).join(""));
     const once = (): string => {
-      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, file], { stdout: "pipe", stderr: "pipe" });
+      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, ...files], { stdout: "pipe", stderr: "pipe" });
       expect([proc.exitCode, proc.exitCode === 0 ? "" : proc.stderr.toString()]).toEqual([0, ""]);
       return proc.stdout.toString();
     };
@@ -375,8 +391,8 @@ phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each
     expect(throwing.results[1]).toEqual({ value: "B" });
     expect(throwing.results[2]).toEqual({ value: { float: "1.5" } });
     expect(throwing.results[3]).toEqual({ value: { array: [[{ int: "1" }, "x"]] } });
-    // The framework directory in a string is `{root}`; eval'd code has no file of its own, so this is the evaluator's.
-    expect(JSON.stringify(throwing.results[4])).not.toContain(LOCAL_INSTALL);
+    // The framework directory in a string is `{root}`.
+    expect((throwing.results[4] as { value: string }).value).toBe("{root}/src/Illuminate/Support/Str.php");
     expect(stage).toEqual({ error: { stage: "setup", class: "RuntimeException", message: "boom" }, results: [] });
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -456,6 +472,22 @@ test("XT-conformance-72: a stale nondeterminism.jsonl (unknown sha256, wrong id,
       rmSync(fx.dir, { recursive: true, force: true });
     }
   }
+  // A stale listing and an unlisted difference in one run: both reported, still no Escalation.
+  const both = fixtureRoot(line(upper.sha256, upper.id) + line(UUID.sha256, UUID.id));
+  try {
+    const blade = REQUESTS[2]!.request;
+    const differ = (sha256: string, pass: number): boolean => sha256 === UUID.sha256 || (sha256 === blade.sha256 && pass === 2);
+    const result = cliInProcess(["--root", both.dir, "--image", "xaravel-oracle:test"], { ORACLE_SIGNING_KEY: both.pem }, standIn(differ).runner);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(`oracle nondeterminism: ${blade.id} (request ${blade.sha256}, view)`);
+    expect(result.stderr).toContain(`${upper.sha256} (${upper.id}) gave identical outputs in both evaluations`);
+    expect(result.stderr).not.toContain("wrote conformance/escalations/");
+    expect(existsSync(join(both.dir, FIXTURES_DIR))).toBe(false);
+    expect(existsSync(join(both.dir, "conformance", "escalations"))).toBe(false);
+  } finally {
+    rmSync(both.dir, { recursive: true, force: true });
+  }
+
   // Without a listing, the random request is an unlisted difference.
   const bare = fixtureRoot(null);
   try {
@@ -476,6 +508,85 @@ test("XT-conformance-72: a stale nondeterminism.jsonl (unknown sha256, wrong id,
   expect(() => parseNondeterminism(`{"sha256":"${"a".repeat(64)}","id":"A","reason":" "}\n`)).toThrow("reason must name the random or time source");
   expect(() => parseNondeterminism(ok.slice(0, -1))).toThrow("the file must end with a newline");
 });
+
+test("XT-conformance-72: a pass that is not one {sha256, output} line per request, in order, fails the run with no fixtures (FR-6)", () => {
+  const mangle = (change: (lines: string[]) => string[]): ImageRunner => {
+    const inner = standIn().runner;
+    return (image, mounts, command) => `${change(inner(image, mounts, command).trimEnd().split("\n")).join("\n")}\n`;
+  };
+  const cases: { runner: ImageRunner; message: string }[] = [
+    { runner: mangle((lines) => lines.slice(0, -1)), message: "first pass: evaluate.php printed 3 lines for 4 requests" },
+    { runner: mangle((lines) => [lines[1]!, lines[0]!, ...lines.slice(2)]), message: "first pass: line 1 is not the output of request" },
+    { runner: mangle((lines) => [lines[0]!.replace(/"output":.*$/, '"output":{"error":null}}'), ...lines.slice(1)]), message: "first pass: line 1 (" },
+    { runner: mangle((lines) => ["not json", ...lines.slice(1)]), message: "first pass: line 1 is not JSON" },
+  ];
+  for (const { runner, message } of cases) {
+    const fx = fixtureRoot();
+    try {
+      const result = cliInProcess(["--root", fx.dir, "--image", "xaravel-oracle:test"], { ORACLE_SIGNING_KEY: fx.pem }, runner);
+      expect([message, result.code]).toEqual([message, 1]);
+      expect(result.stderr).toContain(message);
+      expect(existsSync(join(fx.dir, FIXTURES_DIR))).toBe(false);
+      expect(existsSync(join(fx.dir, "conformance", "escalations"))).toBe(false);
+    } finally {
+      rmSync(fx.dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test("XT-conformance-72: --local runs evaluate.php with --php against the local install, and refuses a local copy that differs from the snapshot (FR-6)", async () => {
+  const fx = fixtureRoot(null);
+  try {
+    // A tiny snapshot and an identical local copy.
+    const snapshot = join(fx.dir, "conformance", "upstream", "framework");
+    const local = join(fx.dir, "local");
+    for (const base of [snapshot, local]) {
+      mkdirSync(join(base, "tests"), { recursive: true });
+      mkdirSync(join(base, "src"), { recursive: true });
+      writeFileSync(join(base, "tests", "ATest.php"), "<?php\n");
+      writeFileSync(join(base, "src", "A.php"), "<?php\n");
+      writeFileSync(join(base, "phpunit.xml.dist"), "<phpunit/>\n");
+    }
+    // A fake php: records its arguments and answers each request with its id, as the stand-in does.
+    const calls = join(fx.dir, "php-calls.jsonl");
+    const fake = join(fx.dir, "fake-php.ts");
+    writeFileSync(
+      fake,
+      [
+        'import { appendFileSync, readFileSync } from "node:fs";',
+        "const args = process.argv.slice(2);",
+        `appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args) + "\\n");`,
+        "for (const file of args.slice(3)) {",
+        '  for (const line of readFileSync(file, "utf8").split("\\n").filter((entry) => entry !== "")) {',
+        "    const request = JSON.parse(line);",
+        '    process.stdout.write(JSON.stringify({ sha256: request.sha256, output: { error: null, results: [{ value: request.id }] } }) + "\\n");',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const php = join(fx.dir, "fake-php");
+    writeFileSync(php, `#!/bin/sh\nexec '${process.execPath}' '${fake}' "$@"\n`);
+    chmodSync(php, 0o755);
+
+    const ok = cliInProcess(["--determinism", "--root", fx.dir, "--local", local, "--php", php], {});
+    expect(ok.stderr).toBe("");
+    expect(ok.code).toBe(0);
+    const argv = readFileSync(calls, "utf8").trimEnd().split("\n").map((entry) => JSON.parse(entry) as string[]);
+    const expected = [join(fx.dir, EVALUATE_SCRIPT), local, PHP_VERSION, ...["database", "support", "view"].map((component) => join(fx.dir, REQUESTS_DIR, `${component}.jsonl`))];
+    expect(argv).toEqual([expected, expected]);
+
+    // A local copy that differs from the snapshot is refused before evaluate.php runs.
+    writeFileSync(join(local, "src", "A.php"), "<?php // changed\n");
+    rmSync(calls);
+    const refused = cliInProcess(["--determinism", "--root", fx.dir, "--local", local, "--php", php], {});
+    expect(refused.code).toBe(1);
+    expect(refused.stderr).toContain(`--local ${local} is not a copy of the snapshot`);
+    expect(refused.stderr).toContain(`${join(local, "src", "A.php")} differs`);
+    expect(existsSync(calls)).toBe(false);
+  } finally {
+    rmSync(fx.dir, { recursive: true, force: true });
+  }
+}, TIMEOUT);
 
 test("XT-conformance-72: the committed nondeterminism.jsonl lists the 23 random requests of ESC-3.2-1, each a committed request with its id (ESC-3.2-1)", () => {
   const text = readFileSync(join(root, NONDETERMINISM_FILE), "utf8");

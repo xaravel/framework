@@ -116,7 +116,12 @@ export function keyFingerprint(key: KeyObject): string {
  * `publicKey` (and, when given, whose `sha256` is `sha256`). Story 3.3 verifies committed fixtures with this.
  */
 export function verifyFixture(text: string, publicKey: KeyObject | string, sha256: string | null = null): string[] {
-  const key = typeof publicKey === "string" ? readPublicKey(publicKey, "the public key") : publicKey;
+  let key: KeyObject;
+  try {
+    key = typeof publicKey === "string" ? readPublicKey(publicKey, "the public key") : publicKey;
+  } catch (error) {
+    return [error instanceof Error ? error.message : String(error)];
+  }
   let value: unknown;
   try {
     value = JSON.parse(text) as unknown;
@@ -133,8 +138,13 @@ export function verifyFixture(text: string, publicKey: KeyObject | string, sha25
   } else if (sha256 !== null && fixture.sha256 !== sha256) {
     problems.push(`sha256 ${fixture.sha256} is not ${sha256}`);
   }
-  if (typeof fixture.signature !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(fixture.signature)) {
-    problems.push("signature is not base64");
+  if (
+    typeof fixture.signature !== "string" ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(fixture.signature) ||
+    Buffer.from(fixture.signature, "base64").toString("base64") !== fixture.signature ||
+    Buffer.from(fixture.signature, "base64").length !== 64
+  ) {
+    problems.push("signature is not the canonical base64 of 64 bytes");
   }
   if (problems.length > 0) {
     return problems;
@@ -535,7 +545,8 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
       });
     }
   }
-  if (result.differences.length > 0) {
+  // A stale listing is fixed first: its run writes no Escalation, even for a difference it also found.
+  if (result.differences.length > 0 && result.stale.length === 0) {
     result.escalation = writeEscalation(root, result.differences);
   }
   if (result.stale.length > 0 || result.differences.length > 0 || key === null) {
@@ -567,6 +578,17 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
         writeFileSync(file, text);
       }
       result.written++;
+    }
+  }
+  // A Component whose request file is gone keeps no fixtures; generators/ is never touched.
+  const others = readdirSync(out, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== GENERATORS && !rendered.has(entry.name))
+    .map((entry) => entry.name)
+    .sort(compareUnits);
+  for (const component of others) {
+    for (const name of readdirSync(join(out, component)).filter((file) => file.endsWith(".json")).sort(compareUnits)) {
+      rmSync(join(out, component, name));
+      result.removed.push(`${component}/${name}`);
     }
   }
   return result;

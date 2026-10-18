@@ -62,8 +62,8 @@ If `GITHUB_TOKEN` is set, `oracle:build` passes it to the build as the BuildKit 
 ## Publishing (`.github/workflows/oracle.yml`)
 
 - `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`. It has no write scope and never logs in or pushes.
-- `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write`, logs in to GHCR or pushes. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`. After the push it runs the fixture batch in the pushed image (`bun run oracle:fixtures --image <ref>`, [Fixtures](#fixtures-bun-run-oraclefixtures)). It runs in the GitHub environment `oracle`, the only place the secret `ORACLE_SIGNING_KEY` exists, and uploads `conformance/fixtures/` and any `conformance/escalations/ESC-bot-*.md` as the artifact `oracle-fixtures`, even when the batch fails.
-- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image as `build` does, then runs `bun run oracle:fixtures --determinism --image <ref>`. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
+- `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write`, logs in to GHCR or pushes. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`. After the push it runs the fixture batch in the pushed image (`bun run oracle:fixtures --image <ref>`, [Fixtures](#fixtures-bun-run-oraclefixtures)). It runs in the GitHub environment `oracle`, the only place the secret `ORACLE_SIGNING_KEY` exists, and, when the batch succeeds, uploads `conformance/fixtures/` as the artifact `oracle-fixtures`. Any `conformance/escalations/ESC-bot-*.md` it wrote is uploaded as the artifact `oracle-escalation`, even when the batch fails.
+- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image as `build` does, then runs `bun run oracle:fixtures --determinism` against the image `xaravel-oracle:<oracle tag>` that `oracle:build` built. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
 
 ## Requests (`bun run oracle:extract`)
 
@@ -217,7 +217,7 @@ Keys in that order, compact, LF, sorted by `id` then `sha256`, no duplicates. A 
 
 ### Maintainer-run steps
 
-These are never agent steps:
+These are never agent steps. Until `ORACLE_SIGNING_KEY` and `conformance/oracle/oracle.pub` both exist, the `oracle` job's batch step fails on every run, after the image has been pushed.
 
 1. Generate the Ed25519 key pair on a Maintainer machine, never on the agent host: `openssl genpkey -algorithm ed25519 -out oracle.key` and `openssl pkey -in oracle.key -pubout -out conformance/oracle/oracle.pub`.
 2. Store the private key as the secret `ORACLE_SIGNING_KEY` of the GitHub environment `oracle`, restricted to the `main` branch, then delete `oracle.key`.

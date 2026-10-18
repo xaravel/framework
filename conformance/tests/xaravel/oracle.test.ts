@@ -712,6 +712,12 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(oracleRuns[8]).toBe('bun run oracle:fixtures --image "$IMAGE"');
   const batch = oracle.steps.find((step) => step.run === oracleRuns[8])!;
   expect(batch.env).toEqual({ ORACLE_SIGNING_KEY: "${{ secrets.ORACLE_SIGNING_KEY }}", IMAGE: "${{ steps.image.outputs.ref }}" });
+  // Fresh fixtures are uploaded only after a successful batch; an Escalation always.
+  const uploads = oracle.steps.filter((step) => (step.uses ?? "").startsWith("actions/upload-artifact@"));
+  expect(uploads.map((step) => [step.if, step.with?.["path"]])).toEqual([
+    ["success()", "conformance/fixtures/"],
+    ["always()", "conformance/escalations/ESC-bot-*.md"],
+  ]);
   expect(oracle.steps.indexOf(batch)).toBeGreaterThan(oracle.steps.findIndex((step) => (step.run ?? "").includes('docker push "$IMAGE"')));
   for (const job of [build, oracle, determinism]) {
     expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
@@ -724,6 +730,7 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
       job === oracle
         ? [
             ["always()", "docker logout ghcr.io"],
+            ["success()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
             ["always()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
           ]
         : job === determinism
