@@ -13,10 +13,12 @@
 # (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
 # Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15), then
 # checks that the committed Upstream scans (conformance/scans/facades.jsonl,
-# tools/lint-rules/singletons.json, conformance/boot-only-state) match the
-# snapshot byte for byte and runs conformance/tests/xaravel/scans.test.ts,
-# whose real-snapshot assertions need the synced snapshot (Story 3.6,
-# ESC-3.6-1).
+# tools/lint-rules/singletons.json, conformance/boot-only-state, and Story
+# 3.7's conformance/scans/allowed-identifiers.json, div12-pairs.jsonl,
+# phpunit-assertions.jsonl and mockery-api.jsonl) match the snapshot byte for
+# byte and runs conformance/tests/xaravel/scans.test.ts and
+# usage-scans.test.ts, whose real-snapshot assertions need the synced
+# snapshot (Story 3.6, ESC-3.6-1; Story 3.7, ESC-3.7-1).
 # `php-fixtures` installs the PHPUnit and Pest fixture projects and runs
 # tools/inventory/lister.php and tools/baseline/{runner,recorder}.php against
 # them with real PHP, and tools/oracle/api-surface.php against
@@ -110,8 +112,14 @@ jobs:
         run: bun run scan:facades --check
       - name: Check the singleton and boot-only-state scan
         run: bun run scan:singletons --check
+      - name: Check the closure allowed-identifier scan
+        run: bun run scan:closures --check
+      - name: Check the DIV-12 pair scan
+        run: bun run scan:div12 --check
+      - name: Check the test-API usage scan
+        run: bun run scan:test-api --check
       - name: Run the scan tests against the snapshot
-        run: bun test conformance/tests/xaravel/scans.test.ts
+        run: bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts
 
   php-fixtures:
     runs-on: ubuntu-latest

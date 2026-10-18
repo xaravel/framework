@@ -2,10 +2,10 @@
 title: 'Story 3.7: Upstream scans: closure identifiers, DIV-12 pairs and test-API usage'
 type: 'feature'
 created: '2026-10-18'
-status: 'ready-for-dev'
-baseline_revision: 'd17fc9f555a95b63d9e03351a0abb941600c8efd'
+status: 'done'
+baseline_revision: '7cdba750773158ca0781d5e335abd9b11bd7124d'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '_bmad-output/implementation-artifacts/epic-3-context.md'
   - 'stories/3.7.md'
@@ -175,6 +175,45 @@ deferred: []
   - `[low]` `[intent_gap]` (C) The Mockery list drifts toward "any method in a Mockery context". Group C.
   - `[low]` `[reject]` The real-snapshot tests are mostly self-consistency. Each Story's anchors are part of the rebuild; the Inventory cross-check is the independent oracle for A.
 
+### 2026-10-18 — Review pass (rebuild after ESC-3.7-1)
+- verdicts: 31 findings — high 0, medium 8, low 19, false 3, maybe-false 1
+- note: the review diff again left out `conformance/scans/div12-pairs.jsonl` (1516 lines) for size; the intent-alignment layer read it from the working tree, and `scan:div12 --check` pins it.
+- findings (blind layer):
+  - `[false]` `[reject]` `stories/3.7.md` is `done` while the spec is in review. That is the build's normal order: the manifest is set with the Story's completion in the same PR.
+  - `[medium]` `[reject]` Testbench and Laravel helpers (`assertDatabaseHas`, `assertFileContains`, `assertFilenameExists`, …) are listed as PHPUnit assertions, because suite hierarchies leave the index through the unindexed `Orchestra\Testbench\TestCase`. Real, but it is the outcome ESC-3.7-1 chose: such names stay listed with `executions: 0`, are printed, and Story 4.4 may exclude them only through an Escalation. Changing it means editing the ruled contract.
+  - `[low]` `[reject]` The review print is mostly `expect*`, `fail` and `markTest*`, which are never Inventory kinds. ESC-3.7-1 includes these names and requires the print; changing it edits the contract.
+  - `[low]` `[patch]` `calls` and `executions` measure different things (`assertThat` 1 call, 3103 executions), and nothing says so. Patched: `docs/ops/scans.md` now explains that executions include indirect `Assert` calls.
+  - `[low]` `[reject]` `ASSERTION` is case-sensitive, so a mis-cased call with no Inventory kind is missed. A grep of the suites finds only `->assertempty(`, which matches the `assertEmpty` kind and is counted; the doc's naming rule is fixed under the verification-gap row below.
+  - `[medium]` `[patch]` Mockery names were case-sensitive: `andreturn` (2) was a separate line from `andReturn` (2646), one method split in two. That contradicts "one line per Mockery method", since PHP method names are case-insensitive. Patched: `fileUsage` keys Mockery by lowercased name and spells each one as its first call site, as the PHPUnit fallback does. Now `andReturn` has 2648 and there are 45 methods. XT-88 covers it with `->andreturn(2)`.
+  - `[low]` `[reject]` Facade names (`Date`, `URL`, `Request`, `Event`, `File`) collide with ECMAScript/Bun globals. The AC lists facade and helper names only. How the codec resolves a collision is the closure Epic's decision (the Never list excludes the codec).
+  - `[low]` `[reject]` `Mailable`, `Notification` and the `Queueable` trait are not option holders themselves. At the Pin none of their pairs is an option name (`bcc`, `locale`, `delay`, …), so the output is unaffected. Whether "reaches" includes the base is a rule reading that the ruling leaves open.
+  - `[medium]` `[patch]` XT-87 lacked the `Queueable`, `Mailable`, `Notification` and `ShouldBroadcast` holder routes. Patched: fixtures `QueueableJob`, `QueuedTrait` (trait-level), `Welcome`, `Invoice` and `Shipped`, each with an AD-26 pair expected as `option-pair`. Deleting the trait route or `ShouldBroadcast` now fails the test (mutation checked).
+  - `[low]` `[reject]` `combinedIndex` keeps the first declaration of a duplicate FQCN. Checked: switching to last-wins gives byte-identical output at the Pin. Detecting duplicates adds a branch for a case not met in practice.
+  - `[low]` `[reject]` Untested edges: `--check` on a missing closures/test-api file, empty-list rendering, `markTestIncomplete`, `shouldNotReceive`, `expects([…])`, and `new readonly class`. The div12 missing-file path shares `runScan`. No `new readonly|final class` exists in the four `src/` trees (verified at Story 3.6). Adding tests here is not a defect fix.
+  - `[low]` `[reject]` `phpunit-assertions.jsonl` can drift after an Inventory regeneration until the `upstream` job runs. That job runs `scan:test-api --check` on every PR, and the regeneration note in `docs/ops/scans.md` covers it.
+- findings (edge-case layer):
+  - `[medium]` `[patch]` Mockery case variants split lines. Same root cause and fix as the blind row.
+  - `[low]` `[reject]` `X::assertY(` where X is an indexed subclass of the unindexed `PHPUnit\Framework\TestCase` is not counted. A grep of the suites finds no `…TestCase::assert…(` site at the Pin.
+  - `[maybe-false]` `[reject]` `$this->assertX(` inside an anonymous class in a test class is judged against the outer class. Settle it by grepping the suites for `new class` bodies that call `$this->assert`. Low if true.
+  - `[low]` `[reject]` `combinedIndex` first-wins. Same as the blind row: output identical at the Pin.
+  - `[low]` `[reject]` A non-object Inventory line gives a raw TypeError. Inventory `check` validates the committed files, and the run still exits 1. (carried from the first review)
+  - `[low]` `[reject]` `namespace { … }` global blocks hide helpers. At the Pin the helper files have no namespace statement, and the counts match (99). (carried)
+  - `[low]` `[reject]` Mailable/Notification base not a holder. Same as the blind row.
+  - `[false]` `[reject]` `\mockery::` in another case skips static calls. The suites have no lower-case `mockery::` reference (grep).
+  - `[medium]` `[patch]` (claim) `mockery-api.jsonl` lists `andreturn` apart from `andReturn`. Same root cause and fix as the blind row.
+- findings (verification-gap layer):
+  - `[medium]` `[patch]` Three option-holder routes were unverified (mutation-demonstrated). Same fix as the blind XT-87 row.
+  - `[medium]` `[patch]` Spelling a name as its Inventory kind was unverified, because `parent::assertEquals` came before `$this->assertequals` in the fixture. Patched: the lower-case call site now comes first. Replacing `kinds.get(lower) ?? site.name` with `site.name` now fails XT-88 (mutation checked).
+  - `[low]` `[patch]` The `kinds.has(lower)` naming clause was undocumented. Patched: the ops doc's **Names** bullet states it. It is what makes the matrix's lower-case row work.
+  - `[low]` `[patch]` The `ci.yml` header comment listed only Story 3.6's scan outputs. Patched: it now names Story 3.7's four outputs and `usage-scans.test.ts`.
+  - `[low]` `[reject]` `div12-pairs.jsonl` is not in the diff. It was omitted for size; `--check` pins it byte for byte.
+- findings (intent-alignment layer):
+  - `[low]` `[reject]` Non-PHPUnit helpers in the assertion file (descriptive). Same as the blind Testbench row: ruled by ESC-3.7-1.
+  - `[low]` `[reject]` Only 13 option pairs at the Pin (descriptive). This is the ruled holder × name rule: framework `src/` rarely declares both members of an AD-26 name on one holder class.
+  - `[low]` `[patch]` `isAssertionName` accepts Inventory-kind matches beyond the rule text. It is needed for the matrix's lower-case row, and it is now documented (same patch as the verification-gap row).
+  - `[false]` `[reject]` Nested Mockery chains inside argument lists are counted on their own. That is reading (a) of "argument lists are skipped with `matching`", and it is documented. A chain inside `with(…)` is real Mockery usage.
+  - `[medium]` `[patch]` Mockery names are case-sensitive. Same root cause and fix as the blind row.
+
 ## Design Notes
 
 - **Path.** The epic names only `allowed-identifiers.json`. It goes in `conformance/scans/` beside the other scan outputs, which are Protected under `/conformance/`, as AD-14 requires.
@@ -213,3 +252,30 @@ Blocking condition: intent gap. Three rules in the `<intent-contract>` give outp
 - **Implementation notes for the rebuild.** 294 Inventory lines have `assertions: null` (tests the baseline did not run), and these add nothing. `Queue::getJobBackoff` now reads backoff through `getAttributeValue`, so the Design Notes' `backoff` example is stale.
 - **AC 1.** `allowed-identifiers.json` had no review finding that needs a ruling, and it is rebuilt unchanged from the patch.
 
+
+### Run 2026-10-18 (rebuild after ESC-3.7-1). Status: done.
+
+- **Summary.** The three scans were rebuilt from the saved attempt (applied, then the patch deleted) with the rules ESC-3.7-1 approved: hierarchy-scoped PHPUnit exclusion, `Assert`-subclass calls, `fail`/`markTest*`, case-insensitive names; option names × option holders for DIV-12; facade-started Mockery chains, skipped mocked methods and the static-call rule. At the Pin the outputs are 49 facades and 99 helpers; 1516 DIV-12 pairs (13 option-pair, 96 model-config, 1407 method-plus-state); 82 assertion names (all 57 Inventory kinds, `assertCount` 1741 calls); and 45 Mockery methods.
+- **Files.**
+  - `tools/scans/closures.ts`, `div12.ts`, `test-api.ts`: the scans and their CLIs.
+  - `tools/scans/php.ts`: exports `phpFiles`, `parseUse`, `codeIndexes`, with no behaviour change.
+  - `package.json`: the `scan:closures`, `scan:div12` and `scan:test-api` scripts.
+  - `conformance/scans/allowed-identifiers.json`, `div12-pairs.jsonl`, `phpunit-assertions.jsonl`, `mockery-api.jsonl`: the generated outputs.
+  - `conformance/tests/xaravel/usage-scans.test.ts`: XT-conformance-86..88.
+  - `.github/workflows/ci.yml`, `conformance/tests/xaravel/upstream.test.ts`: the `upstream` job's three `--check` steps and the test step.
+  - `docs/ops/scans.md`: the three scans documented.
+  - `stories/3.7.md`: `done`.
+- **Review.** 31 findings: medium 8, low 19, false 3, maybe-false 1.
+  - Patched: Mockery names are now grouped case-insensitively (medium), XT-87 has fixtures for the four missing option-holder routes (medium), and XT-88 now covers spelling a name as its Inventory kind (medium). Three doc and comment fixes (low): calls vs executions, the Inventory-kind naming clause, and the `ci.yml` header.
+  - Nothing deferred. The rejected findings and their reasons are in the triage log.
+- **Follow-up review: recommended.** Three medium entries were patched (Mockery case grouping; the holder-route and Inventory-spelling test gaps). The unverified risk is the new Mockery grouping. Its spelling rule (first call site in walk order) is not stated in the contract and was chosen to match the PHPUnit fallback.
+- **Verification.** All clean:
+  - `bun test` on `usage-scans`, `scans` and `upstream`: 11 pass, with the real snapshot present.
+  - The five `scan:* --check` runs: exit 0.
+  - Full `bun test`: 128 pass, 0 fail.
+  - `typecheck`, `lint`, `workflows:check`, `ownership:check` and `protected-paths:codeowners`: clean.
+  - Mutation checks confirm that the Queueable and ShouldBroadcast holder routes and the Inventory-kind spelling are pinned.
+- **Residual risks.**
+  - **The `Model`/`connection` anchor.** It is not a pair at the Pin: `Model` has `$connection` but no `connection()` method. The test checks it through `classifier()` instead.
+  - **Pest closures.** `$this->assert*` calls in Pest closures (about 105, in mcp and boost) are not call sites by rule, so only the Inventory counts them.
+  - **Testbench helpers.** Helpers reached through the unindexed Testbench `TestCase` are listed with `executions: 0`, so Story 4.4 must handle them through Escalations, as ESC-3.7-1 states.
