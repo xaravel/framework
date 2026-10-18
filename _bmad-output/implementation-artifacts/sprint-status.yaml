@@ -64,7 +64,7 @@ development_status:
   3-4-per-story-oracle-requests: done
   3-5-api-surface-export: done
   3-6-upstream-scans-facades-singletons-and-boot-only-state: done
-  3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: backlog
+  3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: blocked  # intent gap: ESC-3.7-1 (PHPUnit call-site exclusion, DIV-12 option-pair rule, Mockery chain rule)
   epic-3-retrospective: optional
 
   epic-4: backlog
