@@ -30,9 +30,10 @@
 //
 // `assertions` and `oracle` come from the baseline run (Story 2.6,
 // tools/baseline). Generation carries them over for each entry whose `id`,
-// `hash` and `backends` are unchanged in the existing files (a file that does
-// not parse carries nothing); any other entry gets
-// `"assertions":null,"oracle":{}` until the next baseline run.
+// `hash` and `backends` are unchanged in the existing files; any other entry
+// gets `"assertions":null,"oracle":{}` until the next baseline run. Carry-over
+// fails closed: a committed file of a selected suite that does not parse stops
+// `generate` and `--check` before anything is written.
 //
 // Lines are sorted by `id` (UTF-16 code units); the files are UTF-8 with LF
 // line endings and a trailing newline. A framework Component's file that is
@@ -620,17 +621,17 @@ export function readSuiteInventory(root: string, suite: Suite): InventoryEntry[]
   return entries.sort((a, b) => compareUnits(a.id, b.id));
 }
 
-/** The existing entries of one suite to carry fields over from; a file that does not parse carries nothing. */
+/**
+ * The committed entries of one suite to carry fields over from. A committed file
+ * that does not parse throws (carry-over would otherwise silently drop its
+ * baseline data); an absent file carries nothing.
+ */
 function previousEntries(root: string, suite: Suite): InventoryEntry[] {
-  const entries: InventoryEntry[] = [];
-  for (const [component, path] of suiteInventoryFiles(root, suite)) {
-    try {
-      entries.push(...parseInventory(readFileSync(path, "utf8"), `${INVENTORY_DIR}/${component}.jsonl`, suite));
-    } catch {
-      // Not a valid Inventory file (for example, one written before Story 2.6): nothing to carry over.
-    }
+  try {
+    return readSuiteInventory(root, suite);
+  } catch (error) {
+    throw new Error(`carry-over needs a valid committed Inventory: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
-  return entries;
 }
 
 /** Carries `assertions` and `oracle` over from `previous` for each entry whose id, hash and backends are unchanged. */
@@ -730,6 +731,8 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
     }
     snapshots.set(suite, snapshot);
   }
+  // Read carry-over before listing, so a committed file that does not parse fails before the (slow) lister runs.
+  const previous = new Map(suites.map((suite) => [suite, previousEntries(root, suite)]));
   const map = readMap(root);
   const lister = resolve(root, LISTER);
   if (!existsSync(lister)) {
@@ -739,7 +742,7 @@ export function generate(root: string, options: GenerateOptions = {}): GenerateR
   for (const suite of suites) {
     const raws = listSuite(root, suite, snapshots.get(suite)!, lister, options);
     const built = suite === "framework" ? buildEntries(raws, map) : buildPestEntries(suite, raws as PestRawTest[], map);
-    const entries = carryOver(built, previousEntries(root, suite));
+    const entries = carryOver(built, previous.get(suite)!);
     generated.push({ suite, files: renderInventory(entries), total: entries.length });
   }
 

@@ -216,7 +216,12 @@ function ids(text: string): string[] {
 
 test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
   await withFixture(async (fx) => {
-    writeFiles(join(fx.dir, INVENTORY_DIR), { "routing.jsonl": "framework stays\n", "ai.jsonl": "ai stays\n", "boost.jsonl": "boost stays\n" });
+    // Valid files, since generating all reads each suite's files for carry-over (a file that does not parse stops it).
+    const stays = (id: string, component: string, source: string): string => `{"id":${JSON.stringify(id)},"component":"${component}","kind":"unit","backends":["none"],"source":"${source}","hash":"${"0".repeat(64)}","assertions":null,"oracle":{}}\n`;
+    const routingStays = stays("Illuminate\\Tests\\Routing\\RoutingTest::testX", "routing", "framework/tests/Routing/RoutingTest.php:1-2");
+    const aiStays = stays("ai/tests/Unit/StaysTest.php::it stays", "ai", "ai/tests/Unit/StaysTest.php:1-2");
+    const boostStays = stays("boost/tests/Unit/StaysTest.php::it stays", "boost", "boost/tests/Unit/StaysTest.php:1-2");
+    writeFiles(join(fx.dir, INVENTORY_DIR), { "routing.jsonl": routingStays, "ai.jsonl": aiStays, "boost.jsonl": boostStays });
 
     // One suite local: only mcp.jsonl is written; the lister runs in pest mode.
     const ok = await cli(["generate", "--suite", "mcp", "--root", fx.dir, "--local", fx.local("mcp"), "--php", fx.php]);
@@ -227,7 +232,7 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
     const files = fx.inventory();
     expect(Object.keys(files)).toEqual(["ai.jsonl", "boost.jsonl", "mcp.jsonl", "routing.jsonl"]);
     // The other suites' files and the framework's are left byte-identical.
-    expect([files["routing.jsonl"], files["ai.jsonl"], files["boost.jsonl"]]).toEqual(["framework stays\n", "ai stays\n", "boost stays\n"]);
+    expect([files["routing.jsonl"], files["ai.jsonl"], files["boost.jsonl"]]).toEqual([routingStays, aiStays, boostStays]);
 
     // The record: Story 2.4's keys, order, sorting and file format.
     const mcp = files["mcp.jsonl"]!;

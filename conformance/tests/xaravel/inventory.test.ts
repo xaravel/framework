@@ -179,9 +179,10 @@ function committed(): Map<string, InventoryEntry[]> {
 
 test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
   await withFixture(async (fx) => {
-    // Foreign files and the Oracle non-determinism findings (Story 2.6) are never touched; a framework Component
-    // no longer generated is deleted.
-    writeFiles(join(fx.dir, INVENTORY_DIR), { "ai.jsonl": "ai stays\n", "mcp.jsonl": "mcp stays\n", "boost.jsonl": "boost stays\n", [NONDETERMINISM_FILE]: "findings stay\n", "routing.jsonl": "stale\n" });
+    // Foreign files and the Oracle non-determinism findings (Story 2.6) are never touched (or read); a framework
+    // Component no longer generated is read for carry-over, then deleted.
+    const staleRouting = '{"id":"Illuminate\\\\Tests\\\\Routing\\\\RoutingTest::testX","component":"routing","kind":"unit","backends":["none"],"source":"framework/tests/Routing/RoutingTest.php:1-2","hash":"' + "0".repeat(64) + '","assertions":null,"oracle":{}}\n';
+    writeFiles(join(fx.dir, INVENTORY_DIR), { "ai.jsonl": "ai stays\n", "mcp.jsonl": "mcp stays\n", "boost.jsonl": "boost stays\n", [NONDETERMINISM_FILE]: "findings stay\n", "routing.jsonl": staleRouting });
 
     // Generate (local): per-Component files, counts, exit 0.
     const ok = await cli(["generate", "--root", fx.dir, "--local", fx.local, "--php", fx.php]);
@@ -244,6 +245,22 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
     const before = baselined.split("\n");
     expect([carried[0], carried[2]]).toEqual([before[0], before[2]]);
     expect(JSON.parse(carried[1]!)).toMatchObject({ id: `${STR}::testAscii#1`, hash: testHash(TOKENS, "[0=>'c']"), assertions: null, oracle: {} });
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), files["support.jsonl"]!);
+
+    // Carry-over fails closed (R6): a committed file of the suite that does not parse stops generate and --check
+    // before anything is written, naming the file and line; nothing changes on disk.
+    const supportLines = files["support.jsonl"]!.split("\n");
+    const broken = [supportLines[0], "<<<<<<< HEAD", ...supportLines.slice(2)].join("\n");
+    writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), broken);
+    const brokenFiles = fx.inventory();
+    for (const extra of [[], ["--check"]]) {
+      const refused = await cli(["generate", ...extra, "--root", fx.dir, "--local", fx.local, "--php", fx.php]);
+      expect(refused.code).toBe(1);
+      expect(refused.stdout).toBe("");
+      expect(refused.stderr).toStartWith(`Inventory generate failed: carry-over needs a valid committed Inventory: ${INVENTORY_DIR}/support.jsonl:2: malformed JSON`);
+      expect(fx.inventory()).toEqual(brokenFiles);
+    }
+    expect(fx.inventory()["support.jsonl"]).toBe(broken);
     writeFileSync(join(fx.dir, INVENTORY_DIR, "support.jsonl"), files["support.jsonl"]!);
 
     // Unmapped: a raw test file no map entry matches.
