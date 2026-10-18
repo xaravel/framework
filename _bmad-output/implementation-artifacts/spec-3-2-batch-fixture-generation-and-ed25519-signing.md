@@ -2,7 +2,7 @@
 title: 'Story 3.2: Batch fixture generation and Ed25519 signing'
 type: 'feature'
 created: '2026-10-17'
-status: 'draft'
+status: 'ready-for-dev'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -10,6 +10,7 @@ context:
   - 'stories/3.2.md'
   - 'conformance/escalations/ESC-3.2-1.md'
   - 'docs/ops/oracle.md'
+  - 'decisions/ESC-3.2-1.md'
 warnings: [oversized]
 deferred: []
 ---
@@ -29,7 +30,7 @@ deferred: []
 - Output per request: `{"error":null|{"stage","class","message"},"results":[…]}`; a result is `{"value":<enc>}` or `{"throws":{"class","message"}}`. Value encoding is lossless and fixed: null/bool/string as JSON (non-UTF-8 → `{"bytes":b64}`), `{"int":"<dec>"}`, `{"float":"<var_export>"}`, `{"array":[[key,value],…]}`, `{"enum":"C::Case"}`, `{"mock":"<mocked class>"}` for Mockery mocks, `{"object":"C","properties":[[name,scope,value],…]}` from the `(array)` cast (no magic methods), `{"recursion":"C"}`, `{"resource":"type"}`. The framework directory in any string becomes `{root}` (as lister.php's export does), so image and local runs give the same bytes.
 - Fixture file: one compact line + LF, keys `sha256`, `output`, `signature`, `output` in canonical JSON (`tools/oracle/request.ts` `canonicalJson`). `signature` = base64 Ed25519 over the UTF-8 bytes of `xaravel-oracle-fixture-v1\n` + `canonicalJson({output, sha256})`. Ed25519 is deterministic, so two runs give identical files.
 - Signing happens in Bun (`node:crypto`), never in the PHP container. The private key is read only from env `ORACLE_SIGNING_KEY` (PKCS#8 PEM). The run fails unless its public key equals `conformance/oracle/oracle.pub` (SPKI PEM). The fingerprint is the lowercase hex SHA-256 of the SPKI DER, printed by `bun run oracle:fixtures fingerprint` and recorded in `docs/ops/oracle.md`.
-- Determinism: both passes are compared per `sha256`; any difference (outside what the ESC-3.2-1 ruling exempts) writes no fixture, writes `ESC-bot-<n>.md` (next free `n`, trigger per the ruling, listing each differing request's id, sha256 and both output digests) to the escalation path, and exits 1. `--determinism` does the same comparison without a key and writes no fixtures.
+- Determinism (ESC-3.2-1, option 1): both passes are compared per `sha256` (canonical JSON of `output`). `conformance/oracle/nondeterminism.jsonl` lists the known random requests, one line `{"sha256","id","reason"}` (keys in that order, compact, LF, sorted by `id` then `sha256`, no duplicates, each `id` equal to the committed request's). A listed request gets no fixture. A difference in an unlisted request writes no fixture, writes `conformance/escalations/ESC-bot-<n>.md` (next free `n`; `trigger: open-question`; `test_ids` = the differing requests' ids; `evidence` lists each id, sha256 and both output digests) and exits 1. A listed `sha256` that is not a committed request, whose `id` differs, or whose two outputs are identical fails the run (exit 1, no fixtures, no Escalation). `--determinism` does the same comparison without a key and writes no fixtures. The first `nondeterminism.jsonl` holds the 23 requests of `spec-3-2-prototype/nondeterministic-requests.txt`, each with its random source as `reason`.
 - Write mode replaces `conformance/fixtures/<component>/*.json` for the Components it writes, deleting stray `*.json` there; it never touches `conformance/fixtures/generators/`.
 - CLI shape of `tools/oracle/extract.ts`: `main(argv)`, `UsageError` → 2, `--root`, `--image <ref>` | `--local <dir> [--php <bin>]`; Docker only through `runInImage`. XT tests use `bun:test` and the PHP guard of `php-scripts.test.ts`.
 
@@ -40,7 +41,9 @@ deferred: []
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
 | Happy path | committed requests, key matching `oracle.pub` | one fixture per request (per ruling), signature verifies with `oracle.pub` | none |
-| Random request | output differs between passes and is not exempt | no fixture written, `ESC-bot-<n>.md` written | exit 1, each differing id on stderr |
+| Random request | output differs between passes and is not in `nondeterminism.jsonl` | no fixture written, `ESC-bot-<n>.md` written | exit 1, each differing id on stderr |
+| Listed random request | differs, listed | no fixture for it; the rest written | none |
+| Stale listing | listed `sha256` not committed, wrong `id`, or identical outputs | nothing written | exit 1 naming the line |
 | Wrong key | `ORACLE_SIGNING_KEY` public half ≠ `oracle.pub` | nothing written | exit 1 `signing key does not match conformance/oracle/oracle.pub` |
 | No key / no pub | env unset, or `oracle.pub` missing | nothing written | exit 1 naming what is missing |
 | Expr throws | `Str::of(…)->x()` throws | result `{"throws":{…}}`, later exprs still run | none |
@@ -67,8 +70,8 @@ deferred: []
 
 **Execution:**
 - `tools/oracle/evaluate.php` -- finish the prototype; apply the ESC-3.2-1 ruling where it touches evaluation.
-- `tools/oracle/fixtures.ts` + `package.json` script `oracle:fixtures` -- CLI: modes write (default), `--determinism`, `fingerprint`; runs evaluate.php twice (image: tools + requests mounted read-only; local: local php), compares, signs, writes or reports, writes the Escalation on difference.
-- `conformance/oracle/nondeterminism.jsonl` (or what the ruling names) -- per the ESC-3.2-1 ruling.
+- `tools/oracle/fixtures.ts` + `package.json` script `oracle:fixtures` -- CLI: modes write (default, `--out <dir>` overrides `conformance/fixtures`), `--determinism`, `fingerprint`; runs evaluate.php twice (image: tools + requests mounted read-only; local: local php), compares, signs, writes or reports, writes the Escalation on difference. Exports `fixtureMessage` and `verifyFixture` for Story 3.3.
+- `conformance/oracle/nondeterminism.jsonl` -- the 23 requests with reasons, per the ESC-3.2-1 ruling; `git rm` the prototype directory.
 - `.github/workflows/oracle.yml` -- batch step, artifact upload, nightly schedule, environment `oracle`.
 - `conformance/tests/xaravel/oracle-fixtures.test.ts` -- XT-conformance-71 (fixture root with a few requests and a fake runner + a test key pair generated in the test: files written at the right paths with the right keys, signatures verify with the pub, wrong/no key fails, strays deleted, generators untouched; a real PHP part under the guard evaluates one request of each kind against `/tmp/xaravel-inv/framework` when present), XT-conformance-72 (a runner whose second pass differs → exit 1, no fixtures, valid `ESC-bot-<n>.md`; identical passes → identical bytes across two runs), XT-conformance-73 (`oracle.pub` path is Protected per `conformance/protected-paths`; when `oracle.pub` exists, `docs/ops/oracle.md` records its fingerprint).
 - `docs/ops/oracle.md`, `docs/ops/identities.md` -- as in the Code Map.
@@ -89,7 +92,7 @@ Fixtures are named by request `sha256` (ESC-3.1-1), since a Test ID has several 
 **Commands:**
 - `bun test conformance/tests/xaravel/oracle-fixtures.test.ts` -- all pass
 - `ORACLE_SIGNING_KEY=<test key> bun run oracle:fixtures --local /tmp/xaravel-inv/framework --out <tmp>` with a matching test `oracle.pub` in a temp root -- exit 0, fixtures verify
-- `bun run oracle:fixtures --determinism --local /tmp/xaravel-inv/framework` -- exit 0 after the ruling's exemptions
+- `bun run oracle:fixtures --determinism --local /tmp/xaravel-inv/framework` -- exit 0 with the 23 listed requests exempt
 - `bun run typecheck`, `bun run lint`, `bun run workflows:check`, `escalations:check`, `bun test` -- clean
 
 ## Auto Run Result
