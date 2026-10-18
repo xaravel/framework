@@ -442,6 +442,16 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
     expect(tagged.length).toBeGreaterThan(0);
     expect(tagged.every((e) => e.oracle[variant] !== undefined)).toBe(true);
   }
+  // ESC-2.6-2: with Upstream's DynamoDB Local on the none leg, the four DynamoDbStoreTest IDs record Upstream's
+  // own outcome and an assertion floor, not a service-caused skip.
+  const dynamo = ["testItemsCanBeAtomicallyAdded", "testItemsCanBeIncrementedAndDecremented", "testItemsCanBeStoredAndRetrieved", "testLocksCanBeAcquired"].map((method) => `Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::${method}`);
+  for (const id of dynamo) {
+    const entry = all.find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    expect(entry!.oracle["none"]).toBeDefined();
+    expect(entry!.oracle["none"]).not.toBe("skip");
+    expect(Object.keys(entry!.assertions ?? {}).length).toBeGreaterThan(0);
+  }
   // Re-rendering the committed files reproduces them byte for byte (what `bun run inventory` carries over).
   for (const [component, text] of renderInventory(carryOver(all, all))) {
     expect(readFileSync(join(root, INVENTORY_DIR, `${component}.jsonl`), "utf8")).toBe(text);
