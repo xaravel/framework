@@ -68,7 +68,7 @@ development_status:
   epic-3-retrospective: done
 
   epic-4: in-progress
-  4-1-php-comparison-core: ready-for-dev  # xaravel-oracle App set up by the Maintainer (decisions/MAINT-2026-10-18-oracle-app.md)
+  4-1-php-comparison-core: done
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: backlog
   4-3-core-phpunit-assertions: backlog
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog
