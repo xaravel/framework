@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-18-2026 10:24
+last_updated: 10-18-2026 16:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -74,7 +74,7 @@ development_status:
   4-5-mockery-core: done
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
   4-6-mockery-advanced-and-api-coverage: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   epic-5: backlog
   5-1-variant-vocabulary-and-expectations-file: backlog
@@ -867,3 +867,75 @@ action_items:
     owner: "Maintainer"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-3-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-1-mockery-class-arg-matching"
+    epic: 4
+    action: "Fix Mockery _matchArg so a value is a class only by the isClosure rule
+      (class source or FQCN brand); a closure never matches a string or acts as instanceof
+      (finding R2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-2-verify-mocks-outside-run"
+    epic: 4
+    action: "Close and verify a Mockery container in the process slot at the next
+      test end, as PHPUnit closes the global container at tearDown, or throw on creation
+      outside a run (finding R3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-3-one-php-value-layer"
+    epic: 4
+    action: "Export the PHP value predicates and formatters from @xaravel/assert (a
+      subpath) and use them in packages/mockery/src/support/values.ts, fixing the
+      four props/class-name/anonymous/-0 disagreements and duplicated gcvt, var_export
+      and object handles (findings A1, A2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-4-mockery-install-fails-loudly"
+    epic: 4
+    action: "Make Mockery global install throw when xaravel.mockery.run or xaravel.mockery.mock
+      already exists and is not its own, instead of skipping (finding R4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-5-coverage-checks-behavior"
+    epic: 4
+    action: "Make assert:coverage and mockery:coverage probe behavior (an assert name
+      records an assertion; a Mockery name is callable on a mock), not just presence,
+      and share the two tools skeleton (findings R5, A2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-6-followup-reviews-4-x"
+    epic: 4
+    action: "Run the follow-up reviews specs 4.1, 4.3, 4.4, 4.5 and 4.6 recommend
+      and clear followup_review_recommended (finding S5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-7-rule-contract-escalations"
+    epic: 4
+    action: "Rule on the open contract Escalations ESC-4.2-1, ESC-4.3-1, ESC-4.4-2
+      and ESC-4.6-1 (DIV clauses, FR-116 reading); Story 4.6 AC 3 is met only once
+      ESC-4.6-1 is approved (finding S1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-8-createmock-and-deferral-targets"
+    epic: 4
+    action: "Reconcile epics.md:114 (createMock via Mockery) with upstream use of
+      the PHPUnit MockObject API and name its Story; name targets for 1 === 1.0, intrinsic
+      freezing, concurrent-count separation, late assertions and the assert-mockery
+      devDependency cycle (findings R1, S4)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-4-retro-item-9-surface-open-escalations"
+    epic: 4
+    action: "Have escalations:check warn (exit 0) on each open Escalation whose Story
+      manifest is done, so idle reports and the Maintainer see unruled contracts;
+      Escalate if it changes AD-16 (findings S1, P2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
