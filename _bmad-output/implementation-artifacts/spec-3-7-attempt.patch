@@ -1,0 +1,1356 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index cbfd0be..a31e40c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -110,8 +110,14 @@ jobs:
+         run: bun run scan:facades --check
+       - name: Check the singleton and boot-only-state scan
+         run: bun run scan:singletons --check
++      - name: Check the closure allowed-identifier scan
++        run: bun run scan:closures --check
++      - name: Check the DIV-12 pair scan
++        run: bun run scan:div12 --check
++      - name: Check the test-API usage scan
++        run: bun run scan:test-api --check
+       - name: Run the scan tests against the snapshot
+-        run: bun test conformance/tests/xaravel/scans.test.ts
++        run: bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts
+ 
+   php-fixtures:
+     runs-on: ubuntu-latest
+diff --git a/conformance/tests/xaravel/upstream.test.ts b/conformance/tests/xaravel/upstream.test.ts
+index 8e938ab..3176e13 100644
+--- a/conformance/tests/xaravel/upstream.test.ts
++++ b/conformance/tests/xaravel/upstream.test.ts
+@@ -183,7 +183,10 @@ test("XT-conformance-39: bun run upstream:sync checks out each of the four repos
+     "bun run upstream:check",
+     "bun run scan:facades --check",
+     "bun run scan:singletons --check",
+-    "bun test conformance/tests/xaravel/scans.test.ts",
++    "bun run scan:closures --check",
++    "bun run scan:div12 --check",
++    "bun run scan:test-api --check",
++    "bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts",
+   ]);
+   expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
+   for (const node of [job, ...job.steps]) {
+diff --git a/conformance/tests/xaravel/usage-scans.test.ts b/conformance/tests/xaravel/usage-scans.test.ts
+new file mode 100644
+index 0000000..824fa09
+--- /dev/null
++++ b/conformance/tests/xaravel/usage-scans.test.ts
+@@ -0,0 +1,403 @@
++// Xaravel Tests for Story 3.7 (Upstream scans: closure identifiers, DIV-12
++// pairs and test-API usage). These run under plain `bun test` until the
++// harness lands in Epic 5. Each scan runs against a mini snapshot written into
++// a temporary root; the parts that read the real snapshot run only when
++// `conformance/upstream/` has been synced (it is gitignored).
++import { expect, test } from "bun:test";
++import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { dirname, join, resolve } from "node:path";
++import { renderJson } from "../../../tools/oracle/request";
++import { activePhases, CODEOWNERS_PATH, isProtected, LIST_PATH, MAINTAINER, matches, parseList, renderCodeowners } from "../../../tools/protected-paths/protected-paths";
++import { ALLOWED_IDENTIFIERS_COMMENT, ALLOWED_IDENTIFIERS_FILE, buildClosures, main as closuresMain } from "../../../tools/scans/closures";
++import { buildDiv12, DIV12_FILE, main as div12Main } from "../../../tools/scans/div12";
++import { ASSERTIONS_FILE, buildTestApi, inventoryExecutions, main as testApiMain, MOCKERY_FILE } from "../../../tools/scans/test-api";
++
++const root = resolve(import.meta.dir, "..", "..", "..");
++const REAL = existsSync(join(root, "conformance", "upstream", "framework", "src"));
++
++function writeTree(dir: string, files: Record<string, string>): void {
++  for (const [path, text] of Object.entries(files)) {
++    const full = join(dir, path);
++    mkdirSync(dirname(full), { recursive: true });
++    writeFileSync(full, text);
++  }
++}
++
++/** A temporary root holding `conformance/upstream/<files>` (an empty `src/` for every repository) and `extra` at the root. */
++function withSnapshot(files: Record<string, string>, body: (dir: string) => void, extra: Record<string, string> = {}): void {
++  const dir = mkdtempSync(join(tmpdir(), "xaravel-usage-scans-test-"));
++  try {
++    for (const repo of ["framework", "ai", "mcp", "boost"]) {
++      mkdirSync(join(dir, "conformance", "upstream", repo, "src"), { recursive: true });
++    }
++    writeTree(join(dir, "conformance", "upstream"), files);
++    writeTree(dir, extra);
++    body(dir);
++  } finally {
++    rmSync(dir, { recursive: true, force: true });
++  }
++}
++
++/** Runs a scan's `main` with stdout and stderr captured. */
++function run(main: (argv: readonly string[]) => number, argv: readonly string[]): { code: number; stdout: string; stderr: string } {
++  const out: string[] = [];
++  const err: string[] = [];
++  const saved = { out: process.stdout.write.bind(process.stdout), err: process.stderr.write.bind(process.stderr) };
++  process.stdout.write = ((chunk: string) => out.push(chunk) > 0) as typeof process.stdout.write;
++  process.stderr.write = ((chunk: string) => err.push(chunk) > 0) as typeof process.stderr.write;
++  try {
++    const code = main(argv);
++    return { code, stdout: out.join(""), stderr: err.join("") };
++  } finally {
++    process.stdout.write = saved.out;
++    process.stderr.write = saved.err;
++  }
++}
++
++const php = (namespace: string | null, body: string, uses: readonly string[] = []): string =>
++  `<?php\n\n${namespace === null ? "" : `namespace ${namespace};\n\n`}${uses.map((use) => `use ${use};\n`).join("")}${uses.length > 0 ? "\n" : ""}${body}\n`;
++
++/** The outputs are Protected, and CODEOWNERS assigns them to the Maintainer (AD-16, as XT-conformance-85). */
++function expectProtected(paths: readonly string[]): void {
++  const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
++  const phases = activePhases(root);
++  const codeowners = readFileSync(join(root, CODEOWNERS_PATH), "utf8");
++  expect(codeowners).toBe(renderCodeowners(entries, phases));
++  for (const path of paths) {
++    expect([path, existsSync(join(root, path))]).toEqual([path, true]);
++    expect([path, isProtected(entries, phases, path)]).toEqual([path, true]);
++    const owning = codeowners
++      .split("\n")
++      .filter((line) => line !== "" && !line.startsWith("#"))
++      .map((line) => line.split(/\s+/))
++      .filter(([pattern]) => matches(pattern!, path))
++      .at(-1);
++    expect([path, owning?.[1]]).toEqual([path, MAINTAINER]);
++  }
++  expect(MAINTAINER).toBe("@edanisko");
++}
++
++// ---------------------------------------------------------------------------
++// XT-conformance-86
++
++const FACADES = "framework/src/Illuminate/Support/Facades";
++
++const CLOSURE_SNAPSHOT: Record<string, string> = {
++  [`${FACADES}/Facade.php`]: php("Illuminate\\Support\\Facades", "abstract class Facade\n{\n}"),
++  [`${FACADES}/Cache.php`]: php("Illuminate\\Support\\Facades", "class Cache extends Facade\n{\n    protected static function getFacadeAccessor()\n    {\n        return 'cache';\n    }\n}"),
++  // An abstract facade subclass is not a facade.
++  [`${FACADES}/Manager.php`]: php("Illuminate\\Support\\Facades", "abstract class Manager extends Facade\n{\n}"),
++  // A facade outside Support/Facades, through an import.
++  "ai/src/Ai.php": php("Laravel\\Ai", "class Ai extends Facade\n{\n}", ["Illuminate\\Support\\Facades\\Facade"]),
++  // A global helpers file: guarded functions, a by-reference function, closures, a class and an anonymous class.
++  "framework/src/Illuminate/Support/helpers.php": php(
++    null,
++    [
++      "use Illuminate\\Support\\Collection;",
++      "",
++      "if (! function_exists('collect')) {",
++      "    function collect($value = [])",
++      "    {",
++      "        $f = function () { return fn () => 1; };",
++      "        return new Collection($value);",
++      "    }",
++      "}",
++      "",
++      "if (! function_exists('str')) {",
++      "    function &str($string = null)",
++      "    {",
++      "        return new class { public function anonymous() {} };",
++      "    }",
++      "}",
++      "",
++      "class HelperBag",
++      "{",
++      "    public function notAHelper()",
++      "    {",
++      "    }",
++      "}",
++      "",
++      "function collect($again) {}",
++    ].join("\n"),
++  ),
++  // A namespaced function is not a helper.
++  "framework/src/Illuminate/Support/functions.php": php("Illuminate\\Support", "function bar()\n{\n}"),
++};
++
++test("XT-conformance-86: scan:closures writes allowed-identifiers.json with every facade short name and global helper name", () => {
++  withSnapshot(CLOSURE_SNAPSHOT, (dir) => {
++    const expected = ["{", `  "comment": ${JSON.stringify(ALLOWED_IDENTIFIERS_COMMENT)},`, '  "facades": [', '    "Ai",', '    "Cache"', "  ],", '  "helpers": [', '    "collect",', '    "str"', "  ]", "}", ""].join("\n");
++    expect(buildClosures(dir).text).toBe(expected);
++
++    const written = run(closuresMain, ["--root", dir]);
++    expect([written.code, written.stderr]).toEqual([0, ""]);
++    expect(written.stdout).toBe(`closures: 2 facades, 2 helpers; wrote ${ALLOWED_IDENTIFIERS_FILE}.\n`);
++    expect(readFileSync(join(dir, ALLOWED_IDENTIFIERS_FILE), "utf8")).toBe(expected);
++    expect(run(closuresMain, ["--root", dir, "--check"]).code).toBe(0);
++    writeFileSync(join(dir, ALLOWED_IDENTIFIERS_FILE), expected.replace('"str"', '"strr"'));
++    const drift = run(closuresMain, ["--root", dir, "--check"]);
++    expect(drift.code).toBe(1);
++    expect(drift.stderr.split("\n")[0]).toBe(`closures drift: ${ALLOWED_IDENTIFIERS_FILE} differs from the scan (first difference at line 9)`);
++    expect(run(closuresMain, ["--root", dir, "--bogus"]).code).toBe(2);
++  });
++
++  // Two facades with one short name: nothing written, both FQCNs named.
++  const duplicate = { ...CLOSURE_SNAPSHOT, "mcp/src/Facades/Cache.php": php("Laravel\\Mcp\\Facades", "class Cache extends \\Illuminate\\Support\\Facades\\Facade\n{\n}") };
++  withSnapshot(duplicate, (dir) => {
++    const failed = run(closuresMain, ["--root", dir]);
++    expect(failed.code).toBe(1);
++    expect(failed.stderr).toBe("closures scan failed: two facades share the short name Cache: Illuminate\\Support\\Facades\\Cache and Laravel\\Mcp\\Facades\\Cache\n");
++    expect(existsSync(join(dir, ALLOWED_IDENTIFIERS_FILE))).toBe(false);
++  });
++
++  if (REAL) {
++    const result = buildClosures(root);
++    expect(readFileSync(join(root, ALLOWED_IDENTIFIERS_FILE), "utf8")).toBe(result.text);
++    for (const name of ["Cache", "Route", "Ai", "Mcp"]) {
++      expect([name, result.facades.includes(name)]).toEqual([name, true]);
++    }
++    for (const name of ["app", "collect", "str"]) {
++      expect([name, result.helpers.includes(name)]).toEqual([name, true]);
++    }
++    expect(result.facades.includes("Facade")).toBe(false);
++  }
++  expectProtected([ALLOWED_IDENTIFIERS_FILE]);
++});
++
++// ---------------------------------------------------------------------------
++// XT-conformance-87
++
++const ELOQUENT = "framework/src/Illuminate/Database/Eloquent";
++const DEMO = "framework/src/Illuminate/Demo";
++
++const DIV12_SNAPSHOT: Record<string, string> = {
++  [`${ELOQUENT}/Model.php`]: php("Illuminate\\Database\\Eloquent", "abstract class Model\n{\n    use HasAttributes;\n\n    protected $connection;\n\n    public function connection()\n    {\n    }\n}", ["Illuminate\\Database\\Eloquent\\Concerns\\HasAttributes"]),
++  [`${ELOQUENT}/Concerns/HasAttributes.php`]: php("Illuminate\\Database\\Eloquent\\Concerns", "trait HasAttributes\n{\n    protected $casts = [];\n\n    protected function casts()\n    {\n        return [];\n    }\n}"),
++  "framework/src/Illuminate/Foundation/Auth/User.php": php("Illuminate\\Foundation\\Auth", "class User extends Model\n{\n}", ["Illuminate\\Database\\Eloquent\\Model"]),
++  // An own pair, and an interface (never listed).
++  [`${DEMO}/Own.php`]: php("Illuminate\\Demo", "class Own implements Named\n{\n    public $name;\n\n    public function name()\n    {\n    }\n}"),
++  [`${DEMO}/Named.php`]: php("Illuminate\\Demo", "interface Named\n{\n    public function name();\n}"),
++  // A trait pair, and a class using it.
++  [`${DEMO}/HasMode.php`]: php("Illuminate\\Demo", "trait HasMode\n{\n    protected $mode;\n\n    public function mode()\n    {\n    }\n}"),
++  [`${DEMO}/WithTrait.php`]: php("Illuminate\\Demo", "class WithTrait\n{\n    use HasMode;\n}"),
++  // An inherited pair: the property in the parent, the method in a trait of the child.
++  [`${DEMO}/Base.php`]: php("Illuminate\\Demo", "class Base\n{\n    protected $label;\n}"),
++  [`${DEMO}/Labels.php`]: php("Illuminate\\Demo", "trait Labels\n{\n    public function label()\n    {\n    }\n}"),
++  [`${DEMO}/Child.php`]: php("Illuminate\\Demo", "class Child extends Base\n{\n    use Labels;\n}"),
++  // A static pair, and a promoted constructor property.
++  [`${DEMO}/Statics.php`]: php("Illuminate\\Demo", "class Statics\n{\n    protected static $resolver;\n\n    public static function resolver()\n    {\n    }\n}"),
++  [`${DEMO}/Promoted.php`]: php("Illuminate\\Demo", "class Promoted\n{\n    public function __construct(protected string $driver, $plain = null)\n    {\n    }\n\n    public function driver()\n    {\n    }\n\n    public function plain()\n    {\n    }\n}"),
++  // Option reads: `method_exists` with a read, and `??` with a call.
++  [`${DEMO}/Job.php`]: php("Illuminate\\Demo", "class Job\n{\n    public $backoff;\n\n    public $tries;\n\n    public function backoff()\n    {\n    }\n\n    public function tries()\n    {\n    }\n}"),
++  [`${DEMO}/Dispatcher.php`]: php(
++    "Illuminate\\Demo",
++    [
++      "class Dispatcher",
++      "{",
++      "    public function backoffFor($job)",
++      "    {",
++      "        if (method_exists($job, 'backoff')) {",
++      "            return $job->backoff();",
++      "        }",
++      "",
++      "        return $job->backoff;",
++      "    }",
++      "",
++      "    public function retry($job)",
++      "    {",
++      "        return $job->tries ?? $job->tries();",
++      "    }",
++      "",
++      "    public function resize($other, $job)",
++      "    {",
++      "        $other->size = 1;",
++      "        $other->size();",
++      "        $job->label;",
++      "        $other->label();",
++      "    }",
++      "}",
++    ].join("\n"),
++  ),
++  // Not option reads: inside the method of the same name, a write, and different receivers.
++  [`${DEMO}/SelfRead.php`]: php("Illuminate\\Demo", "class SelfRead\n{\n    public $timeout;\n\n    public function timeout()\n    {\n        return $this->timeout ?? $this->timeout();\n    }\n}"),
++  [`${DEMO}/Writer.php`]: php("Illuminate\\Demo", "class Writer\n{\n    public $size;\n\n    public function size()\n    {\n    }\n}"),
++};
++
++const side = (declaredIn: string, isStatic: boolean): { declaredIn: string; static: boolean } => ({ declaredIn, static: isStatic });
++const pairLine = (cls: string, name: string, classification: string, property: { declaredIn: string; static: boolean }, method: { declaredIn: string; static: boolean }): string =>
++  renderJson({ class: cls, name, classification, property, method });
++
++test("XT-conformance-87: scan:div12 writes div12-pairs.jsonl with every property/method name pair, classified", () => {
++  withSnapshot(DIV12_SNAPSHOT, (dir) => {
++    const D = "Illuminate\\Demo\\";
++    const MODEL = "Illuminate\\Database\\Eloquent\\Model";
++    const ATTRS = "Illuminate\\Database\\Eloquent\\Concerns\\HasAttributes";
++    const expected = [
++      pairLine(ATTRS, "casts", "model-config", side(ATTRS, false), side(ATTRS, false)),
++      pairLine(MODEL, "casts", "model-config", side(ATTRS, false), side(ATTRS, false)),
++      pairLine(MODEL, "connection", "model-config", side(MODEL, false), side(MODEL, false)),
++      pairLine(`${D}Child`, "label", "method-plus-state", side(`${D}Base`, false), side(`${D}Labels`, false)),
++      pairLine(`${D}HasMode`, "mode", "method-plus-state", side(`${D}HasMode`, false), side(`${D}HasMode`, false)),
++      pairLine(`${D}Job`, "backoff", "option-pair", side(`${D}Job`, false), side(`${D}Job`, false)),
++      pairLine(`${D}Job`, "tries", "option-pair", side(`${D}Job`, false), side(`${D}Job`, false)),
++      pairLine(`${D}Own`, "name", "method-plus-state", side(`${D}Own`, false), side(`${D}Own`, false)),
++      pairLine(`${D}Promoted`, "driver", "method-plus-state", side(`${D}Promoted`, false), side(`${D}Promoted`, false)),
++      pairLine(`${D}SelfRead`, "timeout", "method-plus-state", side(`${D}SelfRead`, false), side(`${D}SelfRead`, false)),
++      pairLine(`${D}Statics`, "resolver", "method-plus-state", side(`${D}Statics`, true), side(`${D}Statics`, true)),
++      pairLine(`${D}WithTrait`, "mode", "method-plus-state", side(`${D}HasMode`, false), side(`${D}HasMode`, false)),
++      pairLine(`${D}Writer`, "size", "method-plus-state", side(`${D}Writer`, false), side(`${D}Writer`, false)),
++      pairLine("Illuminate\\Foundation\\Auth\\User", "casts", "model-config", side(ATTRS, false), side(ATTRS, false)),
++      pairLine("Illuminate\\Foundation\\Auth\\User", "connection", "model-config", side(MODEL, false), side(MODEL, false)),
++    ]
++      .map((line) => `${line}\n`)
++      .join("");
++    const first = buildDiv12(dir).text;
++    expect(first).toBe(expected);
++    expect(buildDiv12(dir).text).toBe(first);
++
++    const written = run(div12Main, ["--root", dir]);
++    expect([written.code, written.stderr]).toEqual([0, ""]);
++    expect(written.stdout).toBe(`div12: 15 pairs (2 option-pair, 5 model-config, 8 method-plus-state); wrote ${DIV12_FILE}.\n`);
++    const bytes = readFileSync(join(dir, DIV12_FILE));
++    expect(run(div12Main, ["--root", dir]).code).toBe(0);
++    expect(readFileSync(join(dir, DIV12_FILE)).equals(bytes)).toBe(true);
++    expect(run(div12Main, ["--root", dir, "--check"]).code).toBe(0);
++    rmSync(join(dir, DIV12_FILE));
++    const missing = run(div12Main, ["--root", dir, "--check"]);
++    expect(missing.code).toBe(1);
++    expect(missing.stderr.split("\n")[0]).toBe(`div12 drift: ${DIV12_FILE} is missing`);
++    expect(existsSync(join(dir, DIV12_FILE))).toBe(false);
++  });
++
++  if (REAL) {
++    const { text, pairs } = buildDiv12(root);
++    expect(readFileSync(join(root, DIV12_FILE), "utf8")).toBe(text);
++    expect(buildDiv12(root).text).toBe(text);
++    const classifications = new Set(pairs.map((pair) => pair.classification));
++    expect([...classifications].sort()).toEqual(["method-plus-state", "model-config", "option-pair"]);
++  }
++  expectProtected([DIV12_FILE]);
++});
++
++// ---------------------------------------------------------------------------
++// XT-conformance-88
++
++const TEST_API_SNAPSHOT: Record<string, string> = {
++  "framework/src/Illuminate/Foundation/Testing/Concerns/InteractsWithDatabase.php": php("Illuminate\\Foundation\\Testing\\Concerns", "trait InteractsWithDatabase\n{\n    protected function assertDatabaseHas($table, array $data = [])\n    {\n    }\n}"),
++  "framework/tests/Support/SupportTest.php": php(
++    "Illuminate\\Tests\\Support",
++    [
++      "class SupportTest extends TestCase",
++      "{",
++      "    protected function assertFoo($x)",
++      "    {",
++      "        $this->assertTrue($x);",
++      "    }",
++      "",
++      "    public function testThings()",
++      "    {",
++      "        $this->assertSame(1, 1);",
++      "        self::assertTrue(true);",
++      "        PHPUnit::assertArraySubset([], []);",
++      "        $this->assertDatabaseHas('users', []);",
++      "        $this->assertFoo(1);",
++      "        $this->expectException(\\RuntimeException::class);",
++      "        // $this->assertCommented(1);",
++      "        $mock = m::mock(Foo::class);",
++      "        $mock->shouldReceive('bar')->with(m::on(function ($x) {",
++      "            return $x->shouldReceive('inner')->once();",
++      "        }))->andReturnUsing(fn () => 1)->once();",
++      "        $mock->expects('x')->once();",
++      "        $builder->expects($this->once())->method('x');",
++      "        Mockery::close();",
++      "    }",
++      "}",
++    ].join("\n"),
++    ["Mockery", "Mockery as m", "PHPUnit\\Framework\\Assert as PHPUnit", "PHPUnit\\Framework\\TestCase"],
++  ),
++  // `m` aliasing another class: not Mockery.
++  "framework/tests/Other/OtherTest.php": php("Illuminate\\Tests\\Other", "class OtherTest extends TestCase\n{\n    public function testIt()\n    {\n        m::create()->shouldIgnoreMissing;\n        Mockery::mock();\n    }\n}", ["Illuminate\\Support\\Factory as m", "PHPUnit\\Framework\\TestCase"]),
++  // A Blade file is not a suite file.
++  "framework/tests/View/fixtures/view.blade.php": "<?php $this->assertBlade(1); ?>\n",
++};
++
++const INVENTORY = {
++  "conformance/inventory/support.jsonl": [
++    renderJson({ id: "A::testOne", assertions: { assertSame: 2, assertNotTrue: 1 } }),
++    renderJson({ id: "A::testTwo", assertions: null }),
++    renderJson({ id: "A::testThree", assertions: {} }),
++  ]
++    .map((line) => `${line}\n`)
++    .join(""),
++  "conformance/inventory/oracle-nondeterminism.jsonl": `${renderJson({ id: "A::testOne", assertions: { assertIgnored: 5 } })}\n`,
++};
++
++test("XT-conformance-88: scan:test-api writes the PHPUnit assertion and Mockery method usage of the Upstream suites", () => {
++  withSnapshot(
++    TEST_API_SNAPSHOT,
++    (dir) => {
++      const result = buildTestApi(dir);
++      const assertions = [
++        { name: "assertArraySubset", calls: 1, executions: 0 },
++        { name: "assertNotTrue", calls: 0, executions: 1 },
++        { name: "assertSame", calls: 1, executions: 2 },
++        { name: "assertTrue", calls: 2, executions: 0 },
++        { name: "expectException", calls: 1, executions: 0 },
++      ];
++      expect(result.files.get(ASSERTIONS_FILE)).toBe(assertions.map((line) => `${renderJson(line)}\n`).join(""));
++      const mockery = [
++        { name: "andReturnUsing", static: false, count: 1 },
++        { name: "close", static: true, count: 1 },
++        { name: "expects", static: false, count: 1 },
++        { name: "mock", static: true, count: 1 },
++        { name: "on", static: true, count: 1 },
++        { name: "once", static: false, count: 3 },
++        { name: "shouldReceive", static: false, count: 2 },
++        { name: "with", static: false, count: 1 },
++      ];
++      expect(result.files.get(MOCKERY_FILE)).toBe(mockery.map((line) => `${renderJson(line)}\n`).join(""));
++
++      const written = run(testApiMain, ["--root", dir]);
++      expect([written.code, written.stderr]).toEqual([0, ""]);
++      expect(written.stdout).toBe(
++        [
++          "test-api: never executed at the baseline, for review: assertArraySubset (1 calls)",
++          "test-api: never executed at the baseline, for review: assertTrue (2 calls)",
++          `test-api: 5 assertions, 8 Mockery methods; wrote ${ASSERTIONS_FILE}, ${MOCKERY_FILE}.`,
++          "",
++        ].join("\n"),
++      );
++      expect(run(testApiMain, ["--root", dir, "--check"]).code).toBe(0);
++      writeFileSync(join(dir, MOCKERY_FILE), "");
++      const drift = run(testApiMain, ["--root", dir, "--check"]);
++      expect(drift.code).toBe(1);
++      expect(drift.stderr.split("\n")[0]).toBe(`test-api drift: ${MOCKERY_FILE} differs from the scan (first difference at line 1)`);
++    },
++    INVENTORY,
++  );
++
++  // Without an Inventory the run fails and writes nothing.
++  withSnapshot(TEST_API_SNAPSHOT, (dir) => {
++    const failed = run(testApiMain, ["--root", dir]);
++    expect(failed.code).toBe(1);
++    expect(failed.stderr).toBe("test-api scan failed: conformance/inventory is missing; the assertion executions come from the committed Inventory\n");
++    expect(existsSync(join(dir, ASSERTIONS_FILE))).toBe(false);
++  });
++
++  if (REAL) {
++    const result = buildTestApi(root);
++    expect(readFileSync(join(root, ASSERTIONS_FILE), "utf8")).toBe(result.files.get(ASSERTIONS_FILE)!);
++    expect(readFileSync(join(root, MOCKERY_FILE), "utf8")).toBe(result.files.get(MOCKERY_FILE)!);
++    const listed = new Set(result.assertions.map((line) => line.name));
++    for (const kind of inventoryExecutions(root).keys()) {
++      expect([kind, listed.has(kind)]).toEqual([kind, true]);
++    }
++    expect(listed.has("assertDatabaseHas")).toBe(false);
++    const mocks = new Set(result.mockery.map((line) => `${line.name}:${line.static}`));
++    for (const key of ["shouldReceive:false", "once:false", "andReturn:false", "mock:true"]) {
++      expect([key, mocks.has(key)]).toEqual([key, true]);
++    }
++  }
++  expectProtected([ASSERTIONS_FILE, MOCKERY_FILE]);
++});
+diff --git a/docs/ops/scans.md b/docs/ops/scans.md
+index bcef7fe..10e963f 100644
+--- a/docs/ops/scans.md
++++ b/docs/ops/scans.md
+@@ -1,12 +1,15 @@
+-# Upstream scans: facades, singletons and boot-only state
++# Upstream scans
+ 
+-Two static scans turn Upstream source into committed data that later work reads (Story 3.6):
++Five static scans turn Upstream source into committed data that later work reads (Stories 3.6 and 3.7):
+ 
+ - the facade generator (Story 28.x) reads `conformance/scans/facades.jsonl`;
+ - the singleton lint (Story 6.3) reads `tools/lint-rules/singletons.json`;
+-- AD-5's sealed-write guard reads `conformance/boot-only-state`.
++- AD-5's sealed-write guard reads `conformance/boot-only-state`;
++- the closure codec (AD-14) reads `conformance/scans/allowed-identifiers.json`;
++- `PORTING.md` (AD-7, AD-26, Epic 8) reads `conformance/scans/div12-pairs.jsonl`;
++- the grader coverage reports (Stories 4.4 and 4.6, FR-116, FR-100) read `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`.
+ 
+-The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. Both share a small PHP lexer in `tools/scans/php.ts`.
++The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. `scan:test-api` also reads the committed Inventory. All share a small PHP lexer in `tools/scans/php.ts` and one CLI (`runScan` in `tools/scans/facades.ts`).
+ 
+ ## Commands
+ 
+@@ -16,8 +19,12 @@ The scans are TypeScript. They read only the snapshot in `conformance/upstream/`
+ | `bun run scan:singletons` | Writes `tools/lint-rules/singletons.json` and `conformance/boot-only-state`. |
+ | `bun run scan:facades --check` | Builds the file in memory and compares it byte for byte with the committed one. Prints `facades drift: <file> …` for a differing or missing file and exits 1. Writes nothing. |
+ | `bun run scan:singletons --check` | The same for both singleton outputs, with `singletons drift: <file> …` lines. |
++| `bun run scan:closures` | Writes `conformance/scans/allowed-identifiers.json`. |
++| `bun run scan:div12` | Writes `conformance/scans/div12-pairs.jsonl`. |
++| `bun run scan:test-api` | Writes `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`. |
++| `bun run scan:<name> --check` | The same check for each of them, with `closures drift:`, `div12 drift:` or `test-api drift:` lines. |
+ 
+-Both take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any failure, 2 usage error. If a scan fails, it writes nothing, and the message names the file and line, or the facade.
++All take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any failure, 2 usage error. If a scan fails, it writes nothing, and the message names the file and line, or the facade.
+ 
+ `scan:singletons` (with or without `--check`) also prints one line per binding whose `class` is null, for review:
+ 
+@@ -25,7 +32,7 @@ Both take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any fai
+ singletons: class null, for review: <provider> <abstract> (<file>:<line>)
+ ```
+ 
+-Without a synced snapshot both fail and tell you to run `bun run upstream:sync`.
++Without a synced snapshot every scan fails and tell you to run `bun run upstream:sync`.
+ 
+ ## The lexer and index (`tools/scans/php.ts`)
+ 
+@@ -129,6 +136,44 @@ For example, at the Pin `UrlGenerator::$request` is not listed: `RoutingServiceP
+ 
+ The rule matches methods by name, so a common name that some provider calls can pull in too much. Treat the file as a reviewed seed. When Xaravel needs its own entries, extend the generator rather than hand-editing the file: `--check` flags any hand edit.
+ 
++## `conformance/scans/allowed-identifiers.json`
++
++The closure codec (AD-14) allows only these free identifiers, besides parameters and ECMAScript built-ins. The file is `{"comment","facades","helpers"}`, in that key order, indented by 2 spaces with one name per line, LF-terminated. Both lists are sorted by UTF-16 code unit.
++
++- **`facades`** is the short name (the last `\` segment) of every non-abstract indexed class whose `extends` chain reaches `Illuminate\Support\Facades\Facade`, `Facade` itself excluded. That includes facades outside `Support/Facades` (`Laravel\Ai\Ai`, `Laravel\Boost\Boost`, `Laravel\Mcp\Facades\Mcp` at the Pin). Two facades with the same short name fail the run, naming both FQCNs. Non-facade aliases such as `Str` and `Arr` are not listed.
++- **`helpers`** is every global helper function name: each `function <name>(` (or `function &<name>(`) in a `src/` file that has no `namespace` statement, outside any class, interface, trait or enum body, anonymous classes included. Closures, arrow functions and methods are not helpers. The names are deduplicated. At the Pin they come from `Foundation`, `Support`, `Collections` and `Reflection` `helpers.php`.
++
++## `conformance/scans/div12-pairs.jsonl`
++
++One line per indexed class, trait or enum D (interfaces are skipped) and name N that is both a property and a method of D (case-sensitive). Lines are `{"class","name","classification","property","method"}`, sorted by `class`, then `name`, compact JSON with LF endings.
++
++- **Member set.** D's own methods and properties, those of the traits it uses, and those of its indexed ancestors and their traits, transitively. Promoted constructor properties (a parameter with `public`, `protected`, `private` or `readonly`) are properties.
++- **`property`, `method`.** Each is `{"declaredIn","static"}`. `declaredIn` is the nearest declaration that declares the member, in the order D, D's traits, then each ancestor followed by its traits.
++- **`classification`**, first match wins:
++  - `option-pair`: N is read as an option somewhere in the `src/` trees. Some method body (other than one named N) uses one receiver R (`$this` or a plain variable) both in a property read `R->N` that is not followed by `(` or an assignment operator, and in a call `R->N(` or `method_exists(R, 'N')`. This is AD-26's "call if function, else value" read;
++  - `model-config`: D is `Illuminate\Database\Eloquent\Model`, a class whose chain reaches it, or a trait in Model's transitive trait set;
++  - `method-plus-state`: otherwise.
++
++## `conformance/scans/phpunit-assertions.jsonl`
++
++One `{"name","calls","executions"}` line per assertion name, sorted by name.
++
++- **`calls`** counts the call sites in the suites: every `.php` file (not `.blade.php`) under each repository's `tests/`, walked in sorted order. A call site is `$this->N(`, `self::N(`, `static::N(`, `parent::N(`, or `X::N(` where X resolves to `PHPUnit\Framework\Assert` or `PHPUnit\Framework\TestCase`. N must match `assert[A-Z]…` or `expect[A-Z]…`, and no declaration in the four repositories' `src/` or `tests/` may declare it as a method (compared case-insensitively). Those are Laravel's or the suites' own helpers, such as `assertDatabaseHas`. The rule also drops PHPUnit names that a Laravel class re-declares (for example `assertCount`); their `executions` still list them.
++- **`executions`** is the sum of each line's `assertions[N]` over every `conformance/inventory/<component>.jsonl` except `oracle-nondeterminism.jsonl`. A null `assertions` (a test the baseline did not run) adds nothing. These are the PHPUnit `Assert` kinds the Story 2.6 baseline recorded (FR-1).
++
++A name is listed when either count is above 0. The scan prints each name with calls but no executions that matches `assert[A-Z]`, for review, because a suite-vendor helper (Testbench, for example) passes the exclusion:
++
++```
++test-api: never executed at the baseline, for review: <name> (<n> calls)
++```
++
++## `conformance/scans/mockery-api.jsonl`
++
++One `{"name","static","count"}` line per Mockery method, sorted by name with `false` before `true`. `count` is the number of call sites in the suites:
++
++- **Static.** `X::N(` where X resolves to `Mockery` (so `use Mockery as m; m::mock(` counts, and an `m` alias of another class does not). It gives `static: true`.
++- **Chain.** A chain starts at `->E(` for E in `shouldReceive`, `shouldNotReceive`, `shouldHaveReceived`, `shouldNotHaveReceived`, `shouldHaveBeenCalled`, `shouldNotHaveBeenCalled`, `shouldIgnoreMissing`, `shouldAllowMockingProtectedMethods`, `shouldAllowMockingMethod`, `shouldDeferMissing`, `makePartial`, `allows` and `expects`, or right after a static Mockery call's `)`. `allows` and `expects` start a chain only when their first argument token is a string literal or `[`, so PHPUnit's `->expects($this->once())` does not count. E itself counts, and so does every following `->M(` in the chain, as `static: false`. Argument lists are skipped, and the chain ends at the first token after a `)` that is not `->`. Chains and static calls inside an argument list (a closure passed to `with`, say) are counted on their own.
++
+ ## CI
+ 
+ The `upstream` job in `.github/workflows/ci.yml` runs these steps in order:
+@@ -137,15 +182,18 @@ The `upstream` job in `.github/workflows/ci.yml` runs these steps in order:
+ 2. `bun run upstream:check`
+ 3. `bun run scan:facades --check`
+ 4. `bun run scan:singletons --check`
+-5. `bun test conformance/tests/xaravel/scans.test.ts`
++5. `bun run scan:closures --check`
++6. `bun run scan:div12 --check`
++7. `bun run scan:test-api --check`
++8. `bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts`
+ 
+-The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 5 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, and the expected classes and entries at the Pin), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
++The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 8 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, and the expected classes and entries at the Pin), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
+ 
+ ## After a Pin move
+ 
+ 1. Run `bun run pin:bump <tag>` and `bun run upstream:sync` as usual (see [upstream.md](upstream.md)).
+-2. Run `bun run scan:facades` and `bun run scan:singletons`.
+-3. If a scan fails on a new Upstream shape, extend the rule in `tools/scans/` and its Xaravel Test in `conformance/tests/xaravel/scans.test.ts`. Do not edit the outputs by hand.
+-4. Review the diff of the three outputs, and the null bindings the singleton scan prints, and commit them with the Pin change.
++2. Run `bun run scan:facades`, `scan:singletons`, `scan:closures`, `scan:div12` and `scan:test-api`. Run `scan:test-api` after any Inventory regeneration too, since its `executions` come from the Inventory.
++3. If a scan fails on a new Upstream shape, extend the rule in `tools/scans/` and its Xaravel Test in `conformance/tests/xaravel/scans.test.ts` or `usage-scans.test.ts`. Do not edit the outputs by hand.
++4. Review the diff of the outputs, the null bindings the singleton scan prints and the unexecuted assertions the test-API scan prints, and commit them with the Pin change.
+ 
+-All three outputs and `tools/scans/` are Protected Paths (under `/conformance/` and `/tools/`), so they land only through Maintainer review.
++All the outputs and `tools/scans/` are Protected Paths (under `/conformance/` and `/tools/`), so they land only through Maintainer review.
+diff --git a/package.json b/package.json
+index b1401e4..2a173c2 100644
+--- a/package.json
++++ b/package.json
+@@ -46,6 +46,9 @@
+     "oracle:api-surface": "bun tools/oracle/api-surface.ts",
+     "scan:facades": "bun tools/scans/facades.ts",
+     "scan:singletons": "bun tools/scans/singletons.ts",
++    "scan:closures": "bun tools/scans/closures.ts",
++    "scan:div12": "bun tools/scans/div12.ts",
++    "scan:test-api": "bun tools/scans/test-api.ts",
+     "component-map:check": "bun tools/component-map/component-map.ts check",
+     "inventory": "bun tools/inventory/inventory.ts generate",
+     "inventory:cross-check": "bun tools/inventory/cross-check.ts",
+diff --git a/tools/scans/closures.ts b/tools/scans/closures.ts
+new file mode 100644
+index 0000000..dfdfd2a
+--- /dev/null
++++ b/tools/scans/closures.ts
+@@ -0,0 +1,136 @@
++// The closure allowed-identifier scan (Story 3.7; the serializable-closure
++// codec reads it, AD-14).
++//
++//   bun tools/scans/closures.ts [--check] [--root <dir>]
++//       reads `conformance/upstream/` only (it runs no PHP and no container) and writes
++//       `conformance/scans/allowed-identifiers.json`, `{"comment","facades","helpers"}`:
++//
++//       - `facades`: the short name (the last `\` segment) of every non-abstract
++//         indexed class whose `extends` chain reaches
++//         `Illuminate\Support\Facades\Facade`, `Facade` itself excluded. Two
++//         facades with the same short name fail the run, naming both FQCNs.
++//       - `helpers`: every `function <name>(` declared in a `src/` file that has
++//         no `namespace` statement, outside any class, interface, trait or enum
++//         body (anonymous classes included). Closures, arrow functions and
++//         methods are not helpers. Deduplicated.
++//
++//       Both lists are sorted by UTF-16 code unit; 2-space indentation, one
++//       name per line, LF-terminated.
++//
++//   … --check
++//       builds the file in memory and compares it byte for byte with the
++//       committed one: a `closures drift: <file> …` line when it differs or is
++//       missing. It writes nothing.
++//
++// Exit codes: 0 pass, 1 any failure (nothing is written), 2 usage error.
++import { compareUnits } from "../oracle/request";
++import { FACADE_BASE, runScan } from "./facades";
++import { buildIndex, codeIndexes, extendsChainReaches, matching, ScanError, type Index, type ParsedFile } from "./php";
++
++export const ALLOWED_IDENTIFIERS_FILE = "conformance/scans/allowed-identifiers.json";
++
++export const ALLOWED_IDENTIFIERS_COMMENT =
++  "Generated by `bun run scan:closures` (tools/scans/closures.ts) from conformance/upstream at the Baseline Pin. Do not edit by hand: every facade short name and global helper function name, the only free identifiers the closure codec allows besides parameters and ECMAScript built-ins (Story 3.7, AD-14).";
++
++export interface ClosuresResult {
++  text: string;
++  facades: string[];
++  helpers: string[];
++}
++
++/** The facade short names; a duplicate short name fails, naming both FQCNs. */
++export function facadeNames(index: Index): string[] {
++  const byShort = new Map<string, string>();
++  for (const decl of index.byFqcn.values()) {
++    if (decl.kind !== "class" || decl.abstract || decl.fqcn === FACADE_BASE || !extendsChainReaches(index, decl, FACADE_BASE)) {
++      continue;
++    }
++    const short = decl.fqcn.slice(decl.fqcn.lastIndexOf("\\") + 1);
++    const other = byShort.get(short);
++    if (other !== undefined) {
++      const [a, b] = [other, decl.fqcn].sort(compareUnits);
++      throw new ScanError(`two facades share the short name ${short}: ${a} and ${b}`);
++    }
++    byShort.set(short, decl.fqcn);
++  }
++  return [...byShort.keys()].sort(compareUnits);
++}
++
++const STATEMENT_START: ReadonlySet<string> = new Set([";", "{", "}"]);
++
++/** The global helper functions a parsed `src/` file declares (none when it has a namespace). */
++export function helperNames(parsed: ParsedFile): string[] {
++  const { tokens } = parsed;
++  const code = codeIndexes(tokens);
++  const tok = (k: number): string => tokens[code[k]!]?.text ?? "";
++  const kind = (k: number): string => tokens[code[k]!]?.kind ?? "";
++  for (let k = 0; k < code.length; k++) {
++    if (kind(k) === "name" && tok(k).toLowerCase() === "namespace" && (k === 0 || STATEMENT_START.has(tok(k - 1))) && (kind(k + 1) === "name" || tok(k + 1) === "{")) {
++      return [];
++    }
++  }
++  // Class-like bodies: the named declarations, plus anonymous classes.
++  const ranges: [number, number][] = parsed.declarations.map((decl) => [decl.start, decl.end]);
++  for (let k = 1; k < code.length; k++) {
++    if (kind(k) === "name" && tok(k).toLowerCase() === "class" && tok(k - 1).toLowerCase() === "new") {
++      let m = k + 1;
++      while (m < code.length && tok(m) !== "{") {
++        if (tok(m) === "(") {
++          m = code.indexOf(matching(tokens, code[m]!, parsed.file) - 1, m);
++        }
++        m++;
++      }
++      if (m < code.length) {
++        ranges.push([code[k]!, matching(tokens, code[m]!, parsed.file)]);
++      }
++    }
++  }
++  const inside = (index: number): boolean => ranges.some(([start, end]) => index >= start && index < end);
++  const out: string[] = [];
++  for (let k = 0; k < code.length; k++) {
++    if (kind(k) !== "name" || tok(k).toLowerCase() !== "function" || inside(code[k]!)) {
++      continue;
++    }
++    const prev = k > 0 ? tok(k - 1) : "";
++    if (prev === "->" || prev === "?->" || prev === "::") {
++      continue;
++    }
++    const m = tok(k + 1) === "&" ? k + 2 : k + 1;
++    if (kind(m) === "name" && tok(m + 1) === "(") {
++      out.push(tok(m));
++    }
++  }
++  return out;
++}
++
++/** Renders `conformance/scans/allowed-identifiers.json`. */
++export function renderAllowedIdentifiers(facades: readonly string[], helpers: readonly string[]): string {
++  const list = (key: string, names: readonly string[], last: boolean): string[] => {
++    const comma = last ? "" : ",";
++    if (names.length === 0) {
++      return [`  ${JSON.stringify(key)}: []${comma}`];
++    }
++    return [`  ${JSON.stringify(key)}: [`, ...names.map((name, i) => `    ${JSON.stringify(name)}${i < names.length - 1 ? "," : ""}`), `  ]${comma}`];
++  };
++  return `${["{", `  "comment": ${JSON.stringify(ALLOWED_IDENTIFIERS_COMMENT)},`, ...list("facades", facades, false), ...list("helpers", helpers, true), "}"].join("\n")}\n`;
++}
++
++/** Builds `allowed-identifiers.json` from the snapshot under `root`. */
++export function buildClosures(root: string, index: Index = buildIndex(root)): ClosuresResult {
++  const facades = facadeNames(index);
++  const helpers = [...new Set(index.files.flatMap(helperNames))].sort(compareUnits);
++  return { text: renderAllowedIdentifiers(facades, helpers), facades, helpers };
++}
++
++const USAGE = ["Usage:", "  bun tools/scans/closures.ts [--check] [--root <dir>]"].join("\n");
++
++export function main(argv: readonly string[]): number {
++  return runScan("closures", argv, USAGE, (root) => {
++    const result = buildClosures(root);
++    return { files: new Map([[ALLOWED_IDENTIFIERS_FILE, result.text]]), summary: `${result.facades.length} facades, ${result.helpers.length} helpers` };
++  });
++}
++
++if (import.meta.main) {
++  process.exit(main(process.argv.slice(2)));
++}
+diff --git a/tools/scans/div12.ts b/tools/scans/div12.ts
+new file mode 100644
+index 0000000..e7d0a6e
+--- /dev/null
++++ b/tools/scans/div12.ts
+@@ -0,0 +1,294 @@
++// The DIV-12 property/method pair scan (Story 3.7; `PORTING.md` reads it,
++// AD-7, AD-26).
++//
++//   bun tools/scans/div12.ts [--check] [--root <dir>]
++//       reads `conformance/upstream/` only (it runs no PHP and no container) and writes
++//       `conformance/scans/div12-pairs.jsonl`: one line per indexed class, trait
++//       or enum D (not interfaces) and name N that is both a property and a
++//       method in D's member set (case-sensitive),
++//       `{"class","name","classification","property","method"}`, sorted by
++//       `class`, then `name`.
++//
++//       - D's member set is its own methods and properties, those of the
++//         traits it uses, and those of its indexed ancestors and their traits,
++//         transitively. Promoted constructor properties are properties.
++//       - `property` and `method` are `{"declaredIn","static"}`: the nearest
++//         declaration that declares the member, in the order D, D's traits,
++//         then each ancestor followed by its traits.
++//       - `classification`, first match wins:
++//         - `option-pair`: some method body in the `src/` trees (other than one
++//           named N) uses one receiver R (`$this` or a plain variable) both in a
++//           property read `R->N` not followed by `(` or an assignment operator,
++//           and in a call `R->N(` or `method_exists(R, 'N')`;
++//         - `model-config`: D is `Illuminate\Database\Eloquent\Model`, a class
++//           whose chain reaches it, or a trait in Model's transitive trait set;
++//         - `method-plus-state`: otherwise.
++//
++//   … --check
++//       builds the file in memory and compares it byte for byte with the
++//       committed one: a `div12 drift: <file> …` line when it differs or is
++//       missing. It writes nothing.
++//
++// Exit codes: 0 pass, 1 any failure (nothing is written), 2 usage error.
++import { compareUnits, renderJson } from "../oracle/request";
++import { runScan } from "./facades";
++import { ancestors, buildIndex, codeRange, COMPOUND_ASSIGNMENTS, extendsChainReaches, matching, type Declaration, type Index, type Method } from "./php";
++
++export const DIV12_FILE = "conformance/scans/div12-pairs.jsonl";
++export const MODEL = "Illuminate\\Database\\Eloquent\\Model";
++
++export type Classification = "option-pair" | "model-config" | "method-plus-state";
++
++export interface MemberSource {
++  declaredIn: string;
++  static: boolean;
++}
++
++export interface Div12Pair {
++  class: string;
++  name: string;
++  classification: Classification;
++  property: MemberSource;
++  method: MemberSource;
++}
++
++/** `decl`'s traits, transitively, in use order (depth first), each once, indexed ones only. */
++function traitsOf(index: Index, decl: Declaration, seen: Set<string>): Declaration[] {
++  const out: Declaration[] = [];
++  for (const name of decl.traits) {
++    if (seen.has(name)) {
++      continue;
++    }
++    seen.add(name);
++    const trait = index.byFqcn.get(name);
++    if (trait === undefined) {
++      continue;
++    }
++    out.push(trait, ...traitsOf(index, trait, seen));
++  }
++  return out;
++}
++
++/** The declarations whose members D has, nearest first: D, its traits, then each ancestor and its traits. */
++export function memberDeclarations(index: Index, decl: Declaration): Declaration[] {
++  const seen = new Set<string>([decl.fqcn]);
++  const out: Declaration[] = [];
++  for (const level of [decl, ...ancestors(index, decl)]) {
++    if (level !== decl) {
++      if (seen.has(level.fqcn)) {
++        continue;
++      }
++      seen.add(level.fqcn);
++    }
++    out.push(level, ...traitsOf(index, level, seen));
++  }
++  return out;
++}
++
++const VISIBILITY: ReadonlySet<string> = new Set(["public", "protected", "private", "readonly"]);
++
++/** The properties a constructor promotes. */
++export function promotedProperties(decl: Declaration, method: Method): string[] {
++  if (method.name.toLowerCase() !== "__construct") {
++    return [];
++  }
++  const { tokens } = decl;
++  const code = codeRange(tokens, method.start, method.end);
++  const fn = code.findIndex((j) => tokens[j]!.kind === "name" && tokens[j]!.text.toLowerCase() === "function");
++  const open = code.findIndex((j, k) => k > fn && tokens[j]!.text === "(");
++  if (fn === -1 || open === -1) {
++    return [];
++  }
++  const close = matching(tokens, code[open]!, decl.file) - 1;
++  const out: string[] = [];
++  let depth = 0;
++  let promoted = false;
++  let variable: string | null = null;
++  const flush = (): void => {
++    if (promoted && variable !== null) {
++      out.push(variable);
++    }
++    promoted = false;
++    variable = null;
++  };
++  for (let k = open + 1; code[k]! < close; k++) {
++    const t = tokens[code[k]!]!;
++    if (t.kind === "punct" && (t.text === "(" || t.text === "[" || t.text === "{")) {
++      depth++;
++    } else if (t.kind === "punct" && (t.text === ")" || t.text === "]" || t.text === "}")) {
++      depth--;
++    } else if (depth === 0 && t.kind === "punct" && t.text === ",") {
++      flush();
++    } else if (depth === 0 && t.kind === "name" && VISIBILITY.has(t.text.toLowerCase())) {
++      promoted = true;
++    } else if (depth === 0 && t.kind === "variable" && variable === null) {
++      variable = t.text.slice(1);
++    }
++  }
++  flush();
++  return out;
++}
++
++/** The option names read in a method body: `R->N` read plus `R->N(` or `method_exists(R, 'N')` on the same receiver. */
++export function optionReads(decl: Declaration, method: Method): Set<string> {
++  const out = new Set<string>();
++  if (method.bodyStart < 0) {
++    return out;
++  }
++  const { tokens } = decl;
++  const code = codeRange(tokens, method.bodyStart, method.end);
++  const at = (k: number): { kind: string; text: string; value?: string | null } => tokens[code[k]!] ?? { kind: "", text: "" };
++  const reads = new Map<string, Set<string>>();
++  const calls = new Map<string, Set<string>>();
++  const add = (map: Map<string, Set<string>>, receiver: string, name: string): void => {
++    let set = map.get(receiver);
++    if (set === undefined) {
++      set = new Set();
++      map.set(receiver, set);
++    }
++    set.add(name);
++  };
++  for (let k = 0; k < code.length; k++) {
++    const t = at(k);
++    if (t.kind === "variable" && at(k + 1).text === "->" && at(k + 2).kind === "name" && at(k - 1).text !== "::" && at(k - 1).text !== "->") {
++      const name = at(k + 2).text;
++      const after = at(k + 3).text;
++      if (after === "(") {
++        add(calls, t.text, name);
++      } else if (after !== "=" && !COMPOUND_ASSIGNMENTS.has(after)) {
++        add(reads, t.text, name);
++      }
++      continue;
++    }
++    if (
++      t.kind === "name" &&
++      (t.text === "method_exists" || t.text === "\\method_exists") &&
++      at(k - 1).text !== "->" &&
++      at(k - 1).text !== "::" &&
++      at(k + 1).text === "(" &&
++      at(k + 2).kind === "variable" &&
++      at(k + 3).text === "," &&
++      at(k + 4).kind === "string" &&
++      typeof at(k + 4).value === "string" &&
++      at(k + 5).text === ")"
++    ) {
++      add(calls, at(k + 2).text, at(k + 4).value!);
++    }
++  }
++  for (const [receiver, names] of reads) {
++    const called = calls.get(receiver);
++    if (called === undefined) {
++      continue;
++    }
++    for (const name of names) {
++      if (called.has(name) && name !== method.name) {
++        out.add(name);
++      }
++    }
++  }
++  return out;
++}
++
++/** Every option name read anywhere in the `src/` trees. */
++export function optionNames(index: Index): Set<string> {
++  const out = new Set<string>();
++  for (const parsed of index.files) {
++    for (const decl of parsed.declarations) {
++      for (const method of decl.methods) {
++        for (const name of optionReads(decl, method)) {
++          out.add(name);
++        }
++      }
++    }
++  }
++  return out;
++}
++
++/** The traits in Model's transitive trait set (its own and its ancestors'). */
++function modelTraits(index: Index): Set<string> {
++  const model = index.byFqcn.get(MODEL);
++  if (model === undefined) {
++    return new Set();
++  }
++  return new Set(
++    memberDeclarations(index, model)
++      .filter((decl) => decl.kind === "trait")
++      .map((decl) => decl.fqcn),
++  );
++}
++
++/** The DIV-12 pairs of the index, sorted by class, then name. */
++export function div12Pairs(index: Index): Div12Pair[] {
++  const options = optionNames(index);
++  const traitsOfModel = modelTraits(index);
++  const pairs: Div12Pair[] = [];
++  for (const decl of index.byFqcn.values()) {
++    if (decl.kind === "interface") {
++      continue;
++    }
++    const properties = new Map<string, MemberSource>();
++    const methods = new Map<string, MemberSource>();
++    for (const level of memberDeclarations(index, decl)) {
++      for (const method of level.methods) {
++        if (!methods.has(method.name)) {
++          methods.set(method.name, { declaredIn: level.fqcn, static: method.static });
++        }
++      }
++      for (const property of level.properties) {
++        if (!properties.has(property.name)) {
++          properties.set(property.name, { declaredIn: level.fqcn, static: property.static });
++        }
++      }
++      for (const method of level.methods) {
++        for (const name of promotedProperties(level, method)) {
++          if (!properties.has(name)) {
++            properties.set(name, { declaredIn: level.fqcn, static: false });
++          }
++        }
++      }
++    }
++    const isModel = decl.fqcn === MODEL || (decl.kind === "class" && extendsChainReaches(index, decl, MODEL)) || (decl.kind === "trait" && traitsOfModel.has(decl.fqcn));
++    for (const [name, property] of properties) {
++      const method = methods.get(name);
++      if (method === undefined) {
++        continue;
++      }
++      const classification: Classification = options.has(name) ? "option-pair" : isModel ? "model-config" : "method-plus-state";
++      pairs.push({ class: decl.fqcn, name, classification, property, method });
++    }
++  }
++  return pairs.sort((a, b) => compareUnits(a.class, b.class) || compareUnits(a.name, b.name));
++}
++
++export function renderPair(pair: Div12Pair): string {
++  return renderJson({
++    class: pair.class,
++    name: pair.name,
++    classification: pair.classification,
++    property: { declaredIn: pair.property.declaredIn, static: pair.property.static },
++    method: { declaredIn: pair.method.declaredIn, static: pair.method.static },
++  });
++}
++
++/** Builds `div12-pairs.jsonl` from the snapshot under `root`. */
++export function buildDiv12(root: string, index: Index = buildIndex(root)): { text: string; pairs: Div12Pair[] } {
++  const pairs = div12Pairs(index);
++  return { text: pairs.map((pair) => `${renderPair(pair)}\n`).join(""), pairs };
++}
++
++const USAGE = ["Usage:", "  bun tools/scans/div12.ts [--check] [--root <dir>]"].join("\n");
++
++export function main(argv: readonly string[]): number {
++  return runScan("div12", argv, USAGE, (root) => {
++    const { text, pairs } = buildDiv12(root);
++    const count = (c: Classification): number => pairs.filter((pair) => pair.classification === c).length;
++    return {
++      files: new Map([[DIV12_FILE, text]]),
++      summary: `${pairs.length} pairs (${count("option-pair")} option-pair, ${count("model-config")} model-config, ${count("method-plus-state")} method-plus-state)`,
++    };
++  });
++}
++
++if (import.meta.main) {
++  process.exit(main(process.argv.slice(2)));
++}
+diff --git a/tools/scans/php.ts b/tools/scans/php.ts
+index b560e33..c43a02c 100644
+--- a/tools/scans/php.ts
++++ b/tools/scans/php.ts
+@@ -417,7 +417,7 @@ export function matching(tokens: readonly Token[], open: number, file = ""): num
+ }
+ 
+ /** The code tokens' indexes: comments, docblocks, attributes and inline HTML dropped. */
+-function codeIndexes(tokens: readonly Token[]): number[] {
++export function codeIndexes(tokens: readonly Token[]): number[] {
+   const out: number[] = [];
+   tokens.forEach((t, j) => {
+     if (!SKIPPED.has(t.kind)) {
+@@ -427,8 +427,8 @@ function codeIndexes(tokens: readonly Token[]): number[] {
+   return out;
+ }
+ 
+-/** Parses `use` imports from `at` (after `use`); returns the index after `;`. */
+-function parseUse(tokens: readonly Token[], code: readonly number[], at: number, imports: Map<string, string>, file: string): number {
++/** Parses `use` imports from `at` (a code index after `use`) into `imports`; returns the code index after `;`. */
++export function parseUse(tokens: readonly Token[], code: readonly number[], at: number, imports: Map<string, string>, file: string): number {
+   const tok = (k: number): Token => tokens[code[k]!]!;
+   let k = at;
+   const first = tok(k).text.toLowerCase();
+@@ -785,7 +785,7 @@ export interface Index {
+ }
+ 
+ /** The `.php` files (not `.blade.php`) under `dir`, sorted, relative to `base`. */
+-function phpFiles(dir: string, base: string): string[] {
++export function phpFiles(dir: string, base: string): string[] {
+   const out: string[] = [];
+   const walk = (current: string): void => {
+     for (const name of readdirSync(current).sort(compareUnits)) {
+diff --git a/tools/scans/test-api.ts b/tools/scans/test-api.ts
+new file mode 100644
+index 0000000..963932a
+--- /dev/null
++++ b/tools/scans/test-api.ts
+@@ -0,0 +1,299 @@
++// The test-API usage scan (Story 3.7; the grader coverage reports of Stories
++// 4.4 and 4.6 read it, FR-116, FR-100).
++//
++//   bun tools/scans/test-api.ts [--check] [--root <dir>]
++//       reads `conformance/upstream/` and the committed Inventory only (it runs
++//       no PHP and no container) and writes two files. The suites are every
++//       `.php` file (not `.blade.php`) under each repository's `tests/`, walked
++//       in sorted order.
++//
++//       `conformance/scans/phpunit-assertions.jsonl`, `{"name","calls","executions"}`
++//       per name, sorted by name:
++//       - `calls` counts the call sites `$this->N(`, `self::N(`, `static::N(`,
++//         `parent::N(` and `X::N(` where X resolves to `PHPUnit\Framework\Assert`
++//         or `PHPUnit\Framework\TestCase`, for N matching `assert[A-Z]…` or
++//         `expect[A-Z]…` that no declaration in the four repositories' `src/`
++//         or `tests/` declares as a method (compared case-insensitively, as PHP
++//         does);
++//       - `executions` sums `assertions[N]` over every
++//         `conformance/inventory/<component>.jsonl` (not the non-determinism
++//         file); a null `assertions` (a test the baseline did not run) adds nothing.
++//       A name is listed when either count is above 0. Names with calls but no
++//       executions that match `assert[A-Z]` are printed for review.
++//
++//       `conformance/scans/mockery-api.jsonl`, `{"name","static","count"}` per
++//       Mockery method, sorted by name, `false` before `true`:
++//       - static: `X::N(` where X resolves to `Mockery`;
++//       - chain: from `->E(` for a chain-starting expectation method E (`allows`
++//         and `expects` only with a string literal or `[` first argument), or
++//         right after a static Mockery call's `)`. E counts, and so does every
++//         following `->M(` in the chain; argument lists are skipped. The chain
++//         ends at the first token after a `)` that is not `->`.
++//
++//   … --check
++//       builds both files in memory and compares them byte for byte with the
++//       committed ones: a `test-api drift: <file> …` line when one differs or
++//       is missing. It writes nothing.
++//
++// Exit codes: 0 pass, 1 any failure (nothing is written), 2 usage error.
++import { existsSync, readdirSync, readFileSync } from "node:fs";
++import { join } from "node:path";
++import { NONDETERMINISM_FILE } from "../inventory/inventory";
++import { compareUnits, renderJson } from "../oracle/request";
++import { UPSTREAM_REPOS, upstreamPath } from "../upstream/upstream";
++import { runScan } from "./facades";
++import { buildIndex, codeIndexes, matching, parseFile, parseUse, phpFiles, resolveName, ScanError, type Index, type NameScope, type ParsedFile } from "./php";
++
++export const ASSERTIONS_FILE = "conformance/scans/phpunit-assertions.jsonl";
++export const MOCKERY_FILE = "conformance/scans/mockery-api.jsonl";
++const INVENTORY_DIR = "conformance/inventory";
++
++const PHPUNIT_CLASSES: ReadonlySet<string> = new Set(["PHPUnit\\Framework\\Assert", "PHPUnit\\Framework\\TestCase"]);
++const RELATIVE: ReadonlySet<string> = new Set(["self", "static", "parent"]);
++const ASSERTION = /^(?:assert|expect)[A-Z]/;
++const REVIEWED = /^assert[A-Z]/;
++const MOCKERY = "Mockery";
++
++/** The methods that start a Mockery expectation chain. */
++export const CHAIN_STARTERS: ReadonlySet<string> = new Set([
++  "shouldReceive",
++  "shouldNotReceive",
++  "shouldHaveReceived",
++  "shouldNotHaveReceived",
++  "shouldHaveBeenCalled",
++  "shouldNotHaveBeenCalled",
++  "shouldIgnoreMissing",
++  "shouldAllowMockingProtectedMethods",
++  "shouldAllowMockingMethod",
++  "shouldDeferMissing",
++  "makePartial",
++  "allows",
++  "expects",
++]);
++/** The chain starters that need a string literal or `[` as their first argument. */
++const ARGUMENT_STARTERS: ReadonlySet<string> = new Set(["allows", "expects"]);
++
++export interface AssertionLine {
++  name: string;
++  calls: number;
++  executions: number;
++}
++
++export interface MockeryLine {
++  name: string;
++  static: boolean;
++  count: number;
++}
++
++/** Every suite file of the four repositories, parsed, in walk order. */
++export function suiteFiles(root: string): ParsedFile[] {
++  const out: ParsedFile[] = [];
++  for (const { name } of UPSTREAM_REPOS) {
++    const tests = upstreamPath(root, name, "tests");
++    if (!existsSync(tests)) {
++      continue;
++    }
++    for (const rel of phpFiles(tests, root)) {
++      out.push(parseFile(readFileSync(join(root, rel), "utf8"), rel.split("\\").join("/")));
++    }
++  }
++  return out;
++}
++
++/** The lowercased names of every method declared in `files`. */
++function declaredMethods(files: readonly ParsedFile[]): Set<string> {
++  const out = new Set<string>();
++  for (const parsed of files) {
++    for (const decl of parsed.declarations) {
++      for (const method of decl.methods) {
++        out.add(method.name.toLowerCase());
++      }
++    }
++  }
++  return out;
++}
++
++const STATEMENT_START: ReadonlySet<string> = new Set([";", "{", "}"]);
++
++/** The call sites one suite file holds. */
++export function fileUsage(parsed: ParsedFile, declared: ReadonlySet<string>, assertions: Map<string, number>, mockery: Map<string, number>): void {
++  const { tokens, file } = parsed;
++  const code = codeIndexes(tokens);
++  const text = (k: number): string => (k >= 0 && k < code.length ? tokens[code[k]!]!.text : "");
++  const kind = (k: number): string => (k >= 0 && k < code.length ? tokens[code[k]!]!.kind : "");
++  const bump = (map: Map<string, number>, key: string): void => {
++    map.set(key, (map.get(key) ?? 0) + 1);
++  };
++  const mock = (name: string, isStatic: boolean): void => bump(mockery, `${name}\u0000${isStatic ? "1" : "0"}`);
++  /** The code index after the `)` of the argument list opening at code index `open`. */
++  const after = (open: number): number => code.indexOf(matching(tokens, code[open]!, file) - 1, open) + 1;
++  const counted = new Set<number>();
++  /** Counts the `->M(` chain following the argument list that opens at `open`. */
++  const chain = (open: number): void => {
++    let m = after(open);
++    while (text(m) === "->" && kind(m + 1) === "name" && text(m + 2) === "(") {
++      mock(text(m + 1), false);
++      counted.add(m + 1);
++      m = after(m + 2);
++    }
++  };
++
++  let scope: { namespace: string; imports: Map<string, string> } = { namespace: "", imports: new Map() };
++  let depth = 0;
++  let base = 0;
++  let pendingBrace = false;
++  for (let k = 0; k < code.length; k++) {
++    const t = tokens[code[k]!]!;
++    if (t.kind === "punct" && t.text === "{") {
++      depth++;
++      if (pendingBrace) {
++        base = depth;
++        pendingBrace = false;
++      }
++      continue;
++    }
++    if (t.kind === "punct" && t.text === "}") {
++      depth--;
++      continue;
++    }
++    if (t.kind !== "name") {
++      continue;
++    }
++    const lower = t.text.toLowerCase();
++    if (lower === "namespace" && (k === 0 || STATEMENT_START.has(text(k - 1))) && (kind(k + 1) === "name" || text(k + 1) === "{")) {
++      const name = kind(k + 1) === "name" ? text(k + 1) : "";
++      scope = { namespace: name, imports: new Map() };
++      const next = name === "" ? k + 1 : k + 2;
++      if (text(next) === "{") {
++        pendingBrace = true;
++      } else {
++        base = depth;
++      }
++      k = next - 1;
++      continue;
++    }
++    if (lower === "use" && depth === base && kind(k + 1) === "name") {
++      k = parseUse(tokens, code, k + 1, scope.imports, file) - 1;
++      continue;
++    }
++    if (text(k + 1) !== "(") {
++      continue;
++    }
++    const prev = text(k - 1);
++    const owner = k >= 2 ? tokens[code[k - 2]!]! : null;
++    const resolved = (): string | null => (owner !== null && owner.kind === "name" && !RELATIVE.has(owner.text.toLowerCase()) ? resolveName(owner.text, scope as NameScope) : null);
++    if (ASSERTION.test(t.text) && !declared.has(lower)) {
++      const viaThis = prev === "->" && owner?.kind === "variable" && owner.text === "$this" && text(k - 3) !== "::" && text(k - 3) !== "->";
++      const viaClass = prev === "::" && owner?.kind === "name" && (RELATIVE.has(owner.text.toLowerCase()) || PHPUNIT_CLASSES.has(resolved() ?? ""));
++      if (viaThis || viaClass) {
++        bump(assertions, t.text);
++      }
++    }
++    if (prev === "::" && resolved() === MOCKERY) {
++      mock(t.text, true);
++      chain(k + 1);
++      continue;
++    }
++    if (prev === "->" && CHAIN_STARTERS.has(t.text) && !counted.has(k)) {
++      if (ARGUMENT_STARTERS.has(t.text) && kind(k + 2) !== "string" && text(k + 2) !== "[") {
++        continue;
++      }
++      mock(t.text, false);
++      counted.add(k);
++      chain(k + 1);
++    }
++  }
++}
++
++/** The summed `assertions` of the committed Inventory under `root`. */
++export function inventoryExecutions(root: string): Map<string, number> {
++  const dir = join(root, INVENTORY_DIR);
++  if (!existsSync(dir)) {
++    throw new ScanError(`${INVENTORY_DIR} is missing; the assertion executions come from the committed Inventory`);
++  }
++  const out = new Map<string, number>();
++  for (const name of readdirSync(dir).sort(compareUnits)) {
++    if (!name.endsWith(".jsonl") || name === NONDETERMINISM_FILE) {
++      continue;
++    }
++    const lines = readFileSync(join(dir, name), "utf8").split("\n");
++    lines.forEach((line, i) => {
++      if (line === "") {
++        return;
++      }
++      const where = `${INVENTORY_DIR}/${name}:${i + 1}`;
++      let record: unknown;
++      try {
++        record = JSON.parse(line);
++      } catch {
++        throw new ScanError(`${where}: not JSON`);
++      }
++      const assertions = (record as { assertions?: unknown }).assertions;
++      if (assertions === null) {
++        // A test the baseline did not run records no assertions.
++        return;
++      }
++      if (typeof assertions !== "object" || assertions === null || Array.isArray(assertions)) {
++        throw new ScanError(`${where}: assertions is not an object`);
++      }
++      for (const [kind, count] of Object.entries(assertions)) {
++        if (!Number.isInteger(count) || (count as number) < 0) {
++          throw new ScanError(`${where}: assertions.${kind} is not a count`);
++        }
++        out.set(kind, (out.get(kind) ?? 0) + (count as number));
++      }
++    });
++  }
++  return out;
++}
++
++export interface TestApiResult {
++  files: Map<string, string>;
++  assertions: AssertionLine[];
++  mockery: MockeryLine[];
++  /** Names called in the suites but never executed at the baseline, for review. */
++  unexecuted: string[];
++}
++
++/** Builds both files from the snapshot and the Inventory under `root`. */
++export function buildTestApi(root: string, index: Index = buildIndex(root)): TestApiResult {
++  const suites = suiteFiles(root);
++  const declared = declaredMethods([...index.files, ...suites]);
++  const calls = new Map<string, number>();
++  const mockeryCounts = new Map<string, number>();
++  for (const parsed of suites) {
++    fileUsage(parsed, declared, calls, mockeryCounts);
++  }
++  const executions = inventoryExecutions(root);
++  const names = [...new Set([...calls.keys(), ...executions.keys()])].filter((name) => (calls.get(name) ?? 0) > 0 || (executions.get(name) ?? 0) > 0).sort(compareUnits);
++  const assertions = names.map((name) => ({ name, calls: calls.get(name) ?? 0, executions: executions.get(name) ?? 0 }));
++  const mockery = [...mockeryCounts]
++    .map(([key, count]) => {
++      const [name, flag] = key.split("\u0000") as [string, string];
++      return { name, static: flag === "1", count };
++    })
++    .sort((a, b) => compareUnits(a.name, b.name) || Number(a.static) - Number(b.static));
++  const files = new Map([
++    [ASSERTIONS_FILE, assertions.map((line) => `${renderJson({ name: line.name, calls: line.calls, executions: line.executions })}\n`).join("")],
++    [MOCKERY_FILE, mockery.map((line) => `${renderJson({ name: line.name, static: line.static, count: line.count })}\n`).join("")],
++  ]);
++  const unexecuted = assertions.filter((line) => line.calls > 0 && line.executions === 0 && REVIEWED.test(line.name)).map((line) => `${line.name} (${line.calls} calls)`);
++  return { files, assertions, mockery, unexecuted };
++}
++
++const USAGE = ["Usage:", "  bun tools/scans/test-api.ts [--check] [--root <dir>]"].join("\n");
++
++export function main(argv: readonly string[]): number {
++  return runScan("test-api", argv, USAGE, (root) => {
++    const result = buildTestApi(root);
++    return {
++      files: result.files,
++      summary: `${result.assertions.length} assertions, ${result.mockery.length} Mockery methods`,
++      notes: result.unexecuted.map((line) => `test-api: never executed at the baseline, for review: ${line}`),
++    };
++  });
++}
++
++if (import.meta.main) {
++  process.exit(main(process.argv.slice(2)));
++}
