@@ -13,6 +13,7 @@ import {
   LIST_PATH,
   MAINTAINER,
   markedPhases,
+  matches,
   parseList,
   renderCodeowners,
   type PrFile,
@@ -179,8 +180,11 @@ test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs
     include("/tsconfig.base.json"),
     include("/.oxlintrc.json"),
     include("/.gitattributes"),
+    include("/.bun-version"),
+    include("/LICENSE"),
     include("/AGENTS.md"),
     include("**/CLAUDE.md"),
+    include("/.claude/"),
   ]);
 
   const protectedNow = (path: string) => isProtected(entries, NONE, path);
@@ -209,6 +213,16 @@ test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs
     "CLAUDE.md",
     "packages/x/CLAUDE.md",
     "a/b/c/CLAUDE.md",
+    ".bun-version",
+    "LICENSE",
+    ".claude/settings.json",
+    ".claude/skills/x/SKILL.md",
+    // Inclusions match in any letter case.
+    "claude.md",
+    "Claude.md",
+    "packages/x/claude.MD",
+    "a/CLAUDE.md",
+    "conformance/EXPECTATIONS/x.jsonl",
   ]) {
     expect([path, protectedNow(path)]).toEqual([path, true]);
   }
@@ -227,11 +241,22 @@ test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs
     "docs/AGENTS.md",
     "packages/x/CLAUDE.md.bak",
     "toolsx/a.ts",
+    "packages/x/LICENSE",
+    "docs/.claude/x",
+    "packages/x/claude.md.bak",
+    "LICENSE.md",
+    "conformance/expectations/x.jsonl",
   ]) {
     expect([path, protectedNow(path)]).toEqual([path, false]);
   }
   // Contracts become Protected once Phase 1 exits.
   expect(isProtected(entries, PHASE_1, "packages/contracts/src/a.ts")).toBe(true);
+  // Folding respects after-phase markers.
+  expect(isProtected(entries, NONE, "packages/Contracts/a.ts")).toBe(false);
+  expect(isProtected(entries, PHASE_1, "packages/Contracts/a.ts")).toBe(true);
+  // The exported matches() stays case-sensitive; only isProtected folds inclusions.
+  expect(matches("**/CLAUDE.md", "claude.md")).toBe(false);
+  expect(matches("/LICENSE", "license")).toBe(false);
   // The Phases the list's after-phase markers name, distinct and ascending.
   expect(markedPhases(entries)).toEqual([1]);
   expect(markedPhases(parseList("/a/ after-phase:3\n/b/\n/c/ after-phase:1\n!/d/ after-phase:3\n"))).toEqual([1, 3]);
@@ -310,6 +335,15 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
     const listed = many.stderr.split("\n").filter((line) => line.includes("protected path: ")).map((line) => line.trim().split(" ")[2]);
     expect(listed).toEqual(["AGENTS.md", "packages/x/CLAUDE.md", "tools/z.ts"]);
 
+    // A CLAUDE.md case variant and agent tooling under .claude/ are each listed.
+    const agentFiles = await runPr({ files: [file("claude.md"), file("packages/x/claude.md"), file(".claude/settings.json"), file("packages/support/src/y.ts")] }, base!);
+    expect(agentFiles.code).toBe(1);
+    expect(agentFiles.stderr).toContain("protected path: claude.md needs @edanisko's approving review on the head commit (no Maintainer review)");
+    expect(agentFiles.stderr).toContain("protected path: packages/x/claude.md needs @edanisko's approving review on the head commit (no Maintainer review)");
+    expect(agentFiles.stderr).toContain("protected path: .claude/settings.json needs @edanisko's approving review on the head commit (no Maintainer review)");
+    const agentListed = agentFiles.stderr.split("\n").filter((line) => line.includes("protected path: ")).map((line) => line.trim().split(" ")[2]);
+    expect(agentListed).toEqual([".claude/settings.json", "claude.md", "packages/x/claude.md"]);
+
     // The allowed conformance subdirectories pass.
     const allowed = await runPr(
       {
@@ -376,7 +410,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
       base!,
     );
     expect(phase2Stale.code).toBe(1);
-    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 25 is end of file, expected "/docs/ @edanisko"');
+    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 28 is end of file, expected "/docs/ @edanisko"');
     const phase2Open = await runPr(
       { files: [file("packages/support/src/y.ts")], head: { [LIST_PATH]: phase2List, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
       base!,
@@ -406,7 +440,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
       base!,
     );
     expect(drift.code).toBe(1);
-    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 25 is end of file, expected "/docs/ @edanisko"');
+    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 28 is end of file, expected "/docs/ @edanisko"');
 
     // The base list judges the PR: a head list that drops `/tools/` and `/conformance/`, with a matching CODEOWNERS, still fails.
     const weakenedList = listText.split("\n").filter((line) => !line.startsWith("/tools/") && !line.startsWith("/conformance/")).join("\n");

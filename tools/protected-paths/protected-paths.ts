@@ -26,7 +26,11 @@
 //
 // List format: one CODEOWNERS-style pattern per line; `#` comments and blank
 // lines are ignored; `!` marks an exclusion; a trailing ` after-phase:<n>` makes
-// the entry active only once `decisions/PHASE-<n>-EXIT.md` exists.
+// the entry active only once `decisions/PHASE-<n>-EXIT.md` exists. The check
+// matches inclusions in any letter case and exclusions case-sensitively, so
+// `**/CLAUDE.md` also protects `claude.md` and folding only ever adds Protected
+// paths (AD-16). CODEOWNERS, which GitHub matches case-sensitively, keeps the
+// literal pattern.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
@@ -146,10 +150,12 @@ function isActive(entry: Entry, phases: ReadonlySet<number>): boolean {
 }
 
 const regexCache = new Map<string, RegExp>();
+const foldedRegexCache = new Map<string, RegExp>();
 
-/** A CODEOWNERS pattern as a regular expression over a repo-relative path. */
-function patternRegex(pattern: string): RegExp {
-  const cached = regexCache.get(pattern);
+/** A CODEOWNERS pattern as a regular expression over a repo-relative path; `fold` matches in any letter case. */
+function patternRegex(pattern: string, fold = false): RegExp {
+  const cache = fold ? foldedRegexCache : regexCache;
+  const cached = cache.get(pattern);
   if (cached !== undefined) {
     return cached;
   }
@@ -184,8 +190,8 @@ function patternRegex(pattern: string): RegExp {
   }
   const prefix = anchored ? "^" : "^(?:.*/)?";
   const suffix = dirOnly ? "/.*$" : "(?:/.*)?$";
-  const regex = new RegExp(prefix + source + suffix);
-  regexCache.set(pattern, regex);
+  const regex = new RegExp(prefix + source + suffix, fold ? "i" : "");
+  cache.set(pattern, regex);
   return regex;
 }
 
@@ -194,11 +200,16 @@ export function matches(pattern: string, path: string): boolean {
   return patternRegex(pattern).test(path.replace(/^\/+/, ""));
 }
 
-/** Whether the last active entry matching `path` is an inclusion. */
+/**
+ * Whether the last active entry matching `path` is an inclusion. Inclusions
+ * match in any letter case, exclusions case-sensitively (AD-16), so folding
+ * can only add Protected paths.
+ */
 export function isProtected(entries: readonly Entry[], phases: ReadonlySet<number>, path: string): boolean {
+  const relative = path.replace(/^\/+/, "");
   let result = false;
   for (const entry of entries) {
-    if (isActive(entry, phases) && matches(entry.pattern, path)) {
+    if (isActive(entry, phases) && patternRegex(entry.pattern, !entry.exclude).test(relative)) {
       result = !entry.exclude;
     }
   }

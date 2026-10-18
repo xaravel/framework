@@ -3,7 +3,10 @@
 # One CODEOWNERS-style pattern per line; `#` comments and blank lines are
 # ignored. A `!` prefix marks an exclusion: the last active entry that matches a
 # path decides it. A trailing ` after-phase:<n>` marks an entry that is active
-# only once `decisions/PHASE-<n>-EXIT.md` exists.
+# only once `decisions/PHASE-<n>-EXIT.md` exists. The check matches inclusions
+# in any letter case and exclusions case-sensitively; CODEOWNERS keeps the
+# literal pattern, so a PR touching a case variant (e.g. `claude.md`) gets no
+# automatic Code Owner request; request @edanisko's review by hand.
 #
 # `.github/CODEOWNERS` is generated from this list:
 #   bun run protected-paths:codeowners
@@ -31,6 +34,9 @@
 /tsconfig.base.json
 /.oxlintrc.json
 /.gitattributes
+/.bun-version
+/LICENSE
 
 /AGENTS.md
 **/CLAUDE.md
+/.claude/
