@@ -9,8 +9,8 @@
 # logs in to GHCR and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`, where the
 # tag is `<framework Pin>-<imagehash>` (`oracle:tag`); the hash covers the four
 # locks, the Dockerfile and its dockerignore, so a change to any of them gets
-# a new tag. It is the only job that holds `packages: write`, logs in to GHCR
-# or pushes; the workflow
+# a new tag. It is the only job that holds `packages: write` or pushes (`story`
+# logs in to GHCR only to pull, with a read-only token); the workflow
 # permissions check allows a write scope only in `oracle.yml#oracle`. The
 # GitHub token reaches Composer only as a BuildKit secret (docs/ops/oracle.md).
 #
@@ -25,6 +25,23 @@
 # `determinism` runs nightly: it builds the image as `build` does and re-runs
 # the two passes with `oracle:fixtures --determinism` (no key, no fixtures). A
 # difference fails it, and the Escalation it wrote is uploaded.
+#
+# `story` (Story 3.4) runs on a Story PR that touches
+# `conformance/oracle-requests/**`, under `pull_request_target`, so it runs
+# main's copy of this workflow and of tools/oracle: a PR cannot change the
+# code that holds the signing key. It runs only for a `story/*` head branch of
+# this repository. It checks out the base commit, never the PR: it reads the
+# Story's manifest from that checkout and the PR's request file from the API,
+# at the head SHA, as data. It never installs or runs PR code; request PHP
+# runs only inside the networkless Oracle image. Its GITHUB_TOKEN is read-only
+# (`contents`, `packages`, `pull-requests`). `oracle:story generate` judges
+# each request against the schema and the manifest's `test_ids` /
+# `xaravel_test_ids`, evaluates the accepted ones twice in the image
+# `ghcr.io/<owner>/xaravel-oracle:<oracle tag>` and signs them with
+# ORACLE_SIGNING_KEY (environment `oracle`). As the `xaravel-oracle` GitHub
+# App it then commits the new `conformance/fixtures/` files to the head
+# branch, fast-forward from the exact head SHA, and comments the report when a
+# request was rejected or a commit was made. A rejection fails the job.
 name: oracle
 
 on:
@@ -50,6 +67,11 @@ on:
       - package.json
       - bun.lock
       - .bun-version
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - conformance/oracle-requests/**
   schedule:
     - cron: "17 4 * * *"
   workflow_dispatch:
@@ -186,3 +208,157 @@ jobs:
           name: oracle-determinism
           path: conformance/escalations/ESC-bot-*.md
           if-no-files-found: ignore
+
+  story:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'story/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: oracle-story-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    environment: oracle
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Name the Story and the image
+        id: story
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          story="${HEAD_REF#story/}"
+          if ! [[ "$story" =~ ^[1-9][0-9]*\.[1-9][0-9]*$ ]]; then
+            echo "branch ${HEAD_REF} does not name a Story ID <epic>.<story>" >&2
+            exit 1
+          fi
+          tag="$(bun tools/oracle/oracle.ts tag)"
+          echo "id=${story}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${OWNER,,}/xaravel-oracle:${tag}" >> "$GITHUB_OUTPUT"
+          echo "dir=${RUNNER_TEMP}/oracle-story" >> "$GITHUB_OUTPUT"
+      - name: Read the Story's request file from the PR head
+        id: read
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STORY: ${{ steps.story.outputs.id }}
+          DIR: ${{ steps.story.outputs.dir }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIR/fixtures"
+          if gh api -H "Accept: application/vnd.github.raw" "repos/${REPO}/contents/conformance/oracle-requests/${STORY}.jsonl?ref=${HEAD_SHA}" > "$DIR/requests.jsonl" 2> "$DIR/read.err"; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif grep -q "HTTP 404" "$DIR/read.err"; then
+            echo "The PR head has no conformance/oracle-requests/${STORY}.jsonl; nothing to evaluate." >> "$GITHUB_STEP_SUMMARY"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            cat "$DIR/read.err" >&2
+            exit 1
+          fi
+      - name: Pull the Oracle image
+        if: steps.read.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ${{ steps.story.outputs.image }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+          status=0
+          docker pull "$IMAGE" || status=$?
+          docker logout ghcr.io
+          exit "$status"
+      - name: Judge, evaluate and sign the Story's requests
+        id: generate
+        if: steps.read.outputs.present == 'true'
+        env:
+          ORACLE_SIGNING_KEY: ${{ secrets.ORACLE_SIGNING_KEY }}
+          IMAGE: ${{ steps.story.outputs.image }}
+          STORY: ${{ steps.story.outputs.id }}
+          DIR: ${{ steps.story.outputs.dir }}
+        run: |
+          status=0
+          bun tools/oracle/story.ts generate "$STORY" --image "$IMAGE" --requests "$DIR/requests.jsonl" --report "$DIR/report.md" --out "$DIR/fixtures" || status=$?
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+      - name: Get the xaravel-oracle App token
+        id: app
+        if: steps.read.outputs.present == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.XARAVEL_ORACLE_APP_ID }}
+          private-key: ${{ secrets.XARAVEL_ORACLE_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Commit the fixtures to the Story branch
+        id: commit
+        if: steps.read.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STORY: ${{ steps.story.outputs.id }}
+          DIR: ${{ steps.story.outputs.dir }}
+        run: |
+          set -euo pipefail
+          cd "$DIR/fixtures"
+          entries="[]"
+          while IFS= read -r file; do
+            if ! [[ "$file" =~ ^[a-z][a-z0-9-]*/[0-9a-f]{64}\.json$ ]]; then
+              echo "refusing to commit ${file}: not conformance/fixtures/<component>/<sha256>.json" >&2
+              exit 1
+            fi
+            blob="$(jq -n --rawfile content "$file" '{content: $content, encoding: "utf-8"}' | gh api "repos/${REPO}/git/blobs" --input - --jq .sha)"
+            entries="$(jq -c --arg path "conformance/fixtures/${file}" --arg sha "$blob" '. + [{path: $path, mode: "100644", type: "blob", sha: $sha}]' <<< "$entries")"
+          done < <(find . -type f | sed 's|^\./||' | LC_ALL=C sort)
+          if [ "$entries" = "[]" ]; then
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base_tree="$(gh api "repos/${REPO}/git/commits/${HEAD_SHA}" --jq .tree.sha)"
+          tree="$(jq -n --arg base "$base_tree" --argjson tree "$entries" '{base_tree: $base, tree: $tree}' | gh api "repos/${REPO}/git/trees" --input - --jq .sha)"
+          if [ "$tree" = "$base_tree" ]; then
+            echo "The Story branch already holds every fixture." >> "$GITHUB_STEP_SUMMARY"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          commit="$(jq -n --arg message "oracle: signed fixtures for Story ${STORY}" --arg tree "$tree" --arg parent "$HEAD_SHA" '{message: $message, tree: $tree, parents: [$parent]}' | gh api "repos/${REPO}/git/commits" --input - --jq .sha)"
+          # The branch must still be at the head SHA the fixtures were made for (a force-push back to an ancestor would
+          # otherwise pass the fast-forward check and re-introduce rewound commits).
+          current="$(gh api "repos/${REPO}/git/ref/heads/${HEAD_REF}" --jq .object.sha)"
+          if [ "$current" != "$HEAD_SHA" ]; then
+            echo "${HEAD_REF} is at ${current}, not ${HEAD_SHA} that was evaluated; not committing (the push that moved it starts a new run)" >&2
+            exit 1
+          fi
+          # Fast-forward only.
+          jq -n --arg sha "$commit" '{sha: $sha, force: false}' | gh api --method PATCH "repos/${REPO}/git/refs/heads/${HEAD_REF}" --input - > /dev/null
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "Committed ${commit} to ${HEAD_REF}." >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment the report on the PR
+        if: steps.read.outputs.present == 'true' && always() && steps.generate.outputs.status != '' && steps.app.outputs.token != '' && (steps.generate.outputs.status != '0' || steps.commit.outputs.committed == 'true')
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DIR: ${{ steps.story.outputs.dir }}
+        run: gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file "$DIR/report.md" --edit-last --create-if-none
+      - name: Fail on a rejected request
+        if: steps.read.outputs.present == 'true' && steps.generate.outputs.status != '0'
+        env:
+          STATUS: ${{ steps.generate.outputs.status }}
+        run: |
+          echo "oracle:story exited ${STATUS}: a request was rejected or the run failed; see the PR comment." >&2
+          exit 1

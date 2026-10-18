@@ -671,12 +671,17 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
     jobs: Record<string, Record<string, unknown> & { if?: string; permissions?: unknown; steps: Step[] }>;
   };
   expect(workflow.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(workflow.on).sort()).toEqual(["pull_request", "push", "schedule", "workflow_dispatch"]);
+  // Story 3.4 adds `pull_request_target`, which runs only the per-Story `story` job; XT-conformance-77 checks its shape.
+  expect(Object.keys(workflow.on).sort()).toEqual(["pull_request", "pull_request_target", "push", "schedule", "workflow_dispatch"]);
   const paths = ["conformance/baseline-pin", "conformance/oracle/**", "tools/oracle/**", "tools/upstream/**", ".github/workflows/oracle.yml", "package.json", "bun.lock", ".bun-version"];
   expect(workflow.on["pull_request"]).toEqual({ branches: ["main"], paths });
   expect(workflow.on["push"]).toEqual({ branches: ["main"], paths });
-  expect(text).not.toContain("pull_request_target");
-  expect(Object.keys(workflow.jobs).sort()).toEqual(["build", "determinism", "oracle"]);
+  expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "synchronize", "reopened"], paths: ["conformance/oracle-requests/**"] });
+  expect(Object.keys(workflow.jobs).sort()).toEqual(["build", "determinism", "oracle", "story"]);
+  expect(workflow.jobs["story"]!.if).toStartWith("github.event_name == 'pull_request_target' &&");
+  for (const id of ["build", "oracle", "determinism"]) {
+    expect([id, (workflow.jobs[id]!.if ?? "").includes("pull_request_target")]).toEqual([id, false]);
+  }
 
   const runs = (job: { steps: Step[] }): string[] => job.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
   const build = workflow.jobs["build"]!;
@@ -743,8 +748,9 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   // The token reaches the build only as an env var, which oracle:build hands to BuildKit as a secret.
   expect(build.steps.at(-1)!.env).toEqual({ GITHUB_TOKEN: "${{ github.token }}" });
   expect(text).not.toMatch(/build-arg/);
-  // The only secret is the fixture signing key, in the oracle job's batch step.
-  expect(text.match(/secrets\.[A-Za-z_]+/g)).toEqual(["secrets.ORACLE_SIGNING_KEY"]);
+  // The only secrets are the fixture signing key, in the oracle job's batch step and the story job's generate step,
+  // and the xaravel-oracle App's key in the story job (Story 3.4).
+  expect(text.match(/secrets\.[A-Za-z_]+/g)).toEqual(["secrets.ORACLE_SIGNING_KEY", "secrets.ORACLE_SIGNING_KEY", "secrets.XARAVEL_ORACLE_APP_KEY"]);
 
   // No other workflow holds packages: write, logs in to GHCR or pushes an image.
   for (const file of readdirSync(join(root, ".github", "workflows")).filter((name) => /\.ya?ml$/.test(name) && name !== "oracle.yml")) {

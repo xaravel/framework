@@ -32,6 +32,10 @@
 // in an Orchestra Testbench application: the Test ID's own class when it is a
 // Testbench TestCase, else a bare Testbench TestCase.
 //
+// An Xaravel Test ID (`XT-<component>-<n>`, a per-Story request of Story 3.4)
+// has no Upstream class: it runs bound to a bare PHPUnit TestCase in the
+// global namespace (`blade-render`: the bare Testbench TestCase).
+//
 // A result is {"value":<encoded>} or {"throws":{"class","message"}}. An error
 // at a stage (`bindings`, `setUp`, `setup`, `tearDown`, `fatal`, `timeout`)
 // sets `error`; an error before `exprs` leaves `results` empty. Values are
@@ -246,9 +250,15 @@ final class StageError extends RuntimeException
     }
 }
 
-/** The Test ID's class and method: `<class>::<method>[#<dataset>]`. */
+/**
+ * The Test ID's class and method: `<class>::<method>[#<dataset>]`. An Xaravel
+ * Test ID has no Upstream class, so it gets the bare PHPUnit TestCase.
+ */
 function testTarget(string $id): array
 {
+    if (preg_match('/^XT-[a-z][a-z0-9-]*-[1-9][0-9]*$/', $id) === 1) {
+        return [BareTestCase::class, 'evaluate'];
+    }
     if (preg_match('/^([A-Za-z_\\\\][A-Za-z0-9_\\\\]*)::([A-Za-z_][A-Za-z0-9_]*)(?:#[\s\S]*)?$/', $id, $match) !== 1) {
         throw new RuntimeException("{$id} is not a PHPUnit Test ID");
     }
@@ -404,6 +414,11 @@ function evaluate(array $request, Encoder $encoder): array
     } catch (StageError $e) {
         return ['error' => ['stage' => $e->stage, ...$encoder->throwable($e->error)], 'results' => $e->partial ?? []];
     }
+}
+
+/** The test case an Xaravel Test ID runs bound to: no Upstream class, the global namespace. */
+final class BareTestCase extends PHPUnit\Framework\TestCase
+{
 }
 
 /** A bare Testbench application for `blade-render` requests whose own class is not one. */

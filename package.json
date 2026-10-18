@@ -42,6 +42,7 @@
     "oracle:extract": "bun tools/oracle/extract.ts",
     "oracle:fixtures": "bun tools/oracle/fixtures.ts",
     "oracle:verify-fixtures": "bun tools/oracle/verify.ts",
+    "oracle:story": "bun tools/oracle/story.ts",
     "component-map:check": "bun tools/component-map/component-map.ts check",
     "inventory": "bun tools/inventory/inventory.ts generate",
     "inventory:cross-check": "bun tools/inventory/cross-check.ts",
