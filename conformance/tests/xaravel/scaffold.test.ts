@@ -291,8 +291,14 @@ function assertDependencies(base: string): void {
         expect(`${row.name} -> ${always}: ${deps[always]}`).toBe(`${row.name} -> ${always}: workspace:*`);
       }
     }
-    if (row.kind === "grader" || row.kind === "distribution" || row.name === "runtime") {
+    if (row.kind === "distribution" || row.name === "runtime") {
       expect(`${row.name}: ${Object.keys(deps).filter((dep) => dep.startsWith("@xaravel/")).join(",")}`).toBe(`${row.name}: `);
+    }
+    // A grader package may depend on other grader packages only, never on anything graded (AD-2; ESC-4.5-1 item 7).
+    if (row.kind === "grader") {
+      const graderNpms = new Set(rows.filter((other) => other.kind === "grader").map((other) => other.npm));
+      const graded = Object.keys(deps).filter((dep) => dep.startsWith("@xaravel/") && !graderNpms.has(dep));
+      expect(`${row.name}: ${graded.join(",")}`).toBe(`${row.name}: `);
     }
   }
   const contracts = readJson<Manifest>(join(base, "packages", "contracts", "package.json"));
