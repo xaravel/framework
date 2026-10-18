@@ -6,7 +6,9 @@
 //       runs one leg: the suite's tests tagged with alpha variant <v>, once,
 //       in the Oracle image (`xaravel-oracle:<oracle tag>`, or `--image
 //       <ref>`, through tools/oracle's `runInImageNetworked`: host network,
-//       the variant's environment, tools/baseline mounted read-only), or with
+//       the leg's environment (`legEnv`: the variant's, plus Upstream's
+//       service env on the framework `none` and `queue-sync@none` legs,
+//       decisions/ESC-2.6-2.md), tools/baseline mounted read-only), or with
 //       `--local <dir>` against a locked install of the suite's snapshot and
 //       the local PHP (or `--php <bin>`). It lists the suite with
 //       tools/inventory's lister (the PHPUnit ID to Inventory ID and test file
@@ -25,7 +27,7 @@
 //       kinds, and differ at most in counts no lower than its `record`, gets
 //       that `record` instead.
 //
-// The pure parts (`variantsFor`, `planRun`, `collectResults`,
+// The pure parts (`variantsFor`, `legEnv`, `planRun`, `collectResults`,
 // `compareAttempts`, `parseFindings`, `mergeResults`) are exported for the tests, which need
 // neither PHP nor a container runtime. docs/ops/baseline.md describes the run.
 //
@@ -84,9 +86,38 @@ export const VARIANT_ENV: Readonly<Record<string, Readonly<Record<string, string
 /** The variants whose run first creates Testbench's SQLite database (`vendor/bin/testbench package:create-sqlite-db`). */
 export const SQLITE_VARIANTS: readonly string[] = ["queue-database@sqlite", "sqlite"];
 
+/**
+ * Upstream's `linux_tests` env (framework .github/workflows/tests.yml:79-86), for the memcached, MySQL
+ * and DynamoDB Local services the workflow starts on SERVICE_LEGS (decisions/ESC-2.6-2.md). MySQL is
+ * mapped to the fixed host port 3306.
+ */
+export const SERVICE_ENV: Readonly<Record<string, string>> = {
+  DB_PORT: "3306",
+  DB_USERNAME: "root",
+  DYNAMODB_CACHE_TABLE: "laravel_dynamodb_test",
+  DYNAMODB_ENDPOINT: "http://localhost:8888",
+  AWS_ACCESS_KEY_ID: "randomKey",
+  AWS_SECRET_ACCESS_KEY: "randomSecret",
+};
+
 export interface Leg {
   suite: Suite;
   variant: string;
+}
+
+/** The legs that run with Upstream's services and SERVICE_ENV: the framework on `none` and `queue-sync@none` (decisions/ESC-2.6-2.md). */
+export const SERVICE_LEGS: readonly Leg[] = [
+  { suite: "framework", variant: "none" },
+  { suite: "framework", variant: "queue-sync@none" },
+];
+
+/** A leg's extra environment: its variant's, plus SERVICE_ENV on a service leg. */
+export function legEnv(suite: Suite, variant: string): Record<string, string> {
+  const env: Record<string, string> = { ...VARIANT_ENV[variant] };
+  if (SERVICE_LEGS.some((leg) => leg.suite === suite && leg.variant === variant)) {
+    Object.assign(env, SERVICE_ENV);
+  }
+  return env;
 }
 
 /** Every leg the baseline workflow runs (twice each): the framework on every alpha variant, each Pest suite on `none`. */
@@ -627,7 +658,7 @@ export function run(root: string, options: RunOptions): { file: string; results:
           env[key] = value;
         }
       }
-      Object.assign(env, VARIANT_ENV[variant]);
+      Object.assign(env, legEnv(suite, variant));
       if (sqlite) {
         spawn([php, "vendor/bin/testbench", "package:create-sqlite-db"], local, env, "testbench package:create-sqlite-db");
       }
@@ -639,7 +670,7 @@ export function run(root: string, options: RunOptions): { file: string; results:
       const command = sqlite
         ? ["sh", "-c", `set -e; cd "$1"; php vendor/bin/testbench package:create-sqlite-db >&2; exec php ${IMAGE_TOOLS}/runner.php "$@"`, "sh", ...args]
         : ["php", `${IMAGE_TOOLS}/runner.php`, ...args];
-      const networked: NetworkedRun = { env: VARIANT_ENV[variant]!, mounts: [{ host: resolve(root, BASELINE_DIR), container: IMAGE_TOOLS }], output: { host: work, container: IMAGE_WORK } };
+      const networked: NetworkedRun = { env: legEnv(suite, variant), mounts: [{ host: resolve(root, BASELINE_DIR), container: IMAGE_TOOLS }], output: { host: work, container: IMAGE_WORK } };
       stdout = runInImageNetworked(image, networked, command);
     }
   } finally {

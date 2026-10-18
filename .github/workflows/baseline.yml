@@ -14,7 +14,12 @@
 # each. Every job builds the Oracle image (`oracle:build`, which builds it
 # twice and verifies it), then `bun run baseline run` runs the leg's tests in
 # it as the non-root uid 1001 with the recorder, on the host network, against
-# the Postgres 18 and Redis 8.10.2 services, and uploads its results file.
+# the Postgres 18 and Redis 8.10.2 services, and uploads its results file. The
+# framework none and queue-sync@none legs (`services: true`) also start
+# Upstream's linux_tests services, memcached 1.6-alpine, MySQL 9.7 (host port
+# 3306) and DynamoDB Local 2.0.0 (host port 8888), and run with Upstream's
+# linux_tests env (`SERVICE_ENV` in tools/baseline/baseline.ts,
+# decisions/ESC-2.6-2.md).
 #
 # `merge` downloads every result and runs `bun run baseline merge`. That fails
 # on a missing result, and on any difference between the two attempts
@@ -87,11 +92,11 @@ jobs:
       matrix:
         attempt: [1, 2]
         leg:
-          - { suite: framework, variant: none }
+          - { suite: framework, variant: none, services: true }
           - { suite: framework, variant: pgsql }
           - { suite: framework, variant: queue-database@sqlite }
           - { suite: framework, variant: queue-redis@redis }
-          - { suite: framework, variant: queue-sync@none }
+          - { suite: framework, variant: queue-sync@none, services: true }
           - { suite: framework, variant: redis }
           - { suite: framework, variant: sqlite }
           - { suite: ai, variant: none }
@@ -112,6 +117,24 @@ jobs:
         ports:
           - 6379:6379
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+      # Upstream's linux_tests services (framework tests.yml:27-48), only on the legs with
+      # `services: true` (decisions/ESC-2.6-2.md). GitHub skips a service whose image is empty.
+      memcached:
+        image: ${{ matrix.leg.services && 'memcached:1.6-alpine' || '' }}
+        ports:
+          - 11211:11211
+      mysql:
+        image: ${{ matrix.leg.services && 'mysql:9.7' || '' }}
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: forge
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-start-period=30s --health-interval=10s --health-timeout=5s --health-retries=3
+      dynamodb:
+        image: ${{ matrix.leg.services && 'amazon/dynamodb-local:2.0.0' || '' }}
+        ports:
+          - 8888:8000
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
