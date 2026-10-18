@@ -29,8 +29,4 @@ epic-4:
   doc: _bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-4-retro-item-1-mockery-class-arg-matching
-    - epic-4-retro-item-2-verify-mocks-outside-run
-    - epic-4-retro-item-3-one-php-value-layer
-    - epic-4-retro-item-4-mockery-install-fails-loudly
+  waiting_on_maintainer: []
