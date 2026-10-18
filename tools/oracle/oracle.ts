@@ -38,7 +38,8 @@
 //
 // Only `verify-image` and `build` call `docker`; `check` and `tag` need
 // neither Docker nor the network. Other tools reach the image only through
-// `runInImage` (no network, read-only mounts) and `runInImageNetworked`
+// `runInImage` (no network, read-only mounts, and the fixed memory, process
+// and CPU caps `IMAGE_RUN_LIMITS`) and `runInImageNetworked`
 // (host network, environment, read-only tool mounts and one read-write
 // output mount, as the non-root `IMAGE_USER`; the baseline run, Story 2.6).
 //
@@ -64,6 +65,16 @@ export const IMAGE_UPSTREAM_DIR = "/oracle/upstream";
  * and expect access to be denied pass only for a non-root user.
  */
 export const IMAGE_USER = "1001:1001";
+/** The memory cap in `IMAGE_RUN_LIMITS`, also named by `runInImage`'s exit-137 hint. */
+const MEMORY_LIMIT = "4g";
+/**
+ * The fixed resource caps on every `runInImage` container: 4 GB of memory with
+ * no swap beyond it, 512 processes and 2 CPUs. `runInImage` runs Story-supplied
+ * PHP in a CI job that holds the Oracle signing key and the App key, so a
+ * request must not exhaust the runner (Epic 3 retrospective, R3). They are a
+ * ceiling against abuse, not tuning, and are not caller-configurable.
+ */
+export const IMAGE_RUN_LIMITS: readonly string[] = ["--memory", MEMORY_LIMIT, "--memory-swap", MEMORY_LIMIT, "--pids-limit", "512", "--cpus", "2"];
 /** The test tools each lock must hold, by snapshot. */
 export const REQUIRED_PACKAGES: Readonly<Record<UpstreamName, readonly string[]>> = {
   framework: ["phpunit/phpunit", "mockery/mockery", "orchestra/testbench-core"],
@@ -712,9 +723,10 @@ export interface ReadOnlyMount {
 }
 
 /**
- * Runs `command` in `image` with `docker run --rm --network none` and the
- * given read-only mounts, and returns its stdout; throws with its exit code
- * and stderr when it fails. Other tools reach the Oracle image only through
+ * Runs `command` in `image` with `docker run --rm --network none`, the fixed
+ * `IMAGE_RUN_LIMITS` and the given read-only mounts, and returns its stdout;
+ * throws with its exit code and stderr when it fails (on exit 137, a SIGKILL,
+ * it adds that the memory limit may have been hit). Other tools reach the Oracle image only through
  * this, so Docker stays behind tools/oracle (the Inventory, Story 2.4).
  */
 export function runInImage(image: string, mounts: readonly ReadOnlyMount[], command: readonly string[]): string {
@@ -722,10 +734,12 @@ export function runInImage(image: string, mounts: readonly ReadOnlyMount[], comm
   if (docker === null) {
     throw new Error("docker is not on PATH; running in the Oracle image needs Docker");
   }
-  const args = ["run", "--rm", "--network", "none", ...mounts.flatMap((mount) => ["--volume", `${mount.host}:${mount.container}:ro`]), image, ...command];
+  const args = ["run", "--rm", "--network", "none", ...IMAGE_RUN_LIMITS, ...mounts.flatMap((mount) => ["--volume", `${mount.host}:${mount.container}:ro`]), image, ...command];
   const proc = Bun.spawnSync([docker, ...args], { env: process.env, stdout: "pipe", stderr: "pipe", stdin: "ignore" });
   if (proc.exitCode !== 0) {
-    throw new Error(`${command.join(" ")} in ${image} failed (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
+    const stderr = proc.stderr.toString().trim();
+    const detail = proc.exitCode === 137 ? [stderr, `exit 137 is a SIGKILL, possibly at the container's ${MEMORY_LIMIT} memory limit`].filter((part) => part !== "").join("; ") : stderr;
+    throw new Error(`${command.join(" ")} in ${image} failed (exit ${proc.exitCode ?? "signal"}): ${detail}`);
   }
   return proc.stdout.toString();
 }
