@@ -2,7 +2,7 @@
 title: 'Retro epic 2 item 10: Upstream services on the framework none and queue-sync@none baseline legs (ESC-2.6-2)'
 type: 'feature'
 created: '2026-10-17'
-status: 'in-progress'
+status: 'done'
 baseline_revision: '7c207ea3383b6d234591d6be5e0418cf178dc860'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -11,7 +11,28 @@ context:
   - '{project-root}/conformance/escalations/ESC-2.6-2.md'
   - '{project-root}/docs/ops/baseline.md'
 warnings: []
-deferred: []
+deferred:
+  - summary: >-
+      run() has no test that it passes legEnv to the runner, so local mode could silently lose SERVICE_ENV.
+    evidence: |-
+      baseline.test.ts never calls run(); only the pure legEnv is tested. CI's merge diff covers image mode only. Testing needs a spawn/runInImageNetworked seam in run(), which has never had a test.
+    location: >-
+      tools/baseline/baseline.ts:661
+    severity: low
+  - summary: >-
+      queue-sync@none gets linux_tests services by the ruling, but Upstream's queues.yml sync job starts none; the seven DynamoBatchTest IDs now pass there.
+    evidence: |-
+      decisions/ESC-2.6-2.md names queue-sync@none explicitly, so this follows the ruling. Whether that Variant mirrors linux_tests or queues.yml's sync job is a Maintainer question, not this change's.
+    location: >-
+      tools/baseline/baseline.ts SERVICE_LEGS
+    severity: medium (unverified)
+  - summary: >-
+      sprint-planning/scope-8.json notes DynamoBatchTest as likely a skip, but the Oracle now records pass on queue-sync@none.
+    evidence: |-
+      _bmad-output/implementation-artifacts/sprint-planning/scope-8.json:205; a pre-existing planning note that this change made stale.
+    location: >-
+      _bmad-output/implementation-artifacts/sprint-planning/scope-8.json:205
+    severity: low
 ---
 
 <intent-contract>
@@ -67,6 +88,28 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-17 — Review pass
+- verdicts: 18 findings — high 0, medium 1, low 14, false 3, maybe-false 0
+- findings:
+  - `[low]` `[patch]` (blind) docs say four IDs change; the Inventory changed 12 — docs paragraph now names all 12 by test class and variant.
+  - `[low]` `[defer]` (blind) scope-8.json DynamoBatchTest note is stale — pre-existing planning artifact; deferred.
+  - `[low]` `[patch]` (blind) docs claim the legs start "that job's services" though Upstream also runs redis:7.0 — clause added noting redis 8.10.2 and Postgres 18.
+  - `[false]` `[reject]` (blind) Protected Paths beyond baseline.yml lack approval — the MAINT ruling's 2026-10-17 amendment approves orchestrator PRs touching Protected Paths.
+  - `[false]` `[reject]` (blind) no health check on dynamodb/memcached races the tests — each leg runs oracle:build (minutes) before the runner; both attempts of both CI runs agreed with no non-determinism.
+  - `[low]` `[reject]` (blind) SERVICE_ENV applies in local mode where a local MySQL may answer — that is Upstream's env and docs say local service legs are not the Oracle; a guard adds complexity for a rare case.
+  - `[low]` `[defer]` (blind) run() wiring untested — same root cause as the verification-gap finding; deferred.
+  - `[low]` `[reject]` (blind) legEnv silently overwrites colliding keys — no service leg has colliding keys; a guard adds code for a hypothetical.
+  - `[low]` `[patch]` (blind) Variants table's queue row omits queue-sync@none's service env, and the paragraph mixes unrelated sentences — parenthetical added, sentences moved back.
+  - `[low]` `[reject]` (blind) spec lacks run provenance and status — the fix edits this build's spec; run IDs go in Auto Run Result.
+  - `[low]` `[reject]` (blind) spec Code Map line ranges stale — the fix edits this build's spec.
+  - `[false]` `[reject]` (edge) dynamodb/memcached need health checks — duplicate of the blind finding; same refutation.
+  - `[low]` `[patch]` (edge) docs' four-ID claim — duplicate; fixed by the docs patch.
+  - `[low]` `[patch]` (edge) eight extra flipped IDs unchecked against AC — they are CI artifact output under the ruling (all skip→pass); docs now name them, and the status issue report lists them for the Maintainer.
+  - `[low]` `[defer]` (verification-gap) local-mode run() → legEnv has no test — filed disposition defer; recorded in `deferred`.
+  - `[low]` `[patch]` (verification-gap other) spec/docs understate the change — duplicate; fixed by the docs patch.
+  - `[medium]` `[defer]` (intent) queue-sync@none mirrors linux_tests rather than Upstream's sync job — the ruling names that leg; Maintainer question, deferred and reported.
+  - `[low]` `[patch]` (intent) no test asserts the four DynamoDbStoreTest IDs are non-skip — XT-conformance-56 now asserts it on the committed Inventory.
+
 ## Design Notes
 
 A per-leg env (not a change to `VARIANT_ENV.none`) keeps the Pest suites' `none` legs unchanged, as the ruling covers only the framework legs. GitHub Actions does not start a service whose `image` evaluates to an empty string, which is the standard way to make job services conditional on a matrix value.
@@ -77,3 +120,26 @@ A per-leg env (not a change to `VARIANT_ENV.none`) keeps the Pest suites' `none`
 - `bun test conformance/tests/xaravel/baseline.test.ts` -- expected: pass
 - `bun run typecheck` (or the repo's `tsc` script) and `bun run lint` -- expected: clean
 - `gh pr checks <n>` after regeneration -- expected: `baseline` green
+
+## Auto Run Result
+
+Status: done
+
+**Summary:** The framework `none` and `queue-sync@none` baseline legs now start Upstream's `linux_tests` services (memcached 1.6-alpine, MySQL 9.7 on host port 3306, DynamoDB Local 2.0.0 on 8888) and run with Upstream's env (`SERVICE_ENV`, applied through `legEnv` in image and local mode). The Inventory was regenerated from baseline run 39100441817's `inventory` artifact. Run 39101389150 then passed every job, including `merge`'s `git diff --exit-code`.
+
+**Files changed:**
+- `tools/baseline/baseline.ts`: adds `SERVICE_ENV`, `SERVICE_LEGS` and `legEnv`, and `run()` uses `legEnv`.
+- `.github/workflows/baseline.yml`: `services: true` on the two legs, plus three services whose image is empty on every other leg.
+- `conformance/tests/xaravel/baseline.test.ts`: XT-conformance-56 asserts the env, the legs, the workflow services, and that the four DynamoDbStoreTest IDs are not `skip`.
+- `docs/ops/baseline.md`: amends the ESC-2.6-2 wording on the `none` leg and documents the service legs and the 12 changed IDs.
+- `conformance/inventory/{auth,cache,queue}.jsonl`: the CI artifact, unedited. 12 IDs went from skip to pass: 4 `Cache\DynamoDbStoreTest` on `none`, 7 `Queue\DynamoBatchTest` on `queue-sync@none`, and 1 `Auth\ApiAuthenticationWithEloquentTest` on `none` (MySQL).
+
+**Review:**
+- 18 findings: 6 patched (all low), 4 deferred (1 medium unverified, 3 low), 8 rejected. The Review Triage Log gives the reason for each.
+- Follow-up review recommended: false, since no patched entry was high or medium.
+
+**Verification:** `bun test` (112 pass), `bun run typecheck` and `bun run lint` are clean. CI baseline runs 39100441817 (expected merge diff only) and 39101389150 (green).
+
+**Residual risks:**
+- The ruling applies the services to `queue-sync@none`, but Upstream's queues.yml `sync` job has none. This is a deferred Maintainer question.
+- Nothing tests that local-mode `run()` is wired to `legEnv`.
