@@ -478,6 +478,9 @@
     "packages/mockery": {
       "name": "@xaravel/mockery",
       "version": "0.0.0",
+      "dependencies": {
+        "@xaravel/assert": "workspace:*",
+      },
     },
     "packages/notifications": {
       "name": "@xaravel/notifications",

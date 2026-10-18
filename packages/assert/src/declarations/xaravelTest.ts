@@ -1,8 +1,11 @@
 // `xaravelTest`: declares a Xaravel Test (Story 4.2; FR-115).
 //
 // The label is `<id>: <consequence>`. Its assertions are counted and reported
-// (ESC-4.2-1), but a Xaravel Test never fails for executing none.
+// (ESC-4.2-1), but a Xaravel Test never fails for executing none. Its body
+// runs through Mockery's test-finish protocol when @xaravel/mockery is loaded,
+// as a Ported Test's does (ESC-4.5-1 item 1).
 import { registerTests } from "./Declarations";
+import { runWithMockery } from "./portedTest";
 
 const XT_ID = /^XT-[a-z0-9]+(-[a-z0-9]+)*-[1-9][0-9]*$/;
 
@@ -17,5 +20,5 @@ export function xaravelTest(id: string, consequence: string, fn: () => unknown):
   if (typeof fn !== "function") {
     throw new TypeError(`xaravelTest(): ${id} needs a test function`);
   }
-  registerTests("xaravelTest()", "xaravel", consequence, [{ label: `${id}: ${consequence}`, id, run: () => fn() }], false);
+  registerTests("xaravelTest()", "xaravel", consequence, [{ label: `${id}: ${consequence}`, id, run: () => runWithMockery(fn) }], false);
 }
