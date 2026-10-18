@@ -1,0 +1,1 @@
+{"sha256":"718294ed288f06910267bae8c9f4baf5d0cb4c9f7a99ef78e51a0cee19c1407a","output":{"error":null,"results":[{"value":"select * from \"users\" order by \"created_at\" desc limit 1"}]},"signature":"fean3NaTYKbMxCPLbR1sMGN8qVK2h2RSvmaIGHjnIOlXE7RzVijpD8UuwQr1x6D7TS1Irf/r6yzF1gOYzX47BA=="}

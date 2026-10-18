@@ -1,0 +1,1 @@
+{"sha256":"e77e73b2728286d2c66b5fc220143f32820d947401de4186359c79b6807f50e8","output":{"error":null,"results":[{"value":"select (1 + 1) as \"expr\", (2 + 2) as \"expr2\" from \"one\""}]},"signature":"JC3BziI/MgvnmVsrkfxwy1KQJ+3ryII7aseh1DVjn0u/ibp2ZYIAA7qd3PWZVSnava0iHaX34GC8wzP0YmTyDQ=="}

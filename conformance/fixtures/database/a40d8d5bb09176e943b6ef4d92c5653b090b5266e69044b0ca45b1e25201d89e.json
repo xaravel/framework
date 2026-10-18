@@ -1,0 +1,1 @@
+{"sha256":"a40d8d5bb09176e943b6ef4d92c5653b090b5266e69044b0ca45b1e25201d89e","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` drop `name`, algorithm=instant"]]}},{"value":"alter table `users` drop `name`, algorithm=instant"}]},"signature":"Xj/IQUR6ELa71kpc0QhcPsnP3g5tYyR4RUvCNScT6FHN5KrZdbeewE45I2KybQSAeLuYnUzvmaCSROTUUPndCQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"b0f9dbbf37386864b17e632780fe6fca10c10e1ab2c8e544536fd9e55a67d3ff","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"search_vector\") @@ websearch_to_tsquery('english', ?)"},{"value":{"array":[[{"int":"0"},"+Hello -World"]]}}]},"signature":"qYE3CuW11HRlWHtSbbA1SnFGxjirUsvmUmFAPgWqAZRHyX/ADIA/PvMVwejPdiLNMi05Sv10JUnoq4QqQAcuCA=="}

@@ -1,0 +1,1 @@
+{"sha256":"b06dec249887b2587df040c79563718345778a26d8ec0da09ebeb11b8320f3cf","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"create index concurrently \"baz\" on \"users\" (\"foo\")"]]}},{"value":"create index concurrently \"baz\" on \"users\" (\"foo\")"}]},"signature":"e4x+P1DxpuMryHV7cGtRGwpuTTccSSVpa/kbhF2nLh03aD3QtcOlblFndIeOUgSSi+OJssnrdkbwwhMFtinmCg=="}

@@ -1,0 +1,1 @@
+{"sha256":"d2ff06cac0e077ee3682d55b698a031cc246dccbbfe89678a4cce42a2149182b","output":{"error":null,"results":[{"value":"{{ Hello, I'm not blade! }}\n@php echo 'And I'm not PHP!' @endphp\n I am Blade\nI am PHP {{ not Blade }}"}]},"signature":"wmLbzK0BEOZ9WPpYYI/3MNZVvOWSehRDhMfwQ7Nln331Boh+Pr8VUBYfmccY+VilTklW7ayzEPPGAZ3fbt66BA=="}

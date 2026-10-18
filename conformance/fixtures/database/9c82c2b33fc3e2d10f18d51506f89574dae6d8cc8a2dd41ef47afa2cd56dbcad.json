@@ -1,0 +1,1 @@
+{"sha256":"9c82c2b33fc3e2d10f18d51506f89574dae6d8cc8a2dd41ef47afa2cd56dbcad","output":{"error":null,"results":[{"value":"select * from [users] order by [email] asc, [age] ? desc"},{"value":{"array":[[{"int":"0"},"foo"]]}}]},"signature":"bejrh3NhTAKm7wwbnLLxCQ2nddYWYLBc/ci7hAQIbpn5nDHBmkrAxudDSKHGYK6ijyRANtHEzVr2BS3tqT6nCA=="}

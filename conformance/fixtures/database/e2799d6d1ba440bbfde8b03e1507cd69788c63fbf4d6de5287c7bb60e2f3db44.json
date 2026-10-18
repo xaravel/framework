@@ -1,0 +1,1 @@
+{"sha256":"e2799d6d1ba440bbfde8b03e1507cd69788c63fbf4d6de5287c7bb60e2f3db44","output":{"error":null,"results":[{"value":"select * from [users] where cast([created_at] as date) = ?"},{"value":{"array":[[{"int":"0"},"2015-09-23"]]}}]},"signature":"jkl6TzgOYun8UXjv/OX14pn4Bg6cq4QCIgwG1aMvMT4n8svkFSQpuocyOTmOVv/UmWVq6VEzD5L0RK7/ZlVuDQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"9aac5f8d58c844459589e84e364746060975b1b9cce803a0d5ff39b89a9ec995","output":{"error":null,"results":[{"value":"select `foo` from `users` force index (test_index)"}]},"signature":"6wc60HA5DfvJCSkw/ZYC0V4LFQRyzsfcsD9XuYWOjxPQOZk2/KYqRD/FyIIbuVriOXBzKtTXn2idbFHi7xFdBg=="}

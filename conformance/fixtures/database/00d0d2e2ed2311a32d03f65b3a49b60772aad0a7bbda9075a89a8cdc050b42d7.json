@@ -1,0 +1,1 @@
+{"sha256":"00d0d2e2ed2311a32d03f65b3a49b60772aad0a7bbda9075a89a8cdc050b42d7","output":{"error":null,"results":[{"value":"select * from \"documents\" where (\"embedding\" <=> ?) <= ?"},{"value":{"array":[[{"int":"0"},"[1,2,3]"],[{"int":"1"},{"float":"0.5"}]]}}]},"signature":"7+5K2Xn7w6cmhQJxcK1dHmHWxoRkkElDMXIJy6Og9K4PsGcG7rROIppPTGwnfdPjwzzFmX6XGhXfiA5ZGsxHCw=="}

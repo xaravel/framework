@@ -1,0 +1,1 @@
+{"sha256":"71a0ec6ecc8873d5bd31b0fb4e0ae9c7b3ae5ee9e8b99fc56c2d4d0c3b71f43e","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"items\"->'available')::jsonb = 'true'::jsonb"}]},"signature":"ZHm3JHHfB1C6GJTui19uIbZN3T+ULQuy1P3OU253YfBRT5dlJb/SajsEVBAkUuDl6MMkVlkGnY4pVVBd/KaNCQ=="}

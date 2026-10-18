@@ -1,0 +1,1 @@
+{"sha256":"10ed531671436bd46e6277322c30eeb1c938e12c41670075071a0c99ce8927a1","output":{"error":null,"results":[{"value":"select * from `users` where items->'$.\"price\"' = 1"}]},"signature":"JffVBhkUPexOY5u/Ei1bsb15gRDdA1R3och85e7UK/pZYkTBiTJEodma6pyXoNyK96ruSgpyzgCxirXlLM/LCw=="}

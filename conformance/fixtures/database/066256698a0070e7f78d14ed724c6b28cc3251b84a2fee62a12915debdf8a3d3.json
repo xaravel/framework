@@ -1,0 +1,1 @@
+{"sha256":"066256698a0070e7f78d14ed724c6b28cc3251b84a2fee62a12915debdf8a3d3","output":{"error":null,"results":[{"value":"select * from [users] where cast([created_at] as time) = NOW()"},{"value":{"array":[]}}]},"signature":"lr7Fp/JOG3RC+oPbLDDl1UlY4OLvdX77/LnQj8TXGyiOkqh2aRWTXdiYjATLo3sBHxg3H5UsBExNjdsbDNgGCg=="}

@@ -1,0 +1,1 @@
+{"sha256":"574e5bb93dbab092bd8f96fbade65e1646fd74e74556c4d4c2c94b5f66a377d0","output":{"error":null,"results":[{"value":"select * from \"users\" where \"items\"->'prices'->>0 = ? and \"items\"->>'age' = ?"}]},"signature":"y3XQRlrzm8i2TXC4Ip9a38cpMc1IrwmwnxRbVuCiu6D6LgyjdH4sGfSiDFN2ubt7VckxjEUBVnTvbz3P7Af1Ag=="}

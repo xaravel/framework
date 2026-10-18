@@ -1,0 +1,1 @@
+{"sha256":"5802317e7f75f9345bca4d4597cfc3cb905a771b64851d813229e4682721c526","output":{"error":null,"results":[{"value":"select * from \"users\" where strftime('%Y', \"created_at\") = cast(? as text)"},{"value":{"array":[[{"int":"0"},{"int":"2014"}]]}}]},"signature":"G/z5RFcZuwBsvCn5/nuRuMKwYXG7jDgMfsP2KOhHr/cdyI9uDb5RXk/qvtbJVAiRD9AN51f+L7kjCfwzldkgCw=="}

@@ -1,0 +1,1 @@
+{"sha256":"4cf304f199f62e9bbbf864207da1dd8e8e8adb30eee30740ba0ddb4dd83a67ef","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" drop constraint \"foo\""]]}},{"value":"alter table \"users\" drop constraint \"foo\""}]},"signature":"6uJnhwm1516HBsywuU7+SC1GEnnKIlA82JtzD0RfpYHUfgOLshfYNzG0xcEiaZqfvmOJltdiHa+1G4IMACkTCg=="}

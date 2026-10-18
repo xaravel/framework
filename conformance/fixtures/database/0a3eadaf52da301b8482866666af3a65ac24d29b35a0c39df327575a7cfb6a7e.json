@@ -1,0 +1,1 @@
+{"sha256":"0a3eadaf52da301b8482866666af3a65ac24d29b35a0c39df327575a7cfb6a7e","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `foo` datetime not null"]]}},{"value":"alter table `users` add `foo` datetime not null"}]},"signature":"AB9ivTFQFXu/KznV8lMds1t9Zvz/TBzpzeB7qmPiFR/xL7UpTgWfyP5hZfSYDv4hlkB4wvgbzBroO74sjaMQAg=="}

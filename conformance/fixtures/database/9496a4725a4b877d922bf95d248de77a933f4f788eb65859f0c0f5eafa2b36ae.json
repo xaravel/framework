@@ -1,0 +1,1 @@
+{"sha256":"9496a4725a4b877d922bf95d248de77a933f4f788eb65859f0c0f5eafa2b36ae","output":{"error":null,"results":[{"value":"select \"foo\" as \"bar\" from \"users\""}]},"signature":"Bvt40lR2aiGbrL1Wv24EO0uYFDBxT1EqyU92/nwcqPjHbqT+Ufe5tWmqBnGYsJ+hFKuk+jAgmUe1Hgf6PFGBDw=="}

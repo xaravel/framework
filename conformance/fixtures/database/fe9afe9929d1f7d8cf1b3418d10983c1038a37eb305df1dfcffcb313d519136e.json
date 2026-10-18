@@ -1,0 +1,1 @@
+{"sha256":"fe9afe9929d1f7d8cf1b3418d10983c1038a37eb305df1dfcffcb313d519136e","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add index `baz`(`foo`, `bar`)"]]}},{"value":"alter table `users` add index `baz`(`foo`, `bar`)"}]},"signature":"m+L6gm7m5s0RmenhtYmCvnpaSA0C4AWleCY4kgwwulkFWUycYJ7UIrVbUuQ2+0ZQfKX5BNULfXSO8LPswt6jAw=="}

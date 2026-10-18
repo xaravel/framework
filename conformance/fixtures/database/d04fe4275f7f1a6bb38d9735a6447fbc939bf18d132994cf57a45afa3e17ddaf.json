@@ -1,0 +1,1 @@
+{"sha256":"d04fe4275f7f1a6bb38d9735a6447fbc939bf18d132994cf57a45afa3e17ddaf","output":{"error":null,"results":[{"value":"select * from \"users\" order by \"email\" asc, \"age\" ? desc"},{"value":{"array":[[{"int":"0"},"foo"]]}}]},"signature":"gDOe/BZYMAdBzanQ6l8alvHhFGeDQQsffoA9ebouFCvRF8BjjuYLSk6pGHXjAC9gRdkBfLj/Fj4As9YnS8lJDQ=="}

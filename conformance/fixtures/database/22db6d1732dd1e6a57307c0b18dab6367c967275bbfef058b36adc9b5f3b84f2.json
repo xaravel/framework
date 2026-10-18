@@ -1,0 +1,1 @@
+{"sha256":"22db6d1732dd1e6a57307c0b18dab6367c967275bbfef058b36adc9b5f3b84f2","output":{"error":null,"results":[{"value":"select * from (select max(last_seen_at) as last_seen_at from \"user_sessions\") as \"sessions\""}]},"signature":"W7WjSmFn7Q07iu7BQSduvjqzJnkmSdxUD4YqZFtfxRZJPVZLpIPtCnWuiE5K7SfIXKmFsdUUVp14GWipyP+rCQ=="}

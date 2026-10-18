@@ -1,0 +1,1 @@
+{"sha256":"3e56cc35690fc59f242fd6ec6ebbc19b9cb8c73d4a7f3d5fdbb95b7c98e3ecf8","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"search_vector_nl\") @@ plainto_tsquery('dutch', ?)"},{"value":{"array":[[{"int":"0"},"Hello World"]]}}]},"signature":"6m2K2FFc29dkecPrM+IEEw5LaiyMCgSSKDxustQzBqw3gcpgRyaONaTdt4y3YlXkf4DtPn3xB8z/dqcgAc1QCA=="}

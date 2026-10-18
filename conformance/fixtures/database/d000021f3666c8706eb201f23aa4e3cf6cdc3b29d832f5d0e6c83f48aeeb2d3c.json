@@ -1,0 +1,1 @@
+{"sha256":"d000021f3666c8706eb201f23aa4e3cf6cdc3b29d832f5d0e6c83f48aeeb2d3c","output":{"error":null,"results":[{"value":"select * from \"tableB\" cross join \"tableA\" on \"tableA\".\"column1\" = \"tableB\".\"column2\""}]},"signature":"sysfbf6QD2yGv61B8oD74PjK6ibBbeTHAsday1cfB073t9daZnM7w4X0bauCBkVEtxDBXJAE4sHZTUxEW5LMAQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"26e9cd9517612b71ff557c204a4ad15f25b9c9f43266ae776e429e5520e528ae","output":{"error":null,"results":[{"value":"select \"email\" as \"foo_email\" from \"users\" having \"foo_email\" is not null"}]},"signature":"Aju4ItvF5rF+FNRsCuhBaucWfnRgCZhL40JklmCuwVMxhM9AZ55Zzskp516u4Q6IH5p/1uAqtqDUX5pIGO83CQ=="}

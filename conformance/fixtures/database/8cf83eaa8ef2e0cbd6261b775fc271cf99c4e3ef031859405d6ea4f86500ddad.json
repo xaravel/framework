@@ -1,0 +1,1 @@
+{"sha256":"8cf83eaa8ef2e0cbd6261b775fc271cf99c4e3ef031859405d6ea4f86500ddad","output":{"error":null,"results":[{"value":"select * from \"users\" where \"name\" = ?"}]},"signature":"vmi7FQ+SciEoWHuEBRnsKRmfsqvog9AVimv9k+Hmn/N2C4Wi7Jy72zQwqVfnH5IBzbgvgxhsrpNTyUdXfPiyAg=="}

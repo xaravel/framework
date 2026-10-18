@@ -1,0 +1,1 @@
+{"sha256":"eda5e0accf52f45f9311028bd87366de900d9f36cd9eff1cd87303f0ed85f2f3","output":{"error":null,"results":[{"value":"select * from [users] order by NEWID()"}]},"signature":"8boMumFl16UeEifH70MtyRB3f+Zub9f7zg18BhUSkybg6nVBUEXsifSQI4NnPVBlRvY+xjnGwtZiUwwtidpjCQ=="}

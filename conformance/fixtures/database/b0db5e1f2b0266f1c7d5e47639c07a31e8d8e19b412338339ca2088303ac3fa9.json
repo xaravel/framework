@@ -1,0 +1,1 @@
+{"sha256":"b0db5e1f2b0266f1c7d5e47639c07a31e8d8e19b412338339ca2088303ac3fa9","output":{"error":null,"results":[{"value":"select * from \"users\" inner join lateral (select * from \"contacts\" where \"contracts\".\"user_id\" = \"users\".\"id\") as \"sub\" on true"}]},"signature":"bMBuXbzIC5r5613OM0ucJ4fq3ChO8IbRrWDMna6SY6boTkHCkYgMX7CiYhbczWLlmbj4GuF8r2w55GhqDt1VDw=="}

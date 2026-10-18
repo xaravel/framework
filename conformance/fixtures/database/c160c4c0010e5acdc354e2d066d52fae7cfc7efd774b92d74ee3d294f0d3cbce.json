@@ -1,0 +1,1 @@
+{"sha256":"c160c4c0010e5acdc354e2d066d52fae7cfc7efd774b92d74ee3d294f0d3cbce","output":{"error":null,"results":[{"value":"select * from `users` where `name` != binary ?"},{"value":{"array":[[{"int":"0"},"john"]]}}]},"signature":"e5uFJF5fBtrHX3e7fD+YKmP52Zyi/ZdygWP62UdGfVY1XKACEwKrvBGnNjcN1lRfZJngh+45U/3hKHts6RAaAg=="}

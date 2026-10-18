@@ -1,0 +1,1 @@
+{"sha256":"bffbb76602b9bcf43f2f5876163bad40835a0895c5af58c8cbcee4cf8974e722","output":{"error":null,"results":[{"value":"select * from [users] where exists (select [foo] intersect select ?)"},{"value":{"array":[[{"int":"0"},"bar"]]}}]},"signature":"GeTgEomhWHGoyU73GcpUO6dY/0RF3p5ax0Mhe2ESMYuHFz5Vh0P+fTw69FjFKWCU9ES8+nSgUX5Esh48SHeYDw=="}

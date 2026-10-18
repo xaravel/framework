@@ -1,0 +1,1 @@
+{"sha256":"e1d71f71b519c4bc048702dc347cdb8e65173e85b7ebb2c822875d53e46fa8e4","output":{"error":null,"results":[{"value":"select * from \"users\" having \"email\" > ?"}]},"signature":"zyWK+VKYy5hwrJEoS+ljmxVTjBY3IVVsehl+9jt0OuoBVnuBEeIH2KyaQsxZqHZXd8M/G7VWn+6EnVj+2YtmBQ=="}

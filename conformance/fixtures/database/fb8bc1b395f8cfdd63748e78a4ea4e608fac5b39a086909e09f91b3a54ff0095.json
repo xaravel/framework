@@ -1,0 +1,1 @@
+{"sha256":"fb8bc1b395f8cfdd63748e78a4ea4e608fac5b39a086909e09f91b3a54ff0095","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` drop primary key"]]}},{"value":"alter table `users` drop primary key"}]},"signature":"JcTCjXEeeNblT3wYWfhsE7jcg54YchJu0zbahzhPNLJpWJEVRMxDAbJ/DelWeJMxulU5uw6AXlcD0dD214DpBg=="}

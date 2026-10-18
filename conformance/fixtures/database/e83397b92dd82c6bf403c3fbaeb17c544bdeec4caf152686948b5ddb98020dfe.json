@@ -1,0 +1,1 @@
+{"sha256":"e83397b92dd82c6bf403c3fbaeb17c544bdeec4caf152686948b5ddb98020dfe","output":{"error":null,"results":[{"value":"select * from `users` where day(`created_at`) = ?"},{"value":{"array":[[{"int":"0"},"01"]]}}]},"signature":"4wDSYHqY6VVHAHkt6bc/WIQHGtwRbK6WvverlfiwUj8mLrhHRm/mVDLJ9pMNGmCGtEkOu7ijNSP113Dg27+qAg=="}

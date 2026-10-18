@@ -1,0 +1,1 @@
+{"sha256":"9f6d5e81f52c91dcb260f0ee6c8c110c72c94a33661ceff197d1201cb7635bc1","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"sp_rename N'\"users\".\"foo\"', \"bar\", N'INDEX'"]]}},{"value":"sp_rename N'\"users\".\"foo\"', \"bar\", N'INDEX'"}]},"signature":"eEY6ta5asgjJS9nUARvwoAVWQWSCBf2lt+khYDWfa2p5Yed+KDJvUsle605AltWadRCQy2fQqCneyG8jKG3vDg=="}

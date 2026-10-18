@@ -1,0 +1,1 @@
+{"sha256":"90aa0c273957195d8d50b1860940dee773d0cf4aa44d879efed7cbaec2d30033","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` drop `name`, lock=none"]]}},{"value":"alter table `users` drop `name`, lock=none"}]},"signature":"lzkdAMcHgTW7GyWn1KGB+K93aSJWuhLHtPO9noOnf9f28xL0Xsinbgbl3l2J7XbRrtiO5xtOOTslYEo9NjEiAg=="}

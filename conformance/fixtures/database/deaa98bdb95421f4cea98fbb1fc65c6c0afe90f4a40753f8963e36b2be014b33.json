@@ -1,0 +1,1 @@
+{"sha256":"deaa98bdb95421f4cea98fbb1fc65c6c0afe90f4a40753f8963e36b2be014b33","output":{"error":null,"results":[{"value":"select * from \"users\" where json_array_length(\"users\".\"options\", '$.\"languages\"') > ?"},{"value":{"array":[[{"int":"0"},{"int":"0"}]]}}]},"signature":"RmxLuYDMk0SdAu7hOjjtJ0k6g2AX23AGy0ok1Iw3Z0qwpbtCUga2Eoh+69fa29ts116X8Et3jFHNx+/7DgySBw=="}

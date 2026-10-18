@@ -1,0 +1,1 @@
+{"sha256":"5b6eb4b1ca1c9d599bf9d9a23c8a0de56dde242c52e15f9ef69fa47823df9074","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"foo\" date not null"]]}},{"value":"alter table \"users\" add \"foo\" date not null"}]},"signature":"HF1u5m0ZSWbh9gzsMKtli5Y4pasHl9BJLKgquSZdTOfpiGB2vorfPoUB2IVfTLe4AojgOoLLHGq4oUi2I1YsCQ=="}

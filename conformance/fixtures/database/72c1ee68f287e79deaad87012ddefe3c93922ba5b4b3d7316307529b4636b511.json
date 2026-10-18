@@ -1,0 +1,1 @@
+{"sha256":"72c1ee68f287e79deaad87012ddefe3c93922ba5b4b3d7316307529b4636b511","output":{"error":null,"results":[{"value":"select * from \"users\" where json_type(\"options\", '$.\"language\".\"primary\"') is not null"}]},"signature":"DwvpgWHLvJFCwc1iyxdnXcoLIXS68bQFB8R/6xjfCLZZC2XZ+XZvrbeHr7pW7w96Ag6tb+z+1xDIfKcDmwFICQ=="}

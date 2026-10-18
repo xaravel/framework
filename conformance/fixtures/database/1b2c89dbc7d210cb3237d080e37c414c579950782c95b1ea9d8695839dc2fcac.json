@@ -1,0 +1,1 @@
+{"sha256":"1b2c89dbc7d210cb3237d080e37c414c579950782c95b1ea9d8695839dc2fcac","output":{"error":null,"results":[{"value":"select * from \"foo\" where \"bar\" = ? for share"},{"value":{"array":[[{"int":"0"},"baz"]]}}]},"signature":"TwZVkWu0KHVoz+9NqlfmWCu8JhZso8IQVIF5FcuZd+6immJ3K34W70vxH+OAb9CvK9t1Eq0cMAiEJfAFqtZIBQ=="}

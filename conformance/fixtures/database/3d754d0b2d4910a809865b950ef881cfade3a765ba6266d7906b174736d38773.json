@@ -1,0 +1,1 @@
+{"sha256":"3d754d0b2d4910a809865b950ef881cfade3a765ba6266d7906b174736d38773","output":{"error":null,"results":[{"value":"select * from \"users\" where \"foo\" is null"}]},"signature":"+5Nz+uCS4PnKMJ971WJgCTWfK5CwkxHKCAqqkpWnSHWBMrZVHA/NNeagS2zTZDss6jU90OMV4GQgz+vfU8K6Dg=="}

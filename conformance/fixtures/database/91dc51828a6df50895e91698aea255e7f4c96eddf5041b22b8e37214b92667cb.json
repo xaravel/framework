@@ -1,0 +1,1 @@
+{"sha256":"91dc51828a6df50895e91698aea255e7f4c96eddf5041b22b8e37214b92667cb","output":{"error":null,"results":[{"value":"drop table \"alpha\", \"beta\", \"gamma\" cascade"}]},"signature":"H1L7yOM6HjLdhCBtRPKdt6sXffb4LJ+00Zifpe2UBsVHFbCsjHA9cv6YlhI1hY8kYODC/oBePrlzSsoUeC39Bw=="}

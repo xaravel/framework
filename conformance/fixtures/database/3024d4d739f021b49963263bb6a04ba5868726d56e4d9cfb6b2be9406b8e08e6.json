@@ -1,0 +1,1 @@
+{"sha256":"3024d4d739f021b49963263bb6a04ba5868726d56e4d9cfb6b2be9406b8e08e6","output":{"error":null,"results":[{"value":"select * from \"users\" where \"email\" = ? order by \"email\" asc"},{"value":"select * from \"users\" where \"email\" = ?"}]},"signature":"fDOEJVAooOeUEvKexu4YoGn7n3NydEa5BpFFhaok+GDOA/EEqPg9TxWmcS3nO0C0E4ybfekEkF+vvVEN7xjKAw=="}

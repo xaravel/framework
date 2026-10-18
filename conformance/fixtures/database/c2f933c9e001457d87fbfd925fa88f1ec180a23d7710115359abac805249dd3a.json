@@ -1,0 +1,1 @@
+{"sha256":"c2f933c9e001457d87fbfd925fa88f1ec180a23d7710115359abac805249dd3a","output":{"error":null,"results":[{"value":"select * from [users] where year([created_at]) = ?"},{"value":{"array":[[{"int":"0"},{"int":"2014"}]]}}]},"signature":"zDS45Y6Wouyq2mQbI7X69SzNt2BFr913HST6R3YA2ALwSc0/nxyEn1Ejtns9fWzHR2ZplHUj/cBMBBsWgLYZDQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"525ecc95aacad029a42a2596cfe2a745915557b87630bda854dd7c3f55ce159f","output":{"error":null,"results":[{"value":"select \"w x\".\"y\".\"z\" as \"foo.bar\" from \"baz\""}]},"signature":"V2XKYz5NEoINFkeHGLANxy2Taml3B+pc4E2KQUufyadTTfDmPGuvi1CwUvwqmJ0Q/EwQ7b/kuUefGRCjDAtWCA=="}

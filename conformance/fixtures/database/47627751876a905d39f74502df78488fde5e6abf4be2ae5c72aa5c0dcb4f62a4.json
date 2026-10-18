@@ -1,0 +1,1 @@
+{"sha256":"47627751876a905d39f74502df78488fde5e6abf4be2ae5c72aa5c0dcb4f62a4","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `uuid` char(36) not null"]]}},{"value":"alter table `users` add `uuid` char(36) not null"}]},"signature":"5CErjbO/m+OjA5khz6rkdUGt5gRHP/JVEVI1F7icaEUvhX/NlEeLSovkFnOLyScpFrWZqSjQ6XWAtI6EvR6xBg=="}

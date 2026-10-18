@@ -1,0 +1,1 @@
+{"sha256":"7b8907d7031fe1d37cea7a59f117aefba5613950af6451485dd1c5bcabf4252b","output":{"error":null,"results":[{"value":"select \"foo\", \"bar\", \"baz\", \"boom\" from \"users\""}]},"signature":"hXDJhQNhvplVPGpAzZaHlpVmGwHEZIXaGEJjzT0DXqB9ZpXKXkiTA9qPNUcwBra76DTLP95NiKGIymF4BnnUDw=="}

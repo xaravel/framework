@@ -1,0 +1,1 @@
+{"sha256":"2c0547cf3b436c34ed16be9d0e96fb00526cfa99886683b851473609e9ea88b0","output":{"error":null,"results":[{"value":"select * from \"users\" group by \"id\", \"email\""}]},"signature":"I0WXExc3cQ5brijU9pNEZUmU8vyJH6rS5IkzvzIseaezW+cWIHcJIG1ZkolzE/dKvEIjSoUB+pF3F7o2GzekCA=="}

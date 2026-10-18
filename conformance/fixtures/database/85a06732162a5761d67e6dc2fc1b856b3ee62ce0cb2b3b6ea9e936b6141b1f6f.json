@@ -1,0 +1,1 @@
+{"sha256":"85a06732162a5761d67e6dc2fc1b856b3ee62ce0cb2b3b6ea9e936b6141b1f6f","output":{"error":null,"results":[{"value":"select * from `users` where `name` sounds like ?"},{"value":{"array":[[{"int":"0"},"John Doe"]]}}]},"signature":"3AOUMeMspoWki2neQOY9hu6OAkmncGsrMixLOr8rnQfEfzupGverhpVz9HDPCcyh9b31lWyFRoDcjUbXKJshBg=="}

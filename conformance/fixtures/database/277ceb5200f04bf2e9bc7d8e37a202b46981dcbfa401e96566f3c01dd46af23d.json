@@ -1,0 +1,1 @@
+{"sha256":"277ceb5200f04bf2e9bc7d8e37a202b46981dcbfa401e96566f3c01dd46af23d","output":{"error":null,"results":[{"value":"select * from \"users\" order by \"updated_at\" asc"}]},"signature":"5X45tGtn3m6RkINoSlhIQ/n+CsLQhrIY53H9zLMiXsE0Zcm1ssz4EdZQX2IOl/aISZxEnYRJC2BzSHksx/yaDg=="}

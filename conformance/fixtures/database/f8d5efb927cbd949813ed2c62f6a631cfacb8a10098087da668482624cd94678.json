@@ -1,0 +1,1 @@
+{"sha256":"f8d5efb927cbd949813ed2c62f6a631cfacb8a10098087da668482624cd94678","output":{"error":null,"results":[{"value":"select * from [users] where 'primary' in (select [key] from openjson([options], '$.\"language\"'))"}]},"signature":"ObVsoN8FvVMuiNk/pq0Kx8yIKSe4yawmPmDpl/tR/vYV+LWpwLMmEqRw1m51ixNdEHVflSGeUJcJOoAvHVCHBQ=="}

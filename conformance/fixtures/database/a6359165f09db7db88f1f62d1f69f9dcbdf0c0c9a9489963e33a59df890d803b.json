@@ -1,0 +1,1 @@
+{"sha256":"a6359165f09db7db88f1f62d1f69f9dcbdf0c0c9a9489963e33a59df890d803b","output":{"error":null,"results":[{"value":"select * from \"users\" order by (select \"created_at\" from \"logins\" where \"user_id\" = \"users\".\"id\" limit 1) desc"}]},"signature":"rM6/qBXoQLoD9NrlntIuZ2ci0gISZwqVfKkIIsBE5vWFJeRfkJNf3fS6Q1jIKgWHu2KsIg69uxhJVfkOydRxAA=="}

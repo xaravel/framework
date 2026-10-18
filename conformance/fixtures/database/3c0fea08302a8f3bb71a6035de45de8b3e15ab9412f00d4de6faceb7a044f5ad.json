@@ -1,0 +1,1 @@
+{"sha256":"3c0fea08302a8f3bb71a6035de45de8b3e15ab9412f00d4de6faceb7a044f5ad","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" not in (1, 2)"},{"value":{"array":[]}}]},"signature":"DXlHYXvdMQljyzDIXosX8ExlbCrZNfzlk1si0i9lKzenwaFQqpyBCguIs2byT3p7KazrSbRSmqqZ/XR4c5q5BA=="}

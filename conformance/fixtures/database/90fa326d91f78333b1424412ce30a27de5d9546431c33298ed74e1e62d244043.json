@@ -1,0 +1,1 @@
+{"sha256":"90fa326d91f78333b1424412ce30a27de5d9546431c33298ed74e1e62d244043","output":{"error":null,"results":[{"value":"select * from [foo] with(holdlock) where [bar] = ?"},{"value":{"array":[[{"int":"0"},"baz"]]}}]},"signature":"dWY8uqWK9RaOgrIUlUN2MbPp6BTmBEfPLoKcIi2px4+ILBohmiN/QWkqzJqd1FPlhwKC+g2qP6JhtcxovujrCg=="}

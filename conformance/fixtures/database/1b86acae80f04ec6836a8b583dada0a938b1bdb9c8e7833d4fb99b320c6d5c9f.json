@@ -1,0 +1,1 @@
+{"sha256":"1b86acae80f04ec6836a8b583dada0a938b1bdb9c8e7833d4fb99b320c6d5c9f","output":{"error":null,"results":[{"value":"select * from dbo.[SomeNameWithRoundBrackets (test)]"}]},"signature":"Oph3N48esBfBBicYq4uNx9NzIu0TyWQiJIXYnhWg4TqA5xQOXvOPaz06p7h2qqza9GVzqRqtz/uPQa25QQlfBQ=="}

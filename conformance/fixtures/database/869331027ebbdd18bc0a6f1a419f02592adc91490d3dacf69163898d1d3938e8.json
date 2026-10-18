@@ -1,0 +1,1 @@
+{"sha256":"869331027ebbdd18bc0a6f1a419f02592adc91490d3dacf69163898d1d3938e8","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add primary key using hash(`foo`)"]]}},{"value":"alter table `users` add primary key using hash(`foo`)"}]},"signature":"Vtvk61NFqTFH6yFtGBGq9wWWa+BPs5mgfSJfLU2clj7SD+KvZRAYfUjHj4eG6wEnuEdoEPX6xYDAisKDjgCYBg=="}

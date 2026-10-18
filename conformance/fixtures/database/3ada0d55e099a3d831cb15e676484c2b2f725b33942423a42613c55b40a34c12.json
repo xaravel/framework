@@ -1,0 +1,1 @@
+{"sha256":"3ada0d55e099a3d831cb15e676484c2b2f725b33942423a42613c55b40a34c12","output":{"error":null,"results":[{"value":"select * from \"orders\" where (\"last_update\", \"order_number\") < (?, 2)"},{"value":{"array":[[{"int":"0"},{"int":"1"}]]}}]},"signature":"zRdLroML0tPFhRL1+k8GRAktyAnOUeoECvmNbAZqrzjrOZQQLBGls7tOxa5zEzab64OzIWwUotGVE00mepeyAQ=="}

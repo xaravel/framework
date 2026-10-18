@@ -1,0 +1,1 @@
+{"sha256":"947656f3045366f4fd43c6d4f5c8f9edeae2ddee1b714c27baecd15d1c019a8a","output":{"error":null,"results":[{"value":"select * from \"users\" inner join \"contacts\" on \"users\".\"id\" = \"contacts\".\"id\" and \"contacts\".\"deleted_at\" is not null"}]},"signature":"WIoBBo6h5Y02D4Cd3CXHhnDU0uGzF+y4xJJoyr752kiyyfw8eLDbUVYIfAQfRm1UZdRt3QF4g3Spe6cJgr2JCg=="}

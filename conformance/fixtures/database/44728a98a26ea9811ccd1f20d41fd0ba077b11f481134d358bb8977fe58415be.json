@@ -1,0 +1,1 @@
+{"sha256":"44728a98a26ea9811ccd1f20d41fd0ba077b11f481134d358bb8977fe58415be","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"foo\" varbinary(max) not null"]]}},{"value":"alter table \"users\" add \"foo\" varbinary(max) not null"}]},"signature":"ZqYOmH4sXH4XfU+svIom9uecLmc8HJPt8yhF1tdIH5ckvo+FdDV+PUwfT5oe9wu7rw7Bbgwzcgvl31ltDj8UBA=="}

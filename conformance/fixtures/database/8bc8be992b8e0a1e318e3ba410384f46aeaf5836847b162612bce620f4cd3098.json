@@ -1,0 +1,1 @@
+{"sha256":"8bc8be992b8e0a1e318e3ba410384f46aeaf5836847b162612bce620f4cd3098","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"create unique index \"bar\" on \"users\" (\"foo\")"]]}},{"value":"create unique index \"bar\" on \"users\" (\"foo\")"}]},"signature":"IwRkG0wpvcgB3vVBK48wcaFWYSBysIwwPwd4HJy2ecV5zdzRXMQn6f+k3lkZm8vZWdN2IqyOLyOlOLnGl19jDg=="}

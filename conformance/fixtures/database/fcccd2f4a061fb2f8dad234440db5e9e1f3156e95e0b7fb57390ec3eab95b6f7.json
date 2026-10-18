@@ -1,0 +1,1 @@
+{"sha256":"fcccd2f4a061fb2f8dad234440db5e9e1f3156e95e0b7fb57390ec3eab95b6f7","output":{"error":null,"results":[{"value":"select * from \"users\" order by case when \"status\" = ? then 0 else 1 end"},{"value":{"array":[[{"int":"0"},"active"]]}}]},"signature":"WQm5F0XReK6OQlC+5v9RtsFiEazDGCzIxjU/NNTfY0HqK+sIoL1Eco9ZzUEt09n1G5/i2tuNGCUAuofdtBAVCw=="}

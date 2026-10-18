@@ -1,0 +1,1 @@
+{"sha256":"4b18510e6127538d0214ddc16731b9d2a6a8833449155284b2bcb2d7efbd84d2","output":{"error":null,"results":[{"value":"select * from `users` order by RAND()"}]},"signature":"+szsrhkLrWrnhuzW2/jhtjAPxNaVGoat5sC/aGWzk7qT1yuzSF2VvzUJOiXt+YwbJDIYQx+btG2QbYkt0XK0AA=="}

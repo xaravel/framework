@@ -1,0 +1,1 @@
+{"sha256":"2c5b5c62ef86cecc783feb89b8ea1781abf8385d92f9b48a5921bf5c546a6826","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"users\".\"options\"->'languages')::jsonb @> ?"},{"value":{"array":[[{"int":"0"},"[\"en\"]"]]}}]},"signature":"6yAk4B+AjkiSeJ51XSVeWuMlCFn3oQVj70m5XVGyP9f0ntsdkWpgplhdyxcWodC61SayVIToRBJTZJf3OznkDA=="}

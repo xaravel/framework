@@ -1,0 +1,1 @@
+{"sha256":"320d67552e11a5250496152980e9b6970e07927efeef6f86a1cc8209010d0cb0","output":{"error":null,"results":[{"value":"select \"category\", count(*) as \"total\" from \"item\" where \"department\" = ? group by \"category\" having \"total\" > ?"}]},"signature":"4c/xka9s+OpetJzfZZtsZ3ovfHufIHHdMM8HG9n3EW3VEMbyEB6up1s2MboEjW6YLxMu8zL6j6zDiJZP6K5KBw=="}

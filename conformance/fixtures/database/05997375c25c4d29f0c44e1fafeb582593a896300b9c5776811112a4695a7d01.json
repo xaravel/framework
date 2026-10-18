@@ -1,0 +1,1 @@
+{"sha256":"05997375c25c4d29f0c44e1fafeb582593a896300b9c5776811112a4695a7d01","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" is not null and \"expires_at\" is not null"},{"value":{"array":[]}}]},"signature":"P9lS6sXTQGSeUEuR1JcTUfIHa1Pa4cbecli2UEJJf99BJe5STVhkm9VHgwtIBxascBmt586Svs6TLSQov69eCg=="}

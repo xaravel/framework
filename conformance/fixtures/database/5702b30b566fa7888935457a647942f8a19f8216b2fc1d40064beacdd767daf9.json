@@ -1,0 +1,1 @@
+{"sha256":"5702b30b566fa7888935457a647942f8a19f8216b2fc1d40064beacdd767daf9","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop table if exists `users`"]]}},{"value":"drop table if exists `users`"}]},"signature":"yJa+HwGzoYVJx2lSwfe/yVFIQnuwqFKP5pcpAQ18O3OmWDH8ya6s0eGDqxeBDFPVax/0D1npMH50hMRBh3vVDA=="}

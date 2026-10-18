@@ -1,0 +1,1 @@
+{"sha256":"8f032f4214ef3877069126476a716c8f966e2c4dd3fa58ca1f60d460d8874088","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"foo\" datetimeoffset not null"]]}},{"value":"alter table \"users\" add \"foo\" datetimeoffset not null"}]},"signature":"HLqztZCo16MggS+Ves6rYvsZIa3eFZvlfK9f1kk18T49eEjQUYbkAKXzKDhL4uCTyj9RDCO6Xt+Lxktzb1xAAA=="}

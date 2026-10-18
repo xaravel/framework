@@ -1,0 +1,1 @@
+{"sha256":"72e32ff76fcbaa9c1f26ca28065af596be52d4d9f60ff7e173fb6bc62b9ca4ce","output":{"error":null,"results":[{"value":"select `foo` from `users` ignore index (test_index)"}]},"signature":"WSie+kcIWRW67+PwtEe7v4mn34wva37UCm/hR0y5CxUFeRQg/31fVtUj2Clm6nAnKZlgMPyINLyFHQ9+Bqj6CQ=="}

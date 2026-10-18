@@ -1,0 +1,1 @@
+{"sha256":"1903feaf0e2358da59165d86fbaca4fd1556fb69ef680c94b2244c82822ad140","output":{"error":null,"results":[{"value":"select * from \"users\" where strftime('%H:%M:%S', \"created_at\") = cast(? as text)"},{"value":{"array":[[{"int":"0"},"22:00"]]}}]},"signature":"+Z1/TmwHFcwttq3CCJG49YBH5Wfs7ehSdxZWDhHx0blIswHdzqO+HR9G3rzpyVdIS06M955LFRL7XWR9Ta3PDA=="}

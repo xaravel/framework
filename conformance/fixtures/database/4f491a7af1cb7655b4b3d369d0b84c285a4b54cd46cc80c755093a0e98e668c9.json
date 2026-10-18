@@ -1,0 +1,1 @@
+{"sha256":"4f491a7af1cb7655b4b3d369d0b84c285a4b54cd46cc80c755093a0e98e668c9","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `foo` blob not null"]]}},{"value":"alter table `users` add `foo` blob not null"}]},"signature":"toreDeXvSnP5xxIJOat1fI2P9ZEti+Oluuycq+/p7SBZHjqG80ThHAekmUVDtTW/mZwxxrRgPSJpZfs5mUesCQ=="}

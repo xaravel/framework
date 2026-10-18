@@ -1,0 +1,1 @@
+{"sha256":"80205e990c76079f0103cbdc66dbf4d6aeab280464909982b36280e52eef9cbd","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" not in (select \"id\" from \"users\" where \"age\" > ? limit 3)"},{"value":{"array":[[{"int":"0"},{"int":"25"}]]}}]},"signature":"zBd922J5Zb32DJ4oM7ZY/Rq7v8uDUHuD9LJaiNXQhKj3JcI6IOB2w0C4EjPRRwYYXx7NfkPJpybJi/zf7eRgAg=="}

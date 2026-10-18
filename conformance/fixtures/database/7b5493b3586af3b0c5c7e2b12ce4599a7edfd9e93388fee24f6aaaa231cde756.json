@@ -1,0 +1,1 @@
+{"sha256":"7b5493b3586af3b0c5c7e2b12ce4599a7edfd9e93388fee24f6aaaa231cde756","output":{"error":null,"results":[{"value":"select * from \"users\" group by DATE(created_at)"}]},"signature":"onYqyJE9m6kvmEvD2d9qWhp8RmNnFiA5gkN5+iv7WWVYqvKy8eMSm8LsSebEvX8gbHEllkduBuUuzm2ZcruIAg=="}

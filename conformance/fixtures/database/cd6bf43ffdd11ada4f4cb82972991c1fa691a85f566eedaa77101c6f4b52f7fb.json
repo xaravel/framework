@@ -1,0 +1,1 @@
+{"sha256":"cd6bf43ffdd11ada4f4cb82972991c1fa691a85f566eedaa77101c6f4b52f7fb","output":{"error":null,"results":[{"value":"select * from \"users\" where (to_tsvector('english', \"body\")) @@ plainto_tsquery('english', ?)"},{"value":{"array":[[{"int":"0"},"Hello World"]]}}]},"signature":"Gr6+T1UN+Xn5h+EzOahBGOmqKauqPS3wJfsw7QqA14/w8dube50tjyeqMfPGAEWM9V/gLljI6bqy/yvWJuuUBA=="}

@@ -1,0 +1,1 @@
+{"sha256":"8ce18eca7f0e2bf0496a70489e5fa84c730433fe4d63fbcbb5061c1053b19baa","output":{"error":null,"results":[{"value":"select * from [users] where json_value([items], '$.\"price\".\"in_usd\"') = ?"}]},"signature":"XVxzsKl0Yd6SMIztyRg7njEts2El12pOzo+012l20zH55aFm/eRe9DciDXO+YSnQA9CY9UeTE1YzzxX99EyjAw=="}

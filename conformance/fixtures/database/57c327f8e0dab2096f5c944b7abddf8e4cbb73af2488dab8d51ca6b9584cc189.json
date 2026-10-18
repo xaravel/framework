@@ -1,0 +1,1 @@
+{"sha256":"57c327f8e0dab2096f5c944b7abddf8e4cbb73af2488dab8d51ca6b9584cc189","output":{"error":null,"results":[{"value":"select \"email\" as \"foo_email\" from \"users\" having \"foo_email\" > ?"}]},"signature":"Z4+Z7h2cZeDUOLxILNKJ2yDOJgcRWHKztcrvstNxkXH3YjxYBC1O5EnHY5PV80RFSLVtb5i40v3/snBHxtSEDQ=="}

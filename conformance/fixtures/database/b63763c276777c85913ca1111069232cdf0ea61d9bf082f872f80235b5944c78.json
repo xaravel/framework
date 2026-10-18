@@ -1,0 +1,1 @@
+{"sha256":"b63763c276777c85913ca1111069232cdf0ea61d9bf082f872f80235b5944c78","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` rename index `foo` to `bar`"]]}},{"value":"alter table `users` rename index `foo` to `bar`"}]},"signature":"c7aE4pejFMdLfJ9Y4qvcRTpfwlCuLdl3N+Wh/QyHvibm6/wWuDMhx6dIfRiDhtZ3oxS3W8tflT1+kBANg8RHDw=="}

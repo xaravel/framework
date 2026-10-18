@@ -1,0 +1,1 @@
+{"sha256":"71f63dbeb75ee2e90ea13c2056b4debfa4aace428ea0a3a9b5b82cf522fc8bb6","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"result\"->>'created_at')::time >= ?"},{"value":{"array":[[{"int":"0"},"22:00"]]}}]},"signature":"iQ9K0+v7q7KapU6TE4Tn04kKCGJalCxfVvFz4t5xzYeukSWW2hmb4I2bwcSkfGtbAuQfHW4kKXQ7bvSb1AruBQ=="}

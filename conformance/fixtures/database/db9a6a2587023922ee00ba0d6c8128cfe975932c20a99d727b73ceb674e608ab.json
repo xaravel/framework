@@ -1,0 +1,1 @@
+{"sha256":"db9a6a2587023922ee00ba0d6c8128cfe975932c20a99d727b73ceb674e608ab","output":{"error":null,"results":[{"value":"select * from `users` where match (`body`) against (? in boolean mode)"},{"value":{"array":[[{"int":"0"},"+Hello -World"]]}}]},"signature":"kxJbkBCi3Spnng8XeyK4pU0OCXLo712Ur8cIc0BPh7fJVwhOs6YSRwcM3/5s2AKmzBVl+4KCAvAUwHYIeUzhCw=="}

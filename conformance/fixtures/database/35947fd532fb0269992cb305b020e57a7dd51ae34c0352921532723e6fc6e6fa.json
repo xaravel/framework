@@ -1,0 +1,1 @@
+{"sha256":"35947fd532fb0269992cb305b020e57a7dd51ae34c0352921532723e6fc6e6fa","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" glob ?"},{"value":{"array":[[{"int":"0"},"1"]]}}]},"signature":"6KL3RKKPMCOLugGYggF+L8GFNJO/wkHUUGrYiKMLxYRViV/koxHMj9mUOWWOseo5I9AowJd+Ftoof0oqvCUaDw=="}

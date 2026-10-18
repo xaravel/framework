@@ -1,0 +1,1 @@
+{"sha256":"35707b9e827d4c9d8a7d526d5fe4c166075034d054f71fabb5fbf63406bd1d21","output":{"error":null,"results":[{"value":"select * from \"users\" having \"email\" is not null and \"phone\" is not null"}]},"signature":"QlMyJnuztWcy5+cDJIYEmBsYex+vcDCdArfB2O5/ETYawitDNcg24wKMG327tF6pNhPMiE8TantzQdptPy3lDw=="}

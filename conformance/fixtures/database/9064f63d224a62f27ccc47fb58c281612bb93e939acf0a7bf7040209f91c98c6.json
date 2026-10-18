@@ -1,0 +1,1 @@
+{"sha256":"9064f63d224a62f27ccc47fb58c281612bb93e939acf0a7bf7040209f91c98c6","output":{"error":null,"results":[{"value":"drop database if exists \"my_database_b\""}]},"signature":"fOryovezDuSV20O44BTVgQghG6ftF8cg6IyxBqtV6eBmAmPQy1WmzzIdsbGQQ9Ib8OTYP5Qmicg9oLRWmI1cCQ=="}

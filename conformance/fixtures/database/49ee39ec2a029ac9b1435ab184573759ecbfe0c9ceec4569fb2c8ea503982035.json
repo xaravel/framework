@@ -1,0 +1,1 @@
+{"sha256":"49ee39ec2a029ac9b1435ab184573759ecbfe0c9ceec4569fb2c8ea503982035","output":{"error":null,"results":[{"value":"select * from `posts` where date(`published_at`) > ?"},{"value":{"array":[[{"int":"0"},"2022-04-20"]]}}]},"signature":"+Bu7ILMTpa71SxmW8UamMoTuQkaD7s4iv4ZTQydNWf7IN3NGtfV/mt6arE49xz4td6f6rrGozqtKFUAs/u+iBA=="}

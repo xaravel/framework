@@ -1,0 +1,1 @@
+{"sha256":"2ae7f767124498d108ab39f2b99549563e80430d512da3fe196767886a5e592b","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"result\"->>'created_at')::date = NOW()"}]},"signature":"zeNVcOHvc3sMBUTjxXJ9/JjWLqvDjH9UlIKcAEXnVxhemoHKHsKpZoCNbzeLM200z/O3xChIJ8El/+wV11TIBA=="}

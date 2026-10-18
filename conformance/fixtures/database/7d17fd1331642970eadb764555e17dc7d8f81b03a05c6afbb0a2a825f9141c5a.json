@@ -1,0 +1,1 @@
+{"sha256":"7d17fd1331642970eadb764555e17dc7d8f81b03a05c6afbb0a2a825f9141c5a","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"last_name\" = ? or \"email\" = ?)"},{"value":{"array":[[{"int":"0"},"%Otwell%"],[{"int":"1"},"%Otwell%"]]}}]},"signature":"Nc8Bwgg015Gu2XvRa4knt3nPJx1uY0bM+lL1YK32AVyLadqS3y0X+ZmQE7ewmEWszQ9ZxamLRPg8f2XyId/DBQ=="}

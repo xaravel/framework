@@ -1,0 +1,1 @@
+{"sha256":"e52e2c79e210fed500027520e71c3f89cfd9906d46928b9cdb247bc1526e4c7b","output":{"error":null,"results":[{"value":"select * from \"users\" where jsonb_array_length((\"json\"->'''))#')::jsonb) = ?"}]},"signature":"ZofzUB2CkqtRbj0OKE0QvQ6FlfLT3ntrF0rRtRdaKdtLturzAQKV4LzQ6k5VpDpdBBzWQmo8KpTpY7XwdjfwBQ=="}

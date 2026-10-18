@@ -1,0 +1,1 @@
+{"sha256":"e1292090f7c11fb828bec18b652dc446bd9a4880f40125acd816f6b2e4e75180","output":{"error":null,"results":[{"value":"select * from `users` where json_unquote(json_extract(`items`, '$.\"sku\"')) = ?"},{"value":{"array":[[{"int":"0"},"foo-bar"]]}},{"value":"foo-bar"}]},"signature":"4sSte1jERJO1U4ayzZuBZeYHufDbqiGkkpm0BIijYm6gfgoKRzKF/jCZh0Trxd9xqk1eMnkaMgwJTH8mSh9ZCw=="}

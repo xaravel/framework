@@ -1,0 +1,1 @@
+{"sha256":"3619e2ce1a0ac78cbf1b769676adb782dcbc675788c8189a1404e6bf7a8c8833","output":{"error":null,"results":[{"value":"select * from \"users\" inner join \"contacts\" on \"users\".\"id\" = \"contacts\".\"id\""}]},"signature":"7tOMDla1tgdZKcuMmSsgBWmgOCuoiowrWJbuVWlsVnol2bGCTVXjsR5OIDcSIsevPf7QmkfD9LvqB9J5kWnHCA=="}

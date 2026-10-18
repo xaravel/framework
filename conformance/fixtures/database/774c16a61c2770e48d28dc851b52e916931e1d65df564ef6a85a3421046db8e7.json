@@ -1,0 +1,1 @@
+{"sha256":"774c16a61c2770e48d28dc851b52e916931e1d65df564ef6a85a3421046db8e7","output":{"error":null,"results":[{"value":"select * from [users] where json_value([items], '$.\"available\"') = 'true'"}]},"signature":"FXDS0BRwKXlM5ys2cNVvs5f8mHqec7Mma4PTgwuAx+y53sawy+WDdV6jfpFXqCtrGDEjoID9eLtcCfH5UdjwAQ=="}

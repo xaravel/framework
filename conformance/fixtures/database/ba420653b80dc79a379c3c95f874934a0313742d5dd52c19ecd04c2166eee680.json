@@ -1,0 +1,1 @@
+{"sha256":"ba420653b80dc79a379c3c95f874934a0313742d5dd52c19ecd04c2166eee680","output":{"error":null,"results":[{"value":"(select * from \"first\") union (select * from \"second\")"}]},"signature":"CLqPwnkNCRGWSoqzoAw8XI43oUzd4TmnGf0zX/QFUQ5T5wwX+j9hLiA6SGDv9c1qYd6WTATRsOH4Jozj9I0nCg=="}

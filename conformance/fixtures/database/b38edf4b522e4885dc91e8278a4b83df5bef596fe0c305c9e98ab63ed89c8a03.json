@@ -1,0 +1,1 @@
+{"sha256":"b38edf4b522e4885dc91e8278a4b83df5bef596fe0c305c9e98ab63ed89c8a03","output":{"error":null,"results":[{"value":"select * from `users` where not json_overlaps(json_extract(`options`, '$.\"languages\"'), ?)"},{"value":{"array":[[{"int":"0"},"[\"en\",\"fr\"]"]]}}]},"signature":"ZXmWcabWc7xNaeg5KxQMPRuyBcQvTU3kXWsJD6UuaWItZbVPTOakFKFhyI+/KddbKqBvs0JM++T9tSJt66EUCg=="}

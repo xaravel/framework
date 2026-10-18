@@ -1,0 +1,1 @@
+{"sha256":"15f02cf31d69da555e00e9a365c946cdec47921f4499d7d60d881901180db159","output":{"error":null,"results":[{"value":"select * from `users` where json_overlaps(`options`, ?)"},{"value":{"array":[[{"int":"0"},"[\"en\",\"fr\"]"]]}}]},"signature":"O9sR9Dw1qfDYrBslXz6BZ0EJNGUdG+TPRmwtrQzaHrR+EobntCsjYUmNiVvQdVbivF698LBfADAXcfIrzu/nAw=="}

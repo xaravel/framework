@@ -1,0 +1,1 @@
+{"sha256":"b5f4fbd43fcfe9b0d7dab7fe30e88493526bb3b093babef88fcf52d828d7f772","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop index \"foo\" on \"users\""]]}},{"value":"drop index \"foo\" on \"users\""}]},"signature":"0atHXIGz5qDERXCs5gp+J8MNqtjkFipnQ9qlYfv2LYJYaULxpVGukrTHdT1MBFjgecqyqrNPhxmlQlNNl54YCQ=="}

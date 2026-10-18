@@ -1,0 +1,1 @@
+{"sha256":"3c573194319fb124471d5dc052c2a4d59a8417c18984de86e4ec2fd457388cfa","output":{"error":null,"results":[{"value":"select * from `users` where items->'$.available' = true"}]},"signature":"YFpGi4udVExTXY57QFGmM186oI/9rEWxTuXx5XAMP0l0ESiH0a5nSGy0UE+B1KNg0fbiynWA9fT5aizrzu3TBw=="}

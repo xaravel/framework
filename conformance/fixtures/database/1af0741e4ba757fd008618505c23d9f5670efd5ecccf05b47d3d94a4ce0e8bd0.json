@@ -1,0 +1,1 @@
+{"sha256":"1af0741e4ba757fd008618505c23d9f5670efd5ecccf05b47d3d94a4ce0e8bd0","output":{"error":null,"results":[{"value":"select * from \"users\" where exists (select 1 from json_each(\"options\") where \"json_each\".\"value\" is ?)"},{"value":{"array":[[{"int":"0"},"en"]]}}]},"signature":"5vBEf5mOUOf8hIvCbOsnQm9QLMbIbOfX5ubs/vEmJYc5zbvwz6DOax8Bm9+bjotgKnQxaK2OS4+DRRvwMuZiAQ=="}

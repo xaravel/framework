@@ -1,0 +1,1 @@
+{"sha256":"f2a86dcf5dec8d6d04daef9bcfcce48a191ccf694b63c6e4e1709c655450b079","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"foo\" jsonb not null"]]}},{"value":"alter table \"users\" add column \"foo\" jsonb not null"}]},"signature":"4DbyJAd8FcAJriBKIf17LD+InCSjLI/Q2fyHP9L0JQK/9YY0qxqeSseNUgyT7ko075sk0xGVhC4MahhHh+DZAQ=="}

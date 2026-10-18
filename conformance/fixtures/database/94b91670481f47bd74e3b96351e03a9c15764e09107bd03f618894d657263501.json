@@ -1,0 +1,1 @@
+{"sha256":"94b91670481f47bd74e3b96351e03a9c15764e09107bd03f618894d657263501","output":{"error":null,"results":[{"value":"select * from \"users\" group by \"email\" having \"email\" is not null"}]},"signature":"IEdY8TaOnfr+U0b+2ho1TJeBjGX1IBd4hk7PeubbzAcptMfNOOf1acANuFUyjF1x3hi8ifQaOGUj0A+Q15tjDQ=="}

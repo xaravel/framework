@@ -1,0 +1,1 @@
+{"sha256":"ad9e113f86d9ceb1d426eba24a2dcb1ae447e639877d5a0cf57d2609b720fb89","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` drop `created_at`, drop `updated_at`"]]}},{"value":"alter table `users` drop `created_at`, drop `updated_at`"}]},"signature":"+Vb5kk9/S63htdTeQwpiYA+7s7bduKPiPVlM4oCuN44PRu9GWOMwqkmC+xJq2PO02iyxpv9ix/F3iihhVvZsBg=="}

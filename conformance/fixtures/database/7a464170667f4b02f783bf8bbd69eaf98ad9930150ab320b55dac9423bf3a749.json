@@ -1,0 +1,1 @@
+{"sha256":"7a464170667f4b02f783bf8bbd69eaf98ad9930150ab320b55dac9423bf3a749","output":{"error":null,"results":[{"value":"select * from `users` where `id` = ? or id is null"},{"value":{"array":[[{"int":"0"},{"int":"1"}]]}}]},"signature":"jtXE6bhRwGU/p1p1fMDG4UINC7JPbgeKG0NsoiJqUKNrwm/0o5n4EcyDcRDGL7D5ceYUVCvnxu7yRbbAz/F0AA=="}

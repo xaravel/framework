@@ -1,0 +1,1 @@
+{"sha256":"312fd571274812a25a166dd685f2e11f8938687cb7f72275a4563a51e5bc2f05","output":{"error":null,"results":[{"value":"select * from \"users\" having (\"range\" >> ?)::bool"}]},"signature":"5mpLtn4geXFsNNfWeurIkpYDZD0Cr98SkRJSSeP35MKEcO3gFQlv3fadBpZ3IzDLKkHM4CXMN+rKXVDBfFEqAQ=="}

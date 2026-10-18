@@ -1,0 +1,1 @@
+{"sha256":"0bbc5abea94a960693ee92d62b86a4d726f6bfdb9f99a536df143363a3787965","output":{"error":null,"results":[{"value":"select * from \"users\" where \"name\" glob ? and \"name\" not glob ?"},{"value":{"array":[[{"int":"0"},"John*"],[{"int":"1"},"*Doe*"]]}}]},"signature":"fd3LEjI8QVnAXQLSdoXjXdsiABrWj/c6+vG5gan0SGN7Qy6N8S94HCTtJL3SORfj8vS7/g6nwwWIAbpvWEvPBw=="}

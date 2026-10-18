@@ -1,0 +1,1 @@
+{"sha256":"99beb6081e815f035b2ca799688f4a18f7ee034ccccae5a85cc81c781c526fdd","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" = ? and \"email\" = ?"}]},"signature":"ukRGO/xllN36SiIpOyUoH3fMoVa/0UVZi8IE52lpzDBrV7F1GWRvDpsVZEXDvFkC7ngzaF6Bp98kUS5tICRoCQ=="}

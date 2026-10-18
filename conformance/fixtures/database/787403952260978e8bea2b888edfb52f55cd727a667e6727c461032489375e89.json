@@ -1,0 +1,1 @@
+{"sha256":"787403952260978e8bea2b888edfb52f55cd727a667e6727c461032489375e89","output":{"error":null,"results":[{"value":"select * from \"orders\" where \"company_id\" = ? or (\"last_update\", \"order_number\") < (?, ?)"}]},"signature":"EUDk4CVNnCCWayKc23VFjZsReDRYQQszXNIQGTGjHKHJW6s6Z+jkYAAUixmdCM06/xkkDtOFX0dFFfSFlqzFCg=="}
