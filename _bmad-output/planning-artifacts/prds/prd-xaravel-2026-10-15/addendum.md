@@ -4,7 +4,7 @@ This addendum holds the technical detail behind the PRD, for use by the architec
 
 ## Repository and distribution (confirmed 2026-10-15, updated 2026-10-16)
 
-- **Name:** the product was renamed from Jaravel to **Xaravel** on 2026-10-15, to keep distance from the "Laravel" trademark (see the Trademark section). The earlier name had other problems too: `github.com/jaravel` belongs to an inactive user, and the unscoped npm `jaravel` belongs to another maintainer.
+- **Name:** the product is **Xaravel**, chosen to keep distance from the "Laravel" trademark (see the Trademark section).
 - **GitHub:** the org `github.com/xaravel` is owned by Ed. It was registered on 2026-10-15 and renamed to lowercase `xaravel` on 2026-10-16.
   - The monorepo lives at `xaravel/framework`, mirroring `laravel/framework`. It was created as a public repo on 2026-10-15 (https://github.com/xaravel/framework). It uses Bun workspaces, with one workspace per Package.
   - `xaravel/xaravel` is reserved for a read-only mirror of the Skeleton, mirroring `laravel/laravel`, if one is ever needed for templates.

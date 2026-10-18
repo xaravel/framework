@@ -15,7 +15,7 @@ A TypeScript port of Laravel 13 (`laravel/framework` v13.37.0) to Bun, server-re
 - Never weaken the grader: no removed assertions, weakened expected values, or new skips without a DIV clause or an approved Escalation. Never stub, fake, or partially implement another Component to pass a test; mark it `blocked-by:<component>`.
 - A Story edits only `packages/<its component>/**`, its own Expectations lines, `conformance/oracle-requests/<story-id>.jsonl` and its own Escalations. Protected Paths (AD-16 list) change only through a Maintainer-approved Infrastructure Story.
 - Never publish to npm or handle publish credentials; only the Maintainer releases, from CI (AD-18). Never commit secrets or an `APP_KEY`.
-- The name is Xaravel (`xaravel`) everywhere — never the former name Jaravel. Describe it only as "a TypeScript port of Laravel", never as affiliated with Laravel; no Laravel logo. Every `LICENSE` keeps Laravel's MIT notice beside Xaravel's.
+- The name is Xaravel (`xaravel`) everywhere. Describe it only as "a TypeScript port of Laravel", never as affiliated with Laravel; no Laravel logo. Every `LICENSE` keeps Laravel's MIT notice beside Xaravel's.
 
 ## Where things are
 
