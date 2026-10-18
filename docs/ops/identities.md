@@ -6,8 +6,8 @@ The rulesets are committed under `.github/rulesets/`:
 
 | File | Ruleset | What it does |
 | --- | --- | --- |
-| `main.json` | Protect main | Guards the default branch. It blocks deletion and force pushes, requires linear history, PRs with Code Owner review and squash merges only, the `protected-paths`, `ownership` and `audit` checks, and the merge queue. |
-| `agent-push.json` | Agent pushes | Restricts `creation`, `update` and `deletion` on every branch except `story/**`, `main` (guarded by `main.json`) and `gh-readonly-queue/**` (the merge queue's own branches). |
+| `main.json` | Protect main | Guards the default branch. It blocks deletion and force pushes, requires linear history, PRs with Code Owner review and squash merges only, the `protected-paths`, `ownership`, `audit` and `fixtures` checks, and the merge queue. |
+| `agent-push.json` | Agent pushes | Restricts `creation`, `update` and `deletion` on every branch except `story/**`, `main` (guarded by `main.json`) and `gh-readonly-queue/**` (the merge queue's own branches). It is committed as `"enforcement": "disabled"` through Phase 0 ([decisions/MAINT-2026-10-17-epic-1-items.md](../../decisions/MAINT-2026-10-17-epic-1-items.md), Epic 1 items 9 and 12): no non-admin identity pushes yet, and GitHub did not honour its `gh-readonly-queue/**` exclusion, so it blocked the merge queue. It is re-enabled at the Epic 8 checkpoint. |
 | `agent-tags.json` | Agent tags | Restricts `creation`, `update` and `deletion` on every tag. |
 
 Each ruleset has exactly one bypass actor, `OrganizationAdmin`. CI never holds an admin token.
