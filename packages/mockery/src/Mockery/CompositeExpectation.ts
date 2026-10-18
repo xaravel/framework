@@ -1,7 +1,7 @@
 // `Mockery\CompositeExpectation` (Mockery 1.6.15, CompositeExpectation.php):
 // what `shouldReceive` returns. It forwards each call to every expectation it
-// holds (PHP's `__call`) and returns itself. Story 4.5 forwards the core API
-// (AC 1); Story 4.6 adds the rest.
+// holds (PHP's `__call`) and returns itself: one explicit forwarder per
+// Expectation API method.
 import { RuntimeException } from "../php/RuntimeException";
 import { FQCN } from "../support/values";
 import type { Expectation } from "./Expectation";
@@ -86,6 +86,74 @@ export class CompositeExpectation {
 
   withArgs(argsOrClosure: readonly unknown[] | ((...args: any[]) => unknown)): this {
     return this.forward((expectation) => expectation.withArgs(argsOrClosure));
+  }
+
+  andReturnArg(index: number): this {
+    return this.forward((expectation) => expectation.andReturnArg(index));
+  }
+
+  andReturnFalse(): this {
+    return this.forward((expectation) => expectation.andReturnFalse());
+  }
+
+  andReturnNull(): this {
+    return this.forward((expectation) => expectation.andReturnNull());
+  }
+
+  andReturnSelf(): this {
+    return this.forward((expectation) => expectation.andReturnSelf());
+  }
+
+  andReturnTrue(): this {
+    return this.forward((expectation) => expectation.andReturnTrue());
+  }
+
+  andReturnUsing(...args: ((...args: any[]) => unknown)[]): this {
+    return this.forward((expectation) => expectation.andReturnUsing(...args));
+  }
+
+  andReturns(...args: unknown[]): this {
+    return this.forward((expectation) => expectation.andReturns(...args));
+  }
+
+  andThrowExceptions(exceptions: readonly unknown[]): this {
+    return this.forward((expectation) => expectation.andThrowExceptions(exceptions));
+  }
+
+  andThrows(exception: unknown, message: string = "", code: number = 0, previous: Error | null = null): this {
+    return this.forward((expectation) => expectation.andThrows(exception, message, code, previous));
+  }
+
+  because(message: string): this {
+    return this.forward((expectation) => expectation.because(message));
+  }
+
+  byDefault(): this {
+    return this.forward((expectation) => expectation.byDefault());
+  }
+
+  globally(): this {
+    return this.forward((expectation) => expectation.globally());
+  }
+
+  passthru(): this {
+    return this.forward((expectation) => expectation.passthru());
+  }
+
+  withNoArgs(): this {
+    return this.forward((expectation) => expectation.withNoArgs());
+  }
+
+  withSomeOfArgs(...args: unknown[]): this {
+    return this.forward((expectation) => expectation.withSomeOfArgs(...args));
+  }
+
+  zeroOrMoreTimes(): this {
+    return this.forward((expectation) => expectation.zeroOrMoreTimes());
+  }
+
+  shouldNotReceive(...methodNames: (string | Readonly<Record<string, unknown>>)[]): unknown {
+    return (this.getMock() as MockObject).shouldNotReceive(...methodNames);
   }
 
   /** PHP's `__call`: the call on every expectation, in order. */

@@ -1,5 +1,6 @@
-// `Mockery` (Mockery 1.6.15, Mockery.php): the static entry point. Story 4.5:
-// `mock`, `close`, `getContainer`, `formatArgs` and `formatObjects`.
+// `Mockery` (Mockery 1.6.15, Mockery.php): the static entry point: `mock`,
+// `spy`, `close`, `getContainer`, `self`, the matchers `any`, `on`, `type` and
+// `capture`, and `formatArgs`/`formatObjects`.
 //
 // Test finish (ESC-4.5-1 item 1). `getContainer()` returns the container of
 // the current run (an AsyncLocalStorage store), else a process-level one.
@@ -16,7 +17,11 @@ import { recordAssertion } from "@xaravel/assert";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Container } from "./Mockery/Container";
 import type { MockObject } from "./Mockery/LegacyMockInterface";
+import { Any } from "./Mockery/Matcher/Any";
+import { Closure } from "./Mockery/Matcher/Closure";
 import { MatcherAbstract } from "./Mockery/Matcher/MatcherAbstract";
+import { Type } from "./Mockery/Matcher/Type";
+import { LogicException } from "./php/LogicException";
 import { type Formattable, FQCN, formatArgument, isPhpObject, objectToArray, getClass, varExport } from "./support/values";
 
 interface ContainerSlot {
@@ -36,8 +41,26 @@ function isMatcher(value: unknown): value is Formattable {
   return value instanceof MatcherAbstract;
 }
 
+/** A by-reference box (AD-9): `Mockery.capture(ref)` writes the argument to `ref.value` (ESC-4.6-1 item 2). */
+export interface Ref<T = unknown> {
+  value: T;
+}
+
 export class Mockery {
   static readonly [FQCN]: string = "Mockery";
+
+  /** A matcher for any one argument. */
+  static any(): Any {
+    return new Any();
+  }
+
+  /** A matcher that matches any argument and writes it to `reference.value` (PHP's `&$reference`). */
+  static capture(reference: Ref): Closure {
+    return new Closure((argument: unknown): boolean => {
+      reference.value = argument;
+      return true;
+    });
+  }
 
   /** Closes and verifies the current container: counts its expectations, detaches it, then verifies every mock. */
   static close(): void {
@@ -102,10 +125,36 @@ export class Mockery {
   }
 
   /** `getContainer().mock(...)`. */
-  static mock<T extends object>(target: abstract new (...args: never[]) => T): MockObject<T>;
-  static mock(target?: string | symbol): MockObject;
+  static mock<T extends object>(target: abstract new (...args: never[]) => T, ...args: unknown[]): MockObject<T>;
+  static mock(...args: unknown[]): MockObject;
   static mock(...args: unknown[]): MockObject {
     return (Mockery.getContainer().mock as (...args: unknown[]) => MockObject)(...args);
+  }
+
+  /** A matcher for an argument `closure` returns exactly `true` for. */
+  static on(closure: (argument: any) => unknown): Closure {
+    return new Closure(closure);
+  }
+
+  /** The last mock created in the current container. */
+  static self(): MockObject {
+    const container = currentSlot().container;
+    if (container === null) {
+      throw new LogicException("You have not declared any mocks yet");
+    }
+    return container.self();
+  }
+
+  /** `mock(...args)->shouldIgnoreMissing()`: a mock that answers every call and records it for `shouldHaveReceived`. */
+  static spy<T extends object>(target: abstract new (...args: never[]) => T, ...args: unknown[]): MockObject<T>;
+  static spy(...args: unknown[]): MockObject;
+  static spy(...args: unknown[]): MockObject {
+    return (Mockery.getContainer().mock as (...args: unknown[]) => MockObject)(...args).shouldIgnoreMissing();
+  }
+
+  /** A matcher for an argument of PHP type `expected` (`'string'`, `'int'`, …), or of a class. */
+  static type(expected: string | (abstract new (...args: never[]) => object)): Type {
+    return new Type(expected);
   }
 }
 

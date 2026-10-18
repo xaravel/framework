@@ -1,17 +1,22 @@
 // `Mockery\Expectation` (Mockery 1.6.15, Expectation.php): one expected call
 // of a mock method, with its argument list, call count, return queue and
-// order. Story 4.5 ports the core API (AC 1): `once`, `twice`, `times`,
-// `never`, `atLeast`, `atMost`, `with`, `withArgs`, `withAnyArgs`,
-// `andReturn`, `andReturnValues`, `andThrow` and `ordered`. The rest of
-// Mockery's Expectation API is Story 4.6's.
-import { phpLooseEquals } from "@xaravel/assert";
+// order. Story 4.5 ported the core API; Story 4.6 adds the `andReturn*`
+// family, `andThrow` with a class-name string, `andThrowExceptions`,
+// `because`, `byDefault`, `globally`, `passthru`, `withNoArgs`,
+// `withSomeOfArgs` and `zeroOrMoreTimes`. Demeter chains, `andYield`,
+// `andSet`/`set`, `between` and `withAndOthers` are not ported (no Upstream
+// use is scanned).
+import { phpLooseEquals, phpStrictEquals } from "@xaravel/assert";
 import { Mockery } from "../Mockery";
 import { InvalidArgumentException } from "../php/InvalidArgumentException";
+import { OutOfBoundsException } from "../php/OutOfBoundsException";
+import { graderExceptionClass } from "../support/classes";
 import { classNameOf, FQCN, instanceOfName, isClass, isPhpObject, phpString } from "../support/values";
 import { AtLeast } from "./CountValidator/AtLeast";
 import { AtMost } from "./CountValidator/AtMost";
 import type { CountValidatorAbstract } from "./CountValidator/CountValidatorAbstract";
 import { Exact } from "./CountValidator/Exact";
+import { Exception } from "./Exception";
 import type { LegacyMockInterface } from "./LegacyMockInterface";
 import { AnyArgs } from "./Matcher/AnyArgs";
 import { MatcherAbstract } from "./Matcher/MatcherAbstract";
@@ -20,7 +25,7 @@ import { NoArgs } from "./Matcher/NoArgs";
 
 type CountValidatorClass = new (expectation: Expectation, limit: number) => CountValidatorAbstract;
 
-/** Something `ordered()` allocates order numbers from: a mock, or (with `globally()`, Story 4.6) the container. */
+/** Something `ordered()` allocates order numbers from: a mock, or (with `globally()`) the container. */
 interface Ordering {
   mockery_getGroups(): ReadonlyMap<string, number>;
   mockery_allocateOrder(): number;
@@ -42,6 +47,7 @@ export class Expectation {
   protected readonly _mock: LegacyMockInterface;
   protected readonly _name: string;
   protected _orderNumber: number | null = null;
+  protected _passthru = false;
   protected _returnQueue: unknown[] = [];
   protected _throw = false;
 
@@ -69,19 +75,86 @@ export class Expectation {
     return this.andReturn(...values);
   }
 
+  /** The first call returns argument `index` of the call; OutOfBoundsException when there is none. */
+  andReturnArg(index: number): this {
+    if (typeof index !== "number" || !Number.isInteger(index) || index < 0) {
+      throw new InvalidArgumentException("Invalid argument index supplied. Index must be a non-negative integer.");
+    }
+    const closure = (...args: unknown[]): unknown => {
+      if (index < args.length) {
+        return args[index];
+      }
+      throw new OutOfBoundsException(`Cannot return an argument value. No argument exists for the index ${index}`);
+    };
+    this._closureQueue = [closure];
+    return this;
+  }
+
+  andReturnFalse(): this {
+    return this.andReturn(false);
+  }
+
+  andReturnNull(): this {
+    return this.andReturn(null);
+  }
+
+  /** Returns the mock itself. */
+  andReturnSelf(): this {
+    return this.andReturn(this._mock);
+  }
+
+  andReturnTrue(): this {
+    return this.andReturn(true);
+  }
+
+  /** Each call returns what the next closure returns for its arguments; the last closure repeats. */
+  andReturnUsing(...args: ((...args: any[]) => unknown)[]): this {
+    this._closureQueue = args;
+    return this;
+  }
+
+  /** `andReturn(...args)`. */
+  andReturns(...args: unknown[]): this {
+    return this.andReturn(...args);
+  }
+
   /**
-   * The call throws `exception`: an error object, or a class constructed as `new exception(message, code, previous)`.
-   * A class-name string cannot be resolved in JS (ESC-4.5-1 item 6).
+   * The call throws `exception`: an error object; a class, constructed as `new exception(message, code, previous)`;
+   * or a class-name string naming one of the exception classes the grader defines (PHP's SPL parents, `Exception`
+   * and Mockery's exceptions). Any other name throws PHP's `Class "<name>" not found` here (ESC-4.6-1 item 9).
    */
   andThrow(exception: unknown, message: string = "", code: number = 0, previous: Error | null = null): this {
     this._throw = true;
     if (isPhpObject(exception) && !isClass(exception)) {
       return this.andReturn(exception);
     }
-    if (isClass(exception)) {
-      return this.andReturn(new (exception as unknown as new (message: string, code: number, previous: Error | null) => unknown)(message, code, previous));
+    let ctor: unknown = exception;
+    if (typeof exception === "string") {
+      ctor = graderExceptionClass(exception);
+      if (ctor === null) {
+        throw new Error(`Class "${exception.replace(/^\\/, "")}" not found`);
+      }
     }
-    throw new InvalidArgumentException(`andThrow() needs an exception object or class, got ${typeof exception === "string" ? `the class-name string '${exception}', which cannot be resolved (ESC-4.5-1 item 6)` : typeof exception}`);
+    if (isClass(ctor)) {
+      return this.andReturn(new (ctor as unknown as new (message: string, code: number, previous: Error | null) => unknown)(message, code, previous));
+    }
+    throw new InvalidArgumentException(`andThrow() needs an exception object, class or class name, got ${typeof exception}`);
+  }
+
+  /** The calls throw each exception in turn; the last one repeats. */
+  andThrowExceptions(exceptions: readonly unknown[]): this {
+    this._throw = true;
+    for (const exception of exceptions) {
+      if (!isPhpObject(exception)) {
+        throw new Exception("You must pass an array of exception objects to andThrowExceptions");
+      }
+    }
+    return this.andReturn(...exceptions);
+  }
+
+  /** `andThrow(...)`. */
+  andThrows(exception: unknown, message: string = "", code: number = 0, previous: Error | null = null): this {
+    return this.andThrow(exception, message, code, previous);
   }
 
   atLeast(): this {
@@ -92,6 +165,29 @@ export class Expectation {
   atMost(): this {
     this._countValidatorClass = AtMost;
     return this;
+  }
+
+  /** The reason an unmet `Exact` count adds to its message. */
+  because(message: string): this {
+    this._because = message;
+    return this;
+  }
+
+  /** Makes this expectation (the last one of its method) a default, which later expectations override. */
+  byDefault(): this {
+    const director = this._mock.mockery_getExpectationsFor(this._name);
+    if (director !== null) {
+      director.makeExpectationDefault(this);
+    }
+    return this;
+  }
+
+  /** A copy, as PHP's `clone`: the arrays copied, each count validator cloned (still bound to this expectation). */
+  clone(): this {
+    const copy = Object.create(Object.getPrototypeOf(this) as object) as this;
+    Object.defineProperties(copy, Object.getOwnPropertyDescriptors(this));
+    copy.__clone();
+    return copy;
   }
 
   getExceptionMessage(): string | null {
@@ -108,6 +204,12 @@ export class Expectation {
 
   getOrderNumber(): number | null {
     return this._orderNumber;
+  }
+
+  /** The next `ordered()` call orders against every mock of the container. */
+  globally(): this {
+    this._globally = true;
+    return this;
   }
 
   isCallCountConstrained(): boolean {
@@ -154,6 +256,13 @@ export class Expectation {
     return this;
   }
 
+  /** The call runs the mocked class's own method (`mockery_callSubjectMethod`), still matched and counted. */
+  passthru(): this {
+    // Mockery throws here for an instance of `Mockery\Mock` itself; a generated mock never is one.
+    this._passthru = true;
+    return this;
+  }
+
   times(limit: number | null = null): this {
     if (limit === null || limit === undefined) {
       return this;
@@ -161,7 +270,8 @@ export class Expectation {
     if (typeof limit !== "number" || !Number.isInteger(limit)) {
       throw new InvalidArgumentException("The passed Times limit should be an integer value");
     }
-    // Mockery's E_USER_DEPRECATED after never() has no channel here (ESC-4.5-1 item 6).
+    // After never(), Mockery raises ERROR_ZERO_INVOCATION as E_USER_DEPRECATED through `@trigger_error`, which
+    // suppresses it: nothing is observable.
     if (limit === 0) {
       this._countValidators.clear();
     }
@@ -196,6 +306,9 @@ export class Expectation {
   verifyCall(args: readonly unknown[]): unknown {
     this.validateOrder();
     this._actualCount++;
+    if (this._passthru) {
+      return this._mock.mockery_callSubjectMethod(this._name, args);
+    }
     const value = this._getReturnValue(args);
     this.throwAsNecessary(value);
     return value;
@@ -221,6 +334,42 @@ export class Expectation {
       return this;
     }
     throw new InvalidArgumentException(`Call to Mockery\\Expectation::withArgs with an invalid argument (${phpString(argsOrClosure)}), only array and closure are allowed`);
+  }
+
+  withNoArgs(): this {
+    this._expectedArgs = [new NoArgs()];
+    return this;
+  }
+
+  /** Matches a call whose arguments include each of `expectedArgs` (PHP `in_array(..., true)`). */
+  withSomeOfArgs(...expectedArgs: unknown[]): this {
+    return this.withArgs((...args: unknown[]): boolean => {
+      for (const expectedArg of expectedArgs) {
+        if (!args.some((arg) => phpStrictEquals(expectedArg, arg))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  /** `atLeast()->never()`: any number of calls, counted as an assertion. */
+  zeroOrMoreTimes(): this {
+    return this.atLeast().never();
+  }
+
+  /** PHP's `__clone` (Expectation.php 99-108): fresh arrays, each count validator cloned. */
+  protected __clone(): void {
+    this._closureQueue = [...this._closureQueue];
+    this._expectedArgs = [...this._expectedArgs];
+    this._returnQueue = [...this._returnQueue];
+    const validators = new Map<CountValidatorClass, CountValidatorAbstract>();
+    for (const [key, countValidator] of this._countValidators) {
+      const copy = Object.create(Object.getPrototypeOf(countValidator) as object) as CountValidatorAbstract;
+      Object.defineProperties(copy, Object.getOwnPropertyDescriptors(countValidator));
+      validators.set(key, copy);
+    }
+    this._countValidators = validators;
   }
 
   protected _defineOrdered(group: string | number | null, ordering: Ordering): number {
@@ -250,8 +399,8 @@ export class Expectation {
     if (this._returnQueue.length > 0) {
       return this._returnQueue[0];
     }
-    // No declared return types in JS: Mockery's `mockery_returnValueForMethod` gives null (AD-9).
-    return null;
+    // No declared return types in JS: `mockery_returnValueForMethod` gives null (AD-9).
+    return this._mock.mockery_returnValueForMethod(this._name);
   }
 
   /**
@@ -302,8 +451,7 @@ export class Expectation {
 
   private withArgsInArray(args: readonly unknown[]): this {
     if (args.length === 0) {
-      this._expectedArgs = [new NoArgs()];
-      return this;
+      return this.withNoArgs();
     }
     this._expectedArgs = [...args];
     return this;

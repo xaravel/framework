@@ -48,6 +48,21 @@ export function isClass(value: unknown): value is abstract new (...args: never[]
   return typeof value === "function" && typeof (value as { prototype?: unknown }).prototype === "object" && (value as { prototype?: unknown }).prototype !== null;
 }
 
+/**
+ * A PHP Closure: a function that is not a class. A `function () {}` expression has an object `prototype` too, so a
+ * function counts as a class only when its source is a `class` or it carries the FQCN brand. Used where a closure
+ * argument is expected (`Container.mock`'s trailing closure, `Mockery.type('Closure')`/`'callable'`).
+ */
+export function isClosure(value: unknown): value is (...args: never[]) => unknown {
+  if (typeof value !== "function") {
+    return false;
+  }
+  if (Object.hasOwn(value, FQCN)) {
+    return false;
+  }
+  return !/^class\b/.test(Function.prototype.toString.call(value));
+}
+
 /** The PHP name of a class: its own FQCN brand, else its JS name. */
 export function classNameOf(ctor: unknown): string | null {
   if (typeof ctor !== "function") {

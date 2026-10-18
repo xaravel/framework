@@ -799,6 +799,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
     "bun run graph:check",
     // Story 4.4: the grader's assertion coverage report (FR-116, ESC-4.4-1, ESC-4.4-2 item 4).
     "bun run assert:coverage",
+    // Story 4.6: the grader's Mockery API coverage report (FR-100, ESC-4.6-1 item 7).
+    "bun run mockery:coverage",
   ]);
   expect(check.steps.filter((step) => step.uses !== undefined).length).toBe(2);
   expect(check["timeout-minutes"]).toBe(30);

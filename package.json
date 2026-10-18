@@ -50,6 +50,7 @@
     "scan:div12": "bun tools/scans/div12.ts",
     "scan:test-api": "bun tools/scans/test-api.ts",
     "assert:coverage": "bun tools/assert-coverage/coverage.ts",
+    "mockery:coverage": "bun tools/mockery-coverage/coverage.ts",
     "component-map:check": "bun tools/component-map/component-map.ts check",
     "inventory": "bun tools/inventory/inventory.ts generate",
     "inventory:cross-check": "bun tools/inventory/cross-check.ts",

@@ -67,13 +67,13 @@ development_status:
   3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: done
   epic-3-retrospective: done
 
-  epic-4: in-progress
+  epic-4: done
   4-1-php-comparison-core: done
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: done
   4-5-mockery-core: done
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
-  4-6-mockery-advanced-and-api-coverage: in-progress
+  4-6-mockery-advanced-and-api-coverage: done
   epic-4-retrospective: optional
 
   epic-5: backlog
