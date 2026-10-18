@@ -58,7 +58,7 @@ development_status:
   epic-2-retrospective: done
 
   epic-3: backlog
-  3-1-oracle-request-format-and-mechanical-extraction: blocked  # intent gap: ESC-3.1-1 (request input per kind, canonical form, which Test IDs are Differential)
+  3-1-oracle-request-format-and-mechanical-extraction: ready-for-dev  # ESC-3.1-1 approved (decisions/ESC-3.1-1.md)
   3-2-batch-fixture-generation-and-ed25519-signing: backlog
   3-3-fixture-signature-verification-in-ci: backlog
   3-4-per-story-oracle-requests: backlog
