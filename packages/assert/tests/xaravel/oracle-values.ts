@@ -7,6 +7,8 @@ import { existsSync, readFileSync } from "node:fs";
 
 export const PHP_ARRAY = Symbol.for("xaravel.php.array");
 export const PHP_PROPS = Symbol.for("xaravel.php.props");
+export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
+const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 
 /** The domain prefix of every fixture signature (tools/oracle/fixtures.ts). */
 const FIXTURE_DOMAIN = "xaravel-oracle-fixture-v1\n";
@@ -27,22 +29,30 @@ export class BrandedArray implements Iterable<readonly [Key, unknown]> {
   }
 }
 
-/** A decoded PHP object: one class per PHP class name, its public props behind the props protocol. */
-interface DecodedObject {
+/**
+ * A decoded PHP object: one class per PHP class name, its public props behind the props protocol. Its protected and
+ * private props (an exception's `message`, `code`, `previous`, …) are in `phpHidden`, by name, outside the protocol.
+ */
+export interface DecodedObject {
+  readonly phpClass: string;
+  readonly phpHidden: ReadonlyMap<string, unknown>;
   [PHP_PROPS](): unknown;
 }
 
-const classes = new Map<string, new (props: unknown) => DecodedObject>();
+const classes = new Map<string, new (props: unknown, hidden: ReadonlyMap<string, unknown>) => DecodedObject>();
 
-function classFor(name: string): new (props: unknown) => DecodedObject {
+function classFor(name: string): new (props: unknown, hidden: ReadonlyMap<string, unknown>) => DecodedObject {
   let known = classes.get(name);
   if (known === undefined) {
     known = class {
+      static readonly [CLASS_FQCN] = name;
       readonly #props: unknown;
       readonly phpClass = name;
+      readonly phpHidden: ReadonlyMap<string, unknown>;
 
-      constructor(props: unknown) {
+      constructor(props: unknown, hidden: ReadonlyMap<string, unknown>) {
         this.#props = props;
+        this.phpHidden = hidden;
       }
 
       [PHP_PROPS](): unknown {
@@ -111,20 +121,31 @@ export function decode(encoded: unknown): unknown {
   if (Array.isArray(value["array"])) {
     return phpArray((value["array"] as unknown[][]).map(([key, item]) => [decodeKey(key), decode(item)] as const));
   }
+  if (typeof value["resource"] === "string") {
+    return { [PHP_RESOURCE]: value["resource"] };
+  }
+  if (typeof value["recursion"] === "string") {
+    return { recursion: value["recursion"] };
+  }
   if (typeof value["object"] === "string" && Array.isArray(value["properties"])) {
-    const props = (value["properties"] as unknown[][]).map(([name, scope, item]) => {
-      if (scope !== "") {
-        throw new Error(`non-public property ${String(name)} of ${String(value["object"])} is not in the table`);
+    const props: (readonly [Key, unknown])[] = [];
+    const hidden = new Map<string, unknown>();
+    for (const [name, scope, item] of value["properties"] as unknown[][]) {
+      if (scope === "") {
+        props.push([decodeKey(name), decode(item)]);
+      } else {
+        hidden.set(String(name), decode(item));
       }
-      return [decodeKey(name), decode(item)] as const;
-    });
-    return new (classFor(value["object"]))(phpArray(props));
+    }
+    return new (classFor(value["object"]))(phpArray(props), hidden);
   }
   throw new Error(`value encoding not in the table: ${JSON.stringify(encoded)}`);
 }
 
 export interface Request {
+  id: string;
   sha256: string;
+  setup: string[];
   exprs: string[];
 }
 
@@ -134,8 +155,8 @@ export function readRequests(path: string): Request[] {
     .split("\n")
     .filter((line) => line !== "")
     .map((line) => {
-      const parsed = JSON.parse(line) as { sha256: string; input: { exprs: string[] } };
-      return { sha256: parsed.sha256, exprs: parsed.input.exprs };
+      const parsed = JSON.parse(line) as { id: string; sha256: string; input: { setup?: string[]; exprs: string[] } };
+      return { id: parsed.id, sha256: parsed.sha256, setup: parsed.input.setup ?? [], exprs: parsed.input.exprs };
     });
 }
 
