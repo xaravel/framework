@@ -6,14 +6,22 @@
 # install exactly the locked package set on PHP 8.5.11 (`oracle:build`).
 # Then it exports the API surface in that image (Story 3.5) and compares it
 # with the committed conformance/api-surface/ files and validates the
-# citation files (`oracle:api-surface --check`); drift fails the job. A PR
-# also triggers `build` when it touches the surface's own inputs
+# citation files (`oracle:api-surface --check`), and re-extracts the Oracle
+# requests in that image and compares them with the committed
+# conformance/oracle/requests/ files (`oracle:extract --check`); drift fails
+# the job. A PR also triggers `build` when it touches the surface's own inputs
 # (conformance/api-surface/**, conformance/component-map,
-# tools/component-map/**); a push to main does not, so they never publish.
+# tools/component-map/**), the package table the component map reads
+# (tools/scaffold/packages.jsonl, tools/scaffold/table.ts) or the test lister
+# the extractor runs (tools/inventory/**); a push to main does not, so they
+# never publish.
 #
-# `oracle` does the same on a push to main or a manual run from main, then
-# logs in to GHCR and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`, where the
-# tag is `<framework Pin>-<imagehash>` (`oracle:tag`); the hash covers the four
+# `oracle` runs on a push to main that touches the push paths (the same as
+# build's except the API-surface, component-map, scaffold and inventory ones)
+# or a manual run from main. It syncs, checks and builds as `build` does but
+# runs neither drift check, then logs in to GHCR and pushes
+# `ghcr.io/<owner>/xaravel-oracle:<tag>`, where the tag is
+# `<framework Pin>-<imagehash>` (`oracle:tag`); the hash covers the four
 # locks, the Dockerfile and its dockerignore, so a change to any of them gets
 # a new tag. It is the only job that holds `packages: write` or pushes (`story`
 # logs in to GHCR only to pull, with a read-only token); the workflow
@@ -29,9 +37,9 @@
 # as a separate artifact, even when the batch fails.
 #
 # `determinism` runs nightly: it builds the image and checks the API surface
-# as `build` does, then re-runs the two passes with `oracle:fixtures
-# --determinism` (no key, no fixtures). A difference fails it, and the
-# Escalation it wrote is uploaded.
+# and the Oracle requests as `build` does, then re-runs the two passes with
+# `oracle:fixtures --determinism` (no key, no fixtures). A difference fails
+# it, and the Escalation it wrote is uploaded.
 #
 # `story` (Story 3.4) runs on a Story PR that touches
 # `conformance/oracle-requests/**`, under `pull_request_target`, so it runs
@@ -60,6 +68,9 @@ on:
       - conformance/api-surface/**
       - conformance/component-map
       - tools/component-map/**
+      - tools/inventory/**
+      - tools/scaffold/packages.jsonl
+      - tools/scaffold/table.ts
       - tools/oracle/**
       - tools/upstream/**
       - .github/workflows/oracle.yml
@@ -116,6 +127,8 @@ jobs:
           bun run oracle:build "xaravel-oracle:${tag}"
       - name: Check the API surface against the image
         run: bun run oracle:api-surface --check
+      - name: Check the Oracle requests against the image
+        run: bun run oracle:extract --check
 
   oracle:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -213,6 +226,8 @@ jobs:
           bun run oracle:build "xaravel-oracle:${tag}"
       - name: Check the API surface against the image
         run: bun run oracle:api-surface --check
+      - name: Check the Oracle requests against the image
+        run: bun run oracle:extract --check
       - name: Evaluate every request twice and compare
         run: bun run oracle:fixtures --determinism
       - name: Upload the Escalation

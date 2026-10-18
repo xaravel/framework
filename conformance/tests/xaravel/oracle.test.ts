@@ -675,7 +675,8 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(Object.keys(workflow.on).sort()).toEqual(["pull_request", "pull_request_target", "push", "schedule", "workflow_dispatch"]);
   const paths = ["conformance/baseline-pin", "conformance/oracle/**", "tools/oracle/**", "tools/upstream/**", ".github/workflows/oracle.yml", "package.json", "bun.lock", ".bun-version"];
   // Story 3.5: a PR touching the API surface's own inputs runs build's drift check; a push of them publishes nothing.
-  const surfacePaths = ["conformance/api-surface/**", "conformance/component-map", "tools/component-map/**"];
+  // Retro 3 item 2: so does a PR touching the test lister that oracle:extract runs, or the package table its component map reads.
+  const surfacePaths = ["conformance/api-surface/**", "conformance/component-map", "tools/component-map/**", "tools/inventory/**", "tools/scaffold/packages.jsonl", "tools/scaffold/table.ts"];
   expect(workflow.on["pull_request"]).toEqual({ branches: ["main"], paths: [...paths.slice(0, 2), ...surfacePaths, ...paths.slice(2)] });
   expect(workflow.on["push"]).toEqual({ branches: ["main"], paths });
   expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "synchronize", "reopened"], paths: ["conformance/oracle-requests/**"] });
@@ -698,6 +699,8 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
     'set -euo pipefail\ntag="$(bun tools/oracle/oracle.ts tag)"\nbun run oracle:build "xaravel-oracle:${tag}"\n',
     // Story 3.5: the API surface exported in the image just built must match the committed files.
     "bun run oracle:api-surface --check",
+    // Retro 3 item 2: the requests re-extracted in that image must match the committed conformance/oracle/requests/.
+    "bun run oracle:extract --check",
   ]);
   // oracle: only from main, on a push or a manual run; the only job with packages: write.
   expect(oracle.if).toBe("github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')");
@@ -710,7 +713,7 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(oracleRuns[5]).toBe('echo "$GH_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin');
   expect(oracleRuns[6]).toContain('docker push "$IMAGE"');
   // The push follows the build and its verification, and nothing lets a step pass past a failure.
-  // determinism (Story 3.2): nightly, no write scope, no secret; builds and checks the API surface as build does, then compares two passes.
+  // determinism (Story 3.2): nightly, no write scope, no secret; builds and checks the API surface and the requests as build does, then compares two passes.
   const determinism = workflow.jobs["determinism"]!;
   expect(determinism.if).toBe("github.event_name == 'schedule'");
   expect(determinism.permissions).toBeUndefined();
@@ -750,9 +753,17 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(determinism.steps.some((step) => /docker (login|push)|ghcr\.io|secrets\./.test(`${step.run ?? ""}${JSON.stringify(step.env ?? {})}`))).toBe(false);
   expect(build.steps.some((step) => /docker (login|push)|ghcr\.io/.test(step.run ?? ""))).toBe(false);
   // The token reaches the build only as an env var, which oracle:build hands to BuildKit as a secret; the API-surface
-  // check after it (Story 3.5) gets no token.
-  expect(build.steps.at(-2)!.env).toEqual({ GITHUB_TOKEN: "${{ github.token }}" });
-  expect(build.steps.at(-1)!.env).toBeUndefined();
+  // check after it (Story 3.5) and the requests check (retro 3 item 2) get no token.
+  for (const job of [build, determinism]) {
+    const buildStep = job.steps.find((step) => (step.run ?? "").includes("bun run oracle:build "));
+    expect(buildStep).toBeDefined();
+    expect(buildStep!.env).toEqual({ GITHUB_TOKEN: "${{ github.token }}" });
+    for (const run of ["bun run oracle:api-surface --check", "bun run oracle:extract --check"]) {
+      const step = job.steps.find((candidate) => candidate.run === run);
+      expect(step).toBeDefined();
+      expect([run, step!.env, job.steps.indexOf(step!) > job.steps.indexOf(buildStep!)]).toEqual([run, undefined, true]);
+    }
+  }
   expect(text).not.toMatch(/build-arg/);
   // The only secrets are the fixture signing key, in the oracle job's batch step and the story job's generate step,
   // and the xaravel-oracle App's key in the story job (Story 3.4).
