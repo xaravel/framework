@@ -198,7 +198,7 @@ A fixture is one compact line and LF, keys in this order:
 
 Signing happens in Bun (`node:crypto`), never in the PHP container. The private key exists only as the secret `ORACLE_SIGNING_KEY` of the GitHub environment `oracle` ([identities.md](identities.md)), is read only from that environment variable, and is never written to disk or committed. The verification key is `conformance/oracle/oracle.pub` (SPKI PEM).
 
-Verification key fingerprint (SHA-256 of the SPKI DER): not yet recorded. The Maintainer records it here, as `` `<64 hex>` ``, in the PR that commits `conformance/oracle/oracle.pub`.
+Verification key fingerprint (SHA-256 of the SPKI DER): `f5c4d31c7020c5c42125c89c57ef5cc374afc38472bd3b0582477eb9ad4cb396`.
 
 ### Determinism
 
