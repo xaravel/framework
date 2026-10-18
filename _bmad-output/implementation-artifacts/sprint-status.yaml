@@ -73,7 +73,7 @@ development_status:
   4-3-core-phpunit-assertions: done
   4-5-mockery-core: done
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
-  4-6-mockery-advanced-and-api-coverage: backlog
+  4-6-mockery-advanced-and-api-coverage: in-progress
   epic-4-retrospective: optional
 
   epic-5: backlog
