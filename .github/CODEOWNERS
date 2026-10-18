@@ -20,5 +20,8 @@
 /tsconfig.base.json @edanisko
 /.oxlintrc.json @edanisko
 /.gitattributes @edanisko
+/.bun-version @edanisko
+/LICENSE @edanisko
 /AGENTS.md @edanisko
 **/CLAUDE.md @edanisko
+/.claude/ @edanisko
