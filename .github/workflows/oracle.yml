@@ -13,6 +13,18 @@
 # or pushes; the workflow
 # permissions check allows a write scope only in `oracle.yml#oracle`. The
 # GitHub token reaches Composer only as a BuildKit secret (docs/ops/oracle.md).
+#
+# After the push, `oracle` runs the fixture batch (Story 3.2) in the pushed
+# image: `oracle:fixtures` evaluates every committed request twice, compares
+# the passes and signs each output with ORACLE_SIGNING_KEY, a secret of the
+# GitHub environment `oracle` (restricted to main) that no other job can
+# read. On success it uploads conformance/fixtures/ as an artifact, which the
+# Maintainer commits through a PR; any ESC-bot-<n>.md it wrote is uploaded
+# as a separate artifact, even when the batch fails.
+#
+# `determinism` runs nightly: it builds the image as `build` does and re-runs
+# the two passes with `oracle:fixtures --determinism` (no key, no fixtures). A
+# difference fails it, and the Escalation it wrote is uploaded.
 name: oracle
 
 on:
@@ -38,6 +50,8 @@ on:
       - package.json
       - bun.lock
       - .bun-version
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -72,8 +86,9 @@ jobs:
   oracle:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     concurrency: oracle
+    environment: oracle
     permissions:
       contents: read
       packages: write
@@ -118,3 +133,56 @@ jobs:
       - name: Log out of GHCR
         if: always()
         run: docker logout ghcr.io
+      - name: Generate and sign the Oracle fixtures
+        env:
+          ORACLE_SIGNING_KEY: ${{ secrets.ORACLE_SIGNING_KEY }}
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: bun run oracle:fixtures --image "$IMAGE"
+      - name: Upload the fixtures
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oracle-fixtures
+          path: conformance/fixtures/
+          if-no-files-found: error
+      - name: Upload any Escalation
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oracle-escalation
+          path: conformance/escalations/ESC-bot-*.md
+          if-no-files-found: ignore
+
+  determinism:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
+      - name: Check the Upstream snapshot
+        run: bun run upstream:check
+      - name: Check the Oracle locks
+        run: bun run oracle:check
+      - name: Build the Oracle image twice and verify both builds
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(bun tools/oracle/oracle.ts tag)"
+          bun run oracle:build "xaravel-oracle:${tag}"
+      - name: Evaluate every request twice and compare
+        run: bun run oracle:fixtures --determinism
+      - name: Upload the Escalation
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oracle-determinism
+          path: conformance/escalations/ESC-bot-*.md
+          if-no-files-found: ignore

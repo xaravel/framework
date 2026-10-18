@@ -29,6 +29,16 @@ Each ruleset has exactly one bypass actor, `OrganizationAdmin`. CI never holds a
 
    `apply` matches each committed ruleset to the live one by name. It updates the live ruleset when one exists and creates it otherwise. `apply` and `verify` refuse two committed files with the same ruleset name, and `apply` matches every name and checks the policy of `main.json` before it writes anything, so an ambiguous live name or a policy violation writes nothing. Run it again whenever a file under `.github/rulesets/` changes on `main`.
 
+## Secrets
+
+CI holds only these secrets. Each lives in one GitHub environment, so only the job that names that environment can read it:
+
+| Secret | Environment | Job | What it is |
+| --- | --- | --- | --- |
+| `ORACLE_SIGNING_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#oracle` | The Ed25519 private key (PKCS#8 PEM) that signs Oracle fixtures. Its public half is `conformance/oracle/oracle.pub`, and its fingerprint is in [oracle.md](oracle.md#fixture-format-and-signature). |
+
+The Maintainer generates the Oracle key pair off the agent host, stores the private key only as this secret, and commits the public key ([oracle.md](oracle.md#maintainer-run-steps)). The agent account never sees it, and no tool writes it to disk.
+
 ## Bootstrapping
 
 The PR that first added `tools/ruleset/` and the `merge_group` triggers (Story 1.7) couldn't pass the merge queue. Its merge group checked out a base commit that didn't have that tool yet, so the `protected-paths` and `ownership` checks failed there. An org admin merged that one PR with the bypass. After that, queue runs work. A later PR that moves or renames `tools/ruleset/ruleset.ts`, or changes how the workflows call `merge-group-pr`, needs the same bypass, because the merge group runs the base commit's copy of the tool.

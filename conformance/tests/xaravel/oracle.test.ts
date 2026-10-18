@@ -671,12 +671,12 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
     jobs: Record<string, Record<string, unknown> & { if?: string; permissions?: unknown; steps: Step[] }>;
   };
   expect(workflow.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(workflow.on).sort()).toEqual(["pull_request", "push", "workflow_dispatch"]);
+  expect(Object.keys(workflow.on).sort()).toEqual(["pull_request", "push", "schedule", "workflow_dispatch"]);
   const paths = ["conformance/baseline-pin", "conformance/oracle/**", "tools/oracle/**", "tools/upstream/**", ".github/workflows/oracle.yml", "package.json", "bun.lock", ".bun-version"];
   expect(workflow.on["pull_request"]).toEqual({ branches: ["main"], paths });
   expect(workflow.on["push"]).toEqual({ branches: ["main"], paths });
   expect(text).not.toContain("pull_request_target");
-  expect(Object.keys(workflow.jobs).sort()).toEqual(["build", "oracle"]);
+  expect(Object.keys(workflow.jobs).sort()).toEqual(["build", "determinism", "oracle"]);
 
   const runs = (job: { steps: Step[] }): string[] => job.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
   const build = workflow.jobs["build"]!;
@@ -701,18 +701,50 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(oracleRuns[5]).toBe('echo "$GH_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin');
   expect(oracleRuns[6]).toContain('docker push "$IMAGE"');
   // The push follows the build and its verification, and nothing lets a step pass past a failure.
-  for (const job of [build, oracle]) {
+  // determinism (Story 3.2): nightly, no write scope, no secret; builds as build does, then compares two passes.
+  const determinism = workflow.jobs["determinism"]!;
+  expect(determinism.if).toBe("github.event_name == 'schedule'");
+  expect(determinism.permissions).toBeUndefined();
+  expect(determinism["environment"]).toBeUndefined();
+  expect(runs(determinism)).toEqual([...runs(build), "bun run oracle:fixtures --determinism"]);
+  // oracle (Story 3.2): after the push, the fixture batch in the pushed image, with the key only from environment oracle.
+  expect(oracle["environment"]).toBe("oracle");
+  expect(oracleRuns[8]).toBe('bun run oracle:fixtures --image "$IMAGE"');
+  const batch = oracle.steps.find((step) => step.run === oracleRuns[8])!;
+  expect(batch.env).toEqual({ ORACLE_SIGNING_KEY: "${{ secrets.ORACLE_SIGNING_KEY }}", IMAGE: "${{ steps.image.outputs.ref }}" });
+  // Fresh fixtures are uploaded only after a successful batch; an Escalation always.
+  const uploads = oracle.steps.filter((step) => (step.uses ?? "").startsWith("actions/upload-artifact@"));
+  expect(uploads.map((step) => [step.if, step.with?.["path"]])).toEqual([
+    ["success()", "conformance/fixtures/"],
+    ["always()", "conformance/escalations/ESC-bot-*.md"],
+  ]);
+  expect(oracle.steps.indexOf(batch)).toBeGreaterThan(oracle.steps.findIndex((step) => (step.run ?? "").includes('docker push "$IMAGE"')));
+  for (const job of [build, oracle, determinism]) {
     expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
     expect(job.steps[1]).toEqual({ uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } });
     for (const node of [job, ...job.steps]) {
       expect(node["continue-on-error"]).toBeUndefined();
     }
-    expect(job.steps.filter((step) => step.if !== undefined).map((step) => step.run)).toEqual(job === oracle ? ["docker logout ghcr.io"] : []);
+    const conditional = job.steps.filter((step) => step.if !== undefined).map((step) => [step.if, step.run ?? step.uses]);
+    expect(conditional).toEqual(
+      job === oracle
+        ? [
+            ["always()", "docker logout ghcr.io"],
+            ["success()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
+            ["always()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
+          ]
+        : job === determinism
+          ? [["failure()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"]]
+          : [],
+    );
   }
+  expect(determinism.steps.some((step) => /docker (login|push)|ghcr\.io|secrets\./.test(`${step.run ?? ""}${JSON.stringify(step.env ?? {})}`))).toBe(false);
   expect(build.steps.some((step) => /docker (login|push)|ghcr\.io/.test(step.run ?? ""))).toBe(false);
   // The token reaches the build only as an env var, which oracle:build hands to BuildKit as a secret.
   expect(build.steps.at(-1)!.env).toEqual({ GITHUB_TOKEN: "${{ github.token }}" });
-  expect(text).not.toMatch(/build-arg|secrets\./);
+  expect(text).not.toMatch(/build-arg/);
+  // The only secret is the fixture signing key, in the oracle job's batch step.
+  expect(text.match(/secrets\.[A-Za-z_]+/g)).toEqual(["secrets.ORACLE_SIGNING_KEY"]);
 
   // No other workflow holds packages: write, logs in to GHCR or pushes an image.
   for (const file of readdirSync(join(root, ".github", "workflows")).filter((name) => /\.ya?ml$/.test(name) && name !== "oracle.yml")) {

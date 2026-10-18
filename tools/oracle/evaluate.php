@@ -2,19 +2,24 @@
 
 // The Oracle evaluator (Story 3.2; FR-6, AD-15).
 //
-//   php evaluate.php <framework-dir> <php-version> <requests-file>
+//   php evaluate.php <framework-dir> <php-version> <requests-file>...
+//
+// tools/oracle/fixtures.ts (`bun run oracle:fixtures`) runs it twice, in the
+// Oracle image or against a locked local install, compares the two passes and
+// signs each output (docs/ops/oracle.md, Fixtures).
 //
 // Runs inside the Oracle image (or against a locked local install). It:
 //
 //   1. refuses any PHP other than <php-version>;
 //   2. applies phpunit.xml.dist's <php> <ini>, <env> and <const> entries,
 //      changes to <framework-dir> and loads its autoloader, as lister.php does;
-//   3. reads <requests-file>, one Oracle request per line
+//   3. reads each <requests-file> in turn, one Oracle request per line
 //      (conformance/oracle/schema.json), and evaluates each in its own
 //      pcntl_fork child, so no static state (macros, facades, test clocks,
 //      serializers) leaks from one request to the next; a child that has not
 //      answered after 60 seconds is killed;
-//   4. writes one JSON line per request to stdout, in input order:
+//   4. writes one JSON line per request to stdout, in input order (file by
+//      file, line by line):
 //
 //      {"sha256":<request hash>,"output":{"error":null|{"stage","class","message"},"results":[…]}}
 //
@@ -64,8 +69,8 @@ function fail(string $message): never
     exit(1);
 }
 
-if ($argc !== 4) {
-    fail('usage: php evaluate.php <framework-dir> <php-version> <requests-file>');
+if ($argc < 4) {
+    fail('usage: php evaluate.php <framework-dir> <php-version> <requests-file>...');
 }
 if (PHP_VERSION !== $argv[2]) {
     fail('needs PHP '.$argv[2].', this is '.PHP_VERSION);
@@ -80,9 +85,14 @@ $root = realpath($rootAsGiven);
 if ($root === false || ! is_file($root.'/phpunit.xml.dist') || ! is_file($root.'/vendor/autoload.php')) {
     fail("{$argv[1]} is not an installed framework directory");
 }
-$requestsText = file_get_contents($argv[3]);
-if ($requestsText === false) {
-    fail("cannot read {$argv[3]}");
+$requestFiles = array_slice($argv, 3);
+$requestTexts = [];
+foreach ($requestFiles as $requestFile) {
+    $text = file_get_contents($requestFile);
+    if ($text === false) {
+        fail("cannot read {$requestFile}");
+    }
+    $requestTexts[$requestFile] = $text;
 }
 
 $config = new DOMDocument;
@@ -480,18 +490,20 @@ if ($rootAsGiven !== $root && $rootAsGiven !== '') {
 }
 $encoder = new Encoder($replace);
 $out = fopen('php://stdout', 'w');
-foreach (explode("\n", $requestsText) as $number => $line) {
-    if ($line === '') {
-        continue;
+foreach ($requestTexts as $requestFile => $requestsText) {
+    foreach (explode("\n", $requestsText) as $number => $line) {
+        if ($line === '') {
+            continue;
+        }
+        try {
+            $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            fail("{$requestFile}:".($number + 1).": not JSON: {$e->getMessage()}");
+        }
+        if (! is_array($request) || ! isset($request['id'], $request['kind'], $request['input'], $request['sha256'])) {
+            fail("{$requestFile}:".($number + 1).': not an Oracle request');
+        }
+        $output = runChild($request, $encoder);
+        fwrite($out, json_encode(['sha256' => $request['sha256'], 'output' => $output], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR)."\n");
     }
-    try {
-        $request = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
-    } catch (JsonException $e) {
-        fail("{$argv[3]}:".($number + 1).": not JSON: {$e->getMessage()}");
-    }
-    if (! is_array($request) || ! isset($request['id'], $request['kind'], $request['input'], $request['sha256'])) {
-        fail("{$argv[3]}:".($number + 1).': not an Oracle request');
-    }
-    $output = runChild($request, $encoder);
-    fwrite($out, json_encode(['sha256' => $request['sha256'], 'output' => $output], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR)."\n");
 }
