@@ -4,6 +4,12 @@
 # the Upstream snapshot, checks the committed locks against it
 # (`oracle:check`), then builds the image twice and verifies that both builds
 # install exactly the locked package set on PHP 8.5.11 (`oracle:build`).
+# Then it exports the API surface in that image (Story 3.5) and compares it
+# with the committed conformance/api-surface/ files and validates the
+# citation files (`oracle:api-surface --check`); drift fails the job. A PR
+# also triggers `build` when it touches the surface's own inputs
+# (conformance/api-surface/**, conformance/component-map,
+# tools/component-map/**); a push to main does not, so they never publish.
 #
 # `oracle` does the same on a push to main or a manual run from main, then
 # logs in to GHCR and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`, where the
@@ -22,9 +28,10 @@
 # Maintainer commits through a PR; any ESC-bot-<n>.md it wrote is uploaded
 # as a separate artifact, even when the batch fails.
 #
-# `determinism` runs nightly: it builds the image as `build` does and re-runs
-# the two passes with `oracle:fixtures --determinism` (no key, no fixtures). A
-# difference fails it, and the Escalation it wrote is uploaded.
+# `determinism` runs nightly: it builds the image and checks the API surface
+# as `build` does, then re-runs the two passes with `oracle:fixtures
+# --determinism` (no key, no fixtures). A difference fails it, and the
+# Escalation it wrote is uploaded.
 #
 # `story` (Story 3.4) runs on a Story PR that touches
 # `conformance/oracle-requests/**`, under `pull_request_target`, so it runs
@@ -50,6 +57,9 @@ on:
     paths:
       - conformance/baseline-pin
       - conformance/oracle/**
+      - conformance/api-surface/**
+      - conformance/component-map
+      - tools/component-map/**
       - tools/oracle/**
       - tools/upstream/**
       - .github/workflows/oracle.yml
@@ -104,6 +114,8 @@ jobs:
           set -euo pipefail
           tag="$(bun tools/oracle/oracle.ts tag)"
           bun run oracle:build "xaravel-oracle:${tag}"
+      - name: Check the API surface against the image
+        run: bun run oracle:api-surface --check
 
   oracle:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -199,6 +211,8 @@ jobs:
           set -euo pipefail
           tag="$(bun tools/oracle/oracle.ts tag)"
           bun run oracle:build "xaravel-oracle:${tag}"
+      - name: Check the API surface against the image
+        run: bun run oracle:api-surface --check
       - name: Evaluate every request twice and compare
         run: bun run oracle:fixtures --determinism
       - name: Upload the Escalation

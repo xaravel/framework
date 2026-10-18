@@ -809,7 +809,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(phpFixtures.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
     "bun run php-fixtures:install",
-    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts",
+    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts",
   ]);
   expect(checkScripts["php-fixtures:install"]).toBe(
     "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest",

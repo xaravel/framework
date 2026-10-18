@@ -62,7 +62,7 @@ development_status:
   3-2-batch-fixture-generation-and-ed25519-signing: done
   3-3-fixture-signature-verification-in-ci: done
   3-4-per-story-oracle-requests: done
-  3-5-api-surface-export: in-progress
+  3-5-api-surface-export: done
   3-6-upstream-scans-facades-singletons-and-boot-only-state: backlog
   3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: backlog
   epic-3-retrospective: optional

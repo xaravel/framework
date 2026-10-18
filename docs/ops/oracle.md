@@ -1,6 +1,6 @@
 # The Oracle image
 
-The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)), request extraction's image mode (`bun run oracle:extract`, through `runInImage`; see [Requests](#requests-bun-run-oracleextract)), fixture generation's image mode (`bun run oracle:fixtures`, through `runInImage`; see [Fixtures](#fixtures-bun-run-oraclefixtures)), per-Story generation's image mode (`bun run oracle:story generate`, through `runInImage`; see [Per-Story requests](#per-story-requests-bun-run-oraclestory)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
+The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)), request extraction's image mode (`bun run oracle:extract`, through `runInImage`; see [Requests](#requests-bun-run-oracleextract)), fixture generation's image mode (`bun run oracle:fixtures`, through `runInImage`; see [Fixtures](#fixtures-bun-run-oraclefixtures)), per-Story generation's image mode (`bun run oracle:story generate`, through `runInImage`; see [Per-Story requests](#per-story-requests-bun-run-oraclestory)), the API-surface export's image mode (`bun run oracle:api-surface`, through `runInImage`; see [API surface](#api-surface-bun-run-oracleapi-surface)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
 
 ## What the image holds
 
@@ -61,10 +61,10 @@ If `GITHUB_TOKEN` is set, `oracle:build` passes it to the build as the BuildKit 
 
 ## Publishing (`.github/workflows/oracle.yml`)
 
-- `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`. It has no write scope and never logs in or pushes.
+- `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`, then `bun run oracle:api-surface --check` in the image it built ([API surface](#api-surface-bun-run-oracleapi-surface)). It has no write scope and never logs in or pushes.
 - `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write` or pushes; `story` logs in to GHCR only to pull, with a read-only token. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`. After the push it runs the fixture batch in the pushed image (`bun run oracle:fixtures --image <ref>`, [Fixtures](#fixtures-bun-run-oraclefixtures)). It runs in the GitHub environment `oracle`, the only place the secret `ORACLE_SIGNING_KEY` exists, and, when the batch succeeds, uploads `conformance/fixtures/` as the artifact `oracle-fixtures`. Any `conformance/escalations/ESC-bot-*.md` it wrote is uploaded as the artifact `oracle-escalation`, even when the batch fails.
 - `story` runs on a Story PR that touches `conformance/oracle-requests/**`, under `pull_request_target` ([Per-Story requests](#per-story-requests-bun-run-oraclestory)).
-- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image as `build` does, then runs `bun run oracle:fixtures --determinism` against the image `xaravel-oracle:<oracle tag>` that `oracle:build` built. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
+- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image and checks the API surface as `build` does, then runs `bun run oracle:fixtures --determinism` against the image `xaravel-oracle:<oracle tag>` that `oracle:build` built. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
 
 ## Requests (`bun run oracle:extract`)
 
@@ -281,3 +281,47 @@ The batch (`bun run oracle:fixtures`) never deletes the fixture of an accepted p
 1. Create the GitHub App `xaravel-oracle` ([identities.md](identities.md#the-xaravel-oracle-github-app)) and install it on the repository.
 2. Store its App ID as the repository variable `XARAVEL_ORACLE_APP_ID` and its private key as the secret `XARAVEL_ORACLE_APP_KEY` of the environment `oracle`.
 3. The environment `oracle` is restricted to `main`; a `pull_request_target` run's ref is the base branch, so the restriction admits the `story` job. Confirm it with a first live run on a Story PR, which is not verified by the tests.
+
+## API surface (`bun run oracle:api-surface`)
+
+Story 6.5 diffs each package's `.d.ts` against Laravel's public API (AD-15, PRD §5.1). That API is committed data, exported from the Upstream snapshot by PHP Reflection in the Oracle image: `conformance/api-surface/<component>.jsonl`, under the Protected `/conformance/`. Contributors need neither PHP nor Docker; they read the committed files.
+
+### Command and modes
+
+| Command | What it does |
+| --- | --- |
+| `bun run oracle:api-surface` | For each Upstream repository (framework, ai, mcp, boost) it runs `tools/oracle/api-surface.php` twice in the Oracle image `xaravel-oracle:<oracle tag>` (`--image <ref>` picks another), through `runInImage`, with the script and the class lists mounted read-only: `php /xaravel/api-surface.php /oracle/upstream/<repo>/vendor/autoload.php /oracle/upstream/<repo>/src /xaravel/classes/<repo>.txt`. The class list is every FQCN tools/component-map's `declaredClasses` finds in that repository's `src/`. It writes `conformance/api-surface/<component>.jsonl`, deletes any other `*.jsonl` there except `additions.jsonl` and `exceptions.jsonl`, and prints the lines per Component. |
+| `bun run oracle:api-surface --local <dir> [--php <bin>]` | The same with the local PHP 8.5.11 (or `--php <bin>`), against locked installs `<dir>/{framework,ai,mcp,boost}` whose `src/` and `tests/` equal the snapshot's. |
+| `bun run oracle:api-surface --check …` | Builds the files in memory and compares them byte for byte with the committed ones, one `api surface drift: <file> …` line per file that differs (with the first differing line), is missing, or is committed but not generated. It also validates the citation files. It writes nothing and exits 1 on any problem. |
+
+Each takes `--root <dir>`. Exit codes: 0 pass, 1 any failure (fail closed, nothing written), 2 usage error. Regenerate after a Pin bump or a component-map change; the pin-bump chain does not run it yet.
+
+### Record format
+
+`conformance/api-surface/schema.json#/$defs/surface` defines a line; the tool re-renders each line in this key order, compact, LF-terminated:
+
+- a class, interface, trait or enum: `{"fqcn","kind","member":null,"stubbed":[…]}`;
+- a public method declared by the class itself (trait-imported methods count, inherited ones do not): `{"fqcn","kind":"method","member","static","parameters","returns","nullable"}`;
+- a public property, likewise: `{"fqcn","kind":"property","member","static","type","nullable"}`;
+- a public constant or an enum case: `{"fqcn","kind":"constant"|"case","member","static":true}`;
+- a user function declared under the repository's `src/`: `{"fqcn","kind":"function","member":null,"static":false,"parameters","returns","nullable"}`.
+
+A parameter is `{"name","type","nullable","default","optional","variadic","byRef"}`. `type` and `returns` are PHP's type string, or null when untyped; `nullable` is `allowsNull()`, and untyped counts as nullable. `default` is null when there is none, else PHP source: a constant name (an unqualified global constant loses its namespace fallback prefix, so `PHP_INT_MAX`, not `Ns\PHP_INT_MAX`), `new …` as Reflection prints it, `Enum::Case` (the enum's FQCN without a leading backslash, however the default is written), or a compact literal (`null`, `true`, `0`, `'x'`, `[]`, `['*']`, `['a' => 1]`). Any other object in a default, or a `new` default Reflection does not print, fails the run instead of being guessed.
+
+A class's Component is `componentForFqcn`. A function's is `kebab(<Dir>)` for `framework/src/Illuminate/<Dir>/…`, else the repository name. An FQCN no Component owns, or a Component missing from the map, fails the run. Lines are sorted by `fqcn`, then kind (declaration or function, case, constant, property, method), then `member`, by UTF-16 code unit. Inherited members are not repeated: each class lists only its own members, and Story 6.5 compares them with the TS class's own members (the port mirrors Upstream's hierarchy). Declaration lines keep member-less classes (exception subclasses, for example) visible.
+
+### Stubs
+
+A type that fails to autoload (`Class|Interface|Trait "X" not found`) is defined as an empty stub of that kind, the load is retried, and X is listed in the `stubbed` of every declaration that has it among its parent classes, interfaces or traits (sorted, whatever the load order). The stub's members are never reported, so no exported member changes, and the local install and the image give the same output. At the Pin this applies only to `Illuminate\Testing\ParallelRunner`, which implements ParaTest's `RunnerInterface`. Any other load failure, a class whose file is not under `src/`, any PHP warning or deprecation (an error handler turns it into a failure) or any other exception makes the script exit 1, naming the class or function it was processing.
+
+### Determinism
+
+The two passes of each repository must print identical bytes. If they differ, nothing is written, stderr gets `api surface not deterministic: <repo> (first difference at line <n>)`, and the command exits 1. Two runs on one Pin therefore give identical files.
+
+### Citation files
+
+`conformance/api-surface/additions.jsonl` (`#/$defs/addition`) lists members a package exports that Upstream lacks; `exceptions.jsonl` (`#/$defs/exception`) lists Upstream members a package does not export. Both are Protected, written by hand through Maintainer review, and committed empty. Each line is `{"component","fqcn","member","citation"}`, with `member` a string or null, in that key order. Every line needs a `citation` (spine AD-15): an addition cites `FR-<n>` or `DIV-<1..12>[.<clause>]`, an exception cites `DIV-…` or `deferred:<item>`. Lines are sorted by `component`, `fqcn`, `member`, with no duplicates. `checkCitations` (run by `--check`) reports every problem.
+
+### The drift check in CI
+
+`oracle.yml#build` (on a PR touching the Oracle's inputs) and `oracle.yml#determinism` (nightly) run `bun run oracle:api-surface --check` in the image they just built. A committed surface that no longer matches the snapshot and the image, or an invalid citation file, fails the job. The `.d.ts` diff, the `api-surface:gate` command and the PR summary are Story 6.5's.
