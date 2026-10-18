@@ -17,3 +17,10 @@ epic-2:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-2-retro-item-7-cleanup-2-6-patches-and-nightly
+epic-3:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-3-retro-2026-10-18.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer: []
