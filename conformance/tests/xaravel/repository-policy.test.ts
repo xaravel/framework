@@ -713,7 +713,9 @@ test("XT-conformance-32: the agent push identity is limited to story/* by live r
   // The agent-push ruleset excludes exactly story/**, main and the merge queue's branches; tags are closed too.
   expect(PUSH["name"]).toBe("Agent pushes");
   expect(PUSH["target"]).toBe("branch");
-  expect(PUSH["enforcement"]).toBe("active");
+  // Disabled through Phase 0 by the Maintainer's Epic 1 ruling (decisions/MAINT-2026-10-17-epic-1-items.md, items 9 and 12): no
+  // non-admin identity pushes yet, and its gh-readonly-queue/** exclusion blocked the merge queue. Re-enabled at the Epic 8 checkpoint.
+  expect(PUSH["enforcement"]).toBe("disabled");
   const pushConditions = (PUSH["conditions"] as { ref_name: { include: string[]; exclude: string[] } }).ref_name;
   expect(pushConditions.include).toEqual(["~ALL"]);
   expect([...pushConditions.exclude].sort(byString)).toEqual(["refs/heads/gh-readonly-queue/**", "refs/heads/main", "refs/heads/story/**"]);
