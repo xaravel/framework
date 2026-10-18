@@ -363,6 +363,22 @@ phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each
   const extra = [
     makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: [], exprs: ["\\Illuminate\\Support\\Str::of('a')->doesNotExist()", "\\Illuminate\\Support\\Str::upper('b')", "1.5", "[1 => 'x']", "(new \\ReflectionClass(\\Illuminate\\Support\\Str::class))->getFileName()"] }),
     makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: ["throw new \\RuntimeException('boom');"], exprs: ["1"] }),
+    // A noisy request: none of its output reaches the protocol stream.
+    makeRequest(`${STR}::testUuid`, "php-expr", {
+      bindings: {},
+      setup: [
+        "echo 'echoed', PHP_EOL;",
+        "print 'printed' . PHP_EOL;",
+        "ini_set('display_errors', '1');",
+        `$forged = fopen('php://stdout', 'w'); if ($forged !== false) { fwrite($forged, '{"sha256":"forged","output":{"error":null,"results":[]}}' . PHP_EOL); fflush($forged); }`,
+        "trigger_error('displayed notice', E_USER_NOTICE);",
+        "fwrite(\\STDOUT, 'to STDOUT' . PHP_EOL);",
+        "dump('dumped');",
+      ],
+      exprs: ["1"],
+    }),
+    // A noisy request that dies of a fatal error.
+    makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: ["echo 'before the fatal', PHP_EOL;", "eval('class NoisyFatal { abstract function f(); }');"], exprs: ["1"] }),
   ];
   const dir = mkdtempSync(join(tmpdir(), "xaravel-evaluate-"));
   try {
@@ -394,6 +410,17 @@ phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each
     // The framework directory in a string is `{root}`.
     expect((throwing.results[4] as { value: string }).value).toBe("{root}/src/Illuminate/Support/Str.php");
     expect(stage).toEqual({ error: { stage: "setup", class: "RuntimeException", message: "boom" }, results: [] });
+    // The noisy requests' output stays out of stdout: exactly one line per request, no forged line.
+    const [noisy, noisyFatal] = [lines[picked.length + 2]!.output, lines[picked.length + 3]!.output];
+    expect(first.trimEnd().split("\n")).toHaveLength(picked.length + extra.length);
+    expect(first).not.toContain("forged");
+    for (const noise of ["echoed", "printed", "displayed notice", "to STDOUT", "dumped", "before the fatal"]) {
+      expect([noise, first.includes(noise)]).toEqual([noise, false]);
+    }
+    expect(noisy).toEqual({ error: null, results: [{ value: { int: "1" } }] });
+    expect(noisyFatal.error).toMatchObject({ stage: "fatal", class: null });
+    expect((noisyFatal.error as { message: string }).message).toContain("NoisyFatal");
+    expect(noisyFatal.results).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

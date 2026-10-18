@@ -17,7 +17,13 @@
 //      (conformance/oracle/schema.json), and evaluates each in its own
 //      pcntl_fork child, so no static state (macros, facades, test clocks,
 //      serializers) leaks from one request to the next; a child that has not
-//      answered after 60 seconds is killed;
+//      answered after 60 seconds is killed; the child answers only over a
+//      socket pair, and its accidental output (echo, print, displayed errors,
+//      dump(), writes to STDOUT or php://stdout) is discarded and never
+//      recorded: the script re-runs itself with fd 1 on /dev/null and the
+//      real stdout on fd 3, where the protocol writer writes (this guards
+//      against stray output, not against request code that deliberately
+//      opens php://fd/3);
 //   4. writes one JSON line per request to stdout, in input order (file by
 //      file, line by line):
 //
@@ -84,6 +90,31 @@ foreach (['pcntl_fork', 'pcntl_waitpid', 'posix_kill', 'stream_socket_pair'] as 
         fail("needs {$function}() (the pcntl and posix extensions)");
     }
 }
+if (! function_exists('proc_open')) {
+    fail('needs proc_open()');
+}
+
+// Keep accidental output of request and Upstream code out of the protocol
+// stream: re-run this script with fd 1 on /dev/null and the real stdout on
+// fd 3, where the protocol writer below writes. PHP cannot dup2(), and closing STDOUT in
+// the child would break code that writes to the STDOUT constant (Symfony's
+// ConsoleOutput, which Testbench builds), so fd 1 is /dev/null from the start.
+const PROTOCOL_FD_ENV = 'XARAVEL_EVALUATE_PROTOCOL_FD';
+if (getenv(PROTOCOL_FD_ENV) !== '3') {
+    putenv(PROTOCOL_FD_ENV.'=3');
+    $inner = proc_open([PHP_BINARY, ...$argv], [0 => STDIN, 1 => ['file', '/dev/null', 'w'], 2 => STDERR, 3 => STDOUT], $pipes);
+    if ($inner === false) {
+        fail('cannot start the evaluation process');
+    }
+    $code = proc_close($inner);
+    if ($code !== 0) {
+        fwrite(STDERR, "evaluate: the evaluation process exited with {$code}\n");
+        exit(1);
+    }
+    exit(0);
+}
+putenv(PROTOCOL_FD_ENV);
+unset($_ENV[PROTOCOL_FD_ENV], $_SERVER[PROTOCOL_FD_ENV]);
 $rootAsGiven = rtrim($argv[1], '/');
 $root = realpath($rootAsGiven);
 if ($root === false || ! is_file($root.'/phpunit.xml.dist') || ! is_file($root.'/vendor/autoload.php')) {
@@ -426,6 +457,12 @@ final class BareTestbenchCase extends Orchestra\Testbench\TestCase
 {
 }
 
+/** The child's output buffer callback: everything written to the output layer is dropped. */
+function discardOutput(string $buffer): string
+{
+    return '';
+}
+
 /** Runs one request in a forked child and returns its output line's `output`. */
 function runChild(array $request, Encoder $encoder): array
 {
@@ -440,6 +477,14 @@ function runChild(array $request, Encoder $encoder): array
     if ($pid === 0) {
         fclose($pair[0]);
         $channel = $pair[1];
+        // The child's fd 1 (and STDOUT) is already /dev/null (see the re-exec
+        // above), so accidental writes to STDOUT or php://stdout go nowhere; a
+        // discarding output buffer also swallows echo, print and displayed
+        // errors. The answer travels only over $channel; the inherited fd 3 is
+        // not guarded against request code that opens it on purpose. The callback is a
+        // named function, not a closure: a closure would take an object id and
+        // shift spl_object_id() in recorded values (Carbon's constructedObjectId).
+        ob_start('discardOutput', 4096);
         register_shutdown_function(static function () use ($channel, $encoder): void {
             $last = error_get_last();
             if ($last !== null && in_array($last['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
@@ -504,7 +549,10 @@ if ($rootAsGiven !== $root && $rootAsGiven !== '') {
     $replace[$rootAsGiven] = '{root}';
 }
 $encoder = new Encoder($replace);
-$out = fopen('php://stdout', 'w');
+$out = fopen('php://fd/3', 'w');
+if ($out === false) {
+    fail('cannot open the protocol stream (fd 3)');
+}
 foreach ($requestTexts as $requestFile => $requestsText) {
     foreach (explode("\n", $requestsText) as $number => $line) {
         if ($line === '') {
