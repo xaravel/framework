@@ -2,7 +2,7 @@
 title: 'Story 4.4: Exception, output, file and JSON assertions, and the coverage report'
 type: 'feature'
 created: '2026-10-18'
-status: 'blocked'
+status: 'draft'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
