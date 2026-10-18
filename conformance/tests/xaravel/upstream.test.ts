@@ -178,7 +178,13 @@ test("XT-conformance-39: bun run upstream:sync checks out each of the four repos
   };
   const job = ci.jobs["upstream"]!;
   expect(job.permissions).toBeUndefined();
-  expect(job.steps.map((step) => step.run).filter((step) => step !== undefined)).toEqual(["bun run upstream:sync", "bun run upstream:check"]);
+  expect(job.steps.map((step) => step.run).filter((step) => step !== undefined)).toEqual([
+    "bun run upstream:sync",
+    "bun run upstream:check",
+    "bun run scan:facades --check",
+    "bun run scan:singletons --check",
+    "bun test conformance/tests/xaravel/scans.test.ts",
+  ]);
   expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
   for (const node of [job, ...job.steps]) {
     expect(node["continue-on-error" as keyof typeof node]).toBeUndefined();
