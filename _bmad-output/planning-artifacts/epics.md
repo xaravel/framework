@@ -2337,6 +2337,10 @@ So that conformance only moves honestly (FR-4, AD-16).
 **When** it happens on `main`
 **Then** it is a warning. If the Test ID is owned by another open Story, it fails only that Story's next run.
 
+**Given** an accepted per-Story Oracle request (`conformance/oracle-requests/<story-id>.jsonl`) that a later batch extraction or another Story's file also produces
+**When** `oracle:verify-fixtures` and `oracle:story` run
+**Then** the already-merged file stays valid: the batch skips a request a merged per-Story file holds, and between two per-Story files the earlier-merged Story owns it, not the first by file name (Epic 3 retro R5).
+
 ### Story 5.7: CI pipeline: PR checks, merge queue and nightly matrix
 
 As the Maintainer,
@@ -2367,6 +2371,10 @@ So that two green PRs can't leave `main` red, and the full matrix still runs reg
 **When** the ruleset is verified (Story 1.7)
 **Then** `ratchet` is now among the required checks.
 
+**Given** the committed Oracle fixtures and the Oracle image at the current Baseline Pin
+**When** the nightly schedule runs
+**Then** it re-evaluates every committed request, batch and per-Story, in that image, and fails naming each fixture whose output differs, so fixtures signed before a Pin bump cannot stay stale unnoticed (Epic 3 retro S5: the signature binds neither the Pin nor the image).
+
 ### Story 5.8: Promotion and quarantine bots
 
 As the Maintainer,
@@ -2386,6 +2394,10 @@ So that one flaky test can't stall every agent (FR-114, AD-16, AD-28).
 **Given** a bot PR that changes only Expectations `status` values
 **When** the ownership check runs
 **Then** it is exempt. A bot PR that changes anything else fails the check.
+
+**Given** an `ESC-bot-<n>.md` that `oracle.yml`'s batch or nightly `determinism` job writes
+**When** the job finishes
+**Then** the bot commits it to `conformance/escalations/` through a `bot/*` PR, as for quarantine, instead of only uploading it as a workflow artifact (Epic 3 retro S6).
 
 ### Story 5.9: Xaravel Test coverage check and the Story done check
 
@@ -2413,6 +2425,11 @@ So that "done" is computed, not claimed (FR-115, PRD §3, NFR-10).
 **Given** the Epic 1 to Epic 4 Xaravel Tests
 **When** this Story merges
 **Then** they all run through `xaravelTest` under the harness.
+
+**Given** a Story whose assigned Test IDs include Differential Tests
+**When** `bun run story:check <story-id>` runs
+**Then** it fails for each such Test ID with no verified fixture in its Component's `conformance/fixtures/` directory, and for each fixture whose output is an evaluation error (`stage: fatal`, or a `setup` error) where Upstream's expected outcome is not that error (Epic 3 retro S5 fixture-set completeness, R6)
+**And** the Oracle evaluator applies `input.now` to Xaravel Test IDs, gives `validation-message` requests for Xaravel Test IDs a translator, and rejects, with a reason, Pest Test IDs the image cannot run, so none of these is signed as an error fixture (Epic 3 retro R6).
 
 ## Epic 6: Static guardrails: lint rules, async surface & API-surface diff
 
@@ -2484,6 +2501,11 @@ So that per-unit state and injection metadata stay correct by construction (AD-4
 
 **And** each passing fixture passes.
 
+**Given** `conformance/boot-only-state`
+**When** `tools/lint-rules` runs
+**Then** it flags a write to a listed property outside the class's `register` / `boot` path, so the file has a consumer before Phase 1 code uses it (Epic 3 retro S5)
+**And** the known false entries (`QueueManager::$connectors`, `Gate::$afterCallbacks` and the others in spec-3-6's deferrals) are gone, removed by correcting the scan rule and regenerating, never by hand edit.
+
 ### Story 6.4: `async-surface.json` generator and drift check
 
 As the Maintainer,
@@ -2526,6 +2548,10 @@ So that parity gaps are visible as they arise, and gate a Component's last Epic 
 **When** the diff runs
 **Then** it posts a per-Component summary and never fails the PR
 **And** `bun run api-surface:gate <component>` fails while any unexplained member remains. That command is what a Component's last Epic is accepted against.
+
+**Given** the API-surface export (`conformance/api-surface/*.jsonl`)
+**When** it is generated
+**Then** a post-load cross-check of `get_declared_classes()` against every class file under the Upstream `src/` fails, naming any class the static scan missed, so no class drops out of the surface silently (Epic 3 retro S5).
 
 ### Story 6.6: Duplicate-FQCN and registration scan
 
@@ -2784,6 +2810,10 @@ So that weakened, removed or mislabelled assertions are caught before merge (FR-
 **Given** a rejecting review
 **When** it is posted
 **Then** the PR returns to its implementer with the findings, and `story:check` counts only approvals by distinct identity.
+
+**Given** a Story PR that adds or changes `conformance/oracle-requests/<story-id>.jsonl`
+**When** the Fidelity Review runs
+**Then** the checklist requires each request's `setup` and `exprs` to match the Upstream test's inputs, or to carry a recorded reason, so a request cannot get arbitrary PHP signed as an expected value (Epic 3 retro R4).
 
 ### Story 8.6: Framework Agent operating instructions and stop rules
 
