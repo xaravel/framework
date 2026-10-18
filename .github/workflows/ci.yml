@@ -118,6 +118,8 @@ jobs:
         run: bun run graph:check
       - name: Report assertion coverage
         run: bun run assert:coverage
+      - name: Report Mockery API coverage
+        run: bun run mockery:coverage
 
   upstream:
     runs-on: ubuntu-latest

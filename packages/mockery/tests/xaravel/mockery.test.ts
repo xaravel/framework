@@ -1,28 +1,49 @@
-// Xaravel Tests for Story 4.5 (Mockery core; FR-100, AD-2, AD-9, AD-15). One
-// test per AC, in order, after the fixture-free checks. Like Epic 4's other
-// grader tests these are plain bun:test: `xaravelTest` is not used to test the
-// grader itself.
+// Xaravel Tests for Stories 4.5 (Mockery core) and 4.6 (Mockery advanced and
+// API coverage); FR-100, AD-2, AD-7, AD-9, AD-15. One test per AC, in order,
+// after the fixture-free checks. Like Epic 4's other grader tests these are
+// plain bun:test: `xaravelTest` is not used to test the grader itself.
 //
 // Every expected outcome and message comes from a signed Oracle fixture of a
-// request in conformance/oracle-requests/4.5.jsonl (real Mockery 1.6.15). Each
+// request in conformance/oracle-requests/4.5.jsonl or 4.6.jsonl (real Mockery
+// 1.6.15). XT-mockery-5 (mocked models) and XT-mockery-6 (the coverage
+// report) check Xaravel-only behaviour and have no request. Each
 // request's setup and exprs are rebuilt from scenarios.ts and must equal the
 // committed line, so the TS twins are the scenarios the Oracle ran. A missing,
 // unsigned or errored fixture fails the test; it is never skipped.
 import { afterAll, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import * as api from "../../src/index";
-import { BadMethodCallException, CompositeExpectation, Container, InvalidArgumentException, InvalidCountException, Mockery, NoMatchingExpectationException } from "../../src/index";
+import {
+  Any,
+  BadMethodCallException,
+  Closure,
+  CompositeExpectation,
+  Container,
+  Exception as MockeryExceptionClass,
+  Expectation,
+  HigherOrderMessage,
+  InvalidArgumentException,
+  InvalidCountException,
+  Mockery,
+  NoMatchingExpectationException,
+  Type,
+  VerificationDirector,
+} from "../../src/index";
 import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
-import { InvalidArgumentException as SplInvalidArgumentException } from "../../src/php/InvalidArgumentException";
 import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
 import { type Output, readRequests, readSignedFixture } from "../../../assert/tests/xaravel/oracle-values";
 import { normalize, oracleCell, scenarioMismatches } from "./cells";
-import { SCENARIOS, type Scenario, SETUP, wrapPhp, XtBar, XtFoo } from "./scenarios";
+import { MODEL_SET_KEYS, MODEL_TRAP_KEYS, SCENARIOS, type Scenario, setupFor, wrapPhp, XtBar, XtFoo, XtModel, XtReal } from "./scenarios";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
-const REQUEST_FILE = "conformance/oracle-requests/4.5.jsonl";
+const REQUEST_FILES: Readonly<Record<Scenario["id"], string>> = {
+  "XT-mockery-1": "conformance/oracle-requests/4.5.jsonl",
+  "XT-mockery-2": "conformance/oracle-requests/4.5.jsonl",
+  "XT-mockery-3": "conformance/oracle-requests/4.5.jsonl",
+  "XT-mockery-4": "conformance/oracle-requests/4.6.jsonl",
+};
 const FIXTURES = "conformance/fixtures/mockery";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 const FIXTURE = "./packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts";
@@ -31,6 +52,43 @@ const SPAWN_TIMEOUT = 50_000;
 
 /** The 14 AC 1 names; each runs in at least one XT-mockery-1 scenario. */
 const CORE_API = ["shouldReceive", "once", "twice", "times", "never", "atLeast", "atMost", "with", "withArgs", "withAnyArgs", "andReturn", "andReturnValues", "andThrow", "ordered"];
+
+/**
+ * Story 4.6's AC 1 names; each runs in at least one XT-mockery-4 scenario. `partial` is the `'Foo[m]'` form,
+ * `andThrowClassName` is `andThrow('<Class>')`, `containerForms` the Container::mock argument forms.
+ */
+const ADVANCED_API = [
+  "spy",
+  "makePartial",
+  "partial",
+  "shouldIgnoreMissing",
+  "byDefault",
+  "andReturnUsing",
+  "andReturnSelf",
+  "on",
+  "type",
+  "any",
+  "shouldHaveReceived",
+  "shouldNotHaveReceived",
+  "allows",
+  "expects",
+  "shouldNotReceive",
+  "andReturnArg",
+  "andReturnFalse",
+  "andReturnNull",
+  "andReturnTrue",
+  "andThrowExceptions",
+  "andThrowClassName",
+  "passthru",
+  "globally",
+  "withNoArgs",
+  "withSomeOfArgs",
+  "zeroOrMoreTimes",
+  "because",
+  "capture",
+  "self",
+  "containerForms",
+];
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -43,10 +101,10 @@ type Id = Scenario["id"];
 
 /** The signed Oracle output of `id`'s one request, after checking the request equals the table's. */
 function oracleOutput(id: Id): Output {
-  const requests = readRequests(join(root, REQUEST_FILE)).filter((request) => request.id === id);
+  const requests = readRequests(join(root, REQUEST_FILES[id])).filter((request) => request.id === id);
   expect(requests).toHaveLength(1);
   const request = requests[0]!;
-  expect({ setup: request.setup, exprs: request.exprs }).toEqual({ setup: [...SETUP], exprs: SCENARIOS.filter((scenario) => scenario.id === id).map((scenario) => wrapPhp(scenario.php)) });
+  expect({ setup: request.setup, exprs: request.exprs }).toEqual({ setup: [...setupFor(id)], exprs: SCENARIOS.filter((scenario) => scenario.id === id).map((scenario) => wrapPhp(scenario.php)) });
   const publicKey = readFileSync(join(root, PUBLIC_KEY), "utf8");
   try {
     return readSignedFixture(join(root, FIXTURES, `${request.sha256}.json`), request.sha256, publicKey);
@@ -97,9 +155,11 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
   // The export list, each export and its prototype frozen.
   expect(Object.keys(api).sort()).toEqual(
     [
+      "Any",
       "AtLeast",
       "AtMost",
       "BadMethodCallException",
+      "Closure",
       "CompositeExpectation",
       "Container",
       "CountValidatorAbstract",
@@ -108,12 +168,19 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
       "Exception",
       "Expectation",
       "ExpectationDirector",
+      "ExpectsHigherOrderMessage",
+      "HigherOrderMessage",
       "InvalidArgumentException",
       "InvalidCountException",
       "InvalidOrderException",
+      "MethodCall",
       "Mockery",
       "NoMatchingExpectationException",
+      "ReceivedMethodCalls",
       "RuntimeException",
+      "Type",
+      "VerificationDirector",
+      "VerificationExpectation",
     ].sort(),
   );
   for (const [name, value] of Object.entries(api)) {
@@ -182,7 +249,7 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
   Mockery.close();
 }, CHILD_TIMEOUT);
 
-test("fixture-free: a class value in with() matches an instance and its class-name string; the rejected forms throw InvalidArgumentException", () => {
+test("fixture-free: a class value in with() matches an instance and its class-name string; the forms with no PHP twin", () => {
   // `with(XtFoo)` stands in for `with(XtFoo::class)`: an XtBar instance and the string 'XtFoo' both match.
   const m = Mockery.mock(XtFoo);
   m.shouldReceive("bar").with(XtFoo).andReturn("matched");
@@ -190,32 +257,81 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   expect(m.bar("XtFoo")).toBe("matched");
   expect(thrown(() => m.bar("XtBar"))).toBeInstanceOf(NoMatchingExpectationException);
 
-  // andThrow() with a class-name string is Story 4.6's (ESC-4.5-1 item 6).
+  // andThrow() with a class-name string resolves only the grader's own exception classes (ESC-4.6-1 item 9): any
+  // other name fails at setup with PHP's message, as `new $name` does.
   const andThrowError = thrown(() => Mockery.mock(XtFoo).shouldReceive("bar").andThrow("XtErr"));
-  expect(andThrowError).toBeInstanceOf(SplInvalidArgumentException);
-  expect(andThrowError).not.toBeInstanceOf(InvalidArgumentException);
-  expect((andThrowError as Error).message.startsWith("andThrow() needs an exception object or class, got the class-name string 'XtErr'")).toBe(true);
+  expect(andThrowError).toBeInstanceOf(Error);
+  expect((andThrowError as Error).message).toBe('Class "XtErr" not found');
 
-  // Container.mock's forms outside Story 4.5 (ESC-4.5-1 item 6).
-  const container = new Container();
-  const mockAny = (...args: unknown[]): unknown => (container.mock as (...args: unknown[]) => unknown).apply(container, args);
-  const rejected: [unknown[], string][] = [
-    [[XtFoo, {}], "Mockery.mock() takes a class, a class-name string or nothing"],
-    [["XtFoo, XtBar"], "Mockery.mock('XtFoo, XtBar'): interface lists, partials and alias:/overload: mocks are not supported yet"],
-    [["XtFoo[bar]"], "Mockery.mock('XtFoo[bar]'): interface lists, partials and alias:/overload: mocks are not supported yet"],
-    [["alias:XtFoo"], "Mockery.mock('alias:XtFoo'): interface lists, partials and alias:/overload: mocks are not supported yet"],
-  ];
-  for (const [args, prefix] of rejected) {
-    let error: unknown = null;
-    try {
-      mockAny(...args);
-    } catch (caught) {
-      error = caught;
-    }
+  // alias: and overload: mocks are PHP-only (ESC-4.6-1 item 3); demeter chains stay unsupported.
+  for (const form of ["alias:XtFoo", "overload:XtFoo"]) {
+    const error = thrown(() => Mockery.mock(form));
     expect(error).toBeInstanceOf(InvalidArgumentException);
-    expect((error as Error).message.startsWith(prefix)).toBe(true);
+    expect((error as Error).message).toContain("ESC-4.6-1");
   }
-  container.mockery_close();
+  expect(thrown(() => Mockery.mock(XtFoo).shouldReceive("bar->baz"))).toBeInstanceOf(InvalidArgumentException);
+
+  // Matchers are exported, print as Mockery's, and Mockery.capture writes `ref.value` (AD-9's by-reference box).
+  expect([String(Mockery.any()), String(Mockery.on(() => true)), String(Mockery.type("string")), String(Mockery.type(XtFoo))]).toEqual(["<Any>", "<Closure===true>", "<String>", "<XtFoo>"]);
+  expect(Mockery.any()).toBeInstanceOf(Any);
+  expect(Mockery.on(() => true)).toBeInstanceOf(Closure);
+  expect(Mockery.type("int")).toBeInstanceOf(Type);
+  const ref = { value: null as unknown };
+  const c = Mockery.mock(XtFoo);
+  c.shouldReceive("bar").with(Mockery.capture(ref)).andReturn(1);
+  expect(c.bar("captured")).toBe(1);
+  expect(ref.value).toBe("captured");
+  Mockery.close();
+
+  // shouldIgnoreMissing(null, true): with no return types, every missing call returns an ignore-missing mock
+  // (ESC-4.6-1 item 5); a missing call without recursion returns null.
+  const recursive = Mockery.mock(XtFoo).shouldIgnoreMissing(null, true);
+  const child = recursive.anything();
+  expect(typeof child.mockery_getName).toBe("function");
+  expect(child.deeper().mockery_getName()).toMatch(/^Mockery_\d+$/);
+  expect(Mockery.mock(XtFoo).shouldIgnoreMissing().nope()).toBeNull();
+  // Higher-order messages and verification directors are what Mockery returns.
+  const spy = Mockery.spy(XtFoo);
+  spy.bar();
+  expect(spy.shouldReceive()).toBeInstanceOf(HigherOrderMessage);
+  expect(spy.shouldHaveReceived("bar")).toBeInstanceOf(VerificationDirector);
+  // A proxied partial's own method runs with the partial object as `this`.
+  class Counter {
+    count = 41;
+    next(): number {
+      return ++this.count;
+    }
+  }
+  const proxied = Mockery.mock(new Counter());
+  expect(proxied.next()).toBe(42);
+  // A trailing `function` expression is a closure, not a class: it runs with the mock; `type('Closure')` and
+  // `type('callable')` match one.
+  let configured: unknown = null;
+  const viaFunction = Mockery.mock(XtFoo, function (mock: unknown) {
+    configured = mock;
+  });
+  expect(configured).toBe(viaFunction);
+  const typed = Mockery.mock(XtFoo);
+  typed.shouldReceive("bar").with(Mockery.type("Closure")).andReturn("closure");
+  typed.shouldReceive("baz").with(Mockery.type("callable")).andReturn("callable");
+  expect(typed.bar(function () {})).toBe("closure");
+  expect(typed.baz(function () {})).toBe("callable");
+  expect(thrown(() => typed.bar(XtFoo))).toBeInstanceOf(NoMatchingExpectationException);
+  // A class that declares its own `allows` keeps it (Mockery's AvoidMethodClashPass): the call is dispatched.
+  class Gate {
+    allows(_ability: string): boolean {
+      return true;
+    }
+  }
+  const gate = Mockery.mock(Gate);
+  gate.shouldReceive("allows").with("edit").andReturn(false);
+  expect(gate.allows("edit")).toBe(false);
+  expect(thrown(() => Mockery.mock(Gate).allows("x"))).toBeInstanceOf(BadMethodCallException);
+  // allows(null) is PHP's empty(): a higher-order message.
+  expect(Mockery.mock(XtFoo).allows(null)).toBeInstanceOf(HigherOrderMessage);
+  // A Mockery\\Exception for an argument Container::mock cannot parse.
+  expect(thrown(() => Mockery.mock(XtFoo, 5))).toBeInstanceOf(MockeryExceptionClass);
+  Mockery.close();
 });
 
 test("XT-mockery-1: shouldReceive, once, twice, times, never, atLeast, atMost, with, withArgs (array and closure), withAnyArgs, andReturn, andReturnValues, andThrow and ordered (plain and grouped) record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
@@ -370,3 +486,164 @@ test("XT-mockery-3: a call that matches no expectation throws Mockery's BadMetho
 
   checkScenarios("XT-mockery-3");
 });
+
+test("XT-mockery-4: spy, partials (makePartial and Foo[m]), shouldIgnoreMissing, byDefault, the andReturn* family, the Mockery.on/type/any/capture/self statics, shouldHaveReceived, shouldNotHaveReceived, allows, expects, shouldNotReceive, andThrowExceptions, andThrow('Class'), passthru, globally, withNoArgs, withSomeOfArgs, zeroOrMoreTimes, because and the Container::mock forms record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
+  const used = new Set(SCENARIOS.filter((scenario) => scenario.id === "XT-mockery-4").flatMap((scenario) => scenario.uses));
+  expect(ADVANCED_API.filter((name) => !used.has(name))).toEqual([]);
+  for (const name of ["andReturnArg", "andReturnFalse", "andReturnNull", "andReturnTrue", "andReturnSelf", "andReturnUsing", "andReturns", "andThrows", "andThrowExceptions", "because", "byDefault", "globally", "passthru", "withNoArgs", "withSomeOfArgs", "zeroOrMoreTimes"]) {
+    expect(typeof (Expectation.prototype as unknown as Record<string, unknown>)[name]).toBe("function");
+    expect(typeof (CompositeExpectation.prototype as unknown as Record<string, unknown>)[name]).toBe("function");
+  }
+  for (const name of ["spy", "on", "type", "any", "capture", "self"]) {
+    expect(typeof (Mockery as unknown as Record<string, unknown>)[name]).toBe("function");
+  }
+  checkScenarios("XT-mockery-4");
+});
+
+const MODEL_STATE = Symbol.for("xaravel.model.state");
+const MEMBERS = Symbol.for("xaravel.mockery.members");
+
+test("XT-mockery-5: a mocked model (its instances carry MODEL_STATE, its constructor returns a Proxy whose defineProperty trap refuses string keys) mocked plainly, as a Foo[m] partial, with makePartial, as a spy and with constructor arguments keeps its members in the MODEL_STATE escape slot, never in the trap (AD-7)", () => {
+  MODEL_TRAP_KEYS.length = 0;
+  MODEL_SET_KEYS.length = 0;
+  XtModel.made = [];
+  const define = (mock: object, name: string, value: unknown): void => {
+    Object.defineProperty(mock, name, { value, writable: true, configurable: true, enumerable: true });
+  };
+  const escape = (mock: object): Record<string, PropertyDescriptor> => ((mock as Record<symbol, Record<symbol, unknown>>)[MODEL_STATE]![MEMBERS] as Record<string, PropertyDescriptor>);
+
+  // Plainly: no constructor runs; the expectation answers.
+  const plain = Mockery.mock(XtModel);
+  plain.shouldReceive("getConnectionName").once().andReturn("mocked");
+  expect(plain).toBeInstanceOf(XtModel);
+  expect(plain.getConnectionName()).toBe("mocked");
+  define(plain, "relation", "plain member");
+  expect(plain["relation"]).toBe("plain member");
+  expect(escape(plain)["relation"]?.value).toBe("plain member");
+  expect(Object.getPrototypeOf(escape(plain))).toBeNull();
+
+  // A Foo[m] partial: the real constructor ran (its Proxy is the instance) and the real getTable reaches the mock.
+  const partial = Mockery.mock("XtModel[getConnectionName]");
+  partial.shouldReceive("getConnectionName").andReturn("partial");
+  expect(partial.getTable()).toBe("partial:table");
+  define(partial, "relation", "partial member");
+  expect(partial["relation"]).toBe("partial member");
+  expect(escape(partial)["relation"]?.value).toBe("partial member");
+
+  // makePartial: the real method runs for a call with no expectation.
+  const deferred = Mockery.mock(XtModel).makePartial();
+  expect(deferred.getTable()).toBe("real-connection:table");
+  define(deferred, "relation", "deferred member");
+  expect(deferred["relation"]).toBe("deferred member");
+
+  // A spy: calls answer null and are verified afterwards.
+  const spy = Mockery.spy(XtModel);
+  expect(spy.getTable()).toBeNull();
+  spy.shouldHaveReceived("getTable").once();
+  define(spy, "relation", "spy member");
+  expect(spy["relation"]).toBe("spy member");
+
+  // Constructor arguments: the real constructor runs with them.
+  const constructed = Mockery.mock(XtModel, [1, 2]);
+  constructed.shouldReceive("getTable").andReturn("constructed");
+  expect(constructed.getTable()).toBe("constructed");
+  define(constructed, "relation", "constructed member");
+  expect(constructed["relation"]).toBe("constructed member");
+  expect(escape(constructed)["relation"]?.value).toBe("constructed member");
+
+  // Assigning to a member defined through the mock updates it in the escape slot. A fresh string key goes to the
+  // model's own set path: its set trap on a mock whose constructor ran; on a plain (constructor-less) mock no model
+  // Proxy exists, so it lands on the bare instance (ESC-4.6-1 item 1). Never to the defineProperty trap.
+  for (const mock of [plain, partial, constructed]) {
+    mock["relation"] = "assigned";
+    expect(mock["relation"]).toBe("assigned");
+    expect(escape(mock)["relation"]?.value).toBe("assigned");
+  }
+  expect(MODEL_SET_KEYS).toEqual([]);
+  plain["fresh"] = "on the instance";
+  expect(MODEL_SET_KEYS).toEqual([]);
+  expect(plain["fresh"]).toBe("on the instance");
+  expect(escape(plain)["fresh"]).toBeUndefined();
+  partial["fresh"] = "partial attribute";
+  constructed["fresh"] = "constructed attribute";
+  expect(MODEL_SET_KEYS).toEqual(["fresh", "fresh"]);
+  expect(escape(partial)["fresh"]).toBeUndefined();
+
+  // Each mock keeps its own slot; the trap saw symbol keys only (Mockery's own MODEL_STATE slot), never a string.
+  expect(XtModel.made).toEqual([[], [1, 2]]);
+  expect(MODEL_TRAP_KEYS.filter((key) => typeof key === "string")).toEqual([]);
+  expect(MODEL_TRAP_KEYS).toEqual([MODEL_STATE, MODEL_STATE]);
+  // Expectations and verification work: the close verifies them all.
+  expect(thrown(() => Mockery.close())).toBeNull();
+
+  // A non-model target still takes members on the instance itself.
+  const foo = Mockery.mock(XtReal);
+  define(foo, "member", 1);
+  expect(Object.getOwnPropertyDescriptor(foo, "member")?.value).toBe(1);
+  Mockery.close();
+});
+
+const COVERAGE = "tools/mockery-coverage/coverage.ts";
+
+function runCoverage(args: readonly string[]): { exitCode: number | null; stdout: string; stderr: string } {
+  const child = Bun.spawnSync([process.execPath, COVERAGE, ...args], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
+  return { exitCode: child.exitCode, stdout: child.stdout.toString(), stderr: child.stderr.toString() };
+}
+
+const PENDING_DOUBLE = ["pending ESC-4.6-1: resolves (JMac\\Testing\\Double)", "pending ESC-4.6-1: returns (JMac\\Testing\\Double)", "pending ESC-4.6-1: throws (JMac\\Testing\\Double)"];
+
+test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name as implemented except returns, throws and resolves (pending ESC-4.6-1), and fails naming a scan name with no implementation", () => {
+  const scanText = readFileSync(join(root, "conformance/scans/mockery-api.jsonl"), "utf8");
+  const scanCount = scanText.split("\n").filter((line) => line !== "").length;
+
+  // The repository: exit 0, the three pending lines, nothing missing.
+  const repo = runCoverage([]);
+  expect({ exitCode: repo.exitCode, stderr: repo.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(repo.stdout.split("\n").filter((line) => line !== "")).toEqual([...PENDING_DOUBLE, `Mockery API coverage: ${scanCount} scan names; ${scanCount - 3} implemented, 3 pending, 0 missing.`]);
+
+  // A temp root whose packages/mockery is the real one, with a scan that adds two names Mockery has but the grader
+  // does not port: both are missing, named, and the report fails.
+  const added = mkdtempSync(join(tmpdir(), "xt-mockery-6-"));
+  tempDirs.push(added);
+  mkdirSync(join(added, "conformance/scans"), { recursive: true });
+  writeFileSync(join(added, "conformance/scans/mockery-api.jsonl"), `${scanText}{"name":"andYield","static":false,"count":1}\n{"name":"pattern","static":true,"count":1}\n`);
+  mkdirSync(join(added, "packages"), { recursive: true });
+  symlinkSync(join(root, "packages/mockery"), join(added, "packages/mockery"));
+  const addedRun = runCoverage(["--root", added]);
+  expect(addedRun.exitCode).toBe(1);
+  expect(addedRun.stdout.split("\n").filter((line) => line !== "")).toEqual([
+    "missing mockery: andYield",
+    "missing mockery: pattern",
+    ...PENDING_DOUBLE,
+    `Mockery API coverage: ${scanCount + 2} scan names; ${scanCount - 3} implemented, 3 pending, 2 missing.`,
+  ]);
+
+  // A temp root whose grader copy lacks an Expectation method and a mock API member: both are missing, named.
+  const removed = mkdtempSync(join(tmpdir(), "xt-mockery-6-"));
+  tempDirs.push(removed);
+  mkdirSync(join(removed, "conformance/scans"), { recursive: true });
+  writeFileSync(join(removed, "conformance/scans/mockery-api.jsonl"), scanText);
+  cpSync(join(root, "packages/mockery/src"), join(removed, "packages/mockery/src"), { recursive: true });
+  const edit = (file: string, from: string, to: string): void => {
+    const path = join(removed, "packages/mockery/src", file);
+    const text = readFileSync(path, "utf8");
+    expect(text).toContain(from);
+    writeFileSync(path, text.replaceAll(from, to));
+  };
+  edit("Mockery/Expectation.ts", "  zeroOrMoreTimes(): this {", "  zeroOrMoreTimesRemoved(): this {");
+  edit("Mockery/CompositeExpectation.ts", "  zeroOrMoreTimes(): this {", "  zeroOrMoreTimesRemoved(): this {");
+  edit("Mockery/Mock.ts", '  "shouldIgnoreMissing",\n', "");
+  mkdirSync(dirname(join(removed, "node_modules/@xaravel/assert")), { recursive: true });
+  symlinkSync(join(root, "packages/assert"), join(removed, "node_modules/@xaravel/assert"));
+  const removedRun = runCoverage(["--root", removed]);
+  expect({ exitCode: removedRun.exitCode, stderr: removedRun.stderr }).toEqual({ exitCode: 1, stderr: "" });
+  expect(removedRun.stdout.split("\n").filter((line) => line !== "")).toEqual([
+    "missing mockery: shouldIgnoreMissing",
+    "missing mockery: zeroOrMoreTimes",
+    ...PENDING_DOUBLE,
+    `Mockery API coverage: ${scanCount} scan names; ${scanCount - 5} implemented, 3 pending, 2 missing.`,
+  ]);
+
+  // A usage error exits 2.
+  expect(runCoverage(["--nope"]).exitCode).toBe(2);
+}, CHILD_TIMEOUT);

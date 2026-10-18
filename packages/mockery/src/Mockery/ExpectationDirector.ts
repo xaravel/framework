@@ -2,6 +2,7 @@
 // the expectations of one mock method, which it matches calls against.
 import { Mockery } from "../Mockery";
 import { FQCN } from "../support/values";
+import { Exception } from "./Exception";
 import { NoMatchingExpectationException } from "./Exception/NoMatchingExpectationException";
 import type { Expectation } from "./Expectation";
 import type { LegacyMockInterface } from "./LegacyMockInterface";
@@ -9,7 +10,7 @@ import type { LegacyMockInterface } from "./LegacyMockInterface";
 export class ExpectationDirector {
   static readonly [FQCN]: string = "Mockery\\ExpectationDirector";
 
-  /** Default expectations (`byDefault()`, Story 4.6); empty in Story 4.5. */
+  /** Default expectations (`byDefault()`), consulted when no other expectation matches. */
   protected _defaults: Expectation[] = [];
   protected _expectations: Expectation[] = [];
   protected readonly _mock: LegacyMockInterface;
@@ -69,6 +70,16 @@ export class ExpectationDirector {
 
   getExpectations(): Expectation[] {
     return this._expectations;
+  }
+
+  /** Moves `expectation`, which must be the last one added, to the front of the defaults. */
+  makeExpectationDefault(expectation: Expectation): void {
+    if (this._expectations.at(-1) === expectation) {
+      this._expectations.pop();
+      this._defaults.unshift(expectation);
+      return;
+    }
+    throw new Exception("Cannot turn a previously defined expectation into a default");
   }
 
   verify(): void {
