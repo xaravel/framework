@@ -39,6 +39,7 @@
     "oracle:lock": "bun tools/oracle/oracle.ts lock",
     "oracle:verify-image": "bun tools/oracle/oracle.ts verify-image",
     "oracle:build": "bun tools/oracle/oracle.ts build",
+    "oracle:extract": "bun tools/oracle/extract.ts",
     "component-map:check": "bun tools/component-map/component-map.ts check",
     "inventory": "bun tools/inventory/inventory.ts generate",
     "inventory:cross-check": "bun tools/inventory/cross-check.ts",

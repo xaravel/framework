@@ -130,9 +130,9 @@ These tests run the real PHP scripts against committed fixture sources, but thei
 
 Pest does not need its Composer plugin here: with `--no-plugins --no-scripts` (no `vendor/pest-plugins.json`), `pest --list-tests`, `--list-tests-xml` and the baseline run all work on the fixture, so both fixtures install the same way.
 
-A real run exposed one lister bug, now fixed. In Pest mode, `lister.php` passed `<suite-dir>` exactly as given to the inner Pest process in `XARAVEL_INVENTORY_PEST_ROOT`. That process runs in the suite directory, so a relative `<suite-dir>` resolved against the wrong directory and the listing failed with `<suite-dir> is not a directory`. `pestRun` now passes the real path when the given one is relative. An absolute path is passed as before, so the `{root}` replacement of an as-given absolute path is unchanged. The tools always pass absolute paths, so the committed Inventory is unaffected. XT-conformance-72 checks that a relative path lists the same lines.
+A real run exposed one lister bug, now fixed. In Pest mode, `lister.php` passed `<suite-dir>` exactly as given to the inner Pest process in `XARAVEL_INVENTORY_PEST_ROOT`. That process runs in the suite directory, so a relative `<suite-dir>` resolved against the wrong directory and the listing failed with `<suite-dir> is not a directory`. `pestRun` now passes the real path when the given one is relative. An absolute path is passed as before, so the `{root}` replacement of an as-given absolute path is unchanged. The tools always pass absolute paths, so the committed Inventory is unaffected. XT-conformance-177 (first numbered XT-conformance-72) checks that a relative path lists the same lines.
 
-Besides the two skip causes above, a PHP older than 8.4 (`php <ver> is older than 8.4`) and, for the PHPUnit fixture, a PHP without pcntl (`php lacks the pcntl extension`) also skip with the reason, or fail under `XARAVEL_PHP_FIXTURES=require`. `vendor/` counts as installed only when `vendor/autoload.php` and `vendor/bin/<runner>` exist. XT-conformance-74 needs no PHP and always runs: it checks that the fixture locks' PHPUnit and Pest versions equal the Oracle locks', so a pin bump that moves them fails.
+Besides the two skip causes above, a PHP older than 8.4 (`php <ver> is older than 8.4`) and, for the PHPUnit fixture, a PHP without pcntl (`php lacks the pcntl extension`) also skip with the reason, or fail under `XARAVEL_PHP_FIXTURES=require`. `vendor/` counts as installed only when `vendor/autoload.php` and `vendor/bin/<runner>` exist. XT-conformance-179 (first numbered XT-conformance-74) needs no PHP and always runs: it checks that the fixture locks' PHPUnit and Pest versions equal the Oracle locks', so a pin bump that moves them fails.
 
 Two existing tests changed shape, with no assertion weakened. XT-conformance-33 lists the new `php-fixtures` job among ci.yml's jobs and pins its steps, permissions, timeout and the install script. XT-conformance-44 read every entry of `conformance/tests/xaravel/` as a file, and now reads only its files, so the `php-fixtures/` directory does not fail it with `EISDIR`.
 
@@ -151,7 +151,7 @@ Status: done
 
 **Files changed**
 - `conformance/tests/xaravel/php-fixtures/{phpunit,pest}/**` -- the fixture projects: composer.json, composer.lock, phpunit.xml.dist and their tests.
-- `conformance/tests/xaravel/php-scripts.test.ts` -- XT-conformance-68..74:
+- `conformance/tests/xaravel/php-scripts.test.ts` -- XT-conformance-173..179, first numbered XT-conformance-68..74 and renamed in Story 3.1 because `stories/3.1.md`..`3.3.md` allocate 68..74:
   - The lister output and the recorder output are checked for exact values against real PHP.
   - Fork-guard isolation.
   - A files-list run.

@@ -1,6 +1,6 @@
 # The Oracle image
 
-The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
+The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)), request extraction's image mode (`bun run oracle:extract`, through `runInImage`; see [Requests](#requests-bun-run-oracleextract)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
 
 ## What the image holds
 
@@ -63,3 +63,83 @@ If `GITHUB_TOKEN` is set, `oracle:build` passes it to the build as the BuildKit 
 
 - `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`. It has no write scope and never logs in or pushes.
 - `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write`, logs in to GHCR or pushes. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`.
+
+## Requests (`bun run oracle:extract`)
+
+Differential Tests take their expected values from the Oracle (FR-6). What the Oracle evaluates is a set of requests, extracted mechanically from the Upstream snapshot (AD-15, `decisions/ESC-3.1-1.md`), never written by hand. They are committed in `conformance/oracle/requests/<component>.jsonl`, a Protected Path, so contributors need neither PHP nor Docker: Stories 3.2 and later read the committed files.
+
+### Command and modes
+
+| Command | What it does |
+| --- | --- |
+| `bun run oracle:extract` | Runs `tools/inventory/lister.php` (the Test IDs and their dataset rows) and `tools/oracle/extract/tokens.php` (PHP's own tokenizer over each Differential test file) in the Oracle image `xaravel-oracle:<oracle tag>`, through `runInImage`, both mounted read-only. `--image <ref>` picks another image. It then reads every Differential Test ID × dataset through its family module and writes `conformance/oracle/requests/<component>.jsonl`, deleting any other `.jsonl` there. It prints the requests per Component and per family. It fails, naming the file, when a listed Differential file (other than the test-less `AbstractBladeTestCase.php`) is missing from the snapshot or has no listed tests, or when a `tests/View/Blade/*Test.php` file is not in the Blade list. |
+| `bun run oracle:extract --local <dir> [--php <bin>]` | The same without Docker: the lister runs against a locked install of the framework snapshot in `<dir>` (every test and source file must equal the snapshot's, as for `bun run inventory --local`), and tokens.php reads the snapshot itself, both with the local PHP 8.5.11 or `--php <bin>`. |
+| `bun run oracle:extract --check …` | Builds the files in memory and compares them byte for byte with the committed ones. It writes nothing. Each drifted file is one `oracle requests drift: <file> …` line on stderr (it differs, with the first differing line; it is missing; or it is committed but not generated), and the command exits 1. |
+
+Two runs on the same snapshot give identical bytes. Exit codes: 0 pass, 1 any failure (fail closed), 2 usage error. Regenerate after a Pin bump, after `bun run inventory`, and whenever a family module changes; the PR is Maintainer-reviewed like every Protected Path.
+
+### Request format
+
+One JSON line per request, keys exactly in this order, validated by `conformance/oracle/schema.json` (JSON Schema 2020-12) and `tools/oracle/request.ts`:
+
+```json
+{"id":"<Test ID or XT-<component>-<n>>","kind":"<kind>","input":{…},"sha256":"<64 lowercase hex>"}
+```
+
+- `id` is a PHPUnit Test ID (`<FQCN>::<method>[#<dataset>]`), a Pest Test ID or an Xaravel Test ID. A Test ID can have several requests (one per segment, grammar or template); Story 3.2 keys fixtures by `sha256`.
+- `sha256` is the SHA-256 of the UTF-8 canonical JSON of `{id, kind, input}`: object keys sorted by UTF-16 code unit at every depth (integer-like keys too), no whitespace, `/` and non-ASCII unescaped, strings escaped as JSON.stringify does. The serializer writes keys and strings itself, never through a JS object. The line itself keeps each input object's PHP key order.
+- Files: one per Component (from the Inventory's component map), lines sorted by `id` then `sha256` in UTF-16 order, identical requests once, LF, trailing newline. Two different lines with one `sha256` fail the run. A reader (`parseRequests`) rejects any line that is not byte-identical to its rendering: compact, `/` unescaped, keys in order, no CR.
+
+PHP source strings (`setup`, `exprs`, `bindings`, `now`) are Upstream's verbatim token text, whitespace and comments kept, trimmed at the ends. Class names (before `::`, after `new`, `instanceof`, `extends`, `implements`, in closure type hints and in `catch` clauses) are resolved to fully qualified `\Name`s against the file's namespace and `use` imports, as PHP's compiler resolves them, and so are names imported with `use function` or `use const`. Nothing else is rewritten.
+
+### Evaluation contract per kind (Story 3.2)
+
+| `kind` | `input`, in key order | The Oracle |
+| --- | --- | --- |
+| `php-expr` | `bindings` (parameter name → PHP literal source of the dataset value, or of a literal default the row omits), `setup`, `exprs` | Instantiates the Test ID's Upstream class and runs its `setUp()`. In a closure bound to that instance it assigns each binding to its variable, runs `setup` in order, then evaluates `exprs` in order, recording each value or the exception class and message. Then it runs `tearDown()`. |
+| `sql-grammar` | `grammar` (`base`, `sqlite`, `pgsql`, `mysql`, `mariadb`, `sqlsrv`), `setup`, `exprs` | As `php-expr`, with no bindings. `grammar` records which grammar the setup's builder uses: the `$this->get<X>Builder[WithProcessor]()` helper (`getBuilder` is `base`) of DatabaseQueryBuilderTest, or the schema grammar test file's own. |
+| `blade-render` | `template`, `data` | Renders `\Illuminate\Support\Facades\Blade::render($template, $data)` in an Orchestra Testbench application and records the HTML, or the exception class and message. This gives DIV-5's rendered-HTML assertions an expected value even where Upstream asserts compiled PHP. |
+| `validation-message` | `lines`, `data`, `rules`, `messages`, `attributes`, `format` (string or null), `exprs` | Bound to the Test ID's instance between `setUp()` and `tearDown()`: `$trans = $this->getIlluminateArrayTranslator(); $trans->addLines($lines, 'en'); $v = new \Illuminate\Validation\Validator($trans, $data, $rules, $messages, $attributes);`, then `$v->messages()->setFormat($format)` when `format` is not null, then evaluates `exprs` (which use `$v`) in order. |
+| `date-format` | `now` (string or null), `timezone`, `setup`, `exprs` | As `php-expr`, with no bindings, under `date.timezone` = `timezone` (phpunit.xml.dist's). `now` is the PHP source of the `setTestNow(…)` argument in the class's `setUp()`, which the run applies by running `setUp()`. A `setUp()` the extractor cannot read, or a phpunit.xml.dist without `date.timezone`, fails the run. |
+
+An empty PHP array in an object-valued field (`data`, `lines`, `rules`, `messages`, `attributes`) is `{}`.
+
+### The Differential set
+
+The set is closed: the `files` list of each family module under `tools/oracle/extract/`. A Test ID × dataset from these files is Differential exactly when its module captures at least one input. Every other one stays an ordinary Ported Test, and a dataset the batch misses goes through Story 3.4's per-Story requests.
+
+| Family (module) | `kind` | Files (under `framework/tests/`) |
+| --- | --- | --- |
+| Str (`str.ts`) | `php-expr` | `Support/SupportStrTest.php`, `Support/SupportStringableTest.php` |
+| SQL grammars (`sql.ts`) | `sql-grammar` | `Database/DatabaseQueryBuilderTest.php` and `Database/Database{SQLite,MySql,MariaDb,Postgres,SqlServer}SchemaGrammarTest.php` |
+| Blade (`blade.ts`) | `blade-render` | every `View/Blade/*.php` (listed by name), `Integration/View/BladeTest.php` |
+| Validation messages (`validation.ts`) | `validation-message` | `Validation/ValidationValidatorTest.php` |
+| Date formatting (`date.ts`) | `date-format` | `Support/SupportCarbonTest.php` |
+
+### Readability rules
+
+A body that cannot be read into its kind's input gives no request, never a guess. `tools/oracle/extract/php.ts` reads bodies statically from PHP's tokens:
+
+- **Statements.** The body must be top-level expression statements. An `if`, `foreach`, `for`, `while`, `switch`, `try`, `return`, `throw`, `echo`, `unset`, a declaration or a label makes it unreadable.
+- **Assertions.** A statement `$this->assert…(…)`, `static::assert…(…)` or `self::assert…(…)` is an assertion. Its actual argument (the value under test) comes from a table of PHPUnit assertions (`assertSame` 1, `assertTrue` 0, `assertCount` 1, …). An unknown assertion, a call chained on one, or an `assert…`/`expect…` call anywhere else makes the body unreadable. So does an assertion whose arguments look reversed: its actual argument is only a literal or a bare bindings variable while its expected (first) argument is neither, as in `assertSame(Str::isUuid($uuid), $passes)`.
+- **Segments.** Every assertion is kept. Consecutive assertions form one segment, whose `exprs` are their actual arguments. Its `setup` replays everything before it, with earlier assertions reduced to their actual argument as an expression statement (`<actual>;`), so side effects happen as in Upstream. A body with no setup between its assertions is one request with `setup` the statements before them.
+- **php-expr, sql-grammar and date-format bodies** are unreadable with:
+  - a named argument, a magic constant (`__DIR__`, …), a variable variable, an anonymous class, `eval` or `include`;
+  - Mockery (`\Mockery`, `shouldReceive`, `expects`, `allows`, …);
+  - `self::`, `static::` or `parent::` outside an assertion head;
+  - `$this->x` that the class does not declare as a property or method (outside `function` closure bodies);
+  - a variable used before the body defines it. Only bindings, `$this`, superglobals and earlier top-level assignments count.
+- **Dataset rows** come from lister.php's `export()`. A row is bound positionally or by parameter name. A row holding an object, enum case, closure, `hex(…)`, `resource(…)`, `*RECURSION*` or a `{root}` rewrite gives no request. So does a variadic parameter. `sql-grammar` and `date-format` have no bindings, so a body that uses a parameter is unreadable.
+- **SQL grammar.** In DatabaseQueryBuilderTest, a segment takes the grammar of the builder helpers its own statements call. If it calls none, it takes the previous segment's; none at all gives no request. Two different helpers, or a builder built another way (`$this->getMockQueryBuilder()`, `new …Builder(`, `new …Grammar(`), give no request for that segment and stop later segments from inheriting a grammar.
+- **Blade.** The body may hold only known assertions and `$var = <literal>;` assignments. Each `->compileString(<template>)` (with `data` `{}`) and `Blade::render(<template>[, <data>])` gives one request per distinct template and data. The template and data are literals, or variables assigned literals. A parameter, an interpolated string or a computed value gives no request for the body. A test class that declares its own `setUp()` (beyond AbstractBladeTestCase's) configures the compiler, so its templates give no request.
+- **Validation.** The body must be, in order: `$trans = $this->getIlluminateArrayTranslator();`, any `$trans->addLines(<literal>, 'en');`, then one `$v = new Validator($trans, <data>[, <rules>[, <messages>[, <attributes>]]]);`. After that it may have at most one `$v->messages()->setFormat('<literal>');` before the first message assertion, any `$v->passes();` or `$v->fails();` before it (a `passes()` or `fails()` after it, bare or in an assertion, replaces the formatted MessageBag and gives no request), and known assertions. `exprs` are the actual arguments of the assertions on `$v->messages()` or `$v->errors()`, and use only `$v` and `$trans`. These give no request: a method with none of those assertions, another locale, a non-literal array, a second translator or validator, or any other statement.
+- **Literals.** These decode as PHP evaluates them:
+  - single- and double-quoted strings without interpolation;
+  - heredoc and nowdoc without interpolation, with the closing indentation removed;
+  - `.` concatenation of strings;
+  - integers (decimal, hex, octal, binary);
+  - non-integral floats (an integral float would read back as an int);
+  - `true`, `false` and `null`;
+  - arrays, as a JSON list when the keys are 0..n-1, or as an object when every key is a string. Other integer keys are unreadable.
+
+  A string with a raw non-UTF-8 byte is unreadable.

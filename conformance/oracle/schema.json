@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xaravel.dev/conformance/oracle/schema.json",
+  "title": "Oracle request",
+  "description": "One line of conformance/oracle/requests/<component>.jsonl (bun run oracle:extract, Story 3.1) or conformance/oracle-requests/<story-id>.jsonl (Story 3.4). The keys are exactly id, kind, input and sha256, in that order. sha256 is the lowercase hex SHA-256 of the UTF-8 canonical JSON of {id, kind, input}: object keys sorted by UTF-16 code unit at every depth, no whitespace, '/' and non-ASCII unescaped. PHP source strings in setup and exprs are Upstream's verbatim token text with class names resolved to fully qualified \\Names. Evaluation (Story 3.2): the Oracle instantiates the Test ID's Upstream test class, runs its setUp(), assigns each bindings entry (PHP literal source) to its variable, runs setup then evaluates exprs in order inside a closure bound to that instance, records each expr's value (or the exception class and message), and runs tearDown().",
+  "type": "object",
+  "required": ["id", "kind", "input", "sha256"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "A PHPUnit Test ID (<FQCN>::<method>[#<dataset>]), a Pest Test ID (<suite>/tests/<file>::<description>[#<dataset>]) or an Xaravel Test ID (XT-<component>-<n>).",
+      "type": "string",
+      "pattern": "^(?:[^:\\s][^\\n]*::[^:#\\s][^#\\n]*(?:#[\\s\\S]*)?|XT-[a-z][a-z0-9-]*-[1-9][0-9]*)$"
+    },
+    "kind": {
+      "description": "Which evaluation the Oracle runs; it fixes the shape of input.",
+      "enum": ["php-expr", "sql-grammar", "blade-render", "validation-message", "date-format"]
+    },
+    "input": {
+      "type": "object"
+    },
+    "sha256": {
+      "description": "Lowercase hex SHA-256 of the canonical JSON of {id, kind, input}.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "php-expr" } } },
+      "then": { "properties": { "input": { "$ref": "#/$defs/php-expr" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "sql-grammar" } } },
+      "then": { "properties": { "input": { "$ref": "#/$defs/sql-grammar" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "blade-render" } } },
+      "then": { "properties": { "input": { "$ref": "#/$defs/blade-render" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "validation-message" } } },
+      "then": { "properties": { "input": { "$ref": "#/$defs/validation-message" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "date-format" } } },
+      "then": { "properties": { "input": { "$ref": "#/$defs/date-format" } } }
+    }
+  ],
+  "$defs": {
+    "php-source": {
+      "description": "PHP source: a statement (with its ';') in setup, an expression (without one) in exprs.",
+      "type": "string",
+      "minLength": 1
+    },
+    "setup": {
+      "description": "Statements run in order before exprs, in the closure bound to the Upstream test instance.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/php-source" }
+    },
+    "exprs": {
+      "description": "Expressions evaluated in order after setup; the Oracle records each value, in order.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/php-source" }
+    },
+    "object": {
+      "description": "A PHP array with string keys, as a JSON object in PHP order (an empty PHP array is {}).",
+      "type": "object"
+    },
+    "php-expr": {
+      "description": "Str and other pure PHP expressions. bindings maps each data-provider parameter name (no $) to its dataset value as PHP literal source (lister.php export()), assigned before setup runs.",
+      "type": "object",
+      "required": ["bindings", "setup", "exprs"],
+      "additionalProperties": false,
+      "properties": {
+        "bindings": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_\\x80-\\uffff][A-Za-z0-9_\\x80-\\uffff]*$" },
+          "additionalProperties": { "$ref": "#/$defs/php-source" }
+        },
+        "setup": { "$ref": "#/$defs/setup" },
+        "exprs": { "$ref": "#/$defs/exprs" }
+      }
+    },
+    "sql-grammar": {
+      "description": "SQL produced by a query or schema grammar. grammar names the builder helper (getBuilder base, get<SQLite|Postgres|MySql|MariaDb|SqlServer>Builder) or the schema grammar test file the setup uses; setup and exprs run as for php-expr.",
+      "type": "object",
+      "required": ["grammar", "setup", "exprs"],
+      "additionalProperties": false,
+      "properties": {
+        "grammar": { "enum": ["base", "sqlite", "pgsql", "mysql", "mariadb", "sqlsrv"] },
+        "setup": { "$ref": "#/$defs/setup" },
+        "exprs": { "$ref": "#/$defs/exprs" }
+      }
+    },
+    "blade-render": {
+      "description": "A Blade template the Oracle renders with \\Illuminate\\Support\\Facades\\Blade::render(template, data) in an Orchestra Testbench application, recording the HTML or the exception class and message (DIV-5's rendered-HTML expected values).",
+      "type": "object",
+      "required": ["template", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "template": { "type": "string" },
+        "data": { "$ref": "#/$defs/object" }
+      }
+    },
+    "validation-message": {
+      "description": "Validator messages. The Oracle runs, bound to the test instance: $trans = $this->getIlluminateArrayTranslator(); $trans->addLines(lines, 'en'); $v = new \\Illuminate\\Validation\\Validator($trans, data, rules, messages, attributes); then $v->messages()->setFormat(format) when format is not null; then evaluates exprs (which use $v) in order.",
+      "type": "object",
+      "required": ["lines", "data", "rules", "messages", "attributes", "format", "exprs"],
+      "additionalProperties": false,
+      "properties": {
+        "lines": { "$ref": "#/$defs/object" },
+        "data": { "$ref": "#/$defs/object" },
+        "rules": { "$ref": "#/$defs/object" },
+        "messages": { "$ref": "#/$defs/object" },
+        "attributes": { "$ref": "#/$defs/object" },
+        "format": { "type": ["string", "null"] },
+        "exprs": { "$ref": "#/$defs/exprs" }
+      }
+    },
+    "date-format": {
+      "description": "Date formatting under a frozen clock. now is the PHP source of the setTestNow argument the test class's setUp() passes (null when it sets none); setUp() itself applies it. timezone is the date.timezone the run uses (phpunit.xml.dist). setup and exprs run as for php-expr.",
+      "type": "object",
+      "required": ["now", "timezone", "setup", "exprs"],
+      "additionalProperties": false,
+      "properties": {
+        "now": { "type": ["string", "null"] },
+        "timezone": { "type": "string", "minLength": 1 },
+        "setup": { "$ref": "#/$defs/setup" },
+        "exprs": { "$ref": "#/$defs/exprs" }
+      }
+    }
+  }
+}
