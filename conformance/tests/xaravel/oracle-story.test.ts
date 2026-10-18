@@ -17,7 +17,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFile
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { PHP_VERSION, type ImageRunner } from "../../../tools/inventory/inventory";
-import { EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, renderFixture, renderNondeterminism, signFixture, verifyFixture } from "../../../tools/oracle/fixtures";
+import { COMPONENT_NAME, EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, renderFixture, renderNondeterminism, signFixture, verifyFixture } from "../../../tools/oracle/fixtures";
 import { makeRequest, renderRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
 import { main, renderReport } from "../../../tools/oracle/story";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
@@ -480,6 +480,9 @@ test("XT-conformance-77: oracle.yml#story runs on a Story PR's request file unde
   const commit = step("commit");
   expect(commit.env).toMatchObject({ GH_TOKEN: "${{ steps.app.outputs.token }}", HEAD_REF: "${{ github.event.pull_request.head.ref }}", HEAD_SHA: "${{ github.event.pull_request.head.sha }}" });
   expect(commit.run).toContain("^[a-z][a-z0-9-]*/[0-9a-f]{64}\\.json$");
+  // The commit step's Component pattern is the one the batch checks request files against, so the two cannot drift.
+  expect([COMPONENT_NAME.flags, COMPONENT_NAME.source.startsWith("^"), COMPONENT_NAME.source.endsWith("$")]).toEqual(["", true, true]);
+  expect(commit.run).toContain(`${COMPONENT_NAME.source.slice(0, -1)}/[0-9a-f]{64}\\.json$`);
   expect(commit.run).toContain('--arg path "conformance/fixtures/${file}"');
   expect(commit.run).toContain('gh api "repos/${REPO}/git/commits/${HEAD_SHA}" --jq .tree.sha');
   expect(commit.run).toContain("parents: [$parent]");

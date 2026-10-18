@@ -260,6 +260,14 @@ test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha2
 
     // The committed request files are what the batch reads.
     expect(readCommittedRequests(fx.dir).map((entry) => entry.component)).toEqual(["database", "support", "view"]);
+    // A Component name must start with a letter, as the story job's commit step requires.
+    const digitFirst = join(fx.dir, REQUESTS_DIR, "1abc.jsonl");
+    writeFileSync(digitFirst, readFileSync(join(fx.dir, REQUESTS_DIR, "support.jsonl")));
+    try {
+      expect(() => readCommittedRequests(fx.dir)).toThrow(`${REQUESTS_DIR}/1abc.jsonl is not a Component's request file`);
+    } finally {
+      rmSync(digitFirst);
+    }
 
     // --out writes elsewhere and leaves conformance/fixtures alone.
     const before = snapshotTree(out);

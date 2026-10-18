@@ -9,10 +9,13 @@
 // JSON of `{id, kind, input}`: object keys sorted by UTF-16 code unit at every
 // depth, no whitespace, `/` unescaped, non-ASCII unescaped, strings escaped as
 // JSON.stringify escapes them (`\"`, `\\`, `\b`, `\f`, `\n`, `\r`, `\t`,
-// `\u00XX` for other control characters, lone surrogates as `\uXXXX`). The
-// serializer writes every string and key itself, never by building a JS
-// object, which would reorder integer-like keys. Story 3.2 names fixtures by
-// that hash.
+// `\u00XX` for other control characters). No string or key may hold a lone
+// UTF-16 surrogate: tools/oracle/evaluate.php reads each line with PHP's
+// `json_decode(..., JSON_THROW_ON_ERROR)`, which rejects one, so
+// `validateRequest` reports it at its JSON path. Paired surrogates (astral
+// characters) are written unescaped like any other non-ASCII. The serializer
+// writes every string and key itself, never by building a JS object, which
+// would reorder integer-like keys. Story 3.2 names fixtures by that hash.
 //
 // `conformance/oracle/schema.json` (JSON Schema 2020-12) is the contract;
 // `validateRequest` interprets the subset of it the schema uses, then checks
@@ -344,9 +347,39 @@ export function schemaErrors(value: unknown, schema: unknown, rootSchema: JsonOb
   return errors;
 }
 
-/** The errors of one parsed request: the schema's, then a `sha256` that is not the hash of the canonical request. */
+const LONE_SURROGATE_REASON = "holds a lone UTF-16 surrogate, which PHP's json_decode rejects";
+
+/** The errors for every string and object key under `value` that holds a lone UTF-16 surrogate, at its JSON path. */
+function surrogateErrors(value: unknown, at: string): string[] {
+  if (typeof value === "string") {
+    return value.isWellFormed() ? [] : [`${at}: ${LONE_SURROGATE_REASON}`];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => surrogateErrors(item, `${at}[${index}]`));
+  }
+  if (isObject(value)) {
+    return Object.keys(value).flatMap((key) => [
+      ...(key.isWellFormed() ? [] : [`${at} key ${JSON.stringify(key)}: ${LONE_SURROGATE_REASON}`]),
+      ...surrogateErrors(value[key], `${at}.${key}`),
+    ]);
+  }
+  return [];
+}
+
+/**
+ * The errors of one parsed request: the schema's, then any string or key in `id`, `kind` or `input` that holds a
+ * lone UTF-16 surrogate (PHP's json_decode rejects the line), then a `sha256` that is not the hash of the canonical
+ * request.
+ */
 export function validateRequest(value: unknown, schema: JsonObject): string[] {
   const errors = schemaErrors(value, schema, schema);
+  if (isObject(value)) {
+    for (const key of ["id", "kind", "input"]) {
+      if (key in value) {
+        errors.push(...surrogateErrors(value[key], `$.${key}`));
+      }
+    }
+  }
   if (errors.length === 0 && isObject(value)) {
     const expected = requestHash(value["id"] as string, value["kind"] as string, value["input"]!);
     if (value["sha256"] !== expected) {
