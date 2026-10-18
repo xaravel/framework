@@ -4,7 +4,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { allowedPath, applySprintStatus, checkDuplicates, evaluatePr, parseManifest, readManifests, SPRINT_STATUS, STORIES_DIR, type Manifest } from "../../../tools/ownership/ownership";
+import { allowedPath, applySprintStatus, botAllowedPath, checkDuplicates, evaluatePr, parseManifest, planningAllowedPath, readManifests, SPRINT_STATUS, STORIES_DIR, type Manifest } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -273,10 +273,13 @@ test("XT-conformance-23: a story/<story-id> PR is judged by the manifest on the 
     // A branch that is not a Story ID fails; it cannot escape the stories directory.
     expect(evaluatePr(base!, { headRef: "story/../9.1", files: [], changedFiles: 0 }).violations[0]).toContain("missing manifest");
 
-    // Not a Story branch: passes, whatever it touches.
-    const planning = await runPr({ ref: "planning/x", files: [file("AGENTS.md"), file("packages/container/src/B.ts")] }, base!);
-    expect(planning).toMatchObject({ code: 0, stdout: "Ownership OK: PR #7: planning/x is not a Story branch.\n" });
-    expect(evaluatePr(base!, { headRef: "bot/expectations", files: [file("tools/x.ts")], changedFiles: 1 })).toEqual({
+    // Not a Story branch: planning/* and bot/* PRs within their rules pass (MAINT-2026-10-17 item 15; XT-conformance-180, -181).
+    const planning = await runPr({ ref: "planning/x", files: [file("AGENTS.md"), file("tools/x.ts")] }, base!);
+    expect(planning).toMatchObject({
+      code: 0,
+      stdout: "Ownership OK: PR #7: planning/x passed the planning rule; no file is under packages/ or conformance/expectations/.\n",
+    });
+    expect(evaluatePr(base!, { headRef: "bot/expectations", files: [file("conformance/expectations/support/x.jsonl")], changedFiles: 1 })).toEqual({
       storyId: null,
       outOfScope: [],
       violations: [],
@@ -467,6 +470,129 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);
   }
   expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
+});
+
+test("XT-conformance-180: a planning/* PR may not change packages/** or conformance/expectations/**, in any letter case or through a rename; a truncated list fails closed (AD-16, MAINT-2026-10-17 item 15)", async () => {
+  const allowed = ["AGENTS.md", "tools/a.ts", "decisions/x.md", "conformance/tests/a.ts", "stories/9.1.md", "packagesx/a", "conformance/expectationsx/a"];
+  for (const path of allowed) {
+    expect([path, planningAllowedPath(path)]).toEqual([path, true]);
+  }
+  const forbidden = ["packages/support/src/A.ts", "conformance/expectations/support/x.jsonl", "Packages/a.ts"];
+  for (const path of [...forbidden, "PACKAGES/x", "Conformance/Expectations/x.jsonl", "tools/../packages/x.ts", "./packages/x.ts", "tools//x.ts", "/packages/x.ts"]) {
+    expect([path, planningAllowedPath(path)]).toEqual([path, false]);
+  }
+  const scope = (path: string) =>
+    `planning scope: ${path} may not change on a planning/* branch; packages/** and conformance/expectations/** change only through story/* branches (AD-16)`;
+
+  await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([base]) => {
+    // Allowed: passes through the function and the CLI.
+    expect(evaluatePr(base!, { headRef: "planning/x", files: allowed.map((path) => file(path)), changedFiles: allowed.length })).toEqual({
+      storyId: null,
+      outOfScope: [],
+      violations: [],
+    });
+    expect(await runPr({ ref: "planning/x", files: allowed.map((path) => file(path)) }, base!)).toMatchObject({
+      code: 0,
+      stdout: "Ownership OK: PR #7: planning/x passed the planning rule; no file is under packages/ or conformance/expectations/.\n",
+      stderr: "",
+    });
+
+    // Forbidden: one planning scope line per path, sorted.
+    const sorted = [...forbidden].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    expect(evaluatePr(base!, { headRef: "planning/x", files: [file("AGENTS.md"), ...forbidden.map((path) => file(path))], changedFiles: 4 })).toEqual({
+      storyId: null,
+      outOfScope: sorted,
+      violations: sorted.map(scope),
+    });
+    const failing = await runPr({ ref: "planning/x", files: forbidden.map((path) => file(path)) }, base!);
+    expect(failing.code).toBe(1);
+    expect(failing.stdout).toBe("");
+    expect(failing.stderr).toBe(`Ownership violations (AD-16):\n${sorted.map((path) => `  ${scope(path)}`).join("\n")}\n`);
+    // Never matches the orchestrator's `out of scope:` allowance for Story PRs.
+    expect(failing.stderr).not.toContain("out of scope:");
+
+    // A rename out of packages lists the previous name only.
+    const renamed = await runPr({ ref: "planning/x", files: [file("docs/A.ts", "packages/support/A.ts")] }, base!);
+    expect(renamed.code).toBe(1);
+    expect(renamed.stderr).toBe(`Ownership violations (AD-16):\n  ${scope("packages/support/A.ts")}\n`);
+    // Removing a file under packages is a change to packages.
+    const removed = { filename: "packages/support/A.ts", status: "removed" };
+    expect(evaluatePr(base!, { headRef: "planning/x", files: [removed], changedFiles: 1 }).violations).toEqual([scope("packages/support/A.ts")]);
+    // A rename into packages lists the new name only.
+    expect(evaluatePr(base!, { headRef: "planning/x", files: [file("packages/support/B.ts", "docs/B.ts")], changedFiles: 1 }).violations).toEqual([
+      scope("packages/support/B.ts"),
+    ]);
+    // A copy leaves its source untouched.
+    const copied = { filename: "docs/A.ts", previous_filename: "packages/support/A.ts", status: "copied" };
+    expect(evaluatePr(base!, { headRef: "planning/x", files: [copied], changedFiles: 1 }).violations).toEqual([]);
+
+    // A truncated file list fails closed.
+    const truncated = await runPr({ ref: "planning/x", files: [file("AGENTS.md")], changedFiles: 2 }, base!);
+    expect(truncated.code).toBe(1);
+    expect(truncated.stderr).toContain("truncated file list: the API returned 1 of 2 changed files; failing closed");
+  });
+});
+
+test("XT-conformance-181: a bot/* PR may change only conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md; other non-Story branches still pass (AD-16, MAINT-2026-10-17 item 15)", async () => {
+  const allowed = ["conformance/expectations/support/x.jsonl", "conformance/escalations/ESC-bot-3.md"];
+  for (const path of [...allowed, "conformance/escalations/ESC-bot-12.md"]) {
+    expect([path, botAllowedPath(path)]).toEqual([path, true]);
+  }
+  const forbidden = ["tools/x.ts", "packages/support/A.ts", "conformance/escalations/ESC-9.1-1.md", "conformance/expectations/../tools/x"];
+  for (const path of [
+    ...forbidden,
+    "conformance/escalations/ESC-bot-0.md",
+    "conformance/escalations/ESC-bot-x.md",
+    "conformance/escalations/ESC-bot-3.md.bak",
+    "Conformance/Expectations/x.jsonl",
+    "conformance/expectations",
+    "conformance/expectations/",
+    "conformance/expectationsx/a",
+  ]) {
+    expect([path, botAllowedPath(path)]).toEqual([path, false]);
+  }
+  const scope = (path: string) =>
+    `bot scope: ${path} is outside conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md, the only paths a bot/* branch may change (AD-16)`;
+
+  await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([base]) => {
+    // Allowed.
+    expect(evaluatePr(base!, { headRef: "bot/q", files: allowed.map((path) => file(path)), changedFiles: 2 })).toEqual({ storyId: null, outOfScope: [], violations: [] });
+    expect(await runPr({ ref: "bot/q", files: allowed.map((path) => file(path)) }, base!)).toMatchObject({
+      code: 0,
+      stdout: "Ownership OK: PR #7: bot/q passed the bot path rule (path-level only; Story 5.8 adds the status-only check); every file is under conformance/expectations/ or a conformance/escalations/ESC-bot-<n>.md.\n",
+      stderr: "",
+    });
+
+    // Forbidden: one bot scope line per path, sorted.
+    const sorted = [...forbidden].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    expect(evaluatePr(base!, { headRef: "bot/q", files: forbidden.map((path) => file(path)), changedFiles: 4 })).toEqual({
+      storyId: null,
+      outOfScope: sorted,
+      violations: sorted.map(scope),
+    });
+    const failing = await runPr({ ref: "bot/q", files: [...allowed, ...forbidden].map((path) => file(path)) }, base!);
+    expect(failing.code).toBe(1);
+    expect(failing.stderr).toBe(`Ownership violations (AD-16):\n${sorted.map((path) => `  ${scope(path)}`).join("\n")}\n`);
+    expect(failing.stderr).not.toContain("out of scope:");
+
+    // A rename into Expectations still lists the previous name.
+    const renamed = evaluatePr(base!, { headRef: "bot/q", files: [file("conformance/expectations/support/x.jsonl", "tools/x.ts")], changedFiles: 1 });
+    expect(renamed.violations).toEqual([scope("tools/x.ts")]);
+
+    // A truncated file list fails closed.
+    const truncated = await runPr({ ref: "bot/q", files: [file(allowed[0]!)], changedFiles: 2 }, base!);
+    expect(truncated.code).toBe(1);
+    expect(truncated.stderr).toContain("truncated file list: the API returned 1 of 2 changed files; failing closed");
+
+    // Any other branch, including a fork's, passes unchanged whatever it touches.
+    for (const ref of ["feature/x", "main", "planningx/y", "botx/y"]) {
+      expect(evaluatePr(base!, { headRef: ref, files: [file("packages/support/A.ts")], changedFiles: 1 })).toEqual({ storyId: null, outOfScope: [], violations: [] });
+    }
+    expect(await runPr({ ref: "feature/x", files: [file("packages/support/A.ts"), file("conformance/expectations/support/x.jsonl")] }, base!)).toMatchObject({
+      code: 0,
+      stdout: "Ownership OK: PR #7: feature/x is not a Story branch.\n",
+    });
+  });
 });
 
 test("XT-conformance-25: a Test ID listed by two open Stories fails, naming both; Stories marked done no longer hold their IDs (AD-16, AD-21)", async () => {
