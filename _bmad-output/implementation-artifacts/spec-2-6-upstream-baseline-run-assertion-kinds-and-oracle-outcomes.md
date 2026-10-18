@@ -307,6 +307,7 @@ The confirming baseline re-run on PR #51 (CI run 39046988875, same Pin) reported
 
 - The attempted implementation (everything except the generated Inventory) is in [spec-2-6-attempt.patch](spec-2-6-attempt.patch). The full tree, including the Inventory merged from CI run 39045666471, is on branch `planning/story-2.6-attempt` (commit c66c357).
 - After the ruling: re-apply the patch, implement the chosen option in `merge`, re-run `baseline.yml`, and commit its `inventory` artifact.
+- Cleanup (epic 2 retro item 7): #56 applied both attempt patches, so they and the `planning/story-2.6-attempt` branch are deleted. The patches remain in history at commit 69d46f0 (`git show 69d46f0:_bmad-output/implementation-artifacts/spec-2-6-attempt.patch`).
 
 
 ### Blocked during the review (2026-10-17, second run)
