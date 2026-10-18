@@ -226,7 +226,7 @@ test(
   }),
 );
 
-test("XT-conformance-74: the committed repository verifies, and ci.yml's check job runs oracle:verify-fixtures on pull_request, merge_group and push (FR-6, AD-15)", async () => {
+test("XT-conformance-74: the committed repository verifies, and ci.yml's required fixtures job runs oracle:verify-fixtures on pull_request, merge_group and push (FR-6, AD-15)", async () => {
   const run = await cli([]);
   expect(run.stderr).toBe("");
   expect(run.code).toBe(0);
@@ -240,11 +240,19 @@ test("XT-conformance-74: the committed repository verifies, and ci.yml's check j
     jobs: Record<string, { steps: { name?: string; run?: string; if?: string }[]; if?: string }>;
   };
   expect(Object.keys(workflow.on)).toEqual(expect.arrayContaining(["pull_request", "merge_group", "push"]));
-  const check = workflow.jobs["check"]!;
-  expect(check.if).toBeUndefined();
-  const step = check.steps.find((entry) => entry.run === "bun run oracle:verify-fixtures");
+  const fixtures = workflow.jobs["fixtures"]!;
+  expect(fixtures.if).toBeUndefined();
+  const step = fixtures.steps.find((entry) => entry.run === "bun run oracle:verify-fixtures");
   expect(step?.name).toBe("Verify the Oracle fixtures");
   expect(step?.if).toBeUndefined();
+  expect(workflow.jobs["check"]!.steps.some((entry) => entry.run === "bun run oracle:verify-fixtures")).toBe(false);
+
+  // A forged fixture cannot merge: `fixtures` is a required check on main (decisions/MAINT-2026-10-18-epic-3-items.md).
+  const main = JSON.parse(readFileSync(join(root, ".github", "rulesets", "main.json"), "utf8")) as {
+    rules: { type: string; parameters?: { required_status_checks?: { context: string; integration_id: number }[] } }[];
+  };
+  const required = main.rules.find((rule) => rule.type === "required_status_checks")!.parameters!.required_status_checks!;
+  expect(required).toContainEqual({ context: "fixtures", integration_id: 15368 });
 });
 
 // ---------------------------------------------------------------------------

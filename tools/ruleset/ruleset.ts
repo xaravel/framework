@@ -51,8 +51,8 @@ export const RULESETS_DIR = ".github/rulesets";
 export const MAIN_FILE = "main.json";
 export const TAGS_RULESET = "Agent tags";
 export const COMPARED_FIELDS = ["name", "target", "enforcement", "conditions", "rules", "bypass_actors"] as const;
-/** The checks main.json must require (AD-16, NFR-5). */
-export const REQUIRED_CHECKS = ["protected-paths", "ownership", "audit"] as const;
+/** The checks main.json must require (AD-16, NFR-5; `fixtures`: decisions/MAINT-2026-10-18-epic-3-items.md). */
+export const REQUIRED_CHECKS = ["protected-paths", "ownership", "audit", "fixtures"] as const;
 /** The GitHub Actions app: each required check is pinned to it, so no other status writer can satisfy it. */
 export const ACTIONS_INTEGRATION_ID = 15368;
 /** Rules main.json must hold besides the required checks (AD-16). */
