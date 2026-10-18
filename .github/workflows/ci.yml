@@ -3,7 +3,11 @@
 # `audit` is a required check on main: it installs from the frozen lockfile
 # without running lifecycle scripts, then fails on any high or critical
 # advisory. `workflow-permissions` checks every workflow's permissions.
-# `check` runs the repository gates: `bun test`, the typecheck, the lint,
+# `check` runs the repository gates: first `oracle:verify-fixtures`, which
+# fails on any committed Oracle fixture whose signature does not verify
+# against conformance/oracle/oracle.pub or whose request hash does not match a
+# committed request, naming the file (Story 3.3, FR-6, AD-15), so no earlier
+# failure hides it; then `bun test`, the typecheck, the lint,
 # `scaffold:check` and `graph:check` (Epic 1 retro R1). `check` is advisory
 # until it is added to the required checks in .github/rulesets/main.json
 # (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
@@ -69,6 +73,8 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Verify the Oracle fixtures
+        run: bun run oracle:verify-fixtures
       - name: Test
         run: bun run test
       - name: Typecheck

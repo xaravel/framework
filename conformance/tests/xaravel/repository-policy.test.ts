@@ -773,6 +773,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(check.steps[1]).toEqual(audit.steps[1]!);
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
+    "bun run oracle:verify-fixtures",
     "bun run test",
     "bun run typecheck",
     "bun run lint",
@@ -788,6 +789,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware");
   expect(checkScripts["scaffold:check"]).toBe("bun tools/scaffold/scaffold.ts --check");
   expect(checkScripts["graph:check"]).toBe("bun tools/graph/graph.ts");
+  expect(checkScripts["oracle:verify-fixtures"]).toBe("bun tools/oracle/verify.ts");
 
   // `php-fixtures` runs the PHP scripts for real against the fixtures, with a missing PHP or vendor/ failing (Epic 2 retro R5).
   const phpFixtures = ci.jobs["php-fixtures"]!;
