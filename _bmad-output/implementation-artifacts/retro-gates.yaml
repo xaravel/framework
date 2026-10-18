@@ -31,3 +31,4 @@ epic-4:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-4-retro-item-1-mockery-class-arg-matching
+    - epic-4-retro-item-2-verify-mocks-outside-run
