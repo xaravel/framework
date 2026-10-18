@@ -1,5 +1,5 @@
 // Xaravel Tests for Story 4.1 (the PHP comparison core; FR-116, AD-15, AD-2).
-// These run under plain `bun test` until Story 4.2's `xaravelTest` lands.
+// These run under plain `bun test`, like Story 4.2's (`xaravelTest` is not used to test the grader itself).
 //
 // XT-assert-1 reads only signed Oracle fixtures: the truth table is never
 // written by hand or evaluated locally (AD-15). A missing, unsigned or errored
@@ -232,7 +232,7 @@ test("XT-assert-3: @xaravel/assert has no graded-package edge or import, and its
 
   // Assigning to an export, an exported function or its prototype throws.
   const exported = Object.entries(api);
-  expect(exported.map(([name]) => name).sort()).toEqual(["phpLooseEquals", "phpStrictEquals"]);
+  expect(exported.map(([name]) => name).sort()).toEqual(["phpLooseEquals", "phpStrictEquals", "portedTest", "recordAssertion", "xaravelTest"]);
   for (const [name, value] of exported) {
     expect(() => {
       (api as Record<string, unknown>)[name] = () => true;
