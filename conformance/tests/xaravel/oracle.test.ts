@@ -780,10 +780,13 @@ test("XT-conformance-44: for a contributor without Docker, bun test, oracle:chec
       }
     }
     expect(mentions.sort()).toEqual(["conformance/tests/xaravel/oracle.test.ts", "tools/oracle/oracle.ts"]);
-    // No other Xaravel Test imports the oracle tool, so bun test reaches docker only through the fakes above.
+    // No other Xaravel Test imports tools/oracle/oracle.ts directly or names runInImage. Other tests may import tools
+    // that import it (tools/inventory, tools/oracle/extract.ts), but they run image mode only through a stand-in
+    // runner, so bun test reaches docker only through the fakes above.
     const testFiles = readdirSync(join(root, "conformance", "tests", "xaravel"), { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name);
     for (const file of testFiles.filter((name) => name !== "oracle.test.ts")) {
-      expect([file, readFileSync(join(root, "conformance", "tests", "xaravel", file), "utf8").includes("tools/oracle")]).toEqual([file, false]);
+      const text = readFileSync(join(root, "conformance", "tests", "xaravel", file), "utf8");
+      expect([file, /tools\/oracle\/oracle["']/.test(text) || text.includes("runInImage")]).toEqual([file, false]);
     }
 
     // With no docker on PATH at all: verify-image and build fail clearly; check and tag are unaffected.

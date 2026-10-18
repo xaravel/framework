@@ -173,7 +173,7 @@ const PHPUNIT_RECORDED_LINES: RecorderLine[] = [
 ];
 
 // Verifies: FR-1 (the lister's PHPUnit raw lines, run for real, list exactly the runner's tests with their datasets)
-phpTest("XT-conformance-68: lister.php lists the PHPUnit fixture's tests in listing order with exact ids, sources, tokens and dataset exports, and the ids equal phpunit --list-tests (FR-1)", "phpunit", () => {
+phpTest("XT-conformance-173: lister.php lists the PHPUnit fixture's tests in listing order with exact ids, sources, tokens and dataset exports, and the ids equal phpunit --list-tests (FR-1)", "phpunit", () => {
   const raws = parseRaw(lister("phpunit"));
   expect(raws.map(({ tokens: _tokens, ...rest }) => rest)).toEqual([
     { id: FORK, class: "Fixture\\Tests\\ForkTest", method: "testFork", dataset: null, file: "tests/ForkTest.php", source: { file: "tests/ForkTest.php", start: 13, end: 26 }, data: null, requiresDatabase: null, redis: false },
@@ -205,17 +205,17 @@ phpTest("XT-conformance-68: lister.php lists the PHPUnit fixture's tests in list
 });
 
 // Verifies: FR-3, FR-113 (the runner and recorder, run for real, give each PHPUnit test its exact outcome and assertion kinds)
-phpTest("XT-conformance-69: runner.php records the PHPUnit fixture's exact pass, skip and fail outcomes and {kind: count}, counting a nested assertThat inside assertCount once (FR-3, FR-113)", "phpunit", () => {
+phpTest("XT-conformance-174: runner.php records the PHPUnit fixture's exact pass, skip and fail outcomes and {kind: count}, counting a nested assertThat inside assertCount once (FR-3, FR-113)", "phpunit", () => {
   expect(runner("phpunit")).toEqual([PHPUNIT_FORK_LINE, ...PHPUNIT_RECORDED_LINES]);
 });
 
 // Verifies: FR-113 (a pcntl_fork child never repeats the counts recorded before the fork)
-phpTest("XT-conformance-70: a test that asserts and then pcntl_forks a child that exits has its counts recorded once, not again by the child (FR-113)", "phpunit", () => {
+phpTest("XT-conformance-175: a test that asserts and then pcntl_forks a child that exits has its counts recorded once, not again by the child (FR-113)", "phpunit", () => {
   expect(withFilesList("tests/ForkTest.php\n", (files) => runner("phpunit", files))).toEqual([PHPUNIT_FORK_LINE]);
 });
 
 // Verifies: FR-3 (a files list reduces the run to the named test files)
-phpTest("XT-conformance-71: runner.php given a files list naming one test file records only that file's tests (FR-3)", "phpunit", () => {
+phpTest("XT-conformance-176: runner.php given a files list naming one test file records only that file's tests (FR-3)", "phpunit", () => {
   expect(withFilesList("tests/RecordedTest.php\n", (files) => runner("phpunit", files))).toEqual(PHPUNIT_RECORDED_LINES);
 });
 
@@ -236,7 +236,7 @@ const PEST_TESTS = [
 ] as const;
 
 // Verifies: FR-1 (the lister's Pest raw lines, run for real, give the Pest Test IDs of exactly the runner's tests)
-phpTest("XT-conformance-72: lister.php in pest mode lists the Pest fixture's tests with exact describe, name, dataset and source, pestTestId gives the describe > name#dataset ids, and the ids equal pest --list-tests (FR-1)", "pest", () => {
+phpTest("XT-conformance-177: lister.php in pest mode lists the Pest fixture's tests with exact describe, name, dataset and source, pestTestId gives the describe > name#dataset ids, and the ids equal pest --list-tests (FR-1)", "pest", () => {
   const raws: PestRawTest[] = parsePestRaw(lister("pest"));
   expect(raws.map(({ tokens: _tokens, ...rest }) => rest)).toEqual(
     PEST_TESTS.map(([method, describe, name, dataset, start, end, data]) => ({
@@ -270,7 +270,7 @@ phpTest("XT-conformance-72: lister.php in pest mode lists the Pest fixture's tes
 });
 
 // Verifies: FR-3, FR-113 (the runner and recorder, run for real, give each Pest test its exact outcome and assertion kinds)
-phpTest("XT-conformance-73: runner.php records the Pest fixture's exact outcomes and {kind: count} per Pest Test ID (FR-3, FR-113)", "pest", () => {
+phpTest("XT-conformance-178: runner.php records the Pest fixture's exact outcomes and {kind: count} per Pest Test ID (FR-3, FR-113)", "pest", () => {
   const ids = new Map(parsePestRaw(lister("pest")).map((raw) => [raw.id, pestTestId(PEST_SUITE, raw)]));
   const lines = runner("pest");
   expect(lines.every((line) => line.class === null)).toBe(true);
@@ -296,7 +296,7 @@ function lockedVersions(file: string, names: readonly string[]): Record<string, 
 }
 
 // Verifies: FR-3 (the fixtures run the PHPUnit and Pest versions the Oracle runs, so a pin bump that moves them fails here)
-test("XT-conformance-74: the PHPUnit fixture locks the framework Oracle lock's phpunit/phpunit, and the Pest fixture locks the ai, mcp and boost Oracle locks' pestphp/pest and phpunit/phpunit (FR-3)", () => {
+test("XT-conformance-179: the PHPUnit fixture locks the framework Oracle lock's phpunit/phpunit, and the Pest fixture locks the ai, mcp and boost Oracle locks' pestphp/pest and phpunit/phpunit (FR-3)", () => {
   const fixtureLock = (fixture: Fixture): string => `${relative(root, fixtureDir(fixture))}/composer.lock`;
   const phpunit = lockedVersions(fixtureLock("phpunit"), ["phpunit/phpunit"]);
   expect(phpunit["phpunit/phpunit"]).not.toBeNull();
