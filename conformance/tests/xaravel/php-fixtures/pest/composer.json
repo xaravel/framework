@@ -1,0 +1,21 @@
+{
+    "name": "xaravel/php-fixture-pest",
+    "description": "A Pest fixture that conformance/tests/xaravel/php-scripts.test.ts runs the lister, runner and recorder against.",
+    "type": "project",
+    "license": "MIT",
+    "require-dev": {
+        "pestphp/pest": "v4.7.8",
+        "phpunit/phpunit": "12.5.33"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fixture\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": false
+        }
+    }
+}

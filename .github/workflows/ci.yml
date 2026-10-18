@@ -7,7 +7,13 @@
 # `scaffold:check` and `graph:check` (Epic 1 retro R1). `check` is advisory
 # until it is added to the required checks in .github/rulesets/main.json
 # (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
-# Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15). All
+# Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15).
+# `php-fixtures` installs the PHPUnit and Pest fixture projects and runs
+# tools/inventory/lister.php and tools/baseline/{runner,recorder}.php against
+# them with real PHP, with XARAVEL_PHP_FIXTURES=require so a missing PHP or
+# vendor/ fails instead of skipping (Epic 2 retro R5). It is its own job
+# because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
+# until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
 # on a required check. The conformance harness, Ratchet and service matrix
 # arrive in Epic 5.
@@ -88,3 +94,27 @@ jobs:
         run: bun run upstream:sync
       - name: Check the Upstream snapshot
         run: bun run upstream:check
+
+  php-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          extensions: dom, mbstring, pcntl, tokenizer, xml
+          coverage: none
+      - name: Install the PHP fixtures
+        run: bun run php-fixtures:install
+      - name: Run the PHP scripts against the fixtures
+        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts

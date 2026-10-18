@@ -766,7 +766,7 @@ test("XT-conformance-44: for a contributor without Docker, bun test, oracle:chec
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) {
-          if (entry.name !== "node_modules" && path !== join(root, "conformance", "upstream")) {
+          if (entry.name !== "node_modules" && entry.name !== "vendor" && path !== join(root, "conformance", "upstream")) {
             scan(path);
           }
         } else if (/\.(ts|js|mjs|sh|toml|json)$/.test(entry.name) && /\bdocker\b/i.test(readFileSync(path, "utf8"))) {
@@ -781,7 +781,8 @@ test("XT-conformance-44: for a contributor without Docker, bun test, oracle:chec
     }
     expect(mentions.sort()).toEqual(["conformance/tests/xaravel/oracle.test.ts", "tools/oracle/oracle.ts"]);
     // No other Xaravel Test imports the oracle tool, so bun test reaches docker only through the fakes above.
-    for (const file of readdirSync(join(root, "conformance", "tests", "xaravel")).filter((name) => name !== "oracle.test.ts")) {
+    const testFiles = readdirSync(join(root, "conformance", "tests", "xaravel"), { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name);
+    for (const file of testFiles.filter((name) => name !== "oracle.test.ts")) {
       expect([file, readFileSync(join(root, "conformance", "tests", "xaravel", file), "utf8").includes("tools/oracle")]).toEqual([file, false]);
     }
 

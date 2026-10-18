@@ -43,7 +43,8 @@
     "inventory": "bun tools/inventory/inventory.ts generate",
     "inventory:cross-check": "bun tools/inventory/cross-check.ts",
     "baseline": "bun tools/baseline/baseline.ts",
-    "pin:bump": "bun tools/pin-bump/pin-bump.ts"
+    "pin:bump": "bun tools/pin-bump/pin-bump.ts",
+    "php-fixtures:install": "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",

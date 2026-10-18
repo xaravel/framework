@@ -28,5 +28,8 @@ Thumbs.db
 # Upstream snapshot: fetched by `bun run upstream:sync`, never committed (FR-1)
 /conformance/upstream/
 
+# PHP fixture installs: `bun run php-fixtures:install`, never committed
+/conformance/tests/xaravel/php-fixtures/*/vendor/
+
 # BMAD: per-user install answers (team config lives in _bmad/config.toml and _bmad/custom/config.toml)
 _bmad/config.user.toml
