@@ -368,13 +368,14 @@ Arrows point from a dependent to its dependency. Every package may also depend d
     - `.github/`;
     - `tools/`;
     - `packages/assert`, `packages/mockery` and `packages/contracts` (contracts after Phase 1);
-    - the root `package.json`, `bun.lock`, the root `bunfig.toml`, the root `tsconfig*.json` and `tsconfig.base.json`, `.oxlintrc.json` and `.gitattributes`. Package `tsconfig.json` files are generated and checked (AD-2).
-    - the agent instructions: `AGENTS.md`, and `**/CLAUDE.md` (none may exist; one would stop Claude Code reading `AGENTS.md`).
+    - the root `package.json`, `bun.lock`, the root `bunfig.toml`, the root `tsconfig*.json` and `tsconfig.base.json`, `.oxlintrc.json`, `.gitattributes`, `.bun-version` and the root `LICENSE`. Package `tsconfig.json` files are generated and checked (AD-2).
+    - the agent instructions and tooling: `AGENTS.md`, `**/CLAUDE.md` in any letter case (none may exist; one would stop Claude Code reading `AGENTS.md`), and `.claude/` (the settings, hooks and skills agents run, such as `bmad-build-auto`).
   - **Enforcement.** A GitHub ruleset on `main` requires the `protected-paths` and `ratchet` checks. They come from workflows pinned to the default branch (`pull_request_target`, which treats the PR diff as data only), so a PR cannot change its own checks. A change to a Protected Path needs Maintainer Code Owner review. That review is the Infrastructure Story approval and replaces any label.
   - **Permissions.** Workflows default to `permissions: contents: read`. Write scopes are granted per job to the Oracle, dashboard and release jobs only. Agents push with an identity limited to `story/*` branches, with no ruleset bypass.
   - **Disabling lint.** An `oxlint-disable` of any rule this spine names fails CI.
   - **Story manifest.** Story files are `stories/<story-id>.md`, written by sprint planning. CI reads `test_ids:` and `component:` from the **base branch**. A Story branch is named `story/<story-id>`. A Test ID may be listed by at most one open Story. CI fails a PR that changes Expectations lines or `portedTest` blocks whose IDs are not in its `test_ids`.
   - **Unexpected passes.** An unexpected pass of a Test ID owned by no open Story is a warning, and a bot opens a promotion PR. One owned by another open Story fails only that Story's next run.
+  - **Planning PRs.** A `planning/*` branch may change tooling, docs, decisions and planning records, but never `packages/**` or `conformance/expectations/**`: framework code and grader data change only through `story/*` branches. The ownership check enforces this (decisions/MAINT-2026-10-17-epic-1-items.md).
   - **Bot PRs.** Quarantine and promotion bots push `bot/*` branches as their own App identity. The ownership check exempts them when they change only Expectations `status` values, and they open `ESC-bot-<n>` Escalations.
   - **Escalations.** An agent writes `conformance/escalations/ESC-<story-id>-<n>.md`, with frontmatter `test_ids`, `proposed` and `evidence`. The ruling is `decisions/ESC-<story-id>-<n>.md` with `decision: approved | rejected`. An Escalation counts as approved only when its decision file exists.
 
