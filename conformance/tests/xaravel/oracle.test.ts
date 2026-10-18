@@ -162,6 +162,8 @@ if (args[0] === "run") {
   if (entrypoint === "cat") serve(join(base, command[0]));
   if (command.join(" ") === "php --version") serve(join(base, "php-version"));
   if (command[0] === "echo") { process.stdout.write(command.slice(1).join(" ") + "\\n"); process.exit(0); }
+  // exit <code> [stderr...]: with no stderr it stands in for an OOM kill, which often writes nothing.
+  if (command[0] === "exit") { if (command.length > 2) process.stderr.write(command.slice(2).join(" ") + "\\n"); process.exit(Number(command[1])); }
 }
 process.stderr.write("fake docker: unexpected call\\n");
 process.exit(2);
@@ -854,14 +856,18 @@ test("XT-conformance-44: for a contributor without Docker, bun test, oracle:chec
     expect((await cli(["tag", "--root", fx.repo], noDocker(fx))).code).toBe(0);
     expect(fx.calls()).toEqual([]);
 
-    // runInImage (the Inventory's image mode): docker run --rm --network none with read-only mounts; stdout passes through.
+    // runInImage (the Inventory's image mode): docker run --rm --network none with the fixed resource limits and
+    // read-only mounts; stdout passes through.
     const saved = { PATH: process.env["PATH"], FAKE_DOCKER_DIR: process.env["FAKE_DOCKER_DIR"] };
     try {
       Object.assign(process.env, withFakes(fx));
       const mounts = [{ host: "/h/lister.php", container: "/c/lister.php" }, { host: "/h/b", container: "/c/b" }];
       expect(runInImage("img:1", mounts, ["echo", "hello", "world"])).toBe("hello world\n");
-      expect(fx.calls().map((call) => call.args)).toEqual([["run", "--rm", "--network", "none", "--volume", "/h/lister.php:/c/lister.php:ro", "--volume", "/h/b:/c/b:ro", "img:1", "echo", "hello", "world"]]);
-      expect(() => runInImage("img:1", [], ["php", "x"])).toThrow("php x in img:1 failed (exit 2): fake docker: unexpected call");
+      expect(fx.calls().map((call) => call.args)).toEqual([["run", "--rm", "--network", "none", "--memory", "4g", "--memory-swap", "4g", "--pids-limit", "512", "--cpus", "2", "--volume", "/h/lister.php:/c/lister.php:ro", "--volume", "/h/b:/c/b:ro", "img:1", "echo", "hello", "world"]]);
+      expect(() => runInImage("img:1", [], ["php", "x"])).toThrow(new Error("php x in img:1 failed (exit 2): fake docker: unexpected call"));
+      // Exit 137 (a SIGKILL) names the 4g memory limit as a possible cause, with or without stderr.
+      expect(() => runInImage("img:1", [], ["exit", "137", "Killed"])).toThrow(new Error("exit 137 Killed in img:1 failed (exit 137): Killed; exit 137 is a SIGKILL, possibly at the container's 4g memory limit"));
+      expect(() => runInImage("img:1", [], ["exit", "137"])).toThrow(new Error("exit 137 in img:1 failed (exit 137): exit 137 is a SIGKILL, possibly at the container's 4g memory limit"));
       process.env["PATH"] = noDocker(fx).PATH;
       expect(() => runInImage("img:1", [], ["echo"])).toThrow("docker is not on PATH; running in the Oracle image needs Docker");
     } finally {
