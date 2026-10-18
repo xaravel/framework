@@ -484,3 +484,23 @@ export function phpLooseEquals(a: unknown, b: unknown): boolean {
 export function phpStrictEquals(a: unknown, b: unknown): boolean {
   return new Comparison().strict(a, b);
 }
+
+// Internal exports for the comparators, the exporter and the assertions (Story 4.3). Not re-exported by index.ts.
+export type { Entries, Key, Numeric };
+export {
+  arrayEntries,
+  brandedKey,
+  Comparison,
+  describe,
+  INT_MAX,
+  INT_MIN,
+  intKey,
+  isBuiltIn,
+  isNumber,
+  isPhpArray,
+  numericValue,
+  objectProps,
+  RECURSION,
+  stringKey,
+  truthy,
+};
