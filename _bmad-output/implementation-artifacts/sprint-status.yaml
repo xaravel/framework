@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 22:03
+last_updated: 10-17-2026 22:11
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -590,7 +590,7 @@ action_items:
       versions and release-authority to main.json required checks and run ruleset:apply
       (finding R2)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
   - id: "epic-1-retro-item-3-bind-decision-to-escalation"
     epic: 1
@@ -678,14 +678,14 @@ action_items:
     action: "Rule on widening the AD-16 Protected list to .claude/, CLAUDE.md case
       variants, .bun-version and the root LICENSE (finding D11)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
   - id: "epic-1-retro-item-15-ownership-non-story-branches"
     epic: 1
     action: "Tighten ownership for non-story/* branches to the AD-16 bot/* rule and
       define what planning/* may touch, Escalating if it changes AD-16 (finding D3)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-17.md"
   - id: "epic-1-retro-item-9-agent-pushes-merge-queue"
     epic: 1
@@ -782,3 +782,21 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-2.6-2.md"
+  - id: "epic-1-retro-item-16-implement-protected-list-widening"
+    epic: 1
+    action: "Implement decisions/MAINT-2026-10-17-epic-1-items.md item 14: add .claude/,
+      CLAUDE.md in any letter case, .bun-version and the root LICENSE to conformance/protected-paths
+      and .github/CODEOWNERS (codeowners --check must pass), with protected-paths
+      tests for each."
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-17-epic-1-items.md"
+  - id: "epic-1-retro-item-17-ownership-planning-rule"
+    epic: 1
+    action: "Implement decisions/MAINT-2026-10-17-epic-1-items.md item 15 in tools/ownership:
+      a planning/* PR fails ownership when it changes packages/** or conformance/expectations/**;
+      bot/* keeps the Expectations status-only rule; other non-story branches unchanged.
+      Add XT tests for each case."
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-17-epic-1-items.md"

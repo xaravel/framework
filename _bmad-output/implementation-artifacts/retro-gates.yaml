@@ -6,11 +6,8 @@ epic-1:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer:
-    - epic-1-retro-item-2-require-remaining-checks
     - epic-1-retro-item-12-agent-identity-decision
     - epic-1-retro-item-13-release-live-setup-and-version-pins
-    - epic-1-retro-item-14-widen-protected-list
-    - epic-1-retro-item-15-ownership-non-story-branches
     - epic-1-retro-item-9-agent-pushes-merge-queue
 epic-2:
   verdict: accepted-with-open-items
