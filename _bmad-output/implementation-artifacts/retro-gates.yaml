@@ -21,3 +21,4 @@ epic-2:
   waiting_on_maintainer:
     - epic-2-retro-item-8-spine-oracle-field
     - epic-2-retro-item-9-confirm-pest-suite-tags
+    - epic-2-retro-item-7-cleanup-2-6-patches-and-nightly
