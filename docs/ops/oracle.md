@@ -157,6 +157,7 @@ The Oracle evaluates each committed request (`conformance/oracle/requests/*.json
 | `bun run oracle:fixtures --local <dir> [--php <bin>]` | The same without Docker: evaluate.php runs with the local PHP 8.5.11 (or `--php <bin>`) against a locked install of the framework snapshot in `<dir>`, whose test and source files must equal the snapshot's (as for `bun run inventory --local`). The framework directory in any output string is `{root}`, so a local run and an image run give the same bytes. |
 | `bun run oracle:fixtures --determinism …` | The same two passes and comparison, without a key. It writes no fixtures. |
 | `bun run oracle:fixtures fingerprint` | Prints the fingerprint of `conformance/oracle/oracle.pub`: the lowercase hex SHA-256 of its SPKI DER. |
+| `bun run oracle:verify-fixtures` | Verifies every committed fixture against `conformance/oracle/oracle.pub` and its committed request, naming each bad file; CI's `check` job runs it ([Verification in CI](#verification-in-ci-bun-run-oracleverify-fixtures)). |
 
 Exit codes: 0 pass, 1 any failure (fail closed), 2 usage error. A run fails, writing nothing, when `ORACLE_SIGNING_KEY` is unset or not an Ed25519 PKCS#8 PEM, when `conformance/oracle/oracle.pub` is missing, or when the key's public half is not `oracle.pub` (`signing key does not match conformance/oracle/oracle.pub`). The key is checked before anything is evaluated.
 
@@ -199,6 +200,18 @@ A fixture is one compact line and LF, keys in this order:
 Signing happens in Bun (`node:crypto`), never in the PHP container. The private key exists only as the secret `ORACLE_SIGNING_KEY` of the GitHub environment `oracle` ([identities.md](identities.md)), is read only from that environment variable, and is never written to disk or committed. The verification key is `conformance/oracle/oracle.pub` (SPKI PEM).
 
 Verification key fingerprint (SHA-256 of the SPKI DER): `f5c4d31c7020c5c42125c89c57ef5cc374afc38472bd3b0582477eb9ad4cb396`.
+
+### Verification in CI (`bun run oracle:verify-fixtures`)
+
+`bun run oracle:verify-fixtures` (`tools/oracle/verify.ts [--root <dir>]`) checks every committed fixture `conformance/fixtures/<component>/<sha256>.json`. It is pure Bun: no Docker, no PHP, no network, no private key (it reads only `oracle.pub`). CI's `check` job (`.github/workflows/ci.yml`, step `Verify the Oracle fixtures`, run first, right after the install) runs it on every pull request, merge-queue run and push to `main`. It reports every problem, one line each on stderr, starting with the file's repo-relative path. Any of these fails it:
+
+- the fixture is not in the canonical [format](#fixture-format-and-signature), or its signature does not verify against `conformance/oracle/oracle.pub` (a hand-edited output, or a fixture signed with another key: `<path>: the signature does not verify`);
+- the file name is not `<64 lowercase hex>.json`, or is not the fixture's `sha256`;
+- the fixture's `sha256` is not a committed request in `conformance/oracle/requests/<component>.jsonl`, the request is in another Component's file, or the Component has no request file;
+- the request is listed in `conformance/oracle/nondeterminism.jsonl` (a listed request gets no fixture);
+- any other file or directory under `conformance/fixtures/`, except `generators/` (generator reference files, never signed, are skipped).
+
+It fails closed, naming the cause, when `oracle.pub` is missing or not an Ed25519 key, or a request file or the listing cannot be read. No `conformance/fixtures/` directory, or no fixtures, passes. Exit codes: 0 pass (`Oracle fixtures OK: <n> fixtures verify against conformance/oracle/oracle.pub.`), 1 any failure, 2 usage error. Fixtures are protected by this check, not by path: `/conformance/fixtures/` keeps no CODEOWNERS owner.
 
 ### Determinism
 
