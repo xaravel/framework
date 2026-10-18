@@ -71,7 +71,7 @@ development_status:
   4-1-php-comparison-core: done
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: done
-  4-4-exception-output-file-and-json-assertions-and-the-coverage-r: in-progress
+  4-4-exception-output-file-and-json-assertions-and-the-coverage-r: blocked  # open-question: ESC-4.4-1 (createMock needs Story 4.5; 15 scan names are Laravel/Testbench helpers)
   4-5-mockery-core: backlog
   4-6-mockery-advanced-and-api-coverage: backlog
   epic-4-retrospective: optional
