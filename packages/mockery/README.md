@@ -8,4 +8,4 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 
 ## Dependencies
 
-None.
+- `@xaravel/assert` (workspace): grader packages may depend on grader packages (AD-2).

@@ -12,12 +12,20 @@
 //      given) as `this`, awaits its `setUp()` and the body, then always its
 //      `tearDown()`, even after a failing `setUp`; the first error wins. No
 //      other lifecycle hook runs here (AD-25 belongs to @xaravel/testing's TestCase);
-//   4. the report goes to the harness reporter, passing or failing;
-//   5. a body or lifecycle error fails the test, then a reporter error;
+//   4. if `globalThis[Symbol.for('xaravel.mockery.run')]` is a function
+//      (installed by @xaravel/mockery on load), `inner` runs through it, inside
+//      the frame: Mockery's container is closed and verified when `inner`
+//      resolves (an unmet expectation fails the test, and each counted
+//      expectation records a `mockeryExpectation` assertion), and purged
+//      without verifying when it rejects, so the body's error wins
+//      (ESC-4.5-1 item 1);
+//   5. the report goes to the harness reporter, passing or failing;
+//   6. a body or lifecycle error fails the test, then a reporter error;
 //      otherwise zero recorded assertions fail the test (FR-113).
 import { registerTests } from "./Declarations";
 
 const SCOPE_RUN = Symbol.for("xaravel.scope.run");
+const MOCKERY_RUN = Symbol.for("xaravel.mockery.run");
 const INTEGER_LIKE = /^(0|-?[1-9][0-9]*)$/;
 
 /**
@@ -86,14 +94,27 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
     const run = async (): Promise<void> => {
       const scopeRun: unknown = (globalThis as Record<symbol, unknown>)[SCOPE_RUN];
       if (typeof scopeRun === "function") {
-        await (scopeRun as (kind: string, fn: () => Promise<void>) => unknown)("test", inner);
+        await (scopeRun as (kind: string, fn: () => Promise<void>) => unknown)("test", () => runWithMockery(inner));
       } else {
-        await inner();
+        await runWithMockery(inner);
       }
     };
     return { label, id: label, run };
   });
   registerTests("portedTest()", "ported", null, planned, true);
+}
+
+/**
+ * Runs `fn` through Mockery's test-finish protocol when @xaravel/mockery is loaded (ESC-4.5-1 item 1), else directly.
+ * Shared with `xaravelTest`.
+ */
+export async function runWithMockery(fn: () => unknown): Promise<void> {
+  const mockeryRun: unknown = (globalThis as Record<symbol, unknown>)[MOCKERY_RUN];
+  if (typeof mockeryRun === "function") {
+    await (mockeryRun as (fn: () => unknown) => unknown)(fn);
+  } else {
+    await fn();
+  }
 }
 
 /** `[key, args]` per test; a single `[null, []]` without a dataset. */
