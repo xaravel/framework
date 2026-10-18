@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 19:30
+last_updated: 10-17-2026 22:03
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -761,7 +761,7 @@ action_items:
     action: "Add the oracle field to AD-15 Inventory fields in the architecture spine
       (finding S3)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
   - id: "epic-2-retro-item-9-confirm-pest-suite-tags"
     epic: 2
@@ -769,5 +769,16 @@ action_items:
       in conformance/baseline-pin, which Story 2.1 AC1 says the Maintainer records
       (finding S2)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-17.md"
+  - id: "epic-2-retro-item-10-implement-esc-2-6-2"
+    epic: 2
+    action: "Implement the Maintainer ruling decisions/ESC-2.6-2.md (option 1): start
+      DynamoDB Local (amazon/dynamodb-local:2.0.0), memcached and MySQL with Upstream
+      linux_tests env in the framework none and queue-sync@none baseline legs (.github/workflows/baseline.yml),
+      amend Story 2.6 none-leg wording in docs/ops/baseline.md, re-run the baseline,
+      and commit the regenerated oracle and assertions values through the artifact
+      flow. The four DynamoDbStoreTest IDs must record Upstream outcomes, not skip."
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-2.6-2.md"
