@@ -342,7 +342,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
     - **Xaravel Tests:** `xaravelTest('XT-<c>-<n>', '<FR consequence>', fn)`.
   - **Data files (JSONL, sorted).**
     - **Expectations:** sharded to mirror the Ported Test files, at `conformance/expectations/<component>/<ported test file path>.jsonl`. Each line is one Test ID × Variant, with fields `id`, `variant`, `status`, `reason`, `adapted` and `escalation`. Parallel Stories therefore never edit the same shard. CI checks that each `(id, variant)` appears exactly once across shards.
-    - **Test Inventory:** `conformance/inventory/<component>.jsonl`, with fields `id`, `component`, `kind`, `backends`, `hash`, `assertions` and `source`.
+    - **Test Inventory:** `conformance/inventory/<component>.jsonl`, with fields `id`, `component`, `kind`, `backends`, `hash`, `assertions`, `oracle` and `source`. `oracle` maps each Variant to the Upstream outcome the baseline recorded (`pass`, `fail` or `skip`).
     - **Variants:** a closed vocabulary in `conformance/variants`: `none`, `sqlite`, `pgsql`, `redis`, and `<driver>@<backend>` (`queue-database@pgsql`, `session-redis@redis`, …).
   - **Upstream snapshot.** `conformance/upstream/{framework,ai,mcp,boost}/` is read-only, at the tag in `conformance/baseline-pin`, synced by `bun run upstream:sync`. The Inventory's `source` field is a path into it plus a line range.
   - **Oracle.**
