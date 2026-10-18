@@ -1,0 +1,1 @@
+{"sha256":"d40ee2e3c23d6be95679eb81c0bd84758e2694891feb82f959aef1cf233620e9","output":{"error":null,"results":[{"value":"select * from `users` where year(`created_at`) = ?"}]},"signature":"9xElQwzpq9JHR0XkY84CisIKT0WCeXnkZ9z9RJ1jpPw5lGO96/69ra7s7bYhkV60LHCKfH/zm+K3HnPyIpJHBw=="}

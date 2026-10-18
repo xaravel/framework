@@ -1,0 +1,1 @@
+{"sha256":"f7a4ecb32a3617004e091c99b6e05d9cb94469ab4db1bc99b2b4e9c6b9a20a38","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"geo\" add \"coordinates\" geometry not null"]]}},{"value":"alter table \"geo\" add \"coordinates\" geometry not null"}]},"signature":"gSOP7fuhffhmQXKZPF2piz80VpUN7WkO+T63rOu3vlN79T+aNBB4D0lFMDgeKwPEjx92UJzFS6WoC0NXMLMSDA=="}

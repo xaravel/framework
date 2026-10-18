@@ -1,0 +1,1 @@
+{"sha256":"6f8d58b4782858ab826d61a10839c8ddd996a2625d872d116c430dc840e14fff","output":{"error":null,"results":[{"value":"select * from \"users\" where \"json\"->>'''))#' = ?"}]},"signature":"gJ8hiS2TekEM2zNMWsG86OaI9rz5NVgt444V6dCuDyc3bGfytoE9oce/jjCQcZOiVwWShpJgf/rMTHtnoPepAg=="}

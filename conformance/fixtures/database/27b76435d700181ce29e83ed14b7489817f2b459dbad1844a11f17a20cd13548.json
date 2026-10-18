@@ -1,0 +1,1 @@
+{"sha256":"27b76435d700181ce29e83ed14b7489817f2b459dbad1844a11f17a20cd13548","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` drop foreign key `foo`"]]}},{"value":"alter table `users` drop foreign key `foo`"}]},"signature":"101wspy7xvtvUWtpqg9SHpXYWvk0QQ127abljGKV+0j42ugAisqnm80x14I5Q4v+kiL+ouzk8YAW5e8l1KxPCQ=="}

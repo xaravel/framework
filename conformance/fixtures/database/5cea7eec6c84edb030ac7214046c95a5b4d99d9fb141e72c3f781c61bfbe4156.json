@@ -1,0 +1,1 @@
+{"sha256":"5cea7eec6c84edb030ac7214046c95a5b4d99d9fb141e72c3f781c61bfbe4156","output":{"error":null,"results":[{"value":"select * from \"users\" where ((\"last_name\" like ?) or (\"email\" like ?))"},{"value":{"array":[[{"int":"0"},"%Otwell%"],[{"int":"1"},"%Otwell%"]]}}]},"signature":"sKlol9O42ieqKYWOEu3MtKJCbwZ4WIGhpa93l7gIf7JS8gDO9GWOo7HFw1ABGo7KLabC44/o5GgaldwqtF+cBw=="}

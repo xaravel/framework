@@ -1,0 +1,1 @@
+{"sha256":"3a58d0ab3b27a0f6f3d6191e5bfc14de59ed0b6a1995364f35de6553ab723529","output":{"error":null,"results":[{"value":"select (select \"baz\" from \"two\" where \"subkey\" = ?) as \"sub\" from \"one\""},{"value":{"array":[[{"int":"0"},"subval"]]}}]},"signature":"l3CnOjvM5i/RQy7vMNjcDNTqVZMGfmGHTscTOuJem2tY0vb5oSsiESEVZX/CUL/x4TqcnpWXpSrb1v3ll/fqDw=="}

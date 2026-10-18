@@ -1,0 +1,1 @@
+{"sha256":"a4aa0a616eff81e770cc398ae1013f34427aad789ab72030fbaa86e3085e0f9b","output":{"error":null,"results":[{"value":"select distinct on (\"foo\") \"foo\", \"bar\" from \"users\""}]},"signature":"RWl7jNMoWdBy3/Bghaxwi1pN03eMegBLSKCBv9YF1jCDoJN96K2JsuEV0SrXT9f1X1Oef9ut9Z6riMAk/5nUCg=="}

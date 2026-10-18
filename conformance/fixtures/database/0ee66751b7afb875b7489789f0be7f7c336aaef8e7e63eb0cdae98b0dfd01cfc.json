@@ -1,0 +1,1 @@
+{"sha256":"0ee66751b7afb875b7489789f0be7f7c336aaef8e7e63eb0cdae98b0dfd01cfc","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop index \"geo_coordinates_spatialindex\" on \"geo\""]]}},{"value":"drop index \"geo_coordinates_spatialindex\" on \"geo\""}]},"signature":"H1sa2wZCjF1dYv+0ixC08OgFrcB2gEoz3Qw33qMfj/ITQYbBkY+St/cA1ijyaZUAXSdNYB7OIVLrA2zZd3UgDg=="}

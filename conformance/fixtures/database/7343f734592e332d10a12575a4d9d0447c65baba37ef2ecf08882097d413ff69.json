@@ -1,0 +1,1 @@
+{"sha256":"7343f734592e332d10a12575a4d9d0447c65baba37ef2ecf08882097d413ff69","output":{"error":null,"results":[{"value":"select * from `users` where not ifnull(json_contains_path(`options`, 'one', '$.\"languages\"[0][1]'), 0)"}]},"signature":"7KQyCvi9QsWKkXdngVqN7hWMn1OWg3XBk5y+439VF+fEtMgv0ZXIBKrndiW0Ljmq/GpQWIfMTalR+IzzdiPeDQ=="}

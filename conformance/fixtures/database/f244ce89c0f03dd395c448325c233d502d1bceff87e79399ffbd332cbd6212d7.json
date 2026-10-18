@@ -1,0 +1,1 @@
+{"sha256":"f244ce89c0f03dd395c448325c233d502d1bceff87e79399ffbd332cbd6212d7","output":{"error":null,"results":[{"value":"select * from \"users\" where \"description\" not glob ?"},{"value":{"array":[[{"int":"0"},"Hell[*] ?orld[?]*"]]}}]},"signature":"E2Juf2he8NcQzuqrV+EnSZF34ED57+fyBit/NKV8qzFGuHkEh1YmEx30gatpyF+2lIEYAGCqxBrKzB9mmF2UAQ=="}

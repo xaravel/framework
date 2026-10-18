@@ -1,0 +1,1 @@
+{"sha256":"5ffb6ca943bf193e644edf0b81a4c634400c08670731518d0a86dc4b8a78214e","output":{"error":null,"results":[{"value":"select * from [foo] with(rowlock,holdlock) where [bar] = ?"},{"value":{"array":[[{"int":"0"},"baz"]]}}]},"signature":"5PggdnO1OOO6e7v4yscmDHXTzdZ0eSRXp0V2MZIHutQDFsRhmTJO290iizDKK//agIQILjiNgdoW1ASrm8hZCg=="}

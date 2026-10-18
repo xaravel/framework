@@ -1,0 +1,1 @@
+{"sha256":"ea31e7b6dbf56f3aed0315c77b92869b5771aa0dc4c4ac0916d039795ac698b5","output":{"error":null,"results":[{"value":"select * from \"users\" where extract(month from \"created_at\") = ?"},{"value":{"array":[[{"int":"0"},"05"]]}}]},"signature":"s+Wk+u2NpL8WYjJzpSTTrLTKPNwFDRwNdTi+jv7eBz0CH0byyy6f0XvXVM1W86HKoXQlQLKOwaLpzRaTYtXvBA=="}

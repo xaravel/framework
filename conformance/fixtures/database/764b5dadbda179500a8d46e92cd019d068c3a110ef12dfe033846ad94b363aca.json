@@ -1,0 +1,1 @@
+{"sha256":"764b5dadbda179500a8d46e92cd019d068c3a110ef12dfe033846ad94b363aca","output":{"error":null,"results":[{"value":"select \"countries\".*, count(users.*) as \"users\" from \"countries\" inner join \"users\" on \"users\".\"country_codes\" ?? \"countries\".\"code\""}]},"signature":"r5SFesa8SwVI/TbmDVbBRsBBm0KPNcvF7xFlzl3PyG2o2YZ6A93G1JgCqGxjvo5mjC4KDvf4wqdfiSXZM56ODg=="}

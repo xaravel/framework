@@ -1,0 +1,1 @@
+{"sha256":"b8e2654bf60ba8d341f1a02a4678b4796d3fe8403f4bb45ac1c4e9d868a9f61f","output":{"error":null,"results":[{"value":"select * from \"users\" where coalesce((\"options\"->'language')::jsonb ?? 'primary', false)"}]},"signature":"6s8dtmE17S2bZlmoqpdXIizG2IZh9vgjgAJs790TVSBOw2IvXzc0ywN9tKFSMldeCNiUWzWbTBrs2c5SwSH7AQ=="}

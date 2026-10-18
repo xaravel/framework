@@ -1,0 +1,1 @@
+{"sha256":"3b599ff32bbdb00a7b8228414205614de3c5bf24441865781a7cc882cb0ff488","output":{"error":null,"results":[{"value":"select * from \"users\" where \"items\"->'price'->>'in_usd' = ? and \"items\"->>'age' = ?"}]},"signature":"B+xnt05Dyhu1cyKVYxvq3ITt7STbeIsxTy7rDdID/DN9+Sdb2mDnH8CvH72PwFuuC5BQS6eTjRA4xWXTRe8+Dg=="}

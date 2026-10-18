@@ -1,0 +1,1 @@
+{"sha256":"202f5cd2f2b80bac225104f2ef4cfa862615dd3dead092603154c4d17d1c56c7","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop table `users`"]]}},{"value":"drop table `users`"}]},"signature":"QBIEBH5jRYcQfFwhFhtyHFmu/ld+H5Zzsb+VNQLOh3PjB01MmLQeKJ7orMTeKnDXFjb4JfUIdxnFPQzdp9CRDA=="}

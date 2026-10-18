@@ -1,0 +1,1 @@
+{"sha256":"c2607ca321b08e9bc4ddbf5a9163fa3d357299144ba4613198905ba155c864c3","output":{"error":null,"results":[{"value":"select * from [users] where [id] = ? or not 1 in (select [key] from openjson([options], '$.\"languages\"[0]'))"}]},"signature":"PpaCCEfDaTsQoXsA1DSi6uYGsYOIgNEx4pCDu0AP5LqzYXyk5fDZtCB851VmhhsYg3EexAdsj4pmq8JSPhVjBQ=="}

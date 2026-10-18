@@ -1,0 +1,1 @@
+{"sha256":"90c5b71ee5c475ef92eaec4e41af7d5564aae1d1ad422bc957906c54891efe97","output":{"error":null,"results":[{"value":"select * from `posts` where date(`published_at`) < ? and date(`held_at`) < ?"},{"value":{"array":[[{"int":"0"},"2022-04-20"],[{"int":"1"},"2022-04-20"]]}}]},"signature":"7X/ip+KbvMKxXLwUCs+LPTHl8U3DuaEq/40tcPQMV+W8h1V3KaHjk4Rpsb39PEoeoK5Zpgdh9Hr7b0M88mztBw=="}

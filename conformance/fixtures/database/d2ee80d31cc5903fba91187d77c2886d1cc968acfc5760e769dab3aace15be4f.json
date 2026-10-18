@@ -1,0 +1,1 @@
+{"sha256":"d2ee80d31cc5903fba91187d77c2886d1cc968acfc5760e769dab3aace15be4f","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" rename to \"foo\""]]}},{"value":"alter table \"users\" rename to \"foo\""}]},"signature":"68N0YzN1ol7SwG9NHbS+qjlltwpf/DhO7756mPjymy800U/zytYCG+56Co5rN0LE5hdJfVFQUGcEVO7PJ3g3BA=="}

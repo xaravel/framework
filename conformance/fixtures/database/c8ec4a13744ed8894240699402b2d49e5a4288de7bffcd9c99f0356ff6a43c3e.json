@@ -1,0 +1,1 @@
+{"sha256":"c8ec4a13744ed8894240699402b2d49e5a4288de7bffcd9c99f0356ff6a43c3e","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `foo` blob not null"]]}},{"value":"alter table `users` add `foo` blob not null"}]},"signature":"fd66otI4jWnkEUuPcYdX3P1iSw6LarobDEWpmLNz6NkYfMDnRrf3biLIB0LLXjlJaet0g82HJZro/fZydFX4DQ=="}

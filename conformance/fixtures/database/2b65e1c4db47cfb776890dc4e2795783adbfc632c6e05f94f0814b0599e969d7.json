@@ -1,0 +1,1 @@
+{"sha256":"2b65e1c4db47cfb776890dc4e2795783adbfc632c6e05f94f0814b0599e969d7","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `geo` add `coordinates` polygon not null"]]}},{"value":"alter table `geo` add `coordinates` polygon not null"}]},"signature":"G9+CopxCN3nQjxH4AXBuF5Oo+SOj8b1Of6OLkp1EumGGesoUDhbZLiAPshwDNDAiNExSRD4NQwBsU7tPmX5cDA=="}

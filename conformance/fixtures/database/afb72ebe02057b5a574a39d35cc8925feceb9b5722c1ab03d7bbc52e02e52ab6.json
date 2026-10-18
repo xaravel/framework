@@ -1,0 +1,1 @@
+{"sha256":"afb72ebe02057b5a574a39d35cc8925feceb9b5722c1ab03d7bbc52e02e52ab6","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"uuid\" uuid not null"]]}},{"value":"alter table \"users\" add column \"uuid\" uuid not null"}]},"signature":"o48/4hGzR+AfpgqvtblBxl571wTmv4Q5Ri9BGTkgJt5z/5HXtGCgpkaN8tFk3P2ZLMhLm8IsDpTgvdCWqstEAw=="}

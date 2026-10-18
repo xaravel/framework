@@ -1,0 +1,1 @@
+{"sha256":"9765cab50f94eb0357540f617e1cd40c23d991b8896c29df35d8f98ce39bac3b","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `foo` decimal(5, 2) not null"]]}},{"value":"alter table `users` add `foo` decimal(5, 2) not null"}]},"signature":"NlKGt3A/4XDqkvTpKPwL9b1kHLruNpwhBaHATQ7GxQJYaX1FlIc+eiCLppCo8tuiuh0WqBTAAeN67o9jEUHyDA=="}

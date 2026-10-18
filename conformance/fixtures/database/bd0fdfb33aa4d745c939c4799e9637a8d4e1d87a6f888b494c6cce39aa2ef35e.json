@@ -1,0 +1,1 @@
+{"sha256":"bd0fdfb33aa4d745c939c4799e9637a8d4e1d87a6f888b494c6cce39aa2ef35e","output":{"error":null,"results":[{"value":"select * from [users] where ? in (select [value] from openjson([options]))"},{"value":{"array":[[{"int":"0"},"true"]]}}]},"signature":"g6Szu+yNrN0D/3G3hkHvO28zCHUzhiC5C2D44LKxDQWPBnU17HrHJ4vJnRb3auMz9b1eTIdwwdl4pOPwyySUDQ=="}

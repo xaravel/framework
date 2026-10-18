@@ -1,0 +1,1 @@
+{"sha256":"980167de79cf52839fb25ebe43c1ff157313d67d28c3b540d600e5b45784dd35","output":{"error":null,"results":[{"value":"select \"foo\" from \"users\" indexed by test_index"}]},"signature":"HMU0QAJCrhAYr07QXV/LP63n1oSdemfno1tVjp6gEGT5gmmwinwf5cQxMvZTsOcQrGWs5+H+F4oOVo7vXZRKCg=="}

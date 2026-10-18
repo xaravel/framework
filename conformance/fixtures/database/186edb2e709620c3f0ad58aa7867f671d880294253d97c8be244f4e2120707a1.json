@@ -1,0 +1,1 @@
+{"sha256":"186edb2e709620c3f0ad58aa7867f671d880294253d97c8be244f4e2120707a1","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" drop constraint \"foo\""]]}},{"value":"alter table \"users\" drop constraint \"foo\""}]},"signature":"hQp+JVP/YTuUlQSNKutfc9B1saGTxWHXUNp/LK0MvgFTGN3HJ6tEeXLuHFF58CzJnWs2YgcNpjOYZxRrIl3gAA=="}

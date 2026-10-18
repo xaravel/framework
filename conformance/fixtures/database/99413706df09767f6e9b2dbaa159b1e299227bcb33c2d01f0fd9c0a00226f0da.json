@@ -1,0 +1,1 @@
+{"sha256":"99413706df09767f6e9b2dbaa159b1e299227bcb33c2d01f0fd9c0a00226f0da","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" drop column \"foo\""]]}},{"value":"alter table \"users\" drop column \"foo\""}]},"signature":"xDTAnWfcj2cgnG2FqPNM38cS5o8IYkkwr5JG3b7lbEfvfQEV4aFlfGWJjHW4GqGgUDPhQOnpg9asuWukNNJqBg=="}

@@ -1,0 +1,1 @@
+{"sha256":"dbca8984225adcbe155ecee61293cbca09b418410befee552e6068a720e36f17","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `geo` add `coordinates` multipolygon not null"]]}},{"value":"alter table `geo` add `coordinates` multipolygon not null"}]},"signature":"A+Qwverr1Sqy4uXo4HgumFgCinAuYpr8bRcuEuB+BNAsNknIwZd47kUfPRXOH5IPNMWXfOq1Infdu3P/RVM/DA=="}

@@ -1,0 +1,1 @@
+{"sha256":"fd4b07de1be3f32fd1e22276efb16a5743456dde142a56712e0472fbaa2cb48f","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"birth_year\" int not null"]]}},{"value":"alter table \"users\" add \"birth_year\" int not null"}]},"signature":"77JHdPaGEPLMFepn54R7J6gsFc0QA9G6Ut2EFFzs+sCSFak8J+z8gWcC2Q+7rZjLnantBZdH+dob7vSih2P9Cg=="}

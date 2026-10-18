@@ -1,0 +1,1 @@
+{"sha256":"b8b7bd8ace7431482c66912aa0e622046b771eb89941fe7668671cd078c4fa42","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"foo\" text not null"]]}},{"value":"alter table \"users\" add column \"foo\" text not null"}]},"signature":"BHtzonfs/tbr74OzCjjfl/qQgawUapXjnz+UbmSY7nz2FF6R6GwFZQFSdpqVNbunfLh+8BPOw7ssfaupIQQ3Ag=="}

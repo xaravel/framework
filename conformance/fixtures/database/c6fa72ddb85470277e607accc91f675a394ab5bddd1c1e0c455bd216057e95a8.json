@@ -1,0 +1,1 @@
+{"sha256":"c6fa72ddb85470277e607accc91f675a394ab5bddd1c1e0c455bd216057e95a8","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"foo\" nvarchar(255) not null"]]}},{"value":"alter table \"users\" add \"foo\" nvarchar(255) not null"}]},"signature":"g9IqnC7Lren4W/kCq/XB/TICZOJDQ3qY7Sc/N42SwYuw66HF5+T13EHfoGSntHbyC4+WM09UGbOCTstVuUaIAA=="}

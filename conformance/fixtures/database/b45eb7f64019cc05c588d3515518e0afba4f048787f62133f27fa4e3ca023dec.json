@@ -1,0 +1,1 @@
+{"sha256":"b45eb7f64019cc05c588d3515518e0afba4f048787f62133f27fa4e3ca023dec","output":{"error":null,"results":[{"value":"select * from [users] order by (SELECT 0) offset 10 rows fetch next 10 rows only"}]},"signature":"grsu/7QAMAsUZjVkcmMFCjOzE0pdW7lHUtwGgLXTyqjqbMWp+2W2Dx5sG3pvSOl9voXHehv2sHtPFhFiUzQWDQ=="}

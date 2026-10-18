@@ -1,0 +1,1 @@
+{"sha256":"56bf8cf5f7adf9da9e50824d089494007b0474ced6c513df9a8940d908357394","output":{"error":null,"results":[{"value":"Some text\n\n    {{ $a }}\n    @if($b)\n        {{ $b }}\n    @endif\n"}]},"signature":"+WdvEBoKPp5TiIfmH6rsn31AzQZj9NktKU3TL+KczbO7H10hIbWW6sWpZ9kxOzD7eJdUI6pOfBeLTufJ72L/Bw=="}

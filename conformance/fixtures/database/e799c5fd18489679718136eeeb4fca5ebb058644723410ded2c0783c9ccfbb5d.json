@@ -1,0 +1,1 @@
+{"sha256":"e799c5fd18489679718136eeeb4fca5ebb058644723410ded2c0783c9ccfbb5d","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"foo\" inet not null"]]}},{"value":"alter table \"users\" add column \"foo\" inet not null"}]},"signature":"y20Tx5KaGZohxcPGi/SI20Pxn2tkeCgeCYeAvKKuUOfhYFY0d5NPQlaFjLyR/O+kefJnDEJgZgDAkdVVHegcCg=="}

@@ -1,0 +1,1 @@
+{"sha256":"e36877a9eafd8c01198b1b6e3c373bfde46ea1647d5d91d7b2de3340e2ee20fa","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" not between \"created_at\" and \"updated_at\""},{"value":{"array":[]}}]},"signature":"pl1RYlrnci8jlG9a2EKf/it5BUgYHwXqQLwe7fLh/7MQr8QyQysRCqMedLDNmZNA8j9YDS4zN4gLW1xevSlzDA=="}

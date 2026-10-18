@@ -1,0 +1,1 @@
+{"sha256":"151fe1e051cbafe7ea08f523d5de13fea85e67ca68a6819fd445e3457984c57d","output":{"error":null,"results":[{"value":"select * from `users` where json_unquote(json_extract(`items`, '$.\"price\".\"in_usd\"')) = ? and json_unquote(json_extract(`items`, '$.\"age\"')) = ?"}]},"signature":"Xyj/98hpp/MMKgKca0BpqqnOFeNm706xi5vMyM53BnMPxLVAegJhTQzRGQeRzQCPCLDvpLQzLsWRkNPkNmcbBw=="}

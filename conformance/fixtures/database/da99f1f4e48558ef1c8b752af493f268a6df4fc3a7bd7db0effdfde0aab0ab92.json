@@ -1,0 +1,1 @@
+{"sha256":"da99f1f4e48558ef1c8b752af493f268a6df4fc3a7bd7db0effdfde0aab0ab92","output":{"error":null,"results":[{"value":"select * from `foo` where `bar` = ? for update"},{"value":{"array":[[{"int":"0"},"baz"]]}}]},"signature":"e+y6nprFJLriEncmmgia3LiFVKpRq2iPfC00XnyNaUWMP4Y6g0/QM7JAp0xTJIEsRn5/bsz9la+F0Q9IF4A1Cg=="}

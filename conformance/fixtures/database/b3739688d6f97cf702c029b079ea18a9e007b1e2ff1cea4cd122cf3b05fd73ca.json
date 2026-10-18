@@ -1,0 +1,1 @@
+{"sha256":"b3739688d6f97cf702c029b079ea18a9e007b1e2ff1cea4cd122cf3b05fd73ca","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"foo\" bigint not null"]]}},{"value":"alter table \"users\" add column \"foo\" bigint not null"}]},"signature":"d/ATp2U7sl0KkwhrvOix1QwtHtbhVdYdKXWKTcPafq3lkA/WY0UMtaE/MXJdlZFHhFON02J0oD9KBWqlY1CjAw=="}

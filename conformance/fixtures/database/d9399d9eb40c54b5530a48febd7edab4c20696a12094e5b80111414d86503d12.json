@@ -1,0 +1,1 @@
+{"sha256":"d9399d9eb40c54b5530a48febd7edab4c20696a12094e5b80111414d86503d12","output":{"error":null,"results":[{"value":"select * from \"users\" where \"roles\" ??& ?"}]},"signature":"FIsCvmwyAqewEmFxAr/ppWPFYvIScma+5cMmYqBnq1P0LaKcoeBCSxQFNnDLrtV6fqrKh+x3tu9/qHJRuGzeBw=="}

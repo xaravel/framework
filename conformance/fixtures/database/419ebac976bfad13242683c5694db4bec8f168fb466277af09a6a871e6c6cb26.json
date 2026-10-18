@@ -1,0 +1,1 @@
+{"sha256":"419ebac976bfad13242683c5694db4bec8f168fb466277af09a6a871e6c6cb26","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" in (?, ?, ?)"},{"value":{"array":[[{"int":"0"},{"int":"45582"}],[{"int":"1"},{"int":"2"}],[{"int":"2"},{"int":"3"}]]}}]},"signature":"wwwPKguB0tUO5/SkjAHOm6rNphYWlq1vGel4/5ityLKzw6TU8Yg5vXpOddZkMvIT9ZdcA6TecC/Aq6pR04ReCQ=="}

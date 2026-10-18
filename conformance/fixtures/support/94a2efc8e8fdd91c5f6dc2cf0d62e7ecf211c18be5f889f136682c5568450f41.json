@@ -1,0 +1,1 @@
+{"sha256":"94a2efc8e8fdd91c5f6dc2cf0d62e7ecf211c18be5f889f136682c5568450f41","output":{"error":null,"results":[{"value":"bar"},{"value":"bar"},{"value":true},{"value":{"array":[[{"int":"0"},"bar"],[{"int":"1"},"bar"]]}}]},"signature":"epFrwkLhzRDxDYCLYuA0cFQ+np/yLMmZwhFDUjdaKlXFWEGg9cH9W9IkHAf4a2yaa6XKlIDQ+ZoBBhPHUC/xDQ=="}

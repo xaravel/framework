@@ -1,0 +1,1 @@
+{"sha256":"a1a4596cfe3e9c901966c186fc6eb224b1a8e4a56fe1c2b2da946503a2cd1920","output":{"error":null,"results":[{"value":"select * from \"users\" where \"name\" like ? or \"name\" glob ?"},{"value":{"array":[[{"int":"0"},"John%"],[{"int":"1"},"Jane*"]]}}]},"signature":"NAKqQOWnnnDvOMEon8iakcJ1E8b+y89WmcqjBBS/jW7gkEQpelupknDuN2t8D5lP8yvzQ9RtqQUPgj57vi8DBw=="}

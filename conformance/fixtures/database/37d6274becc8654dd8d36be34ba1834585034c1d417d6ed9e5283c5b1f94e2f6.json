@@ -1,0 +1,1 @@
+{"sha256":"37d6274becc8654dd8d36be34ba1834585034c1d417d6ed9e5283c5b1f94e2f6","output":{"error":null,"results":[{"value":"select * from \"users\" having user_foo < user_bar"}]},"signature":"xiK+yPVKD2hDkebJLJBwudpNuXOmZHGk5Bg5sTqpMOqhrcV2udJWo6MfhKZWDwkS9C0KFuT6s2wFP08c8QKNDw=="}

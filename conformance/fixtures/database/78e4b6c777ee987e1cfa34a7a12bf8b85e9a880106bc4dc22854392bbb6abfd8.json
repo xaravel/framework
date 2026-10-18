@@ -1,0 +1,1 @@
+{"sha256":"78e4b6c777ee987e1cfa34a7a12bf8b85e9a880106bc4dc22854392bbb6abfd8","output":{"error":null,"results":[{"value":"select substr(foo, 6) from \"users\""}]},"signature":"m+4kGMiARBR8SO2J5RktYKejA/xaD0InPpE40j1mLmqTz5MpHQY1g32395l4O61BrxXjHmb6z9rSmpQE4W7UAw=="}

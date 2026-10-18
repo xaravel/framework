@@ -1,0 +1,1 @@
+{"sha256":"5771590bf0f530c228ff05ae774d6fbbac5a41a631fc14eb608e3df345ee446e","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop index \"foo\" on \"users\""]]}},{"value":"drop index \"foo\" on \"users\""}]},"signature":"QqylQtsnkiutxvwYltpBop9NuT63MwVDIBTUdKLnCXwU4FAOYxHXFURwEilbP19SeLRRzxRys0POzkPAKv0hAw=="}

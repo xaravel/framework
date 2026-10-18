@@ -1,0 +1,1 @@
+{"sha256":"09c60ef59b2ec039f4d9023103940cab1c3f96110af617ae01d09fa5ebea8e10","output":{"error":null,"results":[{"value":"select * from `users` where match (`body`, `title`) against (? in natural language mode)"},{"value":{"array":[[{"int":"0"},"Car,Plane"]]}}]},"signature":"7Z/QdOBrqqUBfD8oMIlRpYR1xC8NRdbvU7cb3j46Dp5Q50RHQ2J+dRBaU6fbvZtBlS4bXm/slRL59Oo2eY+5Cg=="}

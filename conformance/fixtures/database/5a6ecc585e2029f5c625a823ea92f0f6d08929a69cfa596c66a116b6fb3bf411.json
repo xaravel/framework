@@ -1,0 +1,1 @@
+{"sha256":"5a6ecc585e2029f5c625a823ea92f0f6d08929a69cfa596c66a116b6fb3bf411","output":{"error":null,"results":[{"value":"select * from `users` where not json_contains(`options`, ?, '$.\"languages\"')"},{"value":{"array":[[{"int":"0"},"[\"en\"]"]]}}]},"signature":"5lO1LNclMXoMvplSGXB3x+KALOtStl0fpbYesOtrwafBUMuKXctBcrr49JFiYUZvFqSYg+hNJ92LKEzZim2hDg=="}

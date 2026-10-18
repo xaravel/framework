@@ -1,0 +1,1 @@
+{"sha256":"4a7dc61795bce63ac34fa99c5d67b43df21087383eec6ae7b903986b7102601b","output":{"error":null,"results":[{"value":"select vec_distance_cosine(`embedding`, vec_fromtext(?)) as `embedding_distance` from `documents`"},{"value":{"array":[[{"int":"0"},"[1,2,3]"]]}}]},"signature":"+WrS481sI1Y1wNNroHUcxehG+TXC5dVNsAHBBuF9SdDR8qL2Vpq+wBlVqlUS9gggYgaB/Xpy8EeXE2mC4i/qAw=="}

@@ -1,0 +1,1 @@
+{"sha256":"9ec4ae1484ea875b8d118fb29e68598c9b2a8ef078fc0389f46d1e8acf3aed59","output":{"error":null,"results":[{"value":"select top 10 * from [users]"}]},"signature":"du9zjmeeZeiV46ZFGQe84LOjBnEjpiYqYAfi/JZvp03gAp0sP2VgQAxIjX/9BCYdUopmkBC5OjJeBkxurdxVCQ=="}

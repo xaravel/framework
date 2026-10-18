@@ -1,0 +1,1 @@
+{"sha256":"0c302373387b2c73a1d9a74093f9bdf8e1098bafd88b6afbda4931156bcccc6d","output":{"error":null,"results":[{"value":"select (sale / overall.sales) * 100 AS percent_of_total from \"sales\" cross join (select SUM(sale) AS sales from \"sales\") as \"overall\""}]},"signature":"2cvmcY9lz2MlWP/4EHHvhUON3nXvfBdl65k90nCQv8URrz6dEAyGQAeqXMkhI0RDLwDH7MPZ6vgum1Fr6GeXDQ=="}

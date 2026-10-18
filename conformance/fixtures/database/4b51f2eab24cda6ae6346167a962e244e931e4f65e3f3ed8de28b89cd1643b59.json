@@ -1,0 +1,1 @@
+{"sha256":"4b51f2eab24cda6ae6346167a962e244e931e4f65e3f3ed8de28b89cd1643b59","output":{"error":null,"results":[{"value":"select * from \"users\" where not (\"last_name\" = ? or \"email\" = ?)"},{"value":{"array":[[{"int":"0"},"Otwell"],[{"int":"1"},"Otwell"]]}}]},"signature":"RdqmGmPGeQb1kjC/4NvfkmifU0StFIVRoswq/VgwxYDPJEJpBnQhc3dHR+ve4lygI6sBGDTWfipNvVu5eTADCA=="}

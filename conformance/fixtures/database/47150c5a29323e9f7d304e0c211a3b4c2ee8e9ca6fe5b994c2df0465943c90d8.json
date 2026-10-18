@@ -1,0 +1,1 @@
+{"sha256":"47150c5a29323e9f7d304e0c211a3b4c2ee8e9ca6fe5b994c2df0465943c90d8","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" = ?"},{"value":{"array":[[{"int":"0"},{"int":"12"}]]}}]},"signature":"VLXLPTvOu58vyQ9ZkQ5JearvM1fVMpTIJDmOAEHwTELbtfJQmTAUeoItfnQWSIvdvnEnUxoHFX7+/zpCSorSCw=="}

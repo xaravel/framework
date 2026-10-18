@@ -1,0 +1,1 @@
+{"sha256":"6e768eda359209c483f03929ec2aac97cd18ee667491e10ba006b09ed7ffaa74","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"tsv_title\" || \"tsv_body\") @@ plainto_tsquery('english', ?)"},{"value":{"array":[[{"int":"0"},"Car Plane"]]}}]},"signature":"G+Va7VRk9QJM7OSe/ubN1Bw0qHGaYsr43ym1/w3gWOz2scTVontXtQBwpXf0Xlj43pdydFbDGhPCzb74gwDKDA=="}

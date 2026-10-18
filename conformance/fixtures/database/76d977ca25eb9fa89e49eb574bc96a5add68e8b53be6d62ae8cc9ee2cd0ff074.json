@@ -1,0 +1,1 @@
+{"sha256":"76d977ca25eb9fa89e49eb574bc96a5add68e8b53be6d62ae8cc9ee2cd0ff074","output":{"error":null,"results":[{"value":"select \"items\"->>'price' from \"users\" where \"users\".\"items\"->>'price' = ? order by \"items\"->>'price' asc"}]},"signature":"DhfcBgWCu7UfhJVr6apoqP6usElPy6dYkHGJNpcTdXQjd3f1dI+dTMoykuZl9Q+P9q4IdnwxmMrNd3qsRZINCQ=="}

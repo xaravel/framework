@@ -1,0 +1,1 @@
+{"sha256":"4dbbd56e2892cbdfd24541445b99f6d634e7acdf5603bb4b19b1368ab8c7e8aa","output":{"error":null,"results":[{"value":"select * from \"users\" having \"baz\" = ? or user_foo < user_bar"}]},"signature":"9tIfZ+iolhPmisCBLlpXKZsplPCPYEjgOvJHbWlFCGc+DSQvz96B0+bFTHTIEvrL1KimSh2wSRcYeJN1AUaJDw=="}

@@ -1,0 +1,1 @@
+{"sha256":"b918049dac9de24d2d28795b72388b356f41075f9988a5a9b0e2c930af4e9e36","output":{"error":null,"results":[{"value":"select * from \"users\" where 1 = 1"},{"value":{"array":[]}}]},"signature":"RSN19gGcqSawSi4no5as8ZQE3p9EgbjJW99JfaklKiiCdFXdew/grhhs7VnYHOWuManFHZzD8KBtVGVWQJyVBw=="}

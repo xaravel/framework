@@ -1,0 +1,1 @@
+{"sha256":"8720fb67f62c48d1ae88ddc7a27db948671adc94cf1dc101c80fb93ebe5258ef","output":{"error":null,"results":[{"value":"select * from [users] where 'languages' in (select [key] from openjson([users].[options]))"}]},"signature":"Xa9iL+gemTUVXE5RGWMmcHr5wc4GlbedR4bqE4dZYQ9y0I/Njw+1HFycEME9EjVCynSmk4im22cDZvnBIjkkDg=="}

@@ -1,0 +1,1 @@
+{"sha256":"d99cb1d5a012c80ad02137cf6aae0267103787d50f1edf737a3bf94769e55895","output":{"error":null,"results":[{"value":"select * from \"users\" having \"last_login_date\" between ? and ? or user_foo < user_bar"}]},"signature":"Pc1nmDX5YOpULXYuMSlKSiwZUtjSoZJyf0iMkSMCILjLphCpdKW7EnLS5FXWsNib85f080FBQ8CCiKLJ2Uh8DA=="}

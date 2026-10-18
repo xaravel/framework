@@ -1,0 +1,1 @@
+{"sha256":"9293f382696410549f19b8286ac3d485c1912c3e3d637dfd2c61395c94c3755d","output":{"error":null,"results":[{"value":"select * from `users` inner join `contacts` on `users`.`id` = `contacts`.`id` straight_join `photos` on `users`.`id` = `photos`.`id`"}]},"signature":"mPjOBThe2wsjIeS0sH82kR9dYDcyccl817cyCNaZ29Oyzw1TBDFKX97vq3TExbjRUBD8E2zcA9RwAPcZRXKhDg=="}

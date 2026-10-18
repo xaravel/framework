@@ -1,0 +1,1 @@
+{"sha256":"9d4ac56294e939f8b95a2c146b197eaa928a5d8784d4cf2d9982d08b1781a66d","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add unique `bar`(`foo`)"]]}},{"value":"alter table `users` add unique `bar`(`foo`)"}]},"signature":"6tFMKAoUMOCHusdRvdzF7OiSGv/LE4Okf6tyAZMUAxbQCd/Mcg537UEJNsJ/XPyzbKp2xSWNJmoFYFqzpQaWDw=="}

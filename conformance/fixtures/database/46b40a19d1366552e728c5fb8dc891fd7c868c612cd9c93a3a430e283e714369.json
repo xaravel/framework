@@ -1,0 +1,1 @@
+{"sha256":"46b40a19d1366552e728c5fb8dc891fd7c868c612cd9c93a3a430e283e714369","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" is not null order by \"id\" desc limit 15"}]},"signature":"FngtRbd+y3HQhCyHH/ylHQXbCHFiNn1CnFH0whafQ0n9CfOX0MPPD4akUkmN3T9k+xC9IrJ326KNs/P3or2mAQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"ff8d7bca4b56df4aae40873ccf06fdbd22a30aea27813e0d589d77598e60e4e4","output":{"error":null,"results":[{"value":"select * from \"users\" where \"items\"->'price'->>'in_usd' = ?"}]},"signature":"Foau/I8sBsDh98AnMNQPOo7KufQHwGASBlMlIZZxPIAUgxOCtxfi5LoXfSbdz85rk9xZQYIXde3mTjLZNEkFBw=="}

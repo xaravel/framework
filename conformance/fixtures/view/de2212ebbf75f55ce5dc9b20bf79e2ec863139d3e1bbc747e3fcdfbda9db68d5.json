@@ -1,0 +1,1 @@
+{"sha256":"de2212ebbf75f55ce5dc9b20bf79e2ec863139d3e1bbc747e3fcdfbda9db68d5","output":{"error":null,"results":[{"value":"@foreach(\n            $i as $x\n        )"}]},"signature":"FEHPRzbMldCCTUrTDLirpGdPXwa5oAHFRcGwothw8ae/0t+OjMI+HBJ0UOJ1xPGdCPx4tXadr1X8kVgfhj6BCA=="}

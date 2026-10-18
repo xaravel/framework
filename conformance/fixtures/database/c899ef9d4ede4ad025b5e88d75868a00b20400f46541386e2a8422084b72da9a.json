@@ -1,0 +1,1 @@
+{"sha256":"c899ef9d4ede4ad025b5e88d75868a00b20400f46541386e2a8422084b72da9a","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `geo` add `coordinates` multipoint not null"]]}},{"value":"alter table `geo` add `coordinates` multipoint not null"}]},"signature":"8WYENEJhSJ2qWGeEwf2yG13XYOKa7Lg2y673nM/OtWbVdcJhJiOcPQf3eRcCLuv8T24OSynxDTJNZXeQ04EvAg=="}

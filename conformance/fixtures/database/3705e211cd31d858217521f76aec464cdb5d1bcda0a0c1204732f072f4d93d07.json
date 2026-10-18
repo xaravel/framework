@@ -1,0 +1,1 @@
+{"sha256":"3705e211cd31d858217521f76aec464cdb5d1bcda0a0c1204732f072f4d93d07","output":{"error":null,"results":[{"value":"select * from [users] where [id] = ? or (select count(*) from openjson([options], '$.\"languages\"')) > 0"},{"value":{"array":[[{"int":"0"},{"int":"1"}]]}}]},"signature":"EmMotzDTC9ODAFHtH/yrUD3/bqQsTbsPtlK6NwlmhQuYoMFv/1OyA53WTLJIfdZ2bX8jP7D0sKw35yNx7gT2DA=="}

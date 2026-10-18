@@ -1,0 +1,1 @@
+{"sha256":"33597680d49f2b599dd9f6d0fe42f438bd040701030ebbf942f66a59e9d3b485","output":{"error":null,"results":[{"value":"select * from [users] having ([bar] & ?) != 0"}]},"signature":"eoKHOAy7gPFfPwJc2TDaG9FeagadPczxMbmzNGuP2gK4bK320yU6E1iQxpxBL85eBQERfqsHQETh60Ep93CfAw=="}

@@ -1,0 +1,1 @@
+{"sha256":"72af1802eb5725f95c3ddddcab68e72ecc678f10e2e9b89a748ca2633b19285b","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop index \"my_schema\".\"foo\""]]}},{"value":"drop index \"my_schema\".\"foo\""}]},"signature":"MbEfJP3yB2JNyGflIlTz0F9P/xNd+9twdJPBjlgaByE1KoZLScn7oTfn36RrHUl7oPfLGo210DhBz5QBp2sOAw=="}

@@ -1,0 +1,1 @@
+{"sha256":"af2ef8a7d0a76c2ab6014e939504c5b4051f67f226f754bfc7ef8ce28f5ace18","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `geo` add `coordinates` geometry not null"]]}},{"value":"alter table `geo` add `coordinates` geometry not null"}]},"signature":"pMVbELuW5FR3NRkVAharnqKB30vk+lgoB+2Zy/Cu1obAISY292IiV1OQfFp/AoLm+A3XeUPDoSzVHV76NzSqCA=="}

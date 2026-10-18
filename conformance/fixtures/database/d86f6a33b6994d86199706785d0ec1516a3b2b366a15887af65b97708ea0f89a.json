@@ -1,0 +1,1 @@
+{"sha256":"d86f6a33b6994d86199706785d0ec1516a3b2b366a15887af65b97708ea0f89a","output":{"error":null,"results":[{"value":"(select * from `users`) union (select * from `dogs`) limit 10 offset 5"}]},"signature":"QusqObbMfP/Mu693ypvyZkMt7m4GGP2K8CqdCfpjAJ+sL9bGsnkGoXA0G7U2ouSPcs6fCFhe8CrCriNWkhqPBA=="}

@@ -1,0 +1,1 @@
+{"sha256":"e5c8c562e53bfcb0a2315b4f8a9b90ff372f20d0b5ea569b1f35cf5e38f7f9ca","output":{"error":null,"results":[{"value":"select \"two\", \"threee\" as \"threeee\", (select \"col\" from \"tbl\") as \"four\", 1 + 1 from \"one\""}]},"signature":"kEhc3WLxC3RX0Uw+idj+AcrYsUz5ZJZDWZC9vxjdi1H0cOkYM8Kh3A5NvU+EmpcFFz76gGkVaeAaIk9jedGyBw=="}

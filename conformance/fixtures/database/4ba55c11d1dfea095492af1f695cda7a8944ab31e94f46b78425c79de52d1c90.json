@@ -1,0 +1,1 @@
+{"sha256":"4ba55c11d1dfea095492af1f695cda7a8944ab31e94f46b78425c79de52d1c90","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"drop index \"posts_embeddings_vectorindex\""]]}},{"value":"drop index \"posts_embeddings_vectorindex\""}]},"signature":"Qw8czq0At4G36/h6wdTF89ul3Hvi+zH9Faw6wmoKle/8SXB3QgKhKt6Wk+IXPV3hJ6zNKSEcQnZmju7Y7R/fBQ=="}

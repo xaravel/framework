@@ -1,0 +1,1 @@
+{"sha256":"103f0b563f0754f78f82abedefb80a9d7ce76228a76deda6b760f4e818fc2791","output":{"error":null,"results":[{"value":"select * from \"users\" where COALESCE(created_at, updated_at)::date = NOW()"}]},"signature":"BvZWArWW6t6Kz/VVcR6QMQAMyBrN463mno5zsjUHVbw0EklamqyOG7PzKMIfUQqwtbqxWsulIVdXXLjSi/vsCw=="}

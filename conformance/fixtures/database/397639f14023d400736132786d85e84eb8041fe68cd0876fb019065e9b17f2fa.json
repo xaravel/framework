@@ -1,0 +1,1 @@
+{"sha256":"397639f14023d400736132786d85e84eb8041fe68cd0876fb019065e9b17f2fa","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"create index \"baz\" on \"users\" (\"foo\", \"bar\")"]]}},{"value":"create index \"baz\" on \"users\" (\"foo\", \"bar\")"}]},"signature":"bRll/1EQxJFEaIEOR8gesvtjfVtQEJEJH1S++yZN0juFNm3DKaqZQ3ZWh1SnC6eWxXlpshVBO4Jjh/Wc6qbfCQ=="}

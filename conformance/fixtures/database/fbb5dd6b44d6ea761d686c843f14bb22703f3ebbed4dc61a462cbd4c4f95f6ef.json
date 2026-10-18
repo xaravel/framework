@@ -1,0 +1,1 @@
+{"sha256":"fbb5dd6b44d6ea761d686c843f14bb22703f3ebbed4dc61a462cbd4c4f95f6ef","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"bar\" # ?)::bool"}]},"signature":"V2tIIYNiXq/uuKBZ8iYwrtjMakMpM3M9SG7pUNbO8UvQcKfeZbbwjuJR2DKZsK4LaB+Cp2jj70T18CnToRnLCQ=="}

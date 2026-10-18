@@ -1,0 +1,1 @@
+{"sha256":"2d1f16c0f2a9995642eed89ecc653b2caccfe5c312682ca259f11adce21f209f","output":{"error":null,"results":[{"value":"select * from [users] cross apply (select * from [contacts] where [contracts].[user_id] = [users].[id]) as [sub]"}]},"signature":"cg0sg8JGqXd4lK3vG1Cw3nkOeY9YqUqmF6OnbEHCNIyFQR85WJBACU8S7a9ZAvtS2IPtZdrsP5zXXZxfnIkYDw=="}

@@ -1,0 +1,1 @@
+{"sha256":"8f0671ff71fb81622bb5ee2d42ff7b0b6192856e9356a88758c736ebf656a4c3","output":{"error":null,"results":[{"value":"select * from `users` where `id` = ? or json_length(`options`, '$.\"languages\"') > 0"},{"value":{"array":[[{"int":"0"},{"int":"1"}]]}}]},"signature":"c5auQ8L9CIXWGvxtQLS52Mc2VO/xszdEWw5sJPRV9pEDgiV2lMt4Sa3tWRMFOxaaof9gMZc1iJgQBKPLonn+BA=="}

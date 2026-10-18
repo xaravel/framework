@@ -1,0 +1,1 @@
+{"sha256":"abe54a0c8e1cffc23e4191c42ec1c606eaabb06c7c2aa53a9fa54dced5123821","output":{"error":null,"results":[{"value":"select * from \"orders\" where \"id\" = ? or not exists (select * from \"products\" where \"products\".\"id\" = \"orders\".\"id\")"}]},"signature":"FdMewTEjliRQd86MH2q94yQ3GiX4o8gfmiZkZ8BPPbum3PWwVDc1ld9dBmCcRL2HsQM71BtWPDH+YG8Pa2R5Bg=="}

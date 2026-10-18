@@ -1,0 +1,1 @@
+{"sha256":"0b10313b9aca095c50f22a80e388b00cfaa14d845e5d76a597827b7a8387659c","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add index `users_name_index`(`name`)"]]}},{"value":"alter table `users` add index `users_name_index`(`name`)"}]},"signature":"5pc+J2VTk2p7usSrVSp8/wblDCw+jSjb7jMVpRiw3lkmNndLdi5OPaxCoj7yOIG/bi46blVka+gQXoClv+5uDQ=="}

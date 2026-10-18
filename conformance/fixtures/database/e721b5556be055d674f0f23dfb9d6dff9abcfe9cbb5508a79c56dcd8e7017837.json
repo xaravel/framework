@@ -1,0 +1,1 @@
+{"sha256":"e721b5556be055d674f0f23dfb9d6dff9abcfe9cbb5508a79c56dcd8e7017837","output":{"error":null,"results":[{"value":"(select * from \"first\") union (select * from \"second\") order by \"name\" asc"}]},"signature":"6pTilHbU0B3H9x4yZ70T8r11VVijOIIBhQJUYgTJCUoI9zTgQI1PLNZXi0eW4dwSUTRlMSl8hDDUA0sS9Wq0Ag=="}

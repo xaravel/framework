@@ -1,0 +1,1 @@
+{"sha256":"0303f2dbe43da2b4a92d27718e09956bb14f47bb3218cf8b4c7348726622c63e","output":{"error":null,"results":[{"value":"select * where \"foo\" = ?"},{"value":{"array":[[{"int":"0"},"bar"]]}}]},"signature":"roWklTk6NBTxF0fjPPo0rOqLApdbSNPL29kvCzIrfFRYIYbGIS1V3twFj9JTKuDVW1jGMa+dAGrpyupfMQRzAw=="}

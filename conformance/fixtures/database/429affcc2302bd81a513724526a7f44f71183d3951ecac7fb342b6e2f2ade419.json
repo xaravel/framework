@@ -1,0 +1,1 @@
+{"sha256":"429affcc2302bd81a513724526a7f44f71183d3951ecac7fb342b6e2f2ade419","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `ip_address` varchar(45) not null"]]}},{"value":"alter table `users` add `ip_address` varchar(45) not null"}]},"signature":"3ofCoHuLJEjkdz87F/04LLJnoUo2UbCY46+CGxr0J0X3gerNq9HAlwggecAJF2GmUeMO/K4bG+JGRvkiqsPsAA=="}

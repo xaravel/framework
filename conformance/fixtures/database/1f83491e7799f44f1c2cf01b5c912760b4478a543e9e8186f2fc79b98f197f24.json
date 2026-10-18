@@ -1,0 +1,1 @@
+{"sha256":"1f83491e7799f44f1c2cf01b5c912760b4478a543e9e8186f2fc79b98f197f24","output":{"error":null,"results":[{"value":"select * from [users] outer apply (select * from [contacts] where [contracts].[user_id] = [users].[id]) as [sub]"}]},"signature":"x6+cbozT/joCBmsi8U2h5dThyxvkAyEZSASHsh9skYMzw4QkrlRr27nTcm0Ik0RiD/qVJ0Tr0infN8ky9FMMAQ=="}

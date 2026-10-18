@@ -1,0 +1,1 @@
+{"sha256":"a3d281c52d02d0eaf62498b03855a8bc8f39c7528661d126f4bf815854049426","output":{"error":null,"results":[{"value":"select * from \"users\" where \"foo\" is not distinct from ?"},{"value":{"array":[[{"int":"0"},"bar"]]}}]},"signature":"mqoowxgBHCVs4MDXVtx/lBCcZb4BWMRfhvquYcvTeP3KQRhcGAmxNCxoP6+Gy6+4+BhvHz8LtPQGU7xsMzw3Cg=="}

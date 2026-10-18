@@ -1,0 +1,1 @@
+{"sha256":"ec1f243d1b23662d323c8dfe96c86bc14a29e7d0acbf3b9c9e178f86277a0a7b","output":{"error":null,"results":[{"value":"select * from `users` straight_join `contacts` on `users`.`id` = `contacts`.`id`"}]},"signature":"CaJNl1ZJ80sZuLRbgx5raIapaOjx++A1K2qfTRmFJv3+jRbBROYsH8KYD5rTRoN9J9vrJfBbTxY3za/IsXOuCg=="}

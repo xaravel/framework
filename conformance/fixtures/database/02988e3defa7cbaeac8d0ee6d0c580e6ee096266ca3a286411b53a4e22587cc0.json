@@ -1,0 +1,1 @@
+{"sha256":"02988e3defa7cbaeac8d0ee6d0c580e6ee096266ca3a286411b53a4e22587cc0","output":{"error":null,"results":[{"value":"select * from \"sizes\" cross join \"colors\""}]},"signature":"zrqEcTN2y70c83rkj9Dug31X9pMqCVLnKn7j/0kFJbZz5YGyDsMS+SV62ZuzEbyyykYcLBNsnckR4AkRStDxDw=="}

@@ -1,0 +1,1 @@
+{"sha256":"b45c045e5a8a64cd6d7a49cc8bbd92a5f8101f11ae1a9612d15f1fe13873c119","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter index \"foo\" rename to \"bar\""]]}},{"value":"alter index \"foo\" rename to \"bar\""}]},"signature":"C7S/R0ty6JjPidqPjeVpEf8OHxZNazz6yIS0GOTdP0gJAuiQLfYYoUwAjLasqMTaSHQRnMSuXe7NPRHgUCWHCQ=="}

@@ -1,0 +1,1 @@
+{"sha256":"0a5b5a4e0bc588af49f1dcf8a02adf96d2811e7f21aeea16c51355b109b2fc5e","output":{"error":null,"results":[{"value":"select * from [users] order by [name] desc"}]},"signature":"n79Bdivrf88VtGZxsttu3mGnnXu0FeTNbKHsAr2v0BZDKItQXWsfWJbHQ/9/bQH/JaMHhQv44PY+eKO7zOeMAA=="}

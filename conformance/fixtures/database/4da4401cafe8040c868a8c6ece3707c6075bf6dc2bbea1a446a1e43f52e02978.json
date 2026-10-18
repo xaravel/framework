@@ -1,0 +1,1 @@
+{"sha256":"4da4401cafe8040c868a8c6ece3707c6075bf6dc2bbea1a446a1e43f52e02978","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" like ?"},{"value":{"array":[[{"int":"0"},"1"]]}}]},"signature":"CEubp1I6JkR9KXWPgW8wnB1RwiWv7+IQ6NPXx6yF/iB37WsmqK264xmmVKGeMiC/jEFD8PFTIUNpU6DQCiAeCQ=="}

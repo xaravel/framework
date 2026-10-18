@@ -1,0 +1,1 @@
+{"sha256":"c13c0107013980d4a16e340181875b0774e9de0f1ef238fd3b5e4b27ea6102f3","output":{"error":null,"results":[{"value":"select * from [users] order by [email] desc offset 11 rows fetch next 10 rows only"}]},"signature":"iLk69avxjJCNQUXyshLo6HmlDby5JS9ASiqfiUWouGTaGNm48GwNMDF1ma7KUqQGyeoFQlzhyGVjhjCvVd4kDw=="}

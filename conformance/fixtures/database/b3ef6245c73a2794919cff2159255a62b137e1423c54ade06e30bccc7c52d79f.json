@@ -1,0 +1,1 @@
+{"sha256":"b3ef6245c73a2794919cff2159255a62b137e1423c54ade06e30bccc7c52d79f","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"last_name\" not like ? and \"email\" not like ?)"},{"value":{"array":[[{"int":"0"},"%Otwell%"],[{"int":"1"},"%Otwell%"]]}}]},"signature":"Y40ueIP3jWy80Ga7IZ4McdNUfl4haN8KkDyMRrZlajlNQoBmjTkU4ZKUEpWNerMPCOgGcMLGi+sw/txypPfTBA=="}

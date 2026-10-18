@@ -1,0 +1,1 @@
+{"sha256":"3685ff3d5dfcf335b81221e7d0b9faff5c134e11fe5d6beb6490191a299b04ae","output":{"error":null,"results":[{"value":"select * from \"users\" where (\"options\")::jsonb @> ?"},{"value":{"array":[[{"int":"0"},"[\"en\"]"]]}}]},"signature":"bgpKSpAzqVrzxQmHZLdKVybdaTMlssKIS/+dzKDQ4gb0aVg8mt9z2jz5aQbV/nFEcQWfJsWCYQ2WktlXlHo4Bw=="}

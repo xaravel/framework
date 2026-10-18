@@ -1,0 +1,1 @@
+{"sha256":"5d6087cd5eade5d2718d8f28b2b42e1111258aba01dde5b9083e2bc5df49f712","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `created_at` timestamp not null"]]}},{"value":"alter table `users` add `created_at` timestamp not null"}]},"signature":"myyWXSA42jtMBs42vDglPDwyc+0+tbI5uLtTGmi2gTyGk9s+OruEnXrYw5JW2u5Udc3zNmZTcFUsBr7AO0QfCg=="}

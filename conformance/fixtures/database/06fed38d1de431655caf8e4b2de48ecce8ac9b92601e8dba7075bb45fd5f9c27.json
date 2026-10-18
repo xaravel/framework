@@ -1,0 +1,1 @@
+{"sha256":"06fed38d1de431655caf8e4b2de48ecce8ac9b92601e8dba7075bb45fd5f9c27","output":{"error":null,"results":[{"value":"select * from \"users\" group by \"email\" having \"email\" is null"}]},"signature":"LuP096lrT6Fo7u5OY85TD2CkgejAI56zqRMKHBpME1t6UeD9a1NFXhiX2cPIM8EkpqOpwSVADfftMF3dRHtPDA=="}

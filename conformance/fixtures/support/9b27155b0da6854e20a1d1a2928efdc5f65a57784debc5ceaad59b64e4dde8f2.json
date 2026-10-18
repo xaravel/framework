@@ -1,0 +1,1 @@
+{"sha256":"9b27155b0da6854e20a1d1a2928efdc5f65a57784debc5ceaad59b64e4dde8f2","output":{"error":null,"results":[{"value":"foo/foo/foo"},{"value":"foo/foo/foo"},{"value":"bar/bar"},{"value":"?/?/?"},{"value":"foo/bar/baz/bam"},{"value":"?1/?2/?3/?4"},{"value":"foo/bar/baz/bam"}]},"signature":"6bv3DSxADnNMHaBmdvXxyzYwqU51r6cvYHxlch7+an8GXuby1AkCVWbcBlCwAHPCvDX6oMHMoIfBtfrtWjYRBw=="}

@@ -1,0 +1,1 @@
+{"sha256":"b366b680f3c52f4d13d7c31b6a242d00c8e30f8a88fb010db5baa59059d55971","output":{"error":null,"results":[{"value":"select * from \"users\" where COALESCE(created_at, updated_at)::time >= ?"},{"value":{"array":[[{"int":"0"},"22:00"]]}}]},"signature":"UFn84o5e+gNX1LGlWB3a8upLC8/NPJzDAbeXDKeoXP61psFT2G4gyrHNT8DXJqp0hKC9unbnuWJ2dkXWuS9AAg=="}

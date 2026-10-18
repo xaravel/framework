@@ -1,0 +1,1 @@
+{"sha256":"63a252b9d4dc87b4e09bf190f496607bf6b9b444e93d3d7c8d4a5a293e9c795a","output":{"error":null,"results":[{"value":"select * from `users` where `foo` <=> ?"},{"value":{"array":[[{"int":"0"},"bar"]]}}]},"signature":"jXNDepuBdQyYnL4zcgdopshhdKHmsUCpiLh0K/flL2RwVlWvRpPxnL5vWO9QwoOdU/mNZ4ehYmG1/5+EwJOFBg=="}

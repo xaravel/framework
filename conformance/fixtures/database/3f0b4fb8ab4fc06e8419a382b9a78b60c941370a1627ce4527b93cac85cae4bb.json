@@ -1,0 +1,1 @@
+{"sha256":"3f0b4fb8ab4fc06e8419a382b9a78b60c941370a1627ce4527b93cac85cae4bb","output":{"error":null,"results":[{"value":"select * from `users` where (json_extract(`items`, '$.\"id\"') is not null AND json_type(json_extract(`items`, '$.\"id\"')) != 'NULL')"}]},"signature":"B3CgPKSG76f45BOsxMP9Z+iFcn9iqFz6yl1GVfqQG7+umbUXs1Y1JCG88bNXUH7cDOJVrgGZv63hRrrOPeYlAA=="}

@@ -1,0 +1,1 @@
+{"sha256":"f969b59d94cf14d7b917a4909f7424f989da6f43bac1c1465831e0af4480f776","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add column \"foo\" date not null"]]}},{"value":"alter table \"users\" add column \"foo\" date not null"}]},"signature":"PXQP6MBXrNoooDe60FqcdPj5AYaa7ufrWngCNeRD10QtG2l7BevkznrXTHbNGn7jDoxyi4UMX3SdGzkZUZ0TAQ=="}

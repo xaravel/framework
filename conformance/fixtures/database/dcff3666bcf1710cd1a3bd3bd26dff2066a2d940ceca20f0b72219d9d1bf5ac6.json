@@ -1,0 +1,1 @@
+{"sha256":"dcff3666bcf1710cd1a3bd3bd26dff2066a2d940ceca20f0b72219d9d1bf5ac6","output":{"error":null,"results":[{"value":"select * from \"users\" where \"id\" = ? or 1 not between \"created_at\" and \"updated_at\""},{"value":{"array":[[{"int":"0"},{"int":"2"}]]}}]},"signature":"ZHDHE0tIHIaYxW167OJhRPtwvz+3G4V6tWrJf/RDrDMzZuqYc04f+UCFSAAEv2kTWKhk+e5z0OSvSiuZrFOWCQ=="}

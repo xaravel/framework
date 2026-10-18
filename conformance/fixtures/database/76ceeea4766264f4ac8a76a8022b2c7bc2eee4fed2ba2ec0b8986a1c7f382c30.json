@@ -1,0 +1,1 @@
+{"sha256":"76ceeea4766264f4ac8a76a8022b2c7bc2eee4fed2ba2ec0b8986a1c7f382c30","output":{"error":null,"results":[{"value":"select * from `foo` where `bar` = ? lock in share mode"},{"value":{"array":[[{"int":"0"},"baz"]]}}]},"signature":"W0M9PDKw1yCKWaC+thM7Sf0EVw4KARyVgN0mhZaXY2vAbZJQrtrxLtnGJtnbUsuug9IVaHPxkFBG6Yi/beDnAw=="}

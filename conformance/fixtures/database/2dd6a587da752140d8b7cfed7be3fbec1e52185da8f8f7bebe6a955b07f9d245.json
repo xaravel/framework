@@ -1,0 +1,1 @@
+{"sha256":"2dd6a587da752140d8b7cfed7be3fbec1e52185da8f8f7bebe6a955b07f9d245","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table `users` add `foo` varchar(100) not null"]]}},{"value":"alter table `users` add `foo` varchar(100) not null"}]},"signature":"Aw/FD58OE469wDS2nVNqLECH8Svdpao86Pg5SuHpLu9czp0oA5ETmmTq7d7He5mMT32+5YNrUc51uq+yUb3QAQ=="}

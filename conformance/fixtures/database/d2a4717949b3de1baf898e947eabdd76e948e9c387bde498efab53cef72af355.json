@@ -1,0 +1,1 @@
+{"sha256":"d2a4717949b3de1baf898e947eabdd76e948e9c387bde498efab53cef72af355","output":{"error":null,"results":[{"value":{"array":[[{"int":"0"},"alter table \"users\" add \"foo\" nvarchar(max) not null"]]}},{"value":"alter table \"users\" add \"foo\" nvarchar(max) not null"}]},"signature":"zxS4azCzR4O/JilB38xoXQP3QXXhcJzccG3YK51AF8/COMCUsHOwer99hyj5kocnxMoV5mEXXKEnMPYB1z9bDQ=="}

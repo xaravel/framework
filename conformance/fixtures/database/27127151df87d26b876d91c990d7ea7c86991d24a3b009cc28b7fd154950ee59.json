@@ -1,0 +1,1 @@
+{"sha256":"27127151df87d26b876d91c990d7ea7c86991d24a3b009cc28b7fd154950ee59","output":{"error":null,"results":[{"value":"select * from \"users\" where json_extract(\"items\", '$.\"price\".\"in_usd\"') = ? and json_extract(\"items\", '$.\"age\"') = ?"}]},"signature":"l62Wc3NuduHp74StQ7QemWUx4qfx6C9fOInk3bGGFOn2dPo4df+o3Hm7M9AEZgA8btJqDAJ0ss7laYVaBO98Ag=="}

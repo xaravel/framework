@@ -1,0 +1,1 @@
+{"sha256":"b0b58a1745aad5e3dff0a3dc1cc9f2e9e04a98c3179c3428ad2d12078e8aa9dc","output":{"error":null,"results":[{"value":"select * from \"users\" where \"first_name\" = \"last_name\" or \"first_name\" = \"middle_name\""},{"value":{"array":[]}}]},"signature":"aRueImJ3eNSzPONmgM3fBP/ZO/wR/VMq3S6B1CTNHh5INmlRRLFHBS1wZPJ2Z60D5pGCSjna2WOHRxqUK2JZDQ=="}

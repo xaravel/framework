@@ -1,0 +1,1 @@
+{"sha256":"cfd9ced5913beab37a16e2538bf1b4bb12bfb62e7df5461ac8730d7d21931720","output":{"error":null,"results":[{"value":"select * from `documents` order by vec_distance_cosine(`embedding`, vec_fromtext(?)) asc"},{"value":{"array":[[{"int":"0"},"[1,2,3]"]]}}]},"signature":"s8QmUs1gV1WziUMcYFRbwGo6CcmO9kNOvSlKazSyE4xTrN7v6PrSXsmYG1c8Gi9c6M91HVjqnBkmPLtVUhgTBQ=="}
