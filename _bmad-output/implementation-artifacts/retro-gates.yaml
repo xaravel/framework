@@ -26,3 +26,4 @@ epic-3:
   waiting_on_maintainer:
     - epic-3-retro-item-7-oracle-app-and-live-smoke
     - epic-3-retro-item-8-fixture-verify-blocks-merge
+    - epic-3-retro-item-9-target-epic-3-deferrals
