@@ -31,8 +31,10 @@
 # After the push, `oracle` runs the fixture batch (Story 3.2) in the pushed
 # image: `oracle:fixtures` evaluates every committed request twice, compares
 # the passes and signs each output with ORACLE_SIGNING_KEY, a secret of the
-# GitHub environment `oracle` (restricted to main) that no other job can
-# read. On success it uploads conformance/fixtures/ as an artifact, which the
+# GitHub environment `oracle` (restricted to main). `story` also runs in that
+# environment and reads the key; it checks out only the PR's base commit, with
+# `persist-credentials: false`, and never runs PR code. No other job can read
+# it. On success it uploads conformance/fixtures/ as an artifact, which the
 # Maintainer commits through a PR; any ESC-bot-<n>.md it wrote is uploaded
 # as a separate artifact, even when the batch fails.
 #
