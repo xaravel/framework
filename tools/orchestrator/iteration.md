@@ -23,7 +23,7 @@ Every comment you post on ISSUE starts with `🤖 `. Comments without that prefi
 
 A. **Open orchestrator PR.** If an open PR exists from a `story/*` or `planning/*` branch that this orchestrator opened (its body ends with `Opened by the Xaravel orchestrator.`), finish it before you start anything new:
    - Check out its branch.
-   - If checks are still running, wait for them: `gh pr checks <n> --watch --fail-fast`, up to 30 minutes.
+   - If checks are still running, wait for them as section 4 step 3 says.
    - A `protected-paths` or `ownership` failure that section 4 step 3 calls expected is not a failure here.
    - If checks fail, read the failing logs, fix the cause on the branch, commit, push and wait again. If a branch has failed three iterations in a row (count the earlier `[orchestrator fix]` commits on it), stop retrying: mark the Story `blocked` in sprint status and comment on ISSUE.
    - If it is green and mergeable, merge it (see section 4). Outcome `progress`.
@@ -99,9 +99,18 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 
 ## 4. Opening and merging a PR
 
-1. `git push -u origin <branch>`.
+1. Before the first push, commit everything the PR will carry: the code, the Story's `done` status in sprint status and its manifest, retro or action-item records, and any other bookkeeping. Then `git push -u origin <branch>`. Every push re-runs CI, including the roughly 20-minute baseline on Oracle and Inventory PRs, so never push again after checks are green unless a check failed and you are fixing it. Bookkeeping you forgot goes in a later `planning/` PR, not in another push to a green branch.
 2. `gh pr create --title "<story-id>: <title>" --body "<what changed, how it was verified, the Story spec path>\n\nOpened by the Xaravel orchestrator."`
-3. Wait for checks: `gh pr checks <n> --watch`. If the PR has no checks yet (before CI exists), your own verification is the gate.
+3. Wait for checks by polling. Do not use `gh pr checks --watch`: it waits for every check, including the long ones, after a real failure has already shown, and `--fail-fast` stops on the expected `protected-paths` failure below. Do not use `timeout`: macOS has none. Run this as one Bash command; it returns within about 9 minutes, under the tool's 10-minute limit:
+
+   ```bash
+   for i in $(seq 1 18); do s=$(gh pr checks <n> --json name,bucket); bad=$(jq '[.[] | select(.bucket=="fail" and .name!="protected-paths" and .name!="ownership")] | length' <<<"$s"); pending=$(jq '[.[] | select(.bucket=="pending")] | length' <<<"$s"); if [ "$bad" -gt 0 ]; then echo failed; break; fi; if [ "$pending" -eq 0 ]; then echo done; break; fi; sleep 30; done; [ "$bad" -gt 0 ] || [ "$pending" -eq 0 ] || echo pending
+   ```
+
+   - `failed`: a check other than `protected-paths` or `ownership` failed. Stop waiting and handle it as in step A, even though other checks are still running.
+   - `done`: every check has finished. Judge the `protected-paths` and `ownership` results as the bullets below say.
+   - `pending`: run it again, up to 4 runs in all (about 35 minutes). If checks are still pending after that, leave the PR open, comment on ISSUE that its checks are slow, and finish with outcome `progress`. The next iteration picks it up in step A.
+   - If the PR has no checks yet (before CI exists), your own verification is the gate.
    - **Expected `protected-paths` failure.** The `protected-paths` check fails any PR that touches a Protected Path without an approving review from `edanisko` on the head commit. You open PRs as `edanisko`, and GitHub does not allow approving your own PR, so on Stories that touch Protected Paths this check cannot pass. The 2026-10-17 amendment to the MAINT ruling is the Maintainer's approval of those changes. Read the check's log (`gh run view <run-id> --log-failed`). If every violation it reports is `protected path: <path> needs @edanisko's approving review on the head commit (…); re-run this check after approving (AD-16)`, and every other check is green, treat the PR as green and go to step 4. Any other violation, for example `codeowners drift` or `truncated file list`, is a real failure: fix it as in step A.
    - Never edit `conformance/protected-paths`, `tools/protected-paths/` or `.github/workflows/protected-paths.yml` to make this check pass. Change them only when the Story itself requires it.
    - **Expected `ownership` failure.** The `ownership` check fails a `story/*` PR for any path outside `packages/<component>/**`, the Story's Expectations, its oracle requests and its Escalations. The second amendment to the MAINT ruling (2026-10-17) allows two kinds of `out of scope: <path> is outside Story <id>'s allowed paths …` violation: (a) any path, for a Story in Epics 1–8, which are Phase 0 Infrastructure Stories; (b) paths under `_bmad-output/implementation-artifacts/`, for any Story. If every `ownership` violation is one of these, treat the check as passing. Anything else is a real failure: a `missing manifest` violation, or a path outside `_bmad-output/implementation-artifacts/` in a Story from Epic 9 on. Move that change out of the Story (into a `planning/` PR if it is not Story work), or mark the Story blocked.
