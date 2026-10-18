@@ -69,7 +69,7 @@ development_status:
 
   epic-4: in-progress
   4-1-php-comparison-core: done
-  4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: in-progress
+  4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: backlog
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog
   4-5-mockery-core: backlog
