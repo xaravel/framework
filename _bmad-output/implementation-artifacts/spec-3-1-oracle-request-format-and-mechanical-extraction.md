@@ -2,7 +2,7 @@
 title: 'Story 3.1: Oracle request format and mechanical extraction'
 type: 'feature'
 created: '2026-10-17'
-status: 'blocked'
+status: 'draft'
 context:
   - '_bmad-output/implementation-artifacts/epic-3-context.md'
   - 'stories/3.1.md'
