@@ -2,7 +2,8 @@
 title: 'Story 3.2: Batch fixture generation and Ed25519 signing'
 type: 'feature'
 created: '2026-10-17'
-status: 'ready-for-dev'
+status: 'in-progress'
+baseline_revision: 'fc2eeaf5c6d3d3746f7478558fe5efd3ab9174f9'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:

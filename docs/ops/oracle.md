@@ -1,6 +1,6 @@
 # The Oracle image
 
-The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)), request extraction's image mode (`bun run oracle:extract`, through `runInImage`; see [Requests](#requests-bun-run-oracleextract)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
+The Oracle is real PHP Laravel at the Baseline Pin, in a container. Later Stories draw expected values from it (FR-6, OQ-9). It is built from `conformance/oracle/Dockerfile` and the committed locks in `conformance/oracle/locks/`. The tool is `tools/oracle/oracle.ts`. Contributors need neither Docker nor PHP: only `oracle:build`, `oracle:verify-image`, the Inventory's image mode (`bun run inventory`, through `runInImage`; see [inventory.md](inventory.md)), request extraction's image mode (`bun run oracle:extract`, through `runInImage`; see [Requests](#requests-bun-run-oracleextract)), fixture generation's image mode (`bun run oracle:fixtures`, through `runInImage`; see [Fixtures](#fixtures-bun-run-oraclefixtures)) and the baseline run's image mode (`bun run baseline run`, through `runInImageNetworked`; see [baseline.md](baseline.md)) call `docker`, and `bun test` never does. `runInImage` runs with `--network none` and read-only mounts. `runInImageNetworked` runs with `--network host` (to reach the CI's Postgres and Redis services), `--env` variables, read-only tool mounts and one read-write output mount.
 
 ## What the image holds
 
@@ -62,7 +62,8 @@ If `GITHUB_TOKEN` is set, `oracle:build` passes it to the build as the BuildKit 
 ## Publishing (`.github/workflows/oracle.yml`)
 
 - `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`. It has no write scope and never logs in or pushes.
-- `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write`, logs in to GHCR or pushes. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`.
+- `oracle` runs on a push to `main` that touches the same paths, or on a manual `workflow_dispatch` from `main`. It does the same, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write`, logs in to GHCR or pushes. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`. After the push it runs the fixture batch in the pushed image (`bun run oracle:fixtures --image <ref>`, [Fixtures](#fixtures-bun-run-oraclefixtures)). It runs in the GitHub environment `oracle`, the only place the secret `ORACLE_SIGNING_KEY` exists, and uploads `conformance/fixtures/` and any `conformance/escalations/ESC-bot-*.md` as the artifact `oracle-fixtures`, even when the batch fails.
+- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image as `build` does, then runs `bun run oracle:fixtures --determinism --image <ref>`. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
 
 ## Requests (`bun run oracle:extract`)
 
@@ -143,3 +144,84 @@ A body that cannot be read into its kind's input gives no request, never a guess
   - arrays, as a JSON list when the keys are 0..n-1, or as an object when every key is a string. Other integer keys are unreadable.
 
   A string with a raw non-UTF-8 byte is unreadable.
+
+## Fixtures (`bun run oracle:fixtures`)
+
+The Oracle evaluates each committed request (`conformance/oracle/requests/*.jsonl`) and signs its output. Differential Tests read the signed fixtures; CI verifies their signatures (Story 3.3). Fixtures are protected by signature, not by path: `conformance/fixtures/` is not a Protected Path and has no CODEOWNERS owner, while the verification key `conformance/oracle/oracle.pub` and the non-determinism listing are Protected (by `/conformance/`).
+
+### Command and modes
+
+| Command | What it does |
+| --- | --- |
+| `bun run oracle:fixtures` | Runs `tools/oracle/evaluate.php` twice over every committed request in the Oracle image `xaravel-oracle:<oracle tag>`, through `runInImage` (`--image <ref>` picks another), with the script and the request directory mounted read-only. It compares the two passes per request, signs each output with the key in env `ORACLE_SIGNING_KEY`, and writes `conformance/fixtures/<component>/<sha256>.json` (`--out <dir>` writes under `<dir>` instead). It replaces the `*.json` files of each Component it writes, deleting stray ones, and never touches `conformance/fixtures/generators/` (generator reference files are never Oracle-generated). It prints the fixtures per Component. |
+| `bun run oracle:fixtures --local <dir> [--php <bin>]` | The same without Docker: evaluate.php runs with the local PHP 8.5.11 (or `--php <bin>`) against a locked install of the framework snapshot in `<dir>`, whose test and source files must equal the snapshot's (as for `bun run inventory --local`). The framework directory in any output string is `{root}`, so a local run and an image run give the same bytes. |
+| `bun run oracle:fixtures --determinism …` | The same two passes and comparison, without a key. It writes no fixtures. |
+| `bun run oracle:fixtures fingerprint` | Prints the fingerprint of `conformance/oracle/oracle.pub`: the lowercase hex SHA-256 of its SPKI DER. |
+
+Exit codes: 0 pass, 1 any failure (fail closed), 2 usage error. A run fails, writing nothing, when `ORACLE_SIGNING_KEY` is unset or not an Ed25519 PKCS#8 PEM, when `conformance/oracle/oracle.pub` is missing, or when the key's public half is not `oracle.pub` (`signing key does not match conformance/oracle/oracle.pub`). The key is checked before anything is evaluated.
+
+### Evaluation
+
+`php tools/oracle/evaluate.php <framework-dir> <php-version> <requests-file>...` refuses any PHP other than the given version. It applies phpunit.xml.dist's `<php>` entries and loads the autoloader as `tools/inventory/lister.php` does, and initialises PHPUnit's configuration `Registry` from phpunit.xml.dist as `phpunit` does (Testbench's `tearDown()` reads it). Each request runs in its own `pcntl_fork` child, so no static state (macros, facades, test clocks) leaks between requests; a child that has not answered after 60 seconds is killed. Each kind follows [Evaluation contract per kind](#evaluation-contract-per-kind-story-32): `setUpBeforeClass()` and `setUp()` run, then `bindings`, `setup` and `exprs` run with `eval` in the Test ID's namespace, inside a closure bound to the test instance, then `tearDown()` and `tearDownAfterClass()`. `blade-render` renders in the Test ID's class when it is a Testbench TestCase, otherwise in a bare Testbench TestCase.
+
+It prints one line per request, in input order: `{"sha256":…,"output":{"error":…,"results":[…]}}`.
+
+- `error` is `null`, or `{"stage","class","message"}` when a stage fails: `bindings`, `setUp`, `setup`, `tearDown`, `fatal` (a PHP fatal error; `class` is null) or `timeout`. A failure before `exprs` leaves `results` empty; a `tearDown` failure keeps them.
+- Each result is `{"value":<encoded>}`, or `{"throws":{"class","message"}}` when the expression throws; later expressions still run.
+
+Values are encoded losslessly and in a fixed way:
+
+| PHP value | Encoding |
+| --- | --- |
+| `null`, `true`, `false` | themselves |
+| string | a JSON string; a string that is not valid UTF-8 is `{"bytes":<base64>}` |
+| int | `{"int":"<decimal>"}` |
+| float | `{"float":"<var_export>"}` (`1.0`, `0.1`, `-0.0`, `INF`, `NAN`) |
+| array | `{"array":[[<key>,<value>],…]}` in PHP order; a key is an encoded int or a string |
+| enum case | `{"enum":"<Class>::<Case>"}` |
+| Mockery mock | `{"mock":"<mocked class>"}` (its non-Mockery parent class, else its first non-Mockery interface by name); its internals are Mockery's, not Laravel's |
+| other object | `{"object":"<Class>","properties":[[<name>,<scope>,<value>],…]}` from the `(array)` cast, in its order; scope is `""` (public), `"*"` (protected) or the declaring class (private); no magic method runs |
+| object already being encoded | `{"recursion":"<Class>"}` |
+| resource | `{"resource":"<type>"}` |
+
+Every string, key and message has the framework directory replaced by `{root}`.
+
+### Fixture format and signature
+
+A fixture is one compact line and LF, keys in this order:
+
+```json
+{"sha256":"<request sha256>","output":<output, canonical JSON>,"signature":"<base64>"}
+```
+
+`output` is written in the canonical JSON of `tools/oracle/request.ts` (`canonicalJson`: keys sorted by UTF-16 code unit, no whitespace). `signature` is the Ed25519 signature of the UTF-8 bytes of `xaravel-oracle-fixture-v1\n` followed by `canonicalJson({output, sha256})`. The domain prefix keeps a fixture signature from being valid for any other signed object. Ed25519 is deterministic, so two runs give identical files. `fixtureMessage` and `verifyFixture` in `tools/oracle/fixtures.ts` build and check this.
+
+Signing happens in Bun (`node:crypto`), never in the PHP container. The private key exists only as the secret `ORACLE_SIGNING_KEY` of the GitHub environment `oracle` ([identities.md](identities.md)), is read only from that environment variable, and is never written to disk or committed. The verification key is `conformance/oracle/oracle.pub` (SPKI PEM).
+
+Verification key fingerprint (SHA-256 of the SPKI DER): not yet recorded. The Maintainer records it here, as `` `<64 hex>` ``, in the PR that commits `conformance/oracle/oracle.pub`.
+
+### Determinism
+
+Both passes are compared per request, by the canonical JSON of `output`. Some Upstream code under test is random (UUIDs, ULIDs, random strings, an encryption IV), and nothing seeds or pins it (`decisions/ESC-3.2-1.md`). `conformance/oracle/nondeterminism.jsonl` lists those requests, one line each:
+
+```json
+{"sha256":"<request sha256>","id":"<the request's Test ID>","reason":"<the random or time source>"}
+```
+
+Keys in that order, compact, LF, sorted by `id` then `sha256`, no duplicates. A listed request gets no fixture; its Test ID stays an ordinary Ported Test with Upstream's own assertions.
+
+- A difference in an unlisted request writes no fixture, writes `conformance/escalations/ESC-bot-<n>.md` (the next free `n`; `trigger: open-question`; `test_ids` the differing requests' ids; `evidence` each id, sha256 and both output digests), prints each differing id on stderr (`oracle nondeterminism: …`) and exits 1.
+- A listed `sha256` that is not a committed request, whose `id` is not the request's, or whose two outputs are identical fails the run naming the line (exit 1, no fixtures, no Escalation), so the listing cannot go stale.
+
+`--determinism` (the nightly job) applies the same rules without a key.
+
+### Maintainer-run steps
+
+These are never agent steps:
+
+1. Generate the Ed25519 key pair on a Maintainer machine, never on the agent host: `openssl genpkey -algorithm ed25519 -out oracle.key` and `openssl pkey -in oracle.key -pubout -out conformance/oracle/oracle.pub`.
+2. Store the private key as the secret `ORACLE_SIGNING_KEY` of the GitHub environment `oracle`, restricted to the `main` branch, then delete `oracle.key`.
+3. Run `bun run oracle:fixtures fingerprint` and record the value in [Fixture format and signature](#fixture-format-and-signature). Commit `oracle.pub` and the fingerprint through a PR (both Protected).
+4. Run `oracle.yml` from `main` (`workflow_dispatch`), download the `oracle-fixtures` artifact, and commit `conformance/fixtures/` through a PR.
+
+Regenerate fixtures after a Pin bump or a change of the committed requests or of evaluate.php.
