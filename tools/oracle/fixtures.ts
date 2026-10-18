@@ -9,7 +9,9 @@
 //       written anywhere), and writes `<out>/<component>/<sha256>.json`
 //       (`<out>` defaults to `conformance/fixtures`). It replaces the `*.json`
 //       files of each Component it writes, deleting stray ones, and never
-//       touches `conformance/fixtures/generators/`. The key's public half must
+//       touches `conformance/fixtures/generators/` or the fixture of an
+//       accepted per-Story request (`conformance/oracle-requests/`, Story 3.4)
+//       in its manifest's Component directory. The key's public half must
 //       equal `conformance/oracle/oracle.pub` (SPKI PEM). By default
 //       evaluate.php runs in the Oracle image (`xaravel-oracle:<oracle tag>`,
 //       or `--image <ref>`) through tools/oracle's `runInImage`, with the
@@ -46,6 +48,7 @@ import { checkLocalCopy, oracleImage, type ImageRunner } from "../inventory/inve
 import { upstreamPath, UPSTREAM_DIR } from "../upstream/upstream";
 import { IMAGE_UPSTREAM_DIR, ORACLE_DIR, PHP_VERSION, runInImage } from "./oracle";
 import { canonicalJson, compareUnits, parseRequests, readSchema, renderJson, REQUESTS_DIR, type Json, type OracleRequest } from "./request";
+import { readStoryRequestFiles, type StoryRequestFile } from "./story-requests";
 
 export const FIXTURES_DIR = "conformance/fixtures";
 /** Reference files for generator output (never Oracle-generated); the batch never touches them. */
@@ -310,6 +313,16 @@ export function readNondeterminism(root: string): NondeterministicRequest[] {
   return existsSync(file) ? parseNondeterminism(readFileSync(file, "utf8")) : [];
 }
 
+/** Each batch request's `sha256` and its repo-relative request file. */
+export function batchRequestFiles(files: readonly ComponentRequests[]): Map<string, string> {
+  return new Map(files.flatMap((entry) => entry.requests.map((request) => [request.sha256, `${REQUESTS_DIR}/${entry.file}`] as const)));
+}
+
+/** Every committed per-Story request file under `root` (Story 3.4), judged against the batch and the listing. */
+export function readStoryRequests(root: string, files: readonly ComponentRequests[], listing: readonly NondeterministicRequest[]): StoryRequestFile[] {
+  return readStoryRequestFiles(root, readSchema(root), batchRequestFiles(files), new Map(listing.map((entry) => [entry.sha256, entry.line])));
+}
+
 // ---------------------------------------------------------------------------
 // Evaluation
 
@@ -330,15 +343,18 @@ export interface FixturesOptions {
 /** One pass: each request's output, in request order. */
 type Pass = Map<string, Json>;
 
-/** Runs evaluate.php once over every request file and returns its stdout. */
-function evaluateOnce(root: string, files: readonly ComponentRequests[], options: FixturesOptions): string {
+/**
+ * Runs evaluate.php once over the request files `names` in the host directory `dir` and returns its stdout. Image
+ * mode mounts the script and `dir` read-only; `--local` reads the files where they are.
+ */
+export function evaluateOnce(root: string, dir: string, names: readonly string[], options: Pick<FixturesOptions, "image" | "local" | "php" | "runner">): string {
   const script = resolve(root, EVALUATE_SCRIPT);
   if (!existsSync(script)) {
     throw new Error(`${EVALUATE_SCRIPT} is missing`);
   }
   if (options.local !== undefined) {
     const local = resolve(options.local);
-    const command = [options.php ?? "php", script, local, PHP_VERSION, ...files.map((entry) => join(root, REQUESTS_DIR, entry.file))];
+    const command = [options.php ?? "php", script, local, PHP_VERSION, ...names.map((name) => join(dir, name))];
     const proc = Bun.spawnSync(command, { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
     if (proc.exitCode !== 0) {
       throw new Error(`evaluate.php failed (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
@@ -351,13 +367,26 @@ function evaluateOnce(root: string, files: readonly ComponentRequests[], options
       options.image ?? oracleImage(root),
       [
         { host: script, container: IMAGE_EVALUATE },
-        { host: join(root, REQUESTS_DIR), container: IMAGE_REQUESTS },
+        { host: dir, container: IMAGE_REQUESTS },
       ],
-      ["php", IMAGE_EVALUATE, `${IMAGE_UPSTREAM_DIR}/framework`, PHP_VERSION, ...files.map((entry) => `${IMAGE_REQUESTS}/${entry.file}`)],
+      ["php", IMAGE_EVALUATE, `${IMAGE_UPSTREAM_DIR}/framework`, PHP_VERSION, ...names.map((name) => `${IMAGE_REQUESTS}/${name}`)],
     );
   } catch (error) {
     throw new Error(`evaluate.php failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
+}
+
+/** Throws unless `local` is a copy of the framework snapshot under `root` (test and source files equal). */
+export function checkLocalInstall(root: string, local: string): void {
+  const dir = resolve(local);
+  if (!existsSync(dir)) {
+    throw new Error(`--local ${dir} does not exist`);
+  }
+  const snapshot = upstreamPath(root, "framework", ".");
+  if (!existsSync(join(snapshot, "tests"))) {
+    throw new Error(`${UPSTREAM_DIR}/framework/tests is missing; run bun run upstream:sync`);
+  }
+  checkLocalCopy(snapshot, dir, "framework");
 }
 
 /** Parses one pass's stdout; throws unless it is one `{sha256, output}` line per request, in request order. */
@@ -510,19 +539,13 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
     return result;
   }
   if (options.local !== undefined) {
-    const local = resolve(options.local);
-    if (!existsSync(local)) {
-      throw new Error(`--local ${local} does not exist`);
-    }
-    const snapshot = upstreamPath(root, "framework", ".");
-    if (!existsSync(join(snapshot, "tests"))) {
-      throw new Error(`${UPSTREAM_DIR}/framework/tests is missing; run bun run upstream:sync`);
-    }
-    checkLocalCopy(snapshot, local, "framework");
+    checkLocalInstall(root, options.local);
   }
   const all = files.flatMap((entry) => entry.requests);
-  const first = parsePass(evaluateOnce(root, files, options), all, "first pass");
-  const second = parsePass(evaluateOnce(root, files, options), all, "second pass");
+  const requestsDir = join(root, REQUESTS_DIR);
+  const names = files.map((entry) => entry.file);
+  const first = parsePass(evaluateOnce(root, requestsDir, names, options), all, "first pass");
+  const second = parsePass(evaluateOnce(root, requestsDir, names, options), all, "second pass");
 
   const listed = new Map(listing.map((entry) => [entry.sha256, entry]));
   for (const request of all) {
@@ -554,6 +577,16 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
   }
 
   const out = options.out !== undefined ? resolve(options.out) : join(root, FIXTURES_DIR);
+  // The fixtures of accepted per-Story requests (Story 3.4) belong to their Story, not the batch: never deleted.
+  const kept = new Map<string, Set<string>>();
+  for (const story of readStoryRequests(root, files, listing)) {
+    if (story.component !== null) {
+      const shas = kept.get(story.component) ?? new Set<string>();
+      story.accepted.forEach(({ request }) => shas.add(`${request.sha256}.json`));
+      kept.set(story.component, shas);
+    }
+  }
+  const stray = (component: string, name: string): boolean => name.endsWith(".json") && !(kept.get(component)?.has(name) ?? false);
   const rendered = new Map<string, Map<string, string>>();
   for (const entry of files) {
     const texts = new Map<string, string>();
@@ -568,7 +601,7 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
   for (const [component, texts] of rendered) {
     const dir = join(out, component);
     mkdirSync(dir, { recursive: true });
-    for (const name of readdirSync(dir).filter((file) => file.endsWith(".json") && !texts.has(file)).sort(compareUnits)) {
+    for (const name of readdirSync(dir).filter((file) => stray(component, file) && !texts.has(file)).sort(compareUnits)) {
       rmSync(join(dir, name));
       result.removed.push(`${component}/${name}`);
     }
@@ -586,7 +619,7 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
     .map((entry) => entry.name)
     .sort(compareUnits);
   for (const component of others) {
-    for (const name of readdirSync(join(out, component)).filter((file) => file.endsWith(".json")).sort(compareUnits)) {
+    for (const name of readdirSync(join(out, component)).filter((file) => stray(component, file)).sort(compareUnits)) {
       rmSync(join(out, component, name));
       result.removed.push(`${component}/${name}`);
     }

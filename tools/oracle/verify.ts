@@ -8,9 +8,18 @@
 //       `sha256` names a committed request in its Component's request file
 //       `conformance/oracle/requests/<component>.jsonl` that is not listed in
 //       `conformance/oracle/nondeterminism.jsonl` (a listed request gets no
-//       fixture, ESC-3.2-1). Any other file or directory under
-//       `conformance/fixtures/` fails too. `conformance/fixtures/generators/`
-//       (generator reference files, never signed) is skipped.
+//       fixture, ESC-3.2-1), or an accepted per-Story request (Story 3.4)
+//       in `conformance/oracle-requests/<story-id>.jsonl` whose manifest
+//       `stories/<story-id>.md` names that Component. Any other file or
+//       directory under `conformance/fixtures/` fails too.
+//       `conformance/fixtures/generators/` (generator reference files, never
+//       signed) is skipped.
+//
+//       Every per-Story request file is judged as tools/oracle/story-requests.ts
+//       judges it: each rejected line is a violation `<path>:<line>: …` (a
+//       malformed or non-canonical line, an id the Story does not own, a
+//       repeated sha256, a batch request, a listed request, a request already
+//       in another per-Story file), and so is a file without a valid manifest.
 //
 // `conformance/fixtures/` is not a Protected Path and has no CODEOWNERS owner:
 // fixtures are protected by signature, not by path, and this check is what
@@ -26,8 +35,9 @@
 import type { KeyObject } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { FIXTURES_DIR, GENERATORS, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, readCommittedRequests, readNondeterminism, readPublicKey, verifyFixture } from "./fixtures";
+import { FIXTURES_DIR, GENERATORS, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, readCommittedRequests, readNondeterminism, readPublicKey, readStoryRequests, verifyFixture } from "./fixtures";
 import { compareUnits, REQUESTS_DIR } from "./request";
+import { renderRejection, STORY_REQUESTS_DIR } from "./story-requests";
 
 const FIXTURE_NAME = /^([0-9a-f]{64})\.json$/;
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -37,22 +47,50 @@ export interface RequestSource {
   component: string;
   file: string;
   id: string;
+  /** The Story of a per-Story request (Story 3.4), or null for a batch request. */
+  storyId: string | null;
+}
+
+export interface CommittedRequests {
+  requests: Map<string, RequestSource>;
+  /** The Components with a batch request file. */
+  components: Set<string>;
+  /** The Components with an accepted per-Story request and no batch request file. */
+  storyComponents: Set<string>;
+  /** One line per rejected per-Story request or request file, `<path>[:<line>]: …`. */
+  violations: string[];
 }
 
 /**
- * Every committed request a fixture may be for, by `sha256`. This is the one lookup the verifier uses; Story 3.4
- * extends it with `conformance/oracle-requests/*.jsonl`.
+ * Every committed request a fixture may be for, by `sha256`: the batch's (`conformance/oracle/requests/`) and each
+ * accepted per-Story request (`conformance/oracle-requests/`, in its manifest's Component). This is the one lookup
+ * the verifier uses.
  */
-export function committedRequests(root: string): { requests: Map<string, RequestSource>; components: Set<string> } {
+export function committedRequests(root: string): CommittedRequests {
   const requests = new Map<string, RequestSource>();
   const components = new Set<string>();
-  for (const { component, file, requests: list } of readCommittedRequests(root)) {
+  const batch = readCommittedRequests(root);
+  for (const { component, file, requests: list } of batch) {
     components.add(component);
     for (const request of list) {
-      requests.set(request.sha256, { component, file: `${REQUESTS_DIR}/${file}`, id: request.id });
+      requests.set(request.sha256, { component, file: `${REQUESTS_DIR}/${file}`, id: request.id, storyId: null });
     }
   }
-  return { requests, components };
+  const storyComponents = new Set<string>();
+  const violations: string[] = [];
+  for (const story of readStoryRequests(root, batch, readNondeterminism(root))) {
+    violations.push(...story.rejections.map((rejection) => renderRejection(story.file, rejection)));
+    if (story.component === null) {
+      continue;
+    }
+    for (const { request } of story.accepted) {
+      requests.set(request.sha256, { component: story.component, file: story.file, id: request.id, storyId: story.storyId });
+    }
+    if (story.accepted.length > 0 && !components.has(story.component)) {
+      storyComponents.add(story.component);
+    }
+  }
+  return { requests, components, storyComponents, violations };
 }
 
 /** The verification key `conformance/oracle/oracle.pub` under `root`; throws naming it when missing or not Ed25519. */
@@ -97,18 +135,17 @@ function fixtureSha(text: string): string | null {
  */
 export function verifyFixtures(root: string): VerifyResult {
   const key = verificationKey(root);
-  const { requests, components } = committedRequests(root);
+  const { requests, components, storyComponents, violations } = committedRequests(root);
   const listed = new Map(readNondeterminism(root).map((entry) => [entry.sha256, entry]));
 
   const dir = join(root, FIXTURES_DIR);
   if (!existsSync(dir)) {
-    return { count: 0, violations: [] };
+    return { count: 0, violations: violations.sort(compareUnits) };
   }
   if (!statSync(dir).isDirectory()) {
     throw new Error(`${FIXTURES_DIR} is not a directory`);
   }
 
-  const violations: string[] = [];
   let count = 0;
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareUnits(a.name, b.name))) {
     const at = `${FIXTURES_DIR}/${entry.name}`;
@@ -120,7 +157,8 @@ export function verifyFixtures(root: string): VerifyResult {
       continue;
     }
     const component = entry.name;
-    const known = components.has(component);
+    const batchKnown = components.has(component);
+    const known = batchKnown || storyComponents.has(component);
     for (const file of readdirSync(join(dir, component), { withFileTypes: true }).sort((a, b) => compareUnits(a.name, b.name))) {
       const path = `${at}/${file.name}`;
       if (file.isDirectory()) {
@@ -154,9 +192,17 @@ export function verifyFixtures(root: string): VerifyResult {
         if (!known) {
           problems.push(`no committed request file ${REQUESTS_DIR}/${component}.jsonl for Component ${component}`);
         } else if (sha !== null && source === undefined) {
-          problems.push(`no committed request with sha256 ${sha} in ${REQUESTS_DIR}/${component}.jsonl`);
+          problems.push(
+            batchKnown
+              ? `no committed request with sha256 ${sha} in ${REQUESTS_DIR}/${component}.jsonl`
+              : `no committed request with sha256 ${sha} in an accepted per-Story request file of Component ${component}`,
+          );
         } else if (sha !== null && source !== undefined && source.component !== component) {
-          problems.push(`request ${sha} is in ${source.file}, not ${REQUESTS_DIR}/${component}.jsonl`);
+          problems.push(
+            source.storyId === null
+              ? `request ${sha} is in ${source.file}, not ${REQUESTS_DIR}/${component}.jsonl`
+              : `request ${sha} is in ${source.file}, a request of Story ${source.storyId}'s Component ${source.component}, not ${component}`,
+          );
         }
         const entry = sha === null ? undefined : listed.get(sha);
         if (entry !== undefined) {
@@ -204,7 +250,8 @@ export function main(argv: readonly string[]): number {
     const { count, violations } = verifyFixtures(root);
     if (violations.length > 0) {
       process.stderr.write(violations.map((line) => `${line}\n`).join(""));
-      process.stderr.write(`Oracle fixture verification failed: ${violations.length} problem(s) under ${FIXTURES_DIR}/ (${count} fixtures examined).\n`);
+      const where = violations.some((line) => line.startsWith(`${STORY_REQUESTS_DIR}/`)) ? `${FIXTURES_DIR}/ and ${STORY_REQUESTS_DIR}/` : `${FIXTURES_DIR}/`;
+      process.stderr.write(`Oracle fixture verification failed: ${violations.length} problem(s) under ${where} (${count} fixtures examined).\n`);
       return 1;
     }
     process.stdout.write(`Oracle fixtures OK: ${count} fixtures verify against ${PUBLIC_KEY_FILE}.\n`);

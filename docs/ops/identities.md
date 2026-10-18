@@ -35,9 +35,23 @@ CI holds only these secrets. Each lives in one GitHub environment, so only the j
 
 | Secret | Environment | Job | What it is |
 | --- | --- | --- | --- |
-| `ORACLE_SIGNING_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#oracle` | The Ed25519 private key (PKCS#8 PEM) that signs Oracle fixtures. Its public half is `conformance/oracle/oracle.pub`, and its fingerprint is in [oracle.md](oracle.md#fixture-format-and-signature). |
+| `ORACLE_SIGNING_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#oracle`, `oracle.yml#story` | The Ed25519 private key (PKCS#8 PEM) that signs Oracle fixtures. Its public half is `conformance/oracle/oracle.pub`, and its fingerprint is in [oracle.md](oracle.md#fixture-format-and-signature). |
+| `XARAVEL_ORACLE_APP_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#story` | The private key of the `xaravel-oracle` GitHub App ([below](#the-xaravel-oracle-github-app)). Only the pinned `actions/create-github-app-token` step reads it, to mint a short-lived installation token. |
+
+The App's ID is the repository variable `XARAVEL_ORACLE_APP_ID` (not a secret).
 
 The Maintainer generates the Oracle key pair off the agent host, stores the private key only as this secret, and commits the public key ([oracle.md](oracle.md#maintainer-run-steps)). The agent account never sees it, and no tool writes it to disk.
+
+## The `xaravel-oracle` GitHub App
+
+The Oracle commits signed fixtures for a Story's per-Story requests to the Story branch, and comments on the Story PR, as the GitHub App `xaravel-oracle` ([oracle.md](oracle.md#per-story-requests-bun-run-oraclestory)), never as a person or the agent account. Its commits are the App's bot user's. Only `oracle.yml#story`, running main's code under `pull_request_target`, mints its token.
+
+One-time setup (Maintainer):
+
+1. Create a GitHub App owned by the organisation, named `xaravel-oracle`, with no webhook. Give it the repository permissions *Contents: read and write*, *Pull requests: read and write* and *Metadata: read*, and nothing else.
+2. Install it on `xaravel/framework` only.
+3. Generate a private key for it on a Maintainer machine. Store it as the secret `XARAVEL_ORACLE_APP_KEY` of the environment `oracle`, then delete the downloaded file. Store the App ID as the repository variable `XARAVEL_ORACLE_APP_ID`.
+4. Do not add the App as a ruleset bypass actor. It pushes only to `story/*` branches, which the rulesets leave open; `main` stays reachable only through PRs.
 
 ## Bootstrapping
 

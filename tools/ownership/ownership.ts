@@ -35,7 +35,10 @@
 //
 // Allowed paths for `story/<id>` with `component: <c>`: `packages/<c>/**`,
 // `conformance/expectations/<c>/**`, `conformance/oracle-requests/<id>.jsonl`
-// and `conformance/escalations/ESC-<id>-<n>.md`.
+// and `conformance/escalations/ESC-<id>-<n>.md`, plus the signed fixtures the
+// Oracle workflow commits to the Story branch for its requests (Story 3.4,
+// spine "New inputs"): `conformance/fixtures/<c>/<64 hex>.json`. Those are
+// protected by signature, not by path (`bun run oracle:verify-fixtures`).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
@@ -315,7 +318,7 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Whether `path` is one of the four paths a Story may edit (AD-16). */
+/** Whether `path` is one of the paths a Story may edit (AD-16), or a signed fixture of its own Component. */
 export function allowedPath(manifest: Pick<Manifest, "storyId" | "component">, path: string): boolean {
   const { storyId, component } = manifest;
   const segments = path.split("/");
@@ -326,6 +329,10 @@ export function allowedPath(manifest: Pick<Manifest, "storyId" | "component">, p
     return true;
   }
   if (path === `conformance/oracle-requests/${storyId}.jsonl`) {
+    return true;
+  }
+  // generators/ holds the Protected generator reference files, never a Component's fixtures.
+  if (component !== "generators" && new RegExp(`^conformance/fixtures/${escapeRegex(component)}/[0-9a-f]{64}\\.json$`).test(path)) {
     return true;
   }
   return new RegExp(`^conformance/escalations/ESC-${escapeRegex(storyId)}-[1-9]\\d*\\.md$`).test(path);
