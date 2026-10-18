@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-17-2026 17:56
+last_updated: 10-17-2026 19:30
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -58,7 +58,7 @@ development_status:
   epic-2-retrospective: done
 
   epic-3: backlog
-  3-1-oracle-request-format-and-mechanical-extraction: in-progress
+  3-1-oracle-request-format-and-mechanical-extraction: blocked  # intent gap: ESC-3.1-1 (request input per kind, canonical form, which Test IDs are Differential)
   3-2-batch-fixture-generation-and-ed25519-signing: backlog
   3-3-fixture-signature-verification-in-ci: backlog
   3-4-per-story-oracle-requests: backlog
