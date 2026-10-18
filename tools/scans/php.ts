@@ -417,7 +417,7 @@ export function matching(tokens: readonly Token[], open: number, file = ""): num
 }
 
 /** The code tokens' indexes: comments, docblocks, attributes and inline HTML dropped. */
-function codeIndexes(tokens: readonly Token[]): number[] {
+export function codeIndexes(tokens: readonly Token[]): number[] {
   const out: number[] = [];
   tokens.forEach((t, j) => {
     if (!SKIPPED.has(t.kind)) {
@@ -427,8 +427,8 @@ function codeIndexes(tokens: readonly Token[]): number[] {
   return out;
 }
 
-/** Parses `use` imports from `at` (after `use`); returns the index after `;`. */
-function parseUse(tokens: readonly Token[], code: readonly number[], at: number, imports: Map<string, string>, file: string): number {
+/** Parses `use` imports from `at` (a code index after `use`) into `imports`; returns the code index after `;`. */
+export function parseUse(tokens: readonly Token[], code: readonly number[], at: number, imports: Map<string, string>, file: string): number {
   const tok = (k: number): Token => tokens[code[k]!]!;
   let k = at;
   const first = tok(k).text.toLowerCase();
@@ -785,7 +785,7 @@ export interface Index {
 }
 
 /** The `.php` files (not `.blade.php`) under `dir`, sorted, relative to `base`. */
-function phpFiles(dir: string, base: string): string[] {
+export function phpFiles(dir: string, base: string): string[] {
   const out: string[] = [];
   const walk = (current: string): void => {
     for (const name of readdirSync(current).sort(compareUnits)) {

@@ -1,12 +1,15 @@
-# Upstream scans: facades, singletons and boot-only state
+# Upstream scans
 
-Two static scans turn Upstream source into committed data that later work reads (Story 3.6):
+Five static scans turn Upstream source into committed data that later work reads (Stories 3.6 and 3.7):
 
 - the facade generator (Story 28.x) reads `conformance/scans/facades.jsonl`;
 - the singleton lint (Story 6.3) reads `tools/lint-rules/singletons.json`;
-- AD-5's sealed-write guard reads `conformance/boot-only-state`.
+- AD-5's sealed-write guard reads `conformance/boot-only-state`;
+- the closure codec (AD-14) reads `conformance/scans/allowed-identifiers.json`;
+- `PORTING.md` (AD-7, AD-26, Epic 8) reads `conformance/scans/div12-pairs.jsonl`;
+- the grader coverage reports (Stories 4.4 and 4.6, FR-116, FR-100) read `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`.
 
-The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. Both share a small PHP lexer in `tools/scans/php.ts`.
+The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. `scan:test-api` also reads the committed Inventory. All share a small PHP lexer in `tools/scans/php.ts` and one CLI (`runScan` in `tools/scans/facades.ts`).
 
 ## Commands
 
@@ -16,8 +19,12 @@ The scans are TypeScript. They read only the snapshot in `conformance/upstream/`
 | `bun run scan:singletons` | Writes `tools/lint-rules/singletons.json` and `conformance/boot-only-state`. |
 | `bun run scan:facades --check` | Builds the file in memory and compares it byte for byte with the committed one. Prints `facades drift: <file> …` for a differing or missing file and exits 1. Writes nothing. |
 | `bun run scan:singletons --check` | The same for both singleton outputs, with `singletons drift: <file> …` lines. |
+| `bun run scan:closures` | Writes `conformance/scans/allowed-identifiers.json`. |
+| `bun run scan:div12` | Writes `conformance/scans/div12-pairs.jsonl`. |
+| `bun run scan:test-api` | Writes `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`. |
+| `bun run scan:<name> --check` | The same check for each of them, with `closures drift:`, `div12 drift:` or `test-api drift:` lines. |
 
-Both take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any failure, 2 usage error. If a scan fails, it writes nothing, and the message names the file and line, or the facade.
+All take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any failure, 2 usage error. If a scan fails, it writes nothing, and the message names the file and line, or the facade.
 
 `scan:singletons` (with or without `--check`) also prints one line per binding whose `class` is null, for review:
 
@@ -25,7 +32,7 @@ Both take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any fai
 singletons: class null, for review: <provider> <abstract> (<file>:<line>)
 ```
 
-Without a synced snapshot both fail and tell you to run `bun run upstream:sync`.
+Without a synced snapshot every scan fails and tells you to run `bun run upstream:sync`.
 
 ## The lexer and index (`tools/scans/php.ts`)
 
@@ -129,6 +136,54 @@ For example, at the Pin `UrlGenerator::$request` is not listed: `RoutingServiceP
 
 The rule matches methods by name, so a common name that some provider calls can pull in too much. Treat the file as a reviewed seed. When Xaravel needs its own entries, extend the generator rather than hand-editing the file: `--check` flags any hand edit.
 
+## `conformance/scans/allowed-identifiers.json`
+
+The closure codec (AD-14) allows only these free identifiers, besides parameters and ECMAScript built-ins. The file is `{"comment","facades","helpers"}`, in that key order, indented by 2 spaces with one name per line, LF-terminated. Both lists are sorted by UTF-16 code unit.
+
+- **`facades`** is the short name (the last `\` segment) of every non-abstract indexed class whose `extends` chain reaches `Illuminate\Support\Facades\Facade`, `Facade` itself excluded. That includes facades outside `Support/Facades` (`Laravel\Ai\Ai`, `Laravel\Boost\Boost`, `Laravel\Mcp\Facades\Mcp` at the Pin). Two facades with the same short name fail the run, naming both FQCNs. Non-facade aliases such as `Str` and `Arr` are not listed.
+- **`helpers`** is every global helper function name: each `function <name>(` (or `function &<name>(`) in a `src/` file that has no `namespace` statement, outside any class, interface, trait or enum body, anonymous classes included. Closures, arrow functions and methods are not helpers. The names are deduplicated. At the Pin they come from `Foundation`, `Support`, `Collections` and `Reflection` `helpers.php`.
+
+## `conformance/scans/div12-pairs.jsonl`
+
+One line per indexed class, trait or enum D (interfaces are skipped) and name N that is both a property and a method of D (case-sensitive). Lines are `{"class","name","classification","property","method"}`, sorted by `class`, then `name`, compact JSON with LF endings.
+
+- **Member set.** D's own methods and properties, those of the traits it uses, and those of its indexed ancestors and their traits, transitively. Promoted constructor properties (a parameter with `public`, `protected`, `private` or `readonly`) are properties.
+- **`property`, `method`.** Each is `{"declaredIn","static"}`. `declaredIn` is the nearest declaration that declares the member, in the order D, D's traits, then each ancestor followed by its traits.
+- **`classification`**, first match wins (ESC-3.7-1):
+  - **Model hierarchy.** D is `Illuminate\Database\Eloquent\Model`, a class whose chain reaches it, or a trait in Model's transitive trait set (its own and its ancestors'). Then `casts` is `option-pair` (AD-7) and every other name is `model-config`.
+  - `option-pair`: N is an option name and D is an option holder.
+    - An **option name** is one of AD-26's named option pairs (`casts`, `middleware`, `backoff`, `tries`, `timeout`, `uniqueId`, `uniqueFor`, `retryUntil`, `attachments`, `envelope`, `content`, `via`, `broadcastOn`), or a name some method body in the `src/` trees reads as `method_exists($v, 'N')` together with a property read `$v->N` (not followed by `(` or an assignment operator) on the same plain, non-`$this` variable. That is AD-26's "call if function, else value" read.
+    - An **option holder** is a class or trait whose hierarchy (D, its indexed ancestors and the traits they use, transitively) implements `Illuminate\Contracts\Queue\ShouldQueue` or `Illuminate\Contracts\Broadcasting\ShouldBroadcast` (directly, or through an indexed interface that extends one), uses `Illuminate\Bus\Queueable`, or whose `extends` chain reaches `Illuminate\Mail\Mailable` or `Illuminate\Notifications\Notification`.
+  - `method-plus-state`: otherwise.
+
+At the Pin the spine's anchors hold: `Model`/`casts` is `option-pair` and `Query\Builder`/`timeout` is `method-plus-state`. `Model` declares `$connection` but no `connection()` method at the Pin, so it has no `connection` pair; the rule would classify one as `model-config`.
+
+## `conformance/scans/phpunit-assertions.jsonl`
+
+One `{"name","calls","executions"}` line per assertion name, sorted by name.
+
+- **Names.** N matches `assert[A-Z]…` or `expect[A-Z]…`, is `fail`, `markTestSkipped` or `markTestIncomplete`, or matches an Inventory kind case-insensitively (which is how a lower-case `assertequals(` is recognised). Names are grouped case-insensitively, as PHP calls them, and a name is written in the case of the Inventory kind that matches it (so `$this->assertequals(` counts under `assertEquals`), otherwise in the case of its first call site.
+- **`calls`** counts the PHPUnit call sites in the suites: every `.php` file (not `.blade.php`) under each repository's `tests/`, walked in sorted order (ESC-3.7-1). A call site is either:
+  - `$this->N(`, `self::N(`, `static::N(` or `parent::N(` inside a suite class C, unless C's own indexed hierarchy declares N as a method, case-insensitively. The hierarchy is C, its ancestors and the traits they use, transitively, among the declarations of the four repositories' `src/` and `tests/`. Those are Laravel's or the suite's own helpers (`assertDatabaseHas` in a class using `InteractsWithDatabase`, say). A declaration in an unrelated class does not exclude a name, so `assertCount` is counted even though a `src/` class declares one. Calls outside any class (Pest closures) are not call sites.
+  - `X::N(` where X resolves to `PHPUnit\Framework\Assert`, `PHPUnit\Framework\TestCase`, or an indexed class whose `extends` chain reaches `PHPUnit\Framework\Assert` (for example `Illuminate\Testing\Assert`).
+- **`executions`** is the sum of each line's `assertions[N]` over every `conformance/inventory/<component>.jsonl` except `oracle-nondeterminism.jsonl`. A null `assertions` (a test the baseline did not run) adds nothing. These are the PHPUnit `Assert` kinds the Story 2.6 baseline recorded (FR-1). They count every `Assert` call PHPUnit saw, including indirect ones (a Laravel `TestResponse` helper calling `assertThat`, say), so `calls` and `executions` measure different things: `assertThat` has 1 call site but over 3000 executions, and `assertSameSize` runs only through helpers.
+
+A name is listed when either count is above 0. A name with calls but no executions stays listed with `executions: 0`, and the scan prints it for review. Story 4.4's coverage report may exclude such a name only through an approved Escalation.
+
+```
+test-api: never executed at the baseline, for review: <name> (<n> calls)
+```
+
+## `conformance/scans/mockery-api.jsonl`
+
+One `{"name","static","count"}` line per Mockery method, sorted by name with `false` before `true`. Names are grouped case-insensitively, as PHP calls them, and written in the case of their first call site in walk order (so `->andreturn(` counts under `andReturn`). `count` is the number of call sites in the suites:
+
+- **Static.** `X::N(` where X resolves to `Mockery` (so `use Mockery as m; m::mock(` counts, and an `m` alias of another class does not). It gives `static: true`.
+- **Chain starters** are `shouldReceive`, `shouldNotReceive`, `shouldHaveReceived`, `shouldNotHaveReceived`, `shouldHaveBeenCalled`, `shouldNotHaveBeenCalled`, `shouldIgnoreMissing`, `shouldAllowMockingProtectedMethods`, `shouldAllowMockingMethod`, `shouldDeferMissing`, `makePartial`, `allows` and `expects`.
+- **Chain.** A chain starts at `->E(` for a chain starter E, or at a facade's `X::E(`, where X resolves to an indexed class whose chain reaches `Illuminate\Support\Facades\Facade` (`File::shouldReceive(`, ESC-3.7-1). `allows` and `expects` with arguments start a chain only when their first argument token is a string literal or `[`, so PHPUnit's `->expects($this->once())` does not count. E itself counts, and so does every following `->M(` in the chain, as `static: false`. Argument lists are skipped, and the chain ends at the first token after a `)` that is not `->`. Chains and static calls inside an argument list (a closure passed to `with`, say) are counted on their own.
+- **Mocked methods.** After an argument-less `shouldReceive()`, `shouldHaveReceived()`, `shouldNotHaveReceived()`, `allows()` or `expects()`, the next `->M(` is the mocked method (`$spy->shouldHaveReceived()->foo()->once()`). It is not counted, and the chain continues after its `)`.
+- **After a static call.** After a static Mockery call's `)`, only a `->E(` with E a chain starter starts a chain. Any other `->M(` is the mocked class's method and is not counted (`Mockery::mock(X::class)->foo()`).
+
 ## CI
 
 The `upstream` job in `.github/workflows/ci.yml` runs these steps in order:
@@ -137,15 +192,18 @@ The `upstream` job in `.github/workflows/ci.yml` runs these steps in order:
 2. `bun run upstream:check`
 3. `bun run scan:facades --check`
 4. `bun run scan:singletons --check`
-5. `bun test conformance/tests/xaravel/scans.test.ts`
+5. `bun run scan:closures --check`
+6. `bun run scan:div12 --check`
+7. `bun run scan:test-api --check`
+8. `bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts`
 
-The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 5 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, and the expected classes and entries at the Pin), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
+The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 8 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, and the expected classes and entries at the Pin), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
 
 ## After a Pin move
 
 1. Run `bun run pin:bump <tag>` and `bun run upstream:sync` as usual (see [upstream.md](upstream.md)).
-2. Run `bun run scan:facades` and `bun run scan:singletons`.
-3. If a scan fails on a new Upstream shape, extend the rule in `tools/scans/` and its Xaravel Test in `conformance/tests/xaravel/scans.test.ts`. Do not edit the outputs by hand.
-4. Review the diff of the three outputs, and the null bindings the singleton scan prints, and commit them with the Pin change.
+2. Run `bun run scan:facades`, `scan:singletons`, `scan:closures`, `scan:div12` and `scan:test-api`. Run `scan:test-api` after any Inventory regeneration too, since its `executions` come from the Inventory.
+3. If a scan fails on a new Upstream shape, extend the rule in `tools/scans/` and its Xaravel Test in `conformance/tests/xaravel/scans.test.ts` or `usage-scans.test.ts`. Do not edit the outputs by hand.
+4. Review the diff of the outputs, the null bindings the singleton scan prints and the unexecuted assertions the test-API scan prints, and commit them with the Pin change.
 
-All three outputs and `tools/scans/` are Protected Paths (under `/conformance/` and `/tools/`), so they land only through Maintainer review.
+All the outputs and `tools/scans/` are Protected Paths (under `/conformance/` and `/tools/`), so they land only through Maintainer review.
