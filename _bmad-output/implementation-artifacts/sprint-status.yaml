@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-18-2026 16:10
+last_updated: 10-18-2026 16:21
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -873,7 +873,7 @@ action_items:
       (class source or FQCN brand); a closure never matches a string or acts as instanceof
       (finding R2)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
   - id: "epic-4-retro-item-2-verify-mocks-outside-run"
     epic: 4

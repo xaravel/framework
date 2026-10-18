@@ -43,7 +43,10 @@ export function isPhpObject(value: unknown): value is object {
   return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value);
 }
 
-/** A JS class: a function with an object `prototype` (an arrow function has none). */
+/**
+ * A JS class: a function with an object `prototype` (an arrow function has none). This accepts `function` expressions
+ * too; for the PHP meaning of a class or a Closure use `isPhpClass` / `isClosure`.
+ */
 export function isClass(value: unknown): value is abstract new (...args: never[]) => object {
   return typeof value === "function" && typeof (value as { prototype?: unknown }).prototype === "object" && (value as { prototype?: unknown }).prototype !== null;
 }
@@ -61,6 +64,16 @@ export function isClosure(value: unknown): value is (...args: never[]) => unknow
     return false;
   }
   return !/^class\b/.test(Function.prototype.toString.call(value));
+}
+
+/**
+ * A PHP class value for argument matching (`Expectation._matchArg`): a function with an object `prototype` whose
+ * source is a `class`, that carries the FQCN brand (both `isClosure`'s rule), or that is a native constructor
+ * (`Error`, `Date`, `Map`). A user-written `function` expression is a Closure, never a class, even though it has an
+ * object `prototype`; none prints as native code with a prototype.
+ */
+export function isPhpClass(value: unknown): value is abstract new (...args: never[]) => object {
+  return isClass(value) && (!isClosure(value) || /\{\s*\[native code\]\s*\}\s*$/.test(Function.prototype.toString.call(value)));
 }
 
 /** The PHP name of a class: its own FQCN brand, else its JS name. */
