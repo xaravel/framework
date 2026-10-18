@@ -2,8 +2,8 @@
 title: 'Story 3.7: Upstream scans: closure identifiers, DIV-12 pairs and test-API usage'
 type: 'feature'
 created: '2026-10-18'
-status: 'blocked'
-baseline_revision: 'ad304dc3510f2fb13bdffbf1c21fcb9f6fbb7c13'
+status: 'ready-for-dev'
+baseline_revision: 'd17fc9f555a95b63d9e03351a0abb941600c8efd'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -33,19 +33,28 @@ deferred: []
 - **DIV-12** writes `conformance/scans/div12-pairs.jsonl`:
   - For every indexed class, trait or enum D (not interfaces), its member set is its own methods and properties together with those of its indexed ancestors and of the traits they use, transitively. Promoted constructor properties count as properties.
   - A pair is a name N (case-sensitive) that is both a property and a method in D's member set. Each pair gives one line: `{"class","name","classification","property","method"}`. `property` and `method` are each `{"declaredIn","static"}`, where `declaredIn` is the FQCN of the declaration that declares the member, nearest first: D, then its traits, then its ancestors in order.
-  - `classification`, first match wins:
-    - `option-pair`: N is read as an option somewhere in the `src/` trees. Some method body (other than one named N) uses one receiver R (`$this` or a plain variable) in both a property read `R->N` that is not followed by `(` or an assignment operator, and either a call `R->N(` or `method_exists(R, 'N')`.
-    - `model-config`: D is `Illuminate\Database\Eloquent\Model`, a class whose chain reaches it, or a trait in Model's transitive trait set (its own and its ancestors').
+  - `classification`, first match wins (ESC-3.7-1):
+    - **Model hierarchy.** D is `Illuminate\Database\Eloquent\Model`, a class whose chain reaches it, or a trait in Model's transitive trait set (its own and its ancestors'). Then N = `casts` is `option-pair` (AD-7), and every other N is `model-config`.
+    - `option-pair`: N is an option name and D is an option holder.
+      - An option name is one of AD-26's named option pairs (`casts`, `middleware`, `backoff`, `tries`, `timeout`, `uniqueId`, `uniqueFor`, `retryUntil`, `attachments`, `envelope`, `content`, `via`, `broadcastOn`), or a name read somewhere in the `src/` trees as `method_exists($v, 'N')` together with a property read `$v->N` (not followed by `(` or an assignment operator) on the same plain, non-`$this` variable `$v` in the same method body.
+      - An option holder is a class or trait whose hierarchy (D, its indexed ancestors and the traits they use, transitively; for a trait, the trait and the traits it uses) implements `Illuminate\Contracts\Queue\ShouldQueue` or `Illuminate\Contracts\Broadcasting\ShouldBroadcast` (directly, or through an indexed interface that extends one), uses `Illuminate\Bus\Queueable`, or whose `extends` chain reaches `Illuminate\Mail\Mailable` or `Illuminate\Notifications\Notification`.
     - `method-plus-state`: otherwise.
   - Lines are sorted by `class`, then `name`, rendered with `renderJson` in that key order, LF-terminated.
 - **Test API** writes two files.
   - `conformance/scans/phpunit-assertions.jsonl`, with one `{"name","calls","executions"}` line per name, sorted by name:
-    - `calls` counts the PHPUnit call sites in the suites. A call site is `$this->N(`, `self::N(`, `static::N(` or `parent::N(`, or `X::N(` where X resolves to `PHPUnit\Framework\Assert` or `PHPUnit\Framework\TestCase`. N must match `assert[A-Z]…` or `expect[A-Z]…`, and must not be declared as a method by any declaration in the four repositories' `src/` or `tests/` trees (those are Laravel's or the suites' own helpers).
+    - `calls` counts the PHPUnit call sites in the suites (ESC-3.7-1). N must match `assert[A-Z]…` or `expect[A-Z]…`, or be `fail`, `markTestSkipped` or `markTestIncomplete`. A call site is either:
+      - `$this->N(`, `self::N(`, `static::N(` or `parent::N(` inside a suite class C, unless N is declared as a method, case-insensitively, in C's own indexed hierarchy: C, its ancestors and the traits they use, transitively, among the indexed declarations of the four repositories' `src/` and `tests/` trees. A declaration of N in an unrelated class does not exclude it.
+      - `X::N(` where X resolves to `PHPUnit\Framework\Assert`, `PHPUnit\Framework\TestCase`, or an indexed class whose `extends` chain reaches `PHPUnit\Framework\Assert` (for example `Illuminate\Testing\Assert`).
+    - Names are grouped case-insensitively. A name is written in the case of the Inventory kind that matches it case-insensitively; otherwise in the case of its first call site in walk order.
     - `executions` is the sum, over every `conformance/inventory/<component>.jsonl` (not `oracle-nondeterminism.jsonl`), of each line's `assertions[N]`. These are the PHPUnit `Assert` kinds that the Story 2.6 baseline recorded (FR-1).
-    - A name is listed when either count is above 0. Names with `calls > 0` and `executions == 0` that match `assert[A-Z]` are printed for review.
+    - A name is listed when either count is above 0. Names with `calls > 0` and `executions == 0` stay listed with `executions: 0` and are printed for review. Story 4.4's coverage report may exclude such a name only through an approved Escalation.
   - `conformance/scans/mockery-api.jsonl`, with one `{"name","static","count"}` line per Mockery method, sorted by name with `false` before `true`. `count` is the number of call sites in the suites:
     - Static: `X::N(` where X resolves to `Mockery`. Gives `static: true`.
-    - Chain: a chain starts at `->E(` for E in {`shouldReceive`, `shouldNotReceive`, `shouldHaveReceived`, `shouldNotHaveReceived`, `shouldHaveBeenCalled`, `shouldNotHaveBeenCalled`, `shouldIgnoreMissing`, `shouldAllowMockingProtectedMethods`, `shouldAllowMockingMethod`, `shouldDeferMissing`, `makePartial`, `allows`, `expects`}, or right after a static Mockery call's `)`. `allows` and `expects` start a chain only when their first argument token is a string literal or `[`. E itself counts. Every following `->M(` in the same chain counts as `static: false`; argument lists are skipped with `matching`. The chain ends at the first token after a `)` that is not `->`.
+    - Chain starters are E in {`shouldReceive`, `shouldNotReceive`, `shouldHaveReceived`, `shouldNotHaveReceived`, `shouldHaveBeenCalled`, `shouldNotHaveBeenCalled`, `shouldIgnoreMissing`, `shouldAllowMockingProtectedMethods`, `shouldAllowMockingMethod`, `shouldDeferMissing`, `makePartial`, `allows`, `expects`}.
+    - A chain starts at `->E(`, or at a facade's `X::E(` where X resolves to an indexed class whose `extends` chain reaches `Illuminate\Support\Facades\Facade` (ESC-3.7-1). `allows` and `expects` with arguments start a chain only when their first argument token is a string literal or `[`. E itself counts, as `static: false`.
+    - After an argument-less `shouldReceive()`, `shouldHaveReceived()`, `shouldNotHaveReceived()`, `allows()` or `expects()`, the next `->M(` is the mocked method: it is not counted, and the chain continues after its `)`.
+    - After a static Mockery call's `)`, only a `->E(` with E a chain starter continues (and starts) a chain; any other `->M(` is not counted.
+    - Every other `->M(` in a chain counts as `static: false`; argument lists are skipped with `matching`. The chain ends at the first token after a `)` that is not `->`.
 - **CLI.** `tools/scans/closures.ts`, `div12.ts` and `test-api.ts` each export a `build…(root)` that returns the file texts, plus a `main(argv)` that uses `runScan` from `facades.ts` (`--root`, `--check`, `UsageError` exiting 2, exit 1 on failure, nothing written on failure, drift lines). `package.json` gains `scan:closures`, `scan:div12` and `scan:test-api`.
 - **Determinism.** The output depends only on file contents: sorted walks, no timestamps, and no filesystem-order iteration.
 
@@ -59,7 +68,14 @@ deferred: []
 | Duplicate facade short name | two facades named `Cache` in different namespaces | nothing written | exit 1, both FQCNs |
 | Namespaced function | `namespace Foo; function bar()` | not a helper | none |
 | Inherited pair | property in a parent, same-named method in a trait of the child | child listed with each `declaredIn` | none |
-| Laravel assertion | `$this->assertDatabaseHas(` (declared in `src/`) | not listed | none |
+| Hierarchy-declared helper | `$this->assertFoo(` in a class whose indexed hierarchy (an ancestor or trait) declares `assertFoo` | not counted | none |
+| Unrelated declaration | `$this->assertCount(` where only an unrelated `src/` class declares `assertCount` | counted | none |
+| PHPUnit `Assert` subclass | `Assert::assertArraySubset(` with `Assert` resolving to an indexed class extending `PHPUnit\Framework\Assert` | counted | none |
+| Never-executed name | `$this->assertFileContains(` with no Inventory kind | listed, `executions: 0`, printed | none |
+| Lower-case call | `$this->assertequals(` with Inventory kind `assertEquals` | counted under `assertEquals` | none |
+| Facade mock | `File::shouldReceive('x')->once()` | `shouldReceive`, `once` counted, `static: false` | none |
+| Argument-less starter | `$spy->shouldHaveReceived()->foo()->once()` | `shouldHaveReceived`, `once` counted; `foo` not | none |
+| Static Mockery call then method | `Mockery::mock(X::class)->foo()` | `mock` (static) counted; `foo` not | none |
 | Helper-only assertion | kind only in the Inventory | listed, `calls: 0` | none |
 | PHPUnit mock builder | `->expects($this->once())->method('x')` | not counted | none |
 | `m` aliasing a non-Mockery class | `use Foo as m; m::create(` | not counted | none |
@@ -96,8 +112,8 @@ deferred: []
 - `.github/workflows/ci.yml` and `conformance/tests/xaravel/upstream.test.ts` -- the CI steps described in the Code Map.
 - `conformance/tests/xaravel/usage-scans.test.ts`:
   - XT-conformance-86: a mini snapshot with two facades (one outside `Support/Facades`), an abstract facade subclass, a global helpers file holding a guarded function and a method-bearing class, and a namespaced function file. It asserts the exact file and the duplicate-short-name failure. On the real snapshot, the committed file equals `buildClosures`, and its lists include `Cache`, `Route`, `Ai`, `Mcp`, `app`, `collect` and `str`.
-  - XT-conformance-87: a mini snapshot with an own pair, a trait pair, an inherited pair, a static pair, a Model subclass and trait, and an option read (`method_exists` and `??`). It asserts the exact lines and that two runs are byte-identical. On the real snapshot, the committed file equals `buildDiv12`.
-  - XT-conformance-88: a mini snapshot with test files covering `$this->assertSame(`, `self::assertTrue(`, `PHPUnit::assertArraySubset(` via a `use` alias, a src-declared `assertDatabaseHas`, a tests-declared helper `assertFoo`, `expectException(`, a Mockery chain with closure arguments, `m::mock`/`Mockery::on`, `->expects('x')->once()`, `->expects($this->once())`, and an `m` alias of a non-Mockery class. A temp Inventory supplies one kind found only there. It asserts both files exactly. On the real snapshot, the committed files equal `buildTestApi`, every Inventory kind is listed, `assertDatabaseHas` is absent, and `shouldReceive`, `once`, `andReturn` and static `mock` are present.
+  - XT-conformance-87: a mini snapshot with an own pair, a trait pair, an inherited pair, a static pair, a Model subclass and trait (with a `casts` pair and another pair), an option holder (a `ShouldQueue` job with an AD-26 name pair and a `method_exists` option-name pair), the same names on a non-holder class, and a `method_exists` read on `$this` (which does not make an option name). It asserts the exact lines and that two runs are byte-identical. On the real snapshot, the committed file equals `buildDiv12`, and the spine's anchors hold: `Illuminate\Database\Eloquent\Model`/`casts` is option-pair, `Model`/`connection` is model-config, and `Illuminate\Database\Query\Builder`/`timeout` is method-plus-state.
+  - XT-conformance-88: a mini snapshot with test files covering `$this->assertSame(`, `self::assertTrue(`, `PHPUnit::assertArraySubset(` via a `use` alias, `static::` and `parent::` calls, `Assert::assertX(` on an indexed `PHPUnit\Framework\Assert` subclass, an `assertCount` declared only by an unrelated `src/` class (counted), a helper `assertFoo` declared in the calling class's indexed parent or trait (not counted), a never-executed name (listed with `executions: 0`), a lower-case call grouped under its Inventory kind's case, `fail(`, `markTestSkipped(`, `expectException(`, a Mockery chain with closure arguments, `m::mock`/`Mockery::on`, `Mockery::mock(X::class)->foo()` (`foo` not counted), `->expects('x')->once()`, `->expects($this->once())`, an argument-less `shouldHaveReceived()->foo()->once()` and `allows()->foo()->andReturn(`, a facade `File::shouldReceive(` chain, and an `m` alias of a non-Mockery class. A temp Inventory supplies one kind found only there. It asserts both files exactly. On the real snapshot, the committed files equal `buildTestApi`, every Inventory kind is listed, `assertCount` has at least 1000 calls, `fail` is listed, and `shouldReceive`, `once`, `andReturn` and static `mock` are present.
   - The three outputs are Protected and owned by `@edanisko` (same matcher as XT-85).
 - `docs/ops/scans.md` -- document the three scans: commands, formats, rules, CI and regeneration.
 - `stories/3.7.md` -- set `status: done` at completion.
@@ -108,6 +124,12 @@ deferred: []
 - Given the snapshot, when `bun run scan:test-api` runs, then it writes `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`, listing every assertion and every Mockery method used by the Upstream suites, each with a usage count.
 
 ## Spec Change Log
+
+### 2026-10-18 — ESC-3.7-1 ruling (approved, option 1)
+- trigger: the first run halted as an intent gap on three rules (review groups A, B and C below); `decisions/ESC-3.7-1.md` approved option 1.
+- amended: the Boundaries' DIV-12 classification, PHPUnit call-site rule and Mockery chain rule, exactly as the ruling states; I/O matrix rows for the new cases; the XT-87 and XT-88 task descriptions (spine anchors, `assertCount`/`fail` replace "`assertDatabaseHas` is absent", which the hierarchy rule no longer guarantees); the Design Notes' option-pair note.
+- known-bad state avoided: `assertCount` with 0 calls; `count`/`user` as option pairs while `timeout`/`uniqueFor` are not; facade mocks missing and mocked methods counted as Mockery API.
+- KEEP: AC 1 (`allowed-identifiers.json`) and the CLI, determinism and file formats are unchanged. The rebuild starts from the saved attempt patch, which this run applies and deletes.
 
 ## Review Triage Log
 
@@ -158,7 +180,7 @@ deferred: []
 - **Path.** The epic names only `allowed-identifiers.json`. It goes in `conformance/scans/` beside the other scan outputs, which are Protected under `/conformance/`, as AD-14 requires.
 - **Facades, not aliases.** `Str`, `Arr` and the other non-facade default aliases are not facades, so they are not listed. The AC lists facades and helpers only.
 - **Two counts for assertions.** FR-116 says the assertion list comes from "a scan run with FR-1". The Inventory's baseline kinds are exactly PHPUnit `Assert` methods, including those reached through `TestResponse` and Pest `expect()`, but they miss tests skipped at the baseline and `expectException*`. Static call sites cover those. Static names that never ran are printed, because a suite-vendor helper (for example Testbench) could pass the `src`/`tests` exclusion.
-- **Option pair.** AD-26 defines an option pair as one the framework reads with "call if function, else value". The rule detects exactly that read shape in Upstream. For example, `Queue::getJobBackoff` uses `method_exists($job, 'backoff')` and `$job->backoff ?? $job->backoff()`.
+- **Option pair.** AD-26 defines an option pair as one the framework reads with "call if function, else value". ESC-3.7-1 limits it to option names on option holders (queued, broadcast, mailable and notification classes), with AD-26's named pairs plus names Upstream reads with `method_exists($v, 'N')` and `$v->N` on one non-`$this` variable. In the Model hierarchy only `casts` is an option pair (AD-7).
 
 ## Verification
 
