@@ -71,7 +71,7 @@ development_status:
   4-1-php-comparison-core: done
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: done
-  4-5-mockery-core: in-progress  # built before 4.4 (decisions/ESC-4.4-1.md)
+  4-5-mockery-core: blocked  # ESC-4.5-1 item 7: XT-conformance-8 forbids the @xaravel/mockery -> @xaravel/assert dependency (waits on the Maintainer); code in implementation-artifacts/xt45-attempt-1.patch
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog  # ESC-4.4-1 approved (decisions/ESC-4.4-1.md); prerequisite: 4-5-mockery-core
   4-6-mockery-advanced-and-api-coverage: backlog
   epic-4-retrospective: optional
