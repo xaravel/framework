@@ -1,0 +1,3666 @@
+diff --git a/bun.lock b/bun.lock
+index d5d573b..e4adade 100644
+--- a/bun.lock
++++ b/bun.lock
+@@ -478,6 +478,9 @@
+     "packages/mockery": {
+       "name": "@xaravel/mockery",
+       "version": "0.0.0",
++      "dependencies": {
++        "@xaravel/assert": "workspace:*",
++      },
+     },
+     "packages/notifications": {
+       "name": "@xaravel/notifications",
+diff --git a/conformance/oracle-requests/4.5.jsonl b/conformance/oracle-requests/4.5.jsonl
+new file mode 100644
+index 0000000..b707aae
+--- /dev/null
++++ b/conformance/oracle-requests/4.5.jsonl
+@@ -0,0 +1,3 @@
++{"id":"XT-mockery-1","kind":"php-expr","input":{"bindings":{},"setup":["class XtFoo { public function bar($x = null) {} public function baz() {} public function qux() {} }","class XtBar extends XtFoo {}","class XtErr extends \\Exception {}","class XtProp { public $a = 1; public $s = 'x'; public $f = 1.5; public $n = null; public $l = [1, [2]]; public $o = null; }","function xt_try(callable $f) { try { return ['ok', $f()]; } catch (\\Throwable $e) { return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } }"],"exprs":["(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->once()->with(1)->andReturn(2); $r[] = $m->bar(1); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->once(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->twice(); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->twice(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->times(3)->andReturn(1); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->times(3)->andReturn(1); for ($i = 0; $i < 4; $i++) { $r[] = $m->bar(); } $r[] = xt_try(function () { \\Mockery::close(); return null; }); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->never(); $r[] = 'none'; \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->never(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atLeast()->times(2)->andReturn('x'); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atLeast()->times(2); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atMost()->times(1)->andReturn('y'); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atMost()->times(1)->andReturn('y'); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1)->andReturn('a'); $r[] = $m->bar('1'); $r[] = $m->bar(1.0); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(null)->andReturn('b'); $r[] = $m->bar(false); $r[] = xt_try(fn () => $m->bar(true)); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with([1, 2])->andReturn('c'); $r[] = $m->bar([1, 2]); $r[] = $m->bar(['1', '2']); $r[] = xt_try(fn () => $m->bar([2, 1])); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with('XtFoo')->andReturn('d'); $r[] = $m->bar(new \\XtBar()); $r[] = $m->bar('XtFoo'); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(\\XtFoo::class)->andReturn('e'); $r[] = $m->bar(new \\XtBar()); $r[] = xt_try(fn () => $m->bar(new \\XtErr())); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->withArgs([1])->andReturn('f'); $r[] = $m->bar(1); $r[] = xt_try(fn () => $m->bar(1, 2)); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->withArgs(fn ($x) => $x === 1)->andReturn('g'); $r[] = $m->bar(1); $r[] = xt_try(fn () => $m->bar(2)); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->withArgs(fn () => 1); $r[] = xt_try(fn () => $m->bar(1)); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->withArgs(5); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1)->withAnyArgs()->andReturn('h'); $r[] = $m->bar(5, 6); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(); $r[] = xt_try(fn () => $m->bar(1)); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->andReturn(1, 2); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->andReturnValues([3, 4]); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $x = new \\XtErr('e'); $m->shouldReceive('bar')->andThrow($x); try { $m->bar(); $r[] = 'no throw'; } catch (\\XtErr $e) { $r[] = [$e === $x, $e->getMessage()]; } \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->andThrow(\\XtErr::class, 'm', 7); try { $m->bar(); $r[] = 'no throw'; } catch (\\XtErr $e) { $r[] = [$e->getMessage(), $e->getCode()]; } \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->andReturn(new \\XtErr('r')); $r[] = $m->bar()->getMessage(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->ordered(); $m->shouldReceive('baz')->ordered(); $r[] = $m->bar(); $r[] = $m->baz(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->ordered(); $m->shouldReceive('baz')->ordered(); $r[] = $m->baz(); $r[] = $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->ordered('g1'); $m->shouldReceive('baz')->ordered('g1'); $m->shouldReceive('qux')->ordered('g2'); $r[] = $m->baz(); $r[] = $m->bar(); $r[] = $m->qux(); $r[] = xt_try(fn () => $m->bar()); $r[] = xt_try(fn () => $m->qux()); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1)->once()->andReturn('a'); $m->shouldReceive('bar')->with(1)->once()->andReturn('b'); $r[] = $m->bar(1); $r[] = $m->bar(1); $r[] = $m->bar(1); $r[] = xt_try(function () { \\Mockery::close(); return null; }); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar', 'baz')->once()->andReturn(5); $r[] = $m->bar(); $r[] = $m->baz(); $r[] = (string) $m->shouldReceive('qux', 'bar')->with(1, 'x'); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar'); $m->shouldReceive('baz')->andReturn(); $r[] = $m->bar(); $r[] = $m->baz(); $r[] = $m->BAR(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->times('x'); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(); $m->shouldReceive('anything')->once()->andReturn(3); $r[] = $m->anything(); $r[] = xt_try(fn () => $m->other()); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()"]},"sha256":"7d9d1f5422a55d65ef90c67c4b7eb62b2395fd56b64dd9d0f2d621b9f6cb8075"}
++{"id":"XT-mockery-2","kind":"php-expr","input":{"bindings":{},"setup":["class XtFoo { public function bar($x = null) {} public function baz() {} public function qux() {} }","class XtBar extends XtFoo {}","class XtErr extends \\Exception {}","class XtProp { public $a = 1; public $s = 'x'; public $f = 1.5; public $n = null; public $l = [1, [2]]; public $o = null; }","function xt_try(callable $f) { try { return ['ok', $f()]; } catch (\\Throwable $e) { return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } }"],"exprs":["(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->once(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atLeast()->times(2); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->atMost()->times(1); $m->bar(); $m->bar(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1, 'x')->twice(); $m->bar(1, 'x'); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $a = \\Mockery::mock(\\XtFoo::class); $b = \\Mockery::mock(\\XtBar::class); $b->shouldReceive('bar')->once(); $a->shouldReceive('qux')->once(); $a->shouldReceive('baz')->once(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $n = \\Mockery::mock(\\XtBar::class); $m->shouldReceive('bar')->once(); $m->shouldReceive('baz'); $m->shouldReceive('qux')->atLeast()->once(); $n->shouldReceive('bar')->never(); $n->shouldReceive('baz')->withAnyArgs(); $r[] = \\Mockery::getContainer()->mockery_getExpectationCount(); $m->bar(); $m->qux(); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()"]},"sha256":"b499bce23f530806d26c6e8ff708fea44aaab14adb99a1480f7284e3daf83e6f"}
++{"id":"XT-mockery-3","kind":"php-expr","input":{"bindings":{},"setup":["class XtFoo { public function bar($x = null) {} public function baz() {} public function qux() {} }","class XtBar extends XtFoo {}","class XtErr extends \\Exception {}","class XtProp { public $a = 1; public $s = 'x'; public $f = 1.5; public $n = null; public $l = [1, [2]]; public $o = null; }","function xt_try(callable $f) { try { return ['ok', $f()]; } catch (\\Throwable $e) { return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } }"],"exprs":["(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); try { $m->baz(); } catch (\\BadMethodCallException $e) { $r[] = [get_class($e), $e->getMessage()]; } \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar'); try { $m->nope(1); } catch (\\BadMethodCallException $e) { $r[] = [get_class($e), $e->getMessage()]; } \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1); try { $m->bar(2); } catch (\\UnexpectedValueException $e) { $r[] = [get_class($e), $e instanceof \\Mockery\\Exception, $e->getMessage()]; } \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1); $m->shouldReceive('bar')->with(2)->once(); $m->bar(3); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(new \\XtFoo()); $m->bar(new \\XtFoo()); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(); $m->bar('a'); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $m->shouldReceive('bar')->with(1); $m->bar(2, [1, 'a' => [2]], 1.5, 1.0, 1.0E+25, -0.25, true, null, 'x', ['a' => 'x'], [], fn () => 1); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()","(function () { try { $r = []; $m = \\Mockery::mock(\\XtFoo::class); $p = new \\XtProp(); $p->o = new \\XtFoo(); $m->shouldReceive('bar')->with(1); $m->bar($p, new \\XtBar()); \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()"]},"sha256":"c3d3b2e2ea9d82796da2d084579c071188cf89f115f7eb6f34d4fbec64252e38"}
+diff --git a/packages/assert/src/declarations/portedTest.ts b/packages/assert/src/declarations/portedTest.ts
+index 742c89c..c425289 100644
+--- a/packages/assert/src/declarations/portedTest.ts
++++ b/packages/assert/src/declarations/portedTest.ts
+@@ -12,12 +12,20 @@
+ //      given) as `this`, awaits its `setUp()` and the body, then always its
+ //      `tearDown()`, even after a failing `setUp`; the first error wins. No
+ //      other lifecycle hook runs here (AD-25 belongs to @xaravel/testing's TestCase);
+-//   4. the report goes to the harness reporter, passing or failing;
+-//   5. a body or lifecycle error fails the test, then a reporter error;
++//   4. if `globalThis[Symbol.for('xaravel.mockery.run')]` is a function
++//      (installed by @xaravel/mockery on load), `inner` runs through it, inside
++//      the frame: Mockery's container is closed and verified when `inner`
++//      resolves (an unmet expectation fails the test, and each counted
++//      expectation records a `mockeryExpectation` assertion), and purged
++//      without verifying when it rejects, so the body's error wins
++//      (ESC-4.5-1 item 1);
++//   5. the report goes to the harness reporter, passing or failing;
++//   6. a body or lifecycle error fails the test, then a reporter error;
+ //      otherwise zero recorded assertions fail the test (FR-113).
+ import { registerTests } from "./Declarations";
+ 
+ const SCOPE_RUN = Symbol.for("xaravel.scope.run");
++const MOCKERY_RUN = Symbol.for("xaravel.mockery.run");
+ const INTEGER_LIKE = /^(0|-?[1-9][0-9]*)$/;
+ 
+ /**
+@@ -86,9 +94,9 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
+     const run = async (): Promise<void> => {
+       const scopeRun: unknown = (globalThis as Record<symbol, unknown>)[SCOPE_RUN];
+       if (typeof scopeRun === "function") {
+-        await (scopeRun as (kind: string, fn: () => Promise<void>) => unknown)("test", inner);
++        await (scopeRun as (kind: string, fn: () => Promise<void>) => unknown)("test", () => runWithMockery(inner));
+       } else {
+-        await inner();
++        await runWithMockery(inner);
+       }
+     };
+     return { label, id: label, run };
+@@ -96,6 +104,19 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
+   registerTests("portedTest()", "ported", null, planned, true);
+ }
+ 
++/**
++ * Runs `fn` through Mockery's test-finish protocol when @xaravel/mockery is loaded (ESC-4.5-1 item 1), else directly.
++ * Shared with `xaravelTest`.
++ */
++export async function runWithMockery(fn: () => unknown): Promise<void> {
++  const mockeryRun: unknown = (globalThis as Record<symbol, unknown>)[MOCKERY_RUN];
++  if (typeof mockeryRun === "function") {
++    await (mockeryRun as (fn: () => unknown) => unknown)(fn);
++  } else {
++    await fn();
++  }
++}
++
+ /** `[key, args]` per test; a single `[null, []]` without a dataset. */
+ function datasetRows(id: string, dataset: unknown): [string | null, unknown[]][] {
+   if (dataset === undefined) {
+diff --git a/packages/assert/src/declarations/xaravelTest.ts b/packages/assert/src/declarations/xaravelTest.ts
+index 31c3e1d..aa100f3 100644
+--- a/packages/assert/src/declarations/xaravelTest.ts
++++ b/packages/assert/src/declarations/xaravelTest.ts
+@@ -1,8 +1,11 @@
+ // `xaravelTest`: declares a Xaravel Test (Story 4.2; FR-115).
+ //
+ // The label is `<id>: <consequence>`. Its assertions are counted and reported
+-// (ESC-4.2-1), but a Xaravel Test never fails for executing none.
++// (ESC-4.2-1), but a Xaravel Test never fails for executing none. Its body
++// runs through Mockery's test-finish protocol when @xaravel/mockery is loaded,
++// as a Ported Test's does (ESC-4.5-1 item 1).
+ import { registerTests } from "./Declarations";
++import { runWithMockery } from "./portedTest";
+ 
+ const XT_ID = /^XT-[a-z0-9]+(-[a-z0-9]+)*-[1-9][0-9]*$/;
+ 
+@@ -17,5 +20,5 @@ export function xaravelTest(id: string, consequence: string, fn: () => unknown):
+   if (typeof fn !== "function") {
+     throw new TypeError(`xaravelTest(): ${id} needs a test function`);
+   }
+-  registerTests("xaravelTest()", "xaravel", consequence, [{ label: `${id}: ${consequence}`, id, run: () => fn() }], false);
++  registerTests("xaravelTest()", "xaravel", consequence, [{ label: `${id}: ${consequence}`, id, run: () => runWithMockery(fn) }], false);
+ }
+diff --git a/packages/mockery/README.md b/packages/mockery/README.md
+index b231463..57c64fc 100644
+--- a/packages/mockery/README.md
++++ b/packages/mockery/README.md
+@@ -8,4 +8,4 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
+ 
+ ## Dependencies
+ 
+-None.
++- `@xaravel/assert` (workspace): grader packages may depend on grader packages (AD-2).
+diff --git a/packages/mockery/src/Mockery.ts b/packages/mockery/src/Mockery.ts
+new file mode 100644
+index 0000000..21d1714
+--- /dev/null
++++ b/packages/mockery/src/Mockery.ts
+@@ -0,0 +1,138 @@
++// `Mockery` (Mockery 1.6.15, Mockery.php): the static entry point. Story 4.5:
++// `mock`, `close`, `getContainer`, `formatArgs` and `formatObjects`.
++//
++// Test finish (ESC-4.5-1 item 1). `getContainer()` returns the container of
++// the current run (an AsyncLocalStorage store), else a process-level one.
++// `globalThis[Symbol.for('xaravel.mockery.run')](fn)` runs `fn` with a fresh
++// container: when `fn` rejects, the container is closed without verifying and
++// the error is rethrown; when it resolves, `Mockery.close()` runs. `close()`
++// records one `mockeryExpectation` assertion per call-count-constrained
++// expectation (`mockery_getExpectationCount()`, which PHPUnit adds to its
++// assertion count), detaches the container, then verifies it
++// (`mockery_teardown`). `portedTest` and `xaravelTest` call the protocol.
++//
++// Mutable state lives in module variables and the store, never in statics.
++import { recordAssertion } from "@xaravel/assert";
++import { AsyncLocalStorage } from "node:async_hooks";
++import { Container } from "./Mockery/Container";
++import type { MockObject } from "./Mockery/LegacyMockInterface";
++import { MatcherAbstract } from "./Mockery/Matcher/MatcherAbstract";
++import { type Formattable, FQCN, formatArgument, isPhpObject, objectToArray, getClass, varExport } from "./support/values";
++
++interface ContainerSlot {
++  container: Container | null;
++}
++
++const storage = new AsyncLocalStorage<ContainerSlot>();
++const processSlot: ContainerSlot = { container: null };
++/** `formatObjects`' `static $formatting` recursion guard. */
++let formatting = false;
++
++function currentSlot(): ContainerSlot {
++  return storage.getStore() ?? processSlot;
++}
++
++function isMatcher(value: unknown): value is Formattable {
++  return value instanceof MatcherAbstract;
++}
++
++export class Mockery {
++  static readonly [FQCN]: string = "Mockery";
++
++  /** Closes and verifies the current container: counts its expectations, detaches it, then verifies every mock. */
++  static close(): void {
++    const slot = currentSlot();
++    const container = slot.container;
++    if (container === null) {
++      return;
++    }
++    const count = container.mockery_getExpectationCount();
++    for (let index = 0; index < count; index++) {
++      recordAssertion("mockeryExpectation");
++    }
++    slot.container = null;
++    container.mockery_teardown();
++    container.mockery_close();
++  }
++
++  /** `method(<formatted args>)`, or `method()` for null. */
++  static formatArgs(method: string, args: readonly unknown[] | null = null): string {
++    if (args === null) {
++      return `${method}()`;
++    }
++    return `${method}(${args.map((argument) => formatArgument(argument, isMatcher)).join(", ")})`;
++  }
++
++  /** `Objects: ( <var_export of each object argument as an array> )`, or `''` when there is none. */
++  static formatObjects(objects: readonly unknown[] | null = null): string {
++    if (formatting) {
++      return "[Recursion]";
++    }
++    if (objects === null) {
++      return "";
++    }
++    const filtered = objects.filter((object): object is object => isPhpObject(object));
++    if (filtered.length === 0) {
++      return "";
++    }
++    formatting = true;
++    try {
++      const parts: [string, unknown][] = [];
++      for (const object of filtered) {
++        const className = getClass(object);
++        const value = objectToArray(object);
++        const existing = parts.find(([name]) => name === className);
++        if (existing === undefined) {
++          parts.push([className, value]);
++        } else {
++          existing[1] = value;
++        }
++      }
++      return `Objects: ( ${varExport(Object.fromEntries(parts))})`;
++    } finally {
++      formatting = false;
++    }
++  }
++
++  /** The current container: the run's, else the process-level one; created when absent. */
++  static getContainer(): Container {
++    const slot = currentSlot();
++    slot.container ??= new Container();
++    return slot.container;
++  }
++
++  /** `getContainer().mock(...)`. */
++  static mock<T extends object>(target: abstract new (...args: never[]) => T): MockObject<T>;
++  static mock(target?: string | symbol): MockObject;
++  static mock(...args: unknown[]): MockObject {
++    return (Mockery.getContainer().mock as (...args: unknown[]) => MockObject)(...args);
++  }
++}
++
++/** The run protocol: `fn` with a fresh container, closed (and verified) when `fn` resolves. */
++async function run<T>(fn: () => T | Promise<T>): Promise<T> {
++  const slot: ContainerSlot = { container: null };
++  let result: T;
++  try {
++    result = await storage.run(slot, fn);
++  } catch (error) {
++    const container = slot.container;
++    slot.container = null;
++    container?.mockery_close();
++    throw error;
++  }
++  storage.run(slot, () => {
++    Mockery.close();
++  });
++  return result;
++}
++
++function install(key: symbol, value: unknown): void {
++  if (Object.getOwnPropertyDescriptor(globalThis, key) !== undefined) {
++    return;
++  }
++  Object.defineProperty(globalThis, key, { value, writable: false, configurable: false, enumerable: false });
++}
++
++install(Symbol.for("xaravel.mockery.mock"), Object.freeze((...args: unknown[]): MockObject => (Mockery.mock as (...args: unknown[]) => MockObject)(...args)));
++install(Symbol.for("xaravel.mockery.run"), Object.freeze(run));
+diff --git a/packages/mockery/src/Mockery/CompositeExpectation.ts b/packages/mockery/src/Mockery/CompositeExpectation.ts
+new file mode 100644
+index 0000000..cf30620
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CompositeExpectation.ts
+@@ -0,0 +1,106 @@
++// `Mockery\CompositeExpectation` (Mockery 1.6.15, CompositeExpectation.php):
++// what `shouldReceive` returns. It forwards each call to every expectation it
++// holds (PHP's `__call`) and returns itself. Story 4.5 forwards the core API
++// (AC 1); Story 4.6 adds the rest.
++import { RuntimeException } from "../php/RuntimeException";
++import { FQCN } from "../support/values";
++import type { Expectation } from "./Expectation";
++import type { LegacyMockInterface, MockObject } from "./LegacyMockInterface";
++
++export class CompositeExpectation {
++  static readonly [FQCN]: string = "Mockery\\CompositeExpectation";
++
++  protected _expectations: Expectation[] = [];
++
++  toString(): string {
++    return `[${this._expectations.map((expectation) => expectation.toString()).join(", ")}]`;
++  }
++
++  add(expectation: Expectation): void {
++    this._expectations.push(expectation);
++  }
++
++  andReturn(...args: unknown[]): this {
++    return this.forward((expectation) => expectation.andReturn(...args));
++  }
++
++  andReturnValues(values: readonly unknown[]): this {
++    return this.forward((expectation) => expectation.andReturnValues(values));
++  }
++
++  andThrow(exception: unknown, message: string = "", code: number = 0, previous: Error | null = null): this {
++    return this.forward((expectation) => expectation.andThrow(exception, message, code, previous));
++  }
++
++  atLeast(): this {
++    return this.forward((expectation) => expectation.atLeast());
++  }
++
++  atMost(): this {
++    return this.forward((expectation) => expectation.atMost());
++  }
++
++  getMock(): LegacyMockInterface {
++    return this.firstExpectation().getMock();
++  }
++
++  getOrderNumber(): number | null {
++    return this.firstExpectation().getOrderNumber();
++  }
++
++  mock(): LegacyMockInterface {
++    return this.getMock();
++  }
++
++  never(): this {
++    return this.forward((expectation) => expectation.never());
++  }
++
++  once(): this {
++    return this.forward((expectation) => expectation.once());
++  }
++
++  ordered(group: string | number | null = null): this {
++    return this.forward((expectation) => expectation.ordered(group));
++  }
++
++  shouldReceive(...methodNames: (string | Readonly<Record<string, unknown>>)[]): CompositeExpectation {
++    return (this.getMock() as MockObject).shouldReceive(...methodNames);
++  }
++
++  times(limit: number | null = null): this {
++    return this.forward((expectation) => expectation.times(limit));
++  }
++
++  twice(): this {
++    return this.forward((expectation) => expectation.twice());
++  }
++
++  with(...args: unknown[]): this {
++    return this.forward((expectation) => expectation.with(...args));
++  }
++
++  withAnyArgs(): this {
++    return this.forward((expectation) => expectation.withAnyArgs());
++  }
++
++  withArgs(argsOrClosure: readonly unknown[] | ((...args: any[]) => unknown)): this {
++    return this.forward((expectation) => expectation.withArgs(argsOrClosure));
++  }
++
++  /** PHP's `__call`: the call on every expectation, in order. */
++  protected forward(call: (expectation: Expectation) => unknown): this {
++    for (const expectation of this._expectations) {
++      call(expectation);
++    }
++    return this;
++  }
++
++  private firstExpectation(): Expectation {
++    const first = this._expectations[0];
++    if (first === undefined) {
++      throw new RuntimeException("No expectations have been added to this composite expectation");
++    }
++    return first;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Container.ts b/packages/mockery/src/Mockery/Container.ts
+new file mode 100644
+index 0000000..61a9296
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Container.ts
+@@ -0,0 +1,113 @@
++// `Mockery\Container` (Mockery 1.6.15, Container.php): the mocks of one test,
++// verified and torn down together, and the global call order.
++//
++// `mock()` takes a class, a class-name string (or contract token) or nothing;
++// Mockery's other argument forms are not in Story 4.5 (ESC-4.5-1 item 6).
++import { FQCN, isClass } from "../support/values";
++import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
++import { InvalidOrderException } from "./Exception/InvalidOrderException";
++import type { LegacyMockInterface, MockObject } from "./LegacyMockInterface";
++import { Mock, type MockTarget } from "./Mock";
++
++export class Container {
++  static readonly [FQCN]: string = "Mockery\\Container";
++
++  protected _allocatedOrder = 0;
++  protected _currentOrder = 0;
++  protected _groups = new Map<string, number>();
++  protected _mocks: MockObject[] = [];
++
++  /** A new mock of `target`, remembered by this container. */
++  mock<T extends object>(target: abstract new (...args: never[]) => T): MockObject<T>;
++  mock(target?: string | symbol): MockObject;
++  mock(...args: unknown[]): MockObject {
++    if (args.length > 1) {
++      throw new InvalidArgumentException("Mockery.mock() takes a class, a class-name string or nothing; other argument forms are not supported yet (ESC-4.5-1 item 6)");
++    }
++    const target: unknown = args.length === 0 ? null : args[0];
++    if (target !== null && !isClass(target) && typeof target !== "string" && typeof target !== "symbol") {
++      throw new InvalidArgumentException("Mockery.mock() takes a class, a class-name string or nothing; other argument forms are not supported yet (ESC-4.5-1 item 6)");
++    }
++    if (typeof target === "string" && (target.includes(",") || target.includes("[") || /^(alias|overload):/.test(target))) {
++      throw new InvalidArgumentException(`Mockery.mock('${target}'): interface lists, partials and alias:/overload: mocks are not supported yet (ESC-4.5-1 item 6)`);
++    }
++    const mock = Mock.build(this, target as MockTarget);
++    this._mocks.push(mock);
++    return mock;
++  }
++
++  getMocks(): readonly MockObject[] {
++    return this._mocks;
++  }
++
++  mockery_allocateOrder(): number {
++    return ++this._allocatedOrder;
++  }
++
++  /** Resets the container: tears down each mock and forgets them all. */
++  mockery_close(): void {
++    for (const mock of this._mocks) {
++      mock.mockery_teardown();
++    }
++    this._mocks = [];
++  }
++
++  mockery_getCurrentOrder(): number {
++    return this._currentOrder;
++  }
++
++  /** The number of call-count-constrained expectations of every mock (what PHPUnit adds to its assertion count). */
++  mockery_getExpectationCount(): number {
++    let count = 0;
++    for (const mock of this._mocks) {
++      count += mock.mockery_getExpectationCount();
++    }
++    return count;
++  }
++
++  mockery_getGroups(): ReadonlyMap<string, number> {
++    return this._groups;
++  }
++
++  mockery_setCurrentOrder(order: number): void {
++    this._currentOrder = order;
++  }
++
++  mockery_setGroup(group: string | number, order: number): void {
++    this._groups.set(String(group), order);
++  }
++
++  /** Verifies every mock; on the first failure it closes the container and rethrows. */
++  mockery_teardown(): void {
++    try {
++      this.mockery_verify();
++    } catch (error) {
++      this.mockery_close();
++      throw error;
++    }
++  }
++
++  mockery_thrownExceptions(): unknown[] {
++    const exceptions: unknown[] = [];
++    for (const mock of this._mocks) {
++      exceptions.push(...mock.mockery_thrownExceptions());
++    }
++    return exceptions;
++  }
++
++  mockery_validateOrder(method: string, order: number, mock: LegacyMockInterface): void {
++    if (order < this._currentOrder) {
++      const invalidOrderException = new InvalidOrderException(`Method ${method} called out of order: expected order ${order}, was ${this._currentOrder}`);
++      invalidOrderException.setMock(mock).setMethodName(method).setExpectedOrder(order).setActualOrder(this._currentOrder);
++      throw invalidOrderException;
++    }
++    this.mockery_setCurrentOrder(order);
++  }
++
++  /** Verifies each mock, in the order they were made. */
++  mockery_verify(): void {
++    for (const mock of this._mocks) {
++      mock.mockery_verify();
++    }
++  }
++}
+diff --git a/packages/mockery/src/Mockery/CountValidator/AtLeast.ts b/packages/mockery/src/Mockery/CountValidator/AtLeast.ts
+new file mode 100644
+index 0000000..3a7b6fa
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CountValidator/AtLeast.ts
+@@ -0,0 +1,27 @@
++// `Mockery\CountValidator\AtLeast` (Mockery 1.6.15).
++import { InvalidCountException } from "../Exception/InvalidCountException";
++import { FQCN } from "../../support/values";
++import { CountValidatorAbstract } from "./CountValidatorAbstract";
++
++export class AtLeast extends CountValidatorAbstract {
++  static override readonly [FQCN]: string = "Mockery\\CountValidator\\AtLeast";
++
++  override isEligible(_n: number): boolean {
++    return true;
++  }
++
++  validate(n: number): void {
++    if (this._limit > n) {
++      const invalidCountException = new InvalidCountException(
++        `Method ${this._expectation.toString()} from ${this._expectation.getMock().mockery_getName()} should be called\n at least ${this._limit} times but called ${n} times.`,
++      );
++      invalidCountException
++        .setMock(this._expectation.getMock())
++        .setMethodName(this._expectation.toString())
++        .setExpectedCountComparative(">=")
++        .setExpectedCount(this._limit)
++        .setActualCount(n);
++      throw invalidCountException;
++    }
++  }
++}
+diff --git a/packages/mockery/src/Mockery/CountValidator/AtMost.ts b/packages/mockery/src/Mockery/CountValidator/AtMost.ts
+new file mode 100644
+index 0000000..0e8cd3c
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CountValidator/AtMost.ts
+@@ -0,0 +1,23 @@
++// `Mockery\CountValidator\AtMost` (Mockery 1.6.15).
++import { InvalidCountException } from "../Exception/InvalidCountException";
++import { FQCN } from "../../support/values";
++import { CountValidatorAbstract } from "./CountValidatorAbstract";
++
++export class AtMost extends CountValidatorAbstract {
++  static override readonly [FQCN]: string = "Mockery\\CountValidator\\AtMost";
++
++  validate(n: number): void {
++    if (this._limit < n) {
++      const invalidCountException = new InvalidCountException(
++        `Method ${this._expectation.toString()} from ${this._expectation.getMock().mockery_getName()} should be called\n at most ${this._limit} times but called ${n} times.`,
++      );
++      invalidCountException
++        .setMock(this._expectation.getMock())
++        .setMethodName(this._expectation.toString())
++        .setExpectedCountComparative("<=")
++        .setExpectedCount(this._limit)
++        .setActualCount(n);
++      throw invalidCountException;
++    }
++  }
++}
+diff --git a/packages/mockery/src/Mockery/CountValidator/CountValidatorAbstract.ts b/packages/mockery/src/Mockery/CountValidator/CountValidatorAbstract.ts
+new file mode 100644
+index 0000000..578604a
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CountValidator/CountValidatorAbstract.ts
+@@ -0,0 +1,23 @@
++// `Mockery\CountValidator\CountValidatorAbstract` (Mockery 1.6.15).
++import type { Expectation } from "../Expectation";
++import { FQCN } from "../../support/values";
++
++export abstract class CountValidatorAbstract {
++  static readonly [FQCN]: string = "Mockery\\CountValidator\\CountValidatorAbstract";
++
++  protected readonly _expectation: Expectation;
++  protected readonly _limit: number;
++
++  constructor(expectation: Expectation, limit: number) {
++    this._expectation = expectation;
++    this._limit = limit;
++  }
++
++  /** Whether the expectation may take another call after `n` calls. */
++  isEligible(n: number): boolean {
++    return n < this._limit;
++  }
++
++  /** Throws an InvalidCountException when `n` calls break the limit. */
++  abstract validate(n: number): void;
++}
+diff --git a/packages/mockery/src/Mockery/CountValidator/Exact.ts b/packages/mockery/src/Mockery/CountValidator/Exact.ts
+new file mode 100644
+index 0000000..8928181
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CountValidator/Exact.ts
+@@ -0,0 +1,24 @@
++// `Mockery\CountValidator\Exact` (Mockery 1.6.15).
++import { InvalidCountException } from "../Exception/InvalidCountException";
++import { FQCN } from "../../support/values";
++import { CountValidatorAbstract } from "./CountValidatorAbstract";
++
++export class Exact extends CountValidatorAbstract {
++  static override readonly [FQCN]: string = "Mockery\\CountValidator\\Exact";
++
++  validate(n: number): void {
++    if (this._limit !== n) {
++      const because = this._expectation.getExceptionMessage();
++      const invalidCountException = new InvalidCountException(
++        `Method ${this._expectation.toString()} from ${this._expectation.getMock().mockery_getName()} should be called\n exactly ${this._limit} times but called ${n} times.` + (because !== null && because !== "" && because !== "0" ? ` Because ${because}` : ""),
++      );
++      invalidCountException
++        .setMock(this._expectation.getMock())
++        .setMethodName(this._expectation.toString())
++        .setExpectedCountComparative("=")
++        .setExpectedCount(this._limit)
++        .setActualCount(n);
++      throw invalidCountException;
++    }
++  }
++}
+diff --git a/packages/mockery/src/Mockery/CountValidator/Exception.ts b/packages/mockery/src/Mockery/CountValidator/Exception.ts
+new file mode 100644
+index 0000000..b5c0c05
+--- /dev/null
++++ b/packages/mockery/src/Mockery/CountValidator/Exception.ts
+@@ -0,0 +1,7 @@
++// `Mockery\CountValidator\Exception` (Mockery 1.6.15): an OutOfBoundsException.
++import { OutOfBoundsException } from "../../php/OutOfBoundsException";
++import { FQCN } from "../../support/values";
++
++export class Exception extends OutOfBoundsException {
++  static override readonly [FQCN]: string = "Mockery\\CountValidator\\Exception";
++}
+diff --git a/packages/mockery/src/Mockery/Exception.ts b/packages/mockery/src/Mockery/Exception.ts
+new file mode 100644
+index 0000000..27a6490
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception.ts
+@@ -0,0 +1,7 @@
++// `Mockery\Exception` (Mockery 1.6.15, Exception.php): an UnexpectedValueException.
++import { UnexpectedValueException } from "../php/UnexpectedValueException";
++import { FQCN } from "../support/values";
++
++export class Exception extends UnexpectedValueException {
++  static override readonly [FQCN]: string = "Mockery\\Exception";
++}
+diff --git a/packages/mockery/src/Mockery/Exception/BadMethodCallException.ts b/packages/mockery/src/Mockery/Exception/BadMethodCallException.ts
+new file mode 100644
+index 0000000..1903f61
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/BadMethodCallException.ts
+@@ -0,0 +1,25 @@
++// `Mockery\Exception\BadMethodCallException` (Mockery 1.6.15): thrown for a call
++// to a method that has no expectation. Its parent is the grader-internal PHP
++// `\BadMethodCallException` (ESC-4.5-1 item 2).
++import { BadMethodCallException as PhpBadMethodCallException } from "../../php/BadMethodCallException";
++import { FQCN } from "../../support/values";
++
++export class BadMethodCallException extends PhpBadMethodCallException {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\BadMethodCallException";
++
++  #dismissed = false;
++
++  dismiss(): void {
++    this.#dismissed = true;
++    // We sometimes stack them.
++    const previous = this.getPrevious();
++    if (!(previous instanceof BadMethodCallException)) {
++      return;
++    }
++    previous.dismiss();
++  }
++
++  dismissed(): boolean {
++    return this.#dismissed;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Exception/InvalidArgumentException.ts b/packages/mockery/src/Mockery/Exception/InvalidArgumentException.ts
+new file mode 100644
+index 0000000..fb683fd
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/InvalidArgumentException.ts
+@@ -0,0 +1,7 @@
++// `Mockery\Exception\InvalidArgumentException` (Mockery 1.6.15).
++import { InvalidArgumentException as PhpInvalidArgumentException } from "../../php/InvalidArgumentException";
++import { FQCN } from "../../support/values";
++
++export class InvalidArgumentException extends PhpInvalidArgumentException {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\InvalidArgumentException";
++}
+diff --git a/packages/mockery/src/Mockery/Exception/InvalidCountException.ts b/packages/mockery/src/Mockery/Exception/InvalidCountException.ts
+new file mode 100644
+index 0000000..6b4843d
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/InvalidCountException.ts
+@@ -0,0 +1,71 @@
++// `Mockery\Exception\InvalidCountException` (Mockery 1.6.15): an unmet call count.
++import { Exception } from "../CountValidator/Exception";
++import type { LegacyMockInterface } from "../LegacyMockInterface";
++import { FQCN } from "../../support/values";
++import { RuntimeException } from "./RuntimeException";
++
++export class InvalidCountException extends Exception {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\InvalidCountException";
++
++  #actual: number | null = null;
++  #expected = 0;
++  #expectedComparative = "<=";
++  #method: string | null = null;
++  #mockObject: LegacyMockInterface | null = null;
++
++  getActualCount(): number | null {
++    return this.#actual;
++  }
++
++  getExpectedCount(): number {
++    return this.#expected;
++  }
++
++  getExpectedCountComparative(): string {
++    return this.#expectedComparative;
++  }
++
++  getMethodName(): string | null {
++    return this.#method;
++  }
++
++  getMock(): LegacyMockInterface | null {
++    return this.#mockObject;
++  }
++
++  getMockName(): string {
++    const mock = this.getMock();
++    if (mock === null) {
++      return "";
++    }
++    return mock.mockery_getName();
++  }
++
++  setActualCount(count: number): this {
++    this.#actual = count;
++    return this;
++  }
++
++  setExpectedCount(count: number): this {
++    this.#expected = count;
++    return this;
++  }
++
++  setExpectedCountComparative(comp: string): this {
++    if (!["=", ">", "<", ">=", "<="].includes(comp)) {
++      throw new RuntimeException(`Illegal comparative for expected call counts set: ${comp}`);
++    }
++    this.#expectedComparative = comp;
++    return this;
++  }
++
++  setMethodName(name: string): this {
++    this.#method = name;
++    return this;
++  }
++
++  setMock(mock: LegacyMockInterface): this {
++    this.#mockObject = mock;
++    return this;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Exception/InvalidOrderException.ts b/packages/mockery/src/Mockery/Exception/InvalidOrderException.ts
+new file mode 100644
+index 0000000..f199507
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/InvalidOrderException.ts
+@@ -0,0 +1,57 @@
++// `Mockery\Exception\InvalidOrderException` (Mockery 1.6.15): a call out of its `ordered()` place.
++import { Exception } from "../Exception";
++import type { LegacyMockInterface } from "../LegacyMockInterface";
++import { FQCN } from "../../support/values";
++
++export class InvalidOrderException extends Exception {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\InvalidOrderException";
++
++  #actual: number | null = null;
++  #expected = 0;
++  #method: string | null = null;
++  #mockObject: LegacyMockInterface | null = null;
++
++  getActualOrder(): number | null {
++    return this.#actual;
++  }
++
++  getExpectedOrder(): number {
++    return this.#expected;
++  }
++
++  getMethodName(): string | null {
++    return this.#method;
++  }
++
++  getMock(): LegacyMockInterface | null {
++    return this.#mockObject;
++  }
++
++  getMockName(): string | null {
++    const mock = this.getMock();
++    if (mock === null) {
++      return null;
++    }
++    return mock.mockery_getName();
++  }
++
++  setActualOrder(count: number): this {
++    this.#actual = count;
++    return this;
++  }
++
++  setExpectedOrder(count: number): this {
++    this.#expected = count;
++    return this;
++  }
++
++  setMethodName(name: string): this {
++    this.#method = name;
++    return this;
++  }
++
++  setMock(mock: LegacyMockInterface): this {
++    this.#mockObject = mock;
++    return this;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Exception/NoMatchingExpectationException.ts b/packages/mockery/src/Mockery/Exception/NoMatchingExpectationException.ts
+new file mode 100644
+index 0000000..a89c4f5
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/NoMatchingExpectationException.ts
+@@ -0,0 +1,48 @@
++// `Mockery\Exception\NoMatchingExpectationException` (Mockery 1.6.15): a call
++// whose arguments match none of its method's expectations.
++import { Exception } from "../Exception";
++import type { LegacyMockInterface } from "../LegacyMockInterface";
++import { FQCN } from "../../support/values";
++
++export class NoMatchingExpectationException extends Exception {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\NoMatchingExpectationException";
++
++  #actual: unknown[] = [];
++  #method: string | null = null;
++  #mockObject: LegacyMockInterface | null = null;
++
++  getActualArguments(): unknown[] {
++    return this.#actual;
++  }
++
++  getMethodName(): string | null {
++    return this.#method;
++  }
++
++  getMock(): LegacyMockInterface | null {
++    return this.#mockObject;
++  }
++
++  getMockName(): string | null {
++    const mock = this.getMock();
++    if (mock === null) {
++      return null;
++    }
++    return mock.mockery_getName();
++  }
++
++  setActualArguments(count: unknown[]): this {
++    this.#actual = count;
++    return this;
++  }
++
++  setMethodName(name: string): this {
++    this.#method = name;
++    return this;
++  }
++
++  setMock(mock: LegacyMockInterface): this {
++    this.#mockObject = mock;
++    return this;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Exception/RuntimeException.ts b/packages/mockery/src/Mockery/Exception/RuntimeException.ts
+new file mode 100644
+index 0000000..d9d042c
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Exception/RuntimeException.ts
+@@ -0,0 +1,7 @@
++// `Mockery\Exception\RuntimeException` (Mockery 1.6.15): extends PHP's `\Exception`.
++import { Exception } from "../../php/Exception";
++import { FQCN } from "../../support/values";
++
++export class RuntimeException extends Exception {
++  static override readonly [FQCN]: string = "Mockery\\Exception\\RuntimeException";
++}
+diff --git a/packages/mockery/src/Mockery/Expectation.ts b/packages/mockery/src/Mockery/Expectation.ts
+new file mode 100644
+index 0000000..2c9255d
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Expectation.ts
+@@ -0,0 +1,307 @@
++// `Mockery\Expectation` (Mockery 1.6.15, Expectation.php): one expected call
++// of a mock method, with its argument list, call count, return queue and
++// order. Story 4.5 ports the core API (AC 1): `once`, `twice`, `times`,
++// `never`, `atLeast`, `atMost`, `with`, `withArgs`, `withAnyArgs`,
++// `andReturn`, `andReturnValues`, `andThrow` and `ordered`. The rest of
++// Mockery's Expectation API is Story 4.6's.
++import { phpLooseEquals } from "@xaravel/assert";
++import { Mockery } from "../Mockery";
++import { InvalidArgumentException } from "../php/InvalidArgumentException";
++import { FQCN, instanceOfName, isClass, isPhpObject, phpString } from "../support/values";
++import { AtLeast } from "./CountValidator/AtLeast";
++import { AtMost } from "./CountValidator/AtMost";
++import type { CountValidatorAbstract } from "./CountValidator/CountValidatorAbstract";
++import { Exact } from "./CountValidator/Exact";
++import type { LegacyMockInterface } from "./LegacyMockInterface";
++import { AnyArgs } from "./Matcher/AnyArgs";
++import { MatcherAbstract } from "./Matcher/MatcherAbstract";
++import { MultiArgumentClosure } from "./Matcher/MultiArgumentClosure";
++import { NoArgs } from "./Matcher/NoArgs";
++
++type CountValidatorClass = new (expectation: Expectation, limit: number) => CountValidatorAbstract;
++
++/** Something `ordered()` allocates order numbers from: a mock, or (with `globally()`, Story 4.6) the container. */
++interface Ordering {
++  mockery_getGroups(): ReadonlyMap<string, number>;
++  mockery_allocateOrder(): number;
++  mockery_setGroup(group: string | number, order: number): void;
++}
++
++export class Expectation {
++  static readonly [FQCN]: string = "Mockery\\Expectation";
++
++  protected _actualCount = 0;
++  protected _because: string | null = null;
++  protected _closureQueue: ((...args: unknown[]) => unknown)[] = [];
++  protected _countValidatorClass: CountValidatorClass = Exact;
++  protected _countValidators = new Map<CountValidatorClass, CountValidatorAbstract>();
++  protected _expectedArgs: unknown[] = [];
++  protected _expectedCount = -1;
++  protected _globalOrderNumber: number | null = null;
++  protected _globally = false;
++  protected readonly _mock: LegacyMockInterface;
++  protected readonly _name: string;
++  protected _orderNumber: number | null = null;
++  protected _returnQueue: unknown[] = [];
++  protected _throw = false;
++
++  constructor(mock: LegacyMockInterface, name: string) {
++    this._mock = mock;
++    this._name = name;
++    this.withAnyArgs();
++  }
++
++  toString(): string {
++    return Mockery.formatArgs(this._name, this._expectedArgs);
++  }
++
++  /** The values the calls return, in turn; the last one repeats. */
++  andReturn(...args: unknown[]): this {
++    this._returnQueue = args;
++    return this;
++  }
++
++  /** `andReturn(...values)`. */
++  andReturnValues(values: readonly unknown[]): this {
++    if (!Array.isArray(values)) {
++      throw new TypeError(`Mockery\\Expectation::andReturnValues(): Argument #1 ($values) must be of type array, ${values === null ? "null" : typeof values} given`);
++    }
++    return this.andReturn(...values);
++  }
++
++  /**
++   * The call throws `exception`: an error object, or a class constructed as `new exception(message, code, previous)`.
++   * A class-name string cannot be resolved in JS (ESC-4.5-1 item 6).
++   */
++  andThrow(exception: unknown, message: string = "", code: number = 0, previous: Error | null = null): this {
++    this._throw = true;
++    if (isPhpObject(exception) && !isClass(exception)) {
++      return this.andReturn(exception);
++    }
++    if (isClass(exception)) {
++      return this.andReturn(new (exception as unknown as new (message: string, code: number, previous: Error | null) => unknown)(message, code, previous));
++    }
++    throw new InvalidArgumentException(`andThrow() needs an exception object or class, got ${typeof exception === "string" ? `the class-name string '${exception}', which cannot be resolved (ESC-4.5-1 item 6)` : typeof exception}`);
++  }
++
++  atLeast(): this {
++    this._countValidatorClass = AtLeast;
++    return this;
++  }
++
++  atMost(): this {
++    this._countValidatorClass = AtMost;
++    return this;
++  }
++
++  getExceptionMessage(): string | null {
++    return this._because;
++  }
++
++  getMock(): LegacyMockInterface {
++    return this._mock;
++  }
++
++  getName(): string {
++    return this._name;
++  }
++
++  getOrderNumber(): number | null {
++    return this._orderNumber;
++  }
++
++  isCallCountConstrained(): boolean {
++    return this._countValidators.size > 0;
++  }
++
++  isEligible(): boolean {
++    for (const countValidator of this._countValidators.values()) {
++      if (!countValidator.isEligible(this._actualCount)) {
++        return false;
++      }
++    }
++    return true;
++  }
++
++  matchArgs(args: readonly unknown[]): boolean {
++    for (const expectedArg of this._expectedArgs) {
++      if (!(expectedArg instanceof MatcherAbstract) || !expectedArg.isArgumentListMatcher()) {
++        continue;
++      }
++      return this._matchArg(expectedArg, args);
++    }
++    if (args.length === this._expectedArgs.length) {
++      return this._matchArgs(args);
++    }
++    return false;
++  }
++
++  never(): this {
++    return this.times(0);
++  }
++
++  once(): this {
++    return this.times(1);
++  }
++
++  ordered(group: string | number | null = null): this {
++    if (this._globally) {
++      this._globalOrderNumber = this._defineOrdered(group, this._mock.mockery_getContainer());
++    } else {
++      this._orderNumber = this._defineOrdered(group, this._mock);
++    }
++    this._globally = false;
++    return this;
++  }
++
++  times(limit: number | null = null): this {
++    if (limit === null || limit === undefined) {
++      return this;
++    }
++    if (typeof limit !== "number" || !Number.isInteger(limit)) {
++      throw new InvalidArgumentException("The passed Times limit should be an integer value");
++    }
++    // Mockery's E_USER_DEPRECATED after never() has no channel here (ESC-4.5-1 item 6).
++    if (limit === 0) {
++      this._countValidators.clear();
++    }
++    this._expectedCount = limit;
++    this._countValidators.set(this._countValidatorClass, new this._countValidatorClass(this, limit));
++    if (this._countValidatorClass !== Exact) {
++      this._countValidatorClass = Exact;
++      this._countValidators.delete(Exact);
++    }
++    return this;
++  }
++
++  twice(): this {
++    return this.times(2);
++  }
++
++  validateOrder(): void {
++    if (this._orderNumber) {
++      this._mock.mockery_validateOrder(this.toString(), this._orderNumber);
++    }
++    if (this._globalOrderNumber) {
++      this._mock.mockery_getContainer().mockery_validateOrder(this.toString(), this._globalOrderNumber, this._mock);
++    }
++  }
++
++  verify(): void {
++    for (const countValidator of this._countValidators.values()) {
++      countValidator.validate(this._actualCount);
++    }
++  }
++
++  verifyCall(args: readonly unknown[]): unknown {
++    this.validateOrder();
++    this._actualCount++;
++    const value = this._getReturnValue(args);
++    this.throwAsNecessary(value);
++    return value;
++  }
++
++  /** The expected argument list; `with()` with none expects no arguments. */
++  with(...args: unknown[]): this {
++    return this.withArgs(args);
++  }
++
++  withAnyArgs(): this {
++    this._expectedArgs = [new AnyArgs()];
++    return this;
++  }
++
++  /** An expected argument list, or a closure that matches a call when it returns exactly `true`. */
++  withArgs(argsOrClosure: readonly unknown[] | ((...args: any[]) => unknown)): this {
++    if (Array.isArray(argsOrClosure)) {
++      return this.withArgsInArray(argsOrClosure);
++    }
++    if (typeof argsOrClosure === "function") {
++      this._expectedArgs = [new MultiArgumentClosure(argsOrClosure)];
++      return this;
++    }
++    throw new InvalidArgumentException(`Call to Mockery\\Expectation::withArgs with an invalid argument (${phpString(argsOrClosure)}), only array and closure are allowed`);
++  }
++
++  protected _defineOrdered(group: string | number | null, ordering: Ordering): number {
++    const groups = ordering.mockery_getGroups();
++    if (group === null) {
++      return ordering.mockery_allocateOrder();
++    }
++    const known = groups.get(String(group));
++    if (known !== undefined) {
++      return known;
++    }
++    const result = ordering.mockery_allocateOrder();
++    ordering.mockery_setGroup(group, result);
++    return result;
++  }
++
++  protected _getReturnValue(args: readonly unknown[]): unknown {
++    if (this._closureQueue.length > 1) {
++      return this._closureQueue.shift()!(...args);
++    }
++    if (this._closureQueue.length > 0) {
++      return this._closureQueue[0]!(...args);
++    }
++    if (this._returnQueue.length > 1) {
++      return this._returnQueue.shift();
++    }
++    if (this._returnQueue.length > 0) {
++      return this._returnQueue[0];
++    }
++    // No declared return types in JS: Mockery's `mockery_returnValueForMethod` gives null (AD-9).
++    return null;
++  }
++
++  /**
++   * `_matchArg` (Expectation.php 949-980): identity; a matcher; any other object (a closure included) never matches;
++   * a class matches an instance of it, and a class-name string an object of that class; else PHP `==`.
++   */
++  protected _matchArg(expected: unknown, actual: unknown): boolean {
++    if (expected === actual) {
++      return true;
++    }
++    if (expected instanceof MatcherAbstract) {
++      return expected.match(actual);
++    }
++    if (isClass(expected)) {
++      return isPhpObject(actual) && actual instanceof (expected as unknown as abstract new () => object);
++    }
++    if (isPhpObject(expected)) {
++      return false;
++    }
++    if (isPhpObject(actual) && typeof expected === "string" && instanceOfName(actual, expected)) {
++      return true;
++    }
++    return phpLooseEquals(expected, actual);
++  }
++
++  protected _matchArgs(args: readonly unknown[]): boolean {
++    for (let index = 0; index < this._expectedArgs.length; index++) {
++      if (!this._matchArg(this._expectedArgs[index], args[index])) {
++        return false;
++      }
++    }
++    return true;
++  }
++
++  private throwAsNecessary(value: unknown): void {
++    if (!(value instanceof Error)) {
++      return;
++    }
++    if (!this._throw) {
++      return;
++    }
++    throw value;
++  }
++
++  private withArgsInArray(args: readonly unknown[]): this {
++    if (args.length === 0) {
++      this._expectedArgs = [new NoArgs()];
++      return this;
++    }
++    this._expectedArgs = [...args];
++    return this;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/ExpectationDirector.ts b/packages/mockery/src/Mockery/ExpectationDirector.ts
+new file mode 100644
+index 0000000..35e2f20
+--- /dev/null
++++ b/packages/mockery/src/Mockery/ExpectationDirector.ts
+@@ -0,0 +1,104 @@
++// `Mockery\ExpectationDirector` (Mockery 1.6.15, ExpectationDirector.php):
++// the expectations of one mock method, which it matches calls against.
++import { Mockery } from "../Mockery";
++import { FQCN } from "../support/values";
++import { NoMatchingExpectationException } from "./Exception/NoMatchingExpectationException";
++import type { Expectation } from "./Expectation";
++import type { LegacyMockInterface } from "./LegacyMockInterface";
++
++export class ExpectationDirector {
++  static readonly [FQCN]: string = "Mockery\\ExpectationDirector";
++
++  /** Default expectations (`byDefault()`, Story 4.6); empty in Story 4.5. */
++  protected _defaults: Expectation[] = [];
++  protected _expectations: Expectation[] = [];
++  protected readonly _mock: LegacyMockInterface;
++  protected readonly _name: string;
++
++  constructor(name: string, mock: LegacyMockInterface) {
++    this._name = name;
++    this._mock = mock;
++  }
++
++  addExpectation(expectation: Expectation): void {
++    this._expectations.push(expectation);
++  }
++
++  /** Runs the call through its expectation, or throws NoMatchingExpectationException. */
++  call(args: readonly unknown[]): unknown {
++    const expectation = this.findExpectation(args);
++    if (expectation !== null) {
++      return expectation.verifyCall(args);
++    }
++    const noMatchingExpectationException = new NoMatchingExpectationException(
++      `No matching handler found for ${this._mock.mockery_getName()}::${Mockery.formatArgs(this._name, args)}. Either the method was unexpected or its arguments matched no expected argument list for this method\n\n${Mockery.formatObjects(args)}`,
++    );
++    noMatchingExpectationException.setMock(this._mock).setMethodName(this._name).setActualArguments([...args]);
++    throw noMatchingExpectationException;
++  }
++
++  findExpectation(args: readonly unknown[]): Expectation | null {
++    let expectation: Expectation | null = null;
++    if (this._expectations.length > 0) {
++      expectation = this._findExpectationIn(this._expectations, args);
++    }
++    if (expectation === null && this._defaults.length > 0) {
++      return this._findExpectationIn(this._defaults, args);
++    }
++    return expectation;
++  }
++
++  getDefaultExpectations(): Expectation[] {
++    return this._defaults;
++  }
++
++  /** The number of call-count-constrained expectations (the defaults' when there are no others). */
++  getExpectationCount(): number {
++    let count = 0;
++    let expectations = this.getExpectations();
++    if (expectations.length === 0) {
++      expectations = this.getDefaultExpectations();
++    }
++    for (const expectation of expectations) {
++      if (expectation.isCallCountConstrained()) {
++        count++;
++      }
++    }
++    return count;
++  }
++
++  getExpectations(): Expectation[] {
++    return this._expectations;
++  }
++
++  verify(): void {
++    if (this._expectations.length > 0) {
++      for (const expectation of this._expectations) {
++        expectation.verify();
++      }
++      return;
++    }
++    for (const defaultExpectation of this._defaults) {
++      defaultExpectation.verify();
++    }
++  }
++
++  /** The first eligible expectation whose arguments match, else the first whose arguments match. */
++  protected _findExpectationIn(expectations: readonly Expectation[], args: readonly unknown[]): Expectation | null {
++    for (const expectation of expectations) {
++      if (!expectation.isEligible()) {
++        continue;
++      }
++      if (!expectation.matchArgs(args)) {
++        continue;
++      }
++      return expectation;
++    }
++    for (const expectation of expectations) {
++      if (expectation.matchArgs(args)) {
++        return expectation;
++      }
++    }
++    return null;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/LegacyMockInterface.ts b/packages/mockery/src/Mockery/LegacyMockInterface.ts
+new file mode 100644
+index 0000000..ed6687f
+--- /dev/null
++++ b/packages/mockery/src/Mockery/LegacyMockInterface.ts
+@@ -0,0 +1,29 @@
++// `Mockery\LegacyMockInterface` (Mockery 1.6.15): the Mockery API every mock
++// object answers, as a type. Story 4.5's subset; Story 4.6 adds the rest.
++import type { CompositeExpectation } from "./CompositeExpectation";
++import type { Container } from "./Container";
++import type { BadMethodCallException } from "./Exception/BadMethodCallException";
++import type { ExpectationDirector } from "./ExpectationDirector";
++
++export interface LegacyMockInterface {
++  shouldReceive(...methodNames: (string | Readonly<Record<string, unknown>>)[]): CompositeExpectation;
++  mockery_getName(): string;
++  mockery_getContainer(): Container;
++  mockery_verify(): void;
++  mockery_teardown(): void;
++  mockery_getExpectationCount(): number;
++  mockery_getExpectations(): ReadonlyMap<string, ExpectationDirector>;
++  mockery_getExpectationsFor(method: string): ExpectationDirector | null;
++  mockery_setExpectationsFor(method: string, director: ExpectationDirector): void;
++  mockery_allocateOrder(): number;
++  mockery_setGroup(group: string | number, order: number): void;
++  mockery_getGroups(): ReadonlyMap<string, number>;
++  mockery_setCurrentOrder(order: number): void;
++  mockery_getCurrentOrder(): number;
++  mockery_validateOrder(method: string, order: number): void;
++  mockery_thrownExceptions(): BadMethodCallException[];
++  toString(): string;
++}
++
++/** A mock of `T`: `T`'s members plus the Mockery API; any other method name dispatches to its expectations. */
++export type MockObject<T extends object = object> = T & LegacyMockInterface & { [method: string]: any };
+diff --git a/packages/mockery/src/Mockery/Matcher/AnyArgs.ts b/packages/mockery/src/Mockery/Matcher/AnyArgs.ts
+new file mode 100644
+index 0000000..a5e5767
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Matcher/AnyArgs.ts
+@@ -0,0 +1,19 @@
++// `Mockery\Matcher\AnyArgs` (Mockery 1.6.15), an ArgumentListMatcher. Internal in Story 4.5.
++import { FQCN } from "../../support/values";
++import { MatcherAbstract } from "./MatcherAbstract";
++
++export class AnyArgs extends MatcherAbstract {
++  static override readonly [FQCN]: string = "Mockery\\Matcher\\AnyArgs";
++
++  match(_actual: unknown): boolean {
++    return true;
++  }
++
++  toString(): string {
++    return "<Any Arguments>";
++  }
++
++  override isArgumentListMatcher(): boolean {
++    return true;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Matcher/MatcherAbstract.ts b/packages/mockery/src/Mockery/Matcher/MatcherAbstract.ts
+new file mode 100644
+index 0000000..73ed2af
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Matcher/MatcherAbstract.ts
+@@ -0,0 +1,23 @@
++// `Mockery\Matcher\MatcherAbstract` (Mockery 1.6.15). Internal in Story 4.5:
++// Story 4.6 exports the argument matchers.
++import { FQCN } from "../../support/values";
++
++export abstract class MatcherAbstract {
++  static readonly [FQCN]: string = "Mockery\\Matcher\\MatcherAbstract";
++
++  protected readonly _expected: unknown;
++
++  constructor(expected: unknown = null) {
++    this._expected = expected;
++  }
++
++  /** Whether `actual` matches; an ArgumentListMatcher receives the whole argument list. */
++  abstract match(actual: unknown): boolean;
++
++  abstract toString(): string;
++
++  /** `instanceof ArgumentListMatcher`: the matcher stands for the whole argument list. */
++  isArgumentListMatcher(): boolean {
++    return false;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Matcher/MultiArgumentClosure.ts b/packages/mockery/src/Mockery/Matcher/MultiArgumentClosure.ts
+new file mode 100644
+index 0000000..c47ebfc
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Matcher/MultiArgumentClosure.ts
+@@ -0,0 +1,19 @@
++// `Mockery\Matcher\MultiArgumentClosure` (Mockery 1.6.15), an ArgumentListMatcher. Internal in Story 4.5.
++import { FQCN } from "../../support/values";
++import { MatcherAbstract } from "./MatcherAbstract";
++
++export class MultiArgumentClosure extends MatcherAbstract {
++  static override readonly [FQCN]: string = "Mockery\\Matcher\\MultiArgumentClosure";
++
++  match(actual: unknown): boolean {
++    return (this._expected as (...args: unknown[]) => unknown)(...(actual as unknown[])) === true;
++  }
++
++  toString(): string {
++    return "<MultiArgumentClosure===true>";
++  }
++
++  override isArgumentListMatcher(): boolean {
++    return true;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Matcher/NoArgs.ts b/packages/mockery/src/Mockery/Matcher/NoArgs.ts
+new file mode 100644
+index 0000000..6cb6f37
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Matcher/NoArgs.ts
+@@ -0,0 +1,19 @@
++// `Mockery\Matcher\NoArgs` (Mockery 1.6.15), an ArgumentListMatcher. Internal in Story 4.5.
++import { FQCN } from "../../support/values";
++import { MatcherAbstract } from "./MatcherAbstract";
++
++export class NoArgs extends MatcherAbstract {
++  static override readonly [FQCN]: string = "Mockery\\Matcher\\NoArgs";
++
++  match(actual: unknown): boolean {
++    return Array.isArray(actual) && actual.length === 0;
++  }
++
++  toString(): string {
++    return "<No Arguments>";
++  }
++
++  override isArgumentListMatcher(): boolean {
++    return true;
++  }
++}
+diff --git a/packages/mockery/src/Mockery/Mock.ts b/packages/mockery/src/Mockery/Mock.ts
+new file mode 100644
+index 0000000..df7985a
+--- /dev/null
++++ b/packages/mockery/src/Mockery/Mock.ts
+@@ -0,0 +1,309 @@
++// `Mockery\Mock` (Mockery 1.6.15, Mock.php) and the mock-class generator's
++// naming (Generator/MockNameBuilder.php). Internal: the package exports the
++// mock objects it builds, not this class.
++//
++// A mock of a class `X` is an instance of a generated class
++// `Mockery_<n>_X extends X`, made by `Object.create` so `X`'s constructor never
++// runs (Mockery's Instantiator), and wrapped in a Proxy whose `get` resolves a
++// string key in this order:
++//
++//   1. a method with an ExpectationDirector (exact name, then case-insensitive)
++//      -> a dispatcher;
++//   2. a Mockery API member (`shouldReceive`, `mockery_*`, `toString`) -> itself;
++//   3. a function declared on `X`'s prototype chain above Object.prototype
++//      -> a dispatcher;
++//   4. any other property present on the object, and `then` -> Reflect.get
++//      (an absent `then` is undefined, so `await mock` is no method call);
++//   5. any other string -> a dispatcher.
++//
++// Symbol keys always use Reflect.get. A dispatcher runs
++// `_mockery_handleMethodCall(name, args)`.
++import { InvalidArgumentException as PhpInvalidArgumentException } from "../php/InvalidArgumentException";
++import { classNameOf, FQCN, objectId } from "../support/values";
++import { CompositeExpectation } from "./CompositeExpectation";
++import type { Container } from "./Container";
++import { BadMethodCallException } from "./Exception/BadMethodCallException";
++import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
++import { InvalidOrderException } from "./Exception/InvalidOrderException";
++import { Expectation } from "./Expectation";
++import { ExpectationDirector } from "./ExpectationDirector";
++import type { LegacyMockInterface, MockObject } from "./LegacyMockInterface";
++
++/** What `Container.mock` accepts as a target: a class, a class-name string (or contract token), or nothing. */
++export type MockTarget = (abstract new (...args: never[]) => object) | string | symbol | null;
++
++interface Generated {
++  readonly name: string;
++  readonly generated: new () => object;
++}
++
++/** Mockery's process-wide `MockNameBuilder::$mockCounter`; a target seen before reuses its class. */
++let mockCounter = 0;
++const generatedByTarget = new Map<unknown, Generated>();
++const NO_TARGET = Symbol("no target");
++
++function generatedFor(target: MockTarget): Generated {
++  const key = target ?? NO_TARGET;
++  const known = generatedByTarget.get(key);
++  if (known !== undefined) {
++    return known;
++  }
++  let part: string | null;
++  if (typeof target === "function") {
++    part = classNameOf(target) ?? "class@anonymous";
++  } else if (typeof target === "symbol") {
++    part = target.description ?? "";
++  } else {
++    part = target;
++  }
++  const name = ["Mockery", String(mockCounter++), ...(part === null ? [] : [part.replace(/\\/g, "_")])].join("_");
++  const generated: new () => object =
++    typeof target === "function" ? class extends (target as unknown as new () => object) {} : class {};
++  Object.defineProperty(generated, "name", { value: name });
++  Object.defineProperty(generated, FQCN, { value: name });
++  const entry: Generated = { name, generated };
++  generatedByTarget.set(key, entry);
++  return entry;
++}
++
++/** The Mockery API members the Proxy answers itself (step 2). */
++let apiMembers: ReadonlySet<string> | null = null;
++
++export class Mock implements LegacyMockInterface {
++  static readonly [FQCN]: string = "Mockery\\Mock";
++
++  protected _mockery_expectations = new Map<string, ExpectationDirector>();
++  protected _mockery_expectations_count = 0;
++  protected _mockery_name: string;
++  protected _mockery_container: Container;
++  protected _mockery_allocatedOrder = 0;
++  protected _mockery_currentOrder = 0;
++  protected _mockery_groups = new Map<string, number>();
++  protected _mockery_verified = false;
++  protected _mockery_thrownExceptions: BadMethodCallException[] = [];
++  /** The object behind the Proxy: an instance of the generated class. */
++  protected readonly _mockery_instance: object;
++  /** The mock object itself (the Proxy), which expectations hold. */
++  protected _mockery_self: MockObject;
++  readonly #bound = new Map<string, unknown>();
++  readonly #dispatchers = new Map<string, (...args: unknown[]) => unknown>();
++
++  private constructor(container: Container, generated: Generated) {
++    this._mockery_container = container;
++    this._mockery_name = generated.name;
++    this._mockery_instance = Object.create(generated.generated.prototype) as object;
++    this._mockery_self = new Proxy(this._mockery_instance, this.#handler()) as MockObject;
++  }
++
++  /** Builds a mock of `target` in `container`: a Proxy over an instance of `Mockery_<n>[_<target>]`. */
++  static build(container: Container, target: MockTarget): MockObject {
++    return new Mock(container, generatedFor(target))._mockery_self;
++  }
++
++  /**
++   * Expects calls of each named method (several names give one CompositeExpectation over all of them). A
++   * string-keyed object expects each key and returns its value.
++   */
++  shouldReceive(...methodNames: (string | Readonly<Record<string, unknown>>)[]): CompositeExpectation {
++    if (methodNames.length === 0) {
++      // Mockery's HigherOrderMessage form is Story 4.6's.
++      throw new InvalidArgumentException("shouldReceive() without a method name (a HigherOrderMessage) is not supported yet (Story 4.6)");
++    }
++    for (const method of methodNames) {
++      if (method === "") {
++        throw new PhpInvalidArgumentException("Received empty method name");
++      }
++    }
++    const compositeExpectation = new CompositeExpectation();
++    for (const arg of methodNames) {
++      if (typeof arg === "string") {
++        compositeExpectation.add(this.#expect(arg));
++        continue;
++      }
++      if (typeof arg === "object" && arg !== null) {
++        for (const [method, value] of Object.entries(arg)) {
++          compositeExpectation.add(this.#expect(method).andReturn(value));
++        }
++      }
++    }
++    return compositeExpectation;
++  }
++
++  mockery_getName(): string {
++    return this._mockery_name;
++  }
++
++  mockery_getContainer(): Container {
++    return this._mockery_container;
++  }
++
++  mockery_verify(): void {
++    if (this._mockery_verified) {
++      return;
++    }
++    this._mockery_verified = true;
++    for (const mockeryExpectation of this._mockery_expectations.values()) {
++      mockeryExpectation.verify();
++    }
++  }
++
++  mockery_teardown(): void {}
++
++  mockery_getExpectationCount(): number {
++    let count = this._mockery_expectations_count;
++    for (const mockeryExpectation of this._mockery_expectations.values()) {
++      count += mockeryExpectation.getExpectationCount();
++    }
++    return count;
++  }
++
++  mockery_getExpectations(): ReadonlyMap<string, ExpectationDirector> {
++    return this._mockery_expectations;
++  }
++
++  mockery_getExpectationsFor(method: string): ExpectationDirector | null {
++    return this._mockery_expectations.get(method) ?? null;
++  }
++
++  mockery_setExpectationsFor(method: string, director: ExpectationDirector): void {
++    this._mockery_expectations.set(method, director);
++  }
++
++  mockery_allocateOrder(): number {
++    return ++this._mockery_allocatedOrder;
++  }
++
++  mockery_setGroup(group: string | number, order: number): void {
++    this._mockery_groups.set(String(group), order);
++  }
++
++  mockery_getGroups(): ReadonlyMap<string, number> {
++    return this._mockery_groups;
++  }
++
++  mockery_setCurrentOrder(order: number): void {
++    this._mockery_currentOrder = order;
++  }
++
++  mockery_getCurrentOrder(): number {
++    return this._mockery_currentOrder;
++  }
++
++  mockery_validateOrder(method: string, order: number): void {
++    if (order < this._mockery_currentOrder) {
++      const invalidOrderException = new InvalidOrderException(
++        `Method ${this._mockery_name}::${method}() called out of order: expected order ${order}, was ${this._mockery_currentOrder}`,
++      );
++      invalidOrderException.setMock(this._mockery_self).setMethodName(method).setExpectedOrder(order).setActualOrder(this._mockery_currentOrder);
++      throw invalidOrderException;
++    }
++    this.mockery_setCurrentOrder(order);
++  }
++
++  mockery_thrownExceptions(): BadMethodCallException[] {
++    return this._mockery_thrownExceptions;
++  }
++
++  toString(): string {
++    return `${this._mockery_name}#${objectId(this._mockery_instance)}`;
++  }
++
++  /** `_mockery_findExpectedMethodHandler`: the director of `method`, exact name first, then case-insensitive. */
++  protected _mockery_findExpectedMethodHandler(method: string): ExpectationDirector | null {
++    const exact = this._mockery_expectations.get(method);
++    if (exact !== undefined) {
++      return exact;
++    }
++    const lowerCasedMethod = method.toLowerCase();
++    for (const [name, director] of this._mockery_expectations) {
++      if (name.toLowerCase() === lowerCasedMethod) {
++        return director;
++      }
++    }
++    return null;
++  }
++
++  /** `mockery_getMethod`: whether the mocked class declares `method` (a function above Object.prototype). */
++  protected _mockery_declaresMethod(method: string): boolean {
++    if (method === "constructor") {
++      return false;
++    }
++    for (let prototype: unknown = Object.getPrototypeOf(this._mockery_instance); typeof prototype === "object" && prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
++      const descriptor = Object.getOwnPropertyDescriptor(prototype, method);
++      if (descriptor !== undefined) {
++        return typeof descriptor.value === "function";
++      }
++    }
++    return false;
++  }
++
++  protected _mockery_handleMethodCall(method: string, args: unknown[]): unknown {
++    const expectationDirector = this._mockery_findExpectedMethodHandler(method);
++    if (expectationDirector !== null) {
++      return expectationDirector.call(args);
++    }
++    const message = this._mockery_declaresMethod(method)
++      ? `Received ${this._mockery_name}::${method}(), but no expectations were specified`
++      : `Method ${this._mockery_name}::${method}() does not exist on this mock object`;
++    const badMethodCallException = new BadMethodCallException(message);
++    this._mockery_thrownExceptions.push(badMethodCallException);
++    throw badMethodCallException;
++  }
++
++  #expect(method: string): Expectation {
++    if (method.includes("->")) {
++      // Demeter chains are not in Story 4.5 (ESC-4.5-1 item 6).
++      throw new InvalidArgumentException(`shouldReceive('${method}'): demeter chains are not supported yet`);
++    }
++    let director = this.mockery_getExpectationsFor(method);
++    if (director === null) {
++      director = new ExpectationDirector(method, this._mockery_self);
++      this.mockery_setExpectationsFor(method, director);
++    }
++    const expectation = new Expectation(this._mockery_self, method);
++    director.addExpectation(expectation);
++    return expectation;
++  }
++
++  #dispatcher(method: string): (...args: unknown[]) => unknown {
++    let dispatcher = this.#dispatchers.get(method);
++    if (dispatcher === undefined) {
++      dispatcher = (...args: unknown[]): unknown => this._mockery_handleMethodCall(method, args);
++      this.#dispatchers.set(method, dispatcher);
++    }
++    return dispatcher;
++  }
++
++  #api(member: string): unknown {
++    let bound = this.#bound.get(member);
++    if (bound === undefined) {
++      bound = ((Mock.prototype as unknown as Record<string, (...args: unknown[]) => unknown>)[member] as (...args: unknown[]) => unknown).bind(this);
++      this.#bound.set(member, bound);
++    }
++    return bound;
++  }
++
++  #handler(): ProxyHandler<object> {
++    return {
++      get: (target, key, receiver): unknown => {
++        if (typeof key === "symbol") {
++          return Reflect.get(target, key, receiver);
++        }
++        if (this._mockery_findExpectedMethodHandler(key) !== null) {
++          return this.#dispatcher(key);
++        }
++        apiMembers ??= new Set(Object.getOwnPropertyNames(Mock.prototype).filter((name) => name === "shouldReceive" || name === "toString" || name.startsWith("mockery_")));
++        if (apiMembers.has(key)) {
++          return this.#api(key);
++        }
++        if (this._mockery_declaresMethod(key)) {
++          return this.#dispatcher(key);
++        }
++        if (key in target || key === "then") {
++          return Reflect.get(target, key, receiver);
++        }
++        return this.#dispatcher(key);
++      },
++    };
++  }
++}
+diff --git a/packages/mockery/src/index.ts b/packages/mockery/src/index.ts
+index cb0ff5c..7b96e24 100644
+--- a/packages/mockery/src/index.ts
++++ b/packages/mockery/src/index.ts
+@@ -1 +1,100 @@
+-export {};
++// @xaravel/mockery: the grader's Mockery port (Story 4.5, Mockery 1.6.15 core).
++//
++// Loading it installs `globalThis[Symbol.for('xaravel.mockery.mock')]` (what
++// `createMock` delegates to, ESC-4.4-1) and `Symbol.for('xaravel.mockery.run')`
++// (the test-finish protocol, ESC-4.5-1). Every export and its prototype is
++// frozen on load, as in @xaravel/assert (AD-15): assigning to one throws.
++//
++// `Mockery\Exception` is exported as `Exception`, and
++// `Mockery\CountValidator\Exception` as `CountValidatorException` (one JS
++// name per export). PHP's SPL parent classes and the internal argument
++// matchers are not exported (ESC-4.5-1 item 2; Story 4.6 exports matchers).
++import { Mockery } from "./Mockery";
++import { CompositeExpectation } from "./Mockery/CompositeExpectation";
++import { Container } from "./Mockery/Container";
++import { AtLeast } from "./Mockery/CountValidator/AtLeast";
++import { AtMost } from "./Mockery/CountValidator/AtMost";
++import { CountValidatorAbstract } from "./Mockery/CountValidator/CountValidatorAbstract";
++import { Exception as CountValidatorException } from "./Mockery/CountValidator/Exception";
++import { Exact } from "./Mockery/CountValidator/Exact";
++import { Exception } from "./Mockery/Exception";
++import { BadMethodCallException } from "./Mockery/Exception/BadMethodCallException";
++import { InvalidArgumentException } from "./Mockery/Exception/InvalidArgumentException";
++import { InvalidCountException } from "./Mockery/Exception/InvalidCountException";
++import { InvalidOrderException } from "./Mockery/Exception/InvalidOrderException";
++import { NoMatchingExpectationException } from "./Mockery/Exception/NoMatchingExpectationException";
++import { RuntimeException } from "./Mockery/Exception/RuntimeException";
++import { Expectation } from "./Mockery/Expectation";
++import { ExpectationDirector } from "./Mockery/ExpectationDirector";
++import { AnyArgs } from "./Mockery/Matcher/AnyArgs";
++import { MatcherAbstract } from "./Mockery/Matcher/MatcherAbstract";
++import { MultiArgumentClosure } from "./Mockery/Matcher/MultiArgumentClosure";
++import { NoArgs } from "./Mockery/Matcher/NoArgs";
++import { Mock } from "./Mockery/Mock";
++import { BadFunctionCallException } from "./php/BadFunctionCallException";
++import { BadMethodCallException as PhpBadMethodCallException } from "./php/BadMethodCallException";
++import { Exception as PhpException } from "./php/Exception";
++import { InvalidArgumentException as PhpInvalidArgumentException } from "./php/InvalidArgumentException";
++import { LogicException } from "./php/LogicException";
++import { OutOfBoundsException } from "./php/OutOfBoundsException";
++import { RuntimeException as PhpRuntimeException } from "./php/RuntimeException";
++import { UnexpectedValueException } from "./php/UnexpectedValueException";
++
++for (const exported of [
++  AtLeast,
++  AtMost,
++  BadMethodCallException,
++  CompositeExpectation,
++  Container,
++  CountValidatorAbstract,
++  CountValidatorException,
++  Exact,
++  Exception,
++  Expectation,
++  ExpectationDirector,
++  InvalidArgumentException,
++  InvalidCountException,
++  InvalidOrderException,
++  Mockery,
++  NoMatchingExpectationException,
++  RuntimeException,
++  // Internal classes, frozen too so code under test cannot patch an inherited member.
++  AnyArgs,
++  BadFunctionCallException,
++  LogicException,
++  MatcherAbstract,
++  Mock,
++  MultiArgumentClosure,
++  NoArgs,
++  OutOfBoundsException,
++  PhpBadMethodCallException,
++  PhpException,
++  PhpInvalidArgumentException,
++  PhpRuntimeException,
++  UnexpectedValueException,
++]) {
++  Object.freeze(exported.prototype);
++  Object.freeze(exported);
++}
++
++export {
++  AtLeast,
++  AtMost,
++  BadMethodCallException,
++  CompositeExpectation,
++  Container,
++  CountValidatorAbstract,
++  CountValidatorException,
++  Exact,
++  Exception,
++  Expectation,
++  ExpectationDirector,
++  InvalidArgumentException,
++  InvalidCountException,
++  InvalidOrderException,
++  Mockery,
++  NoMatchingExpectationException,
++  RuntimeException,
++};
++export type { LegacyMockInterface, MockObject } from "./Mockery/LegacyMockInterface";
++export type { MockTarget } from "./Mockery/Mock";
+diff --git a/packages/mockery/src/php/BadFunctionCallException.ts b/packages/mockery/src/php/BadFunctionCallException.ts
+new file mode 100644
+index 0000000..fed13c4
+--- /dev/null
++++ b/packages/mockery/src/php/BadFunctionCallException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\BadFunctionCallException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { LogicException } from "./LogicException";
++
++export class BadFunctionCallException extends LogicException {
++  static override readonly [FQCN]: string = "BadFunctionCallException";
++}
+diff --git a/packages/mockery/src/php/BadMethodCallException.ts b/packages/mockery/src/php/BadMethodCallException.ts
+new file mode 100644
+index 0000000..948b43b
+--- /dev/null
++++ b/packages/mockery/src/php/BadMethodCallException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\BadMethodCallException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { BadFunctionCallException } from "./BadFunctionCallException";
++
++export class BadMethodCallException extends BadFunctionCallException {
++  static override readonly [FQCN]: string = "BadMethodCallException";
++}
+diff --git a/packages/mockery/src/php/Exception.ts b/packages/mockery/src/php/Exception.ts
+new file mode 100644
+index 0000000..7d429c8
+--- /dev/null
++++ b/packages/mockery/src/php/Exception.ts
+@@ -0,0 +1,30 @@
++// PHP's `\Exception`, grader-internal (Story 4.5, ESC-4.5-1 item 2): the root
++// of the SPL parents of Mockery's exceptions. Not exported from the package.
++import { FQCN, shortClassName } from "../support/values";
++
++export class Exception extends Error {
++  static readonly [FQCN]: string = "Exception";
++
++  readonly #code: number;
++  readonly #previous: Error | null;
++
++  constructor(message: string = "", code: number = 0, previous: Error | null = null) {
++    super(message);
++    this.#code = code;
++    this.#previous = previous;
++    // Not enumerable: it is no public PHP property (formatObjects reads those).
++    Object.defineProperty(this, "name", { value: shortClassName(new.target), writable: true, configurable: true, enumerable: false });
++  }
++
++  getMessage(): string {
++    return this.message;
++  }
++
++  getCode(): number {
++    return this.#code;
++  }
++
++  getPrevious(): Error | null {
++    return this.#previous;
++  }
++}
+diff --git a/packages/mockery/src/php/InvalidArgumentException.ts b/packages/mockery/src/php/InvalidArgumentException.ts
+new file mode 100644
+index 0000000..e675590
+--- /dev/null
++++ b/packages/mockery/src/php/InvalidArgumentException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\InvalidArgumentException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { LogicException } from "./LogicException";
++
++export class InvalidArgumentException extends LogicException {
++  static override readonly [FQCN]: string = "InvalidArgumentException";
++}
+diff --git a/packages/mockery/src/php/LogicException.ts b/packages/mockery/src/php/LogicException.ts
+new file mode 100644
+index 0000000..5d36a62
+--- /dev/null
++++ b/packages/mockery/src/php/LogicException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\LogicException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { Exception } from "./Exception";
++
++export class LogicException extends Exception {
++  static override readonly [FQCN]: string = "LogicException";
++}
+diff --git a/packages/mockery/src/php/OutOfBoundsException.ts b/packages/mockery/src/php/OutOfBoundsException.ts
+new file mode 100644
+index 0000000..da3f771
+--- /dev/null
++++ b/packages/mockery/src/php/OutOfBoundsException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\OutOfBoundsException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { RuntimeException } from "./RuntimeException";
++
++export class OutOfBoundsException extends RuntimeException {
++  static override readonly [FQCN]: string = "OutOfBoundsException";
++}
+diff --git a/packages/mockery/src/php/RuntimeException.ts b/packages/mockery/src/php/RuntimeException.ts
+new file mode 100644
+index 0000000..4a02731
+--- /dev/null
++++ b/packages/mockery/src/php/RuntimeException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\RuntimeException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { Exception } from "./Exception";
++
++export class RuntimeException extends Exception {
++  static override readonly [FQCN]: string = "RuntimeException";
++}
+diff --git a/packages/mockery/src/php/UnexpectedValueException.ts b/packages/mockery/src/php/UnexpectedValueException.ts
+new file mode 100644
+index 0000000..0e905d8
+--- /dev/null
++++ b/packages/mockery/src/php/UnexpectedValueException.ts
+@@ -0,0 +1,7 @@
++// PHP's `\UnexpectedValueException`, grader-internal (Story 4.5, ESC-4.5-1 item 2). Not exported from the package.
++import { FQCN } from "../support/values";
++import { RuntimeException } from "./RuntimeException";
++
++export class UnexpectedValueException extends RuntimeException {
++  static override readonly [FQCN]: string = "UnexpectedValueException";
++}
+diff --git a/packages/mockery/src/support/values.ts b/packages/mockery/src/support/values.ts
+new file mode 100644
+index 0000000..e1c2167
+--- /dev/null
++++ b/packages/mockery/src/support/values.ts
+@@ -0,0 +1,356 @@
++// PHP value helpers shared by the Mockery port (Story 4.5). Internal: not
++// exported from the package.
++//
++// The value model is AD-9's: a PHP list is a JS Array, a string-keyed PHP array
++// is a plain object, any other PHP array is branded `Symbol.for('xaravel.php.array')`
++// and iterates normalised `[key, value]` pairs. A PHP object is anything else
++// that is an object, or a JS function (PHP's Closure). A class's PHP name is its
++// own static `[Symbol.for('xaravel.class.fqcn')]`, else its JS `name` (display
++// only, AD-10).
++import { createHash } from "node:crypto";
++
++export const FQCN = Symbol.for("xaravel.class.fqcn");
++const PHP_ARRAY = Symbol.for("xaravel.php.array");
++const PHP_PROPS = Symbol.for("xaravel.php.props");
++const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
++
++type Key = number | bigint | string;
++
++/** A branded PhpArray. */
++export function isBrandedArray(value: unknown): value is Iterable<readonly [Key, unknown]> {
++  return typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[PHP_ARRAY] !== undefined && (value as Record<symbol, unknown>)[PHP_ARRAY] !== false;
++}
++
++function isPlainObject(value: object): boolean {
++  const prototype: unknown = Object.getPrototypeOf(value);
++  return prototype === Object.prototype || prototype === null;
++}
++
++function isResource(value: unknown): boolean {
++  return typeof value === "object" && value !== null && PHP_RESOURCE in value;
++}
++
++/** PHP's `is_array`: a list, a plain object or a branded array. */
++export function isPhpArray(value: unknown): boolean {
++  return Array.isArray(value) || isBrandedArray(value) || (typeof value === "object" && value !== null && isPlainObject(value));
++}
++
++/** PHP's `is_object`: a function (Closure) or an object that is no PHP array and no resource. */
++export function isPhpObject(value: unknown): value is object {
++  if (typeof value === "function") {
++    return true;
++  }
++  return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value);
++}
++
++/** A JS class: a function with an object `prototype` (an arrow function has none). */
++export function isClass(value: unknown): value is abstract new (...args: never[]) => object {
++  return typeof value === "function" && typeof (value as { prototype?: unknown }).prototype === "object" && (value as { prototype?: unknown }).prototype !== null;
++}
++
++/** The PHP name of a class: its own FQCN brand, else its JS name. */
++export function classNameOf(ctor: unknown): string | null {
++  if (typeof ctor !== "function") {
++    return null;
++  }
++  if (Object.hasOwn(ctor, FQCN)) {
++    const fqcn: unknown = (ctor as unknown as Record<symbol, unknown>)[FQCN];
++    if (typeof fqcn === "string") {
++      return fqcn;
++    }
++  }
++  return ctor.name === "" ? null : ctor.name;
++}
++
++/** PHP's `get_class`. */
++export function getClass(object: object): string {
++  if (typeof object === "function") {
++    return "Closure";
++  }
++  const prototype: unknown = Object.getPrototypeOf(object);
++  const ctor: unknown = typeof prototype === "object" && prototype !== null && Object.hasOwn(prototype, "constructor") ? (prototype as { constructor: unknown }).constructor : null;
++  return classNameOf(ctor) ?? "stdClass";
++}
++
++/** The PHP short class name of an error or object (after the last `\`). */
++export function shortClassName(value: unknown): string {
++  const name = typeof value === "function" ? (classNameOf(value) ?? "Closure") : isPhpObject(value) ? getClass(value) : typeof value;
++  return name.slice(name.lastIndexOf("\\") + 1);
++}
++
++/** PHP's `$object instanceof $className` for a class-name string (case-insensitive, leading `\` ignored). */
++export function instanceOfName(object: object, name: string): boolean {
++  const wanted = name.replace(/^\\/, "").toLowerCase();
++  if (typeof object === "function") {
++    return wanted === "closure";
++  }
++  for (let prototype: unknown = Object.getPrototypeOf(object); typeof prototype === "object" && prototype !== null; prototype = Object.getPrototypeOf(prototype)) {
++    const ctor: unknown = Object.hasOwn(prototype, "constructor") ? (prototype as { constructor: unknown }).constructor : null;
++    const className = classNameOf(ctor);
++    if (className !== null && className.replace(/^\\/, "").toLowerCase() === wanted) {
++      return true;
++    }
++  }
++  return false;
++}
++
++const ids = new WeakMap<object, number>();
++let nextId = 1;
++
++/** A per-object id, as `spl_object_id`. */
++export function objectId(object: object): number {
++  let id = ids.get(object);
++  if (id === undefined) {
++    id = nextId++;
++    ids.set(object, id);
++  }
++  return id;
++}
++
++/**
++ * PHP's `zend_gcvt` for a finite non-zero float with `precision` significant digits (`0`: the shortest round-trip
++ * digits, as `serialize_precision = -1`).
++ */
++function gcvt(value: number, precision: number): string {
++  const exponential = precision === 0 ? Math.abs(value).toExponential() : Math.abs(value).toExponential(precision - 1);
++  const [mantissa = "", exponentText = "0"] = exponential.split("e");
++  const digits = mantissa.replace(".", "").replace(/0+$/, "") || "0";
++  const decpt = Number(exponentText) + 1;
++  const ndigit = precision === 0 ? 17 : precision;
++  const sign = value < 0 ? "-" : "";
++  if (decpt < 0 ? decpt < -3 : decpt > ndigit) {
++    const exponent = decpt - 1;
++    const fraction = digits.length > 1 ? digits.slice(1) : "0";
++    return `${sign}${digits[0]}.${fraction}E${exponent < 0 ? "-" : "+"}${Math.abs(exponent)}`;
++  }
++  if (decpt <= 0) {
++    return `${sign}0.${"0".repeat(-decpt)}${digits}`;
++  }
++  if (digits.length <= decpt) {
++    return `${sign}${digits}${"0".repeat(decpt - digits.length)}`;
++  }
++  return `${sign}${digits.slice(0, decpt)}.${digits.slice(decpt)}`;
++}
++
++/** A number as PHP prints it: a safe integer as an int, anything else as a float. */
++function phpNumber(value: number, mode: "string" | "export"): string {
++  if (Number.isNaN(value)) {
++    return "NAN";
++  }
++  if (!Number.isFinite(value)) {
++    return value > 0 ? "INF" : "-INF";
++  }
++  if (Number.isSafeInteger(value) && !Object.is(value, -0)) {
++    return String(value);
++  }
++  if (value === 0) {
++    return mode === "string" ? "-0" : "-0.0";
++  }
++  if (mode === "string") {
++    // String conversion uses `precision` (14).
++    return gcvt(value, 14);
++  }
++  const text = gcvt(value, 0);
++  return /[.E]/.test(text) ? text : `${text}.0`;
++}
++
++/** PHP's string conversion of a scalar, as `implode` / `sprintf('%s')` do. */
++export function phpString(value: unknown): string {
++  switch (typeof value) {
++    case "number":
++      return phpNumber(value, "string");
++    case "bigint":
++      return value.toString();
++    case "boolean":
++      return value ? "1" : "";
++    case "string":
++      return value;
++    case "undefined":
++      return "undefined";
++    default:
++      if (value === null) {
++        return "";
++      }
++      if (isPhpArray(value)) {
++        return "Array";
++      }
++      if (typeof value === "symbol") {
++        return value.toString();
++      }
++      return `object(${getClass(value as object)})`;
++  }
++}
++
++/** The `[key, value]` pairs of a PHP array. */
++export function arrayEntries(value: unknown): [Key, unknown][] {
++  if (Array.isArray(value)) {
++    return value.map((item, index) => [index, item as unknown]);
++  }
++  if (isBrandedArray(value)) {
++    return [...value].map(([key, item]) => [key, item]);
++  }
++  return Object.entries(value as Record<string, unknown>);
++}
++
++/** Something with Mockery's matcher shape: formats itself through `toString()`. */
++export interface Formattable {
++  toString(): string;
++}
++
++/** Mockery's private `formatArgument` (Mockery.php 866-910); `isMatcher` tells a matcher from other objects. */
++export function formatArgument(argument: unknown, isMatcher: (value: unknown) => value is Formattable, depth = 0): string {
++  if (isMatcher(argument)) {
++    return argument.toString();
++  }
++  if (isPhpObject(argument)) {
++    return `object(${getClass(argument)})`;
++  }
++  if (typeof argument === "number" || typeof argument === "bigint") {
++    return phpString(argument);
++  }
++  if (isPhpArray(argument)) {
++    let text: string;
++    if (depth === 1) {
++      text = "[...]";
++    } else {
++      const sample = arrayEntries(argument).map(([key, value]) => `${typeof key === "string" ? `'${key}'` : key.toString()} => ${formatArgument(value, isMatcher, depth + 1)}`);
++      text = `[${sample.join(", ")}]`;
++    }
++    const bytes = Buffer.from(text, "utf8");
++    return bytes.length > 1000 ? `${bytes.subarray(0, 1000).toString("utf8")}...]` : text;
++  }
++  if (typeof argument === "boolean") {
++    return argument ? "true" : "false";
++  }
++  if (isResource(argument)) {
++    return "resource(...)";
++  }
++  if (argument === null) {
++    return "NULL";
++  }
++  if (argument === undefined) {
++    // AD-9: never disguised as null.
++    return "undefined";
++  }
++  return `'${phpString(argument)}'`;
++}
++
++/** The public instance properties of an object, in order (Mockery reads them through Reflection). */
++function publicProperties(object: object): [Key, unknown][] {
++  if (typeof object === "function") {
++    return [];
++  }
++  const props = (object as Record<symbol, unknown>)[PHP_PROPS];
++  if (typeof props === "function") {
++    const value: unknown = (props as () => unknown).call(object);
++    return isPhpArray(value) ? arrayEntries(value) : [];
++  }
++  return Object.keys(object).map((name) => [name, (object as Record<string, unknown>)[name]]);
++}
++
++/** An ordered PHP array built while formatting: `[key, value]` pairs, string keys replaced in place. */
++class Pairs {
++  readonly entries: [Key, unknown][] = [];
++
++  set(key: Key, value: unknown): void {
++    const found = this.entries.find(([existing]) => existing === key);
++    if (found === undefined) {
++      this.entries.push([key, value]);
++    } else {
++      found[1] = value;
++    }
++  }
++}
++
++function cleanupArray(argument: unknown, nesting: number): unknown {
++  if (nesting === 0) {
++    return "...";
++  }
++  const result = new Pairs();
++  for (const [key, value] of arrayEntries(argument)) {
++    if (isPhpArray(value)) {
++      result.set(key, cleanupArray(value, nesting - 1));
++    } else if (isPhpObject(value)) {
++      result.set(key, objectToArray(value, nesting - 1));
++    } else {
++      result.set(key, value);
++    }
++  }
++  return result;
++}
++
++function cleanupNesting(argument: unknown, nesting: number): unknown {
++  if (isPhpObject(argument)) {
++    const object = objectToArray(argument, nesting - 1);
++    if (object instanceof Pairs) {
++      object.set("class", getClass(argument));
++    }
++    return object;
++  }
++  if (isPhpArray(argument)) {
++    return cleanupArray(argument, nesting - 1);
++  }
++  return argument;
++}
++
++/** Mockery's private `objectToArray` (Mockery.php 991-1013) with its default formatter. */
++export function objectToArray(object: object, nesting = 3): unknown {
++  if (nesting === 0) {
++    return ["..."];
++  }
++  const className = getClass(object);
++  const result = new Pairs();
++  result.set("class", className);
++  result.set("identity", `#${createHash("md5").update(`${className}_${objectId(object)}`).digest("hex")}`);
++  const properties = new Pairs();
++  for (const [name, value] of publicProperties(object)) {
++    let cleaned: unknown;
++    try {
++      cleaned = cleanupNesting(value, nesting);
++    } catch (error) {
++      cleaned = error instanceof Error ? error.message : String(error);
++    }
++    properties.set(name, cleaned);
++  }
++  result.set("properties", properties);
++  return result;
++}
++
++/** PHP's `var_export($value, true)` for the shapes `formatObjects` produces. */
++export function varExport(value: unknown, indent = ""): string {
++  const isArray = value instanceof Pairs || isPhpArray(value);
++  if (isArray) {
++    const entries = value instanceof Pairs ? value.entries : arrayEntries(value);
++    let text = "array (\n";
++    for (const [key, item] of entries) {
++      const keyText = typeof key === "string" ? exportString(key) : key.toString();
++      const nested = item instanceof Pairs || isPhpArray(item);
++      text += `${indent}  ${keyText} => ${nested ? `\n${indent}  ${varExport(item, `${indent}  `)}` : varExport(item, `${indent}  `)},\n`;
++    }
++    return `${text}${indent})`;
++  }
++  switch (typeof value) {
++    case "number":
++      return phpNumber(value, "export");
++    case "bigint":
++      return value.toString();
++    case "boolean":
++      return value ? "true" : "false";
++    case "string":
++      return exportString(value);
++    case "undefined":
++      return "undefined";
++    default:
++      if (value === null) {
++        return "NULL";
++      }
++      if (isPhpObject(value)) {
++        return `\\${getClass(value)}::__set_state(array(\n${indent}))`;
++      }
++      return typeof value === "symbol" ? exportString(value.toString()) : "NULL";
++  }
++}
++
++function exportString(text: string): string {
++  return `'${text.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
++}
+diff --git a/packages/mockery/tests/xaravel/cells.ts b/packages/mockery/tests/xaravel/cells.ts
+new file mode 100644
+index 0000000..e409693
+--- /dev/null
++++ b/packages/mockery/tests/xaravel/cells.ts
+@@ -0,0 +1,75 @@
++// Test-side comparison for XT-mockery-1..3: each scenario's TS outcome against
++// the Oracle's value for its expr, cell by cell, after normalising
++// `Mockery_<digits>` to `Mockery_<n>` and `#<32 hex>` identities to `#<id>`.
++import type { Mockery as MockeryClass } from "../../src/index";
++import { decode, type Output } from "../../../assert/tests/xaravel/oracle-values";
++import { runScenario, type Scenario } from "./scenarios";
++
++/** Replaces the generated-class counter and the object identities, which differ run to run. */
++export function normalize(value: unknown): unknown {
++  if (typeof value === "string") {
++    return value.replace(/Mockery_\d+/g, "Mockery_<n>").replace(/#[0-9a-f]{32}/g, "#<id>");
++  }
++  if (Array.isArray(value)) {
++    return value.map(normalize);
++  }
++  if (typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
++    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalize(item)]));
++  }
++  return value;
++}
++
++/** A stable text of an outcome; `undefined` is spelled out so it is never taken for null (AD-9). */
++export function show(value: unknown): string {
++  if (value === undefined) {
++    return "undefined";
++  }
++  if (Array.isArray(value)) {
++    return `[${value.map(show).join(",")}]`;
++  }
++  if (typeof value === "object" && value !== null) {
++    if (Object.getPrototypeOf(value) !== Object.prototype) {
++      return `<object ${String((value as { constructor?: { name?: string } }).constructor?.name)}>`;
++    }
++    return `{${Object.entries(value)
++      .map(([key, item]) => `${JSON.stringify(key)}:${show(item)}`)
++      .join(",")}}`;
++  }
++  if (typeof value === "number" && !Number.isFinite(value)) {
++    return String(value);
++  }
++  return JSON.stringify(value);
++}
++
++/** The Oracle's normalised outcome of expr `index`. */
++export function oracleCell(output: Output, index: number, label: string): unknown {
++  if (output.error !== null) {
++    throw new Error(`${label}: the Oracle reported an error: ${JSON.stringify(output.error)}`);
++  }
++  const result = output.results[index];
++  if (result === undefined || !("value" in result)) {
++    throw new Error(`${label}: result ${index} is not a value: ${JSON.stringify(result ?? null)}`);
++  }
++  return normalize(decode(result.value));
++}
++
++/** Runs each scenario's TS twin and lists every cell that differs from the Oracle's. */
++export function scenarioMismatches(label: string, scenarios: readonly Scenario[], output: Output, Mockery: typeof MockeryClass): { cells: number; mismatches: string[] } {
++  if (output.error !== null) {
++    throw new Error(`${label}: the Oracle reported an error: ${JSON.stringify(output.error)}`);
++  }
++  if (output.results.length !== scenarios.length) {
++    throw new Error(`${label}: ${output.results.length} results for ${scenarios.length} scenarios`);
++  }
++  const mismatches: string[] = [];
++  let cells = 0;
++  scenarios.forEach((scenario, index) => {
++    const expected = show(oracleCell(output, index, label));
++    const actual = show(normalize(runScenario(Mockery, scenario)));
++    cells++;
++    if (expected !== actual) {
++      mismatches.push(`${label}: ${scenario.id} "${scenario.label}":\n  Oracle ${expected}\n  got    ${actual}`);
++    }
++  });
++  return { cells, mismatches };
++}
+diff --git a/packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts b/packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts
+new file mode 100644
+index 0000000..497d1c1
+--- /dev/null
++++ b/packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts
+@@ -0,0 +1,86 @@
++// Fixture for XT-mockery-2 (Story 4.5). Not collected by the root `bun test`
++// (its name matches no test glob); mockery.test.ts runs it explicitly:
++//
++//   bun test ./packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts --reporter=junit
++//
++// Environment:
++//   XT_MOCKERY_REPORT_FILE  the harness reporter appends one JSON line per finished test
++//   XT_MOCKERY_PROBE_FILE   testPurged writes what it saw of the failed test's container
++//
++// Each Ported Test uses the real @xaravel/assert declarations, which run the
++// body through Mockery's test-finish protocol (ESC-4.5-1 item 1).
++import { appendFileSync, writeFileSync } from "node:fs";
++import { portedTest, xaravelTest } from "@xaravel/assert";
++import { type Container, Mockery } from "../../../src/index";
++import { XtFoo } from "../scenarios";
++
++const reportFile = process.env["XT_MOCKERY_REPORT_FILE"];
++const probeFile = process.env["XT_MOCKERY_PROBE_FILE"];
++
++(globalThis as Record<symbol, unknown>)[Symbol.for("xaravel.harness.report")] = (report: unknown): void => {
++  if (reportFile !== undefined) {
++    appendFileSync(reportFile, `${JSON.stringify(report)}\n`);
++  }
++};
++
++class CloseInTearDown {
++  tearDown(): void {
++    Mockery.close();
++  }
++}
++
++const T = "Tests\\Unit\\MockeryTest";
++
++// An unmet once(): the test fails with Mockery's message, and the expectation still counts.
++portedTest(`${T}::testUnmet`, {}, function () {
++  Mockery.mock(XtFoo).shouldReceive("bar").once();
++});
++
++// Only met expectations: the test passes and reports them.
++portedTest(`${T}::testMet`, {}, function () {
++  const m = Mockery.mock(XtFoo);
++  m.shouldReceive("bar").once().andReturn(1);
++  m.bar();
++  m.shouldReceive("baz").twice();
++  m.baz();
++  m.baz();
++  m.shouldReceive("qux");
++});
++
++// tearDown closes the container: each expectation counts once.
++portedTest(`${T}::testCloseInTearDown`, { case: CloseInTearDown }, function () {
++  const m = Mockery.mock(XtFoo);
++  m.shouldReceive("bar").once();
++  m.bar();
++  m.shouldReceive("qux").atLeast().once();
++  m.qux();
++});
++
++// tearDown's close verifies too: the unmet expectation fails the test, counted once.
++portedTest(`${T}::testUnmetCloseInTearDown`, { case: CloseInTearDown }, function () {
++  Mockery.mock(XtFoo).shouldReceive("bar").once();
++});
++
++let failedContainer: Container | null = null;
++
++// A failing body's error wins; the container is purged without verifying.
++portedTest(`${T}::testBodyFails`, {}, function () {
++  Mockery.mock(XtFoo).shouldReceive("bar").once();
++  failedContainer = Mockery.getContainer();
++  throw new Error("body failed");
++});
++
++portedTest(`${T}::testPurged`, {}, function () {
++  const m = Mockery.mock(XtFoo);
++  m.shouldReceive("bar").once();
++  m.bar();
++  if (probeFile !== undefined) {
++    const seen = failedContainer as Container | null;
++    writeFileSync(probeFile, JSON.stringify({ failedContainerMocks: seen === null ? null : seen.getMocks().length, fresh: seen !== Mockery.getContainer() }));
++  }
++});
++
++// A Xaravel Test runs through the protocol too.
++xaravelTest("XT-fixture-1", "an unmet Mockery expectation fails a Xaravel Test", () => {
++  Mockery.mock(XtFoo).shouldReceive("bar").once();
++});
+diff --git a/packages/mockery/tests/xaravel/mockery.test.ts b/packages/mockery/tests/xaravel/mockery.test.ts
+new file mode 100644
+index 0000000..63b04f9
+--- /dev/null
++++ b/packages/mockery/tests/xaravel/mockery.test.ts
+@@ -0,0 +1,296 @@
++// Xaravel Tests for Story 4.5 (Mockery core; FR-100, AD-2, AD-9, AD-15). One
++// test per AC, in order, after the fixture-free checks. Like Epic 4's other
++// grader tests these are plain bun:test: `xaravelTest` is not used to test the
++// grader itself.
++//
++// Every expected outcome and message comes from a signed Oracle fixture of a
++// request in conformance/oracle-requests/4.5.jsonl (real Mockery 1.6.15). Each
++// request's setup and exprs are rebuilt from scenarios.ts and must equal the
++// committed line, so the TS twins are the scenarios the Oracle ran. A missing,
++// unsigned or errored fixture fails the test; it is never skipped.
++import { afterAll, expect, test } from "bun:test";
++import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join, relative, resolve } from "node:path";
++import * as api from "../../src/index";
++import { BadMethodCallException, CompositeExpectation, Container, InvalidCountException, Mockery, NoMatchingExpectationException } from "../../src/index";
++import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
++import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
++import { type Output, readRequests, readSignedFixture } from "../../../assert/tests/xaravel/oracle-values";
++import { normalize, oracleCell, scenarioMismatches } from "./cells";
++import { SCENARIOS, type Scenario, SETUP, wrapPhp, XtBar, XtFoo } from "./scenarios";
++
++const root = resolve(import.meta.dir, "..", "..", "..", "..");
++const REQUEST_FILE = "conformance/oracle-requests/4.5.jsonl";
++const FIXTURES = "conformance/fixtures/mockery";
++const PUBLIC_KEY = "conformance/oracle/oracle.pub";
++const FIXTURE = "./packages/mockery/tests/xaravel/fixtures/mockery.fixture.ts";
++const CHILD_TIMEOUT = 60_000;
++const SPAWN_TIMEOUT = 50_000;
++
++/** The 14 AC 1 names; each runs in at least one XT-mockery-1 scenario. */
++const CORE_API = ["shouldReceive", "once", "twice", "times", "never", "atLeast", "atMost", "with", "withArgs", "withAnyArgs", "andReturn", "andReturnValues", "andThrow", "ordered"];
++
++const tempDirs: string[] = [];
++afterAll(() => {
++  for (const dir of tempDirs) {
++    rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++type Id = Scenario["id"];
++
++/** The signed Oracle output of `id`'s one request, after checking the request equals the table's. */
++function oracleOutput(id: Id): Output {
++  const requests = readRequests(join(root, REQUEST_FILE)).filter((request) => request.id === id);
++  expect(requests).toHaveLength(1);
++  const request = requests[0]!;
++  expect({ setup: request.setup, exprs: request.exprs }).toEqual({ setup: [...SETUP], exprs: SCENARIOS.filter((scenario) => scenario.id === id).map((scenario) => wrapPhp(scenario.php)) });
++  const publicKey = readFileSync(join(root, PUBLIC_KEY), "utf8");
++  try {
++    return readSignedFixture(join(root, FIXTURES, `${request.sha256}.json`), request.sha256, publicKey);
++  } catch (error) {
++    throw new Error(error instanceof Error ? error.message.replace(`${root}/`, "") : String(error));
++  }
++}
++
++/** Every scenario of `id` against the Oracle: no mismatch, and at least one cell. */
++function checkScenarios(id: Id): void {
++  const output = oracleOutput(id);
++  const { cells, mismatches } = scenarioMismatches(id, SCENARIOS.filter((scenario) => scenario.id === id), output, Mockery);
++  expect(mismatches).toEqual([]);
++  expect(cells).toBeGreaterThan(0);
++}
++
++function thrown(fn: () => unknown): unknown {
++  try {
++    fn();
++  } catch (error) {
++    return error;
++  } finally {
++    try {
++      Mockery.close();
++    } catch {
++      // the probe's own verify error is not under test
++    }
++  }
++  return null;
++}
++
++test("fixture-free: the globals, the frozen exports, the imports and the mock object's dispatch", () => {
++  // The two globals are installed on load, non-writable and non-configurable.
++  for (const name of ["xaravel.mockery.mock", "xaravel.mockery.run"]) {
++    const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for(name));
++    expect(typeof descriptor?.value).toBe("function");
++    expect({ writable: descriptor?.writable, configurable: descriptor?.configurable }).toEqual({ writable: false, configurable: false });
++  }
++  const viaGlobal = (globalThis as unknown as Record<symbol, (target: unknown) => unknown>)[Symbol.for("xaravel.mockery.mock")]!(XtFoo);
++  expect(viaGlobal).toBeInstanceOf(XtFoo);
++  Mockery.close();
++
++  // A global already defined is left alone.
++  const script = `const run = async (fn) => fn(); globalThis[Symbol.for("xaravel.mockery.run")] = run; await import(${JSON.stringify(join(root, "packages/mockery/src/index.ts"))}); if (globalThis[Symbol.for("xaravel.mockery.run")] !== run) { throw new Error("replaced"); } console.log("kept");`;
++  const child = Bun.spawnSync([process.execPath, "--eval", script], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
++  expect({ exitCode: child.exitCode, stdout: child.stdout.toString().trim(), stderr: child.stderr.toString() }).toEqual({ exitCode: 0, stdout: "kept", stderr: "" });
++
++  // The export list, each export and its prototype frozen.
++  expect(Object.keys(api).sort()).toEqual(
++    [
++      "AtLeast",
++      "AtMost",
++      "BadMethodCallException",
++      "CompositeExpectation",
++      "Container",
++      "CountValidatorAbstract",
++      "CountValidatorException",
++      "Exact",
++      "Exception",
++      "Expectation",
++      "ExpectationDirector",
++      "InvalidArgumentException",
++      "InvalidCountException",
++      "InvalidOrderException",
++      "Mockery",
++      "NoMatchingExpectationException",
++      "RuntimeException",
++    ].sort(),
++  );
++  for (const [name, value] of Object.entries(api)) {
++    expect(() => {
++      (api as Record<string, unknown>)[name] = null;
++    }).toThrow(TypeError);
++    const fn = value as unknown as Record<string, unknown>;
++    expect(Object.isFrozen(fn)).toBe(true);
++    expect(Object.isFrozen(fn["prototype"])).toBe(true);
++    expect(() => {
++      (fn["prototype"] as Record<string, unknown>)["patched"] = true;
++    }).toThrow(TypeError);
++  }
++
++  // The manifest's only runtime edge is @xaravel/assert, and the graph check passes (AD-2).
++  const manifest = JSON.parse(readFileSync(join(root, "packages/mockery/package.json"), "utf8")) as Record<string, unknown>;
++  expect(manifest["dependencies"]).toEqual({ "@xaravel/assert": "workspace:*" });
++  for (const field of ["peerDependencies", "optionalDependencies"]) {
++    expect(manifest[field]).toBeUndefined();
++  }
++  const graph = Bun.spawnSync([process.execPath, "tools/graph/graph.ts"], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
++  expect({ exitCode: graph.exitCode, stderr: graph.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
++
++  // Every src/ import is relative, a node: builtin or @xaravel/assert's public index.
++  const srcDir = join(root, "packages/mockery/src");
++  const bad: string[] = [];
++  for (const file of new Bun.Glob("**/*.ts").scanSync(srcDir)) {
++    const text = readFileSync(join(srcDir, file), "utf8");
++    for (const { path } of new Bun.Transpiler({ loader: "ts" }).scanImports(text)) {
++      if (!(path.startsWith("./") || path.startsWith("../") || path.startsWith("node:") || path === "@xaravel/assert")) {
++        bad.push(`${relative(root, join(srcDir, file))}: ${path}`);
++      }
++    }
++  }
++  expect(bad).toEqual([]);
++
++  // Dispatch: a mock is an instance of its class whose constructor never ran; symbols and an absent `then` are no
++  // method calls; a call with no return value gives null (AD-9); shouldReceive gives a CompositeExpectation.
++  class Counted extends XtFoo {
++    static built = 0;
++    constructor() {
++      super();
++      Counted.built++;
++    }
++  }
++  const m = Mockery.mock(Counted);
++  expect(m).toBeInstanceOf(Counted);
++  expect(m).toBeInstanceOf(XtFoo);
++  expect(Counted.built).toBe(0);
++  expect((m as unknown as Record<string, unknown>)["then"]).toBeUndefined();
++  expect((m as unknown as Record<symbol, unknown>)[Symbol.iterator]).toBeUndefined();
++  const members = m as unknown as Record<string, unknown>;
++  expect(members["bar"]).toBe(members["bar"]);
++  expect(m.shouldReceive("bar")).toBeInstanceOf(CompositeExpectation);
++  expect(m.bar()).toBeNull();
++  expect(m.mockery_getName()).toMatch(/^Mockery_\d+_XtFoo$|^Mockery_\d+_Counted$/);
++  expect(Mockery.getContainer()).toBeInstanceOf(Container);
++  Mockery.close();
++  // A `then` with an expectation is a method call.
++  const thenable = Mockery.mock(XtFoo);
++  thenable.shouldReceive("then").andReturn(7);
++  expect(thenable["then"]()).toBe(7);
++  Mockery.close();
++  // A second mock of a class reuses its generated class name; close never resets the counter.
++  expect(Mockery.mock(XtBar).mockery_getName()).toBe(Mockery.mock(XtBar).mockery_getName());
++  Mockery.close();
++}, CHILD_TIMEOUT);
++
++test("XT-mockery-1: shouldReceive, once, twice, times, never, atLeast, atMost, with, withArgs (array and closure), withAnyArgs, andReturn, andReturnValues, andThrow and ordered (plain and grouped) record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
++  const used = new Set(SCENARIOS.filter((scenario) => scenario.id === "XT-mockery-1").flatMap((scenario) => scenario.uses));
++  expect(CORE_API.filter((name) => !used.has(name))).toEqual([]);
++  for (const name of CORE_API.filter((entry) => entry !== "shouldReceive")) {
++    expect(typeof (api.Expectation.prototype as unknown as Record<string, unknown>)[name]).toBe("function");
++    expect(typeof (CompositeExpectation.prototype as unknown as Record<string, unknown>)[name]).toBe("function");
++  }
++  checkScenarios("XT-mockery-1");
++});
++
++function unescapeXml(text: string): string {
++  return text.replace(/&(#\d+|quot|amp|lt|gt|apos);/g, (_, entity: string) => {
++    switch (entity) {
++      case "quot":
++        return '"';
++      case "amp":
++        return "&";
++      case "lt":
++        return "<";
++      case "gt":
++        return ">";
++      case "apos":
++        return "'";
++      default:
++        return String.fromCodePoint(Number(entity.slice(1)));
++    }
++  });
++}
++
++test("XT-mockery-2: an unmet expectation fails the test when it finishes, with the Oracle's InvalidCountException message, and counts as a mockeryExpectation assertion; met expectations alone pass; a tearDown close counts once; a failing body wins and the container is purged unverified", () => {
++  const dir = mkdtempSync(join(tmpdir(), "xt-mockery-2-"));
++  tempDirs.push(dir);
++  const junit = join(dir, "junit.xml");
++  const reportFile = join(dir, "reports.jsonl");
++  const probeFile = join(dir, "probe.json");
++  const child = Bun.spawnSync([process.execPath, "test", FIXTURE, "--reporter=junit", `--reporter-outfile=${junit}`], {
++    cwd: root,
++    env: { ...process.env, XT_MOCKERY_REPORT_FILE: reportFile, XT_MOCKERY_PROBE_FILE: probeFile },
++    stdout: "pipe",
++    stderr: "pipe",
++    timeout: SPAWN_TIMEOUT,
++  });
++  const output = child.stdout.toString() + child.stderr.toString();
++  for (const path of [junit, reportFile, probeFile]) {
++    if (!existsSync(path)) {
++      throw new Error(`the fixture run wrote no ${path} (exit ${child.exitCode}); its output:\n${output}`);
++    }
++  }
++  const results = new Map<string, string | null>();
++  for (const match of readFileSync(junit, "utf8").matchAll(/<testcase name="([^"]*)"[^>]*?(\/>|>\s*<failure[^>]*?message="([^"]*)")/g)) {
++    results.set(unescapeXml(match[1] ?? ""), match[3] === undefined ? null : unescapeXml(match[3]));
++  }
++  const reports = readFileSync(reportFile, "utf8")
++    .split("\n")
++    .filter((line) => line !== "")
++    .map((line) => JSON.parse(line) as { id: string; assertions: Record<string, number> });
++  const T = "Tests\\Unit\\MockeryTest";
++  const XT = "XT-fixture-1: an unmet Mockery expectation fails a Xaravel Test";
++  expect(child.exitCode).not.toBe(0);
++  expect(Object.fromEntries(reports.map((report) => [report.id, report.assertions]))).toEqual({
++    [`${T}::testUnmet`]: { mockeryExpectation: 1 },
++    [`${T}::testMet`]: { mockeryExpectation: 2 },
++    [`${T}::testCloseInTearDown`]: { mockeryExpectation: 2 },
++    [`${T}::testUnmetCloseInTearDown`]: { mockeryExpectation: 1 },
++    [`${T}::testBodyFails`]: {},
++    [`${T}::testPurged`]: { mockeryExpectation: 1 },
++    "XT-fixture-1": { mockeryExpectation: 1 },
++  });
++  expect(JSON.parse(readFileSync(probeFile, "utf8"))).toEqual({ failedContainerMocks: 0, fresh: true });
++  expect([...results.keys()].sort()).toEqual([`${T}::testUnmet`, `${T}::testMet`, `${T}::testCloseInTearDown`, `${T}::testUnmetCloseInTearDown`, `${T}::testBodyFails`, `${T}::testPurged`, XT].sort());
++  expect(results.get(`${T}::testMet`)).toBeNull();
++  expect(results.get(`${T}::testCloseInTearDown`)).toBeNull();
++  expect(results.get(`${T}::testPurged`)).toBeNull();
++  expect(results.get(`${T}::testBodyFails`)).toBe("body failed");
++
++  // The verify error is an InvalidCountException (TS-side, before any fixture is read).
++  const unmet = thrown(() => {
++    Mockery.mock(XtFoo).shouldReceive("bar").once();
++    Mockery.close();
++  });
++  expect(unmet).toBeInstanceOf(InvalidCountException);
++
++  // The failures carry the Oracle's message for the same scenario (XT-mockery-2's first expr).
++  const output2 = oracleOutput("XT-mockery-2");
++  const cell = oracleCell(output2, 0, "XT-mockery-2") as unknown[];
++  expect(cell[0]).toBe("throws");
++  expect(cell[1]).toBe("InvalidCountException");
++  for (const name of [`${T}::testUnmet`, `${T}::testUnmetCloseInTearDown`, XT]) {
++    expect(normalize(results.get(name))).toBe(cell[2]);
++  }
++  checkScenarios("XT-mockery-2");
++}, CHILD_TIMEOUT);
++
++test("XT-mockery-3: a call that matches no expectation throws Mockery's BadMethodCallException (declared or undeclared method) or NoMatchingExpectationException (arguments matching none, with Objects: (…) for an object), with the Oracle's messages", () => {
++  // TS-side: the hierarchy, before any fixture is read.
++  const m = Mockery.mock(XtFoo);
++  m.shouldReceive("bar").with(1);
++  const declared = thrown(() => m.baz());
++  const m2 = Mockery.mock(XtFoo);
++  const undeclared = thrown(() => m2.nope());
++  const m3 = Mockery.mock(XtFoo);
++  m3.shouldReceive("bar").with(1);
++  const noMatch = thrown(() => m3.bar(2));
++  for (const error of [declared, undeclared]) {
++    expect(error).toBeInstanceOf(BadMethodCallException);
++    expect(error).toBeInstanceOf(SplBadMethodCallException);
++  }
++  expect(noMatch).toBeInstanceOf(NoMatchingExpectationException);
++  expect(noMatch).toBeInstanceOf(SplUnexpectedValueException);
++  expect((noMatch as NoMatchingExpectationException).getActualArguments()).toEqual([2]);
++
++  checkScenarios("XT-mockery-3");
++});
+diff --git a/packages/mockery/tests/xaravel/scenarios.ts b/packages/mockery/tests/xaravel/scenarios.ts
+new file mode 100644
+index 0000000..e202fdc
+--- /dev/null
++++ b/packages/mockery/tests/xaravel/scenarios.ts
+@@ -0,0 +1,809 @@
++// The shared scenario table of Story 4.5 (XT-mockery-1..3): each Mockery
++// scenario as PHP source and as its TS twin, and the PHP/TS twin classes.
++//
++// The request file `conformance/oracle-requests/4.5.jsonl` was generated from
++// this table (by a throwaway script outside the repository, through
++// tools/oracle/request.ts's makeRequest and renderRequests: one request per
++// Xaravel Test ID, `setup` = SETUP, `exprs` = each scenario's `wrapPhp`), and
++// mockery.test.ts rebuilds every request's `setup` and `exprs` from it, so the
++// table and the signed fixtures cannot drift apart. No expected outcome is
++// written here: every one comes from the Oracle (real Mockery 1.6.15).
++//
++// A scenario appends what it observes to `$r` / `r`. The wrapper closes the
++// container and gives `['ok', $r]`, or `['throws', <short class>, <message>]`
++// for the first throw (then closes again, ignoring a second throw). `xt_try` /
++// `xtTry` records a throw without ending the scenario.
++import type { Mockery as MockeryClass } from "../../src/index";
++import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
++import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
++import { Exception as MockeryException } from "../../src/Mockery/Exception";
++import { shortClassName } from "../../src/support/values";
++import { BrandedArray } from "../../../assert/tests/xaravel/oracle-values";
++
++const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
++
++// ---------------------------------------------------------------------------
++// Twin classes (PHP declarations in SETUP)
++
++export class XtFoo {
++  static readonly [CLASS_FQCN]: string = "XtFoo";
++  // PHP lets a caller pass more arguments than a method declares, so the twins take any.
++  bar(..._args: unknown[]): unknown {
++    return null;
++  }
++  baz(..._args: unknown[]): unknown {
++    return null;
++  }
++  qux(..._args: unknown[]): unknown {
++    return null;
++  }
++}
++
++export class XtBar extends XtFoo {
++  static override readonly [CLASS_FQCN]: string = "XtBar";
++}
++
++export class XtErr extends Error {
++  static readonly [CLASS_FQCN]: string = "XtErr";
++  // PHP's Exception keeps these protected: no public property.
++  readonly #code: number;
++  readonly #previous: Error | null;
++  constructor(message: string = "", code: number = 0, previous: Error | null = null) {
++    super(message);
++    this.#code = code;
++    this.#previous = previous;
++  }
++  getMessage(): string {
++    return this.message;
++  }
++  getCode(): number {
++    return this.#code;
++  }
++  getPrevious(): Error | null {
++    return this.#previous;
++  }
++}
++
++export class XtProp {
++  static readonly [CLASS_FQCN]: string = "XtProp";
++  a = 1;
++  s = "x";
++  f = 1.5;
++  n = null;
++  l = [1, [2]];
++  o: unknown = null;
++}
++
++export const SETUP: readonly string[] = [
++  "class XtFoo { public function bar($x = null) {} public function baz() {} public function qux() {} }",
++  "class XtBar extends XtFoo {}",
++  "class XtErr extends \\Exception {}",
++  "class XtProp { public $a = 1; public $s = 'x'; public $f = 1.5; public $n = null; public $l = [1, [2]]; public $o = null; }",
++  "function xt_try(callable $f) { try { return ['ok', $f()]; } catch (\\Throwable $e) { return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } }",
++];
++
++/** The message of a thrown value (a PHP-style exception's `getMessage()`, else `message`). */
++function messageOf(error: unknown): unknown {
++  if (typeof error === "object" && error !== null && typeof (error as { getMessage?: unknown }).getMessage === "function") {
++    return (error as { getMessage: () => unknown }).getMessage();
++  }
++  return error instanceof Error ? error.message : String(error);
++}
++
++/** `xt_try`: `['ok', <value>]`, or `['throws', <short class>, <message>]`. */
++export function xtTry(fn: () => unknown): unknown[] {
++  try {
++    return ["ok", fn()];
++  } catch (error) {
++    return ["throws", shortClassName(error), messageOf(error)];
++  }
++}
++
++/** The PHP class name (FQCN) of a thrown value. */
++function classOf(error: unknown): string {
++  const ctor = (error as { constructor?: unknown }).constructor as Record<symbol, unknown> | undefined;
++  return typeof ctor?.[CLASS_FQCN] === "string" ? (ctor[CLASS_FQCN] as string) : "?";
++}
++
++type M = typeof MockeryClass;
++
++export interface Scenario {
++  readonly id: "XT-mockery-1" | "XT-mockery-2" | "XT-mockery-3";
++  readonly label: string;
++  /** The AC 1 API names the scenario exercises. */
++  readonly uses: readonly string[];
++  /** PHP statements; they append to `$r`. */
++  readonly php: string;
++  /** The TS twin; it appends to `r`. */
++  readonly run: (Mockery: M, r: unknown[]) => void;
++}
++
++/** The PHP expression of one scenario. */
++export function wrapPhp(php: string): string {
++  return `(function () { try { $r = []; ${php} \\Mockery::close(); return ['ok', $r]; } catch (\\Throwable $e) { try { \\Mockery::close(); } catch (\\Throwable $ignored) {} return ['throws', (new \\ReflectionClass($e))->getShortName(), $e->getMessage()]; } })()`;
++}
++
++/** Runs the TS twin of one scenario with the same wrapping. */
++export function runScenario(Mockery: M, scenario: Scenario): unknown[] {
++  const r: unknown[] = [];
++  try {
++    scenario.run(Mockery, r);
++    Mockery.close();
++    return ["ok", r];
++  } catch (error) {
++    try {
++      Mockery.close();
++    } catch {
++      // ignored, as the PHP wrapper does
++    }
++    return ["throws", shortClassName(error), messageOf(error)];
++  }
++}
++
++const FOO = "$m = \\Mockery::mock(\\XtFoo::class);";
++
++export const SCENARIOS: readonly Scenario[] = [
++  // ---- XT-mockery-1: the core API
++  {
++    id: "XT-mockery-1",
++    label: "once() met, with(1), andReturn(2)",
++    uses: ["shouldReceive", "once", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->once()->with(1)->andReturn(2); $r[] = $m->bar(1);`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").once().with(1).andReturn(2);
++      r.push(m.bar(1));
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "once() unmet",
++    uses: ["shouldReceive", "once"],
++    php: `${FOO} $m->shouldReceive('bar')->once();`,
++    run: (Mockery) => {
++      Mockery.mock(XtFoo).shouldReceive("bar").once();
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "twice() met",
++    uses: ["shouldReceive", "twice"],
++    php: `${FOO} $m->shouldReceive('bar')->twice(); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").twice();
++      r.push(m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "twice() unmet: one call",
++    uses: ["shouldReceive", "twice"],
++    php: `${FOO} $m->shouldReceive('bar')->twice(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").twice();
++      r.push(m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "times(3) met",
++    uses: ["shouldReceive", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->times(3)->andReturn(1); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").times(3).andReturn(1);
++      r.push(m.bar(), m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "times(3) unmet: four calls, the fourth still answered",
++    uses: ["shouldReceive", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->times(3)->andReturn(1); for ($i = 0; $i < 4; $i++) { $r[] = $m->bar(); } $r[] = xt_try(function () { \\Mockery::close(); return null; });`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").times(3).andReturn(1);
++      for (let i = 0; i < 4; i++) {
++        r.push(m.bar());
++      }
++      r.push(
++        xtTry(() => {
++          Mockery.close();
++          return null;
++        }),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "never() met",
++    uses: ["shouldReceive", "never"],
++    php: `${FOO} $m->shouldReceive('bar')->never(); $r[] = 'none';`,
++    run: (Mockery, r) => {
++      Mockery.mock(XtFoo).shouldReceive("bar").never();
++      r.push("none");
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "never() unmet: one call",
++    uses: ["shouldReceive", "never"],
++    php: `${FOO} $m->shouldReceive('bar')->never(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").never();
++      r.push(m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "atLeast()->times(2) met with three calls",
++    uses: ["shouldReceive", "atLeast", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->atLeast()->times(2)->andReturn('x'); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").atLeast().times(2).andReturn("x");
++      r.push(m.bar(), m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "atLeast()->times(2) unmet: one call",
++    uses: ["shouldReceive", "atLeast", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->atLeast()->times(2); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").atLeast().times(2);
++      r.push(m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "atMost()->times(1) met",
++    uses: ["shouldReceive", "atMost", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->atMost()->times(1)->andReturn('y'); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").atMost().times(1).andReturn("y");
++      r.push(m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "atMost()->times(1) unmet: two calls",
++    uses: ["shouldReceive", "atMost", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->atMost()->times(1)->andReturn('y'); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").atMost().times(1).andReturn("y");
++      r.push(m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with(1) matches '1' (PHP ==)",
++    uses: ["shouldReceive", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with(1)->andReturn('a'); $r[] = $m->bar('1'); $r[] = $m->bar(1.0);`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1).andReturn("a");
++      r.push(m.bar("1"), m.bar(1.0));
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with(null) matches false",
++    uses: ["shouldReceive", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with(null)->andReturn('b'); $r[] = $m->bar(false); $r[] = xt_try(fn () => $m->bar(true));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(null).andReturn("b");
++      r.push(
++        m.bar(false),
++        xtTry(() => m.bar(true)),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with([1, 2]) matches [1, 2] and ['1', '2']",
++    uses: ["shouldReceive", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with([1, 2])->andReturn('c'); $r[] = $m->bar([1, 2]); $r[] = $m->bar(['1', '2']); $r[] = xt_try(fn () => $m->bar([2, 1]));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with([1, 2]).andReturn("c");
++      r.push(
++        m.bar([1, 2]),
++        m.bar(["1", "2"]),
++        xtTry(() => m.bar([2, 1])),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with('XtFoo') matches an XtBar instance",
++    uses: ["shouldReceive", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with('XtFoo')->andReturn('d'); $r[] = $m->bar(new \\XtBar()); $r[] = $m->bar('XtFoo');`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with("XtFoo").andReturn("d");
++      r.push(m.bar(new XtBar()), m.bar("XtFoo"));
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with(XtFoo::class) (the class itself in TS) matches an XtBar instance",
++    uses: ["shouldReceive", "with", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with(\\XtFoo::class)->andReturn('e'); $r[] = $m->bar(new \\XtBar()); $r[] = xt_try(fn () => $m->bar(new \\XtErr()));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(XtFoo).andReturn("e");
++      r.push(
++        m.bar(new XtBar()),
++        xtTry(() => m.bar(new XtErr())),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "withArgs([1])",
++    uses: ["shouldReceive", "withArgs", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->withArgs([1])->andReturn('f'); $r[] = $m->bar(1); $r[] = xt_try(fn () => $m->bar(1, 2));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").withArgs([1]).andReturn("f");
++      r.push(
++        m.bar(1),
++        xtTry(() => m.bar(1, 2)),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "withArgs(closure) returning true",
++    uses: ["shouldReceive", "withArgs", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->withArgs(fn ($x) => $x === 1)->andReturn('g'); $r[] = $m->bar(1); $r[] = xt_try(fn () => $m->bar(2));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar")
++        .withArgs((x: unknown) => x === 1)
++        .andReturn("g");
++      r.push(
++        m.bar(1),
++        xtTry(() => m.bar(2)),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "withArgs(closure) returning 1 does not match",
++    uses: ["shouldReceive", "withArgs"],
++    php: `${FOO} $m->shouldReceive('bar')->withArgs(fn () => 1); $r[] = xt_try(fn () => $m->bar(1));`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").withArgs(() => 1);
++      r.push(xtTry(() => m.bar(1)));
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "withArgs() with neither an array nor a closure",
++    uses: ["shouldReceive", "withArgs"],
++    php: `${FOO} $m->shouldReceive('bar')->withArgs(5);`,
++    run: (Mockery) => {
++      Mockery.mock(XtFoo)
++        .shouldReceive("bar")
++        .withArgs(5 as never);
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "withAnyArgs() after with(1)",
++    uses: ["shouldReceive", "with", "withAnyArgs", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with(1)->withAnyArgs()->andReturn('h'); $r[] = $m->bar(5, 6); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1).withAnyArgs().andReturn("h");
++      r.push(m.bar(5, 6), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "with() expects no arguments",
++    uses: ["shouldReceive", "with"],
++    php: `${FOO} $m->shouldReceive('bar')->with(); $r[] = xt_try(fn () => $m->bar(1)); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with();
++      r.push(
++        xtTry(() => m.bar(1)),
++        m.bar(),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "andReturn(1, 2) over three calls",
++    uses: ["shouldReceive", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->andReturn(1, 2); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").andReturn(1, 2);
++      r.push(m.bar(), m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "andReturnValues([3, 4]) over three calls",
++    uses: ["shouldReceive", "andReturnValues"],
++    php: `${FOO} $m->shouldReceive('bar')->andReturnValues([3, 4]); $r[] = $m->bar(); $r[] = $m->bar(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").andReturnValues([3, 4]);
++      r.push(m.bar(), m.bar(), m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "andThrow(new XtErr('e')) throws that object",
++    uses: ["shouldReceive", "andThrow"],
++    php: `${FOO} $x = new \\XtErr('e'); $m->shouldReceive('bar')->andThrow($x); try { $m->bar(); $r[] = 'no throw'; } catch (\\XtErr $e) { $r[] = [$e === $x, $e->getMessage()]; }`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      const x = new XtErr("e");
++      m.shouldReceive("bar").andThrow(x);
++      try {
++        m.bar();
++        r.push("no throw");
++      } catch (error) {
++        if (!(error instanceof XtErr)) {
++          throw error;
++        }
++        r.push([error === x, error.getMessage()]);
++      }
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "andThrow(XtErr::class, 'm', 7) builds the exception",
++    uses: ["shouldReceive", "andThrow"],
++    php: `${FOO} $m->shouldReceive('bar')->andThrow(\\XtErr::class, 'm', 7); try { $m->bar(); $r[] = 'no throw'; } catch (\\XtErr $e) { $r[] = [$e->getMessage(), $e->getCode()]; }`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").andThrow(XtErr, "m", 7);
++      try {
++        m.bar();
++        r.push("no throw");
++      } catch (error) {
++        if (!(error instanceof XtErr)) {
++          throw error;
++        }
++        r.push([error.getMessage(), error.getCode()]);
++      }
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "andReturn() of an exception without andThrow returns it",
++    uses: ["shouldReceive", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->andReturn(new \\XtErr('r')); $r[] = $m->bar()->getMessage();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").andReturn(new XtErr("r"));
++      r.push((m.bar() as XtErr).getMessage());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "ordered() in order",
++    uses: ["shouldReceive", "ordered"],
++    php: `${FOO} $m->shouldReceive('bar')->ordered(); $m->shouldReceive('baz')->ordered(); $r[] = $m->bar(); $r[] = $m->baz();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").ordered();
++      m.shouldReceive("baz").ordered();
++      r.push(m.bar(), m.baz());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "ordered() out of order throws at the call",
++    uses: ["shouldReceive", "ordered"],
++    php: `${FOO} $m->shouldReceive('bar')->ordered(); $m->shouldReceive('baz')->ordered(); $r[] = $m->baz(); $r[] = $m->bar();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").ordered();
++      m.shouldReceive("baz").ordered();
++      r.push(m.baz());
++      r.push(m.bar());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "ordered() in two groups",
++    uses: ["shouldReceive", "ordered", "with"],
++    php: `${FOO} $m->shouldReceive('bar')->ordered('g1'); $m->shouldReceive('baz')->ordered('g1'); $m->shouldReceive('qux')->ordered('g2'); $r[] = $m->baz(); $r[] = $m->bar(); $r[] = $m->qux(); $r[] = xt_try(fn () => $m->bar()); $r[] = xt_try(fn () => $m->qux());`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").ordered("g1");
++      m.shouldReceive("baz").ordered("g1");
++      m.shouldReceive("qux").ordered("g2");
++      r.push(m.baz(), m.bar(), m.qux());
++      r.push(
++        xtTry(() => m.bar()),
++        xtTry(() => m.qux()),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "two exhausted with(1)->once() expectations: the third call falls back to the first",
++    uses: ["shouldReceive", "with", "once", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar')->with(1)->once()->andReturn('a'); $m->shouldReceive('bar')->with(1)->once()->andReturn('b'); $r[] = $m->bar(1); $r[] = $m->bar(1); $r[] = $m->bar(1); $r[] = xt_try(function () { \\Mockery::close(); return null; });`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1).once().andReturn("a");
++      m.shouldReceive("bar").with(1).once().andReturn("b");
++      r.push(m.bar(1), m.bar(1), m.bar(1));
++      r.push(
++        xtTry(() => {
++          Mockery.close();
++          return null;
++        }),
++      );
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "several names in one shouldReceive",
++    uses: ["shouldReceive", "once", "andReturn", "with"],
++    php: `${FOO} $m->shouldReceive('bar', 'baz')->once()->andReturn(5); $r[] = $m->bar(); $r[] = $m->baz(); $r[] = (string) $m->shouldReceive('qux', 'bar')->with(1, 'x');`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar", "baz").once().andReturn(5);
++      r.push(m.bar(), m.baz(), String(m.shouldReceive("qux", "bar").with(1, "x")));
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "no return value gives null; the method name matches case-insensitively",
++    uses: ["shouldReceive", "andReturn"],
++    php: `${FOO} $m->shouldReceive('bar'); $m->shouldReceive('baz')->andReturn(); $r[] = $m->bar(); $r[] = $m->baz(); $r[] = $m->BAR();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar");
++      m.shouldReceive("baz").andReturn();
++      r.push(m.bar(), m.baz(), m.BAR());
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "times('x') is rejected",
++    uses: ["shouldReceive", "times"],
++    php: `${FOO} $m->shouldReceive('bar')->times('x');`,
++    run: (Mockery) => {
++      Mockery.mock(XtFoo)
++        .shouldReceive("bar")
++        .times("x" as never);
++    },
++  },
++  {
++    id: "XT-mockery-1",
++    label: "a mock of no class",
++    uses: ["shouldReceive", "once", "andReturn"],
++    php: `$m = \\Mockery::mock(); $m->shouldReceive('anything')->once()->andReturn(3); $r[] = $m->anything(); $r[] = xt_try(fn () => $m->other());`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock();
++      m.shouldReceive("anything").once().andReturn(3);
++      r.push(
++        m.anything(),
++        xtTry(() => m.other()),
++      );
++    },
++  },
++
++  // ---- XT-mockery-2: unmet expectations
++  {
++    id: "XT-mockery-2",
++    label: "once() unmet",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->once();`,
++    run: (Mockery) => {
++      Mockery.mock(XtFoo).shouldReceive("bar").once();
++    },
++  },
++  {
++    id: "XT-mockery-2",
++    label: "atLeast()->times(2) unmet",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->atLeast()->times(2);`,
++    run: (Mockery) => {
++      Mockery.mock(XtFoo).shouldReceive("bar").atLeast().times(2);
++    },
++  },
++  {
++    id: "XT-mockery-2",
++    label: "atMost()->times(1) unmet",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->atMost()->times(1); $m->bar(); $m->bar();`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").atMost().times(1);
++      m.bar();
++      m.bar();
++    },
++  },
++  {
++    id: "XT-mockery-2",
++    label: "with(1, 'x')->twice() called once",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(1, 'x')->twice(); $m->bar(1, 'x');`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1, "x").twice();
++      m.bar(1, "x");
++    },
++  },
++  {
++    id: "XT-mockery-2",
++    label: "the first unmet expectation of the first mock fails the close",
++    uses: [],
++    php: `$a = \\Mockery::mock(\\XtFoo::class); $b = \\Mockery::mock(\\XtBar::class); $b->shouldReceive('bar')->once(); $a->shouldReceive('qux')->once(); $a->shouldReceive('baz')->once();`,
++    run: (Mockery) => {
++      const a = Mockery.mock(XtFoo);
++      const b = Mockery.mock(XtBar);
++      b.shouldReceive("bar").once();
++      a.shouldReceive("qux").once();
++      a.shouldReceive("baz").once();
++    },
++  },
++  {
++    id: "XT-mockery-2",
++    label: "the expectation count holds only call-count-constrained expectations",
++    uses: [],
++    php: `${FOO} $n = \\Mockery::mock(\\XtBar::class); $m->shouldReceive('bar')->once(); $m->shouldReceive('baz'); $m->shouldReceive('qux')->atLeast()->once(); $n->shouldReceive('bar')->never(); $n->shouldReceive('baz')->withAnyArgs(); $r[] = \\Mockery::getContainer()->mockery_getExpectationCount(); $m->bar(); $m->qux();`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      const n = Mockery.mock(XtBar);
++      m.shouldReceive("bar").once();
++      m.shouldReceive("baz");
++      m.shouldReceive("qux").atLeast().once();
++      n.shouldReceive("bar").never();
++      n.shouldReceive("baz").withAnyArgs();
++      r.push(Mockery.getContainer().mockery_getExpectationCount());
++      m.bar();
++      m.qux();
++    },
++  },
++
++  // ---- XT-mockery-3: a call that matches no expectation
++  {
++    id: "XT-mockery-3",
++    label: "a declared method without expectations",
++    uses: [],
++    php: `${FOO} try { $m->baz(); } catch (\\BadMethodCallException $e) { $r[] = [get_class($e), $e->getMessage()]; }`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      try {
++        m.baz();
++      } catch (error) {
++        if (!(error instanceof SplBadMethodCallException)) {
++          throw error;
++        }
++        r.push([classOf(error), error.getMessage()]);
++      }
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "an undeclared method",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar'); try { $m->nope(1); } catch (\\BadMethodCallException $e) { $r[] = [get_class($e), $e->getMessage()]; }`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar");
++      try {
++        m.nope(1);
++      } catch (error) {
++        if (!(error instanceof SplBadMethodCallException)) {
++          throw error;
++        }
++        r.push([classOf(error), error.getMessage()]);
++      }
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "with(1) called with 2",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(1); try { $m->bar(2); } catch (\\UnexpectedValueException $e) { $r[] = [get_class($e), $e instanceof \\Mockery\\Exception, $e->getMessage()]; }`,
++    run: (Mockery, r) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1);
++      try {
++        m.bar(2);
++      } catch (error) {
++        if (!(error instanceof SplUnexpectedValueException)) {
++          throw error;
++        }
++        r.push([classOf(error), error instanceof MockeryException, error.getMessage()]);
++      }
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "with(1) and with(2) called with 3",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(1); $m->shouldReceive('bar')->with(2)->once(); $m->bar(3);`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1);
++      m.shouldReceive("bar").with(2).once();
++      m.bar(3);
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "an object argument against an equal but distinct object",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(new \\XtFoo()); $m->bar(new \\XtFoo());`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(new XtFoo());
++      m.bar(new XtFoo());
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "with() called with one argument",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(); $m->bar('a');`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with();
++      m.bar("a");
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "the arguments are formatted as Mockery does",
++    uses: [],
++    php: `${FOO} $m->shouldReceive('bar')->with(1); $m->bar(2, [1, 'a' => [2]], 1.5, 1.0, 1.0E+25, -0.25, true, null, 'x', ['a' => 'x'], [], fn () => 1);`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      m.shouldReceive("bar").with(1);
++      m.bar(
++        2,
++        new BrandedArray([
++          [0, 1],
++          ["a", [2]],
++        ]),
++        1.5,
++        1.0,
++        1.0e25,
++        -0.25,
++        true,
++        null,
++        "x",
++        { a: "x" },
++        [],
++        () => 1,
++      );
++    },
++  },
++  {
++    id: "XT-mockery-3",
++    label: "an object argument with public properties",
++    uses: [],
++    php: `${FOO} $p = new \\XtProp(); $p->o = new \\XtFoo(); $m->shouldReceive('bar')->with(1); $m->bar($p, new \\XtBar());`,
++    run: (Mockery) => {
++      const m = Mockery.mock(XtFoo);
++      const p = new XtProp();
++      p.o = new XtFoo();
++      m.shouldReceive("bar").with(1);
++      m.bar(p, new XtBar());
++    },
++  },
++];
+diff --git a/packages/mockery/tsconfig.json b/packages/mockery/tsconfig.json
+index 58be447..97eb940 100644
+--- a/packages/mockery/tsconfig.json
++++ b/packages/mockery/tsconfig.json
+@@ -15,5 +15,9 @@
+     "src/**/*.ts",
+     "tests/**/*.ts"
+   ],
+-  "references": []
++  "references": [
++    {
++      "path": "../assert"
++    }
++  ]
+ }
