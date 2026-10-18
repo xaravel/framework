@@ -244,7 +244,7 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   });
   const statusParameters = ruleOf(MAIN, "required_status_checks")["parameters"] as Record<string, unknown>;
   expect(statusParameters["strict_required_status_checks_policy"]).toBe(false);
-  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "ownership", "protected-paths"]);
+  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "fixtures", "ownership", "protected-paths"]);
   for (const check of checksOf(MAIN)) {
     expect(check.integration_id).toBe(15368);
   }
@@ -263,6 +263,7 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   expect(policyViolations(MAIN, { "main.json": MAIN, "agent-push.json": PUSH, "agent-tags.json": TAGS }, ["edanisko"])).toEqual([]);
   expect(REQUIRED_CHECKS).toContain("protected-paths");
   expect(REQUIRED_CHECKS).toContain("ownership");
+  expect(REQUIRED_CHECKS).toContain("fixtures");
 
   // Normalisation: order, extra API fields and the admin actor_id do not matter.
   const live = liveOf(MAIN, 25223480);
@@ -762,7 +763,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(ci.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(ci.on["push"]).toEqual({ branches: ["main"] });
   expect(ci.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "php-fixtures", "upstream", "workflow-permissions"]);
+  expect(Object.keys(ci.jobs).sort(byString)).toEqual(["audit", "check", "fixtures", "php-fixtures", "upstream", "workflow-permissions"]);
 
   const audit = ci.jobs["audit"]!;
   expect(audit.permissions).toBeUndefined();
@@ -789,7 +790,6 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(check.steps[1]).toEqual(audit.steps[1]!);
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
-    "bun run oracle:verify-fixtures",
     "bun run test",
     "bun run typecheck",
     "bun run lint",
@@ -798,6 +798,18 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   ]);
   expect(check.steps.filter((step) => step.uses !== undefined).length).toBe(2);
   expect(check["timeout-minutes"]).toBe(30);
+  // `fixtures` verifies every committed Oracle fixture, with no install, nothing to skip it and nothing past a failure (Epic 3 retro S2).
+  const fixtures = ci.jobs["fixtures"]!;
+  expect(fixtures.permissions).toBeUndefined();
+  for (const node of [fixtures, ...fixtures.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+    expect(node["if"]).toBeUndefined();
+  }
+  expect(fixtures.steps[0]).toEqual(audit.steps[0]!);
+  expect(fixtures.steps[1]).toEqual(audit.steps[1]!);
+  expect(fixtures.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual(["bun run oracle:verify-fixtures"]);
+  expect(fixtures.steps.length).toBe(3);
+  expect(fixtures["timeout-minutes"]).toBe(10);
   // The gates run through package.json scripts, so pin what each script runs.
   const checkScripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(checkScripts["test"]).toBe("bun test");

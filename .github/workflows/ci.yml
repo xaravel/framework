@@ -3,14 +3,16 @@
 # `audit` is a required check on main: it installs from the frozen lockfile
 # without running lifecycle scripts, then fails on any high or critical
 # advisory. `workflow-permissions` checks every workflow's permissions.
-# `check` runs the repository gates: first `oracle:verify-fixtures`, which
-# fails on any committed Oracle fixture whose signature does not verify
-# against conformance/oracle/oracle.pub or whose request hash does not match a
-# committed request, naming the file (Story 3.3, FR-6, AD-15), so no earlier
-# failure hides it; then `bun test`, the typecheck, the lint,
-# `scaffold:check` and `graph:check` (Epic 1 retro R1). `check` is advisory
-# until it is added to the required checks in .github/rulesets/main.json
-# (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
+# `fixtures` runs `oracle:verify-fixtures`, which fails on any committed
+# Oracle fixture whose signature does not verify against
+# conformance/oracle/oracle.pub or whose request hash does not match a
+# committed request, naming the file (Story 3.3, FR-6, AD-15). It needs no
+# install, so it stays fast, and it is a required check on main
+# (decisions/MAINT-2026-10-18-epic-3-items.md, Epic 3 retro S2): a forged
+# fixture cannot merge. `check` runs the other repository gates: `bun test`,
+# the typecheck, the lint, `scaffold:check` and `graph:check` (Epic 1 retro
+# R1). `check` is advisory until it is added to the required checks in
+# .github/rulesets/main.json (Epic 1 retro item 2). `upstream` fetches the Upstream snapshot at the
 # Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15), then
 # checks that the committed Upstream scans (conformance/scans/facades.jsonl,
 # tools/lint-rules/singletons.json, conformance/boot-only-state, and Story
@@ -79,6 +81,19 @@ jobs:
       - name: Check workflow permissions
         run: bun tools/workflow-permissions/workflow-permissions.ts check
 
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Verify the Oracle fixtures
+        run: bun run oracle:verify-fixtures
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -91,8 +106,6 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
-      - name: Verify the Oracle fixtures
-        run: bun run oracle:verify-fixtures
       - name: Test
         run: bun run test
       - name: Typecheck
