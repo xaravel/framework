@@ -51,6 +51,12 @@ import { canonicalJson, compareUnits, parseRequests, readSchema, renderJson, REQ
 import { readStoryRequestFiles, type StoryRequestFile } from "./story-requests";
 
 export const FIXTURES_DIR = "conformance/fixtures";
+/**
+ * A Component name: the form the `story` job's commit step in .github/workflows/oracle.yml accepts for
+ * `conformance/fixtures/<component>/<sha256>.json`, and the one tools/ownership/ownership.ts checks, so the batch
+ * never signs a fixture for a name the commit step refuses (XT-conformance-77 derives the commit pattern from it).
+ */
+export const COMPONENT_NAME = /^[a-z][a-z0-9-]*$/;
 /** Reference files for generator output (never Oracle-generated); the batch never touches them. */
 export const GENERATORS = "generators";
 export const PUBLIC_KEY_FILE = `${ORACLE_DIR}/oracle.pub`;
@@ -226,7 +232,7 @@ export function readCommittedRequests(root: string): ComponentRequests[] {
   const seen = new Map<string, string>();
   for (const file of readdirSync(dir).filter((name) => name.endsWith(".jsonl")).sort(compareUnits)) {
     const component = file.slice(0, -".jsonl".length);
-    if (component === GENERATORS || !/^[a-z0-9][a-z0-9-]*$/.test(component)) {
+    if (component === GENERATORS || !COMPONENT_NAME.test(component)) {
       throw new Error(`${REQUESTS_DIR}/${file} is not a Component's request file`);
     }
     const requests = parseRequests(readFileSync(join(dir, file), "utf8"), `${REQUESTS_DIR}/${file}`, schema);

@@ -142,6 +142,20 @@ test("XT-conformance-68: conformance/oracle/schema.json requires id (Test ID or 
     expect([kind, message, errors.join("\n").includes(message)]).toEqual([kind, message, true]);
   }
   expect(errorsOf((value) => (value["input"] = "x")).join("\n")).toContain("$.input: expected object");
+  // A lone UTF-16 surrogate in any string or key fails at its path, since PHP's json_decode rejects the line; a pair (an astral character) is valid.
+  const surrogate = "holds a lone UTF-16 surrogate, which PHP's json_decode rejects";
+  expect(validateRequest(parsed(makeRequest("XT-view-1", "blade-render", { template: "ü😀", data: { "😀": "ü😀" } })), schema)).toEqual([]);
+  const highInString = makeRequest("XT-support-1", "php-expr", { bindings: {}, setup: [], exprs: ["'\ud800'"] });
+  expect(validateRequest(parsed(highInString), schema)).toEqual([`$.input.exprs[0]: ${surrogate}`]);
+  const lowInKey = makeRequest("XT-view-1", "blade-render", { template: "x", data: { "\udc00": 1 } });
+  expect(validateRequest(parsed(lowInKey), schema)).toEqual([`$.input.data key "\\udc00": ${surrogate}`]);
+  const reversed = makeRequest("XT-view-1", "blade-render", { template: "\udc00\ud800", data: {} });
+  expect(validateRequest(parsed(reversed), schema)).toEqual([`$.input.template: ${surrogate}`]);
+  expect(errorsOf((value) => (value["id"] = "XT-support-1#\ud800")).join("\n")).toContain(`$.id: ${surrogate}`);
+  for (const request of [highInString, lowInKey, reversed]) {
+    expect(() => parseRequests(`${renderRequest(request)}\n`, "f.jsonl", schema)).toThrow(`f.jsonl:1: $.input.`);
+  }
+  expect(() => parseRequests(`${renderRequest(highInString)}\n`, "f.jsonl", schema)).toThrow(`f.jsonl:1: $.input.exprs[0]: ${surrogate}`);
 
   // Canonical JSON: keys by UTF-16 code unit at every depth (integer-like keys too), `/` and non-ASCII unescaped.
   const value = JSON.parse('{"b":[{"z":1,"a":null}],"10":true,"9":"a/b","a":"ü😀","é":-1.5,"Z":"\\u0001\\n"}') as never;
