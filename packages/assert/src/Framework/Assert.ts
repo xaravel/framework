@@ -14,11 +14,25 @@
 // The methods are static, as PHPUnit's are (`Assert.assertSame(…)` for a
 // `self::` or `static::` call), and mirrored onto the prototype so a test case
 // instance calls `this.assertSame(…)`.
+//
+// Story 4.4 adds `assertThat` (public, recording `assertThat`), the file,
+// directory and JSON assertions, `fail` (which counts as one assertion and
+// records `fail`), `markTestSkipped` (which records nothing), and the
+// constraint factories Upstream calls (`logicalAnd`, `greaterThanOrEqual`,
+// `lessThanOrEqual`, `isInstanceOf`). A nested assertion made by Assert
+// itself (`assertStringEqualsFile`'s `assertFileExists`,
+// `assertJsonStringEqualsJsonString`'s `assertJson`) records nothing, as the
+// Inventory's recorder skips it.
+import { readFileSync } from "node:fs";
 import { isPhpArray } from "../comparison/PhpComparison";
 import { argumentError, floatParam, intParam, isArrayAccess, isCountable, isIterable, isPhpObject, stringParam } from "../comparison/PhpValues";
 import { recordAssertion } from "../declarations/AssertionCounter";
-import type { Constraint } from "./Constraint";
-import { LogicalNot, LogicalOr } from "./Constraint";
+import { AssertionFailedError } from "./AssertionFailedError";
+import { Constraint, LogicalAnd, LogicalNot, LogicalOr } from "./Constraint";
+import { DirectoryExists, isDir } from "./Constraint/Filesystem/DirectoryExists";
+import { FileExists } from "./Constraint/Filesystem/FileExists";
+import { JsonMatches } from "./Constraint/JsonMatches";
+import { IsJson } from "./Constraint/String/IsJson";
 import {
   ArrayHasKey,
   ArraySubset,
@@ -48,6 +62,7 @@ import {
   TraversableContainsOnly,
 } from "./Constraints";
 import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
+import { SkippedWithMessageException } from "./Exception/SkippedWithMessageException";
 
 /** A class, or an interface token (an object with `Symbol.hasInstance`); see ESC-4.3-1 item 1. */
 export type ClassOrInterface = (abstract new (...args: never[]) => unknown) | { readonly [Symbol.hasInstance]: (value: unknown) => boolean };
@@ -440,6 +455,122 @@ export class Assert {
     recordAssertion("assertNan");
     assertThat(actual, new IsNan(), message("assertNan", 2, message_));
   }
+
+  // Story 4.4: constraints
+
+  /** Evaluates `constraint` for `value`; records `assertThat`. */
+  static assertThat(value: unknown, constraint: Constraint, message_: string = ""): void {
+    recordAssertion("assertThat");
+    if (!(constraint instanceof Constraint)) {
+      throw argumentError("assertThat", 2, "constraint", "PHPUnit\\Framework\\Constraint\\Constraint", constraint);
+    }
+    assertThat(value, constraint, message("assertThat", 3, message_));
+  }
+
+  /** `LogicalAnd::fromConstraints`: an operand that is not a Constraint is `IsEqual` to it. */
+  static logicalAnd(...constraints: unknown[]): Constraint {
+    return new LogicalAnd(...constraints.map(checkConstraint));
+  }
+
+  static greaterThanOrEqual(value: unknown): Constraint {
+    return new LogicalOr(new IsEqual(value), new GreaterThan(value));
+  }
+
+  static lessThanOrEqual(value: unknown): Constraint {
+    return new LogicalOr(new IsEqual(value), new LessThan(value));
+  }
+
+  static isInstanceOf(className: ClassOrInterface): Constraint {
+    return new IsInstanceOf(className);
+  }
+
+  // Story 4.4: files and directories
+
+  static assertDirectoryExists(directory: string, message_: string = ""): void {
+    recordAssertion("assertDirectoryExists");
+    const path = stringParam("assertDirectoryExists", 1, "directory", directory);
+    assertThat(path, new DirectoryExists(), message("assertDirectoryExists", 2, message_));
+  }
+
+  static assertDirectoryDoesNotExist(directory: string, message_: string = ""): void {
+    recordAssertion("assertDirectoryDoesNotExist");
+    const path = stringParam("assertDirectoryDoesNotExist", 1, "directory", directory);
+    assertThat(path, new LogicalNot(new DirectoryExists()), message("assertDirectoryDoesNotExist", 2, message_));
+  }
+
+  static assertFileExists(filename: string, message_: string = ""): void {
+    recordAssertion("assertFileExists");
+    const path = stringParam("assertFileExists", 1, "filename", filename);
+    assertThat(path, new FileExists(), message("assertFileExists", 2, message_));
+  }
+
+  static assertFileDoesNotExist(filename: string, message_: string = ""): void {
+    recordAssertion("assertFileDoesNotExist");
+    const path = stringParam("assertFileDoesNotExist", 1, "filename", filename);
+    assertThat(path, new LogicalNot(new FileExists()), message("assertFileDoesNotExist", 2, message_));
+  }
+
+  static assertStringEqualsFile(expectedFile: string, actualString: string, message_: string = ""): void {
+    recordAssertion("assertStringEqualsFile");
+    const path = stringParam("assertStringEqualsFile", 1, "expectedFile", expectedFile);
+    const actual = stringParam("assertStringEqualsFile", 2, "actualString", actualString);
+    const description = message("assertStringEqualsFile", 3, message_);
+    assertThat(actual, new IsEqual(contentsOfFile(path, description)), description);
+  }
+
+  // Story 4.4: JSON
+
+  static assertJson(actual: string, message_: string = ""): void {
+    recordAssertion("assertJson");
+    const json = stringParam("assertJson", 1, "actual", actual);
+    assertThat(json, new IsJson(), message("assertJson", 2, message_));
+  }
+
+  static assertJsonStringEqualsJsonString(expectedJson: string, actualJson: string, message_: string = ""): void {
+    recordAssertion("assertJsonStringEqualsJsonString");
+    const expected = stringParam("assertJsonStringEqualsJsonString", 1, "expectedJson", expectedJson);
+    const actual = stringParam("assertJsonStringEqualsJsonString", 2, "actualJson", actualJson);
+    const description = message("assertJsonStringEqualsJsonString", 3, message_);
+    // The two nested assertJson calls are made by Assert itself: not recorded.
+    assertThat(expected, new IsJson(), description);
+    assertThat(actual, new IsJson(), description);
+    assertThat(actual, new JsonMatches(expected), description);
+  }
+
+  // Story 4.4: test outcomes
+
+  /** Fails the test with `message`: counts one assertion (`fail`) and throws AssertionFailedError. */
+  static fail(message_: string = ""): never {
+    recordAssertion("fail");
+    throw new AssertionFailedError(message("fail", 1, message_));
+  }
+
+  /** Marks the test as skipped: throws SkippedWithMessageException, which ends the test as skipped; counts nothing. */
+  static markTestSkipped(message_: string = ""): never {
+    throw new SkippedWithMessageException(message("markTestSkipped", 1, message_));
+  }
+}
+
+/** `Operator::checkConstraint`. */
+function checkConstraint(constraint: unknown): Constraint {
+  return constraint instanceof Constraint ? constraint : new IsEqual(constraint);
+}
+
+/** `Assert::contentsOfFile`: the nested `assertFileExists` and `assertIsString` record nothing. */
+function contentsOfFile(path: string, description: string): string {
+  assertThat(path, new FileExists(), description);
+  if (isDir(path)) {
+    // PHP's file_get_contents() on a directory: a notice, and ''.
+    return "";
+  }
+  let buffer: unknown;
+  try {
+    buffer = readFileSync(path, "utf8");
+  } catch {
+    buffer = false;
+  }
+  assertThat(buffer, new IsType("string"), "");
+  return buffer as string;
 }
 
 /** PHPUnit 11.5's native type aliases, as PHPUnit 13's `NativeType` names them. */
@@ -513,6 +644,20 @@ export interface Assert {
   assertLessThan(maximum: unknown, actual: unknown, message?: string): void;
   assertLessThanOrEqual(maximum: unknown, actual: unknown, message?: string): void;
   assertNan(actual: unknown, message?: string): void;
+  assertThat(value: unknown, constraint: Constraint, message?: string): void;
+  assertDirectoryExists(directory: string, message?: string): void;
+  assertDirectoryDoesNotExist(directory: string, message?: string): void;
+  assertFileExists(filename: string, message?: string): void;
+  assertFileDoesNotExist(filename: string, message?: string): void;
+  assertStringEqualsFile(expectedFile: string, actualString: string, message?: string): void;
+  assertJson(actual: string, message?: string): void;
+  assertJsonStringEqualsJsonString(expectedJson: string, actualJson: string, message?: string): void;
+  fail(message?: string): never;
+  markTestSkipped(message?: string): never;
+  logicalAnd(...constraints: unknown[]): Constraint;
+  greaterThanOrEqual(value: unknown): Constraint;
+  lessThanOrEqual(value: unknown): Constraint;
+  isInstanceOf(className: ClassOrInterface): Constraint;
 }
 
 /**
@@ -573,8 +718,34 @@ export const ASSERTIONS: readonly string[] = Object.freeze([
   "assertNan",
 ]);
 
+/**
+ * The 16 PHPUnit names of Story 4.4 (`phpunit-assertions.jsonl` names that Story 4.3 did not cover and PHPUnit
+ * declares): 10 on Assert, then the 6 TestCase expectations.
+ */
+export const ASSERTIONS_4_4: readonly string[] = Object.freeze([
+  "assertDirectoryExists",
+  "assertDirectoryDoesNotExist",
+  "assertFileExists",
+  "assertFileDoesNotExist",
+  "assertStringEqualsFile",
+  "assertJson",
+  "assertJsonStringEqualsJsonString",
+  "assertThat",
+  "fail",
+  "markTestSkipped",
+  "expectException",
+  "expectExceptionMessage",
+  "expectExceptionMessageMatches",
+  "expectExceptionObject",
+  "expectNotToPerformAssertions",
+  "expectOutputString",
+]);
+
+/** The statics that are not assertions but are mirrored onto the prototype too (`$this->fail(…)`, `$this->logicalAnd(…)`). */
+const MIRRORED = ["fail", "markTestSkipped", "logicalAnd", "greaterThanOrEqual", "lessThanOrEqual", "isInstanceOf"];
+
 // Every static assertion, this Story's and later ones', is mirrored onto the prototype.
-for (const name of Object.getOwnPropertyNames(Assert).filter((key) => key.startsWith("assert"))) {
+for (const name of [...Object.getOwnPropertyNames(Assert).filter((key) => key.startsWith("assert")), ...MIRRORED]) {
   Object.defineProperty(Assert.prototype, name, {
     value: (Assert as unknown as Record<string, unknown>)[name],
     writable: false,
