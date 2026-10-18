@@ -67,8 +67,8 @@ development_status:
   3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: done
   epic-3-retrospective: done
 
-  epic-4: backlog
-  4-1-php-comparison-core: backlog
+  epic-4: in-progress
+  4-1-php-comparison-core: blocked  # dependency: signed Oracle fixtures need the xaravel-oracle App (epic-3-retro-item-7, waiting on Maintainer)
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: backlog
   4-3-core-phpunit-assertions: backlog
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: backlog
