@@ -734,6 +734,22 @@ test("XT-conformance-32: the agent push identity is limited to story/* by live r
   expect(scripts["workflows:check"]).toBe("bun tools/workflow-permissions/workflow-permissions.ts check");
 });
 
+/** The `php-fixtures` step that builds the locked framework install the real-PHP Oracle tests need (docs/ops/inventory.md). */
+/** The awk program the install step uses to read the framework version from conformance/baseline-pin. */
+const PIN_VERSION_AWK = `$1 == "laravel/framework" { sub(/^v/, "", $2); print $2 }`;
+const FRAMEWORK_INSTALL = [
+  "set -euo pipefail",
+  `version="$(awk '${PIN_VERSION_AWK}' conformance/baseline-pin)"`,
+  'test -n "$version"',
+  "rm -rf /tmp/xaravel-inv/framework",
+  "mkdir -p /tmp/xaravel-inv",
+  "cp -R conformance/upstream/framework /tmp/xaravel-inv/framework",
+  "chmod -R u+w /tmp/xaravel-inv/framework",
+  "cp conformance/oracle/locks/framework/composer.lock /tmp/xaravel-inv/framework/composer.lock",
+  'COMPOSER_ROOT_VERSION="$version" composer install --no-interaction --no-progress --no-plugins --no-scripts --prefer-dist --working-dir=/tmp/xaravel-inv/framework',
+  "",
+].join("\n");
+
 test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` and fails on high or critical advisories (AD-16, NFR-5)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
   const ci = Bun.YAML.parse(text) as {
@@ -794,7 +810,7 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   // `php-fixtures` runs the PHP scripts for real against the fixtures, with a missing PHP or vendor/ failing (Epic 2 retro R5).
   const phpFixtures = ci.jobs["php-fixtures"]!;
   expect(phpFixtures.permissions).toEqual({ contents: "read" });
-  expect(phpFixtures["timeout-minutes"]).toBe(15);
+  expect(phpFixtures["timeout-minutes"]).toBe(20);
   for (const node of [phpFixtures, ...phpFixtures.steps]) {
     expect(node["continue-on-error"]).toBeUndefined();
     expect(node["if"]).toBeUndefined();
@@ -809,8 +825,19 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(phpFixtures.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
     "bun run php-fixtures:install",
-    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts",
+    "bun run upstream:sync",
+    FRAMEWORK_INSTALL,
+    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts",
   ]);
+  // The real-PHP Oracle blocks run against the locked framework install docs/ops/inventory.md documents, at the version
+  // conformance/baseline-pin names, never a version written into the workflow (Epic 3 retro item 3).
+  const pinnedFramework = readFileSync(join(root, "conformance", "baseline-pin"), "utf8").split("\n").find((line) => line.startsWith("laravel/framework "));
+  expect(pinnedFramework).toBeDefined();
+  const pinnedVersion = pinnedFramework!.split(/\s+/)[1]!.replace(/^v/, "");
+  expect(FRAMEWORK_INSTALL).not.toContain(pinnedVersion);
+  const awk = Bun.spawnSync(["awk", PIN_VERSION_AWK, "conformance/baseline-pin"], { cwd: root, stdout: "pipe" });
+  expect(awk.exitCode).toBe(0);
+  expect(awk.stdout.toString().trim()).toBe(pinnedVersion);
   expect(checkScripts["php-fixtures:install"]).toBe(
     "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest",
   );

@@ -22,8 +22,18 @@
 # `php-fixtures` installs the PHPUnit and Pest fixture projects and runs
 # tools/inventory/lister.php and tools/baseline/{runner,recorder}.php against
 # them with real PHP, and tools/oracle/api-surface.php against
-# php-fixtures/api-surface/ (Story 3.5), with XARAVEL_PHP_FIXTURES=require so
-# a missing PHP or vendor/ fails instead of skipping (Epic 2 retro R5). It is its own job
+# php-fixtures/api-surface/ (Story 3.5). It also syncs the Upstream snapshot,
+# builds the locked framework install at /tmp/xaravel-inv/framework as
+# docs/ops/inventory.md documents (the snapshot, the Oracle lock and
+# COMPOSER_ROOT_VERSION read from conformance/baseline-pin), and runs the
+# real-PHP blocks of oracle-fixtures.test.ts and oracle-story.test.ts against
+# it and those of oracle-extract.test.ts (Epic 3 retro item 3). All of them
+# run with XARAVEL_PHP_FIXTURES=require, so a missing PHP or vendor/ fails
+# instead of skipping (Epic 2 retro R5); oracle-fixtures.test.ts and
+# oracle-story.test.ts also fail on a PHP other than 8.5.11, one without
+# pcntl, or a missing install, and oracle-extract.test.ts needs only php on
+# PATH. setup-php takes only major.minor, so a newer 8.5 patch on the runner
+# fails these tests until PHP_VERSION in tools/oracle/oracle.ts moves. It is its own job
 # because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
 # until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
@@ -123,7 +133,7 @@ jobs:
 
   php-fixtures:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -142,5 +152,18 @@ jobs:
           coverage: none
       - name: Install the PHP fixtures
         run: bun run php-fixtures:install
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
+      - name: Build the locked framework install
+        run: |
+          set -euo pipefail
+          version="$(awk '$1 == "laravel/framework" { sub(/^v/, "", $2); print $2 }' conformance/baseline-pin)"
+          test -n "$version"
+          rm -rf /tmp/xaravel-inv/framework
+          mkdir -p /tmp/xaravel-inv
+          cp -R conformance/upstream/framework /tmp/xaravel-inv/framework
+          chmod -R u+w /tmp/xaravel-inv/framework
+          cp conformance/oracle/locks/framework/composer.lock /tmp/xaravel-inv/framework/composer.lock
+          COMPOSER_ROOT_VERSION="$version" composer install --no-interaction --no-progress --no-plugins --no-scripts --prefer-dist --working-dir=/tmp/xaravel-inv/framework
       - name: Run the PHP scripts against the fixtures
-        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts
+        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts
