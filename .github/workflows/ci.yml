@@ -14,8 +14,9 @@
 # Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15).
 # `php-fixtures` installs the PHPUnit and Pest fixture projects and runs
 # tools/inventory/lister.php and tools/baseline/{runner,recorder}.php against
-# them with real PHP, with XARAVEL_PHP_FIXTURES=require so a missing PHP or
-# vendor/ fails instead of skipping (Epic 2 retro R5). It is its own job
+# them with real PHP, and tools/oracle/api-surface.php against
+# php-fixtures/api-surface/ (Story 3.5), with XARAVEL_PHP_FIXTURES=require so
+# a missing PHP or vendor/ fails instead of skipping (Epic 2 retro R5). It is its own job
 # because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
 # until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
@@ -123,4 +124,4 @@ jobs:
       - name: Install the PHP fixtures
         run: bun run php-fixtures:install
       - name: Run the PHP scripts against the fixtures
-        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts
+        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts
