@@ -9,7 +9,7 @@ Date: 2026-10-15. Reviewer: input-reconciliation pass (read-only).
 
 **Target:** `prd.md`, `addendum.md`, `.memlog.md` in this folder.
 
-**Excluded by instruction:** Hono-related findings (Hono was dropped; HTTP is on `Bun.serve` with Laravel's router and middleware ported) and the Jaravel→Xaravel rename. Findings that only need an architecture decision are left out unless architecture or epics would be unsafe without a PRD statement.
+**Excluded by instruction:** Hono-related findings (Hono was dropped; HTTP is on `Bun.serve` with Laravel's router and middleware ported). Findings that only need an architecture decision are left out unless architecture or epics would be unsafe without a PRD statement.
 
 Severity: **H** = an alpha gate, Ratchet or public-API contract is wrong or cannot be met as written. **M** = a requirement or divergence is missing and agents would guess. **L** = a clarification or a minor omission.
 

@@ -3,7 +3,7 @@
 - **Inputs:** `briefs/brief-xaravel-2026-10-15/brief.md`, `addendum.md`, `.memlog.md`
 - **Target:** `prds/prd-xaravel-2026-10-15/prd.md`, `addendum.md`, with the PRD `.memlog.md` decisions taking precedence
 - **Date:** 2026-10-15
-- **Excluded as intentionally superseded:** Hono (dropped; FR-27 forbids third-party HTTP frameworks), `@hono/mcp`, hono/jsx as a second engine (the confirmed decision is Blade-only), the Jaravel name, post-alpha major-mirroring as a firm policy (PRD memlog: "post-alpha release policy decided later" → OQ-2), Auth+Queue moved into the alpha (PRD memlog).
+- **Excluded as intentionally superseded:** Hono (dropped; FR-27 forbids third-party HTTP frameworks), `@hono/mcp`, hono/jsx as a second engine (the confirmed decision is Blade-only), post-alpha major-mirroring as a firm policy (PRD memlog: "post-alpha release policy decided later" → OQ-2), Auth+Queue moved into the alpha (PRD memlog).
 
 Severity: **H** = contradiction or a gap that will mislead unattended agents or break a gate; **M** = meaningful content dropped or weakened; **L** = minor or nice-to-have.
 
