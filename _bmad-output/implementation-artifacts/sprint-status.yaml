@@ -59,7 +59,7 @@ development_status:
 
   epic-3: in-progress
   3-1-oracle-request-format-and-mechanical-extraction: done
-  3-2-batch-fixture-generation-and-ed25519-signing: backlog
+  3-2-batch-fixture-generation-and-ed25519-signing: blocked  # intent gap: ESC-3.2-1 (23 committed Oracle requests give random outputs; how to exempt them)
   3-3-fixture-signature-verification-in-ci: backlog
   3-4-per-story-oracle-requests: backlog
   3-5-api-surface-export: backlog
