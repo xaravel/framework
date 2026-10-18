@@ -14,6 +14,7 @@ import {
   collectResults,
   compareAttempts,
   IMAGE_USER,
+  legEnv,
   LEGS,
   mergeResults,
   networkedRunArgs,
@@ -24,6 +25,8 @@ import {
   planRun,
   renderResults,
   resultsFile,
+  SERVICE_ENV,
+  SERVICE_LEGS,
   SQLITE_VARIANTS,
   VARIANT_ENV,
   variantsFor,
@@ -194,6 +197,16 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(VARIANT_ENV["queue-database@sqlite"]).toEqual({ DB_CONNECTION: "sqlite", QUEUE_CONNECTION: "database" });
   expect(VARIANT_ENV["queue-redis@redis"]).toEqual({ REDIS_CLIENT: "phpredis", REDIS_HOST: "127.0.0.1", REDIS_PORT: "6379", REDIS_CACHE_CONNECTION: "cache", REDIS_CACHE_LOCK_CONNECTION: "cache", QUEUE_CONNECTION: "redis" });
   expect(SQLITE_VARIANTS).toEqual(["queue-database@sqlite", "sqlite"]);
+  // Upstream's linux_tests services env, on the framework none and queue-sync@none legs only (ESC-2.6-2).
+  expect(SERVICE_ENV).toEqual({ DB_PORT: "3306", DB_USERNAME: "root", DYNAMODB_CACHE_TABLE: "laravel_dynamodb_test", DYNAMODB_ENDPOINT: "http://localhost:8888", AWS_ACCESS_KEY_ID: "randomKey", AWS_SECRET_ACCESS_KEY: "randomSecret" });
+  expect(SERVICE_LEGS as readonly { suite: string; variant: string }[]).toEqual([{ suite: "framework", variant: "none" }, { suite: "framework", variant: "queue-sync@none" }]);
+  expect(legEnv("framework", "none")).toEqual(SERVICE_ENV);
+  expect(legEnv("framework", "queue-sync@none")).toEqual({ QUEUE_CONNECTION: "sync", ...SERVICE_ENV });
+  expect(legEnv("framework", "pgsql")).toEqual(VARIANT_ENV["pgsql"]!);
+  expect(legEnv("framework", "sqlite")).toEqual({ DB_CONNECTION: "sqlite" });
+  expect(legEnv("ai", "none")).toEqual({});
+  expect(legEnv("boost", "none")).toEqual({});
+  expect(VARIANT_ENV["none"]).toEqual({});
   expect(LEGS as readonly { suite: string; variant: string }[]).toEqual([...ALPHA_VARIANTS.map((variant) => ({ suite: "framework", variant })), { suite: "ai", variant: "none" }, { suite: "mcp", variant: "none" }, { suite: "boost", variant: "none" }]);
 
   // The plan: a leg covers only the files holding tagged entries; the whole suite when that is every file.
@@ -382,11 +395,26 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
   expect(Object.keys(jobs)).toEqual(["inventory", "leg", "merge"]);
   expect(jobs["leg"]!["needs"]).toBe("inventory");
   expect(jobs["merge"]!["needs"]).toBe("leg");
-  const matrix = (jobs["leg"]!["strategy"] as { matrix: { attempt: number[]; leg: { suite: string; variant: string }[] } }).matrix;
+  const matrix = (jobs["leg"]!["strategy"] as { matrix: { attempt: number[]; leg: { suite: string; variant: string; services?: boolean }[] } }).matrix;
   expect(matrix.attempt).toEqual([1, 2]);
-  expect([...matrix.leg].sort((a, b) => `${a.suite}.${a.variant}`.localeCompare(`${b.suite}.${b.variant}`))).toEqual([...LEGS].sort((a, b) => `${a.suite}.${a.variant}`.localeCompare(`${b.suite}.${b.variant}`)));
-  const services = jobs["leg"]!["services"] as Record<string, { image: string }>;
-  expect(Object.values(services).map((service) => service.image)).toEqual(["postgres:18", "redis:8.10.2"]);
+  const byLeg = (a: { suite: string; variant: string }, b: { suite: string; variant: string }): number => `${a.suite}.${a.variant}`.localeCompare(`${b.suite}.${b.variant}`);
+  expect(matrix.leg.map(({ suite, variant }) => ({ suite, variant })).sort(byLeg)).toEqual([...LEGS].sort(byLeg));
+  // Exactly the service legs set `services: true`; no other leg sets the key.
+  expect(matrix.leg.filter((leg) => "services" in leg).map((leg) => ({ suite: leg.suite, variant: leg.variant, services: leg.services }))).toEqual(SERVICE_LEGS.map((leg) => ({ ...leg, services: true })));
+  const services = jobs["leg"]!["services"] as Record<string, { image: string; ports: string[]; env?: Record<string, unknown>; options?: string }>;
+  expect(Object.keys(services)).toEqual(["postgres", "redis", "memcached", "mysql", "dynamodb"]);
+  expect(Object.values(services).map((service) => service.image)).toEqual([
+    "postgres:18",
+    "redis:8.10.2",
+    "${{ matrix.leg.services && 'memcached:1.6-alpine' || '' }}",
+    "${{ matrix.leg.services && 'mysql:9.7' || '' }}",
+    "${{ matrix.leg.services && 'amazon/dynamodb-local:2.0.0' || '' }}",
+  ]);
+  expect(services["memcached"]!.ports).toEqual(["11211:11211"]);
+  expect(services["mysql"]!.ports).toEqual(["3306:3306"]);
+  expect(services["mysql"]!.env).toEqual({ MYSQL_ALLOW_EMPTY_PASSWORD: "yes", MYSQL_DATABASE: "forge" });
+  expect(services["mysql"]!.options).toContain('--health-cmd="mysqladmin ping"');
+  expect(services["dynamodb"]!.ports).toEqual(["8888:8000"]);
   const text = readFileSync(join(root, ".github", "workflows", "baseline.yml"), "utf8");
   for (const uses of text.matchAll(/uses: (\S+)/g)) {
     expect(uses[1]!).toMatch(/^[\w-]+\/[\w-]+@[0-9a-f]{40}$/);
@@ -413,6 +441,16 @@ test("XT-conformance-56: the baseline workflow runs every leg in the Oracle imag
     const tagged = all.filter((e) => e.backends.includes(variant));
     expect(tagged.length).toBeGreaterThan(0);
     expect(tagged.every((e) => e.oracle[variant] !== undefined)).toBe(true);
+  }
+  // ESC-2.6-2: with Upstream's DynamoDB Local on the none leg, the four DynamoDbStoreTest IDs record Upstream's
+  // own outcome and an assertion floor, not a service-caused skip.
+  const dynamo = ["testItemsCanBeAtomicallyAdded", "testItemsCanBeIncrementedAndDecremented", "testItemsCanBeStoredAndRetrieved", "testLocksCanBeAcquired"].map((method) => `Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::${method}`);
+  for (const id of dynamo) {
+    const entry = all.find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    expect(entry!.oracle["none"]).toBeDefined();
+    expect(entry!.oracle["none"]).not.toBe("skip");
+    expect(Object.keys(entry!.assertions ?? {}).length).toBeGreaterThan(0);
   }
   // Re-rendering the committed files reproduces them byte for byte (what `bun run inventory` carries over).
   for (const [component, text] of renderInventory(carryOver(all, all))) {
