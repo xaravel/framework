@@ -30,6 +30,14 @@
 //   missing manifest:    a `story/<id>` branch has no `stories/<id>.md` on base
 //   out of scope:        a PR file (or a renamed file's previous name) outside
 //                        the Story's allowed paths
+//   planning scope:      a `planning/*` PR file (or a renamed file's previous
+//                        name) under `packages/` or `conformance/expectations/`
+//                        (in any letter case), or with an empty, `.` or `..`
+//                        segment
+//   bot scope:           a `bot/*` PR file (or a renamed file's previous name)
+//                        outside the paths a bot branch may change, matched
+//                        case-sensitively, or with an empty, `.` or `..`
+//                        segment
 //   truncated file list: the API returned fewer files than the PR's
 //                        `changed_files`; the check fails closed
 //
@@ -39,6 +47,22 @@
 // Oracle workflow commits to the Story branch for its requests (Story 3.4,
 // spine "New inputs"): `conformance/fixtures/<c>/<64 hex>.json`. Those are
 // protected by signature, not by path (`bun run oracle:verify-fixtures`).
+//
+// Non-Story branches (AD-16 as amended by MAINT-2026-10-17 item 15):
+//   - `planning/*` may change anything except `packages/**` and
+//     `conformance/expectations/**`, which change only through `story/*`
+//     branches. The forbidden prefixes match in any letter case, as the
+//     protected-paths check matches inclusions.
+//   - `bot/*` may change only `conformance/expectations/**` and
+//     `conformance/escalations/ESC-bot-<n>.md`. This is the path-level half of
+//     AD-16's Expectations-`status`-only rule; the value-level half (only
+//     `status` values change) needs the Expectations format and belongs to
+//     Story 5.8. Unlike the planning rule, this allowlist matches
+//     case-sensitively, and it also rejects any path with an empty, `.` or
+//     `..` segment.
+//   - Any other branch passes.
+// Both rules check a renamed file's previous name and fail closed on a
+// truncated file list.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
@@ -95,6 +119,8 @@ export interface OwnershipPrResult {
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
 const COMPONENT = /^[a-z][a-z0-9-]*$/;
 const STORY_BRANCH = "story/";
+const PLANNING_BRANCH = "planning/";
+const BOT_BRANCH = "bot/";
 
 function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -314,6 +340,11 @@ function compareStoryIds(a: string, b: string): number {
   return aEpic - bEpic || aStory - bStory || compare(a, b);
 }
 
+/** Whether `path` has an empty, `.` or `..` segment. */
+function hasBadSegment(path: string): boolean {
+  return path.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+}
+
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -321,8 +352,7 @@ function escapeRegex(text: string): string {
 /** Whether `path` is one of the paths a Story may edit (AD-16), or a signed fixture of its own Component. */
 export function allowedPath(manifest: Pick<Manifest, "storyId" | "component">, path: string): boolean {
   const { storyId, component } = manifest;
-  const segments = path.split("/");
-  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
+  if (hasBadSegment(path)) {
     return false;
   }
   if (path.startsWith(`packages/${component}/`) || path.startsWith(`conformance/expectations/${component}/`)) {
@@ -338,16 +368,81 @@ export function allowedPath(manifest: Pick<Manifest, "storyId" | "component">, p
   return new RegExp(`^conformance/escalations/ESC-${escapeRegex(storyId)}-[1-9]\\d*\\.md$`).test(path);
 }
 
+/**
+ * Whether a `planning/*` branch may change `path` (AD-16, MAINT-2026-10-17 item
+ * 15): anything but `packages/**` and `conformance/expectations/**`, matched in
+ * any letter case.
+ */
+export function planningAllowedPath(path: string): boolean {
+  if (hasBadSegment(path)) {
+    return false;
+  }
+  const folded = path.toLowerCase();
+  return !folded.startsWith("packages/") && !folded.startsWith("conformance/expectations/");
+}
+
+/**
+ * Whether a `bot/*` branch may change `path` (AD-16): `conformance/expectations/**`
+ * or `conformance/escalations/ESC-bot-<n>.md`. Only the path-level half of the
+ * Expectations-`status`-only rule; Story 5.8 owns the value-level half.
+ */
+export function botAllowedPath(path: string): boolean {
+  if (hasBadSegment(path)) {
+    return false;
+  }
+  return path.startsWith("conformance/expectations/") || /^conformance\/escalations\/ESC-bot-[1-9]\d*\.md$/.test(path);
+}
+
+/** Every PR path (and renamed-from path) `allowed` rejects, sorted. */
+function disallowed(files: readonly PrFile[], allowed: (path: string) => boolean): string[] {
+  const outside = new Set<string>();
+  for (const prFile of files) {
+    // Only a rename removes its previous name; a copy leaves its source untouched.
+    const previous = prFile.status === "renamed" ? (prFile.previous_filename ?? null) : null;
+    for (const candidate of [prFile.filename, previous]) {
+      if (candidate !== null && !allowed(candidate)) {
+        outside.add(candidate);
+      }
+    }
+  }
+  return [...outside].sort(compare);
+}
+
+function truncated(pr: OwnershipPrInput): string[] {
+  return pr.files.length < pr.changedFiles
+    ? [`truncated file list: the API returned ${pr.files.length} of ${pr.changedFiles} changed files; failing closed (AD-16)`]
+    : [];
+}
+
 /** Decides a PR from its head branch and files, given the base checkout at `root`. */
 export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResult {
+  if (pr.headRef.startsWith(PLANNING_BRANCH)) {
+    const outOfScope = disallowed(pr.files, planningAllowedPath);
+    const violations = [
+      ...truncated(pr),
+      ...outOfScope.map(
+        (path) =>
+          `planning scope: ${path} may not change on a planning/* branch; packages/** and conformance/expectations/** change only through story/* branches (AD-16)`,
+      ),
+    ];
+    return { storyId: null, outOfScope, violations };
+  }
+  if (pr.headRef.startsWith(BOT_BRANCH)) {
+    const outOfScope = disallowed(pr.files, botAllowedPath);
+    const violations = [
+      ...truncated(pr),
+      ...outOfScope.map(
+        (path) =>
+          `bot scope: ${path} is outside conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md, the only paths a bot/* branch may change (AD-16)`,
+      ),
+    ];
+    return { storyId: null, outOfScope, violations };
+  }
   if (!pr.headRef.startsWith(STORY_BRANCH)) {
     return { storyId: null, outOfScope: [], violations: [] };
   }
   const storyId = pr.headRef.slice(STORY_BRANCH.length);
-  const violations: string[] = [];
-  if (pr.files.length < pr.changedFiles) {
-    violations.push(`truncated file list: the API returned ${pr.files.length} of ${pr.changedFiles} changed files; failing closed (AD-16)`);
-  }
+  const violations: string[] = truncated(pr);
   if (!STORY_ID.test(storyId)) {
     violations.push(`missing manifest: branch ${pr.headRef} does not name a Story ID <epic>.<story>, so no manifest on base can own it (AD-16)`);
     return { storyId, outOfScope: [], violations };
@@ -364,17 +459,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
     return { storyId, outOfScope: [], violations };
   }
   const manifest = parsed.manifest;
-  const outside = new Set<string>();
-  for (const prFile of pr.files) {
-    // Only a rename removes its previous name; a copy leaves its source untouched.
-    const previous = prFile.status === "renamed" ? (prFile.previous_filename ?? null) : null;
-    for (const candidate of [prFile.filename, previous]) {
-      if (candidate !== null && !allowedPath(manifest, candidate)) {
-        outside.add(candidate);
-      }
-    }
-  }
-  const outOfScope = [...outside].sort(compare);
+  const outOfScope = disallowed(pr.files, (candidate) => allowedPath(manifest, candidate));
   for (const candidate of outOfScope) {
     violations.push(`out of scope: ${candidate} is outside Story ${storyId}'s allowed paths (component ${manifest.component}) (AD-16)`);
   }
@@ -458,9 +543,13 @@ async function pr(options: Options): Promise<number> {
     return 1;
   }
   const summary =
-    result.storyId === null
-      ? `${headRef} is not a Story branch`
-      : `every file is within Story ${result.storyId}'s allowed paths`;
+    result.storyId !== null
+      ? `every file is within Story ${result.storyId}'s allowed paths`
+      : headRef.startsWith(PLANNING_BRANCH)
+        ? `${headRef} passed the planning rule; no file is under packages/ or conformance/expectations/`
+        : headRef.startsWith(BOT_BRANCH)
+          ? `${headRef} passed the bot path rule (path-level only; Story 5.8 adds the status-only check); every file is under conformance/expectations/ or a conformance/escalations/ESC-bot-<n>.md`
+          : `${headRef} is not a Story branch`;
   process.stdout.write(`Ownership OK: PR #${options.pr}: ${summary}.\n`);
   return 0;
 }
