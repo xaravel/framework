@@ -44,7 +44,7 @@ Before each provider call, the lister seeds PHP's Mersenne Twister (which Faker 
 
 `assertions` and `oracle` come only from the baseline run's `merge` ([baseline.md](baseline.md)). `assertions` is `null` exactly when `oracle` is `{}`. For a pair listed in `conformance/inventory/oracle-nondeterminism.jsonl` (known Upstream non-determinism, `decisions/ESC-2.6-1.md`), `assertions` holds that file's pinned `record`. That file is not a Component's file, and generation never reads, writes or deletes it.
 
-**Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. An existing file that does not parse carries nothing over. After a Pin move, the carried-over values are the old Pin's until the baseline's `inventory` artifact is committed. The guard is `baseline.yml`'s `merge` job, which fails when the committed Inventory differs from its output; it is not yet a required check (Epic 1 item 2).
+**Preservation.** `bun run inventory` carries `assertions` and `oracle` over from the existing files for each entry whose `id`, `hash` and `backends` are all unchanged, byte for byte. Any other entry, new or changed, gets `"assertions":null,"oracle":{}` until the next baseline run. Carry-over fails closed: if a committed file of a selected suite does not parse (a merge-conflict marker, a hand edit), `generate` and `--check` exit 1 with `Inventory generate failed: carry-over needs a valid committed Inventory: conformance/inventory/<file>[:<line>]: <reason>` before writing or deleting anything. Fix that line (for example, resolve the conflict), or, if you mean to drop that file's baseline data, delete the file deliberately and regenerate. An absent file carries nothing over. Other suites' files and `oracle-nondeterminism.jsonl` are not read. After a Pin move, the carried-over values are the old Pin's until the baseline's `inventory` artifact is committed. The guard is `baseline.yml`'s `merge` job, which fails when the committed Inventory differs from its output; it is not yet a required check (Epic 1 item 2).
 
 Keys are always in this order. Each file covers one Component, and its lines are sorted by `id`, compared by UTF-16 code units. Files are UTF-8, with LF line endings and a trailing newline. The lines are written with `JSON.stringify`, because they are tool data, not framework values. When a framework Component no longer has tests, its file is deleted.
 
@@ -128,6 +128,7 @@ The command exits 0 on success and prints the count of each Component, plus any 
 | `--local <dir> is not a copy of the snapshot: …` | A test or source file in `<dir>` differs from the snapshot, or is missing or extra. Re-copy it from `conformance/upstream/<suite>`. |
 | `<id>: source <suite>/… is not in conformance/upstream/<suite>/tests/` | A method or test closure is declared outside the snapshot's `tests/`. |
 | `duplicate test id: <id>` | PHPUnit listed an id twice. |
+| `carry-over needs a valid committed Inventory: conformance/inventory/<file>[:<line>]: <reason>` | A committed file of a selected suite does not parse, for example a merge-conflict marker or a hand edit. Fix the line, or delete the file deliberately to drop its baseline data, then regenerate. `--check` stops with the same message. |
 
 ## Regenerating
 
@@ -157,7 +158,7 @@ It takes `generate`'s suite and mode flags, builds every selected suite's files 
 | `inventory drift: <file> is missing` | A Component has tests but no file. Regenerate. |
 | `inventory drift: <file> is not generated` | A framework Component file that generation would delete. Regenerate, which deletes it. |
 
-Because carry-over keeps `assertions` and `oracle` for unchanged entries, `--check` checks the generator's output, not the baseline fields; `baseline.yml`'s `merge` checks those.
+Because carry-over keeps `assertions` and `oracle` for unchanged entries, `--check` checks the generator's output, not the baseline fields; `baseline.yml`'s `merge` checks those. A committed file that does not parse stops `--check` with the carry-over error ([The record](#the-record-framework)), not a drift report.
 
 ### The runner-listing cross-check
 

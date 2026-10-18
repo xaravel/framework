@@ -186,19 +186,23 @@ test("XT-conformance-59: bun run inventory --check regenerates the Inventory in 
     const drift = await run(INVENTORY_CLI, check);
     expect([drift.code, drift.stdout, drift.stderr]).toEqual([1, "", `inventory drift: ${INVENTORY_DIR}/bus.jsonl differs from the regenerated Inventory (first difference at line 1)\nInventory check failed: 1 file(s) differ.\n`]);
     expect(fx.inventory()).toEqual({ ...committed, "bus.jsonl": edited });
-    // The first differing line is reported, not always line 1.
-    writeFileSync(join(inv, "bus.jsonl"), `${committed["bus.jsonl"]!}extra\n`);
+    // The first differing line is reported, not always line 1. The appended line is a valid entry: a committed
+    // file that does not parse stops carry-over before any comparison (R6).
+    const busEntry = JSON.parse(committed["bus.jsonl"]!.trimEnd().split("\n").at(-1)!) as { id: string };
+    writeFileSync(join(inv, "bus.jsonl"), `${committed["bus.jsonl"]!}${JSON.stringify({ ...busEntry, id: `${busEntry.id}Extra` })}\n`);
     const appended = await run(INVENTORY_CLI, check);
     expect(appended.stderr).toBe(`inventory drift: ${INVENTORY_DIR}/bus.jsonl differs from the regenerated Inventory (first difference at line 2)\nInventory check failed: 1 file(s) differ.\n`);
     writeFileSync(join(inv, "bus.jsonl"), committed["bus.jsonl"]!);
 
-    // A missing file and a stray framework file: both named, nothing written or deleted.
+    // A missing file and a stray framework file (a valid one, since carry-over reads it): both named, nothing
+    // written or deleted.
+    const ghost = '{"id":"Illuminate\\\\Tests\\\\Ghost\\\\GhostTest::testX","component":"ghost","kind":"unit","backends":["none"],"source":"framework/tests/Ghost/GhostTest.php:1-2","hash":"' + "0".repeat(64) + '","assertions":null,"oracle":{}}\n';
     rmSync(join(inv, "support.jsonl"));
-    writeFileSync(join(inv, "ghost.jsonl"), "ghost\n");
+    writeFileSync(join(inv, "ghost.jsonl"), ghost);
     const missing = await run(INVENTORY_CLI, check);
     expect([missing.code, missing.stderr]).toEqual([1, `inventory drift: ${INVENTORY_DIR}/support.jsonl is missing\ninventory drift: ${INVENTORY_DIR}/ghost.jsonl is not generated\nInventory check failed: 2 file(s) differ.\n`]);
     const { "support.jsonl": _support, ...rest } = committed;
-    expect(fx.inventory()).toEqual({ ...rest, "ghost.jsonl": "ghost\n" });
+    expect(fx.inventory()).toEqual({ ...rest, "ghost.jsonl": ghost });
 
     // generate without --check is unchanged: it restores support.jsonl (carry-over from nothing) and deletes the stray.
     const plain = generate(fx.dir, { local: fx.local("framework"), php: fx.php });
