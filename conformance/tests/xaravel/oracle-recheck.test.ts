@@ -16,7 +16,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFile
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { PHP_VERSION, type ImageRunner } from "../../../tools/inventory/inventory";
-import { EVALUATE_SCRIPT, FIXTURES_DIR, NONDETERMINISM_FILE, outputDigest, renderNondeterminism } from "../../../tools/oracle/fixtures";
+import { CLOCK_FILE, EVALUATE_SCRIPT, FIXTURES_DIR, NONDETERMINISM_FILE, outputDigest, renderNondeterminism } from "../../../tools/oracle/fixtures";
 import { main, recheck, recheckItems } from "../../../tools/oracle/recheck";
 import { makeRequest, renderRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
@@ -81,6 +81,7 @@ function fixtureRoot(output: (request: OracleRequest) => Json = outputFor): stri
   mkdirSync(join(dir, "tools", "oracle"), { recursive: true });
   copyFileSync(join(root, SCHEMA_FILE), join(dir, SCHEMA_FILE));
   copyFileSync(join(root, EVALUATE_SCRIPT), join(dir, EVALUATE_SCRIPT));
+  copyFileSync(join(root, CLOCK_FILE), join(dir, CLOCK_FILE));
   for (const [component, text] of renderRequests([
     { component: "support", request: UPPER },
     { component: "support", request: UUID },
@@ -121,7 +122,7 @@ function standIn(answer: (request: OracleRequest) => Json = outputFor): Stand {
     const out: string[] = [];
     const seen: string[] = [];
     const modes = [statSync(requestsMount.host).mode & 0o777];
-    for (const file of command.slice(4)) {
+    for (const file of command.slice(5)) {
       const host = join(requestsMount.host, file.slice("/xaravel/requests/".length));
       modes.push(statSync(host).mode & 0o777);
       for (const line of readFileSync(host, "utf8").split("\n").filter((entry) => entry !== "")) {
@@ -203,7 +204,7 @@ xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed reque
   expect(ok).toEqual({ code: 0, stdout: "Oracle recheck: 4 fixtures compared, 0 differ, 1 requests without a fixture\n", stderr: "" });
   expect(fresh.calls).toHaveLength(1);
   expect(fresh.calls[0]!.image).toBe(IMAGE);
-  expect(fresh.calls[0]!.command.slice(0, 4)).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION]);
+  expect(fresh.calls[0]!.command.slice(0, 5)).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, readFileSync(join(root, CLOCK_FILE), "utf8").trimEnd()]);
   expect([...fresh.calls[0]!.requests].sort()).toEqual([LOWER.id, UPPER.id, XT.id].sort());
   expect(fresh.calls[0]!.modes).toEqual([0o755, 0o644]);
   expect(fresh.calls[0]!.requests).not.toContain(UUID.id);

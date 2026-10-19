@@ -17,7 +17,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFile
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { PHP_VERSION, type ImageRunner } from "../../../tools/inventory/inventory";
-import { COMPONENT_NAME, EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, renderFixture, renderNondeterminism, signFixture, verifyFixture } from "../../../tools/oracle/fixtures";
+import { CLOCK_FILE, COMPONENT_NAME, EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, NONDETERMINISM_FILE, PUBLIC_KEY_FILE, renderFixture, renderNondeterminism, signFixture, verifyFixture } from "../../../tools/oracle/fixtures";
 import { makeRequest, renderRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
 import { main, renderReport } from "../../../tools/oracle/story";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
@@ -31,6 +31,8 @@ const REQUIRE = process.env["XARAVEL_PHP_FIXTURES"] === "require";
 const PHP = Bun.which("php");
 const LOCAL_INSTALL = "/tmp/xaravel-inv/framework";
 const TIMEOUT = 120_000;
+/** The committed recorded instant (decisions/ESC-5.7-1.md); fixture roots copy it. */
+const NOW = readFileSync(join(root, CLOCK_FILE), "utf8").trimEnd();
 
 // ---------------------------------------------------------------------------
 // Fixture roots
@@ -71,7 +73,7 @@ function keyPair(): { pub: KeyObject; priv: KeyObject; pem: string } {
 
 const lines = (...requests: OracleRequest[]): string => requests.map((request) => `${renderRequest(request)}\n`).join("");
 
-/** A root with the schema, the batch requests, a listing naming UUID, evaluate.php, a test oracle.pub, Story 9.1's manifest and (optionally) its request file. */
+/** A root with the schema, the batch requests, a listing naming UUID, evaluate.php, the clock, a test oracle.pub, Story 9.1's manifest and (optionally) its request file. */
 function fixtureRoot(requests: string | null = lines(LOWER, XT)): Root {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-story-"));
   mkdirSync(join(dir, REQUESTS_DIR), { recursive: true });
@@ -79,6 +81,7 @@ function fixtureRoot(requests: string | null = lines(LOWER, XT)): Root {
   mkdirSync(join(dir, "stories"), { recursive: true });
   copyFileSync(join(root, SCHEMA_FILE), join(dir, SCHEMA_FILE));
   copyFileSync(join(root, EVALUATE_SCRIPT), join(dir, EVALUATE_SCRIPT));
+  copyFileSync(join(root, CLOCK_FILE), join(dir, CLOCK_FILE));
   for (const [component, text] of renderRequests(BATCH)) {
     writeFileSync(join(dir, REQUESTS_DIR, `${component}.jsonl`), text);
   }
@@ -124,7 +127,7 @@ function standIn(differ: (sha256: string, pass: number) => boolean = () => false
     const seen: string[] = [];
     // The modes of the request directory and each request file at call time (the image user must read them).
     const modes = [statSync(requestsMount.host).mode];
-    for (const file of command.slice(4)) {
+    for (const file of command.slice(5)) {
       const host = join(requestsMount.host, file.slice("/xaravel/requests/".length));
       modes.push(statSync(host).mode);
       const text = readFileSync(host, "utf8");
@@ -233,7 +236,7 @@ xaravelTest(
     expect(call.image).toBe("xaravel-oracle:test");
     expect(call.mounts.map((mount) => mount.container)).toEqual(["/xaravel/evaluate.php", "/xaravel/requests"]);
     expect(call.mounts[0]!.host).toBe(join(fx.dir, EVALUATE_SCRIPT));
-    expect(call.command).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, "/xaravel/requests/9.1.jsonl"]);
+    expect(call.command).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, NOW, "/xaravel/requests/9.1.jsonl"]);
     expect(call.requests).toEqual([renderRequest(LOWER), renderRequest(XT)]);
     // The image user (uid 1001, not the host user) can read the mounted directory and its file.
     expect([call.modes.length, call.modes[0]! & 0o005, call.modes[1]! & 0o004]).toEqual([2, 0o005, 0o004]);
@@ -400,7 +403,7 @@ phpTest("XT-conformance-233", "evaluate.php runs an Xaravel Test ID request boun
     const file = join(dir, "9.1.jsonl");
     writeFileSync(file, lines(php, blade));
     const once = (): string => {
-      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, file], { stdout: "pipe", stderr: "pipe" });
+      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, NOW, file], { stdout: "pipe", stderr: "pipe" });
       expect([proc.exitCode, proc.exitCode === 0 ? "" : proc.stderr.toString()]).toEqual([0, ""]);
       return proc.stdout.toString();
     };

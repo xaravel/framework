@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 13:30
+last_updated: 10-19-2026 13:57
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1039,7 +1039,7 @@ action_items:
       in conformance/oracle/ (input.now still overrides), and regenerate the 4 DatabaseQueryBuilderTest::testWhereBetweens
       fixtures (ruling ESC-5.7-1)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/ESC-5.7-1.md"
   - id: "epic-5-retro-item-14-variant-membership"
     epic: 5

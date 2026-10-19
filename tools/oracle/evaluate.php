@@ -2,7 +2,11 @@
 
 // The Oracle evaluator (Story 3.2; FR-6, AD-15).
 //
-//   php evaluate.php <framework-dir> <php-version> <requests-file>...
+//   php evaluate.php <framework-dir> <php-version> <now> <requests-file>...
+//
+// <now> is the Oracle's recorded instant, `YYYY-MM-DDTHH:MM:SSZ`
+// (conformance/oracle/clock, read by fixtures.ts's `evaluateOnce`;
+// decisions/ESC-5.7-1.md).
 //
 // tools/oracle/fixtures.ts (`bun run oracle:fixtures`) runs it twice, in the
 // Oracle image or against a locked local install, compares the two passes and
@@ -10,7 +14,8 @@
 //
 // Runs inside the Oracle image (or against a locked local install). It:
 //
-//   1. refuses any PHP other than <php-version>;
+//   1. refuses any PHP other than <php-version>, and a <now> that is not an
+//      instant `YYYY-MM-DDTHH:MM:SSZ`;
 //   2. applies phpunit.xml.dist's <php> <ini>, <env> and <const> entries,
 //      changes to <framework-dir> and loads its autoloader, as lister.php does;
 //   3. reads each <requests-file> in turn, one Oracle request per line
@@ -29,9 +34,15 @@
 //
 //      {"sha256":<request hash>,"output":{"error":null|{"stage","class","message"},"results":[…]}}
 //
-// Each kind runs as docs/ops/oracle.md "Evaluation contract per kind" says:
-// the Test ID's class is instantiated, setUpBeforeClass() and setUp() run, then
-// a closure bound to the instance assigns the bindings and runs `setup` and
+// Each kind runs as docs/ops/oracle.md "Evaluation contract per kind" says.
+// First the child freezes the clock: Carbon's and CarbonImmutable's test-now
+// are set to <now>, shown in the evaluation's default timezone (date-format's
+// `timezone` when it has one), so a request that reads Carbon's now or today
+// records the same value on every day (ESC-5.7-1). The test's own
+// setUpBeforeClass(), setUp() and `setup`, and an Xaravel date-format
+// request's `now`, run after the freeze and so still override it. Then the
+// Test ID's class is instantiated, setUpBeforeClass() and setUp() run, then a
+// closure bound to the instance assigns the bindings and runs `setup` and
 // `exprs` with eval(), in the Test ID's namespace (so unqualified function
 // names resolve as in the test file), then tearDown() and
 // tearDownAfterClass(). `blade-render` renders Blade::render($template, $data)
@@ -83,11 +94,24 @@ function fail(string $message): never
     exit(1);
 }
 
-if ($argc < 4) {
-    fail('usage: php evaluate.php <framework-dir> <php-version> <requests-file>...');
+if ($argc < 5) {
+    fail('usage: php evaluate.php <framework-dir> <php-version> <now> <requests-file>...');
 }
 if (PHP_VERSION !== $argv[2]) {
     fail('needs PHP '.$argv[2].', this is '.PHP_VERSION);
+}
+/** True when `$now` is a real instant written `YYYY-MM-DDTHH:MM:SSZ` (a round trip rejects 2026-13-40). */
+function isInstant(string $now): bool
+{
+    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/D', $now) !== 1) {
+        return false;
+    }
+    $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i:s\\Z', $now, new DateTimeZone('UTC'));
+
+    return $parsed !== false && $parsed->format('Y-m-d\\TH:i:s\\Z') === $now;
+}
+if (! isInstant($argv[3])) {
+    fail("<now> {$argv[3]} is not an instant YYYY-MM-DDTHH:MM:SSZ");
 }
 foreach (['pcntl_fork', 'pcntl_waitpid', 'posix_kill', 'stream_socket_pair'] as $function) {
     if (! function_exists($function)) {
@@ -124,7 +148,8 @@ $root = realpath($rootAsGiven);
 if ($root === false || ! is_file($root.'/phpunit.xml.dist') || ! is_file($root.'/vendor/autoload.php')) {
     fail("{$argv[1]} is not an installed framework directory");
 }
-$requestFiles = array_slice($argv, 3);
+$now = $argv[3];
+$requestFiles = array_slice($argv, 4);
 $requestTexts = [];
 foreach ($requestFiles as $requestFile) {
     $text = file_get_contents($requestFile);
@@ -181,6 +206,8 @@ PHPUnit\TextUI\Configuration\Registry::init(
 );
 
 const TIMEOUT_SECONDS = 60;
+/** Placeholder objects freezeClock() allocates below the frozen clock (see there). */
+const CLOCK_RESERVE = 1 << 17;
 
 final class Encoder
 {
@@ -385,6 +412,35 @@ function evalBody(string $namespace, array $bindings, array $prelude, array $set
     };
 }
 
+/**
+ * Freezes Carbon's clock to the recorded instant `$now`, shown in the current default timezone as a real
+ * `Carbon::now()` is (ESC-5.7-1). In Carbon 3 both calls write one shared factory, so the second one sticks; the
+ * first keeps CarbonImmutable frozen on any Carbon version. It runs before withTestCase(), so the test's own
+ * setUpBeforeClass(), setUp() and `setup` still override it.
+ *
+ * The frozen instant and Carbon's factory stay alive, so they hold object handles. Allocated plainly, they would
+ * shift every later spl_object_id() by their count, and with it recorded values that embed one (Carbon's
+ * constructedObjectId, `Object #<n>` in PHPUnit and Mockery messages) even in requests that never read the clock.
+ * So they are allocated above CLOCK_RESERVE placeholder objects, which are then freed newest first: PHP reuses
+ * freed handles last-in first-out, so a request that does not use Carbon is handed exactly the handles it would
+ * have had without the freeze (for its first CLOCK_RESERVE live objects). A request that uses Carbon at all finds
+ * the factory the freeze already built, so its later handles still shift. Only Carbon's clock is frozen: time(),
+ * date() and `new DateTime('now')` still read the real clock.
+ */
+function freezeClock(string $now): void
+{
+    $reserve = [];
+    for ($i = 0; $i < CLOCK_RESERVE; $i++) {
+        $reserve[] = new stdClass;
+    }
+    $zone = date_default_timezone_get();
+    \Carbon\CarbonImmutable::setTestNow(\Carbon\CarbonImmutable::parse($now)->setTimezone($zone));
+    \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse($now)->setTimezone($zone));
+    while ($reserve !== []) {
+        array_pop($reserve);
+    }
+}
+
 /** PHP source of a JSON value, as a literal. */
 function phpLiteral(mixed $value): string
 {
@@ -392,7 +448,7 @@ function phpLiteral(mixed $value): string
 }
 
 /** @return array{error: mixed, results: list<mixed>} */
-function evaluate(array $request, Encoder $encoder): array
+function evaluate(array $request, string $now, Encoder $encoder): array
 {
     $kind = $request['kind'];
     $input = $request['input'];
@@ -405,6 +461,7 @@ function evaluate(array $request, Encoder $encoder): array
             }
             $template = $input['template'];
             $data = $input['data'];
+            freezeClock($now);
             $results = withTestCase($class, $method, function () use ($template, $data, $encoder): array {
                 try {
                     return [['value' => $encoder->encode(Illuminate\Support\Facades\Blade::render($template, $data))]];
@@ -430,7 +487,8 @@ function evaluate(array $request, Encoder $encoder): array
             case 'date-format':
                 date_default_timezone_set($input['timezone']);
                 // An Upstream class's setUp() applies `now` itself; an Xaravel Test ID has no setUp() that does, so
-                // the frozen clock is applied here (Epic 3 retro R6).
+                // its `now` is applied here, in the prelude, after freezeClock() (Epic 3 retro R6). Either way it
+                // overrides the recorded instant.
                 if ($class === BareTestCase::class && $input['now'] !== null) {
                     $prelude = ['\\Illuminate\\Support\\Carbon::setTestNow('.$input['now'].');'];
                 }
@@ -449,9 +507,11 @@ function evaluate(array $request, Encoder $encoder): array
                 throw new RuntimeException("unknown kind {$kind}");
         }
         try {
+            freezeClock($now);
             $results = withTestCase($class, $method, evalBody($namespace, $bindings, $prelude, $setup, $exprs, $encoder));
         } finally {
-            // An Xaravel Test date-format request's frozen clock never outlives its request.
+            // Clears the request's test-now (the recorded instant included) after an Xaravel Test date-format
+            // request; the child exits right after anyway.
             if ($kind === 'date-format' && $class === BareTestCase::class) {
                 \Illuminate\Support\Carbon::setTestNow();
             }
@@ -488,7 +548,7 @@ function discardOutput(string $buffer): string
 }
 
 /** Runs one request in a forked child and returns its output line's `output`. */
-function runChild(array $request, Encoder $encoder): array
+function runChild(array $request, string $now, Encoder $encoder): array
 {
     $pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
     if ($pair === false) {
@@ -516,7 +576,7 @@ function runChild(array $request, Encoder $encoder): array
             }
             posix_kill(posix_getpid(), SIGKILL);
         });
-        $output = evaluate($request, $encoder);
+        $output = evaluate($request, $now, $encoder);
         $json = json_encode($output, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
         fwrite($channel, $json);
         fflush($channel);
@@ -590,7 +650,7 @@ foreach ($requestTexts as $requestFile => $requestsText) {
         if (! is_array($request) || ! isset($request['id'], $request['kind'], $request['input'], $request['sha256'])) {
             fail("{$requestFile}:".($number + 1).': not an Oracle request');
         }
-        $output = runChild($request, $encoder);
+        $output = runChild($request, $now, $encoder);
         fwrite($out, json_encode(['sha256' => $request['sha256'], 'output' => $output], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR)."\n");
     }
 }
