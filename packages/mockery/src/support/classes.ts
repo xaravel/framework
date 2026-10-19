@@ -8,7 +8,11 @@
 //     ESC-4.6-1 item 9: when `globalThis[Symbol.for('xaravel.class.lookup')]`
 //     is a function, `lookup(fqcn)` returns the registered class or null
 //     (Story 9.4's class registry is to install it). `Container.mock` reads it
-//     for class-name strings and `Foo[m]` partials.
+//     for class-name strings and `Foo[m]` partials;
+//   - an interface name, for the Double port's safe defaults and class-name
+//     targets (Story 4.8, ESC-4.8-1 item 1), only through the same lookup:
+//     for an interface it returns the contract token, the symbol
+//     `Symbol.for(fqcn)` or an AD-1 token object (one with `Symbol.hasInstance`).
 //
 // The grader's own exception names compare as PHP's do: case-insensitively, a
 // leading `\` ignored. The lookup receives the name as written, minus a
@@ -74,4 +78,17 @@ export function lookupClass(name: string): AnyClass | null {
   }
   const found: unknown = (lookup as (name: string) => unknown)(name.replace(/^\\/, ""));
   return typeof found === "function" && typeof (found as { prototype?: unknown }).prototype === "object" ? (found as AnyClass) : null;
+}
+
+/** The contract token registered for `name` through the class-lookup protocol (a symbol or an AD-1 token object), or null. */
+export function lookupContract(name: string): symbol | object | null {
+  const lookup: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
+  if (typeof lookup !== "function") {
+    return null;
+  }
+  const found: unknown = (lookup as (name: string) => unknown)(name.replace(/^\\/, ""));
+  if (typeof found === "symbol") {
+    return found;
+  }
+  return typeof found === "object" && found !== null && typeof (found as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function" ? found : null;
 }

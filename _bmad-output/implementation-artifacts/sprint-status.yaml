@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-18-2026 19:38
+last_updated: 10-18-2026 22:00
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -67,7 +67,7 @@ development_status:
   3-7-upstream-scans-closure-identifiers-div-12-pairs-and-test-api: done
   epic-3-retrospective: done
 
-  epic-4: in-progress  # Stories 4.7 and 4.8 added by the Maintainer's Epic 4 contract rulings
+  epic-4: done  # Stories 4.7 and 4.8 added by the Maintainer's Epic 4 contract rulings
   4-1-php-comparison-core: done
   4-2-portedtest-and-xaraveltest-declarations-with-assertion-count: done
   4-3-core-phpunit-assertions: done
@@ -75,7 +75,7 @@ development_status:
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
   4-6-mockery-advanced-and-api-coverage: done
   4-7-phpunit-test-doubles: done  # ESC-4.4-2 item 6 (decisions/ESC-4.4-2.md)
-  4-8-jasonmccreary-double-port: backlog  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md)
+  4-8-jasonmccreary-double-port: done  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md); AC 1 conditional on ESC-4.8-1
   epic-4-retrospective: done
 
   epic-5: backlog

@@ -3,35 +3,42 @@
 // `capture`, and `formatArgs`/`formatObjects`.
 //
 // Test finish (ESC-4.5-1 item 1). `getContainer()` returns the container of
-// the current run (an AsyncLocalStorage store), else a process-level one.
-// `globalThis[Symbol.for('xaravel.mockery.run')](fn)` runs `fn` with the run's
-// own container. A run adopts the process-level container, if one exists (a
-// mock made at file load or in a bare `bun:test` hook), as its container and
-// empties the process slot, so the next test to finish verifies it, as
-// PHPUnit's tearDown closes Mockery's one global container; otherwise the run
-// starts with none. A process-level container with no run after it (made
-// after the last run, or in a file with no later test) is never closed, as
-// PHPUnit's global container is closed only by a test's tearDown. When `fn`
-// rejects, the run's container (adopted or not) is closed without verifying
-// and the error is rethrown; when it resolves, `Mockery.close()` runs.
+// the current run (an AsyncLocalStorage slot, support/slots.ts), else a
+// process-level one. `globalThis[Symbol.for('xaravel.mockery.run')](fn)` runs
+// `fn` with the run's own slot. A run adopts the process-level slot's
+// container and Double auto-verify state, if any (a mock made at file load or
+// in a bare `bun:test` hook), and empties the process slot, so the next test
+// to finish verifies them, as PHPUnit's tearDown closes Mockery's one global
+// container; otherwise the run starts with none. A process-level container
+// with no run after it (made after the last run, or in a file with no later
+// test) is never closed, as PHPUnit's global container is closed only by a
+// test's tearDown. When `fn` rejects, the run's container (adopted or not) is
+// closed without verifying; when it resolves, `Mockery.close()` runs.
 // `close()` called outside a run closes the process slot as before.
 //
-// Loading installs both globals non-writable and non-configurable. If either
+// The Double port (Story 4.8, ESC-4.8-1 item 2). When `Double.enableAutoVerify()`
+// (VerifiesDoubles' `#[Before]`) was called in the run and is still on, the
+// run then performs VerifiesDoubles' `#[After]`: `Double.verifyAll(false)` when
+// `fn` resolved and Mockery closed cleanly, else `Double.verifyAll(true)`
+// (ambiguities only). The first error wins and is rethrown.
+//
+// Loading installs the `run` global non-writable and non-configurable. If the
 // symbol already holds a property that is not this evaluation's own value, the
-// load throws `LogicException` naming it and installs neither (Epic 4 retro
+// load throws `LogicException` naming it and installs nothing (Epic 4 retro
 // R4): a foreign `run` would otherwise turn off every verification silently.
 // The own-value check is per evaluation, so a second copy of the module throws
 // too: two copies keep separate containers, and the run protocol could not
-// verify the second copy's mocks.
+// verify the second copy's mocks. (The `xaravel.mockery.mock` hook that
+// `createMock` once delegated to is gone, ESC-4.7-1 item 4.)
 //
 // `close()` records one `mockeryExpectation` assertion per
 // call-count-constrained expectation (`mockery_getExpectationCount()`, which
 // PHPUnit adds to its assertion count), detaches the container, then verifies
 // it (`mockery_teardown`). `portedTest` and `xaravelTest` call the protocol.
 //
-// Mutable state lives in module variables and the store, never in statics.
+// Mutable state lives in module variables and the slots, never in statics.
 import { recordAssertion } from "@xaravel/assert";
-import { AsyncLocalStorage } from "node:async_hooks";
+import { Double } from "./JMac/Testing/Double";
 import { Container } from "./Mockery/Container";
 import type { MockObject } from "./Mockery/LegacyMockInterface";
 import { Any } from "./Mockery/Matcher/Any";
@@ -39,20 +46,11 @@ import { Closure } from "./Mockery/Matcher/Closure";
 import { MatcherAbstract } from "./Mockery/Matcher/MatcherAbstract";
 import { Type } from "./Mockery/Matcher/Type";
 import { LogicException } from "./php/LogicException";
+import { type ContainerSlot, currentSlot, processSlot, storage } from "./support/slots";
 import { type Formattable, FQCN, formatArgument, isPhpObject, objectToArray, getClass, varExport } from "./support/values";
 
-interface ContainerSlot {
-  container: Container | null;
-}
-
-const storage = new AsyncLocalStorage<ContainerSlot>();
-const processSlot: ContainerSlot = { container: null };
 /** `formatObjects`' `static $formatting` recursion guard. */
 let formatting = false;
-
-function currentSlot(): ContainerSlot {
-  return storage.getStore() ?? processSlot;
-}
 
 function isMatcher(value: unknown): value is Formattable {
   return value instanceof MatcherAbstract;
@@ -176,33 +174,52 @@ export class Mockery {
 }
 
 /**
- * The run protocol: `fn` with the run's container, closed (and verified) when `fn` resolves. The run adopts the
- * process-level container, if any, and empties the process slot (PHPUnit closes Mockery's one global container
- * at the next test's tearDown).
+ * The run protocol: `fn` with the run's slot, the container closed (and verified) when `fn` resolves, then
+ * VerifiesDoubles' `#[After]` when auto-verify was enabled in the run. The run adopts the process-level slot's
+ * container and auto-verify state, if any, and empties the process slot (PHPUnit closes Mockery's one global
+ * container at the next test's tearDown).
  */
 async function run<T>(fn: () => T | Promise<T>): Promise<T> {
-  const slot: ContainerSlot = { container: processSlot.container };
+  const slot: ContainerSlot = { container: processSlot.container, double: processSlot.double };
   processSlot.container = null;
-  let result: T;
+  processSlot.double = { enabled: false, pending: [] };
+  let result: T | null = null;
+  let failure: { value: unknown } | null = null;
   try {
     result = await storage.run(slot, fn);
   } catch (error) {
+    failure = { value: error };
     const container = slot.container;
     slot.container = null;
     container?.mockery_close();
-    throw error;
   }
-  storage.run(slot, () => {
-    Mockery.close();
-  });
-  return result;
+  if (failure === null) {
+    try {
+      storage.run(slot, () => {
+        Mockery.close();
+      });
+    } catch (error) {
+      failure = { value: error };
+    }
+  }
+  if (slot.double.enabled) {
+    const testFailed = failure !== null;
+    try {
+      storage.run(slot, () => Double.verifyAll(testFailed));
+    } catch (error) {
+      failure ??= { value: error };
+    }
+  }
+  if (failure !== null) {
+    throw failure.value;
+  }
+  return result as T;
 }
 
-const mockGlobal = Object.freeze((...args: unknown[]): MockObject => (Mockery.mock as (...args: unknown[]) => MockObject)(...args));
 const runGlobal = Object.freeze(run);
 
-// Checks both slots before defining either, so a conflict on one never leaves
-// the other half-installed. A slot holding this evaluation's own value is left
+// Checks every slot before defining any, so a conflict on one never leaves
+// another half-installed. A slot holding this evaluation's own value is left
 // as is; any other property there, whatever its value, throws (R4), including
 // one a second copy of this module installed.
 function installAll(globals: ReadonlyArray<readonly [string, unknown]>): void {
@@ -221,7 +238,4 @@ function installAll(globals: ReadonlyArray<readonly [string, unknown]>): void {
   }
 }
 
-installAll([
-  ["xaravel.mockery.mock", mockGlobal],
-  ["xaravel.mockery.run", runGlobal],
-]);
+installAll([["xaravel.mockery.run", runGlobal]]);

@@ -270,3 +270,35 @@ export function objectToArray(object: object, nesting = 3): unknown {
 export function varExport(value: unknown): string {
   return phpVarExport(value);
 }
+
+/** PHP's `get_debug_type`: the type name of a scalar, `array`, `null`, or an object's class name (a function is a `Closure`). */
+export function getDebugType(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  switch (typeof value) {
+    case "undefined":
+      // AD-9: never disguised as null.
+      return "undefined";
+    case "boolean":
+      return "bool";
+    case "bigint":
+      return "int";
+    case "number":
+      return Number.isSafeInteger(value) ? "int" : "float";
+    case "string":
+      return "string";
+    case "symbol":
+      return "symbol";
+    default:
+      break;
+  }
+  if (isPhpArray(value)) {
+    return "array";
+  }
+  if (isResource(value)) {
+    const type: unknown = (value as Record<symbol, unknown>)[Symbol.for("xaravel.php.resource")];
+    return `resource (${typeof type === "string" ? type : "Unknown"})`;
+  }
+  return getClass(value as object);
+}
