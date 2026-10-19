@@ -2754,6 +2754,10 @@ So that each adapted assertion cites a rule, not a judgement (FR-8, PRD §5.2).
 **When** the marker check runs
 **Then** it fails if clause `<n>.<k>` doesn't exist.
 
+**Given** a clause whose adaptations may record fewer assertions than the Inventory
+**When** its record is read
+**Then** `decisions/DIV-<n>.md` lists `<k>` in a `fewer_assertions: [<k>, ...]` frontmatter list, and no other clause waives the harness's assertion floor (ESC-5.3-2).
+
 ### Story 8.2: `PORTING.md`
 
 As a Framework Agent,
@@ -3196,6 +3200,10 @@ So that equality, exception and instanceof assertions match PHP once those value
 **Given** Story 5.4's signature lookup and a PHPUnit test double whose target has a surface row for the called method
 **When** the method is called without a configured return, or with omitted arguments
 **Then** it returns PHPUnit's generated value for the declared return type, pads omitted arguments and `willReturnMap` rows with the declared defaults, names parameters as declared and gives `Invocation::toString` its `: <type>` suffix; a target with no row keeps the null default (ESC-4.7-1 item 2).
+
+**Given** an assertion that fails after its test's counts have ended (a timer or un-awaited promise the body left behind)
+**When** it fails
+**Then** it does not throw into whichever test is running then: it reports itself to the `xaravel.harness.late` hook, and the harness fails the test it belongs to (ESC-5.3-3).
 
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 
@@ -3802,6 +3810,10 @@ So that per-consumer dependencies work as in Laravel (FR-19, AD-4).
 **When** they are used as Spec values
 **Then** they resolve as Upstream's container attributes do
 **And** descriptors whose service belongs to a later Component raise `BlockedByComponentError(<c>)` when that Component isn't installed.
+
+**Given** the first Component-owned resolution that can fail
+**When** `BlockedByComponentError` is defined
+**Then** it lives in `@xaravel/runtime`, is registered as a framework class, has `name` `BlockedByComponentError`, and its message starts `BlockedByComponentError(<c>)`, where `<c>` is the owning Component's package name from the component map; that is the form the harness matches (ESC-5.3-1).
 
 ### Story 17.3: Calling, extending, tagging and resolving hooks
 
