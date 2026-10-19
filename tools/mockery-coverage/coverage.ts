@@ -9,7 +9,7 @@
 // A scan line is `{"name", "static", "count"}`. A name is implemented when
 // calling it does what it is for (Epic 4 retro item 5, finding R5), not
 // merely when a function of that name exists: PROBES holds one small probe
-// per non-Double scan name, which uses the name on `Mockery` or on a mock or
+// per scan name, which uses the name on `Mockery` or on a mock or
 // expectation and checks an effect (a return value, a thrown exception's
 // class, or the verdict of `Mockery.close()`). Each probe runs in a fresh run
 // of the `Symbol.for('xaravel.mockery.run')` protocol, so one failing probe
@@ -19,25 +19,21 @@
 //
 // `returns`, `throws` and `resolves` are `jasonmccreary/double`'s
 // (`JMac\Testing\Double`, used by the ai, mcp and boost suites), not
-// Mockery's; until an owner ports Double they are listed as pending
-// (ESC-4.6-1 item 6) and do not fail the report.
+// Mockery's. Story 4.8 ports Double into @xaravel/mockery, so their probes
+// drive the exported `Double` in a run, as the others drive `Mockery`.
 //
-// Lines, on stdout, one per unimplemented name, names sorted, missing first:
+// Lines, on stdout, one per unimplemented name, names sorted:
 //
 //   missing mockery: <name>
-//   pending ESC-4.6-1: <name> (JMac\Testing\Double)
 //
-// Exit codes: 0 when nothing is missing (pending names are allowed), 1 when a
-// name is missing (or the scan or the grader cannot be read), 2 on a usage
-// error. The report is advisory in CI like `assert:coverage` (ESC-4.6-1 item 7).
+// Exit codes: 0 when nothing is missing, 1 when a name is missing (or the
+// scan or the grader cannot be read), 2 on a usage error. The report is
+// advisory in CI like `assert:coverage` (ESC-4.6-1 item 7).
 import { join } from "node:path";
 import { type ReportLine, readJsonl, runReport } from "../coverage-report/report";
 
 const SCAN = "conformance/scans/mockery-api.jsonl";
 const GRADER = "packages/mockery/src/index.ts";
-
-/** The scan names that are `jasonmccreary/double`'s, not Mockery's (ESC-4.6-1 item 6). */
-export const DOUBLE_NAMES: ReadonlySet<string> = new Set(["resolves", "returns", "throws"]);
 
 export interface ScanName {
   readonly name: string;
@@ -63,9 +59,10 @@ export interface CoverageLine extends ReportLine {
 
 type ErrorClass = abstract new (...args: never[]) => Error;
 
-/** What a probe uses: the grader's exports (`Mockery` and its exception classes), loosely typed. */
+/** What a probe uses: the grader's exports (`Mockery`, `Double` and Mockery's exception classes), loosely typed. */
 interface Api {
   readonly Mockery: any;
+  readonly Double: any;
   readonly InvalidCountException: ErrorClass;
   readonly InvalidOrderException: ErrorClass;
   readonly NoMatchingExpectationException: ErrorClass;
@@ -101,7 +98,17 @@ function succeeds(fn: () => unknown): boolean {
 
 type Probe = (api: Api) => boolean;
 
-/** One probe per non-Double scan name; each returns true only if the name works. */
+/** Whether `fn` throws exactly `error`. */
+function throwsExactly(fn: () => unknown, error: unknown): boolean {
+  try {
+    fn();
+  } catch (caught) {
+    return caught === error;
+  }
+  return false;
+}
+
+/** One probe per scan name; each returns true only if the name works. */
 export const PROBES: ReadonlyMap<string, Probe> = new Map<string, Probe>([
   // Statics.
   ["any", ({ Mockery }) => {
@@ -269,6 +276,23 @@ export const PROBES: ReadonlyMap<string, Probe> = new Map<string, Probe>([
       mock.f();
     }, InvalidOrderException);
   }],
+  // jasonmccreary/double's verbs (Story 4.8), on a double of ProbeTarget.
+  ["resolves", ({ Double }) => {
+    const double = Double.for(ProbeTarget);
+    double.allows("f").resolves((a: number, b: number) => a + b);
+    return double.f(2, 3) === 5;
+  }],
+  ["returns", ({ Double }) => {
+    const double = Double.for(ProbeTarget);
+    double.allows("f").returns(1, 2);
+    return double.f() === 1 && double.f() === 2 && double.f() === 2;
+  }],
+  ["throws", ({ Double }) => {
+    const double = Double.for(ProbeTarget);
+    const error = new RangeError("probe");
+    double.allows("f").throws(error);
+    return throwsExactly(() => double.f(), error) && throwsExactly(() => double.f(), error);
+  }],
   ["passthru", ({ Mockery }) => {
     const mock = Mockery.mock(ProbeTarget);
     mock.shouldReceive("f").passthru();
@@ -366,7 +390,7 @@ type RunProtocol = (fn: () => unknown) => Promise<unknown>;
 
 async function loadApi(root: string): Promise<{ api: Api; run: RunProtocol }> {
   const grader = (await import(join(root, GRADER))) as Record<string, unknown>;
-  for (const name of ["Mockery", "InvalidCountException", "InvalidOrderException", "NoMatchingExpectationException", "BadMethodCallException"]) {
+  for (const name of ["Mockery", "Double", "InvalidCountException", "InvalidOrderException", "NoMatchingExpectationException", "BadMethodCallException"]) {
     if (typeof grader[name] !== "function") {
       throw new Error(`${GRADER} exports no ${name} class`);
     }
@@ -391,16 +415,14 @@ async function works(api: Api, run: RunProtocol, name: string): Promise<boolean>
   }
 }
 
-/** Every unimplemented scan name, missing before pending, names sorted. */
+/** Every unimplemented scan name, names sorted. */
 export async function coverage(root: string): Promise<{ names: number; lines: CoverageLine[] }> {
   const names = readScanNames(root);
   const { api, run } = await loadApi(root);
   const lines: CoverageLine[] = [];
   const failing = new Set<string>();
-  for (const { name, static: isStatic } of names) {
-    if (!isStatic && DOUBLE_NAMES.has(name)) {
-      lines.push({ status: "pending", name, text: `pending ESC-4.6-1: ${name} (JMac\\Testing\\Double)` });
-    } else if (!(await works(api, run, name))) {
+  for (const { name } of names) {
+    if (!(await works(api, run, name))) {
       failing.add(name);
     }
   }
@@ -409,8 +431,7 @@ export async function coverage(root: string): Promise<{ names: number; lines: Co
       lines.push({ status: "missing", name, text: `missing mockery: ${name}` });
     }
   }
-  const order = ["missing", "pending"];
-  lines.sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  lines.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   return { names: names.length, lines };
 }
 

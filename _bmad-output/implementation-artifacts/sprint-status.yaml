@@ -75,7 +75,7 @@ development_status:
   4-4-exception-output-file-and-json-assertions-and-the-coverage-r: done
   4-6-mockery-advanced-and-api-coverage: done
   4-7-phpunit-test-doubles: done  # ESC-4.4-2 item 6 (decisions/ESC-4.4-2.md)
-  4-8-jasonmccreary-double-port: in-progress  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md)
+  4-8-jasonmccreary-double-port: done  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md); AC 1 conditional on ESC-4.8-1
   epic-4-retrospective: done
 
   epic-5: backlog

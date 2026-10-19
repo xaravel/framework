@@ -1,13 +1,15 @@
-// Xaravel Tests for Stories 4.5 (Mockery core) and 4.6 (Mockery advanced and
-// API coverage); FR-100, AD-2, AD-7, AD-9, AD-15. One test per AC, in order,
-// after the fixture-free checks. Like Epic 4's other grader tests these are
-// plain bun:test: `xaravelTest` is not used to test the grader itself.
+// Xaravel Tests for Stories 4.5 (Mockery core), 4.6 (Mockery advanced and
+// API coverage) and 4.8 (the `jasonmccreary/double` port); FR-100, AD-2,
+// AD-7, AD-9, AD-15. One test per AC, in order, after the fixture-free
+// checks. Like Epic 4's other grader tests these are plain bun:test:
+// `xaravelTest` is not used to test the grader itself.
 //
 // Every expected outcome and message comes from a signed Oracle fixture of a
 // request in conformance/oracle-requests/4.5.jsonl or 4.6.jsonl (real Mockery
-// 1.6.15). XT-mockery-5 (mocked models) and XT-mockery-6 (the coverage
-// report) check Xaravel-only behaviour and have no request. Each
-// request's setup and exprs are rebuilt from scenarios.ts and must equal the
+// 1.6.15) or 4.8.jsonl (real jasonmccreary/double v1.0.1). XT-mockery-5
+// (mocked models) and XT-mockery-6 (the coverage report) check Xaravel-only
+// behaviour and have no request. Each request's setup and exprs are rebuilt
+// from scenarios.ts (double-scenarios.ts for XT-mockery-7) and must equal the
 // committed line, so the TS twins are the scenarios the Oracle ran. A missing,
 // unsigned or errored fixture fails the test; it is never skipped.
 import { afterAll, expect, test } from "bun:test";
@@ -18,10 +20,12 @@ import { dirname, join, relative, resolve } from "node:path";
 import * as api from "../../src/index";
 import {
   Any,
+  Argument,
   BadMethodCallException,
   Closure,
   CompositeExpectation,
   Container,
+  Double,
   Exception as MockeryExceptionClass,
   Expectation,
   HigherOrderMessage,
@@ -36,7 +40,10 @@ import { phpObjectHandle } from "@xaravel/assert";
 import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
 import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
 import { type Output, readRequests, readSignedFixture } from "../../../assert/tests/xaravel/oracle-values";
-import { normalize, oracleCell, scenarioMismatches } from "./cells";
+import { normalize, oracleCell, scenarioMismatches, show } from "./cells";
+import { DOUBLE_SCENARIOS, DOUBLE_SETUP, installDoubleLookups, runDoubleScenario, wrapDoublePhp, XtSvc } from "./double-scenarios";
+import { InvalidDoubleTargetException } from "../../src/JMac/Testing/Exceptions/InvalidDoubleTargetException";
+import { LogicException as SplLogicException } from "../../src/php/LogicException";
 import { MODEL_SET_KEYS, MODEL_TRAP_KEYS, SCENARIOS, type Scenario, setupFor, wrapPhp, XtBar, XtFoo, XtModel, XtReal } from "./scenarios";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -45,6 +52,7 @@ const REQUEST_FILES: Readonly<Record<Scenario["id"], string>> = {
   "XT-mockery-2": "conformance/oracle-requests/4.5.jsonl",
   "XT-mockery-3": "conformance/oracle-requests/4.5.jsonl",
   "XT-mockery-4": "conformance/oracle-requests/4.6.jsonl",
+  "XT-mockery-7": "conformance/oracle-requests/4.8.jsonl",
 };
 const FIXTURES = "conformance/fixtures/mockery";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
@@ -106,7 +114,11 @@ function oracleOutput(id: Id): Output {
   const requests = readRequests(join(root, REQUEST_FILES[id])).filter((request) => request.id === id);
   expect(requests).toHaveLength(1);
   const request = requests[0]!;
-  expect({ setup: request.setup, exprs: request.exprs }).toEqual({ setup: [...setupFor(id)], exprs: SCENARIOS.filter((scenario) => scenario.id === id).map((scenario) => wrapPhp(scenario.php)) });
+  const expected =
+    id === "XT-mockery-7"
+      ? { setup: [...DOUBLE_SETUP], exprs: DOUBLE_SCENARIOS.map((scenario) => wrapDoublePhp(scenario.php)) }
+      : { setup: [...setupFor(id)], exprs: SCENARIOS.filter((scenario) => scenario.id === id).map((scenario) => wrapPhp(scenario.php)) };
+  expect({ setup: request.setup, exprs: request.exprs }).toEqual(expected);
   const publicKey = readFileSync(join(root, PUBLIC_KEY), "utf8");
   try {
     return readSignedFixture(join(root, FIXTURES, `${request.sha256}.json`), request.sha256, publicKey);
@@ -138,19 +150,19 @@ function thrown(fn: () => unknown): unknown {
   return null;
 }
 
-test("fixture-free: the globals, the frozen exports, the imports and the mock object's dispatch", () => {
-  // The two globals are installed on load, non-writable and non-configurable.
-  for (const name of ["xaravel.mockery.mock", "xaravel.mockery.run"]) {
-    const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for(name));
-    expect(typeof descriptor?.value).toBe("function");
-    expect({ writable: descriptor?.writable, configurable: descriptor?.configurable }).toEqual({ writable: false, configurable: false });
-  }
-  const viaGlobal = (globalThis as unknown as Record<symbol, (target: unknown) => unknown>)[Symbol.for("xaravel.mockery.mock")]!(XtFoo);
-  expect(viaGlobal).toBeInstanceOf(XtFoo);
+test("fixture-free: the run global, the frozen exports, the imports and the mock object's dispatch", () => {
+  // The run global is installed on load, non-writable and non-configurable. The `xaravel.mockery.mock` hook
+  // `createMock` once delegated to is gone (ESC-4.7-1 item 4, Story 4.8 AC 1).
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("xaravel.mockery.run"));
+  expect(typeof descriptor?.value).toBe("function");
+  expect({ writable: descriptor?.writable, configurable: descriptor?.configurable }).toEqual({ writable: false, configurable: false });
+  expect(Object.getOwnPropertyDescriptor(globalThis, Symbol.for("xaravel.mockery.mock"))).toBeUndefined();
+  // XtFoo's first mock is generated here, as `Mockery_0_XtFoo` (outside-run compares that name with a child's).
+  expect(Mockery.mock(XtFoo)).toBeInstanceOf(XtFoo);
   Mockery.close();
 
-  // A global already defined by other code makes the load throw LogicException
-  // naming it, and neither global is installed (Epic 4 retro R4). Each child
+  // A run global already defined by other code makes the load throw LogicException
+  // naming it, and nothing is installed (Epic 4 retro R4). Each child
   // pre-defines one slot, imports the package and prints what it saw.
   const indexPath = JSON.stringify(join(root, "packages/mockery/src/index.ts"));
   const report = `const mockKey = Symbol.for("xaravel.mockery.mock"); const runKey = Symbol.for("xaravel.mockery.run"); let error = null; try { await import(${indexPath}); } catch (caught) { error = { name: caught?.name ?? null, message: caught?.message ?? null }; } console.log(JSON.stringify({ error, mockKept: Object.hasOwn(globalThis, mockKey) ? globalThis[mockKey] === fake : null, runKept: Object.hasOwn(globalThis, runKey) ? globalThis[runKey] === fake : null }));`;
@@ -166,10 +178,10 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
     stdout: { error: { name: "LogicException", message: message("xaravel.mockery.run") }, mockKept: null, runKept: true },
     stderr: "",
   });
-  // mock taken.
+  // The retired `mock` slot is no longer Mockery's: other code's value there is left alone, and the load succeeds.
   expect(taken(`const fake = (type) => type; globalThis[Symbol.for("xaravel.mockery.mock")] = fake;`)).toEqual({
     exitCode: 0,
-    stdout: { error: { name: "LogicException", message: message("xaravel.mockery.mock") }, mockKept: true, runKept: null },
+    stdout: { error: null, mockKept: true, runKept: false },
     stderr: "",
   });
   // An accessor property counts too.
@@ -189,6 +201,7 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
   expect(Object.keys(api).sort()).toEqual(
     [
       "Any",
+      "Argument",
       "AtLeast",
       "AtMost",
       "BadMethodCallException",
@@ -197,6 +210,7 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
       "Container",
       "CountValidatorAbstract",
       "CountValidatorException",
+      "Double",
       "Exact",
       "Exception",
       "Expectation",
@@ -209,6 +223,7 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
       "MethodCall",
       "Mockery",
       "NoMatchingExpectationException",
+      "OverriddenDouble",
       "ReceivedMethodCalls",
       "RuntimeException",
       "Type",
@@ -832,16 +847,14 @@ function runCoverage(args: readonly string[]): { exitCode: number | null; stdout
   return { exitCode: child.exitCode, stdout: child.stdout.toString(), stderr: child.stderr.toString() };
 }
 
-const PENDING_DOUBLE = ["pending ESC-4.6-1: resolves (JMac\\Testing\\Double)", "pending ESC-4.6-1: returns (JMac\\Testing\\Double)", "pending ESC-4.6-1: throws (JMac\\Testing\\Double)"];
-
-test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name as implemented except returns, throws and resolves (pending ESC-4.6-1), and fails naming a scan name with no implementation", () => {
+test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name as implemented (Double's returns, throws and resolves included since Story 4.8, none pending), and fails naming a scan name with no implementation", () => {
   const scanText = readFileSync(join(root, "conformance/scans/mockery-api.jsonl"), "utf8");
   const scanCount = scanText.split("\n").filter((line) => line !== "").length;
 
-  // The repository: exit 0, the three pending lines, nothing missing.
+  // The repository: exit 0, nothing pending, nothing missing.
   const repo = runCoverage([]);
   expect({ exitCode: repo.exitCode, stderr: repo.stderr }).toEqual({ exitCode: 0, stderr: "" });
-  expect(repo.stdout.split("\n").filter((line) => line !== "")).toEqual([...PENDING_DOUBLE, `Mockery API coverage: ${scanCount} scan names; ${scanCount - 3} implemented, 3 pending, 0 missing.`]);
+  expect(repo.stdout.split("\n").filter((line) => line !== "")).toEqual([`Mockery API coverage: ${scanCount} scan names; ${scanCount} implemented, 0 pending, 0 missing.`]);
 
   // A temp root whose packages/mockery is the real one, with a scan that adds two names Mockery has but the grader
   // does not port: both are missing, named, and the report fails.
@@ -856,8 +869,7 @@ test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name 
   expect(addedRun.stdout.split("\n").filter((line) => line !== "")).toEqual([
     "missing mockery: andYield",
     "missing mockery: pattern",
-    ...PENDING_DOUBLE,
-    `Mockery API coverage: ${scanCount + 2} scan names; ${scanCount - 3} implemented, 3 pending, 2 missing.`,
+    `Mockery API coverage: ${scanCount + 2} scan names; ${scanCount} implemented, 0 pending, 2 missing.`,
   ]);
 
   // A temp root whose grader copy lacks an Expectation method and a mock API member: both are missing, named.
@@ -882,10 +894,146 @@ test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name 
   expect(removedRun.stdout.split("\n").filter((line) => line !== "")).toEqual([
     "missing mockery: shouldIgnoreMissing",
     "missing mockery: zeroOrMoreTimes",
-    ...PENDING_DOUBLE,
-    `Mockery API coverage: ${scanCount} scan names; ${scanCount - 5} implemented, 3 pending, 2 missing.`,
+    `Mockery API coverage: ${scanCount} scan names; ${scanCount - 2} implemented, 0 pending, 2 missing.`,
   ]);
 
   // A usage error exits 2.
   expect(runCoverage(["--nope"]).exitCode).toBe(2);
+}, CHILD_TIMEOUT);
+
+const CLASS_FQCN_KEY = Symbol.for("xaravel.class.fqcn");
+const SIGNATURE_KEY = Symbol.for("xaravel.api.signature");
+const DOUBLE_FIXTURE = "./packages/mockery/tests/xaravel/fixtures/double.fixture.ts";
+
+/** Runs double.fixture.ts in a child `bun test`: each test's failure message (null when it passed) and report. */
+function runDoubleFixture(): { exitCode: number | null; results: Map<string, string | null>; reports: Record<string, Record<string, number>> } {
+  const dir = mkdtempSync(join(tmpdir(), "xt-mockery-7-"));
+  tempDirs.push(dir);
+  const junit = join(dir, "junit.xml");
+  const reportFile = join(dir, "reports.jsonl");
+  const child = Bun.spawnSync([process.execPath, "test", DOUBLE_FIXTURE, "--reporter=junit", `--reporter-outfile=${junit}`], {
+    cwd: root,
+    env: { ...process.env, XT_DOUBLE_REPORT_FILE: reportFile },
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: SPAWN_TIMEOUT,
+  });
+  const output = child.stdout.toString() + child.stderr.toString();
+  for (const path of [junit, reportFile]) {
+    if (!existsSync(path)) {
+      throw new Error(`the double fixture run wrote no ${path} (exit ${child.exitCode}); its output:\n${output}`);
+    }
+  }
+  const results = new Map<string, string | null>();
+  for (const match of readFileSync(junit, "utf8").matchAll(/<testcase name="([^"]*)"[^>]*?(\/>|>\s*<failure[^>]*?message="([^"]*)")/g)) {
+    results.set(unescapeXml(match[1] ?? ""), match[3] === undefined ? null : unescapeXml(match[3]));
+  }
+  const reports = Object.fromEntries(
+    readFileSync(reportFile, "utf8")
+      .split("\n")
+      .filter((line) => line !== "")
+      .map((line) => JSON.parse(line) as { id: string; assertions: Record<string, number> })
+      .map((report) => [report.id, report.assertions]),
+  );
+  return { exitCode: child.exitCode, results, reports };
+}
+
+test("XT-mockery-7: Double's returns, throws and resolves, its expectations, dispatch, modes, safe defaults, override, intersections and auto-verification record the values, exception classes and messages, verify outcomes and assertTrue counts of the signed jasonmccreary/double v1.0.1 Oracle; enableAutoVerify() in a portedTest verifies after the body", async () => {
+  // The three scan names run in the table.
+  for (const verb of ["->returns(", "->throws(", "->resolves("]) {
+    expect(DOUBLE_SCENARIOS.some((scenario) => scenario.php.includes(verb))).toBe(true);
+  }
+
+  // Auto-verify in a Ported Test (VerifiesDoubles' #[Before] in the body, its #[After] in the run protocol).
+  const T = "Tests\\Unit\\DoubleTest";
+  const child = runDoubleFixture();
+  expect(child.exitCode).toBe(1);
+  expect(child.reports).toEqual({
+    [`${T}::testMet`]: { assertTrue: 1 },
+    [`${T}::testUnmet`]: { assertTrue: 1 },
+    [`${T}::testBodyFails`]: {},
+    [`${T}::testNotEnabled`]: { assertTrue: 1 },
+    [`${T}::testBodyFailsAmbiguous`]: { assertTrue: 1 },
+    [`${T}::testMockeryWins`]: { mockeryExpectation: 1 },
+    [`${T}::testAdoptsOutsideRun`]: { assertTrue: 2 },
+    [`${T}::testAfterAdoption`]: { assertTrue: 1 },
+  });
+  expect(child.results.get(`${T}::testMet`)).toBeNull();
+  expect(child.results.get(`${T}::testBodyFails`)).toBe("body failed");
+  expect(child.results.get(`${T}::testNotEnabled`)).toBeNull();
+  // The run protocol's error order: the body's error, then Mockery's close, then Double's verification.
+  expect(child.results.get(`${T}::testBodyFailsAmbiguous`)).toBe("body failed first");
+  const mockeryUnmet = thrown(() => {
+    Mockery.mock().shouldReceive("f").once();
+    Mockery.close();
+  });
+  expect(mockeryUnmet).toBeInstanceOf(InvalidCountException);
+  expect(normalize(child.results.get(`${T}::testMockeryWins`))).toBe(normalize((mockeryUnmet as Error).message));
+  expect(child.results.get(`${T}::testAdoptsOutsideRun`)).toBe(child.results.get(`${T}::testUnmet`) ?? "unset");
+  expect(child.results.get(`${T}::testAfterAdoption`)).toBeNull();
+
+  // TS-only: the return-type lookup protocol. With no lookup a method is untyped (null); a return type nothing
+  // resolves throws a LogicException naming it.
+  class XtOrphan {
+    static readonly [CLASS_FQCN_KEY]: string = "XtOrphan";
+    make(): unknown {
+      return "real";
+    }
+  }
+  expect(Object.getOwnPropertyDescriptor(globalThis, SIGNATURE_KEY)).toBeUndefined();
+  expect(Double.for(XtOrphan).make()).toBeNull();
+  Object.defineProperty(globalThis, SIGNATURE_KEY, { value: () => ({ returns: "XtMissing", nullable: false }), configurable: true });
+  try {
+    const orphanError = thrown(() => Double.for(XtOrphan).make());
+    expect(orphanError).toBeInstanceOf(SplLogicException);
+    expect((orphanError as Error).message).toContain("`XtMissing`");
+    expect((orphanError as Error).message).toContain("`XtOrphan::make()`");
+  } finally {
+    delete (globalThis as Record<symbol, unknown>)[SIGNATURE_KEY];
+  }
+
+  // TS-only: a bare symbol token's lazily added method stays on the double that configured it.
+  const bare = Symbol.for("XtBareToken");
+  const first: any = Double.for(bare);
+  first.allows("ping").returns(1);
+  expect(first.ping()).toBe(1);
+  const second: any = Double.for(bare);
+  expect(second.ping).toBeUndefined();
+  expect(Double.for(bare).ping).toBeUndefined();
+  // A token object without an FQCN takes its brand's description; with neither it is no target.
+  const branded = { [Symbol.for("XtBranded")]: true, [Symbol.hasInstance]: (): boolean => false };
+  expect(((thrown(() => Double.for(branded).expects("x")) as Error).message)).toContain("`XtBranded`");
+  expect(thrown(() => Double.for({ [Symbol.hasInstance]: (): boolean => false }))?.constructor).toBe(InvalidDoubleTargetException);
+  // PHP's (bool) NAN is true.
+  expect(Argument.satisfies(() => Number.NaN).matches(1)).toBe(true);
+
+  // Every scenario against the Oracle, cell by cell, under the twins' return-type and class lookups.
+  const remove = installDoubleLookups();
+  try {
+    // TS-only: a class-name string target resolves through the class lookup; an unknown one is no target.
+    expect(Double.for("XtSvc")).toBeInstanceOf(XtSvc);
+    expect((thrown(() => Double.for("XtNoSuchClass")) as Error).message).toBe("\nCan't create a double for `XtNoSuchClass` since no such class or interface exists.");
+    const output = oracleOutput("XT-mockery-7");
+    expect(output.error).toBeNull();
+    expect(output.results).toHaveLength(DOUBLE_SCENARIOS.length);
+    const mismatches: string[] = [];
+    for (const [index, scenario] of DOUBLE_SCENARIOS.entries()) {
+      const expected = show(oracleCell(output, index, "XT-mockery-7"));
+      const actual = show(normalize(await runDoubleScenario(scenario)));
+      if (expected !== actual) {
+        mismatches.push(`XT-mockery-7 "${scenario.label}":\n  Oracle ${expected}\n  got    ${actual}`);
+      }
+    }
+    expect(mismatches).toEqual([]);
+
+    // The child's unmet expects() failed with the Oracle's verify message for the same scenario.
+    const unmetIndex = DOUBLE_SCENARIOS.findIndex((scenario) => scenario.label === "expects() never called: unsatisfied at verify");
+    const cell = oracleCell(output, unmetIndex, "XT-mockery-7") as unknown[];
+    const verify = cell[1] as unknown[];
+    expect(verify[0]).toBe("throws");
+    expect(verify[1]).toBe("PHPUnitUnsatisfiedExpectationException");
+    expect(child.results.get(`${T}::testUnmet`)).toBe(verify[2] as string);
+  } finally {
+    remove();
+  }
 }, CHILD_TIMEOUT);

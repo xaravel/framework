@@ -186,7 +186,7 @@ export function setupFor(id: Scenario["id"]): readonly string[] {
 }
 
 /** The message of a thrown value (a PHP-style exception's `getMessage()`, else `message`). */
-function messageOf(error: unknown): unknown {
+export function messageOf(error: unknown): unknown {
   if (typeof error === "object" && error !== null && typeof (error as { getMessage?: unknown }).getMessage === "function") {
     return (error as { getMessage: () => unknown }).getMessage();
   }
@@ -212,7 +212,7 @@ type M = typeof MockeryClass;
 type MockOf = ReturnType<M["mock"]>;
 
 export interface Scenario {
-  readonly id: "XT-mockery-1" | "XT-mockery-2" | "XT-mockery-3" | "XT-mockery-4";
+  readonly id: "XT-mockery-1" | "XT-mockery-2" | "XT-mockery-3" | "XT-mockery-4" | "XT-mockery-7";
   readonly label: string;
   /** The AC 1 API names the scenario exercises (4.5's or 4.6's). */
   readonly uses: readonly string[];

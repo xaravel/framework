@@ -92,6 +92,12 @@ test("XT-conformance-183: mockery:coverage counts a name only when its probe wor
   const dir = tempRoot("conformance/scans/mockery-api.jsonl", "mockery", {
     "Mockery/Expectation.ts": [["  once(): this {\n    return this.times(1);\n  }", "  once(): this {\n    return this;\n  }"]],
     "Mockery/CompositeExpectation.ts": [["  once(): this {\n    return this.forward((expectation) => expectation.once());\n  }", "  once(): this {\n    return this;\n  }"]],
+    // Double's three verbs only return this: still functions, but missing.
+    "JMac/Testing/Engine/MethodExpectation.ts": [
+      ["  returns(...values: unknown[]): this {\n", "  returns(...values: unknown[]): this {\n    return this;\n"],
+      ["  throws(...exceptions: unknown[]): this {\n", "  throws(...exceptions: unknown[]): this {\n    return this;\n"],
+      ["  resolves(resolver: (...args: any[]) => unknown): this {\n", "  resolves(resolver: (...args: any[]) => unknown): this {\n    return this;\n"],
+    ],
   });
   mkdirSync(join(dir, "node_modules/@xaravel"), { recursive: true });
   symlinkSync(join(root, "packages/assert"), join(dir, "node_modules/@xaravel/assert"));
@@ -99,18 +105,22 @@ test("XT-conformance-183: mockery:coverage counts a name only when its probe wor
   writeFileSync(scan, `${readFileSync(scan, "utf8")}{"name":"andXaravelNoProbe","static":false,"count":1}\n`);
   const stubbed = run(MOCKERY, ["--root", dir]);
   expect({ exitCode: stubbed.exitCode, stderr: stubbed.stderr }).toEqual({ exitCode: 1, stderr: "" });
-  // The close, expects, shouldHaveReceived and spy probes go through once() too, so they are missing with it.
+  // The close, expects, shouldHaveReceived and spy probes go through once() too, so they are missing with it; the
+  // stubbed returns, throws and resolves are missing as well.
   expect(stubbed.lines.filter((line) => line.startsWith("missing"))).toEqual([
     "missing mockery: andXaravelNoProbe",
     "missing mockery: close",
     "missing mockery: expects",
     "missing mockery: once",
+    "missing mockery: resolves",
+    "missing mockery: returns",
     "missing mockery: shouldHaveReceived",
     "missing mockery: spy",
+    "missing mockery: throws",
   ]);
-  expect(stubbed.lines.at(-1)).toMatch(/, 6 missing\.$/);
-  // The Double names stay pending.
-  expect(stubbed.lines.filter((line) => line.startsWith("pending"))).toEqual(["pending ESC-4.6-1: resolves (JMac\\Testing\\Double)", "pending ESC-4.6-1: returns (JMac\\Testing\\Double)", "pending ESC-4.6-1: throws (JMac\\Testing\\Double)"]);
+  expect(stubbed.lines.at(-1)).toMatch(/, 9 missing\.$/);
+  // The Double names are probed since Story 4.8 through the exported Double: none is pending.
+  expect(stubbed.lines.filter((line) => line.startsWith("pending"))).toEqual([]);
 
   // A usage error: exit 2, the usage on stderr.
   const usage = run(MOCKERY, ["--nope"]);
