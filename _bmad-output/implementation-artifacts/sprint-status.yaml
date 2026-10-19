@@ -86,7 +86,7 @@ development_status:
   5-5-backend-isolation-per-worktree: done
   5-6-ratchet-and-expectations-line-ownership: done
   5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: done
-  5-8-promotion-and-quarantine-bots: backlog
+  5-8-promotion-and-quarantine-bots: in-progress
   5-9-xaravel-test-coverage-check-and-the-story-done-check: backlog
   5-10-portable-development-environment-devcontainer: backlog  # added by the Maintainer, 2026-10-19
   epic-5-retrospective: optional
