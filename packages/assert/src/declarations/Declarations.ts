@@ -26,6 +26,9 @@
 //   are swallowed, since the test that is running then may be another one.
 //   The harness preload installs it (conformance/harness/preload.ts) and fails
 //   the test as `late`.
+// - Variant membership (ESC-5.3-4): a planned test with `declare: false` is
+//   not registered with bun (it neither runs nor reports), but its Test ID is
+//   still reserved, so the FR-2 duplicate check covers every row.
 import { test } from "bun:test";
 import { isSkippedTest } from "../Framework/Exception/SkippedWithMessageException";
 import { type CountedRun, runCounted } from "./AssertionCounter";
@@ -54,11 +57,14 @@ export interface PlannedTest {
   readonly run: () => unknown;
   /** Bun's per-test timeout in milliseconds, or null (or absent) for bun's default. */
   readonly timeout?: number | null;
+  /** False to reserve the Test ID without registering the test (ESC-5.3-4); absent or true registers it. */
+  readonly declare?: boolean;
 }
 
 /**
  * Registers `planned` with bun:test after checking that no Test ID repeats, here
  * or anywhere earlier in the process. Nothing is registered when any check fails.
+ * Every row's Test ID is reserved; only rows whose `declare` is not false are registered.
  */
 export function registerTests(
   declaration: string,
@@ -77,7 +83,10 @@ export function registerTests(
   for (const id of ids) {
     declared.add(id);
   }
-  for (const { label, id, run, timeout } of planned) {
+  for (const { label, id, run, timeout, declare } of planned) {
+    if (declare === false) {
+      continue;
+    }
     const body = async (): Promise<void> => {
       const result: CountedRun = await runCounted(run, id);
       const skip = result.error !== null && isSkippedTest(result.error.value) ? result.error.value.getMessage() : null;

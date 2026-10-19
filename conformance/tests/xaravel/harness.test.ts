@@ -39,6 +39,7 @@ const C = `${CLASS}::testC`;
 const D = `${CLASS}::testD`;
 const E = `${CLASS}::testE`;
 const SHARD = "conformance/expectations/support/framework/tests/Support/SupportHarnessTest.jsonl";
+/** Deliberately mirrors no Expectations shard (SHARD is under `framework/tests/`), so it loads on every Variant (ESC-5.3-4). */
 const TEST_FILE = "packages/support/tests/ported/Support/SupportHarnessTest.test.ts";
 const VARIANTS = "mysql\nnone\npgsql\nredis\nsqlite\n";
 
@@ -231,6 +232,105 @@ xaravelTest("XT-conformance-101", "bun run harness runs bun test with the root b
   const none = await runHarness(empty, { env: await env() });
   expect(none.out).toEqual([`MISSING ${B} [none] expected=pass actual=missing asserts=-/1`, "SUMMARY variants=1 run=1 not-run=0 checked=2 differ=1"]);
   expect(none.err).toEqual([]);
+
+  // Variant membership (ESC-5.3-4): a Ported Test is declared only on its Inventory backends.
+  // B (backends [sqlite]) neither runs nor reports on `none`; the unmapped TEST_FILE still loads on both runs.
+  const ran = join(probeDir, "ran");
+  const memberBody = ported(
+    [
+      `import { appendFileSync } from "node:fs";`,
+      `portedTest(${JSON.stringify(A)}, {}, () => { appendFileSync(${JSON.stringify(ran)}, "A " + String(process.env["XARAVEL_VARIANT"]) + "\\n"); Assert.assertTrue(true); });`,
+      `portedTest(${JSON.stringify(B)}, {}, () => { appendFileSync(${JSON.stringify(ran)}, "B " + String(process.env["XARAVEL_VARIANT"]) + "\\n"); Assert.assertTrue(true); });`,
+    ].join("\n"),
+  );
+  const member = await runHarness(makeRoot(entries, lines, { [TEST_FILE]: memberBody }), { env: await env() });
+  expect(member.out).toEqual(["SUMMARY variants=2 run=2 not-run=0 checked=2 differ=0"]);
+  expect(readFileSync(ran, "utf8")).toBe(`A none\nB sqlite\n`);
+  expect(member.err).toContain("harness: [none] bun test exited 0 over 1 file(s)");
+  expect(member.err).toContain("harness: [sqlite] bun test exited 0 over 1 file(s)");
+
+  // Without the harness's XARAVEL_INVENTORY (plain `bun test`), every row is declared.
+  rmSync(ran);
+  const plainDir = makeRoot(entries, lines, { [TEST_FILE]: memberBody });
+  const plain = Bun.spawnSync([process.execPath, "--no-env-file", "test", "--preload", join(root, "conformance", "harness", "preload.ts"), join(plainDir, TEST_FILE)], { cwd: plainDir, env: { ...process.env, XARAVEL_VARIANT: "none", XARAVEL_INVENTORY: undefined, XARAVEL_HARNESS_OUT: undefined }, stdout: "pipe", stderr: "pipe" });
+  expect(plain.exitCode).toBe(0);
+  expect(readFileSync(ran, "utf8")).toBe(`A none\nB none\n`);
+
+  // A file that mirrors a shard with lines only on `sqlite` (or a slice of it) is not given to the `none` run.
+  const MIRROR_SHARD = "conformance/expectations/support/framework/tests/Support/SupportMirrorTest.jsonl";
+  const mirrorFiles = {
+    [TEST_FILE]: ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });`),
+    [MIRROR_SHARD]: shard([{ id: C, variant: "sqlite", status: "pass" }]),
+    "packages/support/tests/ported/framework/tests/Support/SupportMirrorTest.test.ts": ported(`portedTest(${JSON.stringify(C)}, {}, () => { Assert.assertTrue(true); });`),
+    "packages/support/tests/ported/framework/tests/Support/SupportMirrorTest/slice.test.ts": ported(`portedTest(${JSON.stringify(D)}, {}, () => { Assert.assertTrue(true); });`),
+  };
+  const mirrorRoot = makeRoot([{ id: A }, { id: C, backends: ["sqlite"] }, { id: D, backends: ["sqlite"] }], [{ id: A, status: "pass" }], mirrorFiles);
+  const mirror = await runHarness(mirrorRoot, { env: await env() });
+  // D has no Expectations line (an unknown id on sqlite), so it reports UNKNOWN there: the slice ran on sqlite.
+  expect(mirror.out).toEqual([`UNKNOWN ${D} [sqlite] expected=- actual=pass asserts=1/-`, "SUMMARY variants=2 run=2 not-run=0 checked=2 differ=1"]);
+  expect(mirror.err).toContain("harness: [none] bun test exited 0 over 1 file(s)");
+  expect(mirror.err).toContain("harness: [sqlite] bun test exited 0 over 3 file(s)");
+
+  // An id that is not in the Inventory is declared everywhere its file runs, and reports UNKNOWN.
+  const Z = `${CLASS}::testNotInInventory`;
+  const unknownBody = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(Z)}, {}, () => { Assert.assertTrue(true); });`);
+  const unknownRun = await runHarness(makeRoot([{ id: A }], [{ id: A, status: "pass" }], { [TEST_FILE]: unknownBody }), { env: await env() });
+  expect(unknownRun.out).toEqual([`UNKNOWN ${Z} [none] expected=- actual=pass asserts=1/-`, "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=1"]);
+  expect(unknownRun.code).toBe(1);
+
+  // FR-2 still covers a row that is not declared: a duplicate non-member fails the file's import.
+  const duplicateBody = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`);
+  const duplicate = await runHarness(makeRoot([{ id: A }, { id: B, backends: ["sqlite"] }], [{ id: A, status: "pass" }], { [TEST_FILE]: duplicateBody }), { env: await env() });
+  expect(duplicate.code).toBe(1);
+  expect(duplicate.err.join("\n")).toContain(`Test ID "${B}" is already declared (FR-2)`);
+
+  // The unmapped TEST_FILE is named once per run it is given to.
+  expect(mirror.err.filter((line) => line === `harness: ${TEST_FILE} mirrors no Expectations shard; it runs on every Variant`)).toHaveLength(2);
+  // The mirror filter applies under a selection too.
+  const mirrorSelected = await runHarness(mirrorRoot, { env: await env(), components: ["support"] });
+  expect(mirrorSelected.err).toContain("harness: [none] bun test exited 0 over 1 file(s)");
+
+  // A run whose files hold only non-member rows runs no test (bun writes no junit file): its lines are MISSING, the run completes.
+  const noTestBody = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });`);
+  const noTest = await runHarness(makeRoot([{ id: A }, { id: C, backends: ["sqlite"] }], [{ id: A, status: "pass" }, { id: C, variant: "sqlite", status: "pass" }], { [TEST_FILE]: noTestBody }), { env: await env() });
+  expect(noTest.out).toEqual([`MISSING ${C} [sqlite] expected=pass actual=missing asserts=-/1`, "SUMMARY variants=2 run=2 not-run=0 checked=2 differ=1"]);
+  expect(noTest.err).toContain("harness: [sqlite] bun test ran no test over 1 file(s)");
+
+  // The Inventory reader skips oracle-nondeterminism.jsonl: membership is unchanged.
+  rmSync(ran);
+  const nondeterminism = `${JSON.stringify({ id: B, variant: "none", attempts: [{ assertTrue: 1 }, { assertTrue: 2 }], record: { assertTrue: 1 } })}\n`;
+  const withRecord = await runHarness(makeRoot(entries, lines, { [TEST_FILE]: memberBody, "conformance/inventory/oracle-nondeterminism.jsonl": nondeterminism }), { env: await env() });
+  expect(withRecord.out).toEqual(["SUMMARY variants=2 run=2 not-run=0 checked=2 differ=0"]);
+  expect(readFileSync(ran, "utf8")).toBe(`A none\nB sqlite\n`);
+
+  // A malformed Inventory line: the harness fails its precondition before spawning; the preload's reader names the file and line.
+  const malformedDir = makeRoot(entries, lines, { [TEST_FILE]: memberBody, "conformance/inventory/zz.jsonl": `${JSON.stringify({ id: C, backends: ["none"] })}\n{not json\n` });
+  const malformed = await runHarness(malformedDir, { env: await env() });
+  expect(malformed.code).toBe(1);
+  expect(malformed.out).toEqual([]);
+  const malformedPlain = Bun.spawnSync([process.execPath, "--no-env-file", "test", "--preload", join(root, "conformance", "harness", "preload.ts"), join(malformedDir, TEST_FILE)], { cwd: malformedDir, env: { ...process.env, XARAVEL_VARIANT: "none", XARAVEL_INVENTORY: join(malformedDir, "conformance", "inventory"), XARAVEL_HARNESS_OUT: undefined }, stdout: "pipe", stderr: "pipe" });
+  expect(malformedPlain.exitCode).not.toBe(0);
+  expect(malformedPlain.stderr.toString()).toContain(`Inventory line ${join(malformedDir, "conformance", "inventory", "zz.jsonl")}:2 is malformed`);
+
+  // Dataset rows: membership looks up the full `<id>#<key>`, so each row runs only on its own Variant.
+  rmSync(ran);
+  const X = `${CLASS}::testRows`;
+  const rowsBody = ported(`import { appendFileSync } from "node:fs";\nportedTest(${JSON.stringify(X)}, { dataset: { a: ["a"], b: ["b"] } }, (key: string) => { appendFileSync(${JSON.stringify(ran)}, key + " " + String(process.env["XARAVEL_VARIANT"]) + "\\n"); Assert.assertTrue(true); });`);
+  const rows = await runHarness(makeRoot([{ id: `${X}#a` }, { id: `${X}#b`, backends: ["sqlite"] }], [{ id: `${X}#a`, status: "pass" }, { id: `${X}#b`, variant: "sqlite", status: "pass" }], { [TEST_FILE]: rowsBody }), { env: await env() });
+  expect(rows.out).toEqual(["SUMMARY variants=2 run=2 not-run=0 checked=2 differ=0"]);
+  expect(readFileSync(ran, "utf8")).toBe("a none\nb sqlite\n");
+
+  // A member report with no Expectations line on the run's Variant is UNKNOWN there, end to end.
+  const knownBody = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`);
+  // (An Inventory `none` excludes other backends, so the two Variants here are both on SQLite.)
+  const knownFiles = { [TEST_FILE]: knownBody, "conformance/variants": VARIANTS.replace("redis\n", "queue-database@sqlite\nredis\n") };
+  const known = await runHarness(makeRoot([{ id: A, backends: ["queue-database@sqlite"], assertions: null }, { id: B, backends: ["queue-database@sqlite", "sqlite"], assertions: null }], [{ id: A, variant: "queue-database@sqlite", status: "pass" }, { id: B, variant: "sqlite", status: "pass" }], knownFiles), { env: await env() });
+  expect(known.out).toEqual([`UNKNOWN ${B} [queue-database@sqlite] expected=- actual=pass asserts=1/-`, "SUMMARY variants=2 run=2 not-run=0 checked=2 differ=1"]);
+
+  // compare: a report whose id has lines only on another variant is UNKNOWN on this one.
+  const strayRun: VariantRun = { junit: new Map([[B, { outcome: "passed", type: null, message: null }]]), reports: new Map([[B, { type: "ported", id: B, assertions: { assertTrue: 1 } }]]), late: new Set(), duplicates: new Set() };
+  const compared = compare({ variant: "none", lines: [], knownIds: new Set([A]), run: strayRun, inventory: new Map(), waived: () => false });
+  expect(compared.differences.map((difference) => difference.text)).toEqual([`UNKNOWN ${B} [none] expected=- actual=pass asserts=1/-`]);
 }, 60_000);
 
 // ---------------------------------------------------------------------------

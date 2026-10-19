@@ -35,13 +35,15 @@
 // (Story 5.9). Filters alone don't make a run a sample.
 //
 // On a selection, only the Variants with selected lines are listed and probed,
-// each checks only its selected lines, and each run gets only the Ported Test
-// files under `packages/<c>/tests/ported/` of its selected Components, plus
-// `-t ^(?:<escaped ids>)$` unless every Expectations line of those Components
-// on that Variant is selected or the pattern exceeds 65,536 characters. A run
+// each checks only its selected lines, and each run gets only those of its
+// Ported Test files (below) under `packages/<c>/tests/ported/` of its selected
+// Components, plus `-t ^(?:<escaped ids>)$` unless every Expectations line of
+// those Components on that Variant is selected or the pattern exceeds 65,536
+// characters. A run
 // given `-t` that exits non-zero with `matched 0 tests` on stderr is empty:
 // every selected line is `missing` (bun 1.4.3 may still write a junit file of
-// skipped testcases then). The UNKNOWN check still uses the full Expectations.
+// skipped testcases then). The UNKNOWN check still uses every Expectations
+// line of the Variant, selected or not.
 //
 // Preconditions, checked before anything runs (each failure exits 1):
 //   - `<root>/bunfig.toml` exists, and no other `bunfig.toml` exists under the
@@ -58,9 +60,11 @@
 //     and every line's Variant is in the vocabulary.
 //
 // The Variants run are those that appear in the Expectations lines, in
-// `conformance/variants` order. Each backend is prepared once, the first time
-// a Variant needs it (./isolation.ts): `sqlite` gets a fresh `.cache/sqlite/`
-// (only created on a fast run); `pgsql` is probed, then the worktree's
+// `conformance/variants` order. The `sqlite` backend is prepared before every
+// Variant run whose backend it is (`sqlite`, `queue-database@sqlite`), so each
+// starts from a fresh `.cache/sqlite/` (only created on a fast run, never
+// removed; ESC-5.3-4). Every other backend is prepared once, the first time a
+// Variant needs it (./isolation.ts): `pgsql` is probed, then the worktree's
 // `xaravel_test_<key>[_<name>]` databases are dropped and `xaravel_test_<key>`
 // created (on a fast run only created when missing; a failure is NOT-RUN with
 // `Postgres database reset failed: <message>`); `redis` is, with `CI=true`,
@@ -70,18 +74,35 @@
 // gets one
 //
 //   <bun> --no-env-file test --preload <this directory>/preload.ts \
-//     --reporter=junit --reporter-outfile=<tmp> <every packages/*/tests/ported/**/*.test.ts>
+//     --reporter=junit --reporter-outfile=<tmp> <the Variant's Ported Test files>
 //
-// with cwd the root (so the root `bunfig.toml` applies) and the parent's env
-// plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>`, to
-// which the preload appends the reports and late assertions, and
+// The Variant's Ported Test files (ESC-5.3-4) are the
+// `packages/*/tests/ported/**/*.test.ts` files that mirror an Expectations
+// shard with a line on the Variant, plus every file that mirrors no shard with
+// a line (so a misplaced file still runs, and its tests still report). A file
+// `packages/<c>/tests/ported/<P>.test.ts` mirrors the shard
+// `conformance/expectations/<c>/<S>.jsonl` when `P` is `S` or starts with
+// `S/` (a slice; AD-15 Location). Each run prints one diagnostic per file it
+// gets that mirrors no shard with a line:
+//   harness: <file> mirrors no Expectations shard; it runs on every Variant
+//
+// The run has cwd the root (so the root `bunfig.toml` applies) and the
+// parent's env plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp
+// jsonl>`, to which the preload appends the reports and late assertions,
 // `XARAVEL_API_SURFACE=<root>/conformance/api-surface`, which the preload's
-// API signature lookup reads (ESC-4.8-1 item 1), and the isolation env
+// API signature lookup reads (ESC-4.8-1 item 1),
+// `XARAVEL_INVENTORY=<root>/conformance/inventory`, from which the preload's
+// membership hook lets `portedTest` declare only the rows whose Inventory
+// `backends` list the Variant (./membership.ts), and the isolation env
 // `XARAVEL_WORKTREE_KEY`, `XARAVEL_CACHE_DIR`, `XARAVEL_SQLITE_DIR`,
 // `XARAVEL_PG_DATABASE` and, on a Variant whose Redis the harness started,
-// `XARAVEL_REDIS_SOCKET`. With no Ported Test file nothing is spawned and
-// every result is `missing`. A run that leaves no junit file fails the harness
-// (exit 1), quoting its stderr. Temp files live in the OS temp directory; the
+// `XARAVEL_REDIS_SOCKET`. With no Ported Test file for the Variant nothing is
+// spawned and every result is `missing`. A run that exits 0 without a junit
+// file ran no test (bun 1.4.3 writes none when every row its files hold is a
+// non-member): it prints the diagnostic
+//   harness: [<variant>] bun test ran no test over <n> file(s)
+// and every result is `missing`. Any other run that leaves no junit file fails
+// the harness (exit 1), quoting its stderr. Temp files live in the OS temp directory; the
 // harness writes under the root only in `.cache/`, and outside it only the
 // worktree's creation id file in its git dir.
 //
@@ -111,7 +132,8 @@
 // The Xaravel run (Story 5.9, ./xaravel.ts). After every Variant run, the
 // harness stops the Redis it started and releases its lock (Xaravel Tests use
 // no backend, and some start harness runs of their own, on the real root
-// too), then spawns one more `bun test` as above, with `XARAVEL_VARIANT=none`,
+// too), then spawns one more `bun test` as above, with `XARAVEL_VARIANT=none`
+// and without `XARAVEL_INVENTORY`,
 // over every `conformance/tests/xaravel/**/*.test.ts` and
 // `packages/*/tests/xaravel/**/*.test.ts` (with `-t` when `--id` globs are
 // given), and reads the preload's `type: "xaravel"` reports. Its report lines
@@ -297,6 +319,33 @@ export function waiverFor(root: string): (line: HarnessLine) => boolean {
   };
 }
 
+const EXPECTATIONS_PREFIX = "conformance/expectations/";
+const PORTED_FILE = /^packages\/([^/]+)\/tests\/ported\/(.+)\.test\.ts$/;
+
+/** A shard's path under conformance/expectations/ without `.jsonl`: `<c>/<S>`. */
+export function shardSubPath(shardPath: string): string {
+  const path = shardPath.startsWith(EXPECTATIONS_PREFIX) ? shardPath.slice(EXPECTATIONS_PREFIX.length) : shardPath;
+  return path.endsWith(".jsonl") ? path.slice(0, -".jsonl".length) : path;
+}
+
+/**
+ * The shard sub-paths a Ported Test file `packages/<c>/tests/ported/<P>.test.ts` could mirror: `<c>/<P>` and, for a
+ * slice, `<c>/<S>` for every proper prefix `S` of `P` ending before a `/` (AD-15 Location).
+ */
+export function mirroredShards(file: string): string[] {
+  const match = PORTED_FILE.exec(file);
+  if (match === null) {
+    return [];
+  }
+  const component = match[1]!;
+  const path = match[2]!;
+  const candidates = [`${component}/${path}`];
+  for (let at = path.indexOf("/"); at !== -1; at = path.indexOf("/", at + 1)) {
+    candidates.push(`${component}/${path.slice(0, at)}`);
+  }
+  return candidates;
+}
+
 /** Reads the preload's JSONL output into the run's Ported Test reports, Xaravel Test reports and late ids. */
 function readHarnessOut(path: string): { reports: Map<string, HarnessReport>; late: Set<string>; duplicates: Set<string>; xaravel: XaravelReport[] } {
   const reports = new Map<string, HarnessReport>();
@@ -368,6 +417,8 @@ async function runVariant(root: string, variant: string, files: readonly string[
     delete childEnv["NODE_OPTIONS"];
     // Only a Redis the harness started may be named; never an inherited one.
     delete childEnv["XARAVEL_REDIS_SOCKET"];
+    // Only a Ported Test Variant run gets the membership Inventory, through `isolated` (the caller's `portedEnv`).
+    delete childEnv["XARAVEL_INVENTORY"];
     Object.assign(childEnv, isolated);
     childEnv["XARAVEL_VARIANT"] = variant;
     childEnv["XARAVEL_HARNESS_OUT"] = outPath;
@@ -388,6 +439,10 @@ async function runVariant(root: string, variant: string, files: readonly string[
     const [, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
     if (pattern !== null && exitCode !== 0 && stderr.includes("matched 0 tests")) {
       err.push(`harness: [${label}] bun test matched none of the selected tests over ${files.length} file(s)`);
+      return emptyRun();
+    }
+    if (!existsSync(junitPath) && exitCode === 0) {
+      err.push(`harness: [${label}] bun test ran no test over ${files.length} file(s)`);
       return emptyRun();
     }
     if (!existsSync(junitPath)) {
@@ -519,12 +574,16 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
       }
       const inventory = new Map(inventoryEntries.map((entry) => [entry.id, entry.assertions] as const));
       const byVariant = new Map<string, HarnessLine[]>();
-      const knownIds = new Set<string>();
+      /** Each Variant's Test IDs: every one with an Expectations line on it (the UNKNOWN check). */
+      const knownIds = new Map<string, Set<string>>();
+      /** Each Variant's shards with a line on it, as `<c>/<S>` (the path under conformance/expectations/, without `.jsonl`). */
+      const shardsOf = new Map<string, Set<string>>();
       /** Each Test ID's Component: the first path segment of its shard under conformance/expectations/. */
       const universe = new Map<string, string>();
       const vocabularySet = new Set(vocabulary.variants);
       for (const shard of shards) {
         const component = shard.path.split("/")[2] ?? "";
+        const subPath = shardSubPath(shard.path);
         shard.lines.forEach((raw, index) => {
           const variant = raw["variant"];
           const status = raw["status"];
@@ -532,7 +591,12 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
             throw new PreconditionError(`${shard.path}:${index + 1}: Variant ${JSON.stringify(variant)} is not in conformance/variants`);
           }
           const line: HarnessLine = { id: raw["id"] as string, variant, status: typeof status === "string" ? status : String(status), reason: stringOrNull(raw["reason"]), adapted: stringOrNull(raw["adapted"]) };
-          knownIds.add(line.id);
+          const known = knownIds.get(variant) ?? new Set<string>();
+          known.add(line.id);
+          knownIds.set(variant, known);
+          const variantShards = shardsOf.get(variant) ?? new Set<string>();
+          variantShards.add(subPath);
+          shardsOf.set(variant, variantShards);
           if (!universe.has(line.id)) {
             universe.set(line.id, component);
           }
@@ -566,10 +630,20 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
         return selected === null ? all : all.filter((line) => selected.has(line.id));
       };
       variants = vocabulary.variants.filter((variant) => linesOf(variant).length > 0);
-      const allFiles = portedTestFiles(root);
+      const mirrors = new Map(portedTestFiles(root).map((file) => [file, mirroredShards(file)] as const));
+      const anyShard = new Set([...shardsOf.values()].flatMap((set) => [...set]));
+      /** Whether a file mirrors no shard with a line on any Variant. */
+      const unmapped = (file: string): boolean => !(mirrors.get(file) ?? []).some((candidate) => anyShard.has(candidate));
+      /** The Variant's Ported Test files: those mirroring one of its shards, and those mirroring no shard with a line (see the header). */
+      const filesOf = (variant: string): string[] => {
+        const own = shardsOf.get(variant) ?? new Set<string>();
+        return [...mirrors]
+          .filter(([file, candidates]) => candidates.some((candidate) => own.has(candidate)) || unmapped(file))
+          .map(([file]) => file);
+      };
       const ci = env["CI"] === "true";
       const waived = waiverFor(root);
-      // Backend preparation: once per backend, the first time a run Variant needs it.
+      // Backend preparation: `sqlite` before every Variant run on it, any other backend once, the first time a run Variant needs it.
       const prepared = new Map<string, Promise<ProbeResult>>();
       const prepare = async (backend: string): Promise<ProbeResult> => {
         if (backend === "sqlite") {
@@ -592,8 +666,10 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
       for (const variant of variants) {
         const lines = linesOf(variant);
         const backend = backendFor(variant);
-        const pending = prepared.get(backend) ?? prepare(backend);
-        prepared.set(backend, pending);
+        const pending = (backend === "sqlite" ? null : prepared.get(backend)) ?? prepare(backend);
+        if (backend !== "sqlite") {
+          prepared.set(backend, pending);
+        }
         const status = await pending;
         if (!status.reachable) {
           notRun++;
@@ -610,19 +686,28 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
         }
         run++;
         checked += lines.length;
-        let files = allFiles;
+        let files = filesOf(variant);
         let pattern: string | null = null;
         if (selected !== null) {
           const selectedComponents = new Set(lines.map((line) => universe.get(line.id) ?? ""));
-          files = allFiles.filter((file) => selectedComponents.has(file.split("/")[1] ?? ""));
+          files = files.filter((file) => selectedComponents.has(file.split("/")[1] ?? ""));
           const ofComponents = byVariant.get(variant)!.filter((line) => selectedComponents.has(universe.get(line.id) ?? "")).length;
           const candidate = namePattern(lines.map((line) => line.id));
           if (ofComponents !== lines.length && candidate.length <= MAX_PATTERN) {
             pattern = candidate;
           }
         }
-        const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, backend === "redis" && services.redis !== null ? { ...isolated, XARAVEL_REDIS_SOCKET: services.redis.socket } : isolated, options.bunArgs ?? [], err);
-        const compared = compare({ variant, lines, knownIds, run: variantRun, inventory, waived });
+        const portedEnv: Record<string, string> = { ...isolated, XARAVEL_INVENTORY: join(root, "conformance", "inventory") };
+        if (backend === "redis" && services.redis !== null) {
+          portedEnv["XARAVEL_REDIS_SOCKET"] = services.redis.socket;
+        }
+        for (const file of files) {
+          if (unmapped(file)) {
+            err.push(`harness: ${file} mirrors no Expectations shard; it runs on every Variant`);
+          }
+        }
+        const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, portedEnv, options.bunArgs ?? [], err);
+        const compared = compare({ variant, lines, knownIds: knownIds.get(variant) ?? new Set<string>(), run: variantRun, inventory, waived });
         results.push(...compared.results);
         if (variantRun.error !== null) {
           errors.push(variantRun.error);

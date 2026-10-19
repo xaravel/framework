@@ -1,5 +1,5 @@
 // The harness's comparison of results with the Expectations File (Story 5.3,
-// FR-3, FR-9, FR-113, AD-15). Pure: everything it reads is passed in.
+// FR-3, FR-9, FR-113, AD-15, ESC-5.3-4). Pure: everything it reads is passed in.
 //
 // The actual outcome of `(id, variant)` on a run variant, from the junit
 // testcase named `id` and the Ported Test report whose `id` is `id`:
@@ -33,7 +33,9 @@
 // failure), `SKIPPED` (skip) or `MISSING` (missing); `e` is the status or
 // `skip:<reason>`; `n` is the sum of the report's assertions or `-`; `u` is the
 // sum of the Inventory's or `-` when null. A Ported Test report whose id has no
-// Expectations line on any variant prints
+// Expectations line on the run variant (none at all, or lines only on other
+// variants: a stray report the membership filter should have stopped,
+// ESC-5.3-4) prints
 //   UNKNOWN <id> [<variant>] expected=- actual=<a> asserts=<n>/-
 import type { JunitCase } from "./junit";
 
@@ -96,7 +98,7 @@ export interface CompareInput {
   readonly variant: string;
   /** The Expectations lines of `variant`. */
   readonly lines: readonly HarnessLine[];
-  /** Every id with an Expectations line on any variant. */
+  /** Every id with an Expectations line on `variant` (all of them, not only the selected `lines`); a report for any other id is `UNKNOWN`. */
   readonly knownIds: ReadonlySet<string>;
   readonly run: VariantRun;
   /** Inventory `assertions` by id. */
