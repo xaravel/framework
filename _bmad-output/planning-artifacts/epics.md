@@ -2469,6 +2469,35 @@ So that "done" is computed, not claimed (FR-115, PRD §3, NFR-10).
 **Then** it fails for each such Test ID with no verified fixture in its Component's `conformance/fixtures/` directory, and for each fixture whose output is an evaluation error (`stage: fatal`, or a `setup` error) where Upstream's expected outcome is not that error (Epic 3 retro S5 fixture-set completeness, R6)
 **And** the Oracle evaluator applies `input.now` to Xaravel Test IDs, gives `validation-message` requests for Xaravel Test IDs a translator, and rejects, with a reason, Pest Test IDs the image cannot run, so none of these is signed as an error fixture (Epic 3 retro R6).
 
+### Story 5.10: Portable development environment (devcontainer)
+
+As a Framework Agent or a contributor on any machine,
+I want one container definition that brings up the decided toolchain and the alpha backends,
+So that the harness runs every alpha Variant the same way everywhere, with nothing installed on the host but Docker (AD-17, AD-28, NFR-7).
+
+**Acceptance Criteria:**
+
+**Given** `.devcontainer/` (`devcontainer.json`, a Compose file and the workspace image's Dockerfile)
+**When** it is started with the devcontainer CLI, or with plain `docker compose` and no Node on the host
+**Then** the workspace container runs as a non-root user on linux/arm64 and linux/amd64, with Bun at `.bun-version`, the repo's locked dependencies installed by `bun install --frozen-lockfile`, and `redis-server` at the Redis version CI uses on `PATH`
+**And** Postgres runs as a sidecar from the same image CI uses, reachable from the workspace through the `PG*` variables the harness reads.
+
+**Given** `bun run harness` inside the container
+**When** it runs
+**Then** no alpha Variant is `NOT-RUN`: Redis is the worktree's own `redis-server` on a unix socket in `.cache/`, and Postgres databases are the worktree's `xaravel_test_<key>` names (AD-17).
+
+**Given** the container's pins
+**When** the pin check runs
+**Then** it fails if the Bun, Postgres or Redis version differs from `.bun-version`, the service images in `.github/workflows/baseline.yml` and the spine's Stack table.
+
+**Given** a PR that changes `.devcontainer/**`, and the nightly run
+**When** CI runs
+**Then** it builds the image and runs `bun run harness` inside it.
+
+**Given** `docs/ops/devcontainer.md`
+**When** a contributor or an agent reads it
+**Then** it explains starting the container, running the harness and an agent session inside it headless, and that no secret or `APP_KEY` is baked into the image; Bun's `.env` autoload stays off.
+
 ## Epic 6: Static guardrails: lint rules, async surface & API-surface diff
 
 The mistakes agents make most often are caught mechanically before review: floating Promises, identity by `constructor.name`, stray state writes and silent API drift.
