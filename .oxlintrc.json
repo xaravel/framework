@@ -14,7 +14,14 @@
     "xaravel/no-ported-bun-expect": "error",
     "xaravel/no-type-import-injection": "error",
     "xaravel/no-model-private": "error",
-    "xaravel/no-package-default-export": "error"
+    "xaravel/no-package-default-export": "error",
+    "xaravel/no-maybe-promise-return": "error",
+    "xaravel/no-async-thenable-return": "error",
+    "xaravel/no-singleton-field-write": "error",
+    "xaravel/no-boot-only-write": "error",
+    "xaravel/no-arrow-test-body": "error",
+    "xaravel/no-inject-param-mismatch": "error",
+    "xaravel/no-dynamic-column-default": "error"
   },
   "ignorePatterns": [
     "_bmad/**",

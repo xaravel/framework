@@ -7,5 +7,5 @@ import type { Mailer } from "./support";
   mailer: Mailer,
 })
 export class Notifier {
-  mailer: Mailer | null = null;
+  constructor(readonly mailer: Mailer | null = null) {}
 }
