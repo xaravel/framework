@@ -36,8 +36,9 @@ const CLASS = "Illuminate\\Tests\\Support\\SupportIsolationTest";
 const A = `${CLASS}::testA`;
 const B = `${CLASS}::testB`;
 const SHARD = "conformance/expectations/support/framework/tests/Support/SupportIsolationTest.jsonl";
+/** Deliberately mirrors no Expectations shard (SHARD is under `framework/tests/`), so it loads on every Variant (ESC-5.3-4). */
 const TEST_FILE = "packages/support/tests/ported/Support/SupportIsolationTest.test.ts";
-const VARIANTS = "mysql\nnone\npgsql\nqueue-database@pgsql\nqueue-redis@redis\nredis\nsqlite\n";
+const VARIANTS = "mysql\nnone\npgsql\nqueue-database@pgsql\nqueue-database@sqlite\nqueue-redis@redis\nredis\nsqlite\n";
 const NO_REDIS_SERVER = join(tmpdir(), "xt-isolation-no-redis-server", "redis-server");
 
 interface Line {
@@ -208,11 +209,10 @@ xaravelTest("XT-conformance-110", "the harness derives the worktree key from SHA
   const body = ported(
     [
       `import { appendFileSync } from "node:fs";`,
-      `portedTest(${JSON.stringify(A)}, {}, () => {`,
-      `  const e = process.env;`,
-      `  appendFileSync(${JSON.stringify(seen)}, JSON.stringify({ variant: e["XARAVEL_VARIANT"], key: e["XARAVEL_WORKTREE_KEY"], cache: e["XARAVEL_CACHE_DIR"], sqlite: e["XARAVEL_SQLITE_DIR"], pg: e["XARAVEL_PG_DATABASE"], redis: e["XARAVEL_REDIS_SOCKET"] ?? null }) + "\\n");`,
-      `  Assert.assertTrue(true);`,
-      `});`,
+      // Recorded on load: A runs only on `none` and B only on `pgsql` (ESC-5.3-4), but the file loads on both runs.
+      `const e = process.env;`,
+      `appendFileSync(${JSON.stringify(seen)}, JSON.stringify({ variant: e["XARAVEL_VARIANT"], key: e["XARAVEL_WORKTREE_KEY"], cache: e["XARAVEL_CACHE_DIR"], sqlite: e["XARAVEL_SQLITE_DIR"], pg: e["XARAVEL_PG_DATABASE"], redis: e["XARAVEL_REDIS_SOCKET"] ?? null }) + "\\n");`,
+      `portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });`,
       `portedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`,
     ].join("\n"),
   );
@@ -451,6 +451,32 @@ xaravelTest("XT-conformance-111", "the SQLite variant's database files live unde
   const again = await runHarness(dir, { env: await env() });
   expect(again.code).toBe(0);
   expect(existsSync(join(dir, ".cache", "sqlite", "keep.db"))).toBe(false);
+
+  // Two SQLite Variants (ESC-5.3-4): each starts from an empty .cache/sqlite/, so neither sees the other's marker.
+  const twoLines: Line[] = [{ id: A, variant: "queue-database@sqlite" }, { id: A, variant: "sqlite" }];
+  const twoBody = ported(
+    [
+      `import { existsSync, readdirSync, writeFileSync } from "node:fs";`,
+      `import { join } from "node:path";`,
+      `portedTest(${JSON.stringify(A)}, {}, () => {`,
+      `  const dir = process.env["XARAVEL_SQLITE_DIR"]!;`,
+      `  Assert.assertSame([], readdirSync(dir));`,
+      `  Assert.assertFalse(existsSync(join(dir, "marker")));`,
+      `  writeFileSync(join(dir, "marker"), process.env["XARAVEL_VARIANT"]!);`,
+      `});`,
+    ].join("\n"),
+  );
+  const two = makeRoot(twoLines, { [TEST_FILE]: twoBody });
+  const both = await runHarness(two, { env: await env() });
+  expect(both.out).toEqual(["SUMMARY variants=2 run=2 not-run=0 checked=2 differ=0"]);
+  expect(both.code).toBe(0);
+  // The last SQLite Variant's marker is what remains.
+  expect(readFileSync(join(two, ".cache", "sqlite", "marker"), "utf8")).toBe("sqlite");
+  // A fast run only creates the directory: the first Variant's marker survives into the second, which fails.
+  rmSync(join(two, ".cache", "sqlite"), { recursive: true, force: true });
+  const twoFast = await runHarness(two, { env: await env(), seed: "x" });
+  expect(twoFast.out).toEqual(["FAST seed=x sample=1/1", `FAIL ${A} [sqlite] expected=pass actual=fail asserts=1/-`, "SUMMARY variants=2 run=2 not-run=0 checked=2 differ=1 mode=fast seed=x"]);
+  expect(readFileSync(join(two, ".cache", "sqlite", "marker"), "utf8")).toBe("queue-database@sqlite");
 }, 60_000);
 
 // ---------------------------------------------------------------------------

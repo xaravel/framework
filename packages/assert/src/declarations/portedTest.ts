@@ -3,7 +3,11 @@
 // Each dataset row becomes one test labelled with its full Test ID: `<id>#<key>`
 // for an object or `Map` key (verbatim, `Map` keys in insertion order) and
 // `<id>#<index>` for a list row; without a dataset the label is the bare `<id>`.
-// Per test:
+// A row is declared with bun only when the harness's membership hook,
+// `globalThis[Symbol.for('xaravel.harness.member')]` (installed by the preload
+// on a Ported Test Variant run, ESC-5.3-4), admits its full Test ID; without
+// the hook every row is declared. A row it rejects neither runs nor reports on
+// that Variant, but its Test ID is still reserved (FR-2). Per test:
 //
 //   1. a counting context opens (AssertionCounter);
 //   2. if `globalThis[Symbol.for('xaravel.scope.run')]` is a function, the rest
@@ -40,6 +44,7 @@ import { registerTests } from "./Declarations";
 
 const SCOPE_RUN = Symbol.for("xaravel.scope.run");
 const MOCKERY_RUN = Symbol.for("xaravel.mockery.run");
+const MEMBER = Symbol.for("xaravel.harness.member");
 const INTEGER_LIKE = /^(0|-?[1-9][0-9]*)$/;
 
 /**
@@ -118,9 +123,15 @@ export function portedTest<T extends object>(id: string, options: PortedTestOpti
         await runWithMockery(inner);
       }
     };
-    return { label, id: label, run };
+    return { label, id: label, run, declare: member(label) };
   });
   registerTests("portedTest()", "ported", null, planned, true);
+}
+
+/** Whether the full Test ID `id` belongs to the run's Variant: the harness's membership hook, or true without one (ESC-5.3-4). */
+function member(id: string): boolean {
+  const hook: unknown = (globalThis as Record<symbol, unknown>)[MEMBER];
+  return typeof hook === "function" ? (hook as (id: string) => unknown)(id) === true : true;
 }
 
 /** PHPUnit 13.4.3's `runLifecycle` for a TestCase instance (Story 4.4): see the header, step 3. */
