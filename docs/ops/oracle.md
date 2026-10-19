@@ -347,6 +347,10 @@ A class's Component is `componentForFqcn`. A function's is `kebab(<Dir>)` for `f
 
 A type that fails to autoload (`Class|Interface|Trait "X" not found`) is defined as an empty stub of that kind, the load is retried, and X is listed in the `stubbed` of every declaration that has it among its parent classes, interfaces or traits (sorted, whatever the load order). The stub's members are never reported, so no exported member changes, and the local install and the image give the same output. At the Pin this applies only to `Illuminate\Testing\ParallelRunner`, which implements ParaTest's `RunnerInterface`. Any other load failure, a class whose file is not under `src/`, any PHP warning or deprecation (an error handler turns it into a failure) or any other exception makes the script exit 1, naming the class or function it was processing.
 
+### Class-list cross-check
+
+The class list comes from a static scan, so a class it missed would vanish from the surface silently (Epic 3 retro). After its reflection loop and before printing, the script checks every class, interface, trait and enum declared from a file under `<src dir>` (`get_declared_classes()`, `get_declared_interfaces()`, `get_declared_traits()`; anonymous classes and aliases skipped), plus every named class-like a non-blade `.php` file under `<src dir>` declares (by the PHP tokenizer: `class`, `interface`, `trait` or `enum` followed by a name, not after `::` or `new`). Each one the class list lacks prints `api-surface: the class list misses <FQCN> (declared in <path under src>)` to stderr, sorted, and the run exits 1 with no stdout (Story 6.5). At the Pin every tokenized class-like (2,437 across the four repositories) is listed. The script is mounted into the image, not baked, so the image tag does not change.
+
 ### Determinism
 
 The two passes of each repository must print identical bytes. If they differ, nothing is written, stderr gets `api surface not deterministic: <repo> (first difference at line <n>)`, and the command exits 1. Two runs on one Pin therefore give identical files.
@@ -357,4 +361,4 @@ The two passes of each repository must print identical bytes. If they differ, no
 
 ### The drift check in CI
 
-`oracle.yml#build` (on a PR touching the Oracle's inputs) and `oracle.yml#determinism` (nightly) run `bun run oracle:api-surface --check` in the image they just built. A committed surface that no longer matches the snapshot and the image, or an invalid citation file, fails the job. The `.d.ts` diff, the `api-surface:gate` command and the PR summary are Story 6.5's.
+`oracle.yml#build` (on a PR touching the Oracle's inputs) and `oracle.yml#determinism` (nightly) run `bun run oracle:api-surface --check` in the image they just built. A committed surface that no longer matches the snapshot and the image, or an invalid citation file, fails the job. The `.d.ts` diff, the `api-surface:gate` command and the PR summary are Story 6.5's: see [api-surface.md](api-surface.md).

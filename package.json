@@ -20,6 +20,8 @@
     "lint": "bun --bun oxlint --type-aware && bun run lint:disables",
     "lint:disables": "bun --no-env-file tools/lint-rules/disables.ts",
     "async-surface": "bun --no-env-file tools/async-surface/async-surface.ts",
+    "api-surface": "bun --no-env-file tools/api-surface/api-surface.ts",
+    "api-surface:gate": "bun --no-env-file tools/api-surface/api-surface.ts --gate",
     "scaffold": "bun tools/scaffold/scaffold.ts",
     "scaffold:check": "bun tools/scaffold/scaffold.ts --check",
     "scaffold:table": "bun tools/scaffold/table.ts",

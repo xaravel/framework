@@ -77,18 +77,18 @@ const TAG_VALUE = /^(?:callback|[A-Za-z_$][\w$]*(?:\\[A-Za-z_$][\w$]*)*\.[A-Za-z
 const TAG = /@asyncRoot\b([^\n@]*)/g;
 
 // oxc-parser's ESTree nodes, read structurally.
-type Node = { readonly type: string; readonly start: number; readonly end: number; readonly [key: string]: unknown };
+export type Node = { readonly type: string; readonly start: number; readonly end: number; readonly [key: string]: unknown };
 type Comment = { readonly type: string; readonly value: string; readonly start: number; readonly end: number };
 
-function node(value: unknown): Node | null {
+export function node(value: unknown): Node | null {
   return typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string" ? (value as Node) : null;
 }
 
-function nodes(value: unknown): Node[] {
+export function nodes(value: unknown): Node[] {
   return Array.isArray(value) ? value.map(node).filter((n): n is Node => n !== null) : [];
 }
 
-function nameOf(key: unknown): string | null {
+export function nameOf(key: unknown): string | null {
   const n = node(key);
   if (n === null) {
     return null;
@@ -103,13 +103,13 @@ function nameOf(key: unknown): string | null {
 }
 
 /** The type inside a `TSTypeAnnotation` (or the node itself). */
-function unwrapAnnotation(value: unknown): Node | null {
+export function unwrapAnnotation(value: unknown): Node | null {
   const n = node(value);
   return n !== null && n.type === "TSTypeAnnotation" ? node(n["typeAnnotation"]) : n;
 }
 
 /** The last segment of a type name: `Identifier` or `TSQualifiedName`. */
-function typeNameTail(value: unknown): string | null {
+export function typeNameTail(value: unknown): string | null {
   const n = node(value);
   if (n === null) {
     return null;
@@ -454,7 +454,7 @@ export function shortNames(fqcns: readonly string[]): ReadonlySet<string> {
 }
 
 /** `<dir>/**\/*.d.ts`, sorted, as paths relative to `dir` with `/` separators. */
-function declarationFiles(dir: string): string[] {
+export function declarationFiles(dir: string): string[] {
   if (!existsSync(dir)) {
     return [];
   }
@@ -477,7 +477,7 @@ function declarationFiles(dir: string): string[] {
  * The declarations of `packages/<pkg>`, read from `<tsconfig outDir>/src`. Only a `.d.ts` whose `src/<path>.ts` still
  * exists is read: an incremental `tsc -b` leaves a deleted or renamed source's declaration behind.
  */
-function packageDeclarations(root: string, pkg: string): DeclarationFile[] {
+export function packageDeclarations(root: string, pkg: string): DeclarationFile[] {
   const dir = join(root, "packages", pkg);
   const tsconfigPath = join(dir, "tsconfig.json");
   if (!existsSync(tsconfigPath)) {
@@ -496,6 +496,20 @@ function packageDeclarations(root: string, pkg: string): DeclarationFile[] {
     .map((path) => ({ path, file: `src/${path.replace(/\.d\.ts$/, ".ts")}` }))
     .filter(({ file }) => existsSync(join(dir, file)))
     .map(({ path, file }) => ({ file, text: readFileSync(join(src, path), "utf8") }));
+}
+
+const TSC_FAILED = "tsc -b failed";
+
+/**
+ * Builds `dirs` (package directories) with one `tsc -b`, the repository's own TypeScript, from `root`. Returns null on
+ * success, else tsc's output followed by `tsc -b failed (exit <n>)`.
+ */
+export function emitDeclarations(root: string, dirs: readonly string[]): string | null {
+  const tsc = Bun.spawnSync([process.execPath, "--bun", TSC, "-b", ...dirs], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  if (tsc.exitCode === 0) {
+    return null;
+  }
+  return `${tsc.stdout.toString()}${tsc.stderr.toString()}${TSC_FAILED} (exit ${tsc.exitCode})`;
 }
 
 function usage(message: string): number {
@@ -553,10 +567,11 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
 
-  const tsc = Bun.spawnSync([process.execPath, "--bun", TSC, "-b", ...pkgs.map((pkg) => join(packagesDir, pkg))], { cwd: root, stdout: "pipe", stderr: "pipe" });
-  if (tsc.exitCode !== 0) {
-    process.stderr.write(tsc.stdout.toString() + tsc.stderr.toString());
-    console.error(`async-surface: tsc -b failed (exit ${tsc.exitCode})`);
+  const failure = emitDeclarations(root, pkgs.map((pkg) => join(packagesDir, pkg)));
+  if (failure !== null) {
+    const at = failure.lastIndexOf(TSC_FAILED);
+    process.stderr.write(failure.slice(0, at));
+    console.error(`async-surface: ${failure.slice(at)}`);
     return 1;
   }
 

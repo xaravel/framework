@@ -25,6 +25,15 @@
 // backslash), or a compact literal; any other object default fails the run.
 // A function's `file` is relative to <src dir>.
 //
+// After the reflection, it cross-checks the class list (Story 6.5): every
+// class, interface, trait or enum declared from a file under <src dir>
+// (get_declared_classes(), get_declared_interfaces(), get_declared_traits())
+// and every named class-like a non-blade `.php` file under <src dir> declares
+// (PHP tokenizer) must be listed. Each one that is not is printed to stderr,
+// sorted, as `api-surface: the class list misses <FQCN> (declared in <path
+// under src>)`, and the run exits 1 with no stdout: a class the static scan
+// missed must not vanish from the surface silently.
+//
 // A type that fails to autoload (`Class|Interface|Trait "X" not found`) is
 // defined as an empty stub of that kind and the load is retried. A
 // declaration's `stubbed` lists, sorted, every stub among its parent classes,
@@ -217,6 +226,92 @@ function stubbedOf(ReflectionClass $class, array $stubs): array
     return $out;
 }
 
+/** The named class-likes a PHP file declares, by the tokenizer: `class`, `interface`, `trait` or `enum` followed by a name, not after `::` or `new`. */
+function declaredIn(string $code): array
+{
+    $tokens = array_values(array_filter(
+        token_get_all($code),
+        static fn (array|string $token): bool => !is_array($token) || !in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true),
+    ));
+    $namespace = '';
+    $out = [];
+    foreach ($tokens as $i => $token) {
+        if (!is_array($token)) {
+            continue;
+        }
+        $next = $tokens[$i + 1] ?? null;
+        if ($token[0] === T_NAMESPACE) {
+            if (is_array($next) && in_array($next[0], [T_STRING, T_NAME_QUALIFIED], true)) {
+                $namespace = $next[1];
+            } elseif ($next === '{') {
+                $namespace = '';
+            }
+            continue;
+        }
+        if (!in_array($token[0], [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM], true) || !is_array($next) || $next[0] !== T_STRING) {
+            continue;
+        }
+        $previous = $tokens[$i - 1] ?? null;
+        if (is_array($previous) && in_array($previous[0], [T_DOUBLE_COLON, T_NEW], true)) {
+            continue;
+        }
+        $out[] = ($namespace === '' ? '' : $namespace . '\\') . $next[1];
+    }
+    return $out;
+}
+
+/** Every non-blade `.php` file under $dir, as paths relative to it, sorted. */
+function phpFiles(string $dir): array
+{
+    $out = [];
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        $path = $file->getPathname();
+        if ($file->isFile() && str_ends_with($path, '.php') && !str_ends_with($path, '.blade.php')) {
+            $out[] = substr($path, strlen($dir) + 1);
+        }
+    }
+    sort($out, SORT_STRING);
+    return $out;
+}
+
+/**
+ * The class-likes under $srcReal the class list misses (Story 6.5): those declared from a file under it (by
+ * get_declared_classes(), get_declared_interfaces() and get_declared_traits(), enums included; anonymous classes
+ * and aliases skipped), and those its non-blade `.php` files declare (by the tokenizer). FQCN => path under src, sorted.
+ */
+function missedClasses(array $list, string $srcReal): array
+{
+    $listed = [];
+    foreach ($list as $fqcn) {
+        $listed[strtolower($fqcn)] = true;
+    }
+    $missed = [];
+    foreach ([...get_declared_classes(), ...get_declared_interfaces(), ...get_declared_traits()] as $name) {
+        $class = new ReflectionClass($name);
+        if ($class->isAnonymous() || $class->getName() !== $name) {
+            continue;
+        }
+        $file = underSrc($class->getFileName(), $srcReal);
+        if ($file !== null && !isset($listed[strtolower($name)])) {
+            $missed[$name] = $file;
+        }
+    }
+    foreach (phpFiles($srcReal) as $path) {
+        $code = file_get_contents($srcReal . '/' . $path);
+        if ($code === false) {
+            fail("cannot read {$path}");
+        }
+        foreach (declaredIn($code) as $name) {
+            if (!isset($listed[strtolower($name)]) && !isset($missed[$name])) {
+                $missed[$name] = $path;
+            }
+        }
+    }
+    ksort($missed, SORT_STRING);
+    return $missed;
+}
+
 $stubs = [];
 $lines = [];
 $current = '(none)';
@@ -285,6 +380,15 @@ try {
             'nullable' => nullableOf($function->getReturnType()),
             'file' => $file,
         ];
+    }
+
+    $current = 'the class-list cross-check';
+    $missed = missedClasses($list, $srcReal);
+    if ($missed !== []) {
+        foreach ($missed as $fqcn => $path) {
+            fwrite(STDERR, "api-surface: the class list misses {$fqcn} (declared in {$path})\n");
+        }
+        exit(1);
     }
 
     $current = 'the output';

@@ -1,0 +1,53 @@
+# The API-surface diff report (Story 6.5, AD-15, AD-16, AD-28).
+#
+# On every PR into main and in the merge queue, `report` runs
+# `bun run api-surface --all`, which diffs each package's `.d.ts` against
+# Upstream's export (`conformance/api-surface/<component>.jsonl`), and appends
+# the per-Component table to the job summary, shown on the PR's checks page.
+# It never fails: the step ends with `exit 0`, and a tool failure becomes a
+# `::warning` and a note in the summary instead of the table. Only
+# `bun run api-surface:gate <component>`, run when a Component's last Epic is
+# accepted, fails on unexplained members. It is not a required check.
+#
+# The job is read-only: no PR comment (that needs `pull-requests: write`,
+# which AD-16 reserves for the Oracle, dashboard and release jobs).
+name: api-surface
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: API-surface diff
+        run: |
+          status=0
+          bun run api-surface --all --markdown "$RUNNER_TEMP/api-surface.md" || status=$?
+          if [ "$status" -eq 0 ]; then
+            {
+              echo "## API surface (AD-15)"
+              echo
+              cat "$RUNNER_TEMP/api-surface.md"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::bun run api-surface failed (exit $status); no API-surface table"
+            echo "The API-surface diff failed (exit $status); see the job log. The report never fails the PR." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0

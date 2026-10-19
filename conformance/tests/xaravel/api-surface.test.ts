@@ -368,7 +368,7 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
   expect(run(["--bogus"], () => "").code).toBe(2);
 });
 
-phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface (FR-6, AD-15.5)", () => {
+phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface; after the load it cross-checks the class list against every class-like declared under src/ and fails naming any it misses (FR-6, AD-15.5)", () => {
   const result = runFixture(FIXTURE_CLASSES);
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
@@ -384,6 +384,18 @@ phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared me
   const declarations = (stdout: string): string[] => stdout.split("\n").filter((line) => line.includes('"stubbed":["'));
   expect(declarations(reversed.stdout)).toEqual([...declarations(result.stdout)].reverse());
   expect(declarations(result.stdout).length).toBe(2);
+  // The class-list cross-check (Story 6.5): a list that omits a loaded trait (Greets, used by Widget) and a class
+  // (Options) fails, naming both with their files under src/, sorted, and prints nothing on stdout.
+  const omitted = runFixture(FIXTURE_CLASSES.filter((fqcn) => fqcn !== "Fixture\\Greets" && fqcn !== "Fixture\\Options"));
+  expect(omitted.code).toBe(1);
+  expect(omitted.stdout).toBe("");
+  expect(omitted.stderr).toBe(["api-surface: the class list misses Fixture\\Greets (declared in Greets.php)", "api-surface: the class list misses Fixture\\Options (declared in Options.php)", ""].join("\n"));
+  // A class-like never loaded (nothing references the enum Size once it is off the list) is found by the tokenizer.
+  const unloaded = runFixture(FIXTURE_CLASSES.filter((fqcn) => fqcn !== "Fixture\\Size" && fqcn !== "Fixture\\Widget"));
+  expect(unloaded.code).toBe(1);
+  expect(unloaded.stdout).toBe("");
+  expect(unloaded.stderr).toBe(["api-surface: the class list misses Fixture\\Size (declared in Size.php)", "api-surface: the class list misses Fixture\\Widget (declared in Widget.php)", ""].join("\n"));
+
   // A class that is not found, or a non-autoload failure, exits 1 naming it.
   const missing = runFixture(["Fixture\\Nope"]);
   expect(missing.code).toBe(1);

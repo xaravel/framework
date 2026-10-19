@@ -29,7 +29,8 @@
     "tools/story-check/**/*.ts",
     "tools/devcontainer/**/*.ts",
     "tools/lint-rules/**/*.ts",
-    "tools/async-surface/*.ts"
+    "tools/async-surface/*.ts",
+    "tools/api-surface/*.ts"
   ],
   "exclude": [
     "conformance/upstream"
