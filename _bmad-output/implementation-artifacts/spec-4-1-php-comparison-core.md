@@ -5,7 +5,7 @@ created: '2026-10-18'
 status: 'done'
 baseline_revision: '6d48339d91cbb8f42afa89963b6da7a42e12178f'
 review_loop_iteration: 1
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/docs/ops/oracle.md'
@@ -18,6 +18,27 @@ deferred:
     location: >-
       packages/assert/src/comparison/PhpComparison.ts
     severity: low
+  - summary: >-
+      A class that extends a JS built-in (Error, Map, EventTarget) is `==` only to itself even when it exposes the props protocol, and it is not cast to 1 against a number.
+    evidence: |-
+      Follow-up pass (2026-10-18). `loose()` checks `isBuiltIn` before `objectProps` (PhpComparison.ts:419), and `isCastableObject` excludes built-ins (:337). A probe of `class E extends Error { [Symbol.for('xaravel.php.props')]() { return {m: this.m}; } }` gives `phpLooseEquals(new E("a"), new E("a"))` false and `phpLooseEquals(new E("a"), 1)` false, where PHP says true for both. Every ported exception extends Error, and Mockery's `with()` matches arguments through `phpLooseEquals`. Story 4.3's ObjectComparator (:33) and Exporter (:83) already treat Error subclasses as PHP objects, so the layers disagree. The rule is the approved ESC-4.1-1 contract (`decisions/ESC-4.1-1.md`, object props protocol), so changing the precedence needs a Maintainer ruling. Target: Maintainer (retro epic-4 item 7).
+    location: >-
+      packages/assert/src/comparison/PhpComparison.ts:337,419
+    severity: medium
+  - summary: >-
+      `phpLooseEquals` never compares a Stringable object with a string through `__toString`, so `$obj == "a"` is false where PHP casts the object.
+    evidence: |-
+      Follow-up pass (2026-10-18). `loose()` returns false for any object against a string. A probe of a class whose own `toString()` returns "a" gives `phpLooseEquals(obj, "a")` false; PHP 8.5 compares the `__toString` result and says true. `PhpValues.isStringable` (Story 4.3) already detects such objects, but the comparison core does not use it, and the objects Oracle request has no string operands. This spec's Design Notes put `__toString` objects out of scope, while the intent asks for PHP 8.5 semantics, so it needs a Maintainer decision rather than a patch. Target: Maintainer (retro epic-4 item 8).
+    location: >-
+      packages/assert/src/comparison/PhpComparison.ts:397-415
+    severity: medium
+  - summary: >-
+      The object protocol has no way to mark an object as uncomparable, as PHP enum cases are, so an enum case would be cast to 1 against a number or compared by props.
+    evidence: |-
+      Follow-up pass (2026-10-18). PHP enum cases use `zend_objects_not_comparable`, so `Suit::Hearts == 1` and `Suit::Hearts == true` are false, and two cases compare by identity. `loose()` casts any non-built-in object to 1 against a number (:391-396), and bool comparisons use the cast to true. No enum representation exists in the AD-9 model yet, so this is unverified against a real runtime value. It needs an extension of the ESC-4.1-1 protocol, which is a Maintainer decision. Target: Maintainer (retro epic-4 item 8).
+    location: >-
+      packages/assert/src/comparison/PhpComparison.ts:367-396
+    severity: medium
 ---
 
 <intent-contract>
@@ -189,6 +210,42 @@ deferred:
   - `[false]` `[reject]` IA11 object detection goes beyond B2 — amendment 1 decided it.
   - `[false]` `[reject]` IA12 D2 reading — matches intent row 2.
 
+### 2026-10-18 — Follow-up review pass
+Scoped to the Story's squash commit (`aeae45d`, excluding `_bmad-output/`), because `followup_review_recommended` was `true` (retro epic-4 item 6, finding S5). Findings were verified against `main` at `9cced98`, which includes retro items 1–5 (#126, #134, #135, #136, #132) and Stories 4.2–4.6. All four layers ran as parallel subagents.
+- verdicts: 27 findings — high 0, medium 8, low 16, false 3, maybe-false 0
+- findings:
+  - Blind Hunter
+    - `[low]` `[reject]` A plain object with integer-like keys reads in JS index order under `===`. — carried (EC2): AD-9 forbids that form, and a guard adds a branch.
+    - `[medium]` `[defer]` The built-in check runs before the props protocol, so an Error/EventTarget/Map subclass can never opt in, and `exception == 1` is false. — Verified with a probe (both false; PHP true for both). The rule is in the approved ESC-4.1-1 contract, so it needs a Maintainer ruling. Recorded in `deferred` (Maintainer, retro epic-4 item 7).
+    - `[medium]` `[defer]` No `__toString` handling; an object never `==` a string. — Verified with a probe (false; PHP true). The Design Notes' Out of scope excludes it but the intent does not, so it needs a Maintainer decision. Recorded in `deferred` (Maintainer, retro epic-4 item 8).
+    - `[low]` `[reject]` Closures are not PHP objects (`fn() => 1 == 1`, closure-vs-closure equality). — Rare in tests, PHP warns on the cast, and JS cannot tell PHP's same-function-and-scope rule apart; Story 4.3's ClosureComparator owns assertEquals on closures. A fix adds branches.
+    - `[medium]` `[defer]` No model for uncomparable objects such as enum cases. — Same root as the Edge Case Hunter row; recorded in `deferred` (Maintainer, retro epic-4 item 8).
+    - `[low]` `[defer]` The tamper-proofing comment claims more than the freeze does; intrinsics are called live. — carried (B10/EC8): the existing deferred item. Not deferred again.
+    - `[low]` `[reject]` The Oracle checks only the decoder's one form of each value. — carried (IA2).
+    - `[low]` `[reject]` No nested-object or recursive Oracle rows. — Request 4 has nested stdClass values. A recursive PHP value cannot be encoded in a fixture, and XT-assert-2 asserts the recursion error. New rows need a live re-signing run.
+    - `[low]` `[reject]` ESC-4.1-1 cites bare DIV-9, and `decodeFloat` drops float-ness. — `decisions/ESC-4.1-1.md` ruled the interim state. The missing owner for `1 === 1.0` is retro finding S4, which item 8 takes.
+    - `[low]` `[reject]` Same-class checks use prototype identity, not `fqcn()`. — AD-10's registry is in `@xaravel/runtime`, which the grader may not import. `PhpValues.sameClass` (Story 4.3) uses the same rule, so the layers agree. No path that loads a class twice was shown.
+  - Edge Case Hunter
+    - `[medium]` `[defer]` A built-in subclass with the props protocol is `==` only to itself. — Grouped with the Blind Hunter built-in row; same `deferred` item.
+    - `[medium]` `[defer]` An Error-subclass object `== 1` is false. — Grouped with the same row.
+    - `[medium]` `[defer]` An enum case `== 1` and `== true` are true; PHP says false. — Recorded in `deferred` (Maintainer, retro epic-4 item 8): it needs a protocol extension, and no enum form exists in AD-9 yet.
+    - `[medium]` `[defer]` A Stringable `==` string is false. — Grouped with the Blind Hunter `__toString` row.
+    - `[low]` `[reject]` Plain objects with int-like keys in non-ascending order. — carried (EC2).
+    - `[low]` `[reject]` A Proxy or bound constructor, or a cross-realm plain object, misclassifies the value. — carried (EC7): there is no realm crossing in the harness. A Proxy class constructor is not a form AD-9 produces.
+    - `[low]` `[reject]` A very sparse array allocates its whole length. — carried (EC4, pass 2).
+    - `[low]` `[reject]` Lazy containers that return fresh children recurse to RangeError. — carried (EC3, pass 2): it fails loudly.
+    - `[low]` `[reject]` A bigint outside PHP's int range is compared silently. — carried (EC6, pass 2).
+    - `[medium]` `[defer]` (claim) AC 2's "objects `==` by class and props" fails for props-exposing built-in subclasses. — Grouped with the built-in row.
+  - Verification Gap
+    - `[low]` `[patch]` Nothing pins `===` false between a bigint int and an unsafe float of equal value. The reviewer showed that a `numbersIdentical` → `numbersEqual` mutation passes. — Added four XT-assert-2 assertions: `9007199254740993n == 9007199254740992` is true, `===` is false both ways round, and `9223372036854775807n === 9223372036854775808` is false.
+  - Intent Alignment
+    - `[low]` `[reject]` The branded/props truth table runs on the decoder's representations, not runtime values. — carried (IA2); the runtime side is ESC-4.1-1, now ruled.
+    - `[false]` `[reject]` XT-assert-2 hand-writes PHP equality claims. — The intent's fixture-only rule governs the XT-assert-1 truth table, as the auditor itself notes. XT-assert-2 tests the brand and protocol rules that have no PHP form.
+    - `[false]` `[reject]` `1 === 1.0` is true and there is no strict integral-float matrix. — carried (IA4): intent row 2 excludes it.
+    - `[low]` `[reject]` Assigning to the namespace is vacuous. — carried (IA5).
+    - `[low]` `[defer]` Intrinsics and the internal `Comparison` class are not frozen. — carried (B10): the existing deferred item.
+    - `[false]` `[reject]` The Story was marked done while ESC-4.1-1 was open. — ESC-4.1-1 has since been ruled (`decisions/ESC-4.1-1.md`, approved option 1).
+
 ## Design Notes
 
 **Unblocked.** The first attempt blocked here because signed fixtures need the `xaravel-oracle` App. `decisions/MAINT-2026-10-18-oracle-app.md` records the setup; this Story's PR is the supervised first `oracle.yml#story` run. Agent-run steps: requests, code, tests, local unsigned cross-check. Live step (App): the fixture commit on the PR. If that run fails, the Story blocks with the run's error and item 7 stays with the Maintainer. Until the fixtures land, XT-assert-1 fails (never skips).
@@ -268,3 +325,16 @@ Status: done (pending the live fixture run; see Residual risks)
 - `1 === 1.0` is true (ESC-4.1-1).
 - Intrinsics can still be patched (deferred).
 - `#private`-only classes need the props protocol (ESC-4.1-1).
+
+### Follow-up review (2026-10-18)
+
+This pass ran for retro epic-4 item 6 (finding S5). It was scoped to `aeae45d` and verified against `main` at `9cced98`. There were 27 findings: 8 medium, 16 low, 3 false.
+- **Patched (low 1).** `packages/assert/tests/xaravel/comparison.test.ts`: XT-assert-2 now pins `===` false between a bigint int and an unsafe float of equal value. A reviewer had shown that this mutation passed the tests.
+- **Deferred to the Maintainer (3 entries, all medium).** Each needs a ruling and is not an agent patch:
+  - Built-in subclasses (`extends Error`) with the props protocol are `==` only to themselves, and are not cast to 1 against a number. This is the approved ESC-4.1-1 rule, and it disagrees with Story 4.3's ObjectComparator and Exporter. Target: retro epic-4 item 7.
+  - A Stringable object `==` a string is always false. Target: retro epic-4 item 8.
+  - There is no uncomparable-object (enum) protocol. Target: retro epic-4 item 8.
+- **Rejected.** The rest, with reasons in the Review Triage Log. Most are carried from passes 1 and 2.
+- **Prior risks retired.** The first pass's object-vs-number cast is now confirmed by the signed objects fixture (XT-assert-1 green). The native-prototype risk is not fixed: it is restated as the first deferred item, which waits on a Maintainer ruling.
+- **Follow-up review recommendation: false.** No high was patched (patched: high 0, medium 0, low 1), so the work has converged.
+- **Verification.** `bun test`: 154 pass, 0 fail. `typecheck`, `lint` and `graph:check` (53 packages) exit 0. `assert:coverage` exits 0 (67 implemented, 15 pending, 0 missing). `mockery:coverage` exits 0 (42 implemented, 3 pending, 0 missing).

@@ -283,8 +283,12 @@ function given(value: unknown): string {
   if (isPhpObject(value)) {
     return classNameOf(value);
   }
+  if (typeof value === "boolean") {
+    // PHP 8.3+ names a bool argument by its value (`zend_zval_value_name`).
+    return value ? "true" : "false";
+  }
   const type = gettype(value);
-  return ({ NULL: "null", boolean: "bool", integer: "int", double: "float" } as Record<string, string>)[type] ?? type;
+  return ({ NULL: "null", integer: "int", double: "float" } as Record<string, string>)[type] ?? type;
 }
 
 /** A PHP engine TypeError for argument `position` of `method`. */

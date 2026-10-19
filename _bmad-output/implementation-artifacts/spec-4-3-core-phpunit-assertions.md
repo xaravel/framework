@@ -5,12 +5,19 @@ created: '2026-10-18'
 status: 'done'
 baseline_revision: '7d497600d22da8e8db565001e0b5ff0e171b5dc7'
 review_loop_iteration: 2
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/docs/ops/oracle.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      Story 4.3 is done while ESC-4.3-1 (15 contract items) is still unruled, so the choices the grader already builds in are conditional on the ruling.
+    evidence: |-
+      Follow-up pass (2026-10-18). There is no `decisions/ESC-4.3-1.md`, and `escalations:check` passes on an open Escalation. The code already implements the Escalation's proposals: the FQCN, Countable, ArrayAccess and resource brands and the callable shape (items 1-3), FR-116 read as PHPUnit's `assertEquals` (item 6), `assertContainsOnly` with PHPUnit 11.5's signature through a shim (item 7), `assertArraySubset` counted under its own name where the Inventory records `assertThat` (item 8), and `assertArraySubset` placed on `Assert` (item 15). Until the Maintainer rules, AC 1's counting for `assertArraySubset` and the FR-116 reading are met only conditionally. Target: Maintainer (retro epic-4 item 7), which already covers ruling the four unruled Epic 4 contract Escalations (retro finding S1).
+    location: >-
+      conformance/escalations/ESC-4.3-1.md
+    severity: medium
 ---
 
 <intent-contract>
@@ -226,6 +233,57 @@ The other 32 scan names (exceptions, output, files, JSON, `assertThat`, `fail`, 
   - `[low]` `[reject]` (intent-alignment) scalar failures name values in PHPUnit's sentence — carried.
   - `[low]` `[reject]` (intent-alignment) `assertArraySubset`/`assertContainsOnly` rest on Laravel code and a PHPUnit 11.5 shim — escalated (ESC items 7, 8, 15).
 
+### 2026-10-18 — Follow-up review pass
+Scoped to the Story's squash commit (`18c323b`, PR #113), because `followup_review_recommended` was `true` (retro epic-4 item 6, finding S5). The staged diff excludes `_bmad-output/` and the 11 signed fixture files under `conformance/fixtures/assert/` (about 7.4 MB of PHPUnit output; `oracle:verify-fixtures` checks their signatures). Findings were verified against `main` at `9cced98`, which includes retro items 1–5 (#126, #134, #135, #136, #132) and Stories 4.4–4.6. All four layers ran as parallel subagents.
+- verdicts: 42 findings — high 0, medium 5, low 31, false 6, maybe-false 0 (the intent-alignment layer filed a descriptive report; its eight divergences are rows below)
+- findings:
+  - Blind Hunter
+    - `[low]` `[reject]` No `GeneratorNotSupportedException`; a generator is read twice, so the message says "actual size 0". — carried: same as pass 1's generator row.
+    - `[low]` `[reject]` An arrow function as the class raises a raw `instanceof` TypeError, and a class constructor counts as a Closure for `assertIsCallable`/`assertIsObject`. — carried: pass 1's arrow-function row and pass 2's class-value row. `PhpValues.isCallable`/`isPhpObject` are unchanged. Retro item 1 (#126) changed only Mockery's `_matchArg`.
+    - `[low]` `[reject]` `serialize()` and `varExport()` have no cycle guard. — `serialize` is carried (pass 2's canonicalize row). `varExport` on a cyclic value is reached only through `assertArraySubset`'s failure export, which has 0 Upstream executions, and it fails loudly with a RangeError. A guard adds reference tracking.
+    - `[low]` `[reject]` The containment constraints read the whole iterable before `.some`/`.every`, where PHPUnit's `foreach` stops early. — This differs only for an infinite or side-effecting Traversable, which no Upstream assertion passes. The fix rewrites two constraints' loops, not a direct correction.
+    - `[low]` `[reject]` `assertArraySubset` coerces `checkForIdentity` with `Boolean()`, and its argument error names `PHPUnit\Framework\Assert`, not Laravel's `ArraySubset::__construct`. — carried: pass 1's ArraySubset rows (0 Upstream executions).
+    - `[medium]` `[patch]` The TypeError cell rule compares only the class and the substring "Argument #". — Grouped with the verification-gap row; same patch.
+    - `[low]` `[reject]` `assertContainsOnly` maps the aliases even with `isNativeType === false`, and `true` with a non-native name becomes a class check. — carried in part (pass 1's `isNativeType: true` row). The only Upstream call passes `null` and has 0 executions. A fix adds branches for an unused flag.
+    - `[low]` `[reject]` `String(regexp)` sorts flags and prints `g`/`y`; a `null` pattern says "got object". — carried: pass 1's `regExp()` row. A non-RegExp pattern is a test-code bug that fails loudly, and flags are DIV-10's (ESC item 5).
+    - `[low]` `[reject]` The delta text uses `toFixed(6)`, not `%F`. — carried: pass 1's `toFixed` row.
+    - `[low]` `[reject]` `EmptyStringException`, `UnknownClassOrInterfaceException` and `InvalidArgumentException` have no FQCN brand, are not exported and lack the `PHPUnit\Framework\Exception` base. — carried: pass 2's "internal exception classes" row. No Story 4.3 assertion requires catching them.
+    - `[medium]` `[defer]` The Story is `done` while ESC-4.3-1 is open, and the grader already builds in its proposals. — Verified: there is no `decisions/ESC-4.3-1.md`. Per the epic-4 lesson, the affected ACs are conditional on the ruling. Recorded in `deferred` (Maintainer, retro epic-4 item 7).
+    - `[low]` `[reject]` The spec says 50 assertions, the code has 51. — carried: the fix edits this build's spec. The Design Notes "Count" note already records it.
+    - `[false]` `[reject]` The diff lacks the signed fixtures. — This pass excluded them when staging the diff. They are on `main` (`conformance/fixtures/assert/`), and XT-assert-8..10 read and pass against them.
+    - `[low]` `[reject]` `VarExport.serialize` duplicates `@xaravel/runtime/php`'s `phpSerialize`. — XT-assert-3 forbids the grader to import `@xaravel/runtime`, so it needs a copy. The copy only makes the canonicalizing sort keys, so drift could change an order, but no message. A parity test across the two packages adds a cross-package edge for little gain.
+  - Edge Case Hunter
+    - `[low]` `[reject]` `assertArraySubset` with a cyclic value overflows the stack in `varExport`. — Grouped with the Blind Hunter cycle row.
+    - `[low]` `[reject]` Unequal cyclic objects under `assertEqualsCanonicalizing` overflow in `serialize`. — carried: pass 2's canonicalize row.
+    - `[low]` `[reject]` `assertEquals(Symbol('a'), Symbol('b'))` and `assertEquals(undefined, Symbol())` pass. — Verified with a probe: both pass. Neither value is in AD-9's model, and a PHP expected value against either still fails on `gettype`. The fix adds a guard for values a port never passes on both sides.
+    - `[low]` `[reject]` An arrow or bound function as the class argument raises a raw TypeError. — carried: pass 1's row.
+    - `[false]` `[reject]` `"\n\r"` exports as `\n` LF `\r` LF, where sebastian maps `\n\r`. — exporter 8.2.1's `exportString` `strtr` list has only `\r\n`, `\r` and `\n` (`Exporter.php:495-501`), which is what the port does.
+    - `[false]` `[reject]` A nested Closure shortens to `Closure Object ()`, where PHP prints `(...)`. — `countProperties` counts `ReflectionClass(Closure)->getProperties()`, which is 0 (`Exporter.php:302-316`), so PHP prints `Closure Object ()` too.
+    - `[low]` `[reject]` `assertArraySubset` with a non-iterable ArrayAccess subset names a frame Laravel does not have. — carried: pass 1's ArraySubset row.
+    - `[low]` `[reject]` `checkForIdentity` given an array, object or null is coerced. — carried: pass 1's row.
+    - `[low]` `[reject]` `assertCount(1e30, …)` is accepted and truncated. — carried: pass 2's int64 row.
+    - `[low]` `[reject]` An infinite generator haystack hangs. — Grouped with the Blind Hunter containment row.
+    - `[low]` `[reject]` A non-string scalar class argument gives a generic message, not `UnknownClassOrInterfaceException`. — This is a test-code bug that fails loudly. A fix adds a branch.
+    - `[low]` `[reject]` A `null` regex pattern says "got object". — carried: pass 1's `regExp()` row.
+    - `[false]` `[reject]` `LogicalNot.negate` leaves single-quoted words un-negated, unlike PHPUnit's `preg_match` branch. — PHPUnit 13.4.3's `LogicalNot::negate` splits on `'…'|"…"` segments and negates only the text between them (`LogicalNot.php`, `preg_split`). The port's `negate` does the same.
+    - `[low]` `[reject]` (claim) The spec says 50. — carried: the fix edits this build's spec.
+    - `[low]` `[reject]` (claim) The spec says canonicalize sorts as `sort()`. — carried: pass 3's row; the code follows comparator 8.4.0.
+    - `[low]` `[reject]` (claim) The pairing guard is structural for objects, not `phpStrictEquals`. — A decoded object is never the same instance as its TS twin, so strict identity cannot hold. The guard compares class and props, which is the only checkable reading. The fix edits this build's spec.
+  - Verification Gap
+    - `[low]` `[reject]` Only 5 of 51 assertions have a custom-message cell. — Pre-verified. Every assertion passes its message through the same `assertThat(…, message)` path that the five cells exercise. More cells need new requests and a live `oracle.yml#story` signing run, which this pass cannot do.
+    - `[medium]` `[patch]` PHP TypeError cells compare only the class plus "Argument #". — Pre-verified. A stricter rule showed 986 hidden mismatches. Patched: `sameCell` (`assertion-cells.ts`) now drops only PHP's `, called in …` tail and requires the rest to equal the port's message. The `xt_contains_only` shim's argument #n maps to `assertContainsOnly`'s #n-1 (ESC item 7).
+    - `[low]` `[reject]` `assertContainsOnly`'s `isNativeType` is never exercised. — Grouped with the Blind Hunter `isNativeType` row. The reviewer filed it as defer, but the only Upstream call has 0 executions, so it is a low with no target.
+    - `[low]` `[patch]` (other) The port's argument errors say `iterable`, `Countable|iterable` and `bool given`, where PHP 8.5 says `Traversable|array`, `Countable|Traversable|array` and `true`/`false given`. — Verified by the stricter rule above. Patched: `Assert.ts` `iterable`/`countableOrIterable` use PHP's type names, and `PhpValues.given` names a bool by its value. All 986 cells now match.
+  - Intent Alignment
+    - `[low]` `[reject]` The Oracle cells run the static `Assert.assertX`, while the instance form runs only in the counting fixture. — carried: pass 3 made the fixture call all 51 through `this`. The prototype methods are the same function objects.
+    - `[false]` `[reject]` `getMessage()` and the JS `message` are split. — Amendment 1 decided it, and `tsCell` checks both forms.
+    - `[medium]` `[patch]` A PHP TypeError's message is never compared. — Grouped with the verification-gap row; same patch.
+    - `[false]` `[reject]` The counting test writes its report multisets by hand. — The intent's "never hand-write" rule covers PHP pass/fail and messages. Counts follow the Inventory recorder's rule, which has no Oracle form, and the Design Notes "Test" section specifies this fixture-free check.
+    - `[low]` `[reject]` Two messages are written by hand: `undefined is null` and `ctx\nFailed asserting that false is true.` — Amendment 1 requires the first, because `undefined` has no PHP form. The second is the intent's own matrix row, checked in the child run's output.
+    - `[low]` `[reject]` Grader-side brands and the callable shape go beyond the intent. — carried: pass 2's protocols row (ESC items 1–3).
+    - `[medium]` `[defer]` The Story is done while ESC-4.3-1 is open. — Grouped with the Blind Hunter row; same `deferred` item.
+    - `[low]` `[reject]` `assertContainsOnly` uses PHPUnit 11.5's form through a shim. — carried: pass 3's row (ESC items 7, 8, 15).
+
 ## Design Notes
 
 **Requests.** Each request's `setup` declares the PHP twin classes (`XtA`, `XtB extends XtA`, `XtI`, `XtC implements XtI`, a `Countable` and an `IteratorAggregate` class) and `$v = [ …operands… ];`. Each expr is one assertion's matrix. Binary assertions map over `$v × $v`, and unary ones over `$v`, with argument cells (class names, counts, keys, deltas, needles) from a small literal list. Every cell is wrapped as
@@ -299,3 +357,15 @@ Status: done
 - XT-assert-8..10 stay red until the PR's `oracle.yml#story` run signs and commits about 9 MB of fixtures. That live run is the merge gate.
 - ESC-4.3-1 is open. Item 8 (`assertArraySubset`'s kind against the Inventory's `assertThat`) and item 6 (FR-116's "PHP `==`" wording) need Maintainer rulings.
 - The comparators for DateTime, Enumeration, SplObjectStorage, DOMNode, MockObject and Number are not ported (ESC item 4).
+
+### Follow-up review (2026-10-18)
+
+This pass ran for retro epic-4 item 6 (finding S5). It was scoped to `18c323b` (PR #113), without `_bmad-output/` and the signed fixtures, and verified against `main` at `9cced98`. There were 42 findings: 5 medium, 31 low, 6 false.
+- **Patched (medium 1, low 1).**
+  - `packages/assert/tests/xaravel/assertion-cells.ts`: a PHP TypeError cell must now equal the port's message once PHP's `, called in …` tail is dropped. Before, any TypeError containing "Argument #" matched, which hid 986 divergent cells.
+  - `packages/assert/src/Framework/Assert.ts` and `packages/assert/src/comparison/PhpValues.ts`: argument errors now use PHP 8.5's text. The types read `Traversable|array` and `Countable|Traversable|array`, and a bool is given as `true` or `false`.
+- **Deferred to the Maintainer (1 entry, medium).** ESC-4.3-1 is still unruled while the Story is done, so AC 1's `assertArraySubset` counting and the FR-116 reading are conditional on the ruling. Target: retro epic-4 item 7.
+- **Rejected.** The rest, with reasons in the Review Triage Log. Most are carried from passes 1–3.
+- **Prior risks retired.** Pass 3's three unreviewed patches were re-reviewed. The Error own-property filter and the canonicalizing request drew no new finding. The TypeError `Argument #` rule is the one this pass tightened.
+- **Follow-up review recommendation: false.** No high was patched (patched: high 0, medium 1, low 1), so the work has converged.
+- **Verification.** `bun test`: 154 pass, 0 fail. `typecheck`, `lint` and `graph:check` (53 packages) exit 0. `assert:coverage` exits 0 (67 implemented, 15 pending, 0 missing). `mockery:coverage` exits 0 (42 implemented, 3 pending, 0 missing).
