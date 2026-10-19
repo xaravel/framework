@@ -43,7 +43,7 @@ The Oracle re-evaluation runs in `oracle.yml#determinism`, also nightly: after i
 
 | Job | Runner | Triggers | What it runs |
 | --- | --- | --- | --- |
-| `devcontainer` | `ubuntu-24.04` (x64) | `pull_request` on `.devcontainer/**`, `tools/devcontainer/**` and the workflow; nightly `schedule`; `workflow_dispatch` | builds `.devcontainer/`, `docker compose up --wait`, then inside the workspace `bun run devcontainer:pins`, `bun run devcontainer:pins runtime` and the Ratchet over a full harness run, `bun run ratchet run --ref <ref>` (`<ref>` is the PR's head branch on a PR, else `github.ref_name`; used only for Story ownership, the tree graded is the checkout); fails when the Ratchet exits non-zero (a warned unexpected pass does not) or `bun run devcontainer:alpha` finds an alpha Variant `NOT-RUN` in the merged report |
+| `devcontainer` | `ubuntu-24.04` (x64) | `pull_request` on `.devcontainer/**`, `tools/devcontainer/**`, `conformance/harness/**`, `package.json`, `bun.lock`, `.bun-version` and the workflow; nightly `schedule`; `workflow_dispatch` | builds `.devcontainer/`, `docker compose up --wait`, then inside the workspace `bun run devcontainer:pins`, `bun run devcontainer:pins runtime` and the Ratchet over a full harness run, `bun run ratchet run --ref <ref>` (`<ref>` is the PR's head branch on a PR, else `github.ref_name`; used only for Story ownership, the tree graded is the checkout); fails when the Ratchet exits non-zero (a warned unexpected pass does not) or `bun run devcontainer:alpha` finds an alpha Variant `NOT-RUN` in the merged report |
 
 It is advisory, not a required check, and does not duplicate the nightly matrix. See [devcontainer.md](devcontainer.md).
 
