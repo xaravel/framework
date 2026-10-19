@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { ASSERTIONS_4_4 } from "../../src/Framework/Assert";
+import { ExceptionMessageMatchesRegularExpression } from "../../src/Framework/Constraint/Exception/ExceptionMessageMatchesRegularExpression";
 import { Assert, AssertionFailedError, Exception, ExpectationFailedException, TestCase } from "../../src/index";
 import { type DirectCell, EXCEPTION_CELLS, EXPECTATION_CELLS, FILE_CELLS, FILES, JSON_CELLS, JSON_MATRIX_EXPRS, JSON_V, JSON_W, type LifecycleCell, OUTPUT_MARKER, type Pair, REQUESTS, type RequestSpec, THAT_CELLS } from "./expectation-cells";
 import { decode, type Output, readRequests, readSignedFixture } from "./oracle-values";
@@ -83,8 +84,8 @@ const TRACE = '" at\n';
 
 /**
  * Whether the port's cell is the Oracle's. A wrong-class message ends with a stack trace, PHP's or JS's (ESC-4.4-2
- * item 3): it is compared up to and including `" at\n"`. PHP's engine TypeError names PHP call sites: only its class
- * is compared, and the port's must be an argument error.
+ * item 3): it is compared up to and including `" at\n"`. PHP's engine TypeError ends with the PHP call site
+ * (", called in <file> on line <n>"): that tail is dropped and the rest must equal the port's message.
  */
 function sameCell(oracle: Cell, got: Cell): boolean {
   if (oracle === null || got === null) {
@@ -95,7 +96,7 @@ function sameCell(oracle: Cell, got: Cell): boolean {
     return false;
   }
   if (oracle[0] === "TypeError") {
-    return got[0] === "TypeError" && got[1].includes("Argument #");
+    return got[0] === "TypeError" && oracle[1].replace(/, called in [\s\S]*$/, "") === got[1];
   }
   if (oracle[0] !== got[0] || JSON.stringify(oracle[2]) !== JSON.stringify(got[2])) {
     return false;
@@ -309,6 +310,15 @@ test("XT-assert-12: the other expectations, the output buffer, fail, markTestSki
   expect(report(run, "testSkippedInSetUp")).toEqual({ type: "ported", id: `${CASE_ID}::testSkippedInSetUp`, consequence: null, assertions: {}, skipped: "skipped in setUp" });
   expect(run.results.get(`${CASE_ID}::testSkippedInSetUp`)).toBeNull();
   expect(run.probes["bodyAfterSkippedSetUp"]).toBeUndefined();
+  // tearDown runs after a passing and a failing body; its error fails a passing test, and a body's assertion failure
+  // wins over it (PHPUnit's tearDownTest).
+  expect(run.probes).toMatchObject({ tearDownAfterPass: true, tearDownAfterFailure: true });
+  expect(run.results.get(`${CASE_ID}::testTearDownRuns`)).toBeNull();
+  expect(run.tests.get(`${CASE_ID}::testTearDownRunsAfterFailure`)?.outcome).toEqual(["AssertionFailedError", "body failed", null, 0]);
+  expect(run.tests.get(`${CASE_ID}::testTearDownThrows`)?.outcome).toEqual(["Error", "boom from tearDown", null, 0]);
+  expect(run.results.get(`${CASE_ID}::testTearDownThrows`)).toContain("boom from tearDown");
+  expect(run.tests.get(`${CASE_ID}::testBodyFailsThenTearDownThrows`)?.outcome).toEqual(["AssertionFailedError", "body failed", null, 0]);
+  expect(run.results.get(`${CASE_ID}::testBodyFailsThenTearDownThrows`)).toContain("body failed");
   for (const [id, child] of run.tests) {
     const keys = Object.keys(child.report);
     expect({ id, keys }).toEqual({ id, keys: "skipped" in child.report ? ["type", "id", "consequence", "assertions", "skipped"] : ["type", "id", "consequence", "assertions"] });
@@ -325,6 +335,12 @@ test("XT-assert-12: the other expectations, the output buffer, fail, markTestSki
 
   // DIV-10: expectExceptionMessageMatches takes a RegExp; a PCRE pattern string is a TypeError.
   expect(() => new TestCase().expectExceptionMessageMatches("/^a.c$/" as unknown as RegExp)).toThrow(TypeError);
+  // One preg_match() call: neither a `y` flag nor a `g` pattern's lastIndex anchors or skips the search.
+  const global = /boom/g;
+  global.lastIndex = 5;
+  for (const pattern of [/boom/y, global]) {
+    expect(() => Assert.assertThat("a boom", new ExceptionMessageMatchesRegularExpression(pattern))).not.toThrow();
+  }
 
   // PHPUnit's Exception protocol: a string code joins the message and the code becomes 0; previous is kept;
   // AssertionFailedError::toString() is getMessage().

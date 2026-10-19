@@ -5,13 +5,20 @@ created: '2026-10-18'
 status: 'done'
 baseline_revision: 'ae0e26cc5f87777029303a1acd005e92533a321b'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/_bmad-output/implementation-artifacts/spec-4-5-mockery-core.md'
   - '{project-root}/docs/ops/oracle.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      `stories/4.6.md` and sprint-status say `done` while ESC-4.6-1, the contract the code ships to, has no ruling.
+    evidence: |-
+      Follow-up pass (2026-10-18). `ls decisions/ESC-4.6-1.md` finds nothing, so ESC-4.6-1 is still open. The code already builds to its proposed contracts: the `MODEL_STATE` symbol and escape slot (item 1), `alias:`/`overload:` as php-only and the no-visibility rule, each with a proposed DIV-6 clause (items 3 and 4), recursive `shouldIgnoreMissing` (item 5), the Double names pending (item 6), and `Symbol.for('xaravel.class.lookup')` (item 9). The Epic 4 lesson says such a Story is done only on condition of the ruling, and retro item 7 records that AC 3 is met only once ESC-4.6-1 is approved. Changing the Story's status or ruling the items is the Maintainer's call. Target: Maintainer (retro epic-4 item 7).
+    location: >-
+      stories/4.6.md, conformance/escalations/ESC-4.6-1.md
+    severity: medium
 ---
 
 <intent-contract>
@@ -144,6 +151,54 @@ deferred: []
   - `[low]` `[reject]` (intent 6) the pending names and `alias:`/`overload:` rest on a proposed, not approved, Escalation — settled by the ruling on ESC-4.6-1, not by code; `overload:` is not a scan name.
   - `[false]` `[reject]` (intent 7) `stories/4.6.md` has `test_ids: []` — XT ids live under `xaravel_test_ids`, as in Stories 4.1-4.5.
 
+### 2026-10-18 — Follow-up review pass
+This pass reviewed the Story's squash commit (`f1fdba2`, excluding `_bmad-output/` and `conformance/fixtures/`) because `followup_review_recommended` was `true` (retro epic-4 item 6, finding S5). Findings were checked against the current tree, which includes retro items 1–5 (#126, #134, #135, #136, #132). Four review layers reported.
+- verdicts: 39 findings — high 0, medium 2, low 25, false 12, maybe-false 0
+- findings:
+  - Blind Hunter
+    - `[medium]` `[defer]` `stories/4.6.md` says `done` while ESC-4.6-1 has no ruling, and the code ships its proposed contracts and two proposed DIV-6 clauses. — Checked: there is no `decisions/ESC-4.6-1.md`. The lesson on open contract Escalations applies. Recorded in `deferred` (Maintainer, retro epic-4 item 7).
+    - `[false]` `[reject]` `test_ids: []` while ESC-4.6-1 claims XT-mockery-4..6. — carried (intent 7).
+    - `[low]` `[reject]` Recursive `shouldIgnoreMissing(null, true)` returns a fresh mock for every missing call, where Mockery returns null for an untyped method (Mock.php 810-867), and it advances `mockCounter`. — The claim is true, but Upstream has 0 recursive uses (only 4 files call `shouldIgnoreMissing`, none with `true`). The behavior is the proposed ESC-4.6-1 item 5, which the item 7 ruling settles.
+    - `[false]` `[reject]` `shouldNotReceive('a','b')` returns only the last name's expectation. — carried (edge row, pass 1): Mock.php 311-327 returns the last `$expectation` too.
+    - `[low]` `[reject]` `shouldHaveBeenCalled`/`shouldNotHaveBeenCalled` cannot pass without ClosureWrapper and are untested. — carried (blind spy(closure) row).
+    - `[low]` `[reject]` With `Foo[m]` and constructor-argument mocks, the real constructor runs on the bare instance before the Proxy exists. Its calls are not recorded, and a captured `this` is not the mock. — Real. In PHP, a constructor that calls a mocked method throws BadMethodCallException, because no expectation exists yet. So PHP-passing tests never depend on recording those calls. A captured `this` is rare, and the fix would mean restructuring construction around a Proxy prototype.
+    - `[low]` `[reject]` The test-side class-lookup stand-in in `scenarios.ts` is installed on import and never removed. — Real, but nothing else in the repo reads `Symbol.for('xaravel.class.lookup')` (grep). The stand-in answers only the twin names, and the protocol is ESC-4.6-1 item 9 (carried intent 2 for the faking part).
+    - `[false]` `[reject]` `mockery:coverage` checks presence only. — Fixed on main by retro item 5 (#132): `tools/mockery-coverage/coverage.ts` now runs one behavior probe per name.
+    - `[low]` `[reject]` `andThrow('<FQCN>')` lacks DomainException, RangeException, Error, TypeError and others. — carried (blind andThrow('RangeException') row).
+    - `[low]` `[patch]` The `support/classes.ts` header says names compare case-insensitively, but `lookupClass` passes the name through as written. — The comment now says that only the grader's own exception names fold case, and that folding a looked-up name is the installer's part of the protocol.
+    - `[low]` `[reject]` `isClosure` reads native constructors (Map, Date, Error) and Proxy-wrapped classes as closures, and `type('callable')` rejects `[obj, 'method']` arrays and invokables. — Verified with a probe (`isClosure(Map)` is true). But a JS built-in passed as a mock target or as an argument has no PHP twin, and both Upstream `type('callable')` uses (CacheRepositoryTest.php:572,590) pass a closure. A fix adds branches.
+    - `[low]` `[reject]` The HigherOrderMessage Proxy turns `toString`, `valueOf`, `toJSON` and `inspect` into messages. — carried (edge row, pass 1).
+    - `[false]` `[reject]` The `generatedFor` cache key uses `JSON.stringify` (AD-23). — The key is built from strings and booleans inside the module and is never output. AD-23 governs how framework values are encoded, so no value is encoded wrongly here.
+    - `[low]` `[reject]` Several new behaviors have no Oracle scenario: `shouldHaveBeenCalled`, recursive ignore-missing, `self()` after `close()`, `'Foo|null'`, mixed `[m1,!m2]`, `between`, and a constructor that sets its own `MODEL_STATE`. — The `'Foo|null'` part is false: Container.php:686 also compares `$arguments`, not `$type`, with `'null'`. `between` is on the Never list. The others are rare forms (0 Upstream uses of the closure spy or of recursion), and new cells need a live signing run.
+  - Edge Case Hunter
+    - `[false]` `[reject]` `shouldNotReceive('a','b')->with(1)` reaches only the last name. — carried (edge row, pass 1).
+    - `[false]` `[reject]` `self()` on an empty container throws LogicException, where PHP throws OutOfBoundsException. — Container.php 466-478 in Mockery 1.6.15 throws `LogicException('You have not declared any mocks yet')`, as the port does.
+    - `[low]` `[reject]` `passthru()` with a name in a different case from the declared method fails, though PHP is case-insensitive. — Real (`_mockery_parentMethod` looks up the exact name), but unlikely: Upstream `passthru` uses the declared spelling. A case-insensitive prototype scan adds a branch.
+    - `[low]` `[reject]` `passthru` on a mock with no parent names `Object::foo()`. — Real, but PHP's `call_user_func_array('::foo')` fails with a different error of its own. No Upstream test calls passthru on a bare mock, and matching PHP would need a new signed cell.
+    - `[low]` `[reject]` Redefining an escape-slot member with a partial descriptor throws TypeError. — carried (edge partial-descriptor row).
+    - `[low]` `[reject]` `in`, `delete` and `Object.keys` miss members defined through a model mock. — carried (blind traps row).
+    - `[low]` `[reject]` A model constructor that sets its own `MODEL_STATE` slot to null or a primitive makes `#members()` dereference null. — Real for that input. But ESC-4.6-1 item 1 makes the slot the model's state object, and no such constructor has been shown. A guard would protect a state nobody has demonstrated.
+    - `[low]` `[reject]` Coercing a HigherOrderMessage (`String()`, `JSON.stringify`, `inspect`) sends a message. — carried (edge row, pass 1).
+    - `[low]` `[reject]` `allows()` given a branded PhpArray reads no entries. — Real, but `PhpArray` does not exist yet (Story 9.5), and ported tests pass object literals. `shouldReceive(map)` reads its map the same way, so a fix belongs with 9.5's type.
+    - `[false]` `[reject]` `{0: a, 1: b}` as constructor arguments is read as quick definitions. — A probe shows that `arrayEntries({0:"a",1:"b"})` normalizes the keys to `[[0,"a"],[1,"b"]]`. `parseArrayArgument` therefore reads the object as a list, so as constructor arguments, as PHP does.
+    - `[low]` `[reject]` A trailing native constructor or Proxy-wrapped class is popped as a closure. — Same root cause as the `isClosure` row above, and rejected on the same grounds.
+    - `[low]` `[reject]` An anonymous parent class is named `class@anonymous`, where PHP uses an md5 (MockConfiguration::generateName). — PHP hashes the anonymous name, which includes the declaring file path and line, so no port can reproduce it. No Upstream message is compared on it.
+    - `[low]` `[patch]` `Mockery.type('int'/'float')` splits numbers with `Number.isInteger`, but the grader's value layer (`PhpValues.isInt`/`isFloat`, `gettype`) uses `Number.isSafeInteger`. So `type('int')` matched `2 ** 53`, and `type('float')` rejected it. — `Matcher/Type.ts` now uses `Number.isSafeInteger`, following retro item 3's one value layer, which supersedes the spec's `Number.isInteger` wording. A fixture-free check pins `2 ** 53` as float and `2 ** 53 - 1` as int.
+  - Verification Gap
+    - `[low]` `[patch]` Nothing tests HigherOrderMessage's `then` guard. — The fixture-free block now checks that `then` reads undefined on `Mockery.mock(XtFoo).shouldReceive()`, so a mutation that drops the guard fails. The test stays synchronous, so there is no `await`.
+    - `[low]` `[patch]` Nothing tests the escape slot's accessor and read-only paths (`readDescriptor` get, the `set` trap's setter and its `writable !== true` refusal). — The filed target, Story 36.1, has no AC covering Mockery's tests (lesson: check the deferral chain), so the check was added now. XT-mockery-5 defines an accessor member on the plain model mock, reads it and assigns through it, then defines a `writable: false` member and asserts that `Reflect.set` returns false and the value is kept. Each of the three mutations now fails a check.
+    - `[low]` `[reject]` (other) The CLASHABLE `expects` half is untested. — It is the same set lookup as the tested `allows`, and no Upstream class declares an instance `expects`.
+    - `[false]` `[reject]` (other) `isClosure`'s `Object.hasOwn(value, FQCN)` check makes no observable difference. — It does: a Proxy-wrapped branded class prints as native code, so without the brand check it would read as a closure.
+  - Intent Alignment
+    - `[false]` `[reject]` (a) Every test is at the grader-internal surface, and the Upstream-facing gaps moved into ESC-4.6-1. — carried (intent 1).
+    - `[false]` `[reject]` (b) The coverage report measures presence. — Fixed on main by retro item 5 (#132).
+    - `[low]` `[reject]` (c) `andThrow('XtErr')` resolves only grader exceptions, and a fixture-free check hand-asserts `Class "XtErr" not found`. — carried (blind andThrow row). ESC-4.6-1 item 9 discloses it.
+    - `[low]` `[reject]` (d) The fixture-free checks hand-write expectations that have PHP analogues. — They pin JS-only forms: `function` expressions against classes, a JS `Gate` class, the ESC-4.6-1 item 5 contract and `allows(null)`. The one PHP message they assert is Container.php:657's literal. Every compared cell is still XT-mockery-4's signed fixture.
+    - `[false]` `[reject]` (e) The `times()` deprecation after `never()` is treated as unobservable. — Expectation.php's `@trigger_error` is suppressed, and by default PHPUnit does not report a suppressed deprecation, so it never changes a test outcome.
+    - `[low]` `[patch]` (f) The diff fixes the `MODEL_STATE` layout itself; a fresh set on a constructor-less mock lands on the bare instance; only a local double is tested. — carried (edge bare-instance row, pass 1): already documented in ESC-4.6-1 item 1 and pinned by XT-mockery-5. Not patched again. The ruling is part of the deferred item (retro epic-4 item 7).
+    - `[false]` `[reject]` (g) The scope additions stay within bounds. — This is a description, not a defect: no bad outcome is claimed.
+    - `[medium]` `[defer]` (h) Bookkeeping: `stories/4.6.md` says `done`, and the `mockery:coverage` CI step is advisory. — The status part is grouped with the Blind Hunter ESC-4.6-1 row (the same `deferred` item, retro epic-4 item 7). The advisory step is carried (intent 4/5): it is advisory like `assert:coverage` (ESC-4.4-2 item 4).
+
 ## Design Notes
 
 **Dispatch.** `_mockery_handleMethodCall(method, args)`: push `MethodCall(method, args)` to the received calls; a director → `call(args)`, catching `NoMatchingExpectationException` only when ignore-missing or defer-missing is set (then fall through); a proxied-partial object → call its method; defer-missing and a function on the parent prototype chain → call it with `this` = the mock Proxy; `__toString`/`toString` per Mockery; ignore-missing → the given default (JS has no return types, so `mockery_returnValueForMethod` yields `null`, or a recursive ignore-missing mock when `recursive` is set; ESC-4.6-1); else 4.5's `BadMethodCallException`. Protected methods: TS visibility does not exist at run time, so every method is mockable and `shouldAllowMockingProtectedMethods()` only sets its flag and returns the mock (ESC-4.6-1). Spies count `shouldHaveReceived` once per call as Mockery does (`++_mockery_expectations_count`).
@@ -173,3 +228,19 @@ Status: done
 - **Follow-up review recommended:** yes — three medium entries patched on a first pass. The unverified risk: the AD-7 escape and `set` path are proven only against a local model double; Story 36.1's real Model Proxy, and the bare-instance set on constructor-less model mocks, are unsettled until ESC-4.6-1 is ruled on.
 - **Verification:** `oracle:story check 4.6`, `escalations:check`, `scaffold:check`, `graph:check`, `ownership:check`, `assert:coverage`, `mockery:coverage` (45 names: 42 implemented, 3 pending), `typecheck` and `lint` pass. `bun test`: 149 pass, 1 fail (XT-mockery-4, naming its missing signed fixture, which `oracle.yml#story` signs on the PR). The implementer's throwaway copy with a locally signed fixture matched all 40 XT-mockery-4 cells against real Mockery 1.6.15 (never committed; `oracle.pub` untouched).
 - **Residual risks:** ESC-4.6-1 is unruled (the class-lookup protocol, `MODEL_STATE` name, `capture` box, DIV-6 entries and the Double owner all depend on it); the in-repo Oracle comparison is unproven until the fixture is signed; the coverage report's probe relies on bound-function names.
+
+### Follow-up review (2026-10-18)
+
+This pass ran for retro epic-4 item 6 (finding S5). It reviewed `f1fdba2` against the current tree, which includes retro items 1–5 (#126, #134, #135, #136, #132). There were 39 findings: 2 medium, 25 low and 12 false, of which 12 rows are carried from pass 1.
+- **Patched (low 4).**
+  - `packages/mockery/src/Mockery/Matcher/Type.ts`: `type('int')` and `type('float')` now split numbers with `Number.isSafeInteger`, as the grader's value layer does (retro item 3). Before, `2 ** 53` counted as an int.
+  - `packages/mockery/src/support/classes.ts`: the header now says the class lookup receives the name as written, and that folding its case is the installer's part of the protocol.
+  - `packages/mockery/tests/xaravel/mockery.test.ts`: the fixture-free block pins HigherOrderMessage's `then` guard and the safe-integer split.
+  - The same file: XT-mockery-5 pins the escape slot's accessor read, its setter and its read-only refusal.
+- **Deferred (1 entry, medium; two rows grouped).** `stories/4.6.md` says `done` while ESC-4.6-1 is unruled, and the code ships its proposed contracts and DIV-6 clauses. Target: Maintainer (retro epic-4 item 7).
+- **Rejected.** The rest, with reasons in the Review Triage Log. Two false findings were fixed on main by retro item 5 (#132): the coverage report's presence check (Blind Hunter 8 and Intent b).
+- **Follow-up review recommendation: false.** No high was patched (patched: high 0, medium 0, low 4), so the work has converged.
+- **Verification.** `bun test packages/mockery`: 10 pass, 0 fail. `bun test`: 154 pass, 0 fail. `bun run typecheck` and `bun run lint` exit 0. `bun run mockery:coverage` exits 0 (45 scan names: 42 implemented, 3 pending, 0 missing).
+- **Residual risks.**
+  - ESC-4.6-1 is still unruled, so the AD-7 escape-slot layout, the class-lookup protocol, recursive ignore-missing and the DIV-6 clauses may all change when it is ruled.
+  - The escape slot is still proven only against the local model double.

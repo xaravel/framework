@@ -1,8 +1,9 @@
 // `Mockery\Matcher\Type` (Mockery 1.6.15): `Mockery.type(name)`.
 //
 // A PHP type name runs PHP's `is_<name>` (`real` is `is_float`) over the AD-9
-// value model; int and float are both a JS number, told apart by
-// `Number.isInteger` (DIV-9). `Closure` and `callable` match a function that
+// value model; int and float are both a JS number, told apart as
+// @xaravel/assert's value layer does: a safe integer is an int, any other
+// number a float (DIV-9). `Closure` and `callable` match a function that
 // is not a class. Any other name matches an object of that class
 // (`instanceof` by name); a class value matches its instances. Printed as
 // `'<' . ucfirst(name) . '>'`.
@@ -27,11 +28,11 @@ function isType(name: string, actual: unknown): boolean | null {
     case "int":
     case "integer":
     case "long":
-      return (typeof actual === "number" && Number.isInteger(actual)) || typeof actual === "bigint";
+      return (typeof actual === "number" && Number.isSafeInteger(actual)) || typeof actual === "bigint";
     case "float":
     case "double":
     case "real":
-      return typeof actual === "number" && !Number.isInteger(actual);
+      return typeof actual === "number" && !Number.isSafeInteger(actual);
     case "string":
       return typeof actual === "string";
     case "bool":

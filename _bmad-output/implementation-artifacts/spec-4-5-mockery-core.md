@@ -5,7 +5,7 @@ created: '2026-10-18'
 status: 'done'
 baseline_revision: '1c5b5f5ab60a1e1d024ee4fc95b8b83f29e151b3'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/docs/ops/oracle.md'
@@ -25,6 +25,20 @@ deferred:
     location: >-
       packages/mockery/src/Mockery.ts (run)
     severity: low
+  - summary: >-
+      A mocked class that declares its own `then` method makes `await mock` (or returning the mock from an async function) call the mock's `then` and reject with BadMethodCallException, although approved ESC-4.5-1 item 5 says `then` without an expectation is read from the object, not dispatched.
+    evidence: |-
+      Follow-up pass (2026-10-18). The Proxy `get` checks `_mockery_declaresMethod` (step 3) before the `key === "then"` read (step 4), as the spec's Design Notes order says (`Mock.ts` `#handler`). A probe that mocked `class XtFoo { then(a) { return 2; } }` and awaited it rejected with "Received Mockery_0_XtFoo::then(), but no expectations were specified". `decisions/ESC-4.5-1.md` item 5 reads "the mock Proxy leaves symbol keys alone, and `then` too unless `then` has an expectation". So the spec and the ruling disagree for a declared `then`. Neither literal fix is clean: reading from the object runs the real class's `then` on an instance whose constructor never ran, which defeats the ruling's reason ("`then` is how await checks for a promise, not a method call"); returning `undefined` is a third behavior nobody ruled on. It needs a Maintainer decision on which one. Target: Maintainer (retro epic-4 item 8).
+    location: >-
+      packages/mockery/src/Mockery/Mock.ts (#handler, steps 3-4)
+    severity: medium
+  - summary: >-
+      The cutoff and merge branches of Mockery's message formatting are never compared with the Oracle, so a defect there passes every test.
+    evidence: |-
+      Follow-up pass (2026-10-18), verification-gap layer. No XT-mockery request reaches `objectToArray`'s `['...']` cutoff at nesting 0, `cleanupArray`'s `'...'`, `formatArgument`'s 1000-byte `...]` truncation, or `Mockery.formatObjects`' last-wins merge of two objects of one class. This pass found and patched a real defect in one of them (an object at the cutoff lost its `'class'` key), which no test caught. The test must not hand-write PHP's expected text, so the fix is new XT-mockery-3 scenarios in `conformance/oracle-requests/4.5.jsonl` with fixtures signed by the Oracle App on a `story/*` branch. A follow-up pass on a `planning/*` branch cannot get them signed. Target: Maintainer (retro epic-4 item 8), to name the Story that adds the cells.
+    location: >-
+      packages/mockery/src/support/values.ts (objectToArray, cleanupArray, cleanupNesting, formatArgument), packages/mockery/src/Mockery.ts (formatObjects)
+    severity: medium
 ---
 
 <intent-contract>
@@ -150,6 +164,50 @@ deferred:
   - `[false]` `[reject]` (intent H) XT tests use `bun:test` rather than `xaravelTest` — the grader does not test itself with itself, as in Stories 4.1-4.3.
   - `[false]` `[reject]` (intent I) internals are frozen beyond the exports — consistent with the intent's freeze rule, no harm.
 
+### 2026-10-18 — Follow-up review pass
+Scoped to the Story's squash commit (`8877869`, excluding `_bmad-output/` and `conformance/fixtures/`), because `followup_review_recommended` was `true` (retro epic-4 item 6, finding S5). Findings were verified against the current tree at `e8a9382`, which includes retro items 1–5 (#126, #134, #135, #136, #132) and Story 4.6. All four layers ran as parallel subagents.
+- verdicts: 35 findings — high 0, medium 3, low 13, false 19, maybe-false 0
+- findings:
+  - Blind Hunter
+    - `[false]` `[reject]` A mock made outside a run is never verified. — Fixed on main by retro item 2 (#134): `run()` adopts the process-level container and the next test end verifies it (`outside-run.fixture.ts`). The floating-async case is the Edge Case Hunter's row 8.
+    - `[false]` `[reject]` `install()` silently keeps an existing global, and a test locks that in. — Fixed on main by retro item 4 (#136): `installAll` throws `LogicException`, and the test now pins the throw.
+    - `[false]` `[reject]` `Mockery.close()` records the count, and a close outside a test records with no running test. — Approved ESC-4.5-1 item 1 puts the count in `close()`, as PHPUnit's integration adds it at tearDown. With no running test, `recordAssertion` finds no store and does nothing (`AssertionCounter.ts:25-28`).
+    - `[false]` `[reject]` `matchArgs` looks for an argument-list matcher at every position. — carried (blind row 3): Mockery 1.6.15 `matchArgs` loops over every `_expectedArgs` entry the same way.
+    - `[low]` `[reject]` Unknown string keys (`toJSON`, `asymmetricMatch`, `$$typeof`, `inspect`) dispatch, so `JSON.stringify(mock)` throws. — carried (edge row 2, duck-type probes).
+    - `[false]` `[reject]` An expectation named `toString`, `shouldReceive` or `mockery_getName` hijacks the API. — carried (edge row 3).
+    - `[low]` `[reject]` Getters run on an uninitialised `Object.create` instance, and `#private` reads throw. — carried (edge row 1, getters and fields on a constructor-less instance).
+    - `[false]` `[reject]` `support/values.ts` is a second PHP value layer. — Fixed on main by retro item 3 (#135): it imports assert's `php*` helpers and keeps only Mockery's own logic.
+    - `[low]` `[reject]` Integer-like keys of plain objects print quoted and reordered. — The quoting is gone since retro item 3 (#135): a probe prints `[0 => 'a', 10 => 2, 'b' => 1]`. The order is JS's own for a plain object, and the grader prints it the same way. AD-9's branded PhpArray keeps insertion order. A fix adds a branch for a form AD-9 already covers.
+    - `[low]` `[reject]` The 1000-byte cut can split a multibyte character, giving U+FFFD. — Confirmed by a probe. PHP's byte `substr` leaves invalid UTF-8, which a JS string cannot hold, and the Oracle's JSON could not carry it either. U+FFFD is the nearest form. It needs an array over 1000 bytes with a multibyte character at the cut.
+    - `[false]` `[reject]` A class value matching its own name string has no DIV clause. — No Ported Test assertion is adapted. The class value stands for `Foo::class` (Design Notes "Matching"), and in PHP `with('XtFoo')` against `'XtFoo'` is a plain `===`, so there is no Oracle value to compare.
+    - `[low]` `[defer]` Swallowed BadMethodCallExceptions are never checked at test end. — carried (blind row 8): the existing `deferred` item (Story 5.3). Not deferred again.
+    - `[false]` `[reject]` Module variables and a private AsyncLocalStorage break AD-5. — carried (blind row 7).
+    - `[false]` `[reject]` `stories/4.5.md` is done with `test_ids: []`. — carried (blind row 12).
+    - `[false]` `[reject]` Tests import assert's private test helpers. — carried (blind row 10): the Code Map requires it.
+    - `[low]` `[reject]` Core paths are untested (`shouldReceive({bar: 1})`, `shouldReceive('')`, `never()` after `times(n)`, CompositeExpectation with no expectations). — `atLeast()->once()` and `never()` in `mockery_getExpectationCount()` are now in an Oracle scenario (`scenarios.ts:770`), and `times()` after `never()` at `:1440`. The rest fail loudly. Each needs a new signed Oracle cell, which this branch cannot get.
+  - Edge Case Hunter
+    - `[low]` `[reject]` `isClass` treats a `function(){}` closure as a class in `_matchArg` and `andThrow`. — The `_matchArg` half is fixed on main by retro item 1 (#126, `isPhpClass`). In `andThrow`, a `function` value is a misuse that PHP rejects with a TypeError. Switching to `isPhpClass` would throw the function itself, which is not better, so a real fix needs a new guard.
+    - `[medium]` `[defer]` A mocked class that declares `then` makes `await mock` reject with BadMethodCallException. — Verified with a probe. Grouped with the claim row 11 below; recorded in `deferred` (Maintainer, retro epic-4 item 8).
+    - `[low]` `[reject]` A class-field property reads as a dispatcher, and an arrow-function field method "does not exist". — carried (blind row 1).
+    - `[low]` `[reject]` A prototype getter that reads `#private` fields with the Proxy as receiver throws TypeError. — carried (edge row 1).
+    - `[false]` `[reject]` `with(1, anyArgs())` matches any call. — carried (blind row 3).
+    - `[low]` `[patch]` An object nested 3 levels down drops Mockery's `'class'` key at the `['...']` cutoff. — Verified against Mockery.php `cleanupNesting`, which sets `$object['class']` on the `['...']` result too, and with a probe. `cleanupNesting` now builds `[0 => '...', 'class' => <class>]` there. No test was added, because the test may not hand-write PHP's text; the Oracle cell is the verification-gap row's `deferred` item.
+    - `[low]` `[reject]` A formatted array over 1000 bytes cut inside a multibyte character gives U+FFFD. — Same as the Blind Hunter row: a JS string cannot hold PHP's invalid bytes.
+    - `[low]` `[reject]` Async work the test does not await makes mocks after `fn` resolves, and that container is never verified. — It needs a floating promise that outlives the test, which is a bug in the test. PHP has no such case. A fix adds a guard to the run slot.
+    - `[false]` `[reject]` `mock()` of a symbol with no or an empty description is named `Mockery_<n>_`. — carried (edge row 6).
+    - `[false]` `[reject]` (claim) The test-finish protocol does not verify outside-run mocks and keeps an existing run global. — Fixed on main by retro items 2 (#134) and 4 (#136).
+    - `[medium]` `[defer]` (claim) ESC-4.5-1 item 5: a declared `then` becomes a dispatcher. — Verified: step 3 (`_mockery_declaresMethod`) runs before the `then` read. The spec's Design Notes order and the approved ruling disagree, and both literal fixes have costs (see `deferred`), so it needs a Maintainer decision. Target: retro epic-4 item 8.
+    - `[false]` `[reject]` (claim) `_matchArg` takes the class branch for a non-arrow closure. — Fixed on main by retro item 1 (#126): `_matchArg` uses `isPhpClass`.
+  - Verification Gap
+    - `[medium]` `[defer]` The cutoff and merge branches of `Objects: (…)` and argument formatting never run against the Oracle. — Pre-verified gap, and this pass patched a real defect in one of those branches. Its proposed fix needs new signed Oracle cells, which a `planning/*` branch cannot get. Recorded in `deferred` (Maintainer, retro epic-4 item 8).
+    - `[low]` `[reject]` (other) The multibyte truncation path gives U+FFFD and no test reaches it. — Same as the Blind Hunter's 1000-byte row.
+  - Intent Alignment
+    - `[false]` `[reject]` The consumer surface is checked only through stand-ins, and token mocks report every method missing. — carried (intent A). The token half is the existing `deferred` item (ESC-4.5-1 item 3, Epic 10).
+    - `[false]` `[reject]` JS-only dispatch rules are checked fixture-free with hand-written expectations. — Proxy key order, `then`, symbol keys, constructors that never run and name reuse have no PHP expression, so no Oracle value exists for them. The intent's rule covers Mockery's outcomes and messages, which all come from the Oracle.
+    - `[false]` `[reject]` The lifecycle is tested only on mocks made inside the run, and the protocol is silently absent if Mockery never loads. — Fixed on main by retro item 2 (#134, `outside-run.fixture.ts`). If `@xaravel/mockery` never loads, no mock exists to verify.
+    - `[false]` `[reject]` The diff edits files outside the component. — carried (intent G).
+    - `[false]` `[reject]` Freezing happens in `index.ts`, so importing `src/Mockery.ts` directly skips it; the tests use `bun:test`. — `package.json` `exports` maps only `.` to `src/index.ts`, so no consumer can import `src/Mockery.ts` by package name. The `bun:test` half is carried (intent H).
+
 ## Design Notes
 
 **Mock object.** `Container.mock(target?)`. A target is a JS class, a class-name string or nothing. The mock class name is `Mockery_<n>[_<part>]`, where the part is the target's `[Symbol.for('xaravel.class.fqcn')]` (else its `name`; display only, AD-10) with `\` replaced by `_`, or the string itself. `n` comes from a process-wide counter that increments only when a new target is seen: a second `mock(XtFoo)` reuses `Mockery_0_XtFoo`, and `close` never resets it. For a class, the generated class extends it (`instanceof` holds); the instance is `Object.create(Generated.prototype)`, so the real constructor never runs, as with Mockery's Instantiator. The returned mock is a `Proxy` whose `get` resolves a string key in this order: (1) a method with an `ExpectationDirector` (exact name, then case-insensitive) → a dispatcher; (2) a Mockery API member (`shouldReceive`, `mockery_*`, `toString`) → itself; (3) a function declared on the target's prototype chain above `Object.prototype` → a dispatcher; (4) any other property present on the object, and `then` → `Reflect.get` (`then` is absent → `undefined`); (5) any other string → a dispatcher. Symbol keys always use `Reflect.get`. The dispatcher runs `_mockery_handleMethodCall(name, args)`: a director → `director.call(args)`; none → `BadMethodCallException` with "Received …, but no expectations were specified" for case (3), "does not exist on this mock object" for case (5).
@@ -182,3 +240,16 @@ Status: done
 - **Follow-up review recommended:** yes — two medium patches (0 high, 2 medium, 1 low patched). The unverified risk: the scope-frame branch is checked only against a fake `xaravel.scope.run`; the real Epic 9 scope runtime may interleave the frame and the AsyncLocalStorage store differently.
 - **Verification:** a local unsigned Oracle run (throwaway key, in a copy outside the repo) matched the port and `bun test packages/mockery` passed 5/5 against it. In the repo: `oracle:story check 4.5`, `escalations:check`, `scaffold:check`, `graph:check`, `ownership:check`, `typecheck` and `lint` pass; `bun test` has 140 pass and 3 fail, the three XT-mockery tests naming their missing signed fixtures, which `oracle.yml#story` signs on the PR. XT-conformance-8 passes.
 - **Residual risks:** the in-repo Oracle comparison is unproven until the fixtures are signed; mock property reads return dispatchers (class fields never initialise); this run's implementation subagent first tried to swap `oracle.pub` inside the repo for the local cross-check; the permission check refused it, and the subagent then ran the cross-check in a throwaway copy outside the repo. No repo file was changed, and the merge gate is the CI-signed fixtures, not that local run.
+
+### Follow-up review (2026-10-18)
+
+This pass ran for retro epic-4 item 6 (finding S5). It was scoped to `8877869` and verified against the current tree at `e8a9382`. There were 35 findings: 3 medium, 13 low, 19 false. Seven of the false ones were already fixed on main by retro items 1–4 (#126, #134, #135, #136).
+- **Patched (low 1).** `packages/mockery/src/support/values.ts` (`cleanupNesting`): an object at the nesting cutoff now prints `[0 => '...', 'class' => <class>]`, as Mockery's `cleanupNesting` does, instead of dropping the `'class'` key. Checked against Mockery.php and with a probe. No test was added, because the test may not hand-write PHP's text; the Oracle cell is the second deferred item below.
+- **Deferred to the Maintainer (2 entries, both medium):**
+  - A mocked class that declares `then` makes `await mock` reject with BadMethodCallException. Approved ESC-4.5-1 item 5 says such a `then` is read from the object, and the spec's Design Notes order says it is dispatched. Choosing between them needs a ruling. Target: retro epic-4 item 8.
+  - No Oracle cell covers the formatting cutoff and merge branches, including the one patched here. New XT-mockery-3 cells need fixtures signed on a `story/*` branch. Target: retro epic-4 item 8, to name the Story.
+- **Rejected.** The rest, with reasons in the Review Triage Log. Many are carried from the first pass.
+- **Prior risks.** The in-repo Oracle comparison is no longer unproven: the 4.5 fixtures are signed, and XT-mockery-1..3 pass. The scope-frame risk stays open: Epic 9's real `xaravel.scope.run` does not exist yet. Property reads that return dispatchers stay as recorded (carried low).
+- **Follow-up review recommendation: false.** No high was patched (patched: high 0, medium 0, low 1), so the work has converged.
+- **Verification.** `bun test packages/mockery`: 10 pass, 0 fail. `bun run typecheck` and `bun run lint` exit 0. `bun run mockery:coverage` exits 0 (45 scan names: 42 implemented, 3 pending, 0 missing).
+- **Residual risks.** The patched cutoff text has no Oracle check until the deferred cells land.

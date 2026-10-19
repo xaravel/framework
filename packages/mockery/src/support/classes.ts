@@ -10,7 +10,9 @@
 //     (Story 9.4's class registry is to install it). `Container.mock` reads it
 //     for class-name strings and `Foo[m]` partials.
 //
-// Names compare as PHP's do: case-insensitively, a leading `\` ignored.
+// The grader's own exception names compare as PHP's do: case-insensitively, a
+// leading `\` ignored. The lookup receives the name as written, minus a
+// leading `\`; case-folding it is the installer's part of the protocol.
 import { BadMethodCallException } from "../Mockery/Exception/BadMethodCallException";
 import { InvalidArgumentException } from "../Mockery/Exception/InvalidArgumentException";
 import { InvalidCountException } from "../Mockery/Exception/InvalidCountException";

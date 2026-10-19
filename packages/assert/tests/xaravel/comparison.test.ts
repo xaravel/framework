@@ -122,6 +122,11 @@ test("XT-assert-2: a branded PhpArray and an object exposing xaravel.php.props c
   expect(phpLooseEquals(0n, false)).toBe(true);
   expect(phpLooseEquals(2n ** 60n, "1152921504606846976")).toBe(true);
   expect(phpStrictEquals(2n ** 60n, "1152921504606846976")).toBe(false);
+  // A bigint int never === an unsafe number (a float) of equal value; == compares them as doubles.
+  expect(phpLooseEquals(9007199254740993n, 9007199254740992)).toBe(true);
+  expect(phpStrictEquals(9007199254740993n, 9007199254740992)).toBe(false);
+  expect(phpStrictEquals(9007199254740992, 9007199254740993n)).toBe(false);
+  expect(phpStrictEquals(9223372036854775807n, 9223372036854775808)).toBe(false);
 
   // An ordinary class instance without the props protocol: its own enumerable keys are its props.
   class A {
