@@ -2,7 +2,15 @@
 //
 //   bun tools/escalations/escalations.ts check [--root <dir>]
 //       validates every `conformance/escalations/ESC-*.md` and
-//       `decisions/ESC-*.md` in the root (either directory may be absent)
+//       `decisions/ESC-*.md` in the root (either directory may be absent);
+//       on a pass it then prints, on stdout after the OK line, one
+//       `warning: open escalation:` line per `ESC-<story-id>-<n>` with no
+//       decision file (an invalid or stale decision is a violation, so it
+//       exits 1 before any warning) whose Story is done: its manifest
+//       `stories/<story-id>.md` is valid and its status, taken from sprint
+//       status through `sprint_key` as `ownership:check` does, is `done`.
+//       Lines are sorted by file name, so outstanding rulings reach the
+//       Maintainer; warnings never change the exit code, and `pr` prints none
 //
 //   bun tools/escalations/escalations.ts pr --repo <owner/name> --pr <n> [--root <dir>]
 //       reads the PR's head branch, head commit and files from the GitHub API
@@ -33,8 +41,10 @@
 //
 // Library: `escalationStatus(id, root?)` answers "open", "approved" or
 // "rejected" (open when the decision is missing, invalid or stale), and throws on a malformed or unknown ID (callers fail closed).
+// `openEscalationWarnings(root)` returns the warning lines `check` prints; on
+// its own it also counts an Escalation with an invalid or stale decision as open.
 //
-// Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
+// Exit codes: 0 pass (with or without warnings), 1 violations or any failure (fail closed), 2 usage error.
 // Every violation kind the check reports, one line each, on stderr:
 //
 //   invalid escalation:  an Escalation file name or frontmatter field is
@@ -76,7 +86,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { type Manifest, parseManifest, STORIES_DIR } from "../ownership/ownership";
+import { applySprintStatus, type Manifest, parseManifest, STORIES_DIR } from "../ownership/ownership";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
 
 export const ESCALATIONS_DIR = "conformance/escalations";
@@ -379,6 +389,35 @@ export function checkRecords(root: string): { escalations: number; decisions: nu
   return { escalations: escalationNames.length, decisions: decisionNames.length, violations };
 }
 
+/**
+ * One `warning: open escalation:` line per `ESC-<story-id>-<n>` under `root`
+ * that is open (no, an invalid or a stale decision) while its Story manifest
+ * `stories/<story-id>.md` is valid and done, sorted by file name. "Done" is
+ * the status after `applySprintStatus`, so sprint status decides it through
+ * `sprint_key` as `ownership:check` does. A bot Escalation, or one whose
+ * manifest is missing, invalid or not done, gives no line (`ownership:check`
+ * owns manifest and sprint status validity).
+ */
+export function openEscalationWarnings(root: string): string[] {
+  const warnings: string[] = [];
+  for (const name of markdownFiles(join(root, ESCALATIONS_DIR))) {
+    const id = parseEscalationId(stemOf(name));
+    if (id === null || id.storyId === null || escalationStatus(id.id, root) !== "open") {
+      continue;
+    }
+    const manifestFile = `${STORIES_DIR}/${id.storyId}.md`;
+    const manifestPath = join(root, manifestFile);
+    const manifest = existsSync(manifestPath) ? parseManifest(manifestFile, readFileSync(manifestPath, "utf8")).manifest : null;
+    if (manifest === null || applySprintStatus(root, [manifest]).manifests[0]?.status !== "done") {
+      continue;
+    }
+    warnings.push(
+      `warning: open escalation: ${ESCALATIONS_DIR}/${name} has no ruling, but Story ${id.storyId} (${manifestFile}) is done; it waits on the Maintainer (AD-16)`,
+    );
+  }
+  return warnings;
+}
+
 /** The repo paths the `pr` check must fetch at the head commit: non-removed Escalation and Escalation decision files. */
 export function prPaths(files: readonly PrFile[]): { escalations: string[]; decisions: string[] } {
   const escalations: string[] = [];
@@ -606,6 +645,9 @@ function check(options: Options): number {
     return 1;
   }
   process.stdout.write(`Escalations OK: ${result.escalations} escalation(s) and ${result.decisions} decision(s) valid.\n`);
+  for (const warning of openEscalationWarnings(options.root)) {
+    process.stdout.write(`${warning}\n`);
+  }
   return 0;
 }
 

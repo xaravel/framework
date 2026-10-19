@@ -11,13 +11,14 @@ import {
   escalationDigest,
   escalationStatus,
   evaluatePr,
+  openEscalationWarnings,
   parseDecision,
   parseEscalation,
   parseEscalationId,
   pathsToFetch,
   TRIGGERS,
 } from "../../../tools/escalations/escalations";
-import { STORIES_DIR } from "../../../tools/ownership/ownership";
+import { SPRINT_STATUS, STORIES_DIR } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -70,10 +71,10 @@ const STR_IS = "Illuminate\\Tests\\Support\\SupportStrTest::testIs";
 const STR_IS_UUID = "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuid";
 const story = (id: string): string => `${STORIES_DIR}/${id}.md`;
 
-/** A Story manifest owning the given Test IDs. */
-function manifest(storyId: string, testIds: string[], xaravelTestIds: string[] = []): string {
+/** A Story manifest owning the given Test IDs, at `status` (default `in-progress`). */
+function manifest(storyId: string, testIds: string[], xaravelTestIds: string[] = [], status = "in-progress"): string {
   return recordText(
-    { story_id: storyId, epic: Number(storyId.split(".")[0]), component: "support", status: "in-progress", test_ids: testIds, xaravel_test_ids: xaravelTestIds },
+    { story_id: storyId, epic: Number(storyId.split(".")[0]), component: "support", status, test_ids: testIds, xaravel_test_ids: xaravelTestIds },
     `\n# Story ${storyId}\n`,
   );
 }
@@ -563,4 +564,98 @@ test("XT-conformance-29: bot-raised ESC-bot-<n> Escalations are accepted with no
   const story = await runPr({ ref: "story/9.1", files: [added(esc("ESC-bot-1"))], head: { [esc("ESC-bot-1")]: escalation() } });
   expect(story.code).toBe(1);
   expect(story.stderr).toContain(`wrong story: ${esc("ESC-bot-1")}: branch story/9.1 may raise only ESC-9.1-<n> (AD-16)`);
+});
+
+test("XT-conformance-184: check warns on stdout, exit 0, for each open ESC-<story-id>-<n> whose Story manifest is done (AD-16)", async () => {
+  const ok = (escalations: number, decisions: number): string => `Escalations OK: ${escalations} escalation(s) and ${decisions} decision(s) valid.\n`;
+  const warning = (id: string, storyId: string): string =>
+    `warning: open escalation: ${esc(id)} has no ruling, but Story ${storyId} (${story(storyId)}) is done; it waits on the Maintainer (AD-16)`;
+  const done = (storyId: string): string => manifest(storyId, [STR_IS], [], "done");
+
+  // Open, Story done: the OK line, then the warning.
+  await withRoot({ [esc("ESC-9.1-1")]: escalation(), [story("9.1")]: done("9.1") }, async (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([warning("ESC-9.1-1", "9.1")]);
+    expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: `${ok(1, 0)}${warning("ESC-9.1-1", "9.1")}\n`, stderr: "" });
+  });
+  // Open, Story not done: only the OK line.
+  for (const status of ["in-progress", "review", "blocked"]) {
+    await withRoot({ [esc("ESC-9.1-1")]: escalation(), [story("9.1")]: manifest("9.1", [STR_IS], [], status) }, async (dir) => {
+      expect(openEscalationWarnings(dir)).toEqual([]);
+      expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: ok(1, 0), stderr: "" });
+    });
+  }
+  // Sprint status decides "done" through sprint_key, as ownership:check does.
+  const keyed = (status: string): string =>
+    recordText({ story_id: "9.1", epic: 9, component: "support", status, sprint_key: "9-1-x", test_ids: [STR_IS], xaravel_test_ids: [] }, "\n# Story 9.1\n");
+  const sprint = (status: string): string => `project: xaravel\ndevelopment_status:\n  9-1-x: ${status}\n`;
+  await withRoot({ [esc("ESC-9.1-1")]: escalation(), [story("9.1")]: keyed("in-progress"), [SPRINT_STATUS]: sprint("done") }, async (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([warning("ESC-9.1-1", "9.1")]);
+    expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: `${ok(1, 0)}${warning("ESC-9.1-1", "9.1")}\n`, stderr: "" });
+  });
+  await withRoot({ [esc("ESC-9.1-1")]: escalation(), [story("9.1")]: keyed("done"), [SPRINT_STATUS]: sprint("in-progress") }, async (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([]);
+    expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: ok(1, 0), stderr: "" });
+  });
+  // Ruled (approved or rejected, bound to the current text): no warning.
+  for (const ruling of ["approved", "rejected"]) {
+    await withRoot({ [esc("ESC-9.1-1")]: escalation(), [dec("ESC-9.1-1")]: decision(ruling), [story("9.1")]: done("9.1") }, async (dir) => {
+      expect(openEscalationWarnings(dir)).toEqual([]);
+      expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: ok(1, 1), stderr: "" });
+    });
+  }
+  // Stale decision: the Escalation counts as open, but check fails with the violation and prints no warning.
+  const widened = escalation({ proposed: "Skip every SupportStrTest test as php-only." });
+  await withRoot({ [esc("ESC-9.1-1")]: widened, [dec("ESC-9.1-1")]: decision("approved"), [story("9.1")]: done("9.1") }, async (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([warning("ESC-9.1-1", "9.1")]);
+    const run = await runCli(["check", "--root", dir]);
+    expect(run.code).toBe(1);
+    expect(run.stdout).toBe("");
+    expect(run.stderr).toContain(`stale decision: ${dec("ESC-9.1-1")}: `);
+    expect(run.stderr).not.toContain("warning:");
+  });
+  // An invalid decision also leaves the Escalation open.
+  await withRoot({ [esc("ESC-9.1-1")]: escalation(), [dec("ESC-9.1-1")]: decision("yes"), [story("9.1")]: done("9.1") }, (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([warning("ESC-9.1-1", "9.1")]);
+  });
+  // No manifest, or an invalid or unparseable one: no warning (ownership:check owns manifest validity).
+  for (const files of [{}, { [story("9.1")]: manifest("9.1", [], [], "done") }, { [story("9.1")]: "not a manifest\n" }]) {
+    await withRoot({ [esc("ESC-9.1-1")]: escalation(), ...files }, async (dir) => {
+      expect(openEscalationWarnings(dir)).toEqual([]);
+      expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: ok(1, 0), stderr: "" });
+    });
+  }
+  // A bot Escalation has no Story: no warning.
+  await withRoot({ [esc("ESC-bot-1")]: escalation({ trigger: "flaky" }), [story("9.1")]: done("9.1") }, async (dir) => {
+    expect(openEscalationWarnings(dir)).toEqual([]);
+    expect(await runCli(["check", "--root", dir])).toEqual({ code: 0, stdout: ok(1, 0), stderr: "" });
+  });
+  // Two warnings, sorted by file name; a ruled Escalation of a done Story between them gives none.
+  await withRoot(
+    {
+      [esc("ESC-9.2-1")]: escalation(),
+      [esc("ESC-9.1-2")]: escalation(),
+      [dec("ESC-9.1-2")]: decision("approved"),
+      [esc("ESC-9.1-1")]: escalation(),
+      [story("9.2")]: done("9.2"),
+      [story("9.1")]: done("9.1"),
+    },
+    async (dir) => {
+      expect(openEscalationWarnings(dir)).toEqual([warning("ESC-9.1-1", "9.1"), warning("ESC-9.2-1", "9.2")]);
+      expect(await runCli(["check", "--root", dir])).toEqual({
+        code: 0,
+        stdout: `${ok(3, 1)}${warning("ESC-9.1-1", "9.1")}\n${warning("ESC-9.2-1", "9.2")}\n`,
+        stderr: "",
+      });
+    },
+  );
+  // The repository: every warning names an open Escalation of a done Story, and check still exits 0.
+  const live = await runCli(["check"]);
+  expect(live.code).toBe(0);
+  const lines = live.stdout.trimEnd().split("\n");
+  expect(lines[0]).toStartWith("Escalations OK: ");
+  expect(lines.slice(1)).toEqual(openEscalationWarnings(root));
+  for (const line of lines.slice(1)) {
+    const id = /conformance\/escalations\/(ESC-[^ ]+)\.md/.exec(line)?.[1] ?? "";
+    expect(escalationStatus(id, root)).toBe("open");
+  }
 });
