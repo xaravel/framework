@@ -23,6 +23,28 @@ fi
 
 say() { echo "$(date -u +%FT%TZ) $*" | tee -a "$STATE/history"; }
 
+# When an iteration ends on Claude's usage limit ("You've hit your session
+# limit · resets 11:50pm (America/Los_Angeles)"), print the reset time and the
+# seconds to sleep until two minutes after it (at most 8 hours). A time up to
+# an hour in the past means the limit has already reset. Prints nothing and
+# fails when the log has no such message.
+limit_wait() {
+  local t target now secs
+  t="$(grep -oE "hit your (session|usage) limit[^\"]{0,20}resets [0-9]{1,2}(:[0-9]{2})?(am|pm)" "$1" 2>/dev/null \
+       | tail -1 | grep -oE '[0-9]{1,2}(:[0-9]{2})?(am|pm)$')"
+  [ -n "$t" ] || return 1
+  case "$t" in *:*) ;; *) t="${t%??}:00${t#${t%??}}" ;; esac
+  target="$(date -j -f '%Y-%m-%d %I:%M%p' "$(date +%Y-%m-%d) $(echo "$t" | tr '[:lower:]' '[:upper:]')" +%s 2>/dev/null)" || return 1
+  now="$(date +%s)"
+  if [ "$target" -le "$now" ]; then
+    if [ $((now - target)) -le 3600 ]; then echo "$t 120"; return 0; fi
+    target=$((target + 86400))
+  fi
+  secs=$((target - now + 120))
+  [ "$secs" -gt 28800 ] && secs=28800
+  echo "$t $secs"
+}
+
 if [ -e "$STATE/STOP" ]; then say "STOP file present; exiting"; exit 0; fi
 
 log="$STATE/logs/$(date +%Y%m%d-%H%M%S).log"
@@ -45,6 +67,13 @@ case "$outcome" in
   progress) sleep 60 ;;
   idle)     sleep 1800 ;;
   stop)     touch "$STATE/STOP"; exit 0 ;;
-  *)        sleep 900 ;;   # crash, auth failure, rate limit or no outcome: back off
+  *)
+    if wait="$(limit_wait "$log")"; then
+      # Usage limit: every iteration before the reset would fail at once.
+      say "usage limit; sleeping ${wait#* }s until ${wait%% *}"
+      sleep "${wait#* }"
+    else
+      sleep 900   # crash, auth failure or no outcome: back off
+    fi ;;
 esac
 exec /bin/bash "$REPO/tools/orchestrator/run.sh"

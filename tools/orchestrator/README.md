@@ -4,6 +4,8 @@ Moves Xaravel forward unattended, one Story per iteration, under the Maintainer 
 
 It runs on the M1 under launchd. Sessions use `claude-opus-5-5` unless `XARAVEL_ORCH_MODEL` overrides it. Each session runs with `--permission-mode auto`, so a classifier still reviews every action. When it refuses a step, such as an `--admin` merge, the session does not work around it: it marks the Story `blocked` and reports it on the status issue for the Maintainer.
 
+Between iterations `run.sh` waits 1 minute after `progress`, 30 minutes after `idle`, and 15 minutes after a failure. When a failed iteration's log says Claude's usage limit was hit ("You've hit your session limit · resets 11:50pm …"), it instead sleeps until two minutes after that reset time (at most 8 hours) and records `usage limit; sleeping …` in `history`.
+
 ## Setup (once, on the host)
 
 ```sh
