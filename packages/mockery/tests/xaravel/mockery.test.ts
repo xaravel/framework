@@ -149,10 +149,41 @@ test("fixture-free: the globals, the frozen exports, the imports and the mock ob
   expect(viaGlobal).toBeInstanceOf(XtFoo);
   Mockery.close();
 
-  // A global already defined is left alone.
-  const script = `const run = async (fn) => fn(); globalThis[Symbol.for("xaravel.mockery.run")] = run; await import(${JSON.stringify(join(root, "packages/mockery/src/index.ts"))}); if (globalThis[Symbol.for("xaravel.mockery.run")] !== run) { throw new Error("replaced"); } console.log("kept");`;
-  const child = Bun.spawnSync([process.execPath, "--eval", script], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
-  expect({ exitCode: child.exitCode, stdout: child.stdout.toString().trim(), stderr: child.stderr.toString() }).toEqual({ exitCode: 0, stdout: "kept", stderr: "" });
+  // A global already defined by other code makes the load throw LogicException
+  // naming it, and neither global is installed (Epic 4 retro R4). Each child
+  // pre-defines one slot, imports the package and prints what it saw.
+  const indexPath = JSON.stringify(join(root, "packages/mockery/src/index.ts"));
+  const report = `const mockKey = Symbol.for("xaravel.mockery.mock"); const runKey = Symbol.for("xaravel.mockery.run"); let error = null; try { await import(${indexPath}); } catch (caught) { error = { name: caught?.name ?? null, message: caught?.message ?? null }; } console.log(JSON.stringify({ error, mockKept: Object.hasOwn(globalThis, mockKey) ? globalThis[mockKey] === fake : null, runKept: Object.hasOwn(globalThis, runKey) ? globalThis[runKey] === fake : null }));`;
+  const taken = (setup: string): unknown => {
+    const child = Bun.spawnSync([process.execPath, "--eval", `${setup} ${report}`], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
+    const stdout = child.stdout.toString().trim();
+    return { exitCode: child.exitCode, stdout: child.exitCode === 0 && stdout !== "" ? (JSON.parse(stdout) as unknown) : stdout, stderr: child.stderr.toString() };
+  };
+  const message = (name: string): string => `Symbol.for('${name}') was already defined by other code or another copy of @xaravel/mockery; @xaravel/mockery will not install over it`;
+  // R4 repro: a fake run that would turn off verification.
+  expect(taken(`const fake = async (fn) => fn(); globalThis[Symbol.for("xaravel.mockery.run")] = fake;`)).toEqual({
+    exitCode: 0,
+    stdout: { error: { name: "LogicException", message: message("xaravel.mockery.run") }, mockKept: null, runKept: true },
+    stderr: "",
+  });
+  // mock taken.
+  expect(taken(`const fake = (type) => type; globalThis[Symbol.for("xaravel.mockery.mock")] = fake;`)).toEqual({
+    exitCode: 0,
+    stdout: { error: { name: "LogicException", message: message("xaravel.mockery.mock") }, mockKept: true, runKept: null },
+    stderr: "",
+  });
+  // An accessor property counts too.
+  expect(taken(`const fake = async (fn) => fn(); Object.defineProperty(globalThis, Symbol.for("xaravel.mockery.run"), { get: () => fake, configurable: true });`)).toEqual({
+    exitCode: 0,
+    stdout: { error: { name: "LogicException", message: message("xaravel.mockery.run") }, mockKept: null, runKept: true },
+    stderr: "",
+  });
+  // A present property counts, whatever its value.
+  expect(taken(`const fake = undefined; Object.defineProperty(globalThis, Symbol.for("xaravel.mockery.run"), { value: undefined, writable: false, configurable: false });`)).toEqual({
+    exitCode: 0,
+    stdout: { error: { name: "LogicException", message: message("xaravel.mockery.run") }, mockKept: null, runKept: true },
+    stderr: "",
+  });
 
   // The export list, each export and its prototype frozen.
   expect(Object.keys(api).sort()).toEqual(

@@ -2,8 +2,10 @@
 //
 // Loading it installs `globalThis[Symbol.for('xaravel.mockery.mock')]` (what
 // `createMock` delegates to, ESC-4.4-1) and `Symbol.for('xaravel.mockery.run')`
-// (the test-finish protocol, ESC-4.5-1). Every export and its prototype is
-// frozen on load, as in @xaravel/assert (AD-15): assigning to one throws.
+// (the test-finish protocol, ESC-4.5-1). If other code already defined either
+// symbol, loading throws `LogicException` and installs neither. Every export
+// and its prototype is frozen on load, as in @xaravel/assert (AD-15):
+// assigning to one throws.
 //
 // `Mockery\Exception` is exported as `Exception`, and
 // `Mockery\CountValidator\Exception` as `CountValidatorException` (one JS
