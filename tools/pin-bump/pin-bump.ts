@@ -420,8 +420,10 @@ function serialiseExpectation(line: Record<string, unknown>): string {
 
 /**
  * The shard edits of `--apply`: each touched shard's new text, or null to delete it. Changed IDs are reset to
- * skip / not-ported-yet / null / null, renamed IDs get the new id, removed IDs' lines are deleted; line order is
- * kept and untouched shards are not returned.
+ * skip / not-ported-yet / null / null, renamed IDs get the new id, removed IDs' lines are deleted. A shard with a
+ * renamed line is re-sorted by id then variant in UTF-16 code units (stable), the order `expectations:check`
+ * enforces, since a rename can move a line past another; otherwise line order is kept (a change or removal never
+ * alters an id). Untouched shards are not returned.
  */
 export function applyBump(shards: readonly Shard[], diff: InventoryDiff): Map<string, string | null> {
   const changed = new Set(diff.changed.map((item) => item.id));
@@ -430,6 +432,7 @@ export function applyBump(shards: readonly Shard[], diff: InventoryDiff): Map<st
   const edits = new Map<string, string | null>();
   for (const shard of shards) {
     let touched = false;
+    let renamedHere = false;
     const out: Record<string, unknown>[] = [];
     for (const line of shard.lines) {
       const id = line["id"] as string;
@@ -439,6 +442,7 @@ export function applyBump(shards: readonly Shard[], diff: InventoryDiff): Map<st
       } else if (renamed.has(id)) {
         out.push({ ...line, id: renamed.get(id)! });
         touched = true;
+        renamedHere = true;
       } else if (removed.has(id)) {
         touched = true;
       } else {
@@ -446,6 +450,10 @@ export function applyBump(shards: readonly Shard[], diff: InventoryDiff): Map<st
       }
     }
     if (touched) {
+      if (renamedHere) {
+        // Must match `comparePairs` in tools/expectations/expectations.ts (not imported: it imports this module).
+        out.sort((a, b) => compareUnits(String(a["id"]), String(b["id"])) || compareUnits(String(a["variant"]), String(b["variant"])));
+      }
       edits.set(shard.path, out.length === 0 ? null : out.map((line) => `${serialiseExpectation(line)}\n`).join(""));
     }
   }
