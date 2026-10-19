@@ -175,6 +175,12 @@ export interface HarnessResult {
   /** Diagnostics (stderr). */
   readonly err: string[];
   readonly results: Result[];
+  /**
+   * Every difference the run counted, with its kind (Story 5.6): the compared
+   * pairs, plus each `ERROR` line and each CI `NOT-RUN` of an alpha Variant as
+   * an `unexpected-failure` with id `-` and that line as its text.
+   */
+  readonly differences: Difference[];
   /** The sample in fast mode, null otherwise. */
   readonly sample: HarnessSample | null;
   /** The worktree and its key once known, null before that. */
@@ -405,6 +411,8 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
   const out: string[] = [];
   const err: string[] = [];
   const results: Result[] = [];
+  /** Every counted difference, in report order (`HarnessResult.differences`). */
+  const counted: Difference[] = [];
   let sample: HarnessSample | null = null;
   let worktree: HarnessWorktree | null = null;
   let lock: Lock | null = null;
@@ -544,7 +552,11 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
         if (counts) {
           ciDifferences++;
         }
-        out.push(`NOT-RUN [${variant}] ${lines.length} line(s): ${status.why}${counts ? "; CI runs every alpha variant (FR-9)" : ""}`);
+        const notRunLine = `NOT-RUN [${variant}] ${lines.length} line(s): ${status.why}${counts ? "; CI runs every alpha variant (FR-9)" : ""}`;
+        out.push(notRunLine);
+        if (counts) {
+          counted.push({ id: "-", variant, kind: "unexpected-failure", text: notRunLine, detail: null });
+        }
         continue;
       }
       run++;
@@ -566,9 +578,11 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
       if (variantRun.error !== null) {
         errors.push(variantRun.error);
         reportLines.push(variantRun.error);
+        counted.push({ id: "-", variant, kind: "unexpected-failure", text: variantRun.error, detail: null });
       }
       const sorted = compared.differences.sort((a, b) => compareUnits(a.id, b.id));
       differences.push(...sorted);
+      counted.push(...sorted);
       reportLines.push(...sorted.map((difference) => difference.text));
     }
     // One diagnostic line per difference with a reason (see the header).
@@ -581,14 +595,14 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
     const differ = differences.length + errors.length + ciDifferences;
     const mode = sample === null ? "" : ` mode=fast seed=${sample.seed}`;
     out.push(`SUMMARY variants=${variants.length} run=${run} not-run=${notRun} checked=${checked} differ=${differ}${mode}`);
-    return { code: differ === 0 ? 0 : 1, out, err, results, sample, worktree };
+    return { code: differ === 0 ? 0 : 1, out, err, results, differences: counted, sample, worktree };
   } catch (error) {
     if (error instanceof PreconditionError || error instanceof IsolationError) {
       err.push(`harness: ${error.message}`);
-      return { code: 1, out, err, results, sample, worktree };
+      return { code: 1, out, err, results, differences: counted, sample, worktree };
     }
     err.push(`harness failed: ${message(error)}`);
-    return { code: 1, out, err, results, sample, worktree };
+    return { code: 1, out, err, results, differences: counted, sample, worktree };
   } finally {
     try {
       await cleanup();

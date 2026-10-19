@@ -734,7 +734,8 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   ]);
   expect(oracle.steps.indexOf(batch)).toBeGreaterThan(oracle.steps.findIndex((step) => (step.run ?? "").includes('docker push "$IMAGE"')));
   for (const job of [build, oracle, determinism]) {
-    expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
+    // Story 5.6 AC5 (Epic 3 retro R5): these jobs read per-Story request files in merge order, which needs full history.
+    expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false, "fetch-depth": 0 } });
     expect(job.steps[1]).toEqual({ uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } });
     for (const node of [job, ...job.steps]) {
       expect(node["continue-on-error"]).toBeUndefined();

@@ -21,6 +21,12 @@
 //       `oracle requests drift: <file> …` line on stderr: it differs, is
 //       missing, or is committed but not generated.
 //
+// A request that an accepted merged per-Story file
+// (`conformance/oracle-requests/<story-id>.jsonl`) holds is left out of the
+// batch (Story 5.6 AC5, Epic 3 retro R5): that Story owns it and its fixture.
+// Reading those files needs their merge order, so full git history
+// (tools/oracle/merge-order.ts).
+//
 // The Differential set is closed: the `files` of the five family modules
 // (str, sql, blade, validation, date). A Test ID × dataset is Differential
 // exactly when its family captures at least one input; anything unreadable
@@ -39,6 +45,7 @@ import { bindingsFor, parseFile, parseTokenLines, PhpReadError, type ExtractTest
 import { sqlFamily } from "./extract/sql";
 import { strFamily } from "./extract/str";
 import { validationFamily } from "./extract/validation";
+import { storyHeldShas } from "./fixtures";
 import { IMAGE_UPSTREAM_DIR, runInImage } from "./oracle";
 import { compareUnits, makeRequest, readSchema, renderRequests, REQUESTS_DIR, validateRequest, type InputByKind, type OracleRequest, type RequestKind } from "./request";
 
@@ -232,7 +239,9 @@ function firstDifference(a: string, b: string): number {
 
 /** Writes (or with `check`, compares) `conformance/oracle/requests/<component>.jsonl` under `root`. */
 export function extract(root: string, options: ExtractOptions = {}): ExtractResult {
-  const { requests } = buildRequests(root, options);
+  const built = buildRequests(root, options).requests;
+  const held = storyHeldShas(root);
+  const requests = built.filter((entry) => !held.has(entry.request.sha256));
   const files = renderRequests(requests);
   const result: ExtractResult = { counts: {}, families: [], total: 0, written: [], removed: [], drift: [] };
   for (const family of FAMILIES) {

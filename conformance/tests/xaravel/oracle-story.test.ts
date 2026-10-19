@@ -435,7 +435,8 @@ test("XT-conformance-77: oracle.yml#story runs on a Story PR's request file unde
   expect(job.permissions).toEqual({ contents: "read", packages: "read", "pull-requests": "read" });
   expect(job["environment"]).toBe("oracle");
   // The base commit, without persisted credentials; nothing checks out, installs or runs the PR's code.
-  expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { ref: "${{ github.event.pull_request.base.sha }}", "persist-credentials": false } });
+  // Story 5.6 AC5 (Epic 3 retro R5): the committed per-Story files are read in merge order, which needs full history.
+  expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { ref: "${{ github.event.pull_request.base.sha }}", "persist-credentials": false, "fetch-depth": 0 } });
   expect(job.steps[1]).toEqual({ uses: "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6", with: { "bun-version-file": ".bun-version" } });
   expect(job.steps.filter((entry) => (entry.uses ?? "").startsWith("actions/checkout@"))).toHaveLength(1);
   for (const entry of job.steps) {
@@ -624,7 +625,7 @@ test("XT-conformance-78: the story job comments the report on the PR with the Ap
 // XT-conformance-79
 
 test(
-  "XT-conformance-79: fixtures the story job generated verify under Story 3.3's check on a root with the committed request file; an unowned committed request, a missing manifest, a request in two Story files and a fixture in another Component's directory are violations (FR-6, AD-15)",
+  "XT-conformance-79: fixtures the story job generated verify under Story 3.3's check on a root with the committed request file; an unowned committed request, a missing manifest and a fixture in another Component's directory are violations; a request in two Story files is not (Story 5.6 AC5) (FR-6, AD-15)",
   withRoot(lines(LOWER, XT), async (fx) => {
     const run = (): number => cliInProcess(["generate", "9.1", "--root", fx.dir, "--image", "xaravel-oracle:test"], { ORACLE_SIGNING_KEY: fx.pem }, standIn().runner).code;
     expect(run()).toBe(0);
@@ -649,10 +650,12 @@ test(
     expect(verifyFixtures(fx.dir).violations).toEqual([`${fixturePath("view", XT)}: request ${XT.sha256} is in ${file}, a request of Story 9.1's Component support, not view`]);
     rmSync(join(fx.dir, fixturePath("view", XT)));
 
-    // A request also in another Story's file: the later file's line is a violation.
+    // A request also in another Story's file: the earlier-merged file owns it and both stay valid (this root is not a
+    // git tree, so merge order falls back to the file name). Story 5.6 AC5 (Epic 3 retro R5) reverses the old
+    // `is also in` violation here.
     writeFileSync(join(fx.dir, "stories", "9.2.md"), manifest("9.2", "support", [], [OWNED_XT]));
     writeFileSync(join(fx.dir, STORY_REQUESTS_DIR, "9.2.jsonl"), lines(XT));
-    expect(verifyFixtures(fx.dir).violations).toEqual([`${STORY_REQUESTS_DIR}/9.2.jsonl:1: request ${XT.sha256} is also in ${file}:2`]);
+    expect(verifyFixtures(fx.dir).violations).toEqual([]);
     rmSync(join(fx.dir, STORY_REQUESTS_DIR, "9.2.jsonl"));
 
     // A request file whose Story has no manifest: a violation, and its fixtures have no source.

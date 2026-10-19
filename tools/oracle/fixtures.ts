@@ -48,7 +48,7 @@ import { checkLocalCopy, oracleImage, type ImageRunner } from "../inventory/inve
 import { upstreamPath, UPSTREAM_DIR } from "../upstream/upstream";
 import { IMAGE_UPSTREAM_DIR, ORACLE_DIR, PHP_VERSION, runInImage } from "./oracle";
 import { canonicalJson, compareUnits, parseRequests, readSchema, renderJson, REQUESTS_DIR, type Json, type OracleRequest } from "./request";
-import { readStoryRequestFiles, type StoryRequestFile } from "./story-requests";
+import { readStoryRequestFiles, STORY_REQUESTS_DIR, type StoryRequestFile } from "./story-requests";
 
 export const FIXTURES_DIR = "conformance/fixtures";
 /**
@@ -324,9 +324,26 @@ export function batchRequestFiles(files: readonly ComponentRequests[]): Map<stri
   return new Map(files.flatMap((entry) => entry.requests.map((request) => [request.sha256, `${REQUESTS_DIR}/${entry.file}`] as const)));
 }
 
-/** Every committed per-Story request file under `root` (Story 3.4), judged against the batch and the listing. */
-export function readStoryRequests(root: string, files: readonly ComponentRequests[], listing: readonly NondeterministicRequest[]): StoryRequestFile[] {
-  return readStoryRequestFiles(root, readSchema(root), batchRequestFiles(files), new Map(listing.map((entry) => [entry.sha256, entry.line])));
+/**
+ * Every committed per-Story request file under `root` (Story 3.4), judged against the listing in merge order. A
+ * merged file is never judged against the batch (Story 5.6 AC5): the batch skips what it holds.
+ */
+export function readStoryRequests(root: string, listing: readonly NondeterministicRequest[]): StoryRequestFile[] {
+  return readStoryRequestFiles(root, readSchema(root), new Map(listing.map((entry) => [entry.sha256, entry.line])));
+}
+
+/** Every `sha256` an accepted merged per-Story request file owns under `root` (Story 5.6 AC5): the batch skips them. */
+export function storyHeldShas(root: string): Set<string> {
+  const held = new Set<string>();
+  if (!existsSync(join(root, STORY_REQUESTS_DIR))) {
+    return held;
+  }
+  for (const story of readStoryRequests(root, readNondeterminism(root))) {
+    if (story.component !== null) {
+      story.accepted.forEach(({ request }) => held.add(request.sha256));
+    }
+  }
+  return held;
 }
 
 // ---------------------------------------------------------------------------
@@ -584,11 +601,18 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
 
   const out = options.out !== undefined ? resolve(options.out) : join(root, FIXTURES_DIR);
   // The fixtures of accepted per-Story requests (Story 3.4) belong to their Story, not the batch: never deleted.
+  // `accepted` holds each request's owner, the earlier-merged Story; a later holder's (`shadowed`) fixture is kept
+  // under its own Component too (Story 5.6 AC5).
   const kept = new Map<string, Set<string>>();
-  for (const story of readStoryRequests(root, files, listing)) {
+  const owned = new Set<string>();
+  for (const story of readStoryRequests(root, listing)) {
     if (story.component !== null) {
       const shas = kept.get(story.component) ?? new Set<string>();
-      story.accepted.forEach(({ request }) => shas.add(`${request.sha256}.json`));
+      story.accepted.forEach(({ request }) => {
+        shas.add(`${request.sha256}.json`);
+        owned.add(request.sha256);
+      });
+      story.shadowed.forEach(({ request }) => shas.add(`${request.sha256}.json`));
       kept.set(story.component, shas);
     }
   }
@@ -597,7 +621,8 @@ export function generateFixtures(root: string, options: FixturesOptions = {}): F
   for (const entry of files) {
     const texts = new Map<string, string>();
     for (const request of entry.requests) {
-      if (!listed.has(request.sha256)) {
+      // A request a merged per-Story file owns is that Story's fixture, never re-signed by the batch (Story 5.6 AC5).
+      if (!listed.has(request.sha256) && !owned.has(request.sha256)) {
         texts.set(`${request.sha256}.json`, renderFixture(signFixture(request.sha256, first.get(request.sha256)!, key)));
       }
     }

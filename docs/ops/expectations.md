@@ -1,6 +1,6 @@
 # The Expectations File
 
-The Expectations File records exactly one status for every Test ID × Backend Variant pair in the [Test Inventory](inventory.md) (FR-3, AD-15). The harness (Story 5.3) compares results against it, and the Ratchet (Story 5.6) guards it. The tool is `tools/expectations/expectations.ts`.
+The Expectations File records exactly one status for every Test ID × Backend Variant pair in the [Test Inventory](inventory.md) (FR-3, AD-15). The harness (Story 5.3) compares results against it, and the [Ratchet](ratchet.md) (Story 5.6) guards it. The tool is `tools/expectations/expectations.ts`.
 
 ## The Variant vocabulary
 
@@ -40,9 +40,7 @@ Exit codes: 0 pass, 1 violations or any failure, 2 usage error.
 
 ## After an Inventory change
 
-When the Pin moves, `bun run pin:bump <tag> --apply` ([upstream.md](upstream.md)) edits the shards: it resets changed Test IDs to `skip` / `not-ported-yet`, renames lines of renamed Test IDs and deletes lines of removed ones. An `unknown:` line therefore means the Inventory changed without that step. Run `expectations:init` afterwards to add lines for new Test IDs. Stories edit only their own Test IDs' lines; Story 5.6 enforces that.
-
-Line ownership and the Ratchet are Story 5.6.
+When the Pin moves, `bun run pin:bump <tag> --apply` ([upstream.md](upstream.md)) edits the shards: it resets changed Test IDs to `skip` / `not-ported-yet`, renames lines of renamed Test IDs and deletes lines of removed ones. An `unknown:` line therefore means the Inventory changed without that step. Run `expectations:init` afterwards to add lines for new Test IDs. Stories edit only their own Test IDs' lines, and moving a `pass` to anything else needs an approved Escalation; the ownership check enforces both ([ratchet.md](ratchet.md#line-ownership)).
 
 ## Skip Reasons
 

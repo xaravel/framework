@@ -334,21 +334,30 @@ export function escalationStatus(id: string, root: string = repoRoot()): Escalat
     throw new Error(`malformed Escalation ID ${JSON.stringify(id)}; expected ESC-<story-id>-<n> or ESC-bot-<n> (AD-16)`);
   }
   const escalationPath = join(root, ESCALATIONS_DIR, `${id}.md`);
-  const decisionFile = `${DECISIONS_DIR}/${id}.md`;
-  const decisionPath = join(root, decisionFile);
+  const decisionPath = join(root, DECISIONS_DIR, `${id}.md`);
   if (!existsSync(escalationPath)) {
     // A decision with no Escalation behind it (an orphan) does not count.
     throw new Error(`unknown Escalation ${id}: ${ESCALATIONS_DIR}/${id}.md does not exist (AD-16)`);
   }
-  if (!existsSync(decisionPath)) {
+  return decisionStatus(id, readFileSync(escalationPath, "utf8"), existsSync(decisionPath) ? readFileSync(decisionPath, "utf8") : null);
+}
+
+/**
+ * The status the decision text `decisionText` (null when `decisions/<id>.md` does not exist) gives the Escalation
+ * `id` whose text is `escalationText`: `approved` or `rejected` when the decision validates and its
+ * `escalation_sha256` binds it to that exact text, otherwise `open`. Pure, so a caller can judge an Escalation that
+ * exists only in a PR head against the base's decision (Story 5.6).
+ */
+export function decisionStatus(id: string, escalationText: string, decisionText: string | null): EscalationStatus {
+  if (decisionText === null) {
     return "open";
   }
-  const parsed = parseDecision(decisionFile, readFileSync(decisionPath, "utf8"));
-  if (parsed.decision === null) {
+  const parsed = parseDecision(`${DECISIONS_DIR}/${id}.md`, decisionText);
+  if (parsed.decision === null || parsed.decision.id.id !== id) {
     return "open";
   }
   // A decision on different Escalation text (a stale one) does not decide.
-  const stale = staleDecision(parsed.decision, `${ESCALATIONS_DIR}/${id}.md`, readFileSync(escalationPath, "utf8"));
+  const stale = staleDecision(parsed.decision, `${ESCALATIONS_DIR}/${id}.md`, escalationText);
   return stale === null ? parsed.decision.decision : "open";
 }
 

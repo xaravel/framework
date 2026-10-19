@@ -80,9 +80,13 @@ export interface Result {
   readonly upstream: number | null;
 }
 
+/** How a difference counts for the Ratchet (Story 5.6): only `UNEXPECTED-PASS` is a pass; everything else, `UNKNOWN` included, is a failure. */
+export type DifferenceKind = "unexpected-pass" | "unexpected-failure";
+
 export interface Difference {
   readonly id: string;
   readonly variant: string;
+  readonly kind: DifferenceKind;
   readonly text: string;
   /** Why it differs, for the diagnostics: the junit failure or the kinds below the floor; null when there is nothing to add. */
   readonly detail: string | null;
@@ -244,10 +248,12 @@ export function compare(input: CompareInput): CompareOutput {
     const upstream = sum(upstreamAssertions);
     results.push({ id: line.id, variant, outcome, belowFloor: floorFailed, performed, upstream });
     if (!matches(line, outcome, floorFailed)) {
+      const word = statusWord(outcome, floorFailed);
       differences.push({
         id: line.id,
         variant,
-        text: `${statusWord(outcome, floorFailed)} ${line.id} [${variant}] expected=${expectedLabel(line)} actual=${outcome} asserts=${count(performed)}/${count(upstream)}`,
+        kind: word === "UNEXPECTED-PASS" ? "unexpected-pass" : "unexpected-failure",
+        text: `${word} ${line.id} [${variant}] expected=${expectedLabel(line)} actual=${outcome} asserts=${count(performed)}/${count(upstream)}`,
         detail: detailOf(line.id, run, outcome, floorFailed, report, upstreamAssertions),
       });
     }
@@ -257,7 +263,7 @@ export function compare(input: CompareInput): CompareOutput {
       continue;
     }
     const outcome = actualOutcome(id, run);
-    differences.push({ id, variant, text: `UNKNOWN ${id} [${variant}] expected=- actual=${outcome} asserts=${count(sum(report.assertions))}/-`, detail: null });
+    differences.push({ id, variant, kind: "unexpected-failure", text: `UNKNOWN ${id} [${variant}] expected=- actual=${outcome} asserts=${count(sum(report.assertions))}/-`, detail: null });
   }
   return { results, differences };
 }

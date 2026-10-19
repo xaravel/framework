@@ -16,10 +16,15 @@
 //       signed) is skipped.
 //
 //       Every per-Story request file is judged as tools/oracle/story-requests.ts
-//       judges it: each rejected line is a violation `<path>:<line>: …` (a
-//       malformed or non-canonical line, an id the Story does not own, a
-//       repeated sha256, a batch request, a listed request, a request already
-//       in another per-Story file), and so is a file without a valid manifest.
+//       judges committed files: each rejected line is a violation
+//       `<path>:<line>: …` (a malformed or non-canonical line, an id the Story
+//       does not own, a repeated sha256, a listed request), and so is a file
+//       without a valid manifest. A merged file stays valid when the batch or
+//       a later-merged Story's file also holds one of its requests (Story 5.6
+//       AC5, Epic 3 retro R5): the earlier-merged Story owns it, in merge order
+//       (tools/oracle/merge-order.ts, which needs full git history), and its
+//       source (Component, Story) is the request's source here. A fixture of
+//       it under a later holder's Component stays valid too.
 //
 // `conformance/fixtures/` is not a Protected Path and has no CODEOWNERS owner:
 // fixtures are protected by signature, not by path, and this check is what
@@ -55,8 +60,13 @@ export interface CommittedRequests {
   requests: Map<string, RequestSource>;
   /** The Components with a batch request file. */
   components: Set<string>;
-  /** The Components with an accepted per-Story request and no batch request file. */
+  /** The Components with an accepted or shadowed per-Story request and no batch request file. */
   storyComponents: Set<string>;
+  /**
+   * By `sha256`, the Components of the later-merged per-Story files that also hold a request an earlier-merged file
+   * owns (Story 5.6 AC5): their fixtures stay valid there too.
+   */
+  shadowed: Map<string, Set<string>>;
   /** One line per rejected per-Story request or request file, `<path>[:<line>]: …`. */
   violations: string[];
 }
@@ -77,20 +87,27 @@ export function committedRequests(root: string): CommittedRequests {
     }
   }
   const storyComponents = new Set<string>();
+  const shadowed = new Map<string, Set<string>>();
   const violations: string[] = [];
-  for (const story of readStoryRequests(root, batch, readNondeterminism(root))) {
+  for (const story of readStoryRequests(root, readNondeterminism(root))) {
     violations.push(...story.rejections.map((rejection) => renderRejection(story.file, rejection)));
     if (story.component === null) {
       continue;
     }
+    // `accepted` holds only the requests this file owns; the owner's source wins over the batch's.
     for (const { request } of story.accepted) {
       requests.set(request.sha256, { component: story.component, file: story.file, id: request.id, storyId: story.storyId });
     }
-    if (story.accepted.length > 0 && !components.has(story.component)) {
+    for (const { request } of story.shadowed) {
+      const holders = shadowed.get(request.sha256) ?? new Set<string>();
+      holders.add(story.component);
+      shadowed.set(request.sha256, holders);
+    }
+    if (story.accepted.length + story.shadowed.length > 0 && !components.has(story.component)) {
       storyComponents.add(story.component);
     }
   }
-  return { requests, components, storyComponents, violations };
+  return { requests, components, storyComponents, shadowed, violations };
 }
 
 /** The verification key `conformance/oracle/oracle.pub` under `root`; throws naming it when missing or not Ed25519. */
@@ -135,7 +152,7 @@ function fixtureSha(text: string): string | null {
  */
 export function verifyFixtures(root: string): VerifyResult {
   const key = verificationKey(root);
-  const { requests, components, storyComponents, violations } = committedRequests(root);
+  const { requests, components, storyComponents, shadowed, violations } = committedRequests(root);
   const listed = new Map(readNondeterminism(root).map((entry) => [entry.sha256, entry]));
 
   const dir = join(root, FIXTURES_DIR);
@@ -197,7 +214,7 @@ export function verifyFixtures(root: string): VerifyResult {
               ? `no committed request with sha256 ${sha} in ${REQUESTS_DIR}/${component}.jsonl`
               : `no committed request with sha256 ${sha} in an accepted per-Story request file of Component ${component}`,
           );
-        } else if (sha !== null && source !== undefined && source.component !== component) {
+        } else if (sha !== null && source !== undefined && source.component !== component && !(shadowed.get(sha)?.has(component) ?? false)) {
           problems.push(
             source.storyId === null
               ? `request ${sha} is in ${source.file}, not ${REQUESTS_DIR}/${component}.jsonl`
