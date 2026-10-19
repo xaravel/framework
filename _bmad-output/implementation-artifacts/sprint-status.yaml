@@ -78,8 +78,8 @@ development_status:
   4-8-jasonmccreary-double-port: done  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md); AC 1 conditional on ESC-4.8-1
   epic-4-retrospective: done
 
-  epic-5: backlog
-  5-1-variant-vocabulary-and-expectations-file: backlog
+  epic-5: in-progress
+  5-1-variant-vocabulary-and-expectations-file: in-progress
   5-2-skip-reason-rule-checks: backlog
   5-3-harness-runner-and-greppable-report: backlog
   5-4-fast-mode-seeds-and-filters: backlog
