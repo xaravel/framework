@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["./tools/lint-rules/plugin.ts"],
   "categories": {
     "correctness": "error"
   },
@@ -7,7 +8,13 @@
     "typescript/no-floating-promises": ["error", { "checkThenables": true }],
     "typescript/await-thenable": "error",
     "typescript/no-misused-promises": ["error", { "checksVoidReturn": true }],
-    "unicorn/no-thenable": "off"
+    "unicorn/no-thenable": "off",
+    "xaravel/no-identity-constructor-name": "error",
+    "xaravel/no-framework-json-stringify": "error",
+    "xaravel/no-ported-bun-expect": "error",
+    "xaravel/no-type-import-injection": "error",
+    "xaravel/no-model-private": "error",
+    "xaravel/no-package-default-export": "error"
   },
   "ignorePatterns": [
     "_bmad/**",
