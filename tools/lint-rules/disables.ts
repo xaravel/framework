@@ -27,7 +27,8 @@
 // disables it. A config's effective rules are its `extends` (relative JSON
 // paths, in order) and then its own `rules`. Also a violation: an `overrides`
 // entry that sets a spine rule below `error` or weakens its options, a
-// `plugins` list without `typescript`, an `ignorePatterns` entry (in any
+// `plugins` list without `typescript`, a root config whose `jsPlugins` does not
+// load `./tools/lint-rules/plugin.ts` (Story 6.2), an `ignorePatterns` entry (in any
 // config, relative to its directory) or root `.eslintignore` line (oxlint
 // honours it by default) that excludes a protected path (`protectedPaths`:
 // `IGNORE_PROBES`, a `packages/demo/src/Demo<ext>` per linted extension, and
@@ -42,10 +43,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, posix, resolve } from "node:path";
 
 /**
- * The rules the spine names (AD-6 async safety, NFR-3). Stories 6.2 and 6.3 append their custom rule names here;
- * a rule is named by its last `/` segment.
+ * The rules the spine names: AD-6 async safety (NFR-3, Story 6.1), then the `xaravel` plugin's identity, value and
+ * test-hygiene rules (`./plugin.ts`, Story 6.2; AD-10, AD-23, AD-15, AD-1, AD-7, AD-3). Story 6.3 appends its custom
+ * rule names here; a rule is named by its last `/` segment, so a name must not collide with an oxlint built-in.
  */
-export const SPINE_RULES: readonly string[] = ["no-floating-promises", "await-thenable", "no-misused-promises"];
+export const SPINE_RULES: readonly string[] = [
+  "no-floating-promises",
+  "await-thenable",
+  "no-misused-promises",
+  "no-identity-constructor-name",
+  "no-framework-json-stringify",
+  "no-ported-bun-expect",
+  "no-type-import-injection",
+  "no-model-private",
+  "no-package-default-export",
+];
 
 /** The options a spine rule must carry, each with the value it must have. */
 export const SPINE_RULE_OPTIONS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
@@ -65,6 +77,8 @@ export const IGNORE_PROBES: readonly string[] = [
 ];
 
 export const ROOT_CONFIG = ".oxlintrc.json";
+/** The `jsPlugins` entry the root config must carry for the `xaravel` spine rules (Story 6.2). */
+export const XARAVEL_PLUGIN = "./tools/lint-rules/plugin.ts";
 export const ESLINTIGNORE = ".eslintignore";
 const JSON_CONFIG_NAMES = new Set([".oxlintrc.json", ".oxlintrc.jsonc"]);
 const JS_CONFIG = /(^|\/)oxlint\.config\.[cm]?[jt]s$/;
@@ -528,6 +542,9 @@ export function checkConfig(root: string, path: string, paths: readonly string[]
       }
     });
   }
+  if (path === ROOT_CONFIG && !loadsXaravelPlugin(config["jsPlugins"])) {
+    out.push({ path, ...locate(text, '"jsPlugins"'), message: `does not load ${XARAVEL_PLUGIN} in jsPlugins, which turns the xaravel spine rules off` });
+  }
   const plugins = config["plugins"];
   if (Array.isArray(plugins) && !plugins.includes("typescript")) {
     out.push({ path, ...locate(text, '"plugins"'), message: "sets plugins without typescript, which turns the type-aware spine rules off" });
@@ -540,6 +557,11 @@ export function checkConfig(root: string, path: string, paths: readonly string[]
     }
   }
   return out;
+}
+
+/** Whether a `jsPlugins` value loads the `xaravel` plugin, as a string entry or a `{ specifier }` object. */
+function loadsXaravelPlugin(jsPlugins: unknown): boolean {
+  return Array.isArray(jsPlugins) && jsPlugins.some((entry: unknown) => entry === XARAVEL_PLUGIN || (isObject(entry) && entry["specifier"] === XARAVEL_PLUGIN));
 }
 
 function ignorePatterns(config: Json): string[] {

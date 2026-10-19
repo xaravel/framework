@@ -105,7 +105,7 @@ xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-pro
   expect(pkg.devDependencies["oxlint-tsgolint"]).toBe("7.0.2004");
 
   // The config: the three rules, top level, with their options; unicorn/no-thenable off (AD-6 thenables).
-  const config = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; ignorePatterns: string[]; overrides?: unknown };
+  const config = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; ignorePatterns: string[]; overrides?: unknown; jsPlugins: string[] };
   expect(config.rules["typescript/no-floating-promises"]).toEqual(["error", { checkThenables: true }]);
   expect(config.rules["typescript/await-thenable"]).toBe("error");
   expect(config.rules["typescript/no-misused-promises"]).toEqual(["error", { checksVoidReturn: true }]);
@@ -134,7 +134,8 @@ xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-pro
 
   // The options are load-bearing: without them the floating thenable and the void callback pass.
   const weak = tempDir("xaravel-lint-129-weak-");
-  const weakConfig = { ...config, rules: { ...config.rules, "typescript/no-floating-promises": "error", "typescript/no-misused-promises": ["error", { checksVoidReturn: false }] } };
+  // The full real config (Story 6.2's plugin rules too), its jsPlugins resolved against the repository root.
+  const weakConfig = { ...config, jsPlugins: config.jsPlugins.map((plugin) => join(root, plugin)), rules: { ...config.rules, "typescript/no-floating-promises": "error", "typescript/no-misused-promises": ["error", { checksVoidReturn: false }] } };
   writeFileSync(join(weak, CONFIG), JSON.stringify(weakConfig));
   placeFixtures(join(weak, "src"), Object.keys(FAILING));
   const weakRun = oxlint(join(weak, CONFIG), [join(weak, "src")]);
@@ -167,7 +168,17 @@ xaravelTest("XT-conformance-131", "an oxlint-disable of a spine rule, a blanket 
   expect(scripts["lint:disables"]).toBe("bun --no-env-file tools/lint-rules/disables.ts");
   const ci = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")) as { jobs: Record<string, { steps: { run?: string }[] }> };
   expect(ci.jobs["check"]!.steps.map((step) => step.run)).toContain("bun run lint");
-  expect(SPINE_RULES).toEqual(["no-floating-promises", "await-thenable", "no-misused-promises"]);
+  expect(SPINE_RULES).toEqual([
+    "no-floating-promises",
+    "await-thenable",
+    "no-misused-promises",
+    "no-identity-constructor-name",
+    "no-framework-json-stringify",
+    "no-ported-bun-expect",
+    "no-type-import-injection",
+    "no-model-private",
+    "no-package-default-export",
+  ]);
 
   // A named disable: exit 1, path:line:col.
   const named = gitRoot("xaravel-lint-131-named-");
