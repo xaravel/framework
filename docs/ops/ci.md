@@ -37,6 +37,14 @@ The matrix jobs set `CI=true` and the same `PG*` and `REDIS_*` variables as `rat
 
 The Oracle re-evaluation runs in `oracle.yml#determinism`, also nightly: after it builds the image at the current Pin, `bun run oracle:recheck` re-evaluates every committed request and fails naming each fixture whose output differs ([oracle.md](oracle.md#recheck-bun-run-oraclerecheck)).
 
+## Devcontainer (`devcontainer.yml`, Story 5.10)
+
+| Job | Runner | Triggers | What it runs |
+| --- | --- | --- | --- |
+| `devcontainer` | `ubuntu-24.04` (x64) | `pull_request` on `.devcontainer/**`, `tools/devcontainer/**` and the workflow; nightly `schedule`; `workflow_dispatch` | builds `.devcontainer/`, `docker compose up --wait`, then inside the workspace `bun run devcontainer:pins`, `bun run devcontainer:pins runtime` and a full `bun run harness`; fails unless the harness exits 0 and `bun run devcontainer:alpha` finds no alpha Variant `NOT-RUN` in its report |
+
+It is advisory, not a required check, and does not duplicate the nightly matrix. See [devcontainer.md](devcontainer.md).
+
 ## Benchmarks (`bun run bench`)
 
 ```sh

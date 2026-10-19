@@ -1,0 +1,9 @@
+{
+  "name": "Xaravel",
+  "dockerComposeFile": "compose.yaml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/xaravel",
+  "remoteUser": "xaravel",
+  "updateRemoteUserUID": true,
+  "shutdownAction": "stopCompose"
+}

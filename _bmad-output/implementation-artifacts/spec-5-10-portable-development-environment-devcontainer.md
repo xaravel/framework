@@ -3,14 +3,42 @@ title: 'Story 5.10: Portable development environment (devcontainer)'
 type: 'feature'
 created: '2026-10-19'
 baseline_revision: '46dccedc9d35230d4dc541738eb764cd8a407fdf'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 1
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-5-context.md'
   - '{project-root}/AGENTS.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      devcontainer.yml's PR paths filter misses inputs that can break the in-container run (conformance/harness/**, bun.lock, package.json, .bun-version, tools/inventory/inventory.ts, baseline.yml).
+    evidence: |-
+      The intent contract fixes the trigger list to .devcontainer/**, the workflow and tools/devcontainer/**. Pin drift is still caught on every PR by XT-conformance-192 in ci.yml's harness --xaravel; harness or lockfile breakage inside the container shows only in the nightly devcontainer run.
+    location: >-
+      .github/workflows/devcontainer.yml on.pull_request.paths
+    severity: medium
+  - summary: >-
+      The devcontainer CLI launch path and linux/arm64 are never exercised by CI; only docker compose on linux-x64 runs.
+    evidence: |-
+      AC4 asks for one linux-x64 job. arm64 rests on the multi-arch base images (oven/bun, redis, postgres); docs/ops/devcontainer.md says it is unverified.
+    location: >-
+      .github/workflows/devcontainer.yml
+    severity: medium
+  - summary: >-
+      .devcontainer/ is not a Protected Path, though it defines the reference environment's pins.
+    evidence: |-
+      Adding it needs an edit to conformance/protected-paths (and the generated CODEOWNERS), which the MAINT ruling forbids the orchestrator unless a Story requires it. The pin check still fails any drift. Raise at the Epic 5 retrospective.
+    location: >-
+      conformance/protected-paths
+    severity: medium
+  - summary: >-
+      Container images (CI services and the devcontainer) are pinned by tag, not digest; postgres:18 floats across minor releases.
+    evidence: |-
+      Pre-existing in ratchet.yml, nightly.yml and baseline.yml; the devcontainer mirrors CI's tags so the pin check compares like with like.
+    location: >-
+      .devcontainer/compose.yaml, .github/workflows/*.yml
+    severity: low
 ---
 
 <intent-contract>
@@ -229,6 +257,44 @@ deferred: []
     - `[false]` `[reject]` Spec and sprint status disagree. A spec in review and a Story in progress is the normal state mid-run.
     - `[low]` `[bad_spec]` The headless-agent docs suggest a volume that does not exist. Amended: the docs say installs are lost on recreate.
 
+### 2026-10-19 — Review pass (after loopback 1)
+- verdicts: 30 findings — high 0, medium 6, low 21, false 3, maybe-false 0
+- findings:
+  - **Verification Gap**
+    - `[medium]` `[patch]` `checkRuntime` and the `check runtime` CLI are never run by a test that can fail. Added a case with a fake `redis-server` on a temp PATH (wrong version) and a `.bun-version` mismatch, each asserting exit 1 and its line.
+    - `[medium]` `[patch]` The alpha gate is never tied to real harness output. XT-195 now passes the real `runHarness` report through `alphaNotRun` and asserts the pgsql and redis violations.
+    - `[low]` `[patch]` The `devcontainer.json could not be parsed` branch is untested. Added an XT-192 case.
+    - `[low]` `[reject]` Strict `JSON.parse` rejects JSONC comments. `devcontainer.json` is documented as plain JSON, and a comment fails closed and loudly.
+    - `[low]` `[reject]` A missing `getuid` reports root. That is intentional fail-closed behaviour on a platform that cannot run the container anyway.
+  - **Intent Alignment**
+    - `[medium]` `[defer]` The devcontainer CLI launch path and linux/arm64 are never exercised. They are live-only: CI runs `docker compose` on x64, and the docs say arm64 is unverified.
+    - `[low]` `[reject]` A contributor's in-container `bun run harness` does not fail on an alpha NOT-RUN. This matches native behaviour (NOT-RUN is never a local failure); the docs pipe the report to `devcontainer:alpha`.
+    - `[low]` `[reject]` Postgres has no runtime version check. The sidecar is CI's exact image string, the same as CI's own services.
+    - `[false]` `[reject]` "The nightly run" is a separate cron. epics.md asks for the job on the nightly run without duplicating 5.7's matrix; a nightly schedule meets that, and `nightly.yml`'s job keys are pinned by XT-121.
+    - `[low]` `[reject]` The headless agent command is generic. AC5 asks the doc to explain it; baking an agent into the image is out of scope (no credentials in the image).
+    - `[low]` `[reject]` carried: AC6 is shown by a static scan for `story:check` and the other tools.
+    - `[false]` `[reject]` Peripheral: `expect` from `bun:test` and the multi-path edits. All existing Xaravel Tests use `expect`, and the paths are Epic 5 Infrastructure scope.
+  - **Edge Case Hunter**
+    - `[low]` `[reject]` A non-canonical zero UID such as `00` passes the root guard. Nobody passes `00` from `id -u`, and the fix adds arithmetic guards.
+    - `[medium]` `[defer]` carried: the PR paths filter is too narrow.
+    - `[low]` `[reject]` A `build.dockerfile`/`context` override in compose escapes the pin check. No such key exists, and XT-190 pins `build.context` to `.`.
+    - `[low]` `[reject]` carried: `tagOf` and digest pins.
+    - `[low]` `[reject]` An alpha Variant with zero Expectations lines is skipped silently. All 7 alpha Variants have lines today (native run: 11 Variants, 4 run plus 7 NOT-RUN); a Variant with no lines has nothing to run.
+    - `[low]` `[reject]` Symlinked workflow files are skipped. No workflow is a symlink, and GitHub does not follow them.
+    - `[low]` `[reject]` A failed `git init` gives a misleading error later. It is a test-diagnostics nicety, and the failure is still loud.
+  - **Blind Hunter**
+    - `[medium]` `[defer]` carried: the PR paths filter is too narrow.
+    - `[low]` `[reject]` The gate does not prove every alpha Variant ran. Same as the Edge Case zero-lines row.
+    - `[low]` `[reject]` `alpha.ts` re-implements the harness's CI alpha rule from text. CI mode cannot be used in the container (it disables `startRedis`), and XT-195 now ties the gate to the real report format.
+    - `[medium]` `[defer]` `.devcontainer/` is not a Protected Path. Adding it means editing `conformance/protected-paths`, which the MAINT ruling forbids the orchestrator unless a Story requires it. Routed to the Maintainer.
+    - `[low]` `[patch]` XT-190 hardcodes `redis:8.10.2`. It now derives the image from `baseline.yml`. The drift fixtures in XT-192 keep their literals, because they edit copies of known text.
+    - `[low]` `[reject]` The runtime check skips Postgres, `git` and inherited env. Postgres is covered as above, a missing `git` fails the harness loudly, and the base images set none of those variables.
+    - `[low]` `[defer]` Images are pinned by tag, not digest. This is pre-existing: CI's own services are tag-pinned; the devcontainer only mirrors them.
+    - `[low]` `[reject]` carried: services keyed other than `postgres`/`redis`.
+    - `[low]` `[patch]` The docs' host harness example masks the exit status behind `tee`. It now mirrors the workflow's status capture.
+    - `[low]` `[patch]` The usage headers omit `--no-env-file`. Fixed in both tools.
+    - `[false]` `[reject]` The diff omits the spec. The spec is deliberately excluded from the review diff, and the edge-case layer reads it as the claims file.
+
 ## Design Notes
 
 - **The base image is CI's Redis image.** That pins `redis-server` to CI's exact build with no glibc or libssl mismatch. The Bun binary only needs glibc, which the Debian-based `redis` image has.
@@ -244,3 +310,49 @@ deferred: []
 - `bun run workflows:check && bun run typecheck && bun run lint` -- expected: clean
 - `bun run harness --xaravel` -- expected: SUMMARY differ=0
 - CI `devcontainer` job on the PR -- expected: green, `devcontainer alpha: not-run=0`
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** `.devcontainer/` is an optional Linux reference environment. It has three parts:
+- a non-root workspace image built on CI's `redis:8.10.2`, with Bun copied from `oven/bun:1.4.3`;
+- a `postgres:18` sidecar;
+- `.cache/` and `node_modules/` on named volumes, with no Docker socket and no secrets.
+
+`devcontainer:pins` checks the image pins against `.bun-version`, the workflows' service images and the spine's Stack table. Its `runtime` mode checks the uid, Bun and `redis-server` inside the container. `devcontainer:alpha` fails a harness report that has an alpha `NOT-RUN`. The `devcontainer.yml` workflow builds the image and runs both inside it.
+
+**Files changed:**
+- `.devcontainer/Dockerfile`: the workspace image, with a non-root uid/gid that refuses 0.
+- `.devcontainer/compose.yaml`: `workspace` (init, PG env, named volumes, ready healthcheck) and `postgres` (TCP `pg_isready`, tmpfs).
+- `.devcontainer/devcontainer.json`: the devcontainer CLI entry, in plain JSON.
+- `.devcontainer/start.sh`: the frozen-lockfile install, then the ready file, then idle.
+- `tools/devcontainer/pins.ts`: the `check` pin check (fails closed) and the `runtime` check.
+- `tools/devcontainer/alpha.ts`: the gate that allows no `NOT-RUN` on an alpha Variant.
+- `.github/workflows/devcontainer.yml`: one linux-x64 job on `.devcontainer/**` PRs, nightly and on dispatch.
+- `conformance/tests/xaravel/devcontainer.test.ts`: XT-conformance-190..195.
+- `docs/ops/devcontainer.md` (new); `docs/ops/ci.md` and `docs/ops/harness.md` (links).
+- `package.json`: the `devcontainer:pins` and `devcontainer:alpha` scripts. `tsconfig.json`: includes `tools/devcontainer`.
+
+**Review.**
+- Pass 1 had 32 findings: 1 high, 11 medium, 15 low, 5 false. The high one sent the spec back once (loopback 1): the `not-run=0` gate failed because the full harness also reports non-alpha Variants. Its other amendments are recorded in the Spec Change Log.
+- Pass 2 had 30 findings: 0 high, 6 medium, 21 low, 3 false. Six patches were applied: 2 medium (the runtime-check test, and the alpha gate tied to real harness output) and 4 low (the unparseable `devcontainer.json` case, the Redis image derived from `baseline.yml`, the docs exit-status example, `--no-env-file` in the usage headers).
+- Four items are deferred to the frontmatter: the PR paths filter, the devcontainer CLI path and arm64 being unexercised, `.devcontainer/` not being a Protected Path, and tag-only image pins.
+- Every rejected finding and its reason is in the Review Triage Log.
+
+**Contract note.** The intent contract's Always bullet says the workflow requires `SUMMARY … not-run=0`. epics.md AC2 says "no alpha Variant is NOT-RUN". The build follows epics.md, because the non-alpha backends (MySQL, MariaDB, SQL Server, Beanstalkd) have no sidecar until Phase 9. The contract text was left untouched, as it is read-only during review.
+
+**Follow-up review recommended: true.** Two medium entries were patched in the last pass. The named risk: the image build, `up --wait`, and the in-container harness run with every alpha Variant reachable have never run, because there is no Docker on the build host. The first live proof is the `devcontainer` job on this Story's PR.
+
+**Verification:**
+- `bun install --frozen-lockfile`: no changes.
+- `bun run test`: 237 pass, 0 fail.
+- `typecheck` and `lint`: clean.
+- `devcontainer:pins`: ok.
+- `workflows:check`: 14 workflows OK.
+- `bun run harness --xaravel`: 237/237 passed, differ=0.
+- `bun run harness`: `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Natively there is no `redis-server` or Postgres; non-alpha Variants are NOT-RUN by design.
+
+**Residual risks:**
+- Live-only: the image build, the run inside the container, arm64, and the devcontainer CLI launch path.
+- The runtime test case assumes `bun test` does not run as root.

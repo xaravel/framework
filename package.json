@@ -65,6 +65,8 @@
     "xt:consequences": "bun tools/xt-coverage/consequences.ts",
     "xt:coverage": "bun --no-env-file tools/xt-coverage/coverage.ts",
     "story:check": "bun --no-env-file tools/story-check/story-check.ts",
+    "devcontainer:pins": "bun --no-env-file tools/devcontainer/pins.ts check",
+    "devcontainer:alpha": "bun --no-env-file tools/devcontainer/alpha.ts",
     "bots": "bun tools/bots/bots.ts",
     "bench": "bun tools/bench/bench.ts",
     "php-fixtures:install": "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest"

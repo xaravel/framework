@@ -26,7 +26,8 @@
     "tools/mockery-coverage/**/*.ts",
     "tools/coverage-report/**/*.ts",
     "tools/xt-coverage/**/*.ts",
-    "tools/story-check/**/*.ts"
+    "tools/story-check/**/*.ts",
+    "tools/devcontainer/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"
