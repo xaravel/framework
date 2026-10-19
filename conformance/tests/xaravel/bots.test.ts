@@ -247,7 +247,48 @@ function judgeBot(files: PrFile[], base: Record<string, string>, head: Record<st
 interface Workflow {
   on: Record<string, unknown>;
   permissions: Record<string, string>;
-  jobs: Record<string, { if?: string; needs?: string[]; environment?: string; concurrency?: Record<string, unknown>; permissions?: Record<string, string>; steps: { uses?: string; run?: string; env?: Record<string, string>; with?: Record<string, unknown> }[] }>;
+  jobs: Record<string, { if?: string; needs?: string[]; environment?: string; concurrency?: Record<string, unknown>; permissions?: Record<string, string>; outputs?: Record<string, string>; steps: WorkflowStep[] }>;
+}
+
+interface WorkflowStep {
+  id?: string;
+  name?: string;
+  uses?: string;
+  run?: string;
+  env?: Record<string, string>;
+  with?: Record<string, unknown>;
+}
+
+/** Runs a workflow step's `run` with bash as GitHub's default shell does, in `cwd`, with `env` added to the environment. */
+function runStep(step: WorkflowStep, cwd: string, env: Record<string, string>): { code: number; stdout: string; stderr: string } {
+  const proc = Bun.spawnSync(["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", step.run!], { cwd, env: { PATH: process.env["PATH"] ?? "", ...env }, stdout: "pipe", stderr: "pipe" });
+  return { code: proc.exitCode, stdout: proc.stdout.toString(), stderr: proc.stderr.toString() };
+}
+
+/** The job's "Count the plan's proposals" step, run against `proposals`; returns the `$GITHUB_OUTPUT` text it wrote. */
+function countProposals(job: Workflow["jobs"][string], proposals: unknown[]): string {
+  const step = job.steps.find((each) => each.id === "count")!;
+  const dir = makeRoot({ ".cache/bots/plan.json": JSON.stringify({ ref: "main", sha: "x", run: "local", proposals }) });
+  const output = join(dir, "github-output");
+  writeFileSync(output, "");
+  expect(runStep(step, dir, { GITHUB_OUTPUT: output }).code).toBe(0);
+  return readFileSync(output, "utf8");
+}
+
+/** Asserts `job` counts its plan's proposals into the job output `proposals`. */
+function expectCountsProposals(job: Workflow["jobs"][string]): void {
+  expect(job.outputs).toEqual({ proposals: "${{ steps.count.outputs.proposals }}" });
+  const names = job.steps.map((step) => step.name ?? step.uses ?? "");
+  const count = names.indexOf("Count the plan's proposals");
+  expect(count).toBeGreaterThanOrEqual(0);
+  expect(job.steps[count]!.id).toBe("count");
+  // After the plan is written, before it is uploaded.
+  const writer = job.steps.findIndex((step) => step.run?.includes("--out .cache/bots/plan.json") ?? false);
+  expect(writer).toBeGreaterThanOrEqual(0);
+  expect(count).toBeGreaterThan(writer);
+  expect(count).toBeLessThan(names.indexOf("Upload the plan"));
+  expect(countProposals(job, [])).toBe("proposals=0\n");
+  expect(countProposals(job, [{ kind: "escalation", file: "ESC-bot-1.md", text: "", source: "" }])).toBe("proposals=1\n");
 }
 
 function botsWorkflow(): { text: string; data: Workflow } {
@@ -629,7 +670,10 @@ xaravelTest("XT-conformance-125", "a bot/* PR from the xaravel-bot App that chan
   expect(open.environment).toBe("bot");
   expect(open.concurrency).toEqual({ group: "bots-open", "cancel-in-progress": false });
   expect(open.needs).toEqual(["detect", "collect"]);
-  expect(open.if).toBe("always() && (needs.detect.result == 'success' || needs.collect.result == 'success')");
+  // Only a successful producer's non-empty plan runs open.
+  expect(open.if).toBe(
+    "always() && ((needs.detect.result == 'success' && needs.detect.outputs.proposals != '0') || (needs.collect.result == 'success' && needs.collect.outputs.proposals != '0'))",
+  );
   expect(open.permissions).toEqual({ contents: "read", actions: "read" });
   const openRuns = open.steps.map((step) => step.run ?? "").join("\n");
   expect(openRuns).not.toMatch(/harness|bun test|bun run test|ratchet|bots\.ts detect/);
@@ -639,7 +683,21 @@ xaravelTest("XT-conformance-125", "a bot/* PR from the xaravel-bot App that chan
   expect(token.uses).toBe("actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510");
   expect(token.with).toEqual({ "app-id": "${{ vars.XARAVEL_BOT_APP_ID }}", "private-key": "${{ secrets.XARAVEL_BOT_APP_KEY }}", "permission-contents": "write", "permission-pull-requests": "write" });
   expect(open.steps.find((step) => step.run?.includes("bots.ts apply"))!.env!["GH_TOKEN"]).toBe("${{ steps.app.outputs.token }}");
+  // Before the token step, a missing App fails with an error naming what to set; the check sees only whether the key is set.
+  const checkIndex = open.steps.findIndex((step) => step.name === "Check the xaravel-bot App is configured");
+  expect(checkIndex).toBe(open.steps.indexOf(token) - 1);
+  const check = open.steps[checkIndex]!;
+  expect(check.env).toEqual({ APP_ID: "${{ vars.XARAVEL_BOT_APP_ID }}", HAS_KEY: "${{ secrets.XARAVEL_BOT_APP_KEY != '' }}" });
+  // No expression is interpolated into the script: it reads only APP_ID and HAS_KEY.
+  expect(check.run).not.toContain("${{");
+  const checkDir = makeRoot({});
+  const missing = "::error::The xaravel-bot App is not configured: set vars.XARAVEL_BOT_APP_ID and secrets.XARAVEL_BOT_APP_KEY in the bot environment (docs/ops/bots.md).\n";
+  expect(runStep(check, checkDir, { APP_ID: "", HAS_KEY: "true" })).toEqual({ code: 1, stdout: missing, stderr: "" });
+  expect(runStep(check, checkDir, { APP_ID: "123", HAS_KEY: "false" })).toEqual({ code: 1, stdout: missing, stderr: "" });
+  expect(runStep(check, checkDir, { APP_ID: "", HAS_KEY: "false" })).toEqual({ code: 1, stdout: missing, stderr: "" });
+  expect(runStep(check, checkDir, { APP_ID: "123", HAS_KEY: "true" })).toEqual({ code: 0, stdout: "", stderr: "" });
   const detectJob = data.jobs["detect"]!;
+  expectCountsProposals(detectJob);
   expect(detectJob.environment).toBeUndefined();
   // A manual dispatch runs detect only from main, since the plan is labelled --ref main.
   expect(detectJob.if).toContain("(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')");
@@ -720,4 +778,5 @@ xaravelTest("XT-conformance-189", "an ESC-bot-<n>.md the Oracle uploads is commi
   expect(download.run).not.toContain("||");
   expect(download.env).toMatchObject({ GH_TOKEN: "${{ github.token }}", RUN_ID: "${{ github.event.workflow_run.id }}" });
   expect(job.steps.map((step) => step.run ?? "").join("\n")).toContain('bun tools/bots/bots.ts collect --from .cache/bots/esc --source "$SOURCE" --out .cache/bots/plan.json');
+  expectCountsProposals(job);
 }, 60_000);

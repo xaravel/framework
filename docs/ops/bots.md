@@ -65,9 +65,9 @@ Based on `main`'s tip, one branch per proposal:
 
 | Job | Runs when | Holds | Does |
 | --- | --- | --- | --- |
-| `detect` | a `ratchet` or `nightly` run on `main` from `push`, `schedule` or `workflow_dispatch` completes, or a manual dispatch from `main` | `contents: read`; no secret, no environment | Postgres 18 and Redis 8.10.2 services, `CI=true`; checks out the run's `head_sha`, runs `detect`, uploads `bot-plan` |
-| `collect` | an `oracle` run on `main` from `push`, `schedule` or `workflow_dispatch` completes | `contents: read`, `actions: read` | checks out that run's `head_sha`, lists its artifacts and downloads `oracle-escalation` and `oracle-determinism` when present (an absent one is not an error; any API or download error fails the job), runs `collect`, uploads `bot-plan` |
-| `open` | `detect` or `collect` succeeded | `contents: read`, `actions: read`; environment `bot`; concurrency group `bots-open`, one run at a time | checks out `main`, downloads `bot-plan`, mints the `xaravel-bot` token and runs `apply`. It runs no test and no harness |
+| `detect` | a `ratchet` or `nightly` run on `main` from `push`, `schedule` or `workflow_dispatch` completes, or a manual dispatch from `main` | `contents: read`; no secret, no environment | Postgres 18 and Redis 8.10.2 services, `CI=true`; checks out the run's `head_sha`, runs `detect`, uploads `bot-plan` and sets the job output `proposals` to the plan's proposal count |
+| `collect` | an `oracle` run on `main` from `push`, `schedule` or `workflow_dispatch` completes | `contents: read`, `actions: read` | checks out that run's `head_sha`, lists its artifacts and downloads `oracle-escalation` and `oracle-determinism` when present (an absent one is not an error; any API or download error fails the job), runs `collect`, uploads `bot-plan` and sets the job output `proposals` to the plan's proposal count |
+| `open` | `detect` or `collect` succeeded with a non-empty plan (its job output `proposals`, the plan's proposal count, is not `0`); an empty plan skips `open` and the run stays green | `contents: read`, `actions: read`; environment `bot`; concurrency group `bots-open`, one run at a time | checks out `main`, downloads `bot-plan`, checks the App is configured, mints the `xaravel-bot` token and runs `apply`. When `vars.XARAVEL_BOT_APP_ID` or `secrets.XARAVEL_BOT_APP_KEY` is unset it fails before the token step with an `::error::` naming both and this page. It runs no test and no harness |
 
 `detect` runs graded code, so it never sees the App key; `open` runs only `main`'s `tools/bots` on a plan it re-validates. `workflow_run` always runs the default branch's `bots.yml`.
 
@@ -79,6 +79,6 @@ A `bot/*` PR passes only when it comes from the `xaravel-bot` App and changes on
 
 `bots.yml`, App-token PR creation and `workflow_run` chaining have never run live. The tests (XT-conformance-123..125, 189) run the tools against a fake GitHub API and check the YAML. Before the first live run the Maintainer:
 
-1. Creates and installs the `xaravel-bot` App, the `bot` environment, the `XARAVEL_BOT_APP_ID` variable and the `XARAVEL_BOT_APP_KEY` secret ([identities.md](identities.md#the-xaravel-bot-github-app)).
+1. Creates and installs the `xaravel-bot` App, the `bot` environment, the `XARAVEL_BOT_APP_ID` variable and the `XARAVEL_BOT_APP_KEY` secret ([identities.md](identities.md#the-xaravel-bot-github-app)). Until then a run with an empty plan skips `open`, and a run with a non-empty plan fails `open` at "Check the xaravel-bot App is configured".
 2. Rules on [ESC-5.8-1](../../conformance/escalations/ESC-5.8-1.md): once `agent-push` is re-enabled at the Epic 8 checkpoint, it would block the App from creating `bot/*` branches.
 3. Supervises the first run (a manual `workflow_dispatch` of `bots`) and reviews the PRs it opens.
