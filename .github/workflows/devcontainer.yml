@@ -13,6 +13,10 @@
 # change the devcontainer, nightly and on dispatch. It does not duplicate the
 # nightly matrix (nightly.yml); arm64 is not built here.
 #
+# The checkout has full history (`fetch-depth: 0`), as ci.yml's `check` job
+# does: the full harness's Xaravel run verifies the Oracle fixtures, which
+# needs the merge order from git history.
+#
 # Read-only (`contents: read`), no secrets, `persist-credentials: false`, and
 # no action other than the pinned checkout.
 name: devcontainer
@@ -41,6 +45,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Build and start the devcontainer
         run: |
           set -euo pipefail

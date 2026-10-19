@@ -354,7 +354,7 @@ xaravelTest("XT-conformance-193", "one linux-x64 devcontainer job builds the ima
   expect(job.strategy).toBeUndefined();
   expect(job.services).toBeUndefined();
   expect(job.permissions).toBeUndefined();
-  expect(job.steps[0]).toEqual({ uses: `${CHECKOUT}`, with: { "persist-credentials": false } });
+  expect(job.steps[0]).toEqual({ uses: `${CHECKOUT}`, with: { "persist-credentials": false, "fetch-depth": 0 } });
   expect(job.steps.filter((step) => step.uses !== undefined).map((step) => step.uses)).toEqual([CHECKOUT]);
   const text = read(".github/workflows/devcontainer.yml");
   expect(text).not.toMatch(/secrets\./);
