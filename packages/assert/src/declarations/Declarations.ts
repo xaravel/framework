@@ -17,11 +17,22 @@
 // - Risky (Story 4.4): a test that recorded `expectNotToPerformAssertions` and
 //   any other kind passes, with PHPUnit's risky warning on stderr (Laravel's
 //   phpunit.xml.dist does not fail risky tests).
+// - Late-assertion protocol (Story 5.3): each test's counts end when its body
+//   settles. An assertion recorded after that (an un-awaited promise or timer
+//   left by the body) is not counted; instead
+//   `globalThis[Symbol.for('xaravel.harness.late')]`, when a function,
+//   receives a frozen `{ id, kind }`: the full Test ID and the kind, or
+//   `null` for the kind-less count. Its result is not awaited and its errors
+//   are swallowed, since the test that is running then may be another one.
+//   The harness preload installs it (conformance/harness/preload.ts) and fails
+//   the test as `late`.
 import { test } from "bun:test";
 import { isSkippedTest } from "../Framework/Exception/SkippedWithMessageException";
 import { type CountedRun, runCounted } from "./AssertionCounter";
 
 const REPORT = Symbol.for("xaravel.harness.report");
+/** Captured at load, so a test that reassigns `globalThis.Object` cannot alter reports. */
+const freeze = Object.freeze;
 
 /** Every full Test ID declared so far in this process. */
 const declared = new Set<string>();
@@ -66,12 +77,12 @@ export function registerTests(
   }
   for (const { label, id, run } of planned) {
     test(label, async () => {
-      const result: CountedRun = await runCounted(run);
+      const result: CountedRun = await runCounted(run, id);
       const skip = result.error !== null && isSkippedTest(result.error.value) ? result.error.value.getMessage() : null;
       let reportError: { value: unknown } | null = null;
       try {
         const report: TestReport = skip === null ? { type, id, consequence, assertions: result.assertions } : { type, id, consequence, assertions: result.assertions, skipped: skip };
-        await sendReport(Object.freeze(report));
+        await sendReport(freeze(report));
       } catch (thrown) {
         reportError = { value: thrown };
       }
