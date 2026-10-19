@@ -2109,7 +2109,7 @@ So that no Upstream test is blocked by a missing matcher (FR-116).
 
 **Given** `this.createMock(X)`
 **When** it is called
-**Then** it delegates to `@xaravel/mockery`.
+**Then** it returns a PHPUnit test double (`MockObject`), as PHPUnit does (Story 4.7; ESC-4.4-2 item 6, ESC-4.7-1 item 4).
 
 **Given** `phpunit-assertions.jsonl`
 **When** the coverage report runs in CI
@@ -2293,6 +2293,10 @@ So that I see exactly which Test IDs differ (FR-9, FR-113).
 **Given** declared tests that run concurrently, an assertion recorded after its test has ended, and code under test that patches a JavaScript intrinsic (`Object.prototype`, `AsyncLocalStorage.prototype`, bun's `test`)
 **When** the harness runs
 **Then** counts never mix between tests, a late assertion fails its test instead of going uncounted, and the intrinsics are frozen before any Ported Test loads (Epic 4 retro S4; spec-4-1 and spec-4-2 deferrals).
+
+**Given** the committed `conformance/api-surface/*.jsonl`
+**When** a Ported Test loads
+**Then** `globalThis[Symbol.for('xaravel.api.signature')]` is installed: `(fqcn, member)` returns that member's surface row (`returns`, `nullable` and `parameters`), or null when there is none (ESC-4.8-1 item 1).
 
 ### Story 5.4: Fast mode, seeds and filters
 
@@ -2831,7 +2835,7 @@ So that weakened, removed or mislabelled assertions are caught before merge (FR-
 - assertions match Upstream;
 - no expected value is weakened;
 - no assertion is removed without a DIV clause;
-- every new Skip Reason is justified, and its precedence is right;
+- every new Skip Reason is justified, and its precedence is right, citing the "Precedence" section of `conformance/README.md` (ESC-5.2-1);
 - every `adapted` marker matches its clause;
 - every Xaravel Test verifies the consequence it declares;
 - no stub, fake or partial implementation of another Component;
@@ -3189,6 +3193,10 @@ So that equality, exception and instanceof assertions match PHP once those value
 **When** Laravel's `TestResponseAssert` appends to its message
 **Then** a supported grader API rewrites the message (ESC-4.3-1 item 11).
 
+**Given** Story 5.3's signature lookup and a PHPUnit test double whose target has a surface row for the called method
+**When** the method is called without a configured return, or with omitted arguments
+**Then** it returns PHPUnit's generated value for the declared return type, pads omitted arguments and `willReturnMap` rows with the declared defaults, names parameters as declared and gives `Invocation::toString` its `: <type>` suffix; a target with no row keeps the null default (ESC-4.7-1 item 2).
+
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 
 Packages built in parallel agree on every interface and container key without importing each other's half-built code.
@@ -3220,6 +3228,10 @@ So that injection and `instanceof` work as they do in PHP (AD-1, DIV-3).
 **Given** `contract<T>('App\\Contracts\\Billing')`
 **When** it is used as a token
 **Then** it behaves like a framework token, and its FQCN is resolvable through `fqcn()`.
+
+**Given** a contract token
+**When** a test double reads it
+**Then** it carries its method names at `Symbol.for('xaravel.contract.methods')` and each method's parameter names (ESC-4.5-1 item 3, ESC-4.7-1 item 5).
 
 **Given** `@xaravel/contracts/psr`
 **When** it is imported
