@@ -67,3 +67,9 @@ The Maintainer:
 1. Runs `GH_TOKEN="$(gh auth token)" bun run ruleset:apply` from `main` after the merge, so the live ruleset requires `ratchet` ([identities.md](identities.md)). Until then `ratchet` is required only in the committed ruleset, and `bun run ruleset:verify` reports the drift.
 2. Supervises the first nightly run. The macOS Homebrew service setup has never run live, and neither have the arm64 service containers.
 3. Triages the first `oracle:recheck` failures. A stale fixture is regenerated. How to handle a request whose output depends on the date is the Maintainer's ruling on `conformance/escalations/ESC-5.7-1.md`, which proposes freezing the Oracle's clock. Listing such a request in `conformance/oracle/nondeterminism.jsonl` drops its fixture and so removes a Differential check; it needs that ruling.
+
+## Bots (`bots.yml`, Story 5.8)
+
+`bots.yml` runs after the `ratchet` (push to `main`), `nightly` and `oracle` workflows complete on `main`, and on a manual dispatch. Its `detect` job quarantines flaky tests and promotes unowned unexpected passes; its `collect` job commits the Oracle's `ESC-bot-<n>.md` artifacts; its `open` job opens the `bot/*` PRs as the `xaravel-bot` App. Only `open` holds a secret, and it runs no test. Bot PRs are never merged automatically: they go through review and the merge queue like any PR. See [bots.md](bots.md).
+
+`workflow_run` chaining, App-token PR creation and the job itself have never run live; the first run needs the Maintainer's App setup ([identities.md](identities.md#the-xaravel-bot-github-app)).

@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { escalationDigest } from "../../../tools/escalations/escalations";
-import { type ContentSide, evaluatePr } from "../../../tools/ownership/ownership";
+import { BOT_LOGIN, type ContentSide, evaluatePr } from "../../../tools/ownership/ownership";
 import { scanPortedBlocks } from "../../../tools/ownership/ported-blocks";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
@@ -73,8 +73,8 @@ function contents(base: Record<string, string>, head: Record<string, string>): (
   return (path, side) => (side === "base" ? base : head)[path] ?? null;
 }
 
-function judge(dir: string, headRef: string, files: PrFile[], base: Record<string, string>, head: Record<string, string>): string[] {
-  return evaluatePr(dir, { headRef, files, changedFiles: files.length, content: contents(base, head), mergeBase: BASE_SHA, headSha: HEAD_SHA }).violations;
+function judge(dir: string, headRef: string, files: PrFile[], base: Record<string, string>, head: Record<string, string>, author: { login: string; type: string } | null = null): string[] {
+  return evaluatePr(dir, { headRef, files, changedFiles: files.length, content: contents(base, head), mergeBase: BASE_SHA, headSha: HEAD_SHA, author }).violations;
 }
 
 const unownedLine = (key: string, shards: string): string => `unowned expectation: ${key} changes in ${shards}, but Story 11.1's test_ids do not list it (AD-16)`;
@@ -233,7 +233,17 @@ test("XT-conformance-117: moving an entry from pass to any other status, or remo
   expect(judge(none, "story/11.1", [modified(S1), added(S2)], before, { [S1]: line(`${X}#0`, "pass"), [S2]: line(A, "pass") })).toEqual([]);
   expect(judge(none, "story/11.1", [modified(S1)], { [S1]: line(A, "fail-known") }, { [S1]: line(A, "pass") })).toEqual([]);
   // bot/* is exempt (Story 5.8 owns its value-level rules).
-  expect(judge(none, "bot/promote", [modified(S1)], before, { [S1]: line(`${X}#0`, "skip") })).toEqual([]);
+  // Story 5.8: the bot value rule allows only promotions and quarantines, so the exempt bot case is now a pass → quarantined
+  // change from the xaravel-bot App with the ESC-bot it adds.
+  const BOT = { login: BOT_LOGIN, type: "Bot" };
+  const quarantined = `${JSON.stringify({ id: A, variant: "none", status: "quarantined", reason: null, adapted: null, escalation: "ESC-bot-1" })}\n`;
+  expect(judge(none, "bot/quarantine", [modified(S1), added("conformance/escalations/ESC-bot-1.md")], before, { [S1]: quarantined + line(`${X}#0`, "pass") }, BOT)).toEqual([]);
+  // Story 5.8: a bot pass → skip is no longer exempt; it fails the bot value rule.
+  const skipped = judge(none, "bot/promote", [modified(S1)], before, { [S1]: line(A, "skip") + line(`${X}#0`, "pass") }, BOT);
+  expect(skipped).toEqual([
+    `bot value: ${A} [none] in ${S1}: status "skip" is neither pass (a promotion) nor quarantined (a quarantine) (AD-16)`,
+    `bot value: ${A} [none] in ${S1}: reason must be null, got "not-ported-yet" (AD-16)`,
+  ]);
 
   // An open Escalation (no decision) does not count.
   const text = escalation([A]);

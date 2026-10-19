@@ -38,6 +38,10 @@
 //                        outside the paths a bot branch may change, matched
 //                        case-sensitively, or with an empty, `.` or `..`
 //                        segment
+//   bot identity:        a `bot/*` PR not opened by the `xaravel-bot` App
+//                        (`user` `{type: "Bot", login: BOT_LOGIN}`) (Story 5.8)
+//   bot value:           a `bot/*` PR changes more than an Expectations line's
+//                        status triple (`botValueProblems`, below) (Story 5.8)
 //   truncated file list: the API returned fewer files than the PR's
 //                        `changed_files`; the check fails closed
 //   unowned expectation: a `story/<id>` PR changes an Expectations line whose
@@ -71,8 +75,9 @@
 //     `story/<id>` branches each changed block's id `X` must be owned:
 //     `test_ids` lists `X` or a row `X#<key>`. Any `portedTest` whose id is
 //     not a string literal or a template of top-level string constants fails.
-//   - Pass demotion, on every branch except `bot/*` (Story 5.8 owns the bot
-//     rules; `planning/*` rejects every Expectations change already): a key whose base lines include `pass` and whose head lines do
+//   - Pass demotion, on every branch except `bot/*` (the bot value rule below
+//     bounds what a bot may change; `planning/*` rejects every Expectations
+//     change already): a key whose base lines include `pass` and whose head lines do
 //     not (another status, or removed) needs an approved Escalation listing
 //     its id (or `X` for a row `X#<key>`): an
 //     `conformance/escalations/ESC-<id>.md` on base, or in the PR head when
@@ -95,11 +100,23 @@
 //     protected-paths check matches inclusions.
 //   - `bot/*` may change only `conformance/expectations/**` and
 //     `conformance/escalations/ESC-bot-<n>.md`. This is the path-level half of
-//     AD-16's Expectations-`status`-only rule; the value-level half (only
-//     `status` values change) needs the Expectations format and belongs to
-//     Story 5.8. Unlike the planning rule, this allowlist matches
-//     case-sensitively, and it also rejects any path with an empty, `.` or
-//     `..` segment.
+//     AD-16's Expectations-`status`-only rule. Unlike the planning rule, this
+//     allowlist matches case-sensitively, and it also rejects any path with an
+//     empty, `.` or `..` segment. Then (Story 5.8):
+//       - identity: the PR's author must be the `xaravel-bot` App, `user`
+//         `{type: "Bot", login: "xaravel-bot[bot]"}` (`BOT_LOGIN`);
+//       - values (`botValueProblems`): over the changed `.jsonl` shards, read
+//         at the merge base and the head, a bot changes only a line's status
+//         triple (`status`, `reason`, `escalation`). No shard is added,
+//         removed or renamed; each shard keeps its keys in order; `id`,
+//         `variant`, `adapted` and any other field stay; a changed line's
+//         status is `pass` or `quarantined` with `reason` null; under `pass`
+//         its `escalation` is unchanged, under `quarantined` it is an
+//         `ESC-bot-<n>` whose file the PR adds, and only a `pass` or
+//         `fail-known` line becomes `quarantined`. Any other changed file
+//         under `conformance/expectations/` is a violation, and so is an
+//         `ESC-bot-<n>.md` the PR modifies, removes or renames (it may only
+//         add one).
 //   - Any other branch passes.
 // Both rules check a renamed file's previous name and fail closed on a
 // truncated file list.
@@ -159,6 +176,8 @@ export interface OwnershipPrInput {
   mergeBase?: string | null;
   /** The head commit's sha, for messages. */
   headSha?: string | null;
+  /** The PR's author (`GET /pulls/<n>` `user`), or null when unknown; the bot identity rule needs it (Story 5.8). */
+  author?: { login: string; type: string } | null;
 }
 
 export interface OwnershipPrResult {
@@ -175,6 +194,8 @@ const COMPONENT = /^[a-z][a-z0-9-]*$/;
 const STORY_BRANCH = "story/";
 const PLANNING_BRANCH = "planning/";
 const BOT_BRANCH = "bot/";
+/** The login of the `xaravel-bot` GitHub App, the only author a `bot/*` PR may have (Story 5.8). */
+export const BOT_LOGIN = "xaravel-bot[bot]";
 
 function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -491,8 +512,21 @@ function sidesOf(prFile: PrFile): { base: string | null; head: string | null } {
 
 /** The reads `evaluatePr`'s line rules need for `headRef` and `files`, in a stable order (the `pr` command prefetches them). */
 export function contentReads(headRef: string, files: readonly PrFile[]): ContentRead[] {
-  if (headRef.startsWith(BOT_BRANCH) || headRef.startsWith(PLANNING_BRANCH)) {
+  if (headRef.startsWith(PLANNING_BRANCH)) {
     return [];
+  }
+  if (headRef.startsWith(BOT_BRANCH)) {
+    // The bot value rule (Story 5.8) reads each changed shard at the merge base and the head.
+    const reads = new Map<string, ContentRead>();
+    for (const prFile of files) {
+      const { base, head } = sidesOf(prFile);
+      for (const [path, side] of [[base, "base"], [head, "head"]] as const) {
+        if (path !== null && EXPECTATIONS_FILE.test(path)) {
+          reads.set(`${side}\0${path}`, { path, side });
+        }
+      }
+    }
+    return [...reads.values()];
   }
   const story = headRef.startsWith(STORY_BRANCH);
   const reads = new Map<string, ContentRead>();
@@ -771,6 +805,178 @@ function lineRules(root: string, pr: OwnershipPrInput, storyId: string | null, o
   return violations;
 }
 
+// ---------------------------------------------------------------------------
+// Bot rules (Story 5.8)
+
+/** The status triple a bot may change; every other field of a line is frozen. */
+const STATUS_TRIPLE: ReadonlySet<string> = new Set(["status", "reason", "escalation"]);
+const BOT_STATUSES: ReadonlySet<string> = new Set(["pass", "quarantined"]);
+const BOT_ESCALATION = /^ESC-bot-[1-9]\d*$/;
+
+interface ParsedShardLine {
+  key: string;
+  text: string;
+  record: Record<string, unknown>;
+}
+
+/** The parsed lines of one shard, or the `bot value:` problems that stop it being judged. */
+function shardLines(path: string, side: ContentSide, text: string, problems: string[]): ParsedShardLine[] | null {
+  const lines = text.split("\n");
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+  const parsed: ParsedShardLine[] = [];
+  let ok = true;
+  lines.forEach((line, index) => {
+    let value: unknown;
+    try {
+      value = JSON.parse(line);
+    } catch {
+      value = null;
+    }
+    const record = value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+    if (record === null || typeof record["id"] !== "string" || typeof record["variant"] !== "string") {
+      problems.push(`bot value: ${path}:${index + 1} at the ${side === "base" ? "merge base" : "head"} is not an Expectations line with a string id and variant (AD-16)`);
+      ok = false;
+      return;
+    }
+    parsed.push({ key: `${record["id"]} [${record["variant"]}]`, text: line, record });
+  });
+  return ok ? parsed : null;
+}
+
+/** Whether two parsed JSON values are equal. */
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+/**
+ * The `bot value:` violations of a bot change (AD-16, Story 5.8): `base` and `head` map each changed Expectations
+ * shard to its text at the merge base and the head (a shard absent on a side is added or removed there), and
+ * `addedBotEscalations` holds the `ESC-bot-<n>` IDs whose files the PR adds. A bot changes only the status triple
+ * (`status`, `reason`, `escalation`) of existing lines; see the header.
+ */
+export function botValueProblems(base: ReadonlyMap<string, string>, head: ReadonlyMap<string, string>, addedBotEscalations: ReadonlySet<string>): string[] {
+  const problems: string[] = [];
+  const paths = [...new Set([...base.keys(), ...head.keys()])].sort(compare);
+  for (const path of paths) {
+    const before = base.get(path);
+    const after = head.get(path);
+    if (before === undefined) {
+      problems.push(`bot value: ${path} is added (or renamed to); a bot/* branch never adds, removes or renames an Expectations shard (AD-16)`);
+      continue;
+    }
+    if (after === undefined) {
+      problems.push(`bot value: ${path} is removed (or renamed away); a bot/* branch never adds, removes or renames an Expectations shard (AD-16)`);
+      continue;
+    }
+    const left = shardLines(path, "base", before, problems);
+    const right = shardLines(path, "head", after, problems);
+    if (left === null || right === null) {
+      continue;
+    }
+    const leftKeys = left.map((line) => line.key);
+    const rightKeys = right.map((line) => line.key);
+    if (leftKeys.join("\n") !== rightKeys.join("\n")) {
+      const rightSet = new Set(rightKeys);
+      const leftSet = new Set(leftKeys);
+      const removed = leftKeys.filter((key) => !rightSet.has(key));
+      const added = rightKeys.filter((key) => !leftSet.has(key));
+      const what = removed.length === 0 && added.length === 0 ? "its lines are reordered or repeated" : `its key set differs (added: ${added.join(", ") || "none"}; removed: ${removed.join(", ") || "none"})`;
+      problems.push(`bot value: ${path}: ${what}; a bot/* branch never adds, removes or moves a line (AD-16)`);
+      continue;
+    }
+    left.forEach((was, index) => {
+      const now = right[index]!;
+      if (was.text === now.text) {
+        return;
+      }
+      const at = `${now.key} in ${path}`;
+      const fields = [...new Set([...Object.keys(was.record), ...Object.keys(now.record)])].filter((field) => !STATUS_TRIPLE.has(field)).sort(compare);
+      for (const field of fields) {
+        if (!sameValue(was.record[field], now.record[field])) {
+          problems.push(`bot value: ${at}: ${field} changes from ${JSON.stringify(was.record[field] ?? null)} to ${JSON.stringify(now.record[field] ?? null)}; a bot changes only status, reason and escalation (AD-16)`);
+        }
+      }
+      const status = now.record["status"];
+      if (typeof status !== "string" || !BOT_STATUSES.has(status)) {
+        problems.push(`bot value: ${at}: status ${JSON.stringify(status ?? null)} is neither pass (a promotion) nor quarantined (a quarantine) (AD-16)`);
+      }
+      if (now.record["reason"] !== null) {
+        problems.push(`bot value: ${at}: reason must be null, got ${JSON.stringify(now.record["reason"] ?? null)} (AD-16)`);
+      }
+      const escalation = now.record["escalation"];
+      if (status === "pass" && !sameValue(was.record["escalation"], escalation)) {
+        problems.push(`bot value: ${at}: escalation changes from ${JSON.stringify(was.record["escalation"] ?? null)} to ${JSON.stringify(escalation ?? null)} under pass; a promotion keeps it (AD-16)`);
+      }
+      const previous = was.record["status"];
+      if (status === "quarantined" && previous !== "quarantined" && previous !== "pass" && previous !== "fail-known") {
+        problems.push(`bot value: ${at}: status changes from ${JSON.stringify(previous ?? null)} to quarantined; a bot quarantines only pass or fail-known lines (AD-16)`);
+      }
+      if (status === "quarantined" && !(typeof escalation === "string" && BOT_ESCALATION.test(escalation) && addedBotEscalations.has(escalation))) {
+        problems.push(`bot value: ${at}: quarantined with escalation ${JSON.stringify(escalation ?? null)}, which is not an ESC-bot-<n> this PR adds (AD-16)`);
+      }
+    });
+  }
+  return problems;
+}
+
+/** The identity and value violations of a `bot/*` PR (see the header). */
+function botRules(pr: OwnershipPrInput): string[] {
+  const violations: string[] = [];
+  const author = pr.author ?? null;
+  if (author === null || author.type !== "Bot" || author.login !== BOT_LOGIN) {
+    const who = author === null ? "an unknown author" : `${author.login} (type ${author.type})`;
+    violations.push(`bot identity: ${pr.headRef} was opened by ${who}, not the xaravel-bot App (${BOT_LOGIN}); only its bot/* PRs are exempt (AD-16)`);
+  }
+  for (const prFile of pr.files) {
+    const { base, head } = sidesOf(prFile);
+    for (const path of [base, head]) {
+      if (path !== null && path.startsWith("conformance/expectations/") && !EXPECTATIONS_FILE.test(path) && !hasBadSegment(path)) {
+        const line = `bot value: ${path} is not an Expectations shard (.jsonl); a bot/* branch changes only Expectations lines (AD-16)`;
+        if (!violations.includes(line)) {
+          violations.push(line);
+        }
+      }
+    }
+  }
+  // A bot only adds Escalations; it never changes, removes or renames one (a rename's new name is not `added`).
+  for (const prFile of pr.files) {
+    const { base, head } = sidesOf(prFile);
+    const status = prFile.status ?? "modified";
+    for (const path of [base, head]) {
+      if (path !== null && status !== "added" && /^conformance\/escalations\/ESC-bot-[1-9]\d*\.md$/.test(path)) {
+        const line = `bot value: ${path} is ${status}; a bot/* branch only adds an ESC-bot-<n>.md, never changes, removes or renames one (AD-16)`;
+        if (!violations.includes(line)) {
+          violations.push(line);
+        }
+      }
+    }
+  }
+  const read = reader(pr, violations);
+  const base = new Map<string, string>();
+  const head = new Map<string, string>();
+  let complete = true;
+  for (const entry of contentReads(pr.headRef, pr.files)) {
+    try {
+      (entry.side === "base" ? base : head).set(entry.path, read(entry.path, entry.side)!);
+    } catch {
+      complete = false;
+    }
+  }
+  if (complete) {
+    const added = new Set<string>();
+    for (const prFile of pr.files) {
+      const match = (prFile.status ?? "modified") === "added" ? /^conformance\/escalations\/(ESC-bot-[1-9]\d*)\.md$/.exec(prFile.filename) : null;
+      if (match !== null) {
+        added.add(match[1]!);
+      }
+    }
+    violations.push(...botValueProblems(base, head, added));
+  }
+  return violations;
+}
+
 /** Decides a PR from its head branch and files, given the base checkout at `root`. */
 export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResult {
   if (pr.headRef.startsWith(PLANNING_BRANCH)) {
@@ -793,6 +999,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
         (path) =>
           `bot scope: ${path} is outside conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md, the only paths a bot/* branch may change (AD-16)`,
       ),
+      ...botRules(pr),
     ];
     return { storyId: null, outOfScope, violations };
   }
@@ -889,7 +1096,9 @@ async function pr(options: Options): Promise<number> {
   const token = process.env["GH_TOKEN"] || null;
   const github = new GitHub(api, options.repo, token);
 
-  const pull = await github.json<{ head: { ref: string; sha?: unknown }; base?: { sha?: unknown } | null; changed_files: number }>(`/pulls/${options.pr}`);
+  const pull = await github.json<{ head: { ref: string; sha?: unknown }; base?: { sha?: unknown } | null; changed_files: number; user?: { login?: unknown; type?: unknown } | null }>(
+    `/pulls/${options.pr}`,
+  );
   const headRef = pull.head.ref;
   if (typeof headRef !== "string" || typeof pull.changed_files !== "number") {
     throw new Error(`GET /pulls/${options.pr}: missing head.ref or changed_files`);
@@ -934,7 +1143,9 @@ async function pr(options: Options): Promise<number> {
     }
     return value;
   };
-  const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha });
+  const user = pull.user ?? null;
+  const author = user !== null && typeof user.login === "string" && typeof user.type === "string" ? { login: user.login, type: user.type } : null;
+  const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha, author });
 
   if (result.violations.length > 0) {
     report(result.violations);
@@ -946,7 +1157,7 @@ async function pr(options: Options): Promise<number> {
       : headRef.startsWith(PLANNING_BRANCH)
         ? `${headRef} passed the planning rule; no file is under packages/ or conformance/expectations/`
         : headRef.startsWith(BOT_BRANCH)
-          ? `${headRef} passed the bot path rule (path-level only; Story 5.8 adds the status-only check); every file is under conformance/expectations/ or a conformance/escalations/ESC-bot-<n>.md`
+          ? `${headRef} passed the bot rules (path, identity, status-only values)`
           : `${headRef} is not a Story branch`;
   process.stdout.write(`Ownership OK: PR #${options.pr}: ${summary}.\n`);
   return 0;
