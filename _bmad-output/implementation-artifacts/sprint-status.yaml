@@ -88,7 +88,7 @@ development_status:
   5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: done
   5-8-promotion-and-quarantine-bots: done
   5-9-xaravel-test-coverage-check-and-the-story-done-check: done  # ESC-5.9-1 (open-question) waits on the Maintainer
-  5-10-portable-development-environment-devcontainer: backlog  # added by the Maintainer, 2026-10-19
+  5-10-portable-development-environment-devcontainer: in-progress  # added by the Maintainer, 2026-10-19
   epic-5-retrospective: optional
 
   epic-6: backlog
