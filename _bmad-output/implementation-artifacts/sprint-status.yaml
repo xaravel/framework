@@ -96,7 +96,7 @@ development_status:
   6-2-lint-rules-for-identity-values-and-test-hygiene: done  # ESC-6.2-1 approved (decisions/ESC-6.2-1.md, orchestrator ruling)
   6-3-lint-rules-for-async-signatures-frame-state-and-declarations: done
   6-4-async-surface-json-generator-and-drift-check: done
-  6-5-api-surface-diff: backlog
+  6-5-api-surface-diff: in-progress
   6-6-duplicate-fqcn-and-registration-scan: backlog
   epic-6-retrospective: optional
 
