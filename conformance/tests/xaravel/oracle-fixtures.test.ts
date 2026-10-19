@@ -12,7 +12,7 @@
 // instead. This file never imports tools/oracle/oracle.ts directly or names
 // its image runner (XT-conformance-44); image mode runs only through the
 // stand-in.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { createHash, generateKeyPairSync, type KeyObject } from "node:crypto";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -36,7 +36,9 @@ import {
   type FixturesOptions,
 } from "../../../tools/oracle/fixtures";
 import { activePhases, isProtected, parseList } from "../../../tools/protected-paths/protected-paths";
-import { canonicalJson, makeRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
+import { canonicalJson, makeRequest, renderRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
+import { judgeStoryRequests } from "../../../tools/oracle/story-requests";
+import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "oracle", "fixtures.ts");
@@ -185,7 +187,7 @@ async function cli(args: string[], env: Record<string, string> = {}): Promise<{ 
 // ---------------------------------------------------------------------------
 // XT-conformance-71
 
-test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha256>.json with the request hash, the output and an Ed25519 signature over both, verifiable with oracle.pub (FR-6, AD-15)", async () => {
+xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<component>/<sha256>.json with the request hash, the output and an Ed25519 signature over both, verifiable with oracle.pub (FR-6, AD-15)", async () => {
   const fx = fixtureRoot();
   try {
     // Generators are reference files the batch never touches; a stray fixture is deleted.
@@ -288,7 +290,7 @@ test("XT-conformance-71: the batch writes conformance/fixtures/<component>/<sha2
   }
 });
 
-test("XT-conformance-71: the private key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; a wrong or missing key or pub writes nothing (FR-6, AD-15)", async () => {
+xaravelTest("XT-conformance-219", "the private key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; a wrong or missing key or pub writes nothing (FR-6, AD-15)", async () => {
   const fx = fixtureRoot();
   try {
     const out = join(fx.dir, FIXTURES_DIR);
@@ -349,21 +351,28 @@ function phpUnmet(): string | null {
   return null;
 }
 
-function phpTest(name: string, body: () => void): void {
+function phpTest(id: string, consequence: string, body: () => void): void {
   const reason = phpUnmet() ?? (existsSync(join(LOCAL_INSTALL, "vendor", "autoload.php")) ? null : `${LOCAL_INSTALL} is not a locked local install`);
-  if (reason === null) {
-    test(name, body, TIMEOUT);
-  } else if (REQUIRE) {
-    test(name, () => {
-      throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
-    });
-  } else {
+  if (reason !== null && !REQUIRE) {
     console.warn(`oracle-fixtures.test.ts: skipping the evaluator run: ${reason}`);
-    test.skip(`${name} [skipped: ${reason}]`, body);
   }
+  xaravelTest(
+    id,
+    consequence,
+    () => {
+      if (reason !== null) {
+        if (REQUIRE) {
+          throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
+        }
+        Assert.markTestSkipped(reason);
+      }
+      body();
+    },
+    TIMEOUT,
+  );
 }
 
-phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each kind in real PHP, records a throwing expr as throws and a failing stage as error (FR-6, AD-15)", () => {
+phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of each kind in real PHP, records a throwing expr as throws and a failing stage as error (FR-6, AD-15)", () => {
   const committed = readCommittedRequests(root).flatMap((entry) => entry.requests);
   const listed = new Set(parseNondeterminism(readFileSync(join(root, NONDETERMINISM_FILE), "utf8")).map((entry) => entry.sha256));
   const kinds = ["php-expr", "sql-grammar", "blade-render", "validation-message", "date-format"] as const;
@@ -437,7 +446,7 @@ phpTest("XT-conformance-71: evaluate.php evaluates one committed request of each
 // ---------------------------------------------------------------------------
 // XT-conformance-72
 
-test("XT-conformance-72: two passes over the same Pin and requests must be identical; an unlisted difference fails, writes no fixture and writes an Escalation (FR-6, AD-15, ESC-3.2-1)", async () => {
+xaravelTest("XT-conformance-72", "two passes over the same Pin and requests must be identical; an unlisted difference fails, writes no fixture and writes an Escalation (FR-6, AD-15, ESC-3.2-1)", async () => {
   const fx = fixtureRoot();
   try {
     // Identical passes: two runs give identical bytes.
@@ -487,7 +496,7 @@ test("XT-conformance-72: two passes over the same Pin and requests must be ident
   }
 });
 
-test("XT-conformance-72: a stale nondeterminism.jsonl (unknown sha256, wrong id, identical outputs, bad form) fails the run with no fixtures and no Escalation (ESC-3.2-1)", () => {
+xaravelTest("XT-conformance-221", "a stale nondeterminism.jsonl (unknown sha256, wrong id, identical outputs, bad form) fails the run with no fixtures and no Escalation (ESC-3.2-1)", () => {
   const line = (sha256: string, id: string): string => `${renderNondeterminism({ sha256, id, reason: "Str::uuid() is random" })}\n`;
   const upper = REQUESTS[0]!.request;
   const cases: { listing: string; message: string }[] = [
@@ -544,7 +553,7 @@ test("XT-conformance-72: a stale nondeterminism.jsonl (unknown sha256, wrong id,
   expect(() => parseNondeterminism(ok.slice(0, -1))).toThrow("the file must end with a newline");
 });
 
-test("XT-conformance-72: a pass that is not one {sha256, output} line per request, in order, fails the run with no fixtures (FR-6)", () => {
+xaravelTest("XT-conformance-222", "a pass that is not one {sha256, output} line per request, in order, fails the run with no fixtures (FR-6)", () => {
   const mangle = (change: (lines: string[]) => string[]): ImageRunner => {
     const inner = standIn().runner;
     return (image, mounts, command) => `${change(inner(image, mounts, command).trimEnd().split("\n")).join("\n")}\n`;
@@ -569,7 +578,7 @@ test("XT-conformance-72: a pass that is not one {sha256, output} line per reques
   }
 });
 
-test("XT-conformance-72: --local runs evaluate.php with --php against the local install, and refuses a local copy that differs from the snapshot (FR-6)", async () => {
+xaravelTest("XT-conformance-223", "--local runs evaluate.php with --php against the local install, and refuses a local copy that differs from the snapshot (FR-6)", async () => {
   const fx = fixtureRoot(null);
   try {
     // A tiny snapshot and an identical local copy.
@@ -623,7 +632,7 @@ test("XT-conformance-72: --local runs evaluate.php with --php against the local 
   }
 }, TIMEOUT);
 
-test("XT-conformance-72: the committed nondeterminism.jsonl lists the 23 random requests of ESC-3.2-1, each a committed request with its id (ESC-3.2-1)", () => {
+xaravelTest("XT-conformance-224", "the committed nondeterminism.jsonl lists the 23 random requests of ESC-3.2-1, each a committed request with its id (ESC-3.2-1)", () => {
   const text = readFileSync(join(root, NONDETERMINISM_FILE), "utf8");
   const listing = parseNondeterminism(text);
   expect(listing).toHaveLength(23);
@@ -636,7 +645,7 @@ test("XT-conformance-72: the committed nondeterminism.jsonl lists the 23 random 
 // ---------------------------------------------------------------------------
 // XT-conformance-73
 
-test("XT-conformance-73: conformance/oracle/oracle.pub is a Protected Path and docs/ops/oracle.md records its fingerprint (FR-6, AD-16)", async () => {
+xaravelTest("XT-conformance-73", "conformance/oracle/oracle.pub is a Protected Path and docs/ops/oracle.md records its fingerprint (FR-6, AD-16)", async () => {
   const entries = parseList(readFileSync(join(root, "conformance", "protected-paths"), "utf8"));
   const phases = activePhases(root);
   expect(isProtected(entries, phases, PUBLIC_KEY_FILE)).toBe(true);
@@ -666,3 +675,71 @@ test("XT-conformance-73: conformance/oracle/oracle.pub is a Protected Path and d
     expect(docs).toContain(`\`${fingerprint(root)}\``);
   }
 });
+
+// ---------------------------------------------------------------------------
+// XT-conformance-197 (Story 5.9, Epic 3 retro R6): Xaravel Test requests and Pest IDs
+
+phpTest(
+  "XT-conformance-197",
+  "an Xaravel Test date-format request honours its now, an Xaravel Test validation-message request evaluates with Upstream's array translator, and a Pest Test ID request is rejected with a reason naming it and never evaluated or signed (FR-6.1, AD-15.4; FR-6, AD-15)",
+  () => {
+    // date-format: `now` freezes the clock through Carbon::setTestNow; validation-message: the bare TestCase has getIlluminateArrayTranslator().
+    const date = makeRequest("XT-conformance-197", "date-format", {
+      now: "\\Illuminate\\Support\\Carbon::create(2017, 6, 27, 13, 14, 15, 'UTC')",
+      timezone: "UTC",
+      setup: [],
+      exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Illuminate\\Support\\Carbon::hasTestNow()"],
+    });
+    const unfrozen = makeRequest("XT-conformance-197", "date-format", { now: null, timezone: "UTC", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::hasTestNow()"] });
+    const message = makeRequest("XT-conformance-197", "validation-message", {
+      lines: { "validation.required": "The :attribute field is required." },
+      data: { name: "" },
+      rules: { name: "required" },
+      messages: {},
+      attributes: {},
+      format: null,
+      exprs: ["$v->fails()", "$v->messages()->first('name')"],
+    });
+    const dir = mkdtempSync(join(tmpdir(), "xaravel-evaluate-xt-"));
+    try {
+      const file = join(dir, "5.9.jsonl");
+      writeFileSync(file, [date, unfrozen, message].map((request) => `${JSON.stringify(request)}\n`).join(""));
+      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, file], { stdout: "pipe", stderr: "pipe" });
+      expect([proc.exitCode, proc.exitCode === 0 ? "" : proc.stderr.toString()]).toEqual([0, ""]);
+      const outputs = proc.stdout
+        .toString()
+        .trimEnd()
+        .split("\n")
+        .map((line) => (JSON.parse(line) as { output: unknown }).output);
+      expect(outputs).toEqual([
+        { error: null, results: [{ value: "2017-06-27T13:14:15+00:00" }, { value: true }] },
+        { error: null, results: [{ value: false }] },
+        { error: null, results: [{ value: true }, { value: "The name field is required." }] },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    // A Pest Test ID: the per-Story judge rejects it with a reason naming it, even when the Story owns it.
+    const PEST = "ai/tests/Feature/AgentAttributeTest.php::agent methods take priority over attributes";
+    const pest = makeRequest(PEST, "php-expr", { bindings: {}, setup: [], exprs: ["1"] });
+    const schema = JSON.parse(readFileSync(join(root, SCHEMA_FILE), "utf8")) as Record<string, Json>;
+    const judged = judgeStoryRequests(`${renderRequest(pest)}\n`, "conformance/oracle-requests/5.9.jsonl", { storyId: "5.9", component: "ai", testIds: [PEST], xaravelTestIds: [] }, schema, new Map(), new Map());
+    expect(judged.accepted).toEqual([]);
+    expect(judged.rejections).toHaveLength(1);
+    expect(judged.rejections[0]!.id).toBe(PEST);
+    expect(judged.rejections[0]!.reasons.join("; ")).toContain(`id ${PEST} is a Pest Test ID`);
+
+    // The batch generator refuses it before anything is evaluated: the runner is never called and nothing is signed.
+    const fx = fixtureRoot();
+    try {
+      writeFileSync(join(fx.dir, REQUESTS_DIR, "ai.jsonl"), `${renderRequest(pest)}\n`);
+      const stand = standIn();
+      expect(() => run(fx, {}, stand)).toThrow(`ai.jsonl:1: id ${PEST} is a Pest Test ID`);
+      expect(stand.calls).toEqual([]);
+      expect(tree(join(fx.dir, FIXTURES_DIR))).toEqual([]);
+    } finally {
+      rmSync(fx.dir, { recursive: true, force: true });
+    }
+  },
+);

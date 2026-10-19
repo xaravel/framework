@@ -48,7 +48,7 @@ import { checkLocalCopy, oracleImage, type ImageRunner } from "../inventory/inve
 import { upstreamPath, UPSTREAM_DIR } from "../upstream/upstream";
 import { IMAGE_UPSTREAM_DIR, ORACLE_DIR, PHP_VERSION, runInImage } from "./oracle";
 import { canonicalJson, compareUnits, parseRequests, readSchema, renderJson, REQUESTS_DIR, type Json, type OracleRequest } from "./request";
-import { readStoryRequestFiles, STORY_REQUESTS_DIR, type StoryRequestFile } from "./story-requests";
+import { isPestTestId, pestReason, readStoryRequestFiles, STORY_REQUESTS_DIR, type StoryRequestFile } from "./story-requests";
 
 export const FIXTURES_DIR = "conformance/fixtures";
 /**
@@ -367,10 +367,44 @@ export interface FixturesOptions {
 type Pass = Map<string, Json>;
 
 /**
+ * Throws, before anything is evaluated, naming each request line of the files `names` in `dir` whose `id` is a Pest
+ * Test ID: evaluate.php binds every request to a PHPUnit TestCase, so a Pest request could only become a signed
+ * `fatal` fixture (Story 5.9, Epic 3 retro R6). Lines that are not JSON objects are left to evaluate.php.
+ */
+export function refusePestRequests(dir: string, names: readonly string[]): void {
+  const refused: string[] = [];
+  for (const name of names) {
+    const path = join(dir, name);
+    if (!existsSync(path)) {
+      continue;
+    }
+    readFileSync(path, "utf8")
+      .split("\n")
+      .forEach((line, index) => {
+        let value: unknown;
+        try {
+          value = JSON.parse(line) as unknown;
+        } catch {
+          return;
+        }
+        const id = typeof value === "object" && value !== null ? (value as { id?: unknown }).id : undefined;
+        if (typeof id === "string" && isPestTestId(id)) {
+          refused.push(`${name}:${index + 1}: ${pestReason(id)}`);
+        }
+      });
+  }
+  if (refused.length > 0) {
+    throw new Error(`refusing to evaluate Pest Test ID requests: ${refused.join("; ")}`);
+  }
+}
+
+/**
  * Runs evaluate.php once over the request files `names` in the host directory `dir` and returns its stdout. Image
- * mode mounts the script and `dir` read-only; `--local` reads the files where they are.
+ * mode mounts the script and `dir` read-only; `--local` reads the files where they are. A Pest Test ID request is
+ * refused before anything runs (`refusePestRequests`).
  */
 export function evaluateOnce(root: string, dir: string, names: readonly string[], options: Pick<FixturesOptions, "image" | "local" | "php" | "runner">): string {
+  refusePestRequests(dir, names);
   const script = resolve(root, EVALUATE_SCRIPT);
   if (!existsSync(script)) {
     throw new Error(`${EVALUATE_SCRIPT} is missing`);

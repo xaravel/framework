@@ -1,9 +1,10 @@
 // Xaravel Tests for Story 1.1 (root workspace and repository baseline).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, openSync, closeSync, readFileSync, rmSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { frameworkTag } from "../../../tools/upstream/upstream";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 
@@ -15,8 +16,8 @@ function readJson(path: string): Record<string, unknown> {
   return JSON.parse(read(path)) as Record<string, unknown>;
 }
 
-test(
-  "XT-conformance-1: Bun matches .bun-version, root manifest declares the four workspaces, 0.0.0 and engines.bun >= 1.4, and bun install succeeds (FR Bun-only toolchain)",
+xaravelTest(
+  "XT-conformance-1", "Bun matches .bun-version, root manifest declares the four workspaces, 0.0.0 and engines.bun >= 1.4, and bun install succeeds (FR Bun-only toolchain)",
   async () => {
     const pinned = read(".bun-version").trim();
     expect(pinned).toBe("1.4.3");
@@ -50,7 +51,7 @@ test(
   60_000,
 );
 
-test("XT-conformance-2: tsconfig.base.json is strict and ESM-resolving, and no tsconfig sets experimentalDecorators (AD-4)", async () => {
+xaravelTest("XT-conformance-2", "tsconfig.base.json is strict and ESM-resolving, and no tsconfig sets experimentalDecorators (AD-4)", async () => {
   const base = readJson("tsconfig.base.json");
   const options = base.compilerOptions as Record<string, unknown>;
   expect(options.strict).toBe(true);
@@ -86,8 +87,8 @@ test("XT-conformance-2: tsconfig.base.json is strict and ESM-resolving, and no t
   }
 });
 
-test(
-  "XT-conformance-3: with the root bunfig.toml, a root .env does not reach process.env (Bun .env autoload off)",
+xaravelTest(
+  "XT-conformance-3", "with the root bunfig.toml, a root .env does not reach process.env (Bun .env autoload off)",
   async () => {
     const bunfig = Bun.TOML.parse(read("bunfig.toml")) as Record<string, unknown>;
     expect(bunfig.env).toBe(false);
@@ -128,7 +129,7 @@ test(
   30_000,
 );
 
-test("XT-conformance-4: .oxlintrc.json, .gitattributes (LF for *.jsonl, *.ts) and conformance/baseline-pin v13.37.0 exist (Protected root config)", () => {
+xaravelTest("XT-conformance-4", ".oxlintrc.json, .gitattributes (LF for *.jsonl, *.ts) and conformance/baseline-pin v13.37.0 exist (Protected root config)", () => {
   for (const path of [".oxlintrc.json", ".gitattributes", "conformance/baseline-pin"]) {
     expect(existsSync(join(root, path))).toBe(true);
   }
@@ -143,7 +144,7 @@ test("XT-conformance-4: .oxlintrc.json, .gitattributes (LF for *.jsonl, *.ts) an
   expect(frameworkTag(root)).toBe("v13.37.0");
 });
 
-test("XT-conformance-5: LICENSE carries both notices, README the description and non-affiliation statement, SECURITY.md a disclosure process (legal and security baseline)", () => {
+xaravelTest("XT-conformance-5", "LICENSE carries both notices, README the description and non-affiliation statement, SECURITY.md a disclosure process (legal and security baseline)", () => {
   const license = read("LICENSE");
   expect(license).toContain("MIT License");
   expect(license).toContain("Xaravel contributors");

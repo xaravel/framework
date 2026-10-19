@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 1.4 (Protected Paths and the protected-paths check).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -19,6 +19,7 @@ import {
   type PrFile,
   type PrReview,
 } from "../../../tools/protected-paths/protected-paths";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "protected-paths", "protected-paths.ts");
@@ -156,7 +157,7 @@ async function runPr(pr: FakePr, rootDir: string): Promise<{ code: number; stdou
   }
 }
 
-test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs, including itself, excludes the four conformance subdirectories and marks contracts after-phase:1 (AD-16)", () => {
+xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-16's globs, including itself, excludes the four conformance subdirectories and marks contracts after-phase:1 (AD-16)", () => {
   const include = (pattern: string, afterPhase: number | null = null) => ({ pattern, exclude: false, afterPhase });
   const exclude = (pattern: string) => ({ pattern, exclude: true, afterPhase: null });
   expect(entries).toEqual([
@@ -262,7 +263,7 @@ test("XT-conformance-17: conformance/protected-paths holds exactly AD-16's globs
   expect(markedPhases(parseList("/a/ after-phase:3\n/b/\n/c/ after-phase:1\n!/d/ after-phase:3\n"))).toEqual([1, 3]);
 });
 
-test("XT-conformance-18: .github/CODEOWNERS mirrors the list with every protected glob owned by the Maintainer, leaves fixtures unowned, and fails on divergence (AD-16)", async () => {
+xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every protected glob owned by the Maintainer, leaves fixtures unowned, and fails on divergence (AD-16)", async () => {
   // The live repository, at whatever Phase it has reached.
   const phases = activePhases(root);
   const committed = readFileSync(join(root, CODEOWNERS_PATH), "utf8");
@@ -318,7 +319,7 @@ test("XT-conformance-18: .github/CODEOWNERS mirrors the list with every protecte
   });
 });
 
-test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the check, listing each protected file it touches; allowed paths pass (AD-16)", async () => {
+xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fails the check, listing each protected file it touches; allowed paths pass (AD-16)", async () => {
   await withRoots([fixtureRoot(), fixtureRoot({ phase1Exit: true })], async ([base, exited]) => {
     // Story touches the grader: only the grader file is listed.
     const grader = await runPr({ files: [file("packages/support/src/y.ts"), file("packages/assert/src/x.ts")] }, base!);
@@ -490,7 +491,7 @@ test("XT-conformance-19: a story/* PR that modifies Protected Paths fails the ch
   });
 });
 
-test("XT-conformance-20: the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", async () => {
+xaravelTest("XT-conformance-20", "the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", async () => {
   // A PR changing the workflow itself is a Protected Path change.
   const workflowFile = [file(".github/workflows/protected-paths.yml")];
   const own = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files: workflowFile, changedFiles: 1, reviews, headSha: HEAD });
@@ -579,7 +580,7 @@ test("XT-conformance-20: the protected-paths workflow triggers only on pull_requ
   expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
 });
 
-test("XT-conformance-21: an Infrastructure PR touching Protected Paths passes only with the Maintainer's latest decisive review approving the head commit (AD-16)", async () => {
+xaravelTest("XT-conformance-21", "an Infrastructure PR touching Protected Paths passes only with the Maintainer's latest decisive review approving the head commit (AD-16)", async () => {
   const files = [file("tools/graph/graph.ts"), file("stories/1.4.md")];
   const decide = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files, changedFiles: files.length, reviews, headSha: HEAD });
 

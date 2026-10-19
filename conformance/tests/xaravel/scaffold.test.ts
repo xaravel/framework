@@ -1,11 +1,12 @@
 // Xaravel Tests for Story 1.2 (package scaffolder and every package scaffolded).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { checkTsconfigs, generateTsconfig, scaffold } from "../../../tools/scaffold/scaffold";
 import { buildTable, kebab, UPSTREAM_PHASES, type PackageRow } from "../../../tools/scaffold/table";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const tablePath = join(root, "tools", "scaffold", "packages.jsonl");
@@ -81,7 +82,7 @@ function npmOf(rows: readonly Row[], upstream: string): string {
   return row.npm;
 }
 
-test("XT-conformance-6: packages.jsonl has the 53 package rows, sorted, with Phase and the Pin's illuminate/* require/suggest, and Foundation's edges from its imports (AD-2, AD-27)", async () => {
+xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted, with Phase and the Pin's illuminate/* require/suggest, and Foundation's edges from its imports (AD-2, AD-27)", async () => {
   const text = readFileSync(tablePath, "utf8");
   expect(text.includes("\r")).toBe(false);
   expect(text.endsWith("\n")).toBe(true);
@@ -312,16 +313,16 @@ function assertDependencies(base: string): void {
   expect("@xaravel/queue" in (auth.peerDependencies ?? {})).toBe(false);
 }
 
-test("XT-conformance-7: every package has the generated package.json, tsconfig.json, src/, tests/ported/, tests/xaravel/, docs/, README.md and LICENSE; the Installer is create-xaravel and boost-framework is private (AD-2, FR-10)", () => {
+xaravelTest("XT-conformance-7", "every package has the generated package.json, tsconfig.json, src/, tests/ported/, tests/xaravel/, docs/, README.md and LICENSE; the Installer is create-xaravel and boost-framework is private (AD-2, FR-10)", () => {
   assertPackagesGenerated(root);
 });
 
-test("XT-conformance-8: each require is a workspace:* dependency, each suggest an optional peer, dependencies and peers are disjoint, and upstream/xaravel packages depend on @xaravel/runtime and @xaravel/contracts (AD-2, FR-10)", () => {
+xaravelTest("XT-conformance-8", "each require is a workspace:* dependency, each suggest an optional peer, dependencies and peers are disjoint, and upstream/xaravel packages depend on @xaravel/runtime and @xaravel/contracts (AD-2, FR-10)", () => {
   assertDependencies(root);
 });
 
-test(
-  "XT-conformance-9: root tsc -b builds every package as its own project reference, including its tests/, with types [bun] and references equal to its workspace dependencies (AD-2)",
+xaravelTest(
+  "XT-conformance-9", "root tsc -b builds every package as its own project reference, including its tests/, with types [bun] and references equal to its workspace dependencies (AD-2)",
   async () => {
     const rows = readTableFile();
     const rootConfig = readJson<{ references?: { path: string }[] }>(join(root, "tsconfig.json"));
@@ -377,8 +378,8 @@ async function runCheck(tmp: string): Promise<{ code: number; stderr: string }> 
   return { code, stderr };
 }
 
-test(
-  "XT-conformance-10: scaffold --check fails naming every package whose tsconfig.json differs from its generated form or is missing, stale root references and unlisted package dirs; scaffold generates every package, is idempotent and keeps an edited package.json (AD-2)",
+xaravelTest(
+  "XT-conformance-10", "scaffold --check fails naming every package whose tsconfig.json differs from its generated form or is missing, stale root references and unlisted package dirs; scaffold generates every package, is idempotent and keeps an edited package.json (AD-2)",
   async () => {
     const tmp = mkdtempSync(join(tmpdir(), "xaravel-scaffold-"));
     try {
@@ -461,8 +462,8 @@ async function tscBuild(cwd: string): Promise<{ code: number; output: string }> 
   return { code, output: `${stdout}${stderr}` };
 }
 
-test(
-  "XT-conformance-170: under tsc -b, a guarded import() of an unreferenced optional peer type-checks and stays typed, and a package's tests/ are type-checked (AD-2)",
+xaravelTest(
+  "XT-conformance-170", "under tsc -b, a guarded import() of an unreferenced optional peer type-checks and stays typed, and a package's tests/ are type-checked (AD-2)",
   async () => {
     const tmp = mkdtempSync(join(tmpdir(), "xaravel-peer-"));
     try {

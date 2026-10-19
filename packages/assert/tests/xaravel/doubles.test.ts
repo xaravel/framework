@@ -10,12 +10,12 @@
 // equal the committed line. A missing, unsigned or errored fixture fails the
 // test; it is never skipped. Fixture-free checks run first. The declared
 // TestCase tests run in a child `bun test` (fixtures/doubles.fixture.ts).
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { runCounted } from "../../src/declarations/AssertionCounter";
-import { Assert, MockBuilder, type MockObject, TestCase } from "../../src/index";
+import { Assert, MockBuilder, type MockObject, TestCase, xaravelTest } from "../../src/index";
 import { parameterInfo } from "../../src/Framework/MockObject/Generator/Generator";
 import { type Cell, DOUBLE_CELLS, MATCHER_CELLS, REQUESTS, type RequestSpec, runCase47, runDirect47, STRING_CELLS, SUBSET_CELLS, XtDouble, XtDoubleIface, XtDoubleWithDefaults } from "./double-cells";
 import { decode, type Output, readRequests, readSignedFixture } from "./oracle-values";
@@ -159,7 +159,7 @@ const expectedReport = (label: string, assertions: Record<string, number>): Reco
 
 // ---------------------------------------------------------------------------
 
-test("XT-assert-15: createMock, createStub and getMockBuilder(…)->getMock() make PHPUnit 13.4.3 test doubles: every return value, thrown exception, verify outcome and kind-less count of expects, method, with and the will* stubs matches the Oracle's", () => {
+xaravelTest("XT-assert-15", "createMock, createStub and getMockBuilder(…)->getMock() make PHPUnit 13.4.3 test doubles: every return value, thrown exception, verify outcome and kind-less count of expects, method, with and the will* stubs matches the Oracle's", () => {
   // Fixture-free first.
   // A double is an instance of a subclass of its target; a token's double carries the token's brand.
   const test47 = new TestCase();
@@ -269,7 +269,7 @@ test("XT-assert-15: createMock, createStub and getMockBuilder(…)->getMock() ma
   expect(run.tests.get("testParameterMismatchCaught")?.outcome).toEqual(scenarioCell(doubles, "parameter mismatch caught")[2]);
 }, CHILD_TIMEOUT);
 
-test("XT-assert-16: addToAssertionCount, stringContains, assertArraySubset and the once, never, any, exactly and atLeastOnce matchers match the Oracle; assertArraySubset records assertThat, and a test whose only count is kind-less passes with an empty kind multiset", async () => {
+xaravelTest("XT-assert-16", "addToAssertionCount, stringContains, assertArraySubset and the once, never, any, exactly and atLeastOnce matchers match the Oracle; assertArraySubset records assertThat, and a test whose only count is kind-less passes with an empty kind multiset", async () => {
   // Fixture-free first.
   // addToAssertionCount takes an integer.
   for (const bad of [1.5, "1", Number.NaN]) {

@@ -3,7 +3,7 @@
 // in Epic 5. Each scan runs against a mini snapshot written into a temporary
 // root; the parts that read the real snapshot run only when
 // `conformance/upstream/` has been synced (it is gitignored).
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +12,7 @@ import { activePhases, CODEOWNERS_PATH, isProtected, LIST_PATH, MAINTAINER, matc
 import { buildFacades, FACADES_FILE, main as facadesMain, parseMethodTag } from "../../../tools/scans/facades";
 import { tokenize } from "../../../tools/scans/php";
 import { BOOT_ONLY_FILE, buildSingletons, main as singletonsMain, SINGLETONS_FILE } from "../../../tools/scans/singletons";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const REAL = existsSync(join(root, "conformance", "upstream", "framework", "src"));
@@ -150,7 +151,7 @@ const FACADE_LINES = [
   }),
 ];
 
-test("XT-conformance-83: scan:facades writes conformance/scans/facades.jsonl with each facade's accessor, root class and every @method signature, and fails closed on a bad accessor, a missing root or a bad @method (Story 3.6)", () => {
+xaravelTest("XT-conformance-83", "scan:facades writes conformance/scans/facades.jsonl with each facade's accessor, root class and every @method signature, and fails closed on a bad accessor, a missing root or a bad @method (Story 3.6)", () => {
   // The lexer keeps a docblock as a token and records lines.
   const tokens = tokenize("<?php\n/** doc */\n#[A('x]')]\n$a?->b ??= <<<'EOT'\n  raw $x\n  EOT;\n", "x.php");
   expect(tokens.map((t) => [t.kind, t.text, t.line])).toEqual([
@@ -227,7 +228,7 @@ test("XT-conformance-83: scan:facades writes conformance/scans/facades.jsonl wit
   }
 });
 
-test("XT-conformance-83: the committed conformance/scans/facades.jsonl is the scan of the snapshot, one line per facade (Story 3.6)", () => {
+xaravelTest("XT-conformance-248", "the committed conformance/scans/facades.jsonl is the scan of the snapshot, one line per facade (Story 3.6)", () => {
   if (!REAL) {
     console.warn("scans.test.ts: conformance/upstream is not synced; the real-snapshot check is skipped");
     return;
@@ -648,7 +649,7 @@ const REVIEW = [
   `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.twice (${PROVIDER_FILE}:61)`,
 ];
 
-test("XT-conformance-84: scan:singletons writes tools/lint-rules/singletons.json with every class an Upstream provider binds with singleton(), and seeds conformance/boot-only-state, deterministically (Story 3.6)", () => {
+xaravelTest("XT-conformance-84", "scan:singletons writes tools/lint-rules/singletons.json with every class an Upstream provider binds with singleton(), and seeds conformance/boot-only-state, deterministically (Story 3.6)", () => {
   withSnapshot(SINGLETON_SNAPSHOT, (dir) => {
     const built = buildSingletons(dir);
     expect(built.singletons).toBe(SINGLETONS_JSON);
@@ -685,7 +686,7 @@ test("XT-conformance-84: scan:singletons writes tools/lint-rules/singletons.json
   });
 });
 
-test("XT-conformance-84: the committed singletons.json and boot-only-state are the scan of the snapshot (Story 3.6)", () => {
+xaravelTest("XT-conformance-249", "the committed singletons.json and boot-only-state are the scan of the snapshot (Story 3.6)", () => {
   if (!REAL) {
     console.warn("scans.test.ts: conformance/upstream is not synced; the real-snapshot check is skipped");
     return;
@@ -711,7 +712,7 @@ test("XT-conformance-84: the committed singletons.json and boot-only-state are t
 // ---------------------------------------------------------------------------
 // XT-conformance-85
 
-test("XT-conformance-85: the scan outputs are Protected and CODEOWNERS assigns them to the Maintainer (AD-16)", () => {
+xaravelTest("XT-conformance-85", "the scan outputs are Protected and CODEOWNERS assigns them to the Maintainer (AD-16)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   const codeowners = readFileSync(join(root, CODEOWNERS_PATH), "utf8");

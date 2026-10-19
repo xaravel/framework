@@ -11,7 +11,7 @@
 // the reason, and with XARAVEL_PHP_FIXTURES=require it fails instead. This
 // file never imports tools/oracle/oracle.ts directly or names its image
 // runner (XT-conformance-44); image mode runs only through the stand-in.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -20,6 +20,7 @@ import { EVALUATE_SCRIPT, FIXTURES_DIR, NONDETERMINISM_FILE, outputDigest, rende
 import { main, recheck, recheckItems } from "../../../tools/oracle/recheck";
 import { makeRequest, renderRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json, type OracleRequest } from "../../../tools/oracle/request";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
+import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const REQUIRE = process.env["XARAVEL_PHP_FIXTURES"] === "require";
@@ -177,7 +178,7 @@ function tree(dir: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-188
 
-test("XT-conformance-188: the nightly re-evaluates each committed request, batch and per-Story, in the image and fails naming each fixture whose output differs; listed and Story-held batch requests are skipped (FR-6, AD-15, AD-28)", () => {
+xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed request, batch and per-Story, in the image and fails naming each fixture whose output differs; listed and Story-held batch requests are skipped (FR-6, AD-15, AD-28)", () => {
   const dir = fixtureRoot();
   const before = tree(dir).map((path) => [path, readFileSync(join(dir, path), "utf8")]);
 
@@ -258,7 +259,7 @@ test("XT-conformance-188: the nightly re-evaluates each committed request, batch
   expect(scripts["oracle:recheck"]).toBe("bun tools/oracle/recheck.ts");
 });
 
-test("XT-conformance-188: oracle.yml's nightly determinism job runs the recheck after the image build, even when the determinism step failed (AD-28)", () => {
+xaravelTest("XT-conformance-229", "oracle.yml's nightly determinism job runs the recheck after the image build, even when the determinism step failed (AD-28)", () => {
   type Step = { name?: string; id?: string; if?: string; run?: string; env?: unknown };
   const workflow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "oracle.yml"), "utf8")) as { jobs: Record<string, { if?: string; steps: Step[] }> };
   const job = workflow.jobs["determinism"]!;
@@ -295,21 +296,28 @@ function phpUnmet(): string | null {
   return null;
 }
 
-function phpTest(name: string, body: () => void): void {
+function phpTest(id: string, consequence: string, body: () => void): void {
   const reason = phpUnmet() ?? (existsSync(join(LOCAL_INSTALL, "vendor", "autoload.php")) ? null : `${LOCAL_INSTALL} is not a locked local install`);
-  if (reason === null) {
-    test(name, body, TIMEOUT);
-  } else if (REQUIRE) {
-    test(name, () => {
-      throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
-    });
-  } else {
+  if (reason !== null && !REQUIRE) {
     console.warn(`oracle-recheck.test.ts: skipping the evaluator run: ${reason}`);
-    test.skip(`${name} [skipped: ${reason}]`, body);
   }
+  xaravelTest(
+    id,
+    consequence,
+    () => {
+      if (reason !== null) {
+        if (REQUIRE) {
+          throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
+        }
+        Assert.markTestSkipped(reason);
+      }
+      body();
+    },
+    TIMEOUT,
+  );
 }
 
-phpTest("XT-conformance-188: --local re-evaluates batch and per-Story requests through evaluate.php for real and names a stale fixture (FR-6, AD-15)", () => {
+phpTest("XT-conformance-230", "--local re-evaluates batch and per-Story requests through evaluate.php for real and names a stale fixture (FR-6, AD-15)", () => {
   const real = (request: OracleRequest): Json => {
     const values: Record<string, string> = { [UPPER.sha256]: "A", [LOWER.sha256]: "abc", [XT.sha256]: "hello-world" };
     return { error: null, results: [{ value: values[request.sha256] ?? null }] };

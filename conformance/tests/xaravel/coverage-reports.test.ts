@@ -1,10 +1,11 @@
 // Xaravel Tests for Epic 4 retro item 5 (the coverage reports probe behavior,
 // not presence; findings R5 and A2). These run under plain `bun test` until
 // the harness lands in Epic 5.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 // Above the assert report's own fixture timeout (FIXTURE_TIMEOUT, 50s); each test spawns at most three reports.
@@ -52,7 +53,7 @@ function tempRoot(scan: string, pkg: string, edits: Record<string, [string, stri
 const ASSERT = "tools/assert-coverage/coverage.ts";
 const MOCKERY = "tools/mockery-coverage/coverage.ts";
 
-test("XT-conformance-182: assert:coverage counts a name only when calling it records an assertion or changes a declared test's outcome: an emptied assertTrue or expectException is missing, an unknown scan name is missing, and a usage error exits 2", () => {
+xaravelTest("XT-conformance-182", "assert:coverage counts a name only when calling it records an assertion or changes a declared test's outcome: an emptied assertTrue or expectException is missing, an unknown scan name is missing, and a usage error exits 2", () => {
   // The repository: exit 0, nothing missing.
   const repo = run(ASSERT, []);
   expect({ exitCode: repo.exitCode, stderr: repo.stderr }).toEqual({ exitCode: 0, stderr: "" });
@@ -81,7 +82,7 @@ test("XT-conformance-182: assert:coverage counts a name only when calling it rec
   expect(usage.stderr).toContain("usage: bun tools/assert-coverage/coverage.ts [--root <dir>]");
 }, CHILD_TIMEOUT);
 
-test("XT-conformance-183: mockery:coverage counts a name only when its probe works on a mock or expectation: a once() that only returns this is missing, an unknown scan name is missing, and a usage error exits 2", () => {
+xaravelTest("XT-conformance-183", "mockery:coverage counts a name only when its probe works on a mock or expectation: a once() that only returns this is missing, an unknown scan name is missing, and a usage error exits 2", () => {
   // The repository: exit 0, nothing missing.
   const repo = run(MOCKERY, []);
   expect({ exitCode: repo.exitCode, stderr: repo.stderr }).toEqual({ exitCode: 0, stderr: "" });

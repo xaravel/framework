@@ -40,7 +40,11 @@
 //
 // An Xaravel Test ID (`XT-<component>-<n>`, a per-Story request of Story 3.4)
 // has no Upstream class: it runs bound to a bare PHPUnit TestCase in the
-// global namespace (`blade-render`: the bare Testbench TestCase).
+// global namespace (`blade-render`: the bare Testbench TestCase). Since no
+// setUp() of its own freezes the clock or builds a translator, `date-format`
+// applies its `now` through `Illuminate\Support\Carbon::setTestNow`, and the bare
+// TestCase has Upstream's `getIlluminateArrayTranslator()` for
+// `validation-message` (Story 5.9, Epic 3 retro R6).
 //
 // A result is {"value":<encoded>} or {"throws":{"class","message"}}. An error
 // at a stage (`bindings`, `setUp`, `setup`, `tearDown`, `fatal`, `timeout`)
@@ -342,7 +346,7 @@ function withTestCase(string $class, string $method, Closure $body): array
  * The body every eval-based kind shares: bindings, setup, then each expr.
  *
  * @param array<string, string> $bindings
- * @param list<string> $prelude PHP statements run before `setup` (validation-message)
+ * @param list<string> $prelude PHP statements run before `setup` (validation-message; date-format's `now` for an Xaravel Test ID)
  * @param list<string> $setup
  * @param list<string> $exprs
  */
@@ -425,6 +429,11 @@ function evaluate(array $request, Encoder $encoder): array
                 break;
             case 'date-format':
                 date_default_timezone_set($input['timezone']);
+                // An Upstream class's setUp() applies `now` itself; an Xaravel Test ID has no setUp() that does, so
+                // the frozen clock is applied here (Epic 3 retro R6).
+                if ($class === BareTestCase::class && $input['now'] !== null) {
+                    $prelude = ['\\Illuminate\\Support\\Carbon::setTestNow('.$input['now'].');'];
+                }
                 break;
             case 'validation-message':
                 $prelude = [
@@ -439,7 +448,14 @@ function evaluate(array $request, Encoder $encoder): array
             default:
                 throw new RuntimeException("unknown kind {$kind}");
         }
-        $results = withTestCase($class, $method, evalBody($namespace, $bindings, $prelude, $setup, $exprs, $encoder));
+        try {
+            $results = withTestCase($class, $method, evalBody($namespace, $bindings, $prelude, $setup, $exprs, $encoder));
+        } finally {
+            // An Xaravel Test date-format request's frozen clock never outlives its request.
+            if ($kind === 'date-format' && $class === BareTestCase::class) {
+                \Illuminate\Support\Carbon::setTestNow();
+            }
+        }
 
         return ['error' => null, 'results' => $results];
     } catch (StageError $e) {
@@ -447,9 +463,17 @@ function evaluate(array $request, Encoder $encoder): array
     }
 }
 
-/** The test case an Xaravel Test ID runs bound to: no Upstream class, the global namespace. */
+/**
+ * The test case an Xaravel Test ID runs bound to: no Upstream class, the global namespace. It has Upstream's
+ * validation tests' translator, so a `validation-message` request evaluates as it does there (Epic 3 retro R6).
+ */
 final class BareTestCase extends PHPUnit\Framework\TestCase
 {
+    /** Upstream's `getIlluminateArrayTranslator()` (tests/Validation): an `en` Translator over an ArrayLoader. */
+    public function getIlluminateArrayTranslator(): Illuminate\Translation\Translator
+    {
+        return new Illuminate\Translation\Translator(new Illuminate\Translation\ArrayLoader, 'en');
+    }
 }
 
 /** A bare Testbench application for `blade-render` requests whose own class is not one. */

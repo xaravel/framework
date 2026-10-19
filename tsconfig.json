@@ -24,7 +24,9 @@
     "tools/scans/**/*.ts",
     "tools/assert-coverage/**/*.ts",
     "tools/mockery-coverage/**/*.ts",
-    "tools/coverage-report/**/*.ts"
+    "tools/coverage-report/**/*.ts",
+    "tools/xt-coverage/**/*.ts",
+    "tools/story-check/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

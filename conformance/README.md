@@ -53,3 +53,12 @@ Conformance only moves honestly (FR-3, AD-16, Story 5.6). Operator docs are in [
 - **Line ownership** (`bun tools/ownership/ownership.ts pr`): a `story/<id>` PR may change only Expectations lines and `portedTest` blocks of its own `test_ids`. The rules compare only Expectations lines and the text of `portedTest` blocks; code outside a block (helpers, imports, setup) is not compared, and the Ratchet catches the outcome changes it causes. A Story listing any row `X#k` may change the block of `X`: no manifest splits one test's rows across Stories.
 - **Pass demotion:** moving a line from `pass` to any other status, or removing it, needs an approved Escalation listing its Test ID. `bot/*` branches are exempt, and so are `planning/*` branches, which may not change Expectations at all.
 - **Bot PRs** (Story 5.8, [`docs/ops/bots.md`](../docs/ops/bots.md)): a `bot/*` PR must come from the `xaravel-bot` App and may change only Expectations status values: a promotion sets `pass` with `reason` null; a quarantine sets `quarantined` with `reason` null and an `ESC-bot-<n>` the same PR adds. It never adds, removes or moves a line, or changes `id`, `variant` or `adapted`.
+
+## Xaravel Test coverage and the done check
+
+"Done" is computed, not claimed (FR-115, Story 5.9). Operator docs are in [`docs/ops/done-check.md`](../docs/ops/done-check.md).
+
+- **Consequence files** (`xaravel-consequences/<component>.jsonl`, Protected) list a Xaravel Component's testable consequences as `FR-<n>.<k>` (the k-th bullet of FR-n's consequences in the PRD) and `AD-<n>.<k>` (the k-th bullet of AD-n's rule in the spine). `bun run xt:consequences` generates them, and `--check` fails on drift; nobody edits them by hand.
+- **Coverage** (`bun run xt:coverage <component>`): every consequence that no passing `xaravelTest` declares as a whole token in its consequence string is listed as `UNCOVERED`. A Xaravel Component's Epic is accepted only when none is.
+- **Every Xaravel Test runs under the harness.** A full `bun run harness` ends with the Xaravel run (`XARAVEL tests=… passed=… failed=… skipped=…`); every test in a `tests/xaravel/` file must be an `xaravelTest`, and a plain `test()` there is an `UNDECLARED` difference.
+- **The done check** (`bun run story:check <story-id>`) reports PASS or FAIL for `manifest`, `tests`, `xaravel-tests`, `fixtures`, `approvals`, `escalations` and `full-run`, and passes only when all seven do.

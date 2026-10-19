@@ -4,7 +4,7 @@
 // roots are hermetic git roots like ratchet.test.ts's, run by the real
 // harness; GitHub is a `Bun.serve` fake that keeps the Git objects and PRs
 // the bots write.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -15,6 +15,7 @@ import { renderEscalation } from "../../../tools/oracle/fixtures";
 import { BOT_LOGIN, botValueProblems, evaluatePr, type ContentSide } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import type { HarnessResult } from "../../harness/harness";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const ASSERT = join(root, "packages", "assert", "src", "index.ts");
@@ -257,7 +258,7 @@ function botsWorkflow(): { text: string; data: Workflow } {
 // ---------------------------------------------------------------------------
 // XT-conformance-123
 
-test("XT-conformance-123: a test that fails on main and passes on rerun is quarantined on a bot/* branch with a new flaky ESC-bot-<n> holding the run evidence; a consistent failure is not (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-123", "a test that fails on main and passes on rerun is quarantined on a bot/* branch with a new flaky ESC-bot-<n> holding the run evidence; a consistent failure is not (AD-16, AD-28)", async () => {
   const counter = "flaky-counter";
   const dir = makeRoot({
     "conformance/inventory/support.jsonl": inventory([BROKEN, FLAKY]),
@@ -404,7 +405,7 @@ test("XT-conformance-123: a test that fails on main and passes on rerun is quara
       const results = Object.entries(kinds)
         .filter(([, list]) => list[at] !== "missing")
         .map(([id]) => ({ id, variant: "none", outcome: "pass" as const, belowFloor: false, performed: 1, upstream: 1 }));
-      return { code: differences.length > 0 ? 1 : 0, out: ["SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0"], err: [], results, differences, sample: null, worktree: null };
+      return { code: differences.length > 0 ? 1 : 0, out: ["SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0"], err: [], results, differences, sample: null, worktree: null, xaravel: null };
     };
   };
   const mixed = makeRoot({ [SHARD]: shard([{ id: BROKEN, status: "skip" }, { id: FLAKY, status: "fail-known" }]) });
@@ -439,7 +440,7 @@ test("XT-conformance-123: a test that fails on main and passes on rerun is quara
 // ---------------------------------------------------------------------------
 // XT-conformance-124
 
-test("XT-conformance-124: an unowned unexpected pass on main gets a bot/promote PR setting it to pass with reason null; one an open Story owns gets none (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-124", "an unowned unexpected pass on main gets a bot/promote PR setting it to pass with reason null; one an open Story owns gets none (AD-16, AD-28)", async () => {
   const dir = makeRoot({
     "conformance/inventory/support.jsonl": inventory([OWNED, UNOWNED, UNOWNED2]),
     [SHARD]: shard([
@@ -511,7 +512,7 @@ test("XT-conformance-124: an unowned unexpected pass on main gets a bot/promote 
 // ---------------------------------------------------------------------------
 // XT-conformance-125
 
-test("XT-conformance-125: a bot/* PR from the xaravel-bot App that changes only Expectations status values passes the ownership check; any other change, or another author, fails (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-125", "a bot/* PR from the xaravel-bot App that changes only Expectations status values passes the ownership check; any other change, or another author, fails (AD-16, AD-28)", async () => {
   const S = "conformance/expectations/support/x.jsonl";
   const ESC = `${ESCALATIONS}/ESC-bot-4.md`;
   const A = "A::testA";
@@ -651,7 +652,7 @@ test("XT-conformance-125: a bot/* PR from the xaravel-bot App that changes only 
 // ---------------------------------------------------------------------------
 // XT-conformance-189
 
-test("XT-conformance-189: an ESC-bot-<n>.md the Oracle uploads is committed, renumbered, to conformance/escalations/ through a bot/oracle-esc PR (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-189", "an ESC-bot-<n>.md the Oracle uploads is committed, renumbered, to conformance/escalations/ through a bot/oracle-esc PR (AD-16, AD-28)", async () => {
   const dir = makeRoot({});
   // Besides the heading, the body names its own id once more, and ESC-bot-10, which must not change.
   const text = `${renderEscalation("ESC-bot-1", [{ sha256: "a".repeat(64), id: "Illuminate\\Tests\\Support\\SupportStrTest::testRandom", component: "support", first: "b".repeat(64), second: "c".repeat(64) }])}\nSee ESC-bot-1 (not ESC-bot-10).\n`;

@@ -12,7 +12,7 @@
 // from scenarios.ts (double-scenarios.ts for XT-mockery-7) and must equal the
 // committed line, so the TS twins are the scenarios the Oracle ran. A missing,
 // unsigned or errored fixture fails the test; it is never skipped.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -36,7 +36,7 @@ import {
   Type,
   VerificationDirector,
 } from "../../src/index";
-import { phpObjectHandle } from "@xaravel/assert";
+import { phpObjectHandle, xaravelTest } from "@xaravel/assert";
 import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
 import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
 import { type Output, readRequests, readSignedFixture } from "../../../assert/tests/xaravel/oracle-values";
@@ -150,7 +150,7 @@ function thrown(fn: () => unknown): unknown {
   return null;
 }
 
-test("fixture-free: the run global, the frozen exports, the imports and the mock object's dispatch", () => {
+xaravelTest("XT-mockery-8", "fixture-free: the run global, the frozen exports, the imports and the mock object's dispatch", () => {
   // The run global is installed on load, non-writable and non-configurable. The `xaravel.mockery.mock` hook
   // `createMock` once delegated to is gone (ESC-4.7-1 item 4, Story 4.8 AC 1).
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("xaravel.mockery.run"));
@@ -297,7 +297,7 @@ test("fixture-free: the run global, the frozen exports, the imports and the mock
   Mockery.close();
 }, CHILD_TIMEOUT);
 
-test("fixture-free: a class value in with() matches an instance and its class-name string; the forms with no PHP twin", () => {
+xaravelTest("XT-mockery-9", "fixture-free: a class value in with() matches an instance and its class-name string; the forms with no PHP twin", () => {
   // `with(XtFoo)` stands in for `with(XtFoo::class)`: an XtBar instance and the string 'XtFoo' both match.
   const m = Mockery.mock(XtFoo);
   m.shouldReceive("bar").with(XtFoo).andReturn("matched");
@@ -414,7 +414,7 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   Mockery.close();
 });
 
-test("Epic 4 retro A1: Mockery prints PHP values as @xaravel/assert does", () => {
+xaravelTest("XT-mockery-10", "Epic 4 retro A1: Mockery prints PHP values as @xaravel/assert does", () => {
   /** The NoMatchingExpectationException message of `m.bar(arg)` on a mock expecting `bar('nope')`. */
   function message(arg: unknown): string {
     const m = Mockery.mock();
@@ -481,7 +481,7 @@ test("Epic 4 retro A1: Mockery prints PHP values as @xaravel/assert does", () =>
   Mockery.close();
 });
 
-test("XT-mockery-1: shouldReceive, once, twice, times, never, atLeast, atMost, with, withArgs (array and closure), withAnyArgs, andReturn, andReturnValues, andThrow and ordered (plain and grouped) record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
+xaravelTest("XT-mockery-1", "shouldReceive, once, twice, times, never, atLeast, atMost, with, withArgs (array and closure), withAnyArgs, andReturn, andReturnValues, andThrow and ordered (plain and grouped) record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
   const used = new Set(SCENARIOS.filter((scenario) => scenario.id === "XT-mockery-1").flatMap((scenario) => scenario.uses));
   expect(CORE_API.filter((name) => !used.has(name))).toEqual([]);
   for (const name of CORE_API.filter((entry) => entry !== "shouldReceive")) {
@@ -559,7 +559,7 @@ function runFixture(withScope: boolean): FixtureRun {
   return { exitCode: child.exitCode, results, reports, probe: JSON.parse(readFileSync(probeFile, "utf8")) as unknown, scope };
 }
 
-test("XT-mockery-2: an unmet expectation fails the test when it finishes, with the Oracle's InvalidCountException message, and counts as a mockeryExpectation assertion; met expectations alone pass; a tearDown close counts once; a failing body wins and the container is purged unverified", () => {
+xaravelTest("XT-mockery-2", "an unmet expectation fails the test when it finishes, with the Oracle's InvalidCountException message, and counts as a mockeryExpectation assertion; met expectations alone pass; a tearDown close counts once; a failing body wins and the container is purged unverified", () => {
   const T = "Tests\\Unit\\MockeryTest";
   const XT = "XT-fixture-1: an unmet Mockery expectation fails a Xaravel Test";
   const plain = runFixture(false);
@@ -664,7 +664,7 @@ function runOutsideRunFixture(scenario: "unmet" | "met" | "body-fails"): Outside
   return { exitCode: child.exitCode, results, types, reports, probe: JSON.parse(readFileSync(probeFile, "utf8")) as unknown };
 }
 
-test("outside-run (Epic 4 retro R3): a mock made outside a run is adopted by the next run, sharing its container, verified and counted when the body resolves (an unmet once() fails that test with InvalidCountException), purged unverified when the body fails; the process slot is then empty and the run after starts with no container", () => {
+xaravelTest("XT-mockery-11", "outside-run (Epic 4 retro R3): a mock made outside a run is adopted by the next run, sharing its container, verified and counted when the body resolves (an unmet once() fails that test with InvalidCountException), purged unverified when the body fails; the process slot is then empty and the run after starts with no container", () => {
   const T = "Tests\\Unit\\MockeryOutsideRunTest";
   const adopts = `${T}::testAdopts`;
   const nextRun = `${T}::testNextRun`;
@@ -707,7 +707,7 @@ test("outside-run (Epic 4 retro R3): a mock made outside a run is adopted by the
   expect(bodyFails.results.get(nextRun)).toBeNull();
 }, 3 * SPAWN_TIMEOUT + 10_000);
 
-test("XT-mockery-3: a call that matches no expectation throws Mockery's BadMethodCallException (declared or undeclared method) or NoMatchingExpectationException (arguments matching none, with Objects: (…) for an object), with the Oracle's messages", () => {
+xaravelTest("XT-mockery-3", "a call that matches no expectation throws Mockery's BadMethodCallException (declared or undeclared method) or NoMatchingExpectationException (arguments matching none, with Objects: (…) for an object), with the Oracle's messages", () => {
   // TS-side: the hierarchy, before any fixture is read.
   const m = Mockery.mock(XtFoo);
   m.shouldReceive("bar").with(1);
@@ -728,7 +728,7 @@ test("XT-mockery-3: a call that matches no expectation throws Mockery's BadMetho
   checkScenarios("XT-mockery-3");
 });
 
-test("XT-mockery-4: spy, partials (makePartial and Foo[m]), shouldIgnoreMissing, byDefault, the andReturn* family, the Mockery.on/type/any/capture/self statics, shouldHaveReceived, shouldNotHaveReceived, allows, expects, shouldNotReceive, andThrowExceptions, andThrow('Class'), passthru, globally, withNoArgs, withSomeOfArgs, zeroOrMoreTimes, because and the Container::mock forms record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
+xaravelTest("XT-mockery-4", "spy, partials (makePartial and Foo[m]), shouldIgnoreMissing, byDefault, the andReturn* family, the Mockery.on/type/any/capture/self statics, shouldHaveReceived, shouldNotHaveReceived, allows, expects, shouldNotReceive, andThrowExceptions, andThrow('Class'), passthru, globally, withNoArgs, withSomeOfArgs, zeroOrMoreTimes, because and the Container::mock forms record the values, exception classes and messages the signed Mockery 1.6.15 Oracle does", () => {
   const used = new Set(SCENARIOS.filter((scenario) => scenario.id === "XT-mockery-4").flatMap((scenario) => scenario.uses));
   expect(ADVANCED_API.filter((name) => !used.has(name))).toEqual([]);
   for (const name of ["andReturnArg", "andReturnFalse", "andReturnNull", "andReturnTrue", "andReturnSelf", "andReturnUsing", "andReturns", "andThrows", "andThrowExceptions", "because", "byDefault", "globally", "passthru", "withNoArgs", "withSomeOfArgs", "zeroOrMoreTimes"]) {
@@ -744,7 +744,7 @@ test("XT-mockery-4: spy, partials (makePartial and Foo[m]), shouldIgnoreMissing,
 const MODEL_STATE = Symbol.for("xaravel.model.state");
 const MEMBERS = Symbol.for("xaravel.mockery.members");
 
-test("XT-mockery-5: a mocked model (its instances carry MODEL_STATE, its constructor returns a Proxy whose defineProperty trap refuses string keys) mocked plainly, as a Foo[m] partial, with makePartial, as a spy and with constructor arguments keeps its members in the MODEL_STATE escape slot, never in the trap (AD-7)", () => {
+xaravelTest("XT-mockery-5", "a mocked model (its instances carry MODEL_STATE, its constructor returns a Proxy whose defineProperty trap refuses string keys) mocked plainly, as a Foo[m] partial, with makePartial, as a spy and with constructor arguments keeps its members in the MODEL_STATE escape slot, never in the trap (AD-7)", () => {
   MODEL_TRAP_KEYS.length = 0;
   MODEL_SET_KEYS.length = 0;
   XtModel.made = [];
@@ -847,7 +847,7 @@ function runCoverage(args: readonly string[]): { exitCode: number | null; stdout
   return { exitCode: child.exitCode, stdout: child.stdout.toString(), stderr: child.stderr.toString() };
 }
 
-test("XT-mockery-6: bun run mockery:coverage lists every mockery-api.jsonl name as implemented (Double's returns, throws and resolves included since Story 4.8, none pending), and fails naming a scan name with no implementation", () => {
+xaravelTest("XT-mockery-6", "bun run mockery:coverage lists every mockery-api.jsonl name as implemented (Double's returns, throws and resolves included since Story 4.8, none pending), and fails naming a scan name with no implementation", () => {
   const scanText = readFileSync(join(root, "conformance/scans/mockery-api.jsonl"), "utf8");
   const scanCount = scanText.split("\n").filter((line) => line !== "").length;
 
@@ -938,7 +938,7 @@ function runDoubleFixture(): { exitCode: number | null; results: Map<string, str
   return { exitCode: child.exitCode, results, reports };
 }
 
-test("XT-mockery-7: Double's returns, throws and resolves, its expectations, dispatch, modes, safe defaults, override, intersections and auto-verification record the values, exception classes and messages, verify outcomes and assertTrue counts of the signed jasonmccreary/double v1.0.1 Oracle; enableAutoVerify() in a portedTest verifies after the body", async () => {
+xaravelTest("XT-mockery-7", "Double's returns, throws and resolves, its expectations, dispatch, modes, safe defaults, override, intersections and auto-verification record the values, exception classes and messages, verify outcomes and assertTrue counts of the signed jasonmccreary/double v1.0.1 Oracle; enableAutoVerify() in a portedTest verifies after the body", async () => {
   // The three scan names run in the table.
   for (const verb of ["->returns(", "->throws(", "->resolves("]) {
     expect(DOUBLE_SCENARIOS.some((scenario) => scenario.php.includes(verb))).toBe(true);
@@ -980,16 +980,27 @@ test("XT-mockery-7: Double's returns, throws and resolves, its expectations, dis
       return "real";
     }
   }
-  expect(Object.getOwnPropertyDescriptor(globalThis, SIGNATURE_KEY)).toBeUndefined();
-  expect(Double.for(XtOrphan).make()).toBeNull();
-  Object.defineProperty(globalThis, SIGNATURE_KEY, { value: () => ({ returns: "XtMissing", nullable: false }), configurable: true });
-  try {
-    const orphanError = thrown(() => Double.for(XtOrphan).make());
-    expect(orphanError).toBeInstanceOf(SplLogicException);
-    expect((orphanError as Error).message).toContain("`XtMissing`");
-    expect((orphanError as Error).message).toContain("`XtOrphan::make()`");
-  } finally {
+  // The harness preload installs a configurable lookup (Story 5.4): it is saved, removed and restored around this part.
+  const savedLookup = Object.getOwnPropertyDescriptor(globalThis, SIGNATURE_KEY);
+  if (savedLookup !== undefined) {
     delete (globalThis as Record<symbol, unknown>)[SIGNATURE_KEY];
+  }
+  try {
+    expect(Object.getOwnPropertyDescriptor(globalThis, SIGNATURE_KEY)).toBeUndefined();
+    expect(Double.for(XtOrphan).make()).toBeNull();
+    Object.defineProperty(globalThis, SIGNATURE_KEY, { value: () => ({ returns: "XtMissing", nullable: false }), configurable: true });
+    try {
+      const orphanError = thrown(() => Double.for(XtOrphan).make());
+      expect(orphanError).toBeInstanceOf(SplLogicException);
+      expect((orphanError as Error).message).toContain("`XtMissing`");
+      expect((orphanError as Error).message).toContain("`XtOrphan::make()`");
+    } finally {
+      delete (globalThis as Record<symbol, unknown>)[SIGNATURE_KEY];
+    }
+  } finally {
+    if (savedLookup !== undefined) {
+      Object.defineProperty(globalThis, SIGNATURE_KEY, savedLookup);
+    }
   }
 
   // TS-only: a bare symbol token's lazily added method stays on the double that configured it.

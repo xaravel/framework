@@ -4,13 +4,14 @@
 // hermetic temp directories holding `conformance/variants`,
 // `conformance/inventory/*.jsonl` and `conformance/expectations/`; the real
 // repository is only read, never written.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { check, init, initialLine, parseVariants, readVariants, serialiseLine, shardPathFor, VARIANTS_FILE } from "../../../tools/expectations/expectations";
 import { ALPHA_VARIANTS } from "../../../tools/inventory/inventory";
 import { applyBump, EXPECTATION_KEYS, readExpectations, readWorkingInventory } from "../../../tools/pin-bump/pin-bump";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "expectations", "expectations.ts");
@@ -91,7 +92,7 @@ function initialised(): string {
 // ---------------------------------------------------------------------------
 // XT-conformance-89: the closed Variant vocabulary
 
-test("XT-conformance-89: conformance/variants is the closed vocabulary and every Inventory backend is a member", () => {
+xaravelTest("XT-conformance-89", "conformance/variants is the closed vocabulary and every Inventory backend is a member", () => {
   const { variants, violations } = readVariants(root);
   expect(violations).toEqual([]);
   expect(variants).toEqual([
@@ -121,7 +122,7 @@ test("XT-conformance-89: conformance/variants is the closed vocabulary and every
   }
 });
 
-test("XT-conformance-89: a malformed, duplicated or unsorted vocabulary line is a violation naming the line", () => {
+xaravelTest("XT-conformance-204", "a malformed, duplicated or unsorted vocabulary line is a violation naming the line", () => {
   expect(parseVariants("# c\n\nnone\nsqlite\n").violations).toEqual([]);
   expect(parseVariants("MySQL\nnone\n").violations).toEqual([`${VARIANTS_FILE}:1: not a Variant: "MySQL"`]);
   expect(parseVariants("none\nnone\n").violations).toEqual([`${VARIANTS_FILE}:2: duplicate Variant none`]);
@@ -149,7 +150,7 @@ test("XT-conformance-89: a malformed, duplicated or unsorted vocabulary line is 
   }
 });
 
-test("XT-conformance-89: an Inventory backend outside the vocabulary fails init and check, naming the id and backend", () => {
+xaravelTest("XT-conformance-205", "an Inventory backend outside the vocabulary fails init and check, naming the id and backend", () => {
   const dir = fixture({ "support.jsonl": entry(A, "support", ["oracle"], "framework/tests/Support/SupportStrTest.php:10-12") });
   try {
     expect(() => init(dir)).toThrow(`unknown backend: ${A} has backend oracle`);
@@ -166,7 +167,7 @@ test("XT-conformance-89: an Inventory backend outside the vocabulary fails init 
 // ---------------------------------------------------------------------------
 // XT-conformance-90: init
 
-test("XT-conformance-90: init writes one sorted shard per source file, skip / not-ported-yet, deferred:ai-sdk for ai", () => {
+xaravelTest("XT-conformance-90", "init writes one sorted shard per source file, skip / not-ported-yet, deferred:ai-sdk for ai", () => {
   const dir = fixture();
   try {
     expect(init(dir)).toEqual({ added: 4, shards: [AI_SHARD, SUPPORT_SHARD] });
@@ -179,7 +180,7 @@ test("XT-conformance-90: init writes one sorted shard per source file, skip / no
   }
 });
 
-test("XT-conformance-90: re-running init changes nothing and keeps an edited line", () => {
+xaravelTest("XT-conformance-206", "re-running init changes nothing and keeps an edited line", () => {
   const dir = initialised();
   try {
     const edited = read(dir, SUPPORT_SHARD).replace(`${line(A, "none")}`, line(A, "none").replace('"status":"skip"', '"status":"pass"'));
@@ -193,7 +194,7 @@ test("XT-conformance-90: re-running init changes nothing and keeps an edited lin
   }
 });
 
-test("XT-conformance-90: init adds only missing pairs and re-sorts only the shards it touches", () => {
+xaravelTest("XT-conformance-207", "init adds only missing pairs and re-sorts only the shards it touches", () => {
   const dir = initialised();
   try {
     write(dir, SUPPORT_SHARD, `${line(B, "mysql")}\n${line(B, "sqlite")}\n`);
@@ -206,7 +207,7 @@ test("XT-conformance-90: init adds only missing pairs and re-sorts only the shar
   }
 });
 
-test("XT-conformance-90: init refuses, writing nothing, when an existing shard has a fault", () => {
+xaravelTest("XT-conformance-208", "init refuses, writing nothing, when an existing shard has a fault", () => {
   const faulty: [string, string | Uint8Array, string][] = [
     ["malformed JSON", `{not json\n${line(B, "mysql")}\n${line(B, "sqlite")}\n`, `${SUPPORT_SHARD}:1: malformed JSON`],
     ["invalid UTF-8", new Uint8Array([...new TextEncoder().encode(`${line(B, "mysql")}\n`), 0xff, 0x0a]), `${SUPPORT_SHARD}: invalid UTF-8`],
@@ -231,7 +232,7 @@ test("XT-conformance-90: init refuses, writing nothing, when an existing shard h
   }
 });
 
-test("XT-conformance-90: bun run expectations:init --root works and prints the summary", () => {
+xaravelTest("XT-conformance-209", "bun run expectations:init --root works and prints the summary", () => {
   const dir = fixture();
   try {
     const proc = Bun.spawnSync(["bun", "run", "expectations:init", "--root", dir], { cwd: root, stdout: "pipe", stderr: "pipe" });
@@ -246,7 +247,7 @@ test("XT-conformance-90: bun run expectations:init --root works and prints the s
   }
 });
 
-test("XT-conformance-90: a serialised line has AD-15's six keys in order, as pin-bump writes and reads them", () => {
+xaravelTest("XT-conformance-210", "a serialised line has AD-15's six keys in order, as pin-bump writes and reads them", () => {
   const id = "Illuminate\\Tests\\Integration\\Support\\AuthFacadeTest::testItFailsIfTheUiPackageIsMissing";
   const serialised = serialiseLine(initialLine({ id, component: "support" }, "none"));
   expect(serialised).toBe(String.raw`{"id":"Illuminate\\Tests\\Integration\\Support\\AuthFacadeTest::testItFailsIfTheUiPackageIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}`);
@@ -274,7 +275,7 @@ test("XT-conformance-90: a serialised line has AD-15's six keys in order, as pin
 // ---------------------------------------------------------------------------
 // XT-conformance-91: check
 
-test("XT-conformance-91: a pair on two shards is a duplicate listing both paths", () => {
+xaravelTest("XT-conformance-91", "a pair on two shards is a duplicate listing both paths", () => {
   const dir = initialised();
   try {
     write(dir, "conformance/expectations/a.jsonl", `${line(A, "none")}\n`);
@@ -289,7 +290,7 @@ test("XT-conformance-91: a pair on two shards is a duplicate listing both paths"
   }
 });
 
-test("XT-conformance-91: a deleted line is missing, a fake id is unknown", () => {
+xaravelTest("XT-conformance-211", "a deleted line is missing, a fake id is unknown", () => {
   const dir = initialised();
   try {
     write(dir, SUPPORT_SHARD, `${line(A, "none")}\n${line(B, "mysql")}\n${line(`${B}Fake`, "none")}\n`);
@@ -302,7 +303,7 @@ test("XT-conformance-91: a deleted line is missing, a fake id is unknown", () =>
   }
 });
 
-test("XT-conformance-91: each format fault is one violation naming file:line", () => {
+xaravelTest("XT-conformance-212", "each format fault is one violation naming file:line", () => {
   const EXTRA = "conformance/expectations/support/framework/tests/Support/Extra.jsonl";
   const extra: [string, string, string][] = [
     ["empty shard", "", `${EXTRA}: empty shard`],
@@ -374,7 +375,7 @@ test("XT-conformance-91: each format fault is one violation naming file:line", (
   }
 });
 
-test("XT-conformance-91: check passes on the repository and the package scripts run the tool", () => {
+xaravelTest("XT-conformance-213", "check passes on the repository and the package scripts run the tool", () => {
   const report = check(root);
   expect(report.violations).toEqual([]);
   const pairs = readWorkingInventory(root).reduce((sum, item) => sum + item.backends.length, 0);

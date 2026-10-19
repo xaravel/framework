@@ -398,6 +398,15 @@ export class GitHub {
     return (await response.json()) as T;
   }
 
+  /** A response body as text (a job log, which the API serves through a redirect); throws unless the status is 2xx. */
+  async text(path: string): Promise<string> {
+    const response = await this.request(path, "application/vnd.github+json");
+    if (!response.ok) {
+      throw new Error(`GET ${path}: HTTP ${response.status}`);
+    }
+    return response.text();
+  }
+
   async paged<T>(path: string): Promise<T[]> {
     const items: T[] = [];
     for (let page = 1; ; page++) {

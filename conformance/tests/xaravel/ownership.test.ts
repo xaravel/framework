@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 1.5 (Story manifests and edit-ownership check).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -19,6 +19,7 @@ import {
   type Manifest,
 } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "ownership", "ownership.ts");
@@ -189,7 +190,7 @@ const manifest = (id: string, ids: string[], status: Manifest["status"] = "backl
   xaravelTestIds: xt,
 });
 
-test("XT-conformance-22: every Story manifest requires story_id, epic, component and status, plus a non-empty test_ids or xaravel_test_ids; one without fails (AD-16, AD-21)", async () => {
+xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, component and status, plus a non-empty test_ids or xaravel_test_ids; one without fails (AD-16, AD-21)", async () => {
   // Every committed manifest validates, and `manifests` passes on the repo root.
   const committed = readManifests(root);
   expect(committed.violations).toEqual([]);
@@ -270,7 +271,7 @@ test("XT-conformance-22: every Story manifest requires story_id, epic, component
   );
 });
 
-test("XT-conformance-23: a story/<story-id> PR is judged by the manifest on the base checkout only; a branch with no manifest on base fails, other branches pass (AD-16, AD-21)", async () => {
+xaravelTest("XT-conformance-23", "a story/<story-id> PR is judged by the manifest on the base checkout only; a branch with no manifest on base fails, other branches pass (AD-16, AD-21)", async () => {
   await withRoots([fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3", { component: undefined }) })], async ([base]) => {
     // No manifest on base.
     const missing = await runPr({ ref: "story/99.9", files: [file("packages/support/src/A.ts")] }, base!);
@@ -317,7 +318,7 @@ test("XT-conformance-23: a story/<story-id> PR is judged by the manifest on the 
   });
 });
 
-test("XT-conformance-24: a Story PR changing files outside its four allowed paths exits 1 and lists the out-of-scope paths, sorted (AD-16, AD-21)", async () => {
+xaravelTest("XT-conformance-24", "a Story PR changing files outside its four allowed paths exits 1 and lists the out-of-scope paths, sorted (AD-16, AD-21)", async () => {
   const support = { storyId: "9.1", component: "support" };
   for (const path of [
     "packages/support/src/A.ts",
@@ -504,7 +505,7 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
   expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
 });
 
-test("XT-conformance-180: a planning/* PR may not change packages/** or conformance/expectations/**, in any letter case or through a rename; a truncated list fails closed (AD-16, MAINT-2026-10-17 item 15)", async () => {
+xaravelTest("XT-conformance-180", "a planning/* PR may not change packages/** or conformance/expectations/**, in any letter case or through a rename; a truncated list fails closed (AD-16, MAINT-2026-10-17 item 15)", async () => {
   const allowed = ["AGENTS.md", "tools/a.ts", "decisions/x.md", "conformance/tests/a.ts", "stories/9.1.md", "packagesx/a", "conformance/expectationsx/a"];
   for (const path of allowed) {
     expect([path, planningAllowedPath(path)]).toEqual([path, true]);
@@ -565,7 +566,7 @@ test("XT-conformance-180: a planning/* PR may not change packages/** or conforma
   });
 });
 
-test("XT-conformance-181: a bot/* PR may change only conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md; other non-Story branches still pass (AD-16, MAINT-2026-10-17 item 15)", async () => {
+xaravelTest("XT-conformance-181", "a bot/* PR may change only conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md; other non-Story branches still pass (AD-16, MAINT-2026-10-17 item 15)", async () => {
   const allowed = ["conformance/expectations/support/x.jsonl", "conformance/escalations/ESC-bot-3.md"];
   for (const path of [...allowed, "conformance/escalations/ESC-bot-12.md"]) {
     expect([path, botAllowedPath(path)]).toEqual([path, true]);
@@ -644,7 +645,7 @@ test("XT-conformance-181: a bot/* PR may change only conformance/expectations/**
   });
 });
 
-test("XT-conformance-25: a Test ID listed by two open Stories fails, naming both; Stories marked done no longer hold their IDs (AD-16, AD-21)", async () => {
+xaravelTest("XT-conformance-25", "a Test ID listed by two open Stories fails, naming both; Stories marked done no longer hold their IDs (AD-16, AD-21)", async () => {
   // Through the function.
   expect(checkDuplicates([manifest("9.1", ["T1"]), manifest("9.2", ["T1"])])).toEqual([
     "duplicate test id: T1 is listed by open Story 9.1, Story 9.2 (AD-16)",

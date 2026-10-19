@@ -1,12 +1,13 @@
 # The conformance harness
 
-The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Stories 5.3, 5.4 and 5.5; FR-3, FR-9, FR-113, AD-15, AD-17). Its code is in `conformance/harness/`.
+The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Stories 5.3, 5.4 and 5.5; FR-3, FR-9, FR-113, AD-15, AD-17). A full run then also runs every Xaravel Test (Story 5.9, [The Xaravel run](#the-xaravel-run)). Its code is in `conformance/harness/`.
 
 ```sh
 bun run harness [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]
+bun run harness [--root <dir>] --xaravel [--id <glob>]...
 ```
 
-The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error. The usage errors are an unknown flag, a missing value, a second `--seed` or `--story`, a `--story` value not of the form `<epic>.<story>`, and a seed that doesn't match `^[A-Za-z0-9._-]{1,64}$`.
+The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error. The usage errors are an unknown flag, a missing value, a second `--seed` or `--story`, a `--story` value not of the form `<epic>.<story>`, a seed that doesn't match `^[A-Za-z0-9._-]{1,64}$`, and `--xaravel` with `--fast`, `--seed`, `--component` or `--story`.
 
 The [Ratchet](ratchet.md) (Story 5.6) turns the harness's differences into a CI verdict. In CI (Story 5.7, [CI pipeline](ci.md)) a PR's Ratchet runs the harness with `--component` over its reverse-dependency closure and then with `--story` over its Story's `test_ids`; the merge queue, `main` and the nightly matrix run it in full. CI never passes `--fast`. `runHarness` returns each counted difference with its kind (`HarnessResult.differences`): `unexpected-pass` for an `UNEXPECTED-PASS` line, `unexpected-failure` for every other one, including `UNKNOWN`, and each `ERROR` line and CI `NOT-RUN` of an alpha Variant (with id `-`). The printed report is the same either way.
 
@@ -156,6 +157,33 @@ SUMMARY variants=<v> run=<r> not-run=<nr> checked=<c> differ=<d>
 ```
 
 `checked` counts the Expectations lines on run Variants. To list failures, run `bun run harness | grep -E '^(FAIL|FLOOR|MISSING)'`.
+
+## The Xaravel run
+
+The Xaravel Tests (`xaravelTest`, FR-115) run under the harness too (Story 5.9, `conformance/harness/xaravel.ts`). A full run (no filter, no `--fast`) does the Xaravel run after every Variant run; `--xaravel` does only the Xaravel run, and its `--id` globs then select XT ids (`*` and `?` as for Test IDs). `runHarness` runs no Xaravel Tests unless `options.xaravel` asks for them (`{ only?, ids? }`), so the [Ratchet](ratchet.md) and the other callers of `runHarness` are unchanged, and a `--story`, `--component` or fast run never does one.
+
+Before it starts, the harness stops the Redis server it started and releases `.cache/harness.lock`: the Xaravel Tests use no backend, and some of them start harness runs of their own, on the real root too. It then runs one more `bun test`, with the same preload, junit report and env as a Variant run but `XARAVEL_VARIANT=none`, over every `conformance/tests/xaravel/**/*.test.ts` and `packages/*/tests/xaravel/**/*.test.ts`. With `--id` globs it adds `-t ^(?:<globs>): `. It reads the preload's `type: "xaravel"` reports.
+
+| Outcome | When |
+| --- | --- |
+| `fail` | the testcase failed (a failed testcase named `<XT id>: …` with no report is that id's failure: bun ends a test that times out before its report is sent), or two reports carry the id |
+| `late` | the test recorded an assertion after it ended |
+| `skip` | its report carries `skipped` (`markTestSkipped`) |
+| `pass` | otherwise |
+| `missing` | an `--id` value with no `*` or `?` that names no test |
+
+The report gets one line per selected Xaravel Test that failed, was missing or was late, then one line per junit testcase that no report labels (a plain `test()` in an Xaravel Test file), then the run's ERROR line, if any:
+
+```
+<id> [xaravel] FAIL|MISSING|LATE
+- [xaravel] UNDECLARED <testcase name>
+ERROR [xaravel] bun test exited <n> with no failing testcase
+XARAVEL tests=<n> passed=<p> failed=<f> skipped=<s>
+```
+
+Each of the first three kinds is one difference (`HarnessResult.differences`, Variant `xaravel`); a skipped Xaravel Test is not. The `XARAVEL` line comes right before SUMMARY, whose format does not change: with `--xaravel` it reads `SUMMARY variants=0 run=0 not-run=0 checked=0 differ=<d>`, and no Expectations data is read. `failed` counts FAIL, LATE and MISSING. A root with no Xaravel Test file spawns nothing and prints none of these lines. `runHarness` returns `xaravel: { results, lines, summary, differ }`, each result `{ id, consequence, outcome }`, which `bun run xt:coverage` reads ([done check](done-check.md)).
+
+`xaravelTest(id, consequence, fn, timeout?)` takes bun's per-test timeout in milliseconds as its fourth argument. A test that needs real PHP calls `Assert.markTestSkipped(<reason>)` in its body when PHP is unmet, and fails instead under `XARAVEL_PHP_FIXTURES=require`.
 
 ## The preload and its protocols
 
