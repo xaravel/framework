@@ -27,7 +27,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.xaravel.orchestrator
 
 ## Watching
 
-- The GitHub issue **Orchestrator status** (label `orchestrator`) gets one comment per merge, block or wait. Subscribe to it.
+- The GitHub issue **Orchestrator status** (label `orchestrator`) gets one comment per merge, block or wait. Subscribe to it. Each Story merge comment ends with a progress line from `tools/orchestrator/progress.sh`: Stories done out of all, and a loose estimate of the days left at the last three days' pace.
 - `ssh "$XARAVEL_ORCH_HOST" cat ~/.xaravel-orchestrator/history` prints one line per iteration.
 - `ssh "$XARAVEL_ORCH_HOST" "tail -F ~/.xaravel-orchestrator/latest.log | jq -r 'select(.type==\"assistant\") | .message.content[]? | select(.type==\"text\") | .text'"` shows the live narration.
 
