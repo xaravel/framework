@@ -40,27 +40,35 @@
 //         quarantine  `bot/quarantine-<sha8(<id> [<variant>])>`, one per key;
 //         promotion   `bot/promote-<sha8(sorted keys)>`, one per plan;
 //         escalation  `bot/oracle-esc-<sha8(file text)>`.
-//       A branch that exists prints `BOT-SKIP <branch> exists`; an escalation
-//       or promotion while an open PR of that kind (`bot/oracle-esc-`,
-//       `bot/promote-`) exists prints `BOT-SKIP <branch> pending`; a planned
-//       `before` line that is no longer in main's shard prints
-//       `BOT-SKIP <branch> stale`. It never trusts the plan's `after`: it
-//       rebuilds each line from `before` (a quarantine sets `quarantined`,
-//       reason null and its new `ESC-bot-<n>`; a promotion `pass`, reason null,
-//       escalation kept) and replaces exactly that line with `serialiseLine`,
-//       keeping every other byte. Each new `ESC-bot-<n>` is one past the
-//       highest on main's `conformance/escalations/` and in every open PR
-//       whose head is `bot/*`; every whole-word `ESC-bot-<old>` in an Oracle
+//       A branch that is the head of an open PR prints `BOT-SKIP <branch> open`;
+//       a leftover branch with no open PR (its PR closed unmerged) is
+//       force-moved to the new commit and gets a new PR. A promotion while an
+//       open `bot/promote-` PR exists prints `BOT-SKIP <branch> pending`; so
+//       does an escalation whose every `test_ids` entry is already named by an
+//       `ESC-bot-<n>.md` that an open `bot/oracle-esc-` PR (or this run) adds;
+//       any other escalation opens its own PR. A planned `before` line that is
+//       no longer in main's shard prints `BOT-SKIP <branch> stale`. It never
+//       trusts the plan's `after`: it rebuilds each line from `before` (a
+//       quarantine sets `quarantined`, reason null and its new `ESC-bot-<n>`; a
+//       promotion `pass`, reason null, escalation kept) and replaces exactly
+//       that line with `serialiseLine`, keeping every other byte. Each new
+//       `ESC-bot-<n>` is one past the highest on main's
+//       `conformance/escalations/` (listed by walking the Git trees API from
+//       main's commit; a truncated listing throws) and in every open PR whose
+//       head is `bot/*`; every whole-word `ESC-bot-<old>` in an Oracle
 //       Escalation (its heading included) is rewritten to match. A
 //       quarantine's evidence records the full previous line. Before any write it runs ownership's
 //       `botValueProblems` and `parseEscalation` on the change and refuses on
-//       any problem (`BOT-REFUSE <branch> <problem>`). It writes through the
-//       Git data API (blobs, a tree on main's, a commit, the ref), opens a PR
-//       to `main` with the evidence and prints `BOT-PR <url>`; when the PR
-//       cannot be opened it deletes the branch it created. It never merges.
+//       any problem (`BOT-REFUSE <branch> <problem>`); it then reads main's
+//       current tip and refuses when an `ESC-bot-<n>.md` it adds already
+//       exists there (`BOT-REFUSE <branch> <path> already exists on main`). It
+//       writes through the Git data API (blobs, a tree on main's, a commit, the
+//       ref), opens a PR to `main` with the evidence and prints `BOT-PR <url>`;
+//       when the PR cannot be opened it deletes the branch. It never merges.
 //
 // Exit codes: 0 done (skips included), 1 a thrown error, an invalid collected
-// file or, for apply, any failed write (`BOT-FAIL <branch> <message>`), 2 a
+// file or, for apply, any failed write or refusal (`BOT-FAIL <branch> <message>`
+// or `BOT-REFUSE <branch> <problem>`), 2 a
 // usage error.
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -523,12 +531,25 @@ class Writer {
   }
 
   async post<T>(path: string, body: unknown): Promise<T> {
-    const response = await fetch(`${this.api}/repos/${this.repo}${path}`, { method: "POST", headers: this.headers(), body: JSON.stringify(body) });
+    return this.send<T>("POST", path, body);
+  }
+
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    return this.send<T>("PATCH", path, body);
+  }
+
+  private async send<T>(method: "POST" | "PATCH", path: string, body: unknown): Promise<T> {
+    const response = await fetch(`${this.api}/repos/${this.repo}${path}`, { method, headers: this.headers(), body: JSON.stringify(body) });
     if (!response.ok) {
-      throw new Error(`POST ${path}: HTTP ${response.status}`);
+      throw new Error(`${method} ${path}: HTTP ${response.status}`);
     }
     return (await response.json()) as T;
   }
+}
+
+interface TreeListing {
+  tree?: { path?: unknown; type?: unknown; sha?: unknown }[];
+  truncated?: unknown;
 }
 
 interface Prepared {
@@ -570,29 +591,68 @@ export async function apply(plan: Plan, options: ApplyOptions): Promise<BotRun> 
       highest = Math.max(highest, id.n);
     }
   };
-  const listing = await github.json<{ name?: unknown }[]>(`/contents/${ESCALATIONS_DIR}?ref=${baseSha}`);
-  for (const entry of listing) {
-    if (typeof entry.name === "string") {
-      note(entry.name);
+  // Main's conformance/escalations/, walked through the Git trees API (root → conformance → escalations), which has no
+  // 1,000-entry cap; a truncated listing throws.
+  const baseCommit = await github.json<{ tree?: { sha?: unknown } }>(`/git/commits/${baseSha}`);
+  const baseTree = baseCommit.tree?.sha;
+  if (typeof baseTree !== "string") {
+    throw new Error(`GET /git/commits/${baseSha}: missing tree.sha`);
+  }
+  const treeEntries = async (sha: string): Promise<NonNullable<TreeListing["tree"]>> => {
+    const listing = await github.json<TreeListing>(`/git/trees/${sha}`);
+    if (listing.truncated === true) {
+      throw new Error(`GET /git/trees/${sha}: the listing is truncated`);
+    }
+    return listing.tree ?? [];
+  };
+  let dirSha: string | null = baseTree;
+  for (const segment of ESCALATIONS_DIR.split("/")) {
+    const child: NonNullable<TreeListing["tree"]>[number] | undefined = dirSha === null ? undefined : (await treeEntries(dirSha)).find((entry) => entry.path === segment && entry.type === "tree");
+    dirSha = child !== undefined && typeof child.sha === "string" ? child.sha : null;
+  }
+  for (const entry of dirSha === null ? [] : await treeEntries(dirSha)) {
+    if (entry.type === "blob" && typeof entry.path === "string") {
+      note(entry.path);
     }
   }
-  const pulls = await github.paged<{ number: number; head?: { ref?: unknown } }>("/pulls");
-  // An open Oracle-Escalation or promotion PR makes a new one of that kind wait (`BOT-SKIP <branch> pending`).
-  const pending = new Set<string>();
+
+  const pulls = await github.paged<{ number: number; head?: { ref?: unknown; sha?: unknown; repo?: { full_name?: unknown } | null } }>("/pulls");
+  // The head of every open bot/* PR (`BOT-SKIP <branch> open`); an open promotion PR makes a new promotion wait.
+  const openHeads = new Set<string>();
+  let promotionPending = false;
+  // Every Test ID an ESC-bot-<n>.md added by an open bot/oracle-esc-* PR (or by this run) names: an escalation
+  // proposal whose Test IDs are all here waits (`BOT-SKIP <branch> pending`).
+  const coveredIds = new Set<string>();
   for (const pull of pulls) {
-    if (typeof pull.head?.ref === "string" && pull.head.ref.startsWith("bot/")) {
-      for (const prefix of ["bot/oracle-esc-", "bot/promote-"]) {
-        if (pull.head.ref.startsWith(prefix)) {
-          pending.add(prefix);
-        }
+    const ref = pull.head?.ref;
+    // A fork PR is never a bot PR, whatever its head ref is called.
+    if (typeof ref !== "string" || !ref.startsWith("bot/") || pull.head?.repo?.full_name !== options.repo) {
+      continue;
+    }
+    openHeads.add(ref);
+    if (ref.startsWith("bot/promote-")) {
+      promotionPending = true;
+    }
+    const isEscalation = ref.startsWith("bot/oracle-esc-");
+    const headSha = pull.head?.sha;
+    for (const file of await github.paged<PrFile>(`/pulls/${pull.number}/files`)) {
+      if (file.status === "removed" || !file.filename.startsWith(`${ESCALATIONS_DIR}/`)) {
+        continue;
       }
-      for (const file of await github.paged<PrFile>(`/pulls/${pull.number}/files`)) {
-        if (file.status !== "removed" && file.filename.startsWith(`${ESCALATIONS_DIR}/`)) {
-          note(file.filename.slice(ESCALATIONS_DIR.length + 1));
+      const name = file.filename.slice(ESCALATIONS_DIR.length + 1);
+      note(name);
+      if (isEscalation && file.status === "added" && BOT_ESCALATION_FILE.test(name)) {
+        if (typeof headSha !== "string") {
+          throw new Error(`GET /pulls: PR #${pull.number} has no head.sha`);
+        }
+        const text = await github.contents(file.filename, headSha);
+        for (const id of text === null ? [] : (parseEscalation(file.filename, text).escalation?.testIds ?? [])) {
+          coveredIds.add(id);
         }
       }
     }
   }
+  const testIdsOf = (proposal: EscalationProposal): string[] => parseEscalation(`${ESCALATIONS_DIR}/${proposal.file}`, proposal.text).escalation?.testIds ?? [];
   const nextEscalation = (): string => `ESC-bot-${++highest}`;
 
   const shardCache = new Map<string, string | null>();
@@ -614,13 +674,14 @@ export async function apply(plan: Plan, options: ApplyOptions): Promise<BotRun> 
         : proposal.kind === "promotion"
           ? `bot/promote-${sha8(proposal.changes.map((change) => keyOf(change.id, change.variant)).sort(compareUnits).join("\n"))}`
           : `bot/oracle-esc-${sha8(proposal.text)}`;
-    if (branches.has(branch)) {
+    if (openHeads.has(branch)) {
       skipped++;
-      out.push(`BOT-SKIP ${branch} exists`);
+      out.push(`BOT-SKIP ${branch} open`);
       continue;
     }
-    const kindPrefix = proposal.kind === "escalation" ? "bot/oracle-esc-" : proposal.kind === "promotion" ? "bot/promote-" : null;
-    if (kindPrefix !== null && pending.has(kindPrefix)) {
+    const proposalIds = proposal.kind === "escalation" ? testIdsOf(proposal) : [];
+    const waits = proposal.kind === "promotion" ? promotionPending : proposal.kind === "escalation" && proposalIds.length > 0 && proposalIds.every((id) => coveredIds.has(id));
+    if (waits) {
       skipped++;
       out.push(`BOT-SKIP ${branch} pending`);
       continue;
@@ -650,9 +711,26 @@ export async function apply(plan: Plan, options: ApplyOptions): Promise<BotRun> 
       out.push(`BOT-REFUSE ${branch} ${problems.join("; ")}`);
       continue;
     }
+    let taken: string | null;
+    try {
+      taken = await takenOnMain(prepared);
+    } catch (error) {
+      failed++;
+      out.push(`BOT-FAIL ${branch} ${message(error)}`);
+      continue;
+    }
+    if (taken !== null) {
+      failed++;
+      out.push(`BOT-REFUSE ${branch} ${taken} already exists on main`);
+      continue;
+    }
     try {
       const url = await write(prepared);
       branches.add(branch);
+      openHeads.add(branch);
+      for (const id of proposalIds) {
+        coveredIds.add(id);
+      }
       applied++;
       out.push(`BOT-PR ${url}`);
     } catch (error) {
@@ -739,20 +817,39 @@ export async function apply(plan: Plan, options: ApplyOptions): Promise<BotRun> 
     };
   }
 
+  /** The first `ESC-bot-<n>.md` the change adds that already exists at main's current tip, else null. */
+  async function takenOnMain(prepared: Prepared): Promise<string | null> {
+    const added = [...prepared.addedEscalations].map((escId) => `${ESCALATIONS_DIR}/${escId}.md`).sort(compareUnits);
+    if (added.length === 0) {
+      return null;
+    }
+    const now = await github.json<{ object?: { sha?: unknown } }>("/git/ref/heads/main");
+    const currentTip = now.object?.sha;
+    if (typeof currentTip !== "string") {
+      throw new Error("GET /git/ref/heads/main: missing object.sha");
+    }
+    for (const path of added) {
+      if ((await github.contents(path, currentTip)) !== null) {
+        return path;
+      }
+    }
+    return null;
+  }
+
   async function write(prepared: Prepared): Promise<string> {
     const tree: { path: string; mode: string; type: string; sha: string }[] = [];
     for (const [path, content] of [...prepared.files].sort(([a], [b]) => compareUnits(a, b))) {
       const blob = await writer.post<{ sha: string }>("/git/blobs", { content, encoding: "utf-8" });
       tree.push({ path, mode: "100644", type: "blob", sha: blob.sha });
     }
-    const commit = await github.json<{ tree?: { sha?: unknown } }>(`/git/commits/${baseSha}`);
-    const baseTree = commit.tree?.sha;
-    if (typeof baseTree !== "string") {
-      throw new Error(`GET /git/commits/${baseSha}: missing tree.sha`);
-    }
     const created = await writer.post<{ sha: string }>("/git/trees", { base_tree: baseTree, tree });
     const committed = await writer.post<{ sha: string }>("/git/commits", { message: prepared.title, tree: created.sha, parents: [baseSha] });
-    await writer.post("/git/refs", { ref: `refs/heads/${prepared.branch}`, sha: committed.sha });
+    if (branches.has(prepared.branch)) {
+      // A leftover branch with no open PR (its PR was closed unmerged): move it to the new commit.
+      await writer.patch(`/git/refs/heads/${prepared.branch}`, { sha: committed.sha, force: true });
+    } else {
+      await writer.post("/git/refs", { ref: `refs/heads/${prepared.branch}`, sha: committed.sha });
+    }
     try {
       const pull = await writer.post<{ html_url?: unknown }>("/pulls", { title: prepared.title, head: prepared.branch, base: "main", body: prepared.body, maintainer_can_modify: false });
       if (typeof pull.html_url !== "string") {
@@ -760,7 +857,7 @@ export async function apply(plan: Plan, options: ApplyOptions): Promise<BotRun> 
       }
       return pull.html_url;
     } catch (error) {
-      // No PR: delete the branch, or every later run would skip it as existing.
+      // No PR: delete the branch rather than leave a bot branch with no PR behind.
       try {
         await writer.delete(`/git/refs/heads/${prepared.branch}`);
       } catch (cleanup) {

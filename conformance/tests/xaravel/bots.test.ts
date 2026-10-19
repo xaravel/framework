@@ -112,12 +112,16 @@ async function env(): Promise<Record<string, string | undefined>> {
 interface FakeState {
   /** Main's files (raw contents at MAIN_SHA). */
   main: Record<string, string>;
-  /** Open PRs and their files. */
-  pulls: { number: number; ref: string; files: PrFile[] }[];
+  /** Open PRs, their files and the files' contents at the PR's head. */
+  pulls: { number: number; ref: string; files: PrFile[]; head?: Record<string, string>; repo?: string }[];
   /** Existing bot/* branches. */
   branches: string[];
   /** POST /pulls answers HTTP 500. */
   failPulls?: boolean;
+  /** Files main gains after the first read of its tip: every later GET /git/ref/heads/main answers LATER_SHA, holding main's files and these. */
+  later?: Record<string, string>;
+  /** GET /git/trees/<root> answers `truncated: true`. */
+  truncated?: boolean;
 }
 
 interface Fake {
@@ -125,11 +129,16 @@ interface Fake {
   /** The files a created branch adds or changes, by path. */
   branch: (name: string) => Record<string, string>;
   opened: { title: string; head: string; base: string; body: string }[];
+  /** Write paths; a PATCH is recorded as `PATCH <path>`. */
   writes: string[];
   /** Branches deleted through DELETE /git/refs/heads/<branch>. */
   deleted: string[];
   stop: () => Promise<void>;
 }
+
+const ROOT_TREE = "t".repeat(40);
+const LATER_SHA = "2".repeat(40);
+const pullSha = (n: number): string => `p${String(n).padStart(39, "0")}`;
 
 function fakeGitHub(state: FakeState): Fake {
   const blobs = new Map<string, string>();
@@ -140,7 +149,33 @@ function fakeGitHub(state: FakeState): Fake {
   const writes: string[] = [];
   const deleted: string[] = [];
   let next = 0;
+  let mainReads = 0;
   const id = (): string => (++next).toString(16).padStart(40, "0");
+  const branchFiles = (name: string): Record<string, string> => {
+    const commit = refs.get(name);
+    const tree = commit === undefined ? [] : (trees.get(commits.get(commit)!) ?? []);
+    return Object.fromEntries(tree.map((entry) => [entry.path, blobs.get(entry.sha)!]));
+  };
+  // Every open PR: the state's and those this fake opened.
+  const openPulls = (): { number: number; ref: string; sha: string; files: PrFile[]; head: Record<string, string>; repo: string }[] => [
+    ...state.pulls.map((pull) => ({ number: pull.number, ref: pull.ref, sha: pullSha(pull.number), files: pull.files, head: pull.head ?? {}, repo: pull.repo ?? "xaravel/framework" })),
+    ...opened.map((pull, index) => {
+      const files = branchFiles(pull.head);
+      return { number: 101 + index, ref: pull.head, sha: refs.get(pull.head) ?? "", repo: "xaravel/framework", files: Object.keys(files).map((filename) => ({ filename, status: filename in state.main ? "modified" : "added" })), head: files };
+    }),
+  ];
+  // Main's directory trees by sha: the root is ROOT_TREE, a directory `d` is `tree:<d>`.
+  const listTree = (dir: string): { path: string; type: string; sha: string }[] => {
+    const prefix = dir === "" ? "" : `${dir}/`;
+    const entries = new Map<string, { path: string; type: string; sha: string }>();
+    for (const file of Object.keys(state.main)) {
+      if (file.startsWith(prefix)) {
+        const [name, ...rest] = file.slice(prefix.length).split("/");
+        entries.set(name!, rest.length === 0 ? { path: name!, type: "blob", sha: "b".repeat(40) } : { path: name!, type: "tree", sha: `tree:${prefix}${name}` });
+      }
+    }
+    return [...entries.values()];
+  };
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
@@ -155,6 +190,13 @@ function fakeGitHub(state: FakeState): Fake {
         deleted.push(name);
         return refs.delete(name) ? new Response(null, { status: 204 }) : new Response("not found", { status: 422 });
       }
+      if (request.method === "PATCH" && path.startsWith("/git/refs/heads/")) {
+        writes.push(`PATCH ${path}`);
+        const body = (await request.json()) as Record<string, unknown>;
+        expect(body["force"]).toBe(true);
+        refs.set(path.slice("/git/refs/heads/".length), body["sha"] as string);
+        return Response.json({ ref: `refs/heads/${path.slice("/git/refs/heads/".length)}` });
+      }
       if (request.method === "POST") {
         writes.push(path);
         const body = (await request.json()) as Record<string, unknown>;
@@ -164,7 +206,7 @@ function fakeGitHub(state: FakeState): Fake {
           return Response.json({ sha });
         }
         if (path === "/git/trees") {
-          expect(body["base_tree"]).toBe("t".repeat(40));
+          expect(body["base_tree"]).toBe(ROOT_TREE);
           const sha = id();
           trees.set(sha, body["tree"] as { path: string; sha: string }[]);
           return Response.json({ sha });
@@ -189,29 +231,35 @@ function fakeGitHub(state: FakeState): Fake {
         return new Response("not found", { status: 404 });
       }
       if (path === "/git/ref/heads/main") {
-        return Response.json({ object: { sha: MAIN_SHA } });
+        return Response.json({ object: { sha: mainReads++ > 0 && state.later !== undefined ? LATER_SHA : MAIN_SHA } });
       }
       if (path === "/git/matching-refs/heads/bot/") {
-        return Response.json([...state.branches, ...refs.keys()].map((name) => ({ ref: `refs/heads/${name}` })));
+        return Response.json([...new Set([...state.branches, ...refs.keys()])].map((name) => ({ ref: `refs/heads/${name}` })));
       }
       if (path === `/git/commits/${MAIN_SHA}`) {
-        return Response.json({ tree: { sha: "t".repeat(40) } });
+        return Response.json({ tree: { sha: ROOT_TREE } });
+      }
+      if (path.startsWith("/git/trees/")) {
+        const sha = decodeURIComponent(path.slice("/git/trees/".length));
+        if (sha === ROOT_TREE) {
+          return Response.json({ sha, tree: listTree(""), truncated: state.truncated === true });
+        }
+        return sha.startsWith("tree:") ? Response.json({ sha, tree: listTree(sha.slice("tree:".length)), truncated: false }) : new Response("not found", { status: 404 });
       }
       if (path === "/pulls") {
-        return Response.json(state.pulls.map((pull) => ({ number: pull.number, head: { ref: pull.ref } })));
+        return Response.json(openPulls().map((pull) => ({ number: pull.number, head: { ref: pull.ref, sha: pull.sha, repo: { full_name: pull.repo } } })));
       }
       const files = /^\/pulls\/(\d+)\/files$/.exec(path);
       if (files !== null) {
-        return Response.json(state.pulls.find((pull) => pull.number === Number(files[1]))?.files ?? []);
+        return Response.json(openPulls().find((pull) => pull.number === Number(files[1]))?.files ?? []);
       }
       if (path.startsWith("/contents/")) {
-        expect(url.searchParams.get("ref")).toBe(MAIN_SHA);
+        const ref = url.searchParams.get("ref");
         const file = path.slice("/contents/".length);
-        if (file === ESCALATIONS) {
-          const names = Object.keys(state.main).filter((name) => name.startsWith(`${ESCALATIONS}/`)).map((name) => ({ name: name.slice(ESCALATIONS.length + 1), type: "file" }));
-          return Response.json(names);
-        }
-        const text = state.main[file];
+        const pull = openPulls().find((each) => each.sha === ref);
+        const tree = ref === MAIN_SHA ? state.main : ref === LATER_SHA && state.later !== undefined ? { ...state.main, ...state.later } : pull !== undefined ? pull.head : null;
+        expect([ref, tree !== null]).toEqual([ref, true]);
+        const text = tree![file];
         return text === undefined ? new Response("not found", { status: 404 }) : new Response(text);
       }
       return new Response("not found", { status: 404 });
@@ -219,11 +267,7 @@ function fakeGitHub(state: FakeState): Fake {
   });
   return {
     api: `http://127.0.0.1:${server.port}`,
-    branch: (name) => {
-      const commit = refs.get(name);
-      const tree = commit === undefined ? [] : (trees.get(commits.get(commit)!) ?? []);
-      return Object.fromEntries(tree.map((entry) => [entry.path, blobs.get(entry.sha)!]));
-    },
+    branch: branchFiles,
     opened,
     writes,
     deleted,
@@ -388,12 +432,52 @@ xaravelTest("XT-conformance-123", "a test that fails on main and passes on rerun
       }).violations,
     ).toEqual([]);
 
-    // The same plan again: the branch exists.
+    // The same plan again: the branch is the head of an open PR.
     const again = await apply(plan, { repo: "xaravel/framework", api: fake.api, token: "bot-token" });
-    expect(again.out).toEqual([`BOT-SKIP ${branch} exists`, "BOTS applied=0 failed=0 skipped=1"]);
+    expect(again.out).toEqual([`BOT-SKIP ${branch} open`, "BOTS applied=0 failed=0 skipped=1"]);
     expect(again.code).toBe(0);
   } finally {
     await fake.stop();
+  }
+
+  // A leftover branch whose PR was closed unmerged: the ref is force-moved to the new commit and a new PR opened.
+  const leftover = fakeGitHub({ main: { [SHARD]: before }, pulls: [], branches: [`bot/quarantine-${sha8(`${FLAKY} [none]`)}`] });
+  try {
+    const branch = `bot/quarantine-${sha8(`${FLAKY} [none]`)}`;
+    const result = await apply(plan, { repo: "xaravel/framework", api: leftover.api, token: "bot-token" });
+    expect(result.out).toEqual(["BOT-PR https://github.example/xaravel/framework/pull/101", "BOTS applied=1 failed=0 skipped=0"]);
+    expect(result.code).toBe(0);
+    expect(leftover.writes).toContain(`PATCH /git/refs/heads/${branch}`);
+    expect(leftover.writes).not.toContain("/git/refs");
+    expect(Object.keys(leftover.branch(branch)).sort()).toEqual([`${ESCALATIONS}/ESC-bot-1.md`, SHARD]);
+    expect(leftover.opened).toHaveLength(1);
+    expect(leftover.opened[0]).toMatchObject({ head: branch, base: "main" });
+  } finally {
+    await leftover.stop();
+  }
+
+  // The ESC-bot-<n>.md the quarantine would add appeared on main's new tip: refused, nothing written, exit 1.
+  const raced = fakeGitHub({ main: { [SHARD]: before, [`${ESCALATIONS}/ESC-bot-1.md`]: "x" }, pulls: [], branches: [], later: { [`${ESCALATIONS}/ESC-bot-2.md`]: "x" } });
+  try {
+    const result = await apply(plan, { repo: "xaravel/framework", api: raced.api, token: "bot-token" });
+    expect(result.out).toEqual([`BOT-REFUSE bot/quarantine-${sha8(`${FLAKY} [none]`)} ${ESCALATIONS}/ESC-bot-2.md already exists on main`, "BOTS applied=0 failed=1 skipped=0"]);
+    expect(result.code).toBe(1);
+    expect(raced.writes).toEqual([]);
+  } finally {
+    await raced.stop();
+  }
+
+  // A truncated tree listing: apply rejects rather than guess the next number.
+  const truncated = fakeGitHub({ main: { [SHARD]: before }, pulls: [], branches: [], truncated: true });
+  try {
+    const rejected = await apply(plan, { repo: "xaravel/framework", api: truncated.api, token: "bot-token" }).then(
+      () => null,
+      (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    );
+    expect(rejected).toContain("the listing is truncated");
+    expect(truncated.writes).toEqual([]);
+  } finally {
+    await truncated.stop();
   }
 
   // POST /pulls fails after the ref was created: the branch is deleted, so the next run retries; exit 1.
@@ -743,8 +827,13 @@ xaravelTest("XT-conformance-189", "an ESC-bot-<n>.md the Oracle uploads is commi
     await fake.stop();
   }
 
-  // An open Oracle-Escalation PR makes a new one wait.
-  const busy = fakeGitHub({ main: { [`${ESCALATIONS}/ESC-bot-1.md`]: "x" }, pulls: [{ number: 5, ref: "bot/oracle-esc-0000aaaa", files: [added(`${ESCALATIONS}/ESC-bot-2.md`)] }], branches: ["bot/oracle-esc-0000aaaa"] });
+  // An open Oracle-Escalation PR whose ESC-bot names every Test ID of the proposal makes it wait.
+  const pendingText = text.replace("# ESC-bot-1: ", "# ESC-bot-2: ");
+  const busy = fakeGitHub({
+    main: { [`${ESCALATIONS}/ESC-bot-1.md`]: "x" },
+    pulls: [{ number: 5, ref: "bot/oracle-esc-0000aaaa", files: [added(`${ESCALATIONS}/ESC-bot-2.md`)], head: { [`${ESCALATIONS}/ESC-bot-2.md`]: pendingText } }],
+    branches: ["bot/oracle-esc-0000aaaa"],
+  });
   try {
     const result = await apply(collected.plan!, { repo: "xaravel/framework", api: busy.api, token: "bot-token" });
     expect(result.out).toEqual([`BOT-SKIP bot/oracle-esc-${sha8(text)} pending`, "BOTS applied=0 failed=0 skipped=1"]);
@@ -752,6 +841,60 @@ xaravelTest("XT-conformance-189", "an ESC-bot-<n>.md the Oracle uploads is commi
     expect(busy.writes).toEqual([]);
   } finally {
     await busy.stop();
+  }
+
+  // An open Oracle-Escalation PR about another Test ID: the proposal opens its own PR, numbered past the open one's.
+  const other = renderEscalation("ESC-bot-2", [{ sha256: "d".repeat(64), id: "Illuminate\\Tests\\Support\\SupportStrTest::testUuid", component: "support", first: "e".repeat(64), second: "f".repeat(64) }]);
+  const queued = fakeGitHub({
+    main: { [`${ESCALATIONS}/ESC-bot-1.md`]: "x" },
+    pulls: [{ number: 5, ref: "bot/oracle-esc-0000bbbb", files: [added(`${ESCALATIONS}/ESC-bot-2.md`)], head: { [`${ESCALATIONS}/ESC-bot-2.md`]: other } }],
+    branches: ["bot/oracle-esc-0000bbbb"],
+  });
+  try {
+    const branch = `bot/oracle-esc-${sha8(text)}`;
+    const result = await apply(collected.plan!, { repo: "xaravel/framework", api: queued.api, token: "bot-token" });
+    expect(result.out).toEqual(["BOT-PR https://github.example/xaravel/framework/pull/101", "BOTS applied=1 failed=0 skipped=0"]);
+    expect(result.code).toBe(0);
+    expect(Object.keys(queued.branch(branch))).toEqual([`${ESCALATIONS}/ESC-bot-3.md`]);
+    expect(queued.branch(branch)[`${ESCALATIONS}/ESC-bot-3.md`]).toContain("# ESC-bot-3: ");
+  } finally {
+    await queued.stop();
+  }
+
+  // A fork PR named like a bot branch, covering the same Test IDs, is ignored: the proposal opens its own PR.
+  const forked = fakeGitHub({
+    main: { [`${ESCALATIONS}/ESC-bot-1.md`]: "x" },
+    pulls: [{ number: 6, ref: "bot/oracle-esc-0000cccc", files: [added(`${ESCALATIONS}/ESC-bot-2.md`)], head: { [`${ESCALATIONS}/ESC-bot-2.md`]: pendingText }, repo: "someone/framework" }],
+    branches: [],
+  });
+  try {
+    const result = await apply(collected.plan!, { repo: "xaravel/framework", api: forked.api, token: "bot-token" });
+    expect(result.out).toEqual(["BOT-PR https://github.example/xaravel/framework/pull/101", "BOTS applied=1 failed=0 skipped=0"]);
+    expect(Object.keys(forked.branch(`bot/oracle-esc-${sha8(text)}`))).toEqual([`${ESCALATIONS}/ESC-bot-2.md`]);
+  } finally {
+    await forked.stop();
+  }
+
+  // Two escalations in one plan naming the same Test IDs: the second waits behind the PR this run opened.
+  const second = `${text}Seen again.\n`;
+  const twice: Plan = { ...collected.plan!, proposals: [...collected.plan!.proposals, { kind: "escalation", file: "ESC-bot-1.md", text: second, source: "https://github.example/xaravel/framework/actions/runs/9" }] };
+  const sameRun = fakeGitHub({ main: {}, pulls: [], branches: [] });
+  try {
+    const result = await apply(twice, { repo: "xaravel/framework", api: sameRun.api, token: "bot-token" });
+    expect(result.out).toEqual(["BOT-PR https://github.example/xaravel/framework/pull/101", `BOT-SKIP bot/oracle-esc-${sha8(second)} pending`, "BOTS applied=1 failed=0 skipped=1"]);
+    expect(result.code).toBe(0);
+  } finally {
+    await sameRun.stop();
+  }
+
+  // 1,200 ESC-bot files on main, past the contents API's 1,000-entry cap: the next is ESC-bot-1201.
+  const large = fakeGitHub({ main: Object.fromEntries(Array.from({ length: 1200 }, (_, i) => [`${ESCALATIONS}/ESC-bot-${i + 1}.md`, "x"])), pulls: [], branches: [] });
+  try {
+    const result = await apply(collected.plan!, { repo: "xaravel/framework", api: large.api, token: "bot-token" });
+    expect(result.out).toEqual(["BOT-PR https://github.example/xaravel/framework/pull/101", "BOTS applied=1 failed=0 skipped=0"]);
+    expect(Object.keys(large.branch(`bot/oracle-esc-${sha8(text)}`))).toEqual([`${ESCALATIONS}/ESC-bot-1201.md`]);
+  } finally {
+    await large.stop();
   }
 
   // An invalid file exits 1 naming it.
