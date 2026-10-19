@@ -256,6 +256,30 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   expect(m.bar(new XtBar())).toBe("matched");
   expect(m.bar("XtFoo")).toBe("matched");
   expect(thrown(() => m.bar("XtBar"))).toBeInstanceOf(NoMatchingExpectationException);
+  // A built-in constructor is a class too: `with(TypeError)` matches an instance and the string 'TypeError'.
+  const builtin = Mockery.mock(XtFoo);
+  builtin.shouldReceive("bar").with(TypeError).andReturn("builtin");
+  expect(builtin.bar(new TypeError("x"))).toBe("builtin");
+  expect(builtin.bar("TypeError")).toBe("builtin");
+
+  // A closure in with() is never a class (Expectation.php 949-980): it matches only itself, never its name or an
+  // object built from it with `new`.
+  const handler = function handler(): void {};
+  const byName = Mockery.mock(XtFoo);
+  byName.shouldReceive("run").with(handler).andReturn("matched");
+  expect(thrown(() => byName.run("handler"))).toBeInstanceOf(NoMatchingExpectationException);
+  function Ctor(this: object): void {}
+  const byInstance = Mockery.mock(XtFoo);
+  byInstance.shouldReceive("run").with(Ctor).andReturn("matched");
+  expect(thrown(() => byInstance.run(new (Ctor as unknown as new () => object)()))).toBeInstanceOf(NoMatchingExpectationException);
+  const same = function (): void {};
+  const byIdentity = Mockery.mock(XtFoo);
+  byIdentity.shouldReceive("run").with(same).andReturn("matched");
+  expect(byIdentity.run(same)).toBe("matched");
+  const other = Mockery.mock(XtFoo);
+  other.shouldReceive("run").with(function (): void {}).andReturn("matched");
+  expect(thrown(() => other.run(function (): void {}))).toBeInstanceOf(NoMatchingExpectationException);
+  Mockery.close();
 
   // andThrow() with a class-name string resolves only the grader's own exception classes (ESC-4.6-1 item 9): any
   // other name fails at setup with PHP's message, as `new $name` does.
