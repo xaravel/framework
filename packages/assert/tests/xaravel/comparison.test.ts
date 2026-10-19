@@ -16,7 +16,7 @@ const REQUESTS = "conformance/oracle-requests/4.1.jsonl";
 const FIXTURES = "conformance/fixtures/assert";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 
-xaravelTest("XT-assert-1", "phpLooseEquals and phpStrictEquals match the signed PHP 8.5 Oracle truth table over every ordered pair", () => {
+xaravelTest("XT-assert-1", "phpLooseEquals and phpStrictEquals match the signed PHP 8.5 Oracle truth table over every ordered pair (FR-116.2)", () => {
   const requests = readRequests(join(root, REQUESTS));
   expect(requests).toHaveLength(4);
   const publicKey = readFileSync(join(root, PUBLIC_KEY), "utf8");
@@ -37,7 +37,7 @@ xaravelTest("XT-assert-1", "phpLooseEquals and phpStrictEquals match the signed 
   expect(pairs).toBeGreaterThan(0);
 });
 
-xaravelTest("XT-assert-2", "a branded PhpArray and an object exposing xaravel.php.props compare as the PHP array or object they stand for", () => {
+xaravelTest("XT-assert-2", "a branded PhpArray and an object exposing xaravel.php.props compare as the PHP array or object they stand for (FR-116.2, AD-15.9)", () => {
   // Branded map vs list, plain object and another branded map.
   const list = ["b", "a"];
   const ordered = new BrandedArray([[0, "b"], [1, "a"]]);
@@ -209,7 +209,7 @@ xaravelTest("XT-assert-2", "a branded PhpArray and an object exposing xaravel.ph
   expect(imports.filter((path) => path.startsWith("@xaravel/"))).toEqual([]);
 });
 
-xaravelTest("XT-assert-3", "@xaravel/assert has no graded-package edge or import, and its exports and prototypes are frozen", () => {
+xaravelTest("XT-assert-3", "@xaravel/assert has no graded-package edge or import, and its exports and prototypes are frozen (AD-15.9)", () => {
   // The package graph check (AD-2) passes, and the manifest declares no runtime edge at all.
   const graph = Bun.spawnSync([process.execPath, "tools/graph/graph.ts"], { cwd: root, stdout: "pipe", stderr: "pipe" });
   expect({ exitCode: graph.exitCode, stderr: graph.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });

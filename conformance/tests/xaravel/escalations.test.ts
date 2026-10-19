@@ -181,7 +181,7 @@ function judge(headRef: string, files: PrFile[], head: Record<string, string>, c
   return evaluatePr({ root: base, headRef, files, changedFiles, contents }).violations;
 }
 
-xaravelTest("XT-conformance-26", "an Escalation requires test_ids, an FR-114 trigger, proposed and evidence, and a PR whose branch Story ID differs from the file's fails (FR-114, AD-16)", async () => {
+xaravelTest("XT-conformance-26", "an Escalation requires test_ids, an FR-114 trigger, proposed and evidence, and a PR whose branch Story ID differs from the file's fails (FR-114.1, AD-16.9)", async () => {
   const check = (text: string, file = esc("ESC-9.1-1")) => parseEscalation(file, text).violations;
 
   // Valid escalation, for every FR-114 trigger.
@@ -345,7 +345,7 @@ xaravelTest("XT-conformance-26", "an Escalation requires test_ids, an FR-114 tri
   expect(botPr.code).toBe(0);
 });
 
-xaravelTest("XT-conformance-27", "a decision file requires decision: approved | rejected and a rationale (FR-114, AD-16)", async () => {
+xaravelTest("XT-conformance-27", "a decision file requires decision: approved | rejected and a rationale (FR-114.4, AD-16.9)", async () => {
   const check = (text: string, file = dec("ESC-9.1-1")) => parseDecision(file, text).violations;
 
   // Valid decisions.
@@ -480,7 +480,7 @@ xaravelTest("XT-conformance-27", "a decision file requires decision: approved | 
   expect((await runCli(["digest"])).code).toBe(2);
 });
 
-xaravelTest("XT-conformance-28", "escalationStatus(id) is open with no decision file, and approved or rejected only once a valid decision file exists (FR-114, AD-16)", async () => {
+xaravelTest("XT-conformance-28", "escalationStatus(id) is open with no decision file, and approved or rejected only once a valid decision file exists (FR-114, AD-16.9)", async () => {
   await withRoot(
     {
       [esc("ESC-9.1-1")]: escalation(),
@@ -537,7 +537,7 @@ xaravelTest("XT-conformance-28", "escalationStatus(id) is open with no decision 
   expect(() => escalationStatus("ESC-999.999-999")).toThrow("unknown Escalation");
 });
 
-xaravelTest("XT-conformance-29", "bot-raised ESC-bot-<n> Escalations are accepted with no Story ID (FR-114, AD-16)", async () => {
+xaravelTest("XT-conformance-29", "bot-raised ESC-bot-<n> Escalations are accepted with no Story ID (FR-114, AD-16.8)", async () => {
   expect(parseEscalationId("ESC-bot-3")).toEqual({ id: "ESC-bot-3", storyId: null, n: 3 });
   expect(parseEscalationId("ESC-9.1-12")).toEqual({ id: "ESC-9.1-12", storyId: "9.1", n: 12 });
   for (const bad of ["ESC-bot-0", "ESC-bot-01", "ESC-bot", "ESC-Bot-1", "ESC-bot-9.1-1", "ESC-0.1-1", "ESC-9.1", "esc-9.1-1", "ESC-9.1-1.md"]) {
@@ -567,7 +567,7 @@ xaravelTest("XT-conformance-29", "bot-raised ESC-bot-<n> Escalations are accepte
   expect(story.stderr).toContain(`wrong story: ${esc("ESC-bot-1")}: branch story/9.1 may raise only ESC-9.1-<n> (AD-16)`);
 });
 
-xaravelTest("XT-conformance-184", "check warns on stdout, exit 0, for each open ESC-<story-id>-<n> whose Story manifest is done (AD-16)", async () => {
+xaravelTest("XT-conformance-184", "check warns on stdout, exit 0, for each open ESC-<story-id>-<n> whose Story manifest is done (AD-16.9)", async () => {
   const ok = (escalations: number, decisions: number): string => `Escalations OK: ${escalations} escalation(s) and ${decisions} decision(s) valid.\n`;
   const warning = (id: string, storyId: string): string =>
     `warning: open escalation: ${esc(id)} has no ruling, but Story ${storyId} (${story(storyId)}) is done; it waits on the Maintainer (AD-16)`;

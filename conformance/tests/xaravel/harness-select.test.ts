@@ -127,7 +127,7 @@ const pad = (i: number): string => String(i).padStart(3, "0");
 // ---------------------------------------------------------------------------
 // XT-conformance-106
 
-xaravelTest("XT-conformance-106", "bun run harness --fast prints the seed it used and samples deterministically from it (FR-9)", async () => {
+xaravelTest("XT-conformance-106", "bun run harness --fast prints the seed it used and samples deterministically from it (FR-9.1)", async () => {
   // 150 Test IDs, none ported: nothing is spawned, every sampled line is missing, and skip lines match it.
   const ids = range(150, (i) => s(`test${pad(i)}`));
   const dir = makeRoot(ids.map((id) => ({ id, status: "skip" })));
@@ -178,7 +178,7 @@ xaravelTest("XT-conformance-106", "bun run harness --fast prints the seed it use
 // ---------------------------------------------------------------------------
 // XT-conformance-107
 
-xaravelTest("XT-conformance-107", "--seed <s> run twice on the same tree runs the same sample, and malformed options are usage errors (FR-9)", async () => {
+xaravelTest("XT-conformance-107", "--seed <s> run twice on the same tree runs the same sample, and malformed options are usage errors (FR-9.1)", async () => {
   const ids = range(150, (i) => s(`test${pad(i)}`));
   const passing = new Set(ids.filter((_, i) => i % 3 === 0));
   // Tests that pass where the line says skip make differences, so the output depends on which IDs were sampled.
@@ -218,7 +218,7 @@ xaravelTest("XT-conformance-107", "--seed <s> run twice on the same tree runs th
 // ---------------------------------------------------------------------------
 // XT-conformance-108
 
-xaravelTest("XT-conformance-108", "--component, --id and --story run only the matching Test IDs, and --story reads the manifest's test_ids (FR-9)", async () => {
+xaravelTest("XT-conformance-108", "--component, --id and --story run only the matching Test IDs, and --story reads the manifest's test_ids (FR-9.1)", async () => {
   const seenDir = mkdtempSync(join(tmpdir(), "xt-select-seen-"));
   roots.push(seenDir);
   const seen = join(seenDir, "seen");
@@ -403,7 +403,7 @@ xaravelTest("XT-conformance-108", "--component, --id and --story run only the ma
 // ---------------------------------------------------------------------------
 // XT-conformance-109
 
-xaravelTest("XT-conformance-109", "a fast run says in its report that it is a sample, and its SUMMARY never counts as a full run for the done check (FR-9)", async () => {
+xaravelTest("XT-conformance-109", "a fast run says in its report that it is a sample, and its SUMMARY never counts as a full run for the done check (FR-9.1)", async () => {
   const dir = makeRoot([s("testA"), s("testB"), c("testA")].map((id, i) => ({ id, status: "skip", component: i === 2 ? "collections" : "support" })));
   const fast = await harness(dir, { seed: "s1", components: ["support"] });
   expect(fast.out).toEqual(["FAST seed=s1 sample=2/2", "SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0 mode=fast seed=s1"]);

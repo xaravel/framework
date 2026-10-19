@@ -149,7 +149,7 @@ const checkCli = (fx: Fixture, env: Record<string, string> = {}) =>
 
 const snapshot = (fx: Fixture, name: string): string => join(fx.repo, "conformance", "upstream", name);
 
-xaravelTest("XT-conformance-39", "bun run upstream:sync checks out each of the four repos at its pinned tag into conformance/upstream/{framework,ai,mcp,boost}/ (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-39", "bun run upstream:sync checks out each of the four repos at its pinned tag into conformance/upstream/{framework,ai,mcp,boost}/ (FR-1, AD-15.3)", async () => {
   // The repository's pin: exactly four entries, at the recorded tags, with full SHAs.
   const pin = readPin(root);
   expect(pin.map((entry) => [entry.repo, entry.tag])).toEqual([
@@ -302,7 +302,7 @@ xaravelTest("XT-conformance-39", "bun run upstream:sync checks out each of the f
   });
 });
 
-xaravelTest("XT-conformance-40", "each snapshot directory's tree hash matches the pin, and any local modification fails the snapshot check (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-40", "each snapshot directory's tree hash matches the pin, and any local modification fails the snapshot check (FR-1, AD-15.3)", async () => {
   // treeHash is git's own: nested dirs, `a.b` before `a/`, the exec bit, a symlink, CRLF bytes.
   const dir = mkdtempSync(join(tmpdir(), "xaravel-tree-"));
   try {
@@ -375,7 +375,7 @@ xaravelTest("XT-conformance-40", "each snapshot directory's tree hash matches th
   });
 });
 
-xaravelTest("XT-conformance-41", "with no network, tools read Upstream source only from conformance/upstream/ and never fetch; the check and the reader never run git (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-41", "with no network, tools read Upstream source only from conformance/upstream/ and never fetch; the check and the reader never run git (FR-1, AD-15.3)", async () => {
   await withFixture(async (fx) => {
     expect((await syncCli(fx)).code).toBe(0);
 

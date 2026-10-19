@@ -226,7 +226,7 @@ function setLock(fx: Fixture, name: string, packages: Pkg[], json: string = comp
 
 // ---------------------------------------------------------------------------
 
-xaravelTest("XT-conformance-42", "the image built from conformance/oracle/Dockerfile and the committed locks holds PHP 8.5.11 and the snapshot with its dev dependencies, and two builds install the same package set (FR-6, OQ-9)", async () => {
+xaravelTest("XT-conformance-42", "the image built from conformance/oracle/Dockerfile and the committed locks holds PHP 8.5.11 and the snapshot with its dev dependencies, and two builds install the same package set (FR-6.2, OQ-9, AD-15.4)", async () => {
   // Composer's content-hash, emulated: the relevant keys ksorted, json_encode with flags 0.
   expect(contentHash('{"name":"a/b","description":"ignored","require":{"php":"^8.3"},"extra":{}}')).toBe(md5('{"extra":[],"name":"a\\/b","require":{"php":"^8.3"}}'));
   expect(contentHash('{"name":"x","extra":{"label":"café 😀","path":"A\\\\B"}}')).toBe(md5('{"extra":{"label":"caf\\u00e9 \\ud83d\\ude00","path":"A\\\\B"},"name":"x"}'));
@@ -665,7 +665,7 @@ xaravelTest("XT-conformance-42", "the image built from conformance/oracle/Docker
   }
 }, 30_000);
 
-xaravelTest("XT-conformance-43", "CI publishes the image to GHCR tagged <Pin>-<imagehash>, and only oracle.yml#oracle holds packages: write or pushes (FR-6, AD-16)", () => {
+xaravelTest("XT-conformance-43", "CI publishes the image to GHCR tagged <Pin>-<imagehash>, and only oracle.yml#oracle holds packages: write or pushes (FR-6, AD-16.3)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "oracle.yml"), "utf8");
   type Step = Record<string, unknown> & { uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; if?: string };
   const workflow = Bun.YAML.parse(text) as {

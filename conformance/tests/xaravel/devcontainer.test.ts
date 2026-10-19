@@ -168,7 +168,7 @@ xaravelTest("XT-conformance-190", "the devcontainer is a non-root workspace with
 // ---------------------------------------------------------------------------
 // XT-conformance-191
 
-xaravelTest("XT-conformance-191", "inside the container the harness runs every alpha Variant: the PG* env reaches the sidecar, no CI or REDIS_* is set so the worktree's own redis-server starts on .cache/redis.sock, the runtime is non-root with the pinned Bun and redis-server, and CI fails when an alpha Variant is NOT-RUN in a full run (AD-17.4, AD-17.6)", async () => {
+xaravelTest("XT-conformance-191", "inside the container the harness runs every alpha Variant: the PG* env reaches the sidecar, no CI or REDIS_* is set so the worktree's own redis-server starts on .cache/redis.sock, the runtime is non-root with the pinned Bun and redis-server, and CI fails when an alpha Variant is NOT-RUN in a full run (AD-17.4, AD-17.6, FR-9.4)", async () => {
   const data = compose();
   const postgres = data.services["postgres"]!.environment!;
   const env = data.services["workspace"]!.environment!;
@@ -488,7 +488,7 @@ function walk(dir: string): string[] {
 
 xaravelTest(
   "XT-conformance-195",
-  "without a container engine, the harness, the tools and story:check run natively: a backend that isn't running is NOT-RUN, the pin check still passes, and no harness or done-check path references the container CLI or .devcontainer/ (AD-17.6, NFR-1)",
+  "without a container engine, the harness, the tools and story:check run natively: a backend that isn't running is NOT-RUN, the pin check still passes, and no harness or done-check path references the container CLI or .devcontainer/ (AD-17.6, FR-9.3, NFR-1)",
   async () => {
     // A PATH with only git and bun: no container CLI, no redis-server.
     const bin = tempDir("xt-dc-path-");

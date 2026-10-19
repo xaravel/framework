@@ -228,7 +228,7 @@ async function withRulesets(files: Record<string, unknown>, body: (dir: string) 
   }
 }
 
-xaravelTest("XT-conformance-30", ".github/rulesets/main.json matches the live ruleset and requires protected-paths and ownership, linear history, the merge queue and only the Maintainer as bypass; any difference exits 1 naming it (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-30", ".github/rulesets/main.json matches the live ruleset and requires protected-paths and ownership, linear history, the merge queue and only the Maintainer as bypass; any difference exits 1 naming it (AD-16.2, AD-28.2, AD-28.7)", async () => {
   // The committed main ruleset carries every invariant.
   expect(MAIN["name"]).toBe("Protect main");
   expect(MAIN["target"]).toBe("branch");
@@ -526,7 +526,7 @@ function workflow(top: string, jobs = "  build:\n    runs-on: ubuntu-latest\n   
 
 const READ = "permissions:\n  contents: read\n";
 
-xaravelTest("XT-conformance-31", "every workflow's top-level permissions are contents: read, and write scopes appear only in the oracle, dashboard and release jobs (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-31", "every workflow's top-level permissions are contents: read, and write scopes appear only in the oracle, dashboard and release jobs (AD-16.3, AD-28)", async () => {
   expect([...ALLOWED_WRITE_JOBS]).toEqual(["oracle.yml#oracle", "dashboard.yml#dashboard", "release.yml#release"]);
   const check = (text: string) => checkWorkflow(".github/workflows/x.yml", text);
 
@@ -647,7 +647,7 @@ const OK_RULES: Record<string, ActiveRule[]> = {
   "story/probe": [],
 };
 
-xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* by live rules, `bun run ruleset:identity` verifies it, and docs/ops/identities.md documents the setup (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* by live rules, `bun run ruleset:identity` verifies it, and docs/ops/identities.md documents the setup (AD-16.3, AD-28)", async () => {
   const tags = liveOf(TAGS, 102);
   expect(identityViolations(OK_RULES, tags)).toEqual([]);
   expect(identityViolations(OK_RULES, tags, { login: "bot", roleName: "write", orgAdmin: false })).toEqual([]);
@@ -758,7 +758,7 @@ const FRAMEWORK_INSTALL = [
   "",
 ].join("\n");
 
-xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun audit` and fails on high or critical advisories (AD-16, NFR-5)", () => {
+xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun audit` and fails on high or critical advisories (AD-16.3, AD-28.5, NFR-5)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
   const ci = Bun.YAML.parse(text) as {
     on: Record<string, unknown>;

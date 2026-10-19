@@ -157,7 +157,7 @@ async function runPr(pr: FakePr, rootDir: string): Promise<{ code: number; stdou
   }
 }
 
-xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-16's globs, including itself, excludes the four conformance subdirectories and marks contracts after-phase:1 (AD-16)", () => {
+xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-16's globs, including itself, excludes the four conformance subdirectories and marks contracts after-phase:1 (FR-112.1, AD-16.1)", () => {
   const include = (pattern: string, afterPhase: number | null = null) => ({ pattern, exclude: false, afterPhase });
   const exclude = (pattern: string) => ({ pattern, exclude: true, afterPhase: null });
   expect(entries).toEqual([
@@ -264,7 +264,7 @@ xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-1
   expect(markedPhases(parseList("/a/ after-phase:3\n/b/\n/c/ after-phase:1\n!/d/ after-phase:3\n"))).toEqual([1, 3]);
 });
 
-xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every protected glob owned by the Maintainer, leaves fixtures unowned, and fails on divergence (AD-16)", async () => {
+xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every protected glob owned by the Maintainer, leaves fixtures unowned, and fails on divergence (AD-16.1)", async () => {
   // The live repository, at whatever Phase it has reached.
   const phases = activePhases(root);
   const committed = readFileSync(join(root, CODEOWNERS_PATH), "utf8");
@@ -320,7 +320,7 @@ xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every
   });
 });
 
-xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fails the check, listing each protected file it touches; allowed paths pass (AD-16)", async () => {
+xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fails the check, listing each protected file it touches; allowed paths pass (FR-112.2, AD-16.2)", async () => {
   await withRoots([fixtureRoot(), fixtureRoot({ phase1Exit: true })], async ([base, exited]) => {
     // Story touches the grader: only the grader file is listed.
     const grader = await runPr({ files: [file("packages/support/src/y.ts"), file("packages/assert/src/x.ts")] }, base!);
@@ -492,7 +492,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
   });
 });
 
-xaravelTest("XT-conformance-20", "the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16)", async () => {
+xaravelTest("XT-conformance-20", "the protected-paths workflow triggers only on pull_request_target and merge_group, never checks out or runs PR code, and takes PR data only from the API (AD-16.2, AD-16.3)", async () => {
   // A PR changing the workflow itself is a Protected Path change.
   const workflowFile = [file(".github/workflows/protected-paths.yml")];
   const own = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files: workflowFile, changedFiles: 1, reviews, headSha: HEAD });
@@ -581,7 +581,7 @@ xaravelTest("XT-conformance-20", "the protected-paths workflow triggers only on 
   expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
 });
 
-xaravelTest("XT-conformance-21", "an Infrastructure PR touching Protected Paths passes only with the Maintainer's latest decisive review approving the head commit (AD-16)", async () => {
+xaravelTest("XT-conformance-21", "an Infrastructure PR touching Protected Paths passes only with the Maintainer's latest decisive review approving the head commit (FR-112.3, AD-16.2)", async () => {
   const files = [file("tools/graph/graph.ts"), file("stories/1.4.md")];
   const decide = (reviews: PrReview[]) => evaluatePr(entries, NONE, { files, changedFiles: files.length, reviews, headSha: HEAD });
 

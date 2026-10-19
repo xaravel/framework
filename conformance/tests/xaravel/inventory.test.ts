@@ -178,7 +178,7 @@ function committed(): Map<string, InventoryEntry[]> {
 // ---------------------------------------------------------------------------
 // XT-conformance-49
 
-xaravelTest("XT-conformance-49", "bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
+xaravelTest("XT-conformance-49", "bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1.1, FR-1.3, FR-1.6, FR-1.7, AD-15.2, AD-15.3)", async () => {
   await withFixture(async (fx) => {
     // Foreign files and the Oracle non-determinism findings (Story 2.6) are never touched (or read); a framework
     // Component no longer generated is read for carry-over, then deleted.
@@ -369,7 +369,7 @@ xaravelTest("XT-conformance-49", "bun run inventory writes conformance/inventory
 // ---------------------------------------------------------------------------
 // XT-conformance-50
 
-xaravelTest("XT-conformance-50", "each #[DataProvider] or #[TestWith] dataset, runtime-computed ones included, is its own entry, an unnamed dataset using its numeric index (FR-1)", async () => {
+xaravelTest("XT-conformance-50", "each #[DataProvider] or #[TestWith] dataset, runtime-computed ones included, is its own entry, an unnamed dataset using its numeric index (FR-1.1)", async () => {
   await withFixture((fx) => {
     generate(fx.dir, { local: fx.local, php: fx.php });
     const bus = parseInventory(fx.inventory()["bus.jsonl"]!, "bus.jsonl");
@@ -402,7 +402,7 @@ xaravelTest("XT-conformance-50", "each #[DataProvider] or #[TestWith] dataset, r
 // ---------------------------------------------------------------------------
 // XT-conformance-51
 
-xaravelTest("XT-conformance-51", "backends come from #[RequiresDatabase], the Integration/Database/<Engine> directories, InteractsWithRedis and the Integration/Queue suite, otherwise [\"none\"] (FR-1)", async () => {
+xaravelTest("XT-conformance-51", "backends come from #[RequiresDatabase], the Integration/Database/<Engine> directories, InteractsWithRedis and the Integration/Queue suite, otherwise [\"none\"] (FR-1.3)", async () => {
   const b = (fields: Partial<Pick<RawTest, "file" | "requiresDatabase" | "redis">>): string[] => backendsFor({ id: "T::t", file: "tests/Support/XTest.php", requiresDatabase: null, redis: false, ...fields });
   expect(b({})).toEqual(["none"]);
   expect(b({ requiresDatabase: ["sqlite", "mysql", "sqlite"] })).toEqual(["mysql", "sqlite"]);
@@ -479,7 +479,7 @@ xaravelTest("XT-conformance-51", "backends come from #[RequiresDatabase], the In
 // ---------------------------------------------------------------------------
 // XT-conformance-52
 
-xaravelTest("XT-conformance-52", "hash covers the method's code tokens and the dataset export; whitespace and comments leave it, code and data change it; generation is byte-identical (FR-7)", async () => {
+xaravelTest("XT-conformance-52", "hash covers the method's code tokens and the dataset export; whitespace and comments leave it, code and data change it; generation is byte-identical (FR-1.2, FR-1.6, FR-7)", async () => {
   const base = testHash(TOKENS, "[0=>'a']");
   expect(base).toMatch(/^[0-9a-f]{64}$/);
   expect(normaliseTokens(TOKENS)).toEqual(["function", "testIt", "(", ")", "{", "$this", "->", "assertTrue", "(", "true", ")", ";", "}"]);

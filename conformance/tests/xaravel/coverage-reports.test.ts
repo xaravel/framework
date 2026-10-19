@@ -53,7 +53,7 @@ function tempRoot(scan: string, pkg: string, edits: Record<string, [string, stri
 const ASSERT = "tools/assert-coverage/coverage.ts";
 const MOCKERY = "tools/mockery-coverage/coverage.ts";
 
-xaravelTest("XT-conformance-182", "assert:coverage counts a name only when calling it records an assertion or changes a declared test's outcome: an emptied assertTrue or expectException is missing, an unknown scan name is missing, and a usage error exits 2", () => {
+xaravelTest("XT-conformance-182", "assert:coverage counts a name only when calling it records an assertion or changes a declared test's outcome: an emptied assertTrue or expectException is missing, an unknown scan name is missing, and a usage error exits 2 (FR-116.1)", () => {
   // The repository: exit 0, nothing missing.
   const repo = run(ASSERT, []);
   expect({ exitCode: repo.exitCode, stderr: repo.stderr }).toEqual({ exitCode: 0, stderr: "" });

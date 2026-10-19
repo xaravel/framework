@@ -98,7 +98,7 @@ async function env(extra: Record<string, string | undefined> = {}): Promise<Reco
 // ---------------------------------------------------------------------------
 // XT-conformance-115
 
-xaravelTest("XT-conformance-115", "a PR run lists every unexpected failure and every unexpected pass its own Story owns, and exits 1; a clean run exits 0 (FR-3, AD-15, AD-28)", async () => {
+xaravelTest("XT-conformance-115", "a PR run lists every unexpected failure and every unexpected pass its own Story owns, and exits 1; a clean run exits 0 (FR-3, FR-4.1, FR-4.2, FR-9.4, AD-15, AD-28)", async () => {
   // Clean: every result matches its line.
   const clean = makeRoot({
     "conformance/inventory/support.jsonl": inventory([{ id: A }]),
@@ -220,7 +220,7 @@ xaravelTest("XT-conformance-115", "a PR run lists every unexpected failure and e
   expect(scripts["ratchet"]).toBe("bun tools/ratchet/ratchet.ts");
 }, 120_000);
 
-xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under pull_request_target with the base's grader, read-only, with no secrets, on every alpha Variant's service (FR-3, AD-16, AD-28)", () => {
+xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under pull_request_target with the base's grader, read-only, with no secrets, on every alpha Variant's service (FR-3, FR-9.4, AD-16.2, AD-16.3, AD-28.1, AD-28.2)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "ratchet.yml"), "utf8");
   type Step = { uses?: string; if?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "working-directory"?: string; "continue-on-error"?: unknown };
   const workflow = Bun.YAML.parse(text) as {
@@ -306,7 +306,7 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
   }
 });
 
-xaravelTest("XT-conformance-247", "the overlay restores every Protected Path and the sprint status from the base into the PR tree, and leaves the PR's own code (AD-16)", () => {
+xaravelTest("XT-conformance-247", "the overlay restores every Protected Path and the sprint status from the base into the PR tree, and leaves the PR's own code (AD-16.2)", () => {
   const list = "/conformance/\n!/conformance/expectations/\n/stories/\n/tools/\n/packages/assert/\n/packages/contracts/ after-phase:1\n/bunfig.toml\n/package.json\n";
   const base = makeRoot({
     "conformance/protected-paths": list,
@@ -377,7 +377,7 @@ xaravelTest("XT-conformance-247", "the overlay restores every Protected Path and
 // ---------------------------------------------------------------------------
 // XT-conformance-118
 
-xaravelTest("XT-conformance-118", "an unexpected pass owned by no open Story warns and exits 0 on main; one owned by another open Story warns in this run and fails that Story's own run (FR-3, AD-16)", async () => {
+xaravelTest("XT-conformance-118", "an unexpected pass owned by no open Story warns and exits 0 on main; one owned by another open Story warns in this run and fails that Story's own run (FR-3, AD-16.6)", async () => {
   const dir = makeRoot({
     "conformance/inventory/support.jsonl": inventory([{ id: A }, { id: B }]),
     [SHARD]: shard([

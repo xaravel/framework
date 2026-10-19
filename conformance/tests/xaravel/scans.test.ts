@@ -793,7 +793,7 @@ xaravelTest("XT-conformance-249", "the committed singletons.json and boot-only-s
 // ---------------------------------------------------------------------------
 // XT-conformance-85
 
-xaravelTest("XT-conformance-85", "the scan outputs are Protected and CODEOWNERS assigns them to the Maintainer (AD-16)", () => {
+xaravelTest("XT-conformance-85", "the scan outputs are Protected and CODEOWNERS assigns them to the Maintainer (AD-16.1)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   const codeowners = readFileSync(join(root, CODEOWNERS_PATH), "utf8");

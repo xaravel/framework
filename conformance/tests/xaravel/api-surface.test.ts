@@ -243,7 +243,7 @@ const FIXTURE_LINES = [
 // ---------------------------------------------------------------------------
 // XT-conformance-80
 
-xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<component>.jsonl, one schema-valid, sorted line per public declaration and member, from a stand-in image runner (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<component>.jsonl, one schema-valid, sorted line per public declaration and member, from a stand-in image runner (FR-6, AD-15.5)", () => {
   withRoot((fx) => {
     // A stray Component file goes; the citation files stay.
     writeFileSync(join(fx.dir, API_SURFACE_DIR, "stale.jsonl"), "{}\n");
@@ -368,7 +368,7 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
   expect(run(["--bogus"], () => "").code).toBe(2);
 });
 
-phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface (FR-6)", () => {
+phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface (FR-6, AD-15.5)", () => {
   const result = runFixture(FIXTURE_CLASSES);
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
@@ -415,7 +415,7 @@ phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared me
   });
 });
 
-xaravelTest("XT-conformance-199", "the committed conformance/api-surface/<component>.jsonl files are schema-valid, canonical, sorted and LF-terminated (AD-15)", () => {
+xaravelTest("XT-conformance-199", "the committed conformance/api-surface/<component>.jsonl files are schema-valid, canonical, sorted and LF-terminated (AD-15.5)", () => {
   const dir = join(root, API_SURFACE_DIR);
   const names = existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".jsonl") && name !== "additions.jsonl" && name !== "exceptions.jsonl") : [];
   // The export is committed (bun run oracle:api-surface --local …), so at least one Component file exists.
@@ -475,7 +475,7 @@ phpTest("XT-conformance-200", "the real api-surface.php run twice on the fixture
 // ---------------------------------------------------------------------------
 // XT-conformance-82
 
-xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist empty and Protected, and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15, AD-16)", () => {
+xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist empty and Protected, and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15.5, AD-16.1)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   for (const name of ["additions.jsonl", "exceptions.jsonl", "schema.json", "support.jsonl"]) {

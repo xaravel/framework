@@ -259,7 +259,7 @@ xaravelTest("XT-conformance-13", "Foundation depending on a later-Phase package 
   );
 });
 
-xaravelTest("XT-conformance-14", "a graded package with a runtime edge to a grader package fails; only testing -> mockery (dependency) and support -> mockery (optional peer) pass, and devDependencies on the grader always pass; a grader package depends on nothing graded (AD-2)", async () => {
+xaravelTest("XT-conformance-14", "a graded package with a runtime edge to a grader package fails; only testing -> mockery (dependency) and support -> mockery (optional peer) pass, and devDependencies on the grader always pass; a grader package depends on nothing graded (AD-2, AD-15.9)", async () => {
   const graders = { assert: { phase: 0, kind: "grader" }, mockery: { phase: 0, kind: "grader" } };
   const optionalMockery = { peerDependencies: workspace("@xaravel/mockery"), peerDependenciesMeta: { "@xaravel/mockery": { optional: true } } };
   await withFixtures(
