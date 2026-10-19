@@ -1,6 +1,6 @@
-// PHPUnit 13.4.3's `PHPUnit\Framework\TestCase` (Story 4.4), as far as Ported
-// Tests use it: Assert's assertions plus the exception, output and
-// assertion-count expectations, and `createMock`.
+// PHPUnit 13.4.3's `PHPUnit\Framework\TestCase` (Stories 4.4 and 4.7), as far
+// as Ported Tests use it: Assert's assertions plus the exception, output and
+// assertion-count expectations, and PHPUnit's test doubles.
 //
 // A `portedTest` whose `this` is a TestCase runs PHPUnit's lifecycle
 // (`runLifecycle`/`runTest`): the output buffer starts, then `setUp`, the
@@ -9,25 +9,38 @@
 // The expectations live in a module WeakMap, per instance, which
 // `portedTest` reads through `testCaseState`.
 //
-// `createMock(X)` delegates to Mockery (ESC-4.4-1): it calls
-// `globalThis[Symbol.for('xaravel.mockery.mock')]`, which `@xaravel/mockery`
-// installs on load, and throws an error naming `@xaravel/mockery` when it is
-// not loaded. The grader never imports Mockery.
+// Test doubles (Story 4.7, `decisions/ESC-4.4-2.md` item 6): `createMock(X)`,
+// `createPartialMock(X, [...])` and `getMockBuilder(X)->…->getMock()` return
+// PHPUnit mock objects, registered with this TestCase and verified after the
+// body (`portedTest`'s lifecycle); `createStub(X)` returns a test stub, which
+// is never verified. `X` is a class or a contract token. Mockery stays
+// reachable through `Mockery.mock()`; `createMock` never calls it. Counts that
+// have no assertion kind (`addToAssertionCount`, mock verification) go to the
+// counting context's kind-less count (AssertionCounter).
 import { argumentError, stringParam } from "../comparison/PhpValues";
-import { recordAssertion } from "../declarations/AssertionCounter";
+import { addToAssertionCount, recordAssertion } from "../declarations/AssertionCounter";
 import { Assert, type ClassOrInterface } from "./Assert";
 import { classOrInterface } from "./Constraints";
+import { type DoubleTarget, testDouble } from "./MockObject/Generator/Generator";
+import { MockBuilder } from "./MockObject/MockBuilder";
+import type { MockObject } from "./MockObject/Runtime/Interface/MockObject";
+import type { Stub } from "./MockObject/Runtime/Interface/Stub";
+import { AnyInvokedCount } from "./MockObject/Runtime/Rule/AnyInvokedCount";
+import { InvokedAtLeastOnce } from "./MockObject/Runtime/Rule/InvokedAtLeastOnce";
+import { InvokedCount } from "./MockObject/Runtime/Rule/InvokedCount";
+import { Exception as ExceptionStub } from "./MockObject/Runtime/Stub/Exception";
 import { ExceptionExpectation } from "./TestCase/ExceptionExpectation";
+import { MockObjectRegistry } from "./TestCase/MockObjectRegistry";
 import { OutputBuffer } from "./TestCase/OutputBuffer";
-import { codeOf, messageOf } from "./Throwable";
+import { codeOf, isThrowable, messageOf } from "./Throwable";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
-const MOCKERY_MOCK = Symbol.for("xaravel.mockery.mock");
 
 /** One TestCase instance's expectations. Internal. */
 export interface TestCaseState {
   readonly exception: ExceptionExpectation;
   readonly output: OutputBuffer;
+  readonly mockObjects: MockObjectRegistry;
 }
 
 const states = new WeakMap<object, TestCaseState>();
@@ -77,9 +90,11 @@ function intOrString(method: string, value: unknown): number | string {
 export class TestCase extends Assert {
   static readonly [CLASS_FQCN]: string = "PHPUnit\\Framework\\TestCase";
 
+  #numberOfAssertionsPerformed = 0;
+
   constructor() {
     super();
-    states.set(this, { exception: new ExceptionExpectation(), output: new OutputBuffer() });
+    states.set(this, { exception: new ExceptionExpectation(), output: new OutputBuffer(), mockObjects: new MockObjectRegistry() });
   }
 
   /** The test passes only if the body throws an instance of `exception` (a class or an interface token). */
@@ -125,16 +140,89 @@ export class TestCase extends Assert {
     state(this).output.expectString(stringArgument("expectOutputString", "expectedString", expectedString));
   }
 
-  /** Mockery's mock of `type` (ESC-4.4-1): `@xaravel/mockery` must be loaded. */
-  createMock<T extends object>(type: abstract new (...args: never[]) => T): T;
-  createMock(type: unknown): unknown;
-  createMock(type: unknown): unknown {
-    const mock: unknown = (globalThis as Record<symbol, unknown>)[MOCKERY_MOCK];
-    if (typeof mock !== "function") {
-      throw new Error(
-        "PHPUnit\\Framework\\TestCase::createMock() delegates to @xaravel/mockery, which is not loaded: import '@xaravel/mockery' (a devDependency of the test's package) so it installs globalThis[Symbol.for('xaravel.mockery.mock')]",
-      );
+  // Story 4.7: test doubles
+
+  /** A mock object of `type` (a class or a contract token): every method doubled, no constructor run; registered and verified after the body. */
+  createMock<T>(type: abstract new (...args: never[]) => T): T & MockObject;
+  createMock(type: DoubleTarget): MockObject;
+  createMock(type: DoubleTarget): MockObject {
+    const mock = testDouble(type, true, [], [], false, (count) => this.addToAssertionCount(count)) as MockObject;
+    this.registerMockObject(type, mock);
+    return mock;
+  }
+
+  /** A mock object of `type` whose `methods` are doubled and whose other methods are the real ones; no constructor run. */
+  createPartialMock<T>(type: abstract new (...args: never[]) => T, methods: readonly string[]): T & MockObject;
+  createPartialMock(type: DoubleTarget, methods: readonly string[]): MockObject;
+  createPartialMock(type: DoubleTarget, methods: readonly string[]): MockObject {
+    return new MockBuilder(this, type).disableOriginalConstructor().disableOriginalClone().onlyMethods(methods).getMock();
+  }
+
+  /** A test stub of `type`: every method doubled, no constructor run, no `expects()`, never verified. */
+  static createStub<T>(type: abstract new (...args: never[]) => T): T & Stub;
+  static createStub(type: DoubleTarget): Stub;
+  static createStub(type: DoubleTarget): Stub {
+    return testDouble(type, false, [], [], false, () => {}) as Stub;
+  }
+
+  /** `self::createStub($type)` called as `$this->createStub($type)`. */
+  createStub<T>(type: abstract new (...args: never[]) => T): T & Stub;
+  createStub(type: DoubleTarget): Stub;
+  createStub(type: DoubleTarget): Stub {
+    return TestCase.createStub(type);
+  }
+
+  getMockBuilder<T>(className: abstract new (...args: never[]) => T): MockBuilder<T>;
+  getMockBuilder(className: DoubleTarget): MockBuilder;
+  getMockBuilder(className: DoubleTarget): MockBuilder {
+    return new MockBuilder(this, className);
+  }
+
+  /** Internal (PHPUnit's `@internal registerMockObject`): `mockObject` is verified after the body. */
+  registerMockObject(type: unknown, mockObject: MockObject): void {
+    state(this).mockObjects.register(type, mockObject);
+  }
+
+  /** Counts `count` assertions that have no kind (Story 4.7): they count for the zero-assertion rule, never in the report's kinds. */
+  addToAssertionCount(count: number): void {
+    addToAssertionCount(count);
+    this.#numberOfAssertionsPerformed += count;
+  }
+
+  /** The kind-less assertions this TestCase counted. */
+  numberOfAssertionsPerformed(): number {
+    return this.#numberOfAssertionsPerformed;
+  }
+
+  /** A matcher that matches any number of calls (PHPUnit deprecates it; the deprecation is not emitted, ESC-4.7-1 item 3). */
+  any(): AnyInvokedCount {
+    return new AnyInvokedCount();
+  }
+
+  never(): InvokedCount {
+    return new InvokedCount(0);
+  }
+
+  atLeastOnce(): InvokedAtLeastOnce {
+    return new InvokedAtLeastOnce();
+  }
+
+  once(): InvokedCount {
+    return new InvokedCount(1);
+  }
+
+  exactly(count: number): InvokedCount {
+    if (typeof count !== "number" || !Number.isSafeInteger(count)) {
+      throw new TypeError(`PHPUnit\\Framework\\TestCase::exactly(): Argument #1 ($count) must be of type int, ${typeof count} given`);
     }
-    return (mock as (type: unknown) => unknown)(type);
+    return new InvokedCount(count);
+  }
+
+  /** A stub that throws `exception`, for `willReturnOnConsecutiveCalls(…)` and `willReturn(…)`. */
+  throwException(exception: Error): ExceptionStub {
+    if (!isThrowable(exception)) {
+      throw new TypeError(`PHPUnit\\Framework\\TestCase::throwException(): Argument #1 ($exception) must be of type Throwable, ${typeof exception} given`);
+    }
+    return new ExceptionStub(exception);
   }
 }

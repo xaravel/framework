@@ -2,15 +2,37 @@
 title: 'Story 4.7: PHPUnit test doubles'
 type: 'feature'
 created: '2026-10-18'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: '805c3f28c712619825a32667f2f4ab43ae01d1fd'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/_bmad-output/implementation-artifacts/spec-4-4-exception-output-file-and-json-assertions-and-the-coverage-report.md'
   - '{project-root}/docs/ops/oracle.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      A contract-token double assumes the token's brand is `Symbol.for(<FQCN>)`, and a token without an FQCN brands as `class@anonymous`, so `instanceof` could silently be false.
+    evidence: |-
+      Review pass 2026-10-18 (Blind Hunter, Edge Case Hunter E5). Maybe-false: Epic 10's contract tokens do not exist yet. To settle it, check Story 10.1's token shape (its `Symbol.hasInstance` brand and FQCN), against ESC-4.7-1 item 5.
+    location: >-
+      packages/assert/src/Framework/MockObject/Generator/Generator.ts readTarget
+    severity: medium (unverified)
+  - summary: >-
+      Symbol-keyed methods (for example `[Symbol.iterator]`) and accessors stay real on a double, so iterating a mock may run the real iterator over uninitialized state.
+    evidence: |-
+      Review pass 2026-10-18 (Edge Case Hunter E8). Maybe-false: PHP has no symbol-keyed methods, so whether ports map `IteratorAggregate::getIterator` to `[Symbol.iterator]` is decided later. To settle it, check how the Collection or iteration port (Epic 14) and the Upstream tests that `createMock` an iterable class behave.
+    location: >-
+      packages/assert/src/Framework/MockObject/Generator/Generator.ts readTarget
+    severity: medium (unverified)
+  - summary: >-
+      `assertArraySubset` records `assertThat` before its argument checks, so a call that throws `InvalidArgumentException` counts one `assertThat`, while the Inventory records none.
+    evidence: |-
+      Review pass 2026-10-18 (Blind Hunter). Laravel's `Illuminate\Testing\Assert::assertArraySubset` throws before calling `PHPUnit::assertThat`. Moving the record after the checks makes `tools/assert-coverage/coverage.ts`'s no-argument probe (`recordsAssertion`) see nothing, so `assert:coverage` exits 1 and XT-assert-14 fails. The fix needs an `OUTCOME_PROBES` entry or a real probe argument in `tools/assert-coverage/` (Protected). Target: a Maintainer-approved Infrastructure change, or the next `assert` follow-up Story.
+    location: >-
+      packages/assert/src/Framework/Assert.ts assertArraySubset; tools/assert-coverage/coverage.ts recordsAssertion
+    severity: low
 ---
 
 <intent-contract>
@@ -162,7 +184,60 @@ The PHP twin is `class XtDouble` with untyped methods `bar($x = null, $y = null)
 
 ## Spec Change Log
 
+- 2026-10-18, implementation. Local unsigned Oracle runs (PHP 8.5.11 against `/tmp/xaravel-inv/framework`) settled six points the spec left open or got wrong. No compared cell was weakened.
+  - **The cell helper's TestCase.** `xt_case47` runs on `new XtCase47('testDouble')`, a `TestCase` subclass the setup declares, not on `new BareTestCase('xt')`. `BareTestCase` is final, and with a test method that does not exist, PHPUnit's metadata parser fails `assert(method_exists($className, $methodName))` in `MockObjectRegistry::verify` and in `any()`.
+  - **Omitted arguments.** PHPUnit's generated method passes every declared parameter, so `bar(1)` on `bar($x = null, $y = null)` is `XtDouble::bar(1, null)`. The matrix's "Too few args" row is therefore `Parameter $y … Failed asserting that null matches expected 2.`, and "Parameter count … is too low" comes from `baz()` with `with(1)`. The port passes an omitted declared argument as `null`.
+  - **`willReturnMap` rows.** The local Oracle run shows PHP pads `[[1, 'a']]` to `bar`'s two parameters, so `bar(1)` returns `'a'`. The port normalizes rows as `normalizeValueMap` does, with `null` as each default, instead of leaving them unpadded. ESC-4.7-1 item 2 records this.
+  - **Over-count counting.** `handleExceptionFromInvokedCountRule` counts any `ExpectationFailedException` whose first frame is `InvokedCount`, including a direct `exactly(n)->verify()`. The port marks every exception `InvokedCount` throws.
+  - **PHPUnit 13 rules the matrix does not list.** These are ported because the local Oracle run shows them: `MethodParametersAlreadyConfiguredForAnotherMatcherException` (`with()` on two matchers of one method), and `MethodNameNotConfiguredException` from `willReturn()` before `method()` and from verify.
+  - **Contract tokens.** ESC-4.7-1 gains item 5. A token double reads its method names from `token[Symbol.for('xaravel.contract.methods')]`, but it has no parameter names, and a bare symbol has no method list.
+
 ## Review Triage Log
+
+### 2026-10-18 — Review pass
+- verdicts: 37 findings — high 0, medium 9, low 18, false 7, maybe-false 3
+- findings:
+  - Blind Hunter
+    - `[low]` `defer` assertArraySubset records `assertThat` before its argument checks, though Laravel throws before calling assertThat. The move was tried and reverted: `tools/assert-coverage/coverage.ts` (`recordsAssertion`) probes each assertion with no arguments and needs a recorded kind, so the report showed `missing assert: assertArraySubset` and XT-assert-14 failed. The fix needs an `OUTCOME_PROBES` entry in `tools/**` (Protected, outside this Story). It is recorded in `deferred`.
+    - `[medium]` `patch` Doubles made without a constructor run no field initializers (fields read `undefined`), and twins mask it with `?? null` — documented in ESC-4.7-1 item 2 and the README; each `?? null` cites it. Grouped with E3, E4, E7.
+    - `[medium]` `patch` A partial mock's real method that reads `#private` fields throws — same root cause and fix as the row above.
+    - `[low]` `patch` ESC-4.7-1 item 2 calls unsigned local Oracle runs "signed" — wording corrected. The `review` status while fixtures are unsigned is the established flow (Story 4.6); CI signs them on the PR.
+    - `[false]` `reject` The code adopts ESC-4.7-1's proposals before a ruling — the AGENTS.md rule was followed: the Escalation is raised, DIV-6 is within DIV-1..12, and the ACs are recorded as conditional (Epic 4 lesson).
+    - `[medium]` `patch` `parameterInfo` drops whole lists to `fn.length` for `x = null`, `...rest` and trailing commas — top-level parsing added, plus a default-parameter twin check. Grouped with E1, E2, V1.
+    - `[low]` `patch` `StringContains.ignoreLineEndings` has no caller and is untested — removed. Grouped with V-other1.
+    - `[low]` `patch` The `method` guard is case-sensitive — now lowercased. The `expects` collision part is rejected: it would need a new guard, and it is unlikely (no Upstream class has an `expects` method).
+    - `[low]` `reject` Unused `clear()`, the stored `type`, `hasParametersRule` and the no-op `disableOriginalClone` — no caller diverges. They are PHPUnit-shaped surface for the notice port, and `disableOriginalClone` is called by `createPartialMock`.
+    - `[low]` `reject` The request file can't be regenerated from the repo — same convention as Stories 4.4 and 4.6. The test detects drift between cells and the committed line.
+    - `[low]` `patch` XT-assert-13's comment says XT-assert-15 pins the `XtService::run` message — comment corrected. XT-assert-13's subject is the absence of delegation; the message template is pinned by XT-assert-15 on XtDouble.
+    - `[low]` `patch` A vacuous `toThrow(TypeError)` on calling `undefined` — deleted.
+    - `[maybe-false]` `defer` A token double assumes the token's brand symbol — Epic 10 tokens don't exist yet. Settle it when Story 10.1 defines the brand (ESC-4.7-1 item 5). Grouped with E5.
+    - `[low]` `patch` `willReturnMap` throws an invented TypeError for a Constraint method name — now returns the map unnormalized, as PHPUnit does.
+    - `[low]` `reject` Extra counts after a non-PHPUnit error in `Parameters` — only reachable when a constraint throws a non-assertion error. The fix adds branches.
+    - `[low]` `reject` `readTarget` runs three times per builder — a performance nit on test setup, with no behaviour change.
+  - Edge Case Hunter
+    - `[medium]` `patch` E1: default parameters make `parameterInfo` fall back to `fn.length` — grouped with B6.
+    - `[medium]` `patch` E2: `willReturnMap` truncates full-arity rows when the count is too low — grouped with B6. It is fixed by the parameter parsing.
+    - `[medium]` `patch` E3: field initializers are skipped without a constructor — grouped with B2.
+    - `[medium]` `patch` E4: `#private` access crashes in partial mocks — grouped with B2.
+    - `[maybe-false]` `defer` E5: a token without an FQCN brands as `class@anonymous` — grouped with B13.
+    - `[false]` `reject` E6: a target function without a prototype gives a raw TypeError — that is a loud failure on invalid input, which is correct behaviour.
+    - `[low]` `patch` E7: built-in subclasses lose internal slots on `Object.create` — documented with B2. It needs no code change.
+    - `[maybe-false]` `defer` E8: symbol-keyed methods (`[Symbol.iterator]`) stay real on doubles — this depends on how later Stories port `IteratorAggregate`. If true, the severity is medium; settle it with Story 14.x's `Collection` iteration port.
+    - `[low]` `reject` E9: a constructor that freezes `this` or returns another object — unlikely, and it fails loudly in `defineProperty`.
+    - `[low]` `patch` E10: the case-insensitive `method` guard — grouped with B8.
+    - `[low]` `patch` E11: `addToAssertionCount` rejects negatives that PHPUnit accepts — it now accepts any safe integer.
+    - `[false]` `reject` E12: the spec names `BareTestCase` but the code uses `XtCase47` — the Spec Change Log already records why.
+    - `[false]` `reject` E13: the orphaned `xaravel.mockery.mock` hook — it is already routed to Story 4.8 by ESC-4.7-1 item 4, since this Story may not edit `packages/mockery/**`.
+  - Verification Gap
+    - `[medium]` `patch` V1: no test covers the `parameterInfo` fallback — grouped with B6. A default-parameter twin was added.
+    - `[medium]` `patch` V2: mock verification after a matched expected exception is unpinned — a declared fixture test was added, and XT-assert-15 asserts its failure message.
+    - `[low]` `patch` V-other1: `ignoreLineEndings` is dead code — grouped with B7.
+    - `[low]` `patch` V-other2: the lifecycle failure checks run only after the fixture comparison — moved before it.
+  - Intent Alignment
+    - `[low]` `reject` I1: the tests use synthetic twins, not Upstream call sites — the Story is a grader Story (`test_ids: []`). Ported Upstream tests belong to their Components' Stories.
+    - `[false]` `reject` I2: the ACs hold only conditionally on ESC-4.7-1 — this is by design and recorded in the ACs (Epic 4 lesson).
+    - `[false]` `reject` I3: the fixtures are unsigned — `oracle.yml#story` signs them on the PR (the Story 4.6 precedent). A missing fixture fails rather than skips.
+    - `[false]` `reject` I4: the kind-less count reaches Story 5.3's report reading — the report shape is unchanged (four keys), and it is raised as ESC-4.7-1 item 1.
 
 ## Design Notes
 
@@ -197,3 +272,49 @@ m.bar(1);                                       // handler.invoke(new Invocation
 - A local unsigned Oracle run in a throwaway copy outside the repo, then the tests against it -- expected: 0 mismatches.
 - `bun run oracle:story check 4.7`, `bun run escalations:check`, `bun run assert:coverage`, `bun run mockery:coverage`, `bun run ownership:check`, `bun run graph:check`, `bun run scaffold:check` -- expected: pass.
 - `bun run typecheck`, `bun run lint`, `bun test` -- expected: no new failures.
+
+## Auto Run Result
+
+Status: done
+
+- **Change:** PHPUnit 13.4.3's test doubles are ported into `@xaravel/assert`.
+  - `createMock`, `createPartialMock` and `createStub` (static and instance) are covered, as is `getMockBuilder(…)` with `onlyMethods`, `setConstructorArgs` and `disable/enableOriginalConstructor`, ending in `getMock()`.
+  - The double's API is `expects`, `method`, `with` and the `will*` family (`willReturn`, `willReturnOnConsecutiveCalls`, `willReturnCallback`, `willReturnMap`, `willReturnSelf`, `willThrowException`, plus `throwException`).
+  - The matchers are `once`, `never`, `any`, `exactly` and `atLeastOnce`.
+  - Verification runs in `portedTest`'s lifecycle (`verifyTest`).
+  - A kind-less assertion count is added (`addToAssertionCount`, `numberOfAssertionsPerformed`).
+  - `stringContains` is added, with PHPUnit's `$case`→`ignoreCase` quirk.
+  - `assertArraySubset` now records `assertThat`.
+  - `createMock` no longer reads Mockery's global (`decisions/ESC-4.4-2.md` item 6).
+  - ESC-4.7-1 records five contract items.
+- **Files:**
+  - `packages/assert/src/Framework/MockObject/**`: the port, which includes Generator, MockBuilder/TestDoubleBuilder, ConfigurableMethod, Invocation, InvocationHandler, Matcher, the rules, the stubs, the interfaces and 8 exceptions.
+  - `src/Framework/TestCase/MockObjectRegistry.ts`: registration and verification.
+  - `src/Framework/TestCase.ts`: the double API, matchers and counting.
+  - `src/declarations/{AssertionCounter,portedTest}.ts`: the kind-less count and the verify step.
+  - `src/Framework/{Assert,Constraints}.ts`: `stringContains`, `ignoreCase`, and the `assertThat` kind.
+  - `src/index.ts`: the `MockBuilder` export and the types.
+  - `tests/xaravel/{doubles.test.ts,double-cells.ts,fixtures/doubles.fixture.ts}`: XT-assert-15 and XT-assert-16.
+  - `tests/xaravel/{expectations.test.ts,fixtures/mock.fixture.ts}`: XT-assert-13 reworked to the ruling.
+  - `tests/xaravel/{assertions,comparison}.test.ts`: the XT-assert-8 kind and the XT-assert-3 export list.
+  - `packages/assert/README.md`.
+  - `conformance/oracle-requests/4.7.jsonl`: 3 requests.
+  - `conformance/escalations/ESC-4.7-1.md`.
+  - `stories/4.7.md` and `sprint-status.yaml`.
+- **Review:** 37 findings.
+  - Patched: 3 medium entries and 9 low.
+    - Medium: parameter parsing with defaults and variadics, plus a default-parameter twin; the verify-after-expected-exception fixture test; documentation of constructor-less doubles in ESC-4.7-1 item 2.
+    - Low: wording, the case-insensitive `method` guard, `willReturnMap` with a Constraint name, negative `addToAssertionCount`, removal of `ignoreLineEndings`, the XT-assert-13 comment, the vacuous check, and lifecycle checks moved before the fixture comparison.
+  - Deferred: 3.
+    - Token brand and symbol-keyed methods (both maybe-false, medium if true).
+    - `assertArraySubset`'s record position, which needs a `tools/assert-coverage` probe change.
+  - Rejected: the rest, with reasons in the Review Triage Log.
+- **Follow-up review recommended:** true, since 3 medium entries were patched on a first pass. The unverified risk is the new top-level `parameterInfo` parser (comments, templates, destructuring). It is checked against XtDouble's results and direct cases only, never against real Upstream-shaped TS ports.
+- **Verification:**
+  - These pass: `typecheck`, `lint`, `oracle:story check 4.7` (3 accepted), `escalations:check`, `assert:coverage` (0 missing), `mockery:coverage`, `ownership:check`, `graph:check` and `scaffold:check`.
+  - `bun test`: 155 pass and 2 fail. The 2 are XT-assert-15 and XT-assert-16, and their only problems are the 3 missing signed fixtures, which `oracle.yml#story` signs on the PR.
+  - The implementer's throwaway copy, with locally signed fixtures, matched every cell against real PHPUnit 13.4.3 on PHP 8.5.11. That copy was never committed, and `oracle.pub` was untouched.
+- **Residual risks:**
+  - ESC-4.7-1 is unruled, so both ACs are conditional on it: the kind-less count, the DIV-6 clause, the notices, the mockery leftover with the `epics.md:2110` reconciliation, and the token protocol.
+  - In-repo Oracle fidelity is unproven until the fixtures are signed.
+  - Constructor-less doubles skip JS field initializers.

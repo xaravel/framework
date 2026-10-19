@@ -1,5 +1,7 @@
-// Fixture for XT-assert-13 (Story 4.4): `createMock` delegates to the real
-// @xaravel/mockery (ESC-4.4-1). Not collected by the root `bun test`;
+// Fixture for XT-assert-13 (Story 4.4, reworked by Story 4.7 under
+// `decisions/ESC-4.4-2.md` item 6): `createMock` returns a PHPUnit mock object
+// whether or not @xaravel/mockery is loaded, and Mockery stays reachable
+// through `Mockery.mock()`. Not collected by the root `bun test`;
 // expectations.test.ts runs it twice:
 //
 //   XT_MOCK_MOCKERY=1 bun test ./packages/assert/tests/xaravel/fixtures/mock.fixture.ts
@@ -56,25 +58,25 @@ class XtCase extends TestCase {}
 
 const ID = "Tests\\Unit\\CreateMockTest";
 
-portedTest(`${ID}::testMetExpectation`, { case: XtCase }, function () {
-  const mock = this.createMock(XtService) as unknown as Mocked;
-  mock.shouldReceive("run").once().andReturn(5);
-  this.assertSame(5, mock.run());
+portedTest(`${ID}::testCreateMockIsPhpUnitDouble`, { case: XtCase }, function () {
+  const mock = this.createMock(XtService);
   this.assertInstanceOf(XtService, mock);
+  this.assertFalse("shouldReceive" in mock);
+  mock.expects(this.once()).method("run").willReturn(5);
+  this.assertSame(5, mock.run());
 });
 
 portedTest(`${ID}::testUnmetExpectation`, { case: XtCase }, function () {
-  const mock = this.createMock(XtService) as unknown as Mocked;
-  mock.shouldReceive("run").once();
+  this.createMock(XtService).expects(this.once()).method("run");
   this.assertTrue(true);
 });
 
-// The same unmet expectation through Mockery itself, for the message the createMock test must fail with.
+// Mockery itself, beside createMock.
 if (mockery !== null) {
   const { Mockery } = mockery;
-  portedTest(`${ID}::testUnmetExpectationThroughMockery`, { case: XtCase }, function () {
+  portedTest(`${ID}::testMockeryStillReachable`, { case: XtCase }, function () {
     const mock = Mockery.mock(XtService) as Mocked;
-    mock.shouldReceive("run").once();
-    this.assertTrue(true);
+    mock.shouldReceive("run").once().andReturn(5);
+    this.assertSame(5, mock.run());
   });
 }

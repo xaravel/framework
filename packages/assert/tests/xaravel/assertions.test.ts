@@ -100,8 +100,11 @@ test("XT-assert-8: each core assertion passes, fails with PHPUnit's message and 
   const counted = JSON.parse(readFileSync(probeFile, "utf8")) as Record<string, number>;
   expect(Object.keys(counted).sort()).toEqual([...ASSERTIONS].sort());
   const reports = jsonLines(readFileSync(reportFile, "utf8"));
+  // Laravel's assertArraySubset records the PHPUnit assertThat it calls, as the Inventory's recorder sees it
+  // (decisions/ESC-4.3-1.md item 8, Story 4.7).
+  const kinds = Object.keys(counted).map((name) => (name === "assertArraySubset" ? "assertThat" : name));
   expect(reports).toEqual([
-    { type: "ported", id: "Tests\\Unit\\AssertionsTest::testEveryAssertion", consequence: null, assertions: Object.fromEntries(Object.keys(counted).sort().map((name) => [name, 1])) },
+    { type: "ported", id: "Tests\\Unit\\AssertionsTest::testEveryAssertion", consequence: null, assertions: Object.fromEntries(kinds.sort().map((name) => [name, 1])) },
     // The nested assertNotEquals is not counted; the failing second call still counts (the kind is recorded first).
     { type: "ported", id: "Tests\\Unit\\AssertionsTest::testNotSameBooleans", consequence: null, assertions: { assertNotSame: 2 } },
     // An argument error counts.

@@ -1,6 +1,7 @@
 // Xaravel Tests for Story 4.4 (the exception, output, file and JSON
 // assertions, `createMock` and the coverage report; FR-116, AD-15). One test
-// per AC, in order. Like 4.1-4.3's tests these are plain bun:test:
+// per AC, in order. Story 4.7 reworked XT-assert-13 to the superseding ruling
+// `decisions/ESC-4.4-2.md` item 6: `createMock` makes a PHPUnit mock object. Like 4.1-4.3's tests these are plain bun:test:
 // `xaravelTest` is not used to test the grader itself.
 //
 // Every expected pass, failure message and exported string of XT-assert-11
@@ -19,6 +20,7 @@ import { ASSERTIONS_4_4 } from "../../src/Framework/Assert";
 import { ExceptionMessageMatchesRegularExpression } from "../../src/Framework/Constraint/Exception/ExceptionMessageMatchesRegularExpression";
 import { Assert, AssertionFailedError, Exception, ExpectationFailedException, TestCase } from "../../src/index";
 import { type DirectCell, EXCEPTION_CELLS, EXPECTATION_CELLS, FILE_CELLS, FILES, JSON_CELLS, JSON_MATRIX_EXPRS, JSON_V, JSON_W, type LifecycleCell, OUTPUT_MARKER, type Pair, REQUESTS, type RequestSpec, THAT_CELLS } from "./expectation-cells";
+import { runCase47 } from "./double-cells";
 import { decode, type Output, readRequests, readSignedFixture } from "./oracle-values";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -440,31 +442,35 @@ function runMockFixture(withMockery: boolean): MockRun {
   return { exitCode: child.exitCode, output, tests };
 }
 
-test("XT-assert-13: this.createMock(X) returns Mockery's mock of X when @xaravel/mockery is loaded (an unmet expectation fails the test with Mockery's message), and throws an error naming @xaravel/mockery when it is not", () => {
-  const loaded = runMockFixture(true);
-  // A met expectation: shouldReceive works, the mock is an X, and Mockery counts its expectation.
-  expect(loaded.tests.get("testMetExpectation")).toEqual({
-    report: { type: "ported", id: "Tests\\Unit\\CreateMockTest::testMetExpectation", consequence: null, assertions: { assertInstanceOf: 1, assertSame: 1, mockeryExpectation: 1 } },
-    error: null,
-  });
-  // An unmet one fails the test with Mockery's own InvalidCountException message for the same expectation.
-  const unmet = loaded.tests.get("testUnmetExpectation")?.error;
-  const reference = loaded.tests.get("testUnmetExpectationThroughMockery")?.error;
-  expect(reference?.name).toBe("InvalidCountException");
-  expect(reference?.message).toContain("should be called\n exactly 1 times but called 0 times.");
-  const anonymous = (text: string | undefined): string | undefined => text?.replace(/Mockery_\d+_/g, "Mockery_<n>_");
-  expect({ name: unmet?.name, message: anonymous(unmet?.message) }).toEqual({ name: reference!.name, message: anonymous(reference!.message) });
-  expect(loaded.output).toMatch(/1 pass\b/);
-  expect(loaded.output).toMatch(/2 fail\b/);
-
-  // Without Mockery loaded, createMock throws an error that names the package.
-  const unloaded = runMockFixture(false);
-  for (const label of ["testMetExpectation", "testUnmetExpectation"]) {
-    const error = unloaded.tests.get(label)?.error;
-    expect(error?.name).toBe("Error");
-    expect(error?.message).toContain("@xaravel/mockery");
+/** fixtures/mock.fixture.ts's class: the unmet expectation's message is the port's own PHPUnit message for it. XT-assert-15 pins the same template against the Oracle for `XtDouble::bar()` ("unmet once"). */
+class XtService {
+  run(): number {
+    return 1;
   }
-  expect(unloaded.tests.has("testUnmetExpectationThroughMockery")).toBe(false);
+}
+
+test("XT-assert-13: this.createMock(X) returns a PHPUnit mock object of X, with and without @xaravel/mockery loaded (decisions/ESC-4.4-2.md item 6): it is an X, has no shouldReceive, and an unmet expects(once()) fails the test with PHPUnit's message", () => {
+  const [, , unmetMessage] = runCase47(function () {
+    this.createMock(XtService).expects(this.once()).method("run");
+  });
+  expect(unmetMessage?.[1]).toBe("XtService::run() was expected to be invoked once but was never invoked.");
+  for (const withMockery of [true, false]) {
+    const run = runMockFixture(withMockery);
+    // A met expectation: the double is an X without Mockery's API, and only the assertions' kinds are reported.
+    expect({ withMockery, test: run.tests.get("testCreateMockIsPhpUnitDouble") }).toEqual({
+      withMockery,
+      test: { report: { type: "ported", id: "Tests\\Unit\\CreateMockTest::testCreateMockIsPhpUnitDouble", consequence: null, assertions: { assertFalse: 1, assertInstanceOf: 1, assertSame: 1 } }, error: null },
+    });
+    // An unmet one fails the test with PHPUnit's message.
+    expect({ withMockery, error: run.tests.get("testUnmetExpectation")?.error }).toEqual({ withMockery, error: { name: "ExpectationFailedException", message: unmetMessage![1] } });
+    // Mockery stays reachable through Mockery.mock().
+    expect({ withMockery, mockery: run.tests.get("testMockeryStillReachable") ?? null }).toEqual({
+      withMockery,
+      mockery: withMockery ? { report: { type: "ported", id: "Tests\\Unit\\CreateMockTest::testMockeryStillReachable", consequence: null, assertions: { assertSame: 1, mockeryExpectation: 1 } }, error: null } : null,
+    });
+    expect(run.output).toMatch(withMockery ? /\b2 pass\b/ : /\b1 pass\b/);
+    expect(run.output).toMatch(/\b1 fail\b/);
+  }
 }, CHILD_TIMEOUT);
 
 // ---------------------------------------------------------------------------
