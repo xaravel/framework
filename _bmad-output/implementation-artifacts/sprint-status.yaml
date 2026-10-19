@@ -82,7 +82,7 @@ development_status:
   5-1-variant-vocabulary-and-expectations-file: done  # ESC-5.1-1 (decisions/ESC-5.1-1.md, orchestrator ruling)
   5-2-skip-reason-rule-checks: done
   5-3-harness-runner-and-greppable-report: done
-  5-4-fast-mode-seeds-and-filters: backlog
+  5-4-fast-mode-seeds-and-filters: in-progress
   5-5-backend-isolation-per-worktree: backlog
   5-6-ratchet-and-expectations-line-ownership: backlog
   5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: backlog
