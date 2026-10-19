@@ -42,4 +42,14 @@ Exit codes: 0 pass, 1 violations or any failure, 2 usage error.
 
 When the Pin moves, `bun run pin:bump <tag> --apply` ([upstream.md](upstream.md)) edits the shards: it resets changed Test IDs to `skip` / `not-ported-yet`, renames lines of renamed Test IDs and deletes lines of removed ones. An `unknown:` line therefore means the Inventory changed without that step. Run `expectations:init` afterwards to add lines for new Test IDs. Stories edit only their own Test IDs' lines; Story 5.6 enforces that.
 
-Skip Reason rules and status values are checked by Story 5.2. Line ownership and the Ratchet are Story 5.6.
+Line ownership and the Ratchet are Story 5.6.
+
+## Skip Reasons
+
+```sh
+bun run expectations:reasons [--root <dir>]
+```
+
+`expectations:reasons` (`tools/expectations/reasons.ts`) checks every line's `status`, `reason` and `escalation` against the rules in [`conformance/README.md`](../../conformance/README.md), which also gives the FR-3 precedence order for choosing one reason when several apply. It also validates `conformance/deferred-items` (PRD §7.2) and `conformance/non-goals` (PRD §7.1), the Protected lists `deferred:<item>` and `out-of-scope:<NG-N>` must name. Each violation is one stderr line naming `<shard>:<line>`, the Test ID, the Variant and the rule, and the command exits 1; on success it prints `Skip Reasons OK: <n> line(s) checked.` Run `expectations:check` first: a line it rejects as malformed stops this command too. CI runs it in the required `check` job.
+
+Exit codes: 0 pass, 1 violations or any failure, 2 usage error.

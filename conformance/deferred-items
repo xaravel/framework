@@ -1,0 +1,44 @@
+# The post-alpha items a `deferred:<item>` Skip Reason may name (Story 5.2,
+# FR-3), transcribed from PRD §7.2 "After the alpha, as Phase 9 and beyond".
+# This file is Protected (AD-16): changing it is a Maintainer-approved change.
+# `bun run expectations:reasons` fails a `deferred:<item>` whose item is not
+# listed here. Slugs already used in `epics.md` are kept verbatim; Cache,
+# Broadcasting and other drivers `epics.md` routes to Maintainer Escalations
+# (memcached, apc, dynamodb, ably, mercure) are deliberately not listed.
+#
+# Format: UTF-8, LF, one item per line, sorted by UTF-16 code units and unique.
+# Lines starting with `#` and blank lines are ignored. An item matches
+# `^[a-z0-9]+(-[a-z0-9]+)*$`.
+
+# "The AI SDK (FR-103)."
+ai-sdk
+# "SQS and Beanstalkd."
+beanstalkd
+# "further Boost tools: record-rule and per-Package agent skills."
+boost-agent-skills
+# "Boost documentation search (FR-108)"
+boost-docs-search
+# "further Boost tools: record-rule and per-Package agent skills."
+boost-record-rule
+# "Browser tests (FR-102)."
+browser-tests
+# "`email:spoof` validation."
+email-spoof
+# "The rest of Foundation (Cloud and other integrations)."
+foundation-cloud
+# "The Laravel 14 re-sync Epic."
+laravel-14-resync
+# "Additional mail transports."
+mail-transports
+# "MySQL, MariaDB and SQL Server drivers."
+mariadb-driver
+# "MySQL, MariaDB and SQL Server drivers."
+mysql-driver
+# "Redis Cluster."
+redis-cluster
+# "MySQL, MariaDB and SQL Server drivers."
+sqlsrv-driver
+# "SQS and Beanstalkd."
+sqs
+# "Windows support."
+windows

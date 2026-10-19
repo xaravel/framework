@@ -796,6 +796,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
     "bun run test",
     // Story 5.1: the Expectations File check (FR-3, AD-15, XT-conformance-91).
     "bun run expectations:check",
+    // Story 5.2: the Skip Reason rule checks (FR-3, SM-C1, XT-conformance-92..99).
+    "bun run expectations:reasons",
     "bun run typecheck",
     "bun run lint",
     "bun run scaffold:check",
