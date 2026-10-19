@@ -88,6 +88,11 @@ function isBranded(value: object): boolean {
   return PHP_ARRAY in value;
 }
 
+/** A value branded `Symbol.for('xaravel.php.array')`, whose iterator yields `[key, value]` pairs. */
+function isBrandedArray(value: unknown): value is Iterable<readonly [Key, unknown]> & object {
+  return typeof value === "object" && value !== null && isBranded(value);
+}
+
 function hasProps(value: object): value is { [PHP_PROPS]: () => unknown } {
   return typeof (value as { [PHP_PROPS]?: unknown })[PHP_PROPS] === "function";
 }
@@ -485,7 +490,8 @@ export function phpStrictEquals(a: unknown, b: unknown): boolean {
   return new Comparison().strict(a, b);
 }
 
-// Internal exports for the comparators, the exporter and the assertions (Story 4.3). Not re-exported by index.ts.
+// Internal exports for the comparators, the exporter and the assertions (Story 4.3). index.ts re-exports
+// some of them as `php*` names for @xaravel/mockery (Epic 4 retro A1).
 export type { Entries, Key, Numeric };
 export {
   arrayEntries,
@@ -495,6 +501,7 @@ export {
   INT_MAX,
   INT_MIN,
   intKey,
+  isBrandedArray,
   isBuiltIn,
   isNumber,
   isPhpArray,

@@ -17,7 +17,7 @@
 // Mockery\Container::mock()')`.
 import { LogicException } from "../php/LogicException";
 import { lookupClass } from "../support/classes";
-import { classNameOf, FQCN, isBrandedArray, isClass, isClosure, isPhpArray, isPhpObject } from "../support/values";
+import { arrayEntries, classNameOf, FQCN, isClass, isClosure, isPhpArray, isPhpObject } from "../support/values";
 import { Exception } from "./Exception";
 import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
 import { InvalidOrderException } from "./Exception/InvalidOrderException";
@@ -219,7 +219,7 @@ export class Container {
       parsed.constructorArgs = [...(argument as unknown[])];
       return;
     }
-    const entries: [unknown, unknown][] = isBrandedArray(argument) ? [...argument].map(([key, value]) => [key, value]) : Object.entries(argument as Record<string, unknown>);
+    const entries = arrayEntries(argument);
     if (entries.every(([key], index) => key === index)) {
       parsed.constructorArgs = entries.map(([, value]) => value);
       return;

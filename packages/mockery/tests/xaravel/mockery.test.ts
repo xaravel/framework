@@ -11,6 +11,7 @@
 // committed line, so the TS twins are the scenarios the Oracle ran. A missing,
 // unsigned or errored fixture fails the test; it is never skipped.
 import { afterAll, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
@@ -31,6 +32,7 @@ import {
   Type,
   VerificationDirector,
 } from "../../src/index";
+import { phpObjectHandle } from "@xaravel/assert";
 import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
 import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
 import { type Output, readRequests, readSignedFixture } from "../../../assert/tests/xaravel/oracle-values";
@@ -355,6 +357,73 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   expect(Mockery.mock(XtFoo).allows(null)).toBeInstanceOf(HigherOrderMessage);
   // A Mockery\\Exception for an argument Container::mock cannot parse.
   expect(thrown(() => Mockery.mock(XtFoo, 5))).toBeInstanceOf(MockeryExceptionClass);
+  Mockery.close();
+});
+
+test("Epic 4 retro A1: Mockery prints PHP values as @xaravel/assert does", () => {
+  /** The NoMatchingExpectationException message of `m.bar(arg)` on a mock expecting `bar('nope')`. */
+  function message(arg: unknown): string {
+    const m = Mockery.mock();
+    m.shouldReceive("bar").with("nope");
+    const error = thrown(() => (m as unknown as { bar(value: unknown): unknown }).bar(arg));
+    expect(error).toBeInstanceOf(NoMatchingExpectationException);
+    return (error as Error).message;
+  }
+  const call = (args: string): RegExp => new RegExp(`^No matching handler found for Mockery_\\d+::bar\\(${args.replace(/[\\[\]().@]/g, "\\$&")}\\)\\. Either the method was unexpected`);
+
+  // A plain object with the props protocol is a PHP object, its properties those the protocol returns.
+  const props = message({
+    [Symbol.for("xaravel.php.props")]() {
+      return { a: 1 };
+    },
+  });
+  expect(props).toMatch(call("object(stdClass)"));
+  expect(props).toContain("'properties' => \n    array (\n      'a' => 1,\n    ),");
+
+  // An unregistered subclass of an FQCN-branded class is the parent's FQCN; an anonymous class is class@anonymous.
+  class Reg {}
+  Object.defineProperty(Reg, Symbol.for("xaravel.class.fqcn"), { value: "App\\Reg" });
+  class Sub extends Reg {}
+  const sub = new Sub();
+  expect(message(sub)).toMatch(call("object(App\\Reg)"));
+  expect(message(new (class {})())).toMatch(call("object(class@anonymous)"));
+
+  // -0 is an integral float, which reads as an int (DIV-9): it prints 0.
+  expect(message(-0)).toMatch(call("0"));
+  expect(message([-0])).toMatch(call("[0 => 0]"));
+  class Zero {
+    p = -0;
+  }
+  expect(message(new Zero())).toContain("'p' => 0,");
+
+  // An int-like string key is an int key, as PHP stores it.
+  expect(message({ "0": "x" })).toMatch(call("[0 => 'x']"));
+
+  // One object handle counter: the grader hands out a fresh object's handle first, and Mockery's identity hash is
+  // md5(<class>_<handle>) of that same handle.
+  const fresh = new Sub();
+  const handle = phpObjectHandle(fresh);
+  const identity = /'identity' => '#([0-9a-f]{32})'/.exec(message(fresh))?.[1];
+  expect(identity).toBe(createHash("md5").update(`App\\Reg_${handle}`).digest("hex"));
+
+  // The other consumers of the shared predicates: Mockery.type, Container::mock's argument parsing, the mock name.
+  const propsObject = {
+    [Symbol.for("xaravel.php.props")]() {
+      return { a: 1 };
+    },
+  };
+  expect(Mockery.type("object").match(propsObject)).toBe(true);
+  expect(Mockery.type("array").match(propsObject)).toBe(false);
+  // `{ "0": "a" }` is the PHP array [0 => 'a']: constructor arguments, not a quick definition of a method "0".
+  const withArgs = Mockery.mock({ "0": "a" }) as unknown as Record<string, () => unknown>;
+  let quick: unknown = null;
+  try {
+    quick = withArgs["0"]?.();
+  } catch {
+    // no method "0" was defined
+  }
+  expect(quick).not.toBe("a");
+  expect(Mockery.mock(new (class {})()).mockery_getName()).toContain("class@anonymous");
   Mockery.close();
 });
 
