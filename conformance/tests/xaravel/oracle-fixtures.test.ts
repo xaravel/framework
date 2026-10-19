@@ -20,6 +20,7 @@ import { join, resolve } from "node:path";
 import { checkRecords, parseEscalation } from "../../../tools/escalations/escalations";
 import { PHP_VERSION, type ImageRunner } from "../../../tools/inventory/inventory";
 import {
+  CLOCK_FILE,
   EVALUATE_SCRIPT,
   fingerprint,
   FIXTURE_DOMAIN,
@@ -31,6 +32,7 @@ import {
   parseNondeterminism,
   PUBLIC_KEY_FILE,
   readCommittedRequests,
+  readOracleClock,
   renderNondeterminism,
   verifyFixture,
   type FixturesOptions,
@@ -46,6 +48,8 @@ const REQUIRE = process.env["XARAVEL_PHP_FIXTURES"] === "require";
 const PHP = Bun.which("php");
 const LOCAL_INSTALL = "/tmp/xaravel-inv/framework";
 const TIMEOUT = 120_000;
+/** The committed recorded instant (decisions/ESC-5.7-1.md); fixture roots copy it. */
+const NOW = readFileSync(join(root, "conformance", "oracle", "clock"), "utf8").trimEnd();
 
 // ---------------------------------------------------------------------------
 // Fixture roots
@@ -73,13 +77,14 @@ function keyPair(): { pub: KeyObject; pem: string } {
   return { pub: pair.publicKey, pem: pair.privateKey.export({ type: "pkcs8", format: "pem" }).toString() };
 }
 
-/** A fixture root: the schema, the requests above, evaluate.php, a test oracle.pub and (optionally) a listing. */
+/** A fixture root: the schema, the requests above, evaluate.php, the clock, a test oracle.pub and (optionally) a listing. */
 function fixtureRoot(listing: string | null = renderNondeterminism({ sha256: UUID.sha256, id: UUID.id, reason: "Str::uuid() is random" }) + "\n"): Root {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-fixtures-"));
   mkdirSync(join(dir, REQUESTS_DIR), { recursive: true });
   mkdirSync(join(dir, "tools", "oracle"), { recursive: true });
   copyFileSync(join(root, SCHEMA_FILE), join(dir, SCHEMA_FILE));
   copyFileSync(join(root, EVALUATE_SCRIPT), join(dir, EVALUATE_SCRIPT));
+  copyFileSync(join(root, CLOCK_FILE), join(dir, CLOCK_FILE));
   for (const [component, text] of renderRequests(REQUESTS)) {
     writeFileSync(join(dir, REQUESTS_DIR, `${component}.jsonl`), text);
   }
@@ -112,7 +117,7 @@ function standIn(differ: (sha256: string, pass: number) => boolean = (sha256) =>
     const pass = calls.length;
     const requestsMount = mounts.find((mount) => mount.container === "/xaravel/requests")!;
     const lines: string[] = [];
-    for (const file of command.slice(4)) {
+    for (const file of command.slice(5)) {
       const text = readFileSync(join(requestsMount.host, file.slice("/xaravel/requests/".length)), "utf8");
       for (const line of text.split("\n").filter((entry) => entry !== "")) {
         const request = JSON.parse(line) as OracleRequest;
@@ -210,7 +215,8 @@ xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<compone
     expect(result.counts).toEqual({ database: 1, support: 1, view: 1 });
     expect(result.removed).toEqual([`support/${"0".repeat(64)}.json`, `gone/${"1".repeat(64)}.json`]);
 
-    // Image mode: evaluate.php and the request directory mounted read-only, the image's framework, the Pin's PHP, twice.
+    // Image mode: evaluate.php and the request directory mounted read-only, the image's framework, the Pin's PHP, the
+    // recorded instant (conformance/oracle/clock), twice.
     expect(stand.calls).toHaveLength(2);
     expect(stand.calls[0]).toEqual(stand.calls[1]!);
     expect(stand.calls[0]!.image).toBe("xaravel-oracle:test");
@@ -218,7 +224,7 @@ xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<compone
       { host: join(fx.dir, EVALUATE_SCRIPT), container: "/xaravel/evaluate.php" },
       { host: join(fx.dir, REQUESTS_DIR), container: "/xaravel/requests" },
     ]);
-    expect(stand.calls[0]!.command).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, "/xaravel/requests/database.jsonl", "/xaravel/requests/support.jsonl", "/xaravel/requests/view.jsonl"]);
+    expect(stand.calls[0]!.command).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, NOW, "/xaravel/requests/database.jsonl", "/xaravel/requests/support.jsonl", "/xaravel/requests/view.jsonl"]);
 
     // One fixture per unlisted request, at the right path; the listed random request gets none.
     const expected = REQUESTS.filter(({ request }) => request.sha256 !== UUID.sha256);
@@ -404,7 +410,7 @@ phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of e
     writeFileSync(files[0]!, picked.map((request) => `${JSON.stringify(request)}\n`).join(""));
     writeFileSync(files[1]!, extra.map((request) => `${JSON.stringify(request)}\n`).join(""));
     const once = (): string => {
-      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, ...files], { stdout: "pipe", stderr: "pipe" });
+      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, NOW, ...files], { stdout: "pipe", stderr: "pipe" });
       expect([proc.exitCode, proc.exitCode === 0 ? "" : proc.stderr.toString()]).toEqual([0, ""]);
       return proc.stdout.toString();
     };
@@ -438,6 +444,48 @@ phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of e
     expect(noisyFatal.error).toMatchObject({ stage: "fatal", class: null });
     expect((noisyFatal.error as { message: string }).message).toContain("NoisyFatal");
     expect(noisyFatal.results).toEqual([]);
+
+    // The frozen clock (decisions/ESC-5.7-1.md): a request that reads the clock records the recorded instant, shown in
+    // the default timezone, whatever the real date; a request's own setTestNow still overrides it.
+    const clock = [
+      makeRequest(`${STR}::testUuid`, "php-expr", {
+        bindings: {},
+        setup: [],
+        exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Carbon\\CarbonImmutable::now()->toIso8601String()", "\\Illuminate\\Support\\Carbon::today()->toIso8601String()", "\\Illuminate\\Support\\Carbon::now()->getTimezone()->getName()", "\\Illuminate\\Support\\Carbon::hasTestNow()"],
+      }),
+      makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: ["\\Illuminate\\Support\\Carbon::setTestNow('2001-02-03 04:05:06');"], exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Carbon\\CarbonImmutable::now()->toIso8601String()"] }),
+      makeRequest("Illuminate\\Tests\\View\\Blade\\BladeEchoTest::testEchos", "blade-render", { template: "{{ \\Illuminate\\Support\\Carbon::now()->toIso8601String() }}", data: {} }),
+      // An Upstream class's own setUp() (SupportCarbonTest freezes 2017-06-27 13:14:15 UTC) overrides the recorded instant.
+      makeRequest("Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonCanSerializeToJson", "date-format", { now: null, timezone: "UTC", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()"] }),
+      // A request that does not use Carbon is handed the object handles it had before the freeze (CLOCK_RESERVE).
+      makeRequest(`${STR}::testUuid`, "php-expr", { bindings: {}, setup: [], exprs: ["spl_object_id(new \\stdClass)"] }),
+    ];
+    const clockFile = join(dir, "clock.jsonl");
+    writeFileSync(clockFile, clock.map((request) => `${JSON.stringify(request)}\n`).join(""));
+    const clocked = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, NOW, clockFile], { stdout: "pipe", stderr: "pipe" });
+    expect([clocked.exitCode, clocked.exitCode === 0 ? "" : clocked.stderr.toString()]).toEqual([0, ""]);
+    const instant = NOW.replace(/Z$/, "+00:00");
+    expect(
+      clocked.stdout
+        .toString()
+        .trimEnd()
+        .split("\n")
+        .map((line) => (JSON.parse(line) as { output: unknown }).output),
+    ).toEqual([
+      { error: null, results: [{ value: instant }, { value: instant }, { value: `${NOW.slice(0, 10)}T00:00:00+00:00` }, { value: "UTC" }, { value: true }] },
+      { error: null, results: [{ value: "2001-02-03T04:05:06+00:00" }, { value: "2001-02-03T04:05:06+00:00" }] },
+      { error: null, results: [{ value: instant }] },
+      { error: null, results: [{ value: "2017-06-27T13:14:15+00:00" }] },
+      // 91 is what evaluate.php at baseline 3d47209 (before the freeze) gives for this request against the local
+      // install: measured once with `git show 3d47209:tools/oracle/evaluate.php` run from a temp copy.
+      { error: null, results: [{ value: { int: "91" } }] },
+    ]);
+
+    // A <now> that is not an instant YYYY-MM-DDTHH:MM:SSZ is refused before anything is evaluated.
+    for (const bogus of ["bogus", "2026-10-18 12:34:56", "2026-13-40T00:00:00Z", "2026-10-18T12:34:56+00:00", "2026-10-18T12:34:56Z\n"]) {
+      const refused = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, bogus, clockFile], { stdout: "pipe", stderr: "pipe" });
+      expect([bogus, refused.exitCode, refused.stdout.toString(), refused.stderr.toString()]).toEqual([bogus, 1, "", `evaluate: <now> ${bogus} is not an instant YYYY-MM-DDTHH:MM:SSZ\n`]);
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -576,6 +624,37 @@ xaravelTest("XT-conformance-222", "a pass that is not one {sha256, output} line 
       rmSync(fx.dir, { recursive: true, force: true });
     }
   }
+
+  // The recorded instant (decisions/ESC-5.7-1.md): one line YYYY-MM-DDTHH:MM:SSZ and LF. A missing or malformed
+  // conformance/oracle/clock fails the run before anything is evaluated: the runner is never called, nothing is written.
+  expect(readFileSync(join(root, CLOCK_FILE), "utf8")).toBe("2026-10-18T12:34:56Z\n");
+  expect(readOracleClock(root)).toBe("2026-10-18T12:34:56Z");
+  const clocks: { text: string | null; message: string }[] = [
+    { text: null, message: `${CLOCK_FILE} is missing` },
+    ...["2026-10-18 12:34:56\n", "2026-13-40T00:00:00Z\n", "2026-02-30T00:00:00Z\n", "2026-10-18T12:34:56Z\n2026-10-19T12:34:56Z\n", "2026-10-18T12:34:56Z", "2026-10-18T12:34:56Z\r\n", ""].map((text) => ({
+      text,
+      message: `${CLOCK_FILE}: ${JSON.stringify(text)} is not an instant YYYY-MM-DDTHH:MM:SSZ`,
+    })),
+  ];
+  for (const { text, message } of clocks) {
+    const fx = fixtureRoot();
+    try {
+      if (text === null) {
+        rmSync(join(fx.dir, CLOCK_FILE));
+      } else {
+        writeFileSync(join(fx.dir, CLOCK_FILE), text);
+      }
+      const stand = standIn();
+      const result = cliInProcess(["--root", fx.dir, "--image", "xaravel-oracle:test"], { ORACLE_SIGNING_KEY: fx.pem }, stand.runner);
+      expect([text, result.code]).toEqual([text, 1]);
+      expect(result.stderr).toContain(message);
+      expect(stand.calls).toEqual([]);
+      expect(existsSync(join(fx.dir, FIXTURES_DIR))).toBe(false);
+      expect(() => run(fx, { determinism: true })).toThrow(message);
+    } finally {
+      rmSync(fx.dir, { recursive: true, force: true });
+    }
+  }
 });
 
 xaravelTest("XT-conformance-223", "--local runs evaluate.php with --php against the local install, and refuses a local copy that differs from the snapshot (FR-6)", async () => {
@@ -600,7 +679,7 @@ xaravelTest("XT-conformance-223", "--local runs evaluate.php with --php against 
         'import { appendFileSync, readFileSync } from "node:fs";',
         "const args = process.argv.slice(2);",
         `appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args) + "\\n");`,
-        "for (const file of args.slice(3)) {",
+        "for (const file of args.slice(4)) {",
         '  for (const line of readFileSync(file, "utf8").split("\\n").filter((entry) => entry !== "")) {',
         "    const request = JSON.parse(line);",
         '    process.stdout.write(JSON.stringify({ sha256: request.sha256, output: { error: null, results: [{ value: request.id }] } }) + "\\n");',
@@ -616,7 +695,7 @@ xaravelTest("XT-conformance-223", "--local runs evaluate.php with --php against 
     expect(ok.stderr).toBe("");
     expect(ok.code).toBe(0);
     const argv = readFileSync(calls, "utf8").trimEnd().split("\n").map((entry) => JSON.parse(entry) as string[]);
-    const expected = [join(fx.dir, EVALUATE_SCRIPT), local, PHP_VERSION, ...["database", "support", "view"].map((component) => join(fx.dir, REQUESTS_DIR, `${component}.jsonl`))];
+    const expected = [join(fx.dir, EVALUATE_SCRIPT), local, PHP_VERSION, NOW, ...["database", "support", "view"].map((component) => join(fx.dir, REQUESTS_DIR, `${component}.jsonl`))];
     expect(argv).toEqual([expected, expected]);
 
     // A local copy that differs from the snapshot is refused before evaluate.php runs.
@@ -690,7 +769,11 @@ phpTest(
       setup: [],
       exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Illuminate\\Support\\Carbon::hasTestNow()"],
     });
-    const unfrozen = makeRequest("XT-conformance-197", "date-format", { now: null, timezone: "UTC", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::hasTestNow()"] });
+    // No `now`: the clock stays at the Oracle's recorded instant (decisions/ESC-5.7-1.md), which `now` above overrides.
+    const recorded = makeRequest("XT-conformance-197", "date-format", { now: null, timezone: "UTC", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Illuminate\\Support\\Carbon::hasTestNow()"] });
+    // A string `now` wins too; the recorded instant is shown in the request's timezone.
+    const literal = makeRequest("XT-conformance-197", "date-format", { now: "'2020-01-01 00:00:00'", timezone: "UTC", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()"] });
+    const berlin = makeRequest("XT-conformance-197", "date-format", { now: null, timezone: "Europe/Berlin", setup: [], exprs: ["\\Illuminate\\Support\\Carbon::now()->toIso8601String()", "\\Illuminate\\Support\\Carbon::now()->getTimezone()->getName()"] });
     const message = makeRequest("XT-conformance-197", "validation-message", {
       lines: { "validation.required": "The :attribute field is required." },
       data: { name: "" },
@@ -703,8 +786,8 @@ phpTest(
     const dir = mkdtempSync(join(tmpdir(), "xaravel-evaluate-xt-"));
     try {
       const file = join(dir, "5.9.jsonl");
-      writeFileSync(file, [date, unfrozen, message].map((request) => `${JSON.stringify(request)}\n`).join(""));
-      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, file], { stdout: "pipe", stderr: "pipe" });
+      writeFileSync(file, [date, recorded, literal, berlin, message].map((request) => `${JSON.stringify(request)}\n`).join(""));
+      const proc = Bun.spawnSync([PHP!, join(root, EVALUATE_SCRIPT), LOCAL_INSTALL, PHP_VERSION, NOW, file], { stdout: "pipe", stderr: "pipe" });
       expect([proc.exitCode, proc.exitCode === 0 ? "" : proc.stderr.toString()]).toEqual([0, ""]);
       const outputs = proc.stdout
         .toString()
@@ -713,7 +796,9 @@ phpTest(
         .map((line) => (JSON.parse(line) as { output: unknown }).output);
       expect(outputs).toEqual([
         { error: null, results: [{ value: "2017-06-27T13:14:15+00:00" }, { value: true }] },
-        { error: null, results: [{ value: false }] },
+        { error: null, results: [{ value: NOW.replace(/Z$/, "+00:00") }, { value: true }] },
+        { error: null, results: [{ value: "2020-01-01T00:00:00+00:00" }] },
+        { error: null, results: [{ value: "2026-10-18T14:34:56+02:00" }, { value: "Europe/Berlin" }] },
         { error: null, results: [{ value: true }, { value: "The name field is required." }] },
       ]);
     } finally {

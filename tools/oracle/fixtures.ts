@@ -34,6 +34,13 @@
 // listed `sha256` that is not a committed request, whose `id` differs from
 // the request's, or whose two outputs are identical fails the run too.
 //
+// The clock (decisions/ESC-5.7-1.md): `conformance/oracle/clock` records one
+// instant, `YYYY-MM-DDTHH:MM:SSZ` and LF. `evaluateOnce`, the only way any
+// caller (the batch, `oracle:recheck`, `oracle:story`) runs evaluate.php,
+// reads it and passes it as evaluate.php's `<now>`, which freezes Carbon to it
+// for every request. A missing or malformed file fails the run before anything
+// is evaluated.
+//
 // A fixture is one line: {"sha256":…,"output":<canonical JSON>,"signature":…}
 // and LF. `signature` is the base64 Ed25519 signature of `fixtureMessage`: the
 // UTF-8 bytes of `xaravel-oracle-fixture-v1\n` and `canonicalJson({output,
@@ -61,6 +68,8 @@ export const COMPONENT_NAME = /^[a-z][a-z0-9-]*$/;
 export const GENERATORS = "generators";
 export const PUBLIC_KEY_FILE = `${ORACLE_DIR}/oracle.pub`;
 export const NONDETERMINISM_FILE = `${ORACLE_DIR}/nondeterminism.jsonl`;
+/** The Oracle's recorded instant, which evaluate.php freezes Carbon to (decisions/ESC-5.7-1.md). */
+export const CLOCK_FILE = `${ORACLE_DIR}/clock`;
 export const EVALUATE_SCRIPT = "tools/oracle/evaluate.php";
 export const SIGNING_KEY_ENV = "ORACLE_SIGNING_KEY";
 /** The domain prefix of every signed fixture message, so a fixture signature is never valid for another object. */
@@ -398,12 +407,41 @@ export function refusePestRequests(dir: string, names: readonly string[]): void 
   }
 }
 
+const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/;
+
+/**
+ * Reads `conformance/oracle/clock`: exactly one line `YYYY-MM-DDTHH:MM:SSZ` and LF, a real UTC instant. Throws,
+ * naming the file, when it is missing or anything else.
+ */
+export function readOracleClock(root: string): string {
+  const path = join(root, CLOCK_FILE);
+  if (!existsSync(path)) {
+    throw new Error(`${CLOCK_FILE} is missing`);
+  }
+  const text = readFileSync(path, "utf8");
+  const instant = text.endsWith("\n") ? text.slice(0, -1) : null;
+  const match = instant === null ? null : INSTANT.exec(instant);
+  const valid =
+    match !== null &&
+    (() => {
+      const [year, month, day, hour, minute, second] = match.slice(1).map(Number) as [number, number, number, number, number, number];
+      const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+      return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day && date.getUTCHours() === hour && date.getUTCMinutes() === minute && date.getUTCSeconds() === second;
+    })();
+  if (!valid) {
+    throw new Error(`${CLOCK_FILE}: ${JSON.stringify(text)} is not an instant YYYY-MM-DDTHH:MM:SSZ followed by one LF`);
+  }
+  return instant!;
+}
+
 /**
  * Runs evaluate.php once over the request files `names` in the host directory `dir` and returns its stdout. Image
- * mode mounts the script and `dir` read-only; `--local` reads the files where they are. A Pest Test ID request is
- * refused before anything runs (`refusePestRequests`).
+ * mode mounts the script and `dir` read-only; `--local` reads the files where they are. The recorded instant
+ * (`readOracleClock`) is evaluate.php's `<now>`. A missing or malformed clock, or a Pest Test ID request, is refused
+ * before anything runs (`refusePestRequests`).
  */
 export function evaluateOnce(root: string, dir: string, names: readonly string[], options: Pick<FixturesOptions, "image" | "local" | "php" | "runner">): string {
+  const now = readOracleClock(root);
   refusePestRequests(dir, names);
   const script = resolve(root, EVALUATE_SCRIPT);
   if (!existsSync(script)) {
@@ -411,7 +449,7 @@ export function evaluateOnce(root: string, dir: string, names: readonly string[]
   }
   if (options.local !== undefined) {
     const local = resolve(options.local);
-    const command = [options.php ?? "php", script, local, PHP_VERSION, ...names.map((name) => join(dir, name))];
+    const command = [options.php ?? "php", script, local, PHP_VERSION, now, ...names.map((name) => join(dir, name))];
     const proc = Bun.spawnSync(command, { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
     if (proc.exitCode !== 0) {
       throw new Error(`evaluate.php failed (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
@@ -426,7 +464,7 @@ export function evaluateOnce(root: string, dir: string, names: readonly string[]
         { host: script, container: IMAGE_EVALUATE },
         { host: dir, container: IMAGE_REQUESTS },
       ],
-      ["php", IMAGE_EVALUATE, `${IMAGE_UPSTREAM_DIR}/framework`, PHP_VERSION, ...names.map((name) => `${IMAGE_REQUESTS}/${name}`)],
+      ["php", IMAGE_EVALUATE, `${IMAGE_UPSTREAM_DIR}/framework`, PHP_VERSION, now, ...names.map((name) => `${IMAGE_REQUESTS}/${name}`)],
     );
   } catch (error) {
     throw new Error(`evaluate.php failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });

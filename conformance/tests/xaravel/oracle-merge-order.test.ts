@@ -14,7 +14,7 @@ import { COMPONENT_MAP_FILE } from "../../../tools/component-map/component-map";
 import { LISTER, type ImageRunner, type RawTest } from "../../../tools/inventory/inventory";
 import { extract, FAMILIES, TOKENS_SCRIPT } from "../../../tools/oracle/extract";
 import { BLADE_BASE } from "../../../tools/oracle/extract/blade";
-import { EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, PUBLIC_KEY_FILE, readStoryRequests, renderFixture, signFixture, storyHeldShas } from "../../../tools/oracle/fixtures";
+import { CLOCK_FILE, EVALUATE_SCRIPT, FIXTURES_DIR, generateFixtures, PUBLIC_KEY_FILE, readStoryRequests, renderFixture, signFixture, storyHeldShas } from "../../../tools/oracle/fixtures";
 import { mergeOrder, SHALLOW_MESSAGE } from "../../../tools/oracle/merge-order";
 import { makeRequest, parseRequests, readSchema, renderRequest, REQUESTS_DIR, SCHEMA_FILE, type OracleRequest } from "../../../tools/oracle/request";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
@@ -67,6 +67,8 @@ function repo(commits: [string, string][]): { dir: string; priv: KeyObject } {
   copyFileSync(join(root, SCHEMA_FILE), join(dir, SCHEMA_FILE));
   write(dir, EVALUATE_SCRIPT, "");
   copyFileSync(join(root, EVALUATE_SCRIPT), join(dir, EVALUATE_SCRIPT));
+  write(dir, CLOCK_FILE, "");
+  copyFileSync(join(root, CLOCK_FILE), join(dir, CLOCK_FILE));
   write(dir, `${REQUESTS_DIR}/support.jsonl`, lines(UPPER));
   write(dir, "stories/3.4.md", manifest("3.4", "support", [], [SHARED.id]));
   write(dir, "stories/10.1.md", manifest("10.1", "testing", [], [SHARED.id, OTHER.id]));
