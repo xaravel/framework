@@ -158,7 +158,8 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   expect(Object.fromEntries(Object.entries(job.services!).map(([name, service]) => [name, service.image]))).toEqual({ postgres: "postgres:18", redis: "redis:8.10.2" });
   expect(job.env).toMatchObject(SERVICE_ENV);
   // The PR flow, in order: scope (before the overlay), overlay, install, run --scope, story.
-  const pr = job.steps.filter((step) => step.if === "github.event_name == 'pull_request_target'" && step.run !== undefined).map((step) => step.run);
+  // Retro 5 item 1: only a same-repository PR's code runs (a fork PR fails closed, XT-conformance-246).
+  const pr = job.steps.filter((step) => step.if === "github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository" && step.run !== undefined).map((step) => step.run);
   expect(pr).toEqual([
     'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"',
     "bun tools/ratchet/ratchet.ts overlay --base . --head pr",

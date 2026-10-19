@@ -226,7 +226,7 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
   const workflow = Bun.YAML.parse(text) as {
     on: Record<string, { branches?: string[]; types?: string[] }>;
     permissions: Record<string, string>;
-    jobs: Record<string, { permissions?: unknown; services: Record<string, { image: string }>; env: Record<string, string>; steps: Step[]; "continue-on-error"?: unknown }>;
+    jobs: Record<string, { if?: unknown; permissions?: unknown; services: Record<string, { image: string }>; env: Record<string, string>; steps: Step[]; "continue-on-error"?: unknown }>;
   };
   // Story 5.7: the merge queue runs the Ratchet too (XT-conformance-120).
   expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group", "push"]);
@@ -236,6 +236,8 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
   expect(workflow.permissions).toEqual({ contents: "read" });
   expect(Object.keys(workflow.jobs)).toEqual(["ratchet"]);
   const job = workflow.jobs["ratchet"]!;
+  // Retro 5 item 1: no job-level condition; a skipped required check counts as passing.
+  expect(job.if).toBeUndefined();
   // Story 5.7: read-only job permissions; `pull-requests: read` only lets the merge-group run read the queued PR's head branch.
   expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
   expect(text).not.toMatch(/secrets\./);
@@ -251,15 +253,29 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
   ]);
   const setup = job.steps.find((step) => (step.uses ?? "").startsWith("oven-sh/setup-bun@"))!;
   expect(setup.with).toEqual({ "bun-version-file": ".bun-version" });
+  // Retro 5 item 1: only a same-repository PR's code is checked out or run; a fork PR fails closed.
+  const SAME_REPO = "github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository";
+  const FORK = "github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository";
+  expect(checkouts.map((step) => step.if ?? null)).toEqual([null, SAME_REPO]);
   const runs = job.steps.filter((step) => step.run !== undefined).map((step) => [step.if, step.run, step["working-directory"] ?? null]);
+  const label = (run: string | null | undefined): string | null | undefined => {
+    if ((run ?? "").startsWith("set -euo pipefail")) {
+      return "<find the PR>";
+    }
+    if ((run ?? "").startsWith('echo "::error::')) {
+      return "<refuse a fork>";
+    }
+    return run;
+  };
   // Story 5.7: scope before the overlay, the PR graded over its scope, then the Story's tests in full; the merge
   // group's full run; main's full run.
-  expect(runs.map(([condition, run, dir]) => [condition, (run ?? "").startsWith("set -euo pipefail") ? "<find the PR>" : run, dir])).toEqual([
-    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"', null],
-    ["github.event_name == 'pull_request_target'", "bun tools/ratchet/ratchet.ts overlay --base . --head pr", null],
-    ["github.event_name == 'pull_request_target'", "bun install --frozen-lockfile --ignore-scripts", "pr"],
-    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"', null],
-    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts story --root pr --ref "$HEAD_REF"', null],
+  expect(runs.map(([condition, run, dir]) => [condition, label(run), dir])).toEqual([
+    [FORK, "<refuse a fork>", null],
+    [SAME_REPO, 'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"', null],
+    [SAME_REPO, "bun tools/ratchet/ratchet.ts overlay --base . --head pr", null],
+    [SAME_REPO, "bun install --frozen-lockfile --ignore-scripts", "pr"],
+    [SAME_REPO, 'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"', null],
+    [SAME_REPO, 'bun tools/ratchet/ratchet.ts story --root pr --ref "$HEAD_REF"', null],
     ["github.event_name == 'push' || github.event_name == 'merge_group'", "bun install --frozen-lockfile --ignore-scripts", null],
     ["github.event_name == 'merge_group'", "<find the PR>", null],
     ["github.event_name == 'merge_group'", 'bun tools/ratchet/ratchet.ts run --root . --ref "$HEAD_REF"', null],
@@ -271,6 +287,22 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
   for (const step of job.steps.filter((candidate) => (candidate.run ?? "").includes("$HEAD_REF"))) {
     expect(step.run).not.toContain("${{");
     expect(Object.keys(step.env ?? {})).toContain("HEAD_REF");
+  }
+  // Retro 5 item 1: the refusal comes before every PR-code step, exits 1, and names the fork through env only.
+  const refuse = job.steps.find((step) => step.if === FORK)!;
+  const firstPrCode = job.steps.findIndex((step) => step.if === SAME_REPO);
+  expect(job.steps.indexOf(refuse)).toBeLessThan(firstPrCode);
+  expect(refuse.env).toEqual({ HEAD_REPO: "${{ github.event.pull_request.head.repo.full_name }}" });
+  expect(refuse.run).not.toContain("${{");
+  // The script itself fails and names the fork, or says the fork was deleted (head.repo null).
+  for (const [headRepo, named] of [["someone/fork", "someone/fork"], ["", "<deleted fork>"]] as const) {
+    const refused = Bun.spawnSync(["bash", "-c", refuse.run!], { env: { HEAD_REPO: headRepo, PATH: process.env["PATH"] ?? "" }, stdout: "pipe", stderr: "pipe" });
+    const stdout = refused.stdout.toString();
+    expect([headRepo, refused.exitCode, stdout.includes("::error::"), stdout.includes(named)]).toEqual([headRepo, 1, true, true]);
+  }
+  // Every step that checks out `pr/` or runs with `pr` carries the same-repository guard.
+  for (const step of job.steps.filter((candidate) => candidate.with?.["path"] === "pr" || candidate["working-directory"] === "pr" || /--(?:head|root) pr\b/.test(candidate.run ?? ""))) {
+    expect([step.run ?? step.uses, step.if]).toEqual([step.run ?? step.uses, SAME_REPO]);
   }
 });
 
