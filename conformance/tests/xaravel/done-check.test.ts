@@ -306,8 +306,23 @@ async function withGitHub<T>(fake: FakeGitHub, body: (api: string, paths: string
 }
 
 const SHA = "a".repeat(40);
-const LOG_FULL = ["2026-10-19T10:00:00.0000000Z SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0 mode=fast seed=ab", "2026-10-19T10:01:00.1234567Z SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0", "2026-10-19T10:01:01.0000000Z RATCHET ref=main scope=full failures=0 passes=0 warnings=0", ""].join("\n");
-const LOG_FAST = ["2026-10-19T10:01:00.1234567Z SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0", "2026-10-19T10:02:00.0000000Z SUMMARY variants=1 run=1 not-run=0 checked=100 differ=0 mode=fast seed=0f0f0f0f"].join("\n");
+// The PR ratchet job's log: the `run --scope` step (SUMMARY, then RATCHET), then the `ratchet story` step (SUMMARY, its
+// classified lines, then STORY). LOG_FULL's story step differed only by a warned pass; LOG_FAST's story step was fast.
+const LOG_FULL = [
+  "2026-10-19T10:00:00.0000000Z SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0 mode=fast seed=ab",
+  "2026-10-19T10:01:00.1234567Z SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0",
+  "2026-10-19T10:01:01.0000000Z RATCHET ref=story/9.1 scope=components failures=0 passes=0 warnings=0",
+  "2026-10-19T10:02:00.0000000Z SUMMARY variants=11 run=7 not-run=4 checked=2 differ=1",
+  "2026-10-19T10:02:00.1000000Z WARNING UNEXPECTED-PASS X [none] expected=fail-known actual=pass asserts=1/1 (owned by no open Story)",
+  "2026-10-19T10:02:00.2000000Z STORY ref=story/9.1 failures=0 passes=0 warnings=1",
+  "",
+].join("\n");
+const LOG_FAST = [
+  "2026-10-19T10:01:00.1234567Z SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0",
+  "2026-10-19T10:01:01.0000000Z RATCHET ref=story/9.1 scope=full failures=0 passes=0 warnings=0",
+  "2026-10-19T10:02:00.0000000Z SUMMARY variants=1 run=1 not-run=0 checked=100 differ=0 mode=fast seed=0f0f0f0f",
+  "2026-10-19T10:02:00.1000000Z STORY ref=story/9.1 failures=0 passes=0 warnings=0",
+].join("\n");
 
 function fakeGitHub(overrides: Partial<FakeGitHub> = {}): FakeGitHub {
   return {
@@ -354,7 +369,7 @@ xaravelTest(
     expect([...CLAUSES]).toEqual(["manifest", "tests", "xaravel-tests", "fixtures", "approvals", "escalations", "full-run"]);
 
     // Every clause passes: the Story's own lines are done, its Xaravel Test passes, two distinct non-author approvals
-    // (each reviewer's latest counted review), no open Escalation, and the latest ratchet run's job log ends in a full SUMMARY.
+    // (each reviewer's latest counted review), no open Escalation, and the latest ratchet run's story step passed a full run (a warned difference allowed).
     const good = storyRoot();
     const passing = await withGitHub(fakeGitHub(), (api) => runStoryCheck(["9.1", "--root", good], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
     expect(passing.out).toEqual([
@@ -364,7 +379,7 @@ xaravelTest(
       "PASS fixtures: no assigned Differential Test ID",
       "PASS approvals: PR #7: 2 approvals (alice, bob)",
       "PASS escalations: no Escalations",
-      "PASS full-run: PR #7 ratchet run 12: SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0",
+      "PASS full-run: PR #7 ratchet run 12: SUMMARY variants=11 run=7 not-run=4 checked=2 differ=1; STORY ref=story/9.1 failures=0 passes=0 warnings=1",
       "STORY-CHECK 9.1 pass",
     ]);
     expect(passing.code).toBe(0);
@@ -480,7 +495,7 @@ xaravelTest(
     const apiDown = await withGitHub(fakeGitHub(), (api) => runStoryCheck(["9.1", "--root", empty], { env: env({ GH_TOKEN: "wrong", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
     expect(apiDown.out.filter((line) => line.includes("approvals:") || line.includes("full-run:")).every((line) => line.startsWith("FAIL ") && line.includes("HTTP 401"))).toBe(true);
 
-    // A ratchet job that concluded failure fails full-run even when its log ends in a full differ=0 SUMMARY.
+    // A ratchet job that concluded failure fails full-run even when its story step's verdict passed.
     const failedJob = await withGitHub(fakeGitHub({ jobs: { 12: [{ id: 99, name: "ratchet", conclusion: "failure" }] } }), (api) =>
       runStoryCheck(["9.1", "--root", good], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }),
     );
@@ -510,8 +525,29 @@ xaravelTest(
       "  alice: APPROVED",
       `  bob: APPROVED on ${"b".repeat(40)}, not the head ${SHA}`,
     ]);
-    // A full run that differed fails, as does a fast one.
-    expect(fullRunClause("w", "success", "SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2")).toEqual({ clause: "full-run", pass: false, detail: "w: SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2 differed", items: [] });
+    // full-run reads the ratchet story step's verdict (ESC-5.9-2): a story SUMMARY that differed only by warnings passes;
+    // a failure or an own unexpected pass fails.
+    const scopeStep = "SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0\nRATCHET ref=story/9.1 scope=components failures=0 passes=0 warnings=0\n";
+    const storySummary = "SUMMARY variants=11 run=7 not-run=4 checked=3 differ=2";
+    const storyLog = (verdict: string): string => `${scopeStep}${storySummary}\n${verdict}\n`;
+    expect(fullRunClause("w", "success", storyLog("STORY ref=story/9.1 failures=0 passes=0 warnings=2"))).toEqual({ clause: "full-run", pass: true, detail: `w: ${storySummary}; STORY ref=story/9.1 failures=0 passes=0 warnings=2`, items: [] });
+    for (const verdict of ["STORY ref=story/9.1 failures=1 passes=0 warnings=1", "STORY ref=story/9.1 failures=0 passes=1 warnings=1"]) {
+      expect(fullRunClause("w", "success", storyLog(verdict))).toEqual({ clause: "full-run", pass: false, detail: `w: ${verdict} failed`, items: [] });
+    }
+    // A Story with no test_ids has nothing of its own to run: it passes.
+    expect(fullRunClause("w", "success", `${scopeStep}STORY ref=story/10.1 skipped: no test_ids\n`)).toEqual({ clause: "full-run", pass: true, detail: "w: STORY ref=story/10.1 skipped: no test_ids", items: [] });
+    // Fail closed: only the scope run's SUMMARY (no STORY line), a skipped non-Story ref, a malformed verdict.
+    expect(fullRunClause("w", "success", scopeStep)).toEqual({ clause: "full-run", pass: false, detail: "w: the log has no STORY line from the ratchet story step", items: [] });
+    for (const story of ["STORY ref=planning/x skipped: not a Story ref", "STORY ref=story/9.1 failures=0 passes=0", "STORY ref=story/9.1 failures=x passes=0 warnings=0"]) {
+      expect(fullRunClause("w", "success", `${scopeStep}${storySummary}\n${story}\n`)).toEqual({ clause: "full-run", pass: false, detail: `w: ${story} is not a Story verdict`, items: [] });
+    }
+    // The story step's SUMMARY is the one after the scope step's RATCHET line: none there fails, even when the scope
+    // step (or nothing, with scope=none) printed one before it.
+    for (const log of [`${scopeStep}STORY ref=story/9.1 failures=0 passes=0 warnings=0\n`, "RATCHET ref=story/9.1 scope=none failures=0 passes=0 warnings=0\nSTORY ref=story/9.1 failures=0 passes=0 warnings=0\n"]) {
+      expect(fullRunClause("w", "success", log)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet story step printed no SUMMARY line", items: [] });
+    }
+    // A fast story SUMMARY fails.
+    expect(fullRunClause("w", "success", `${scopeStep}SUMMARY variants=1 run=1 not-run=0 checked=3 differ=0 mode=fast seed=ab\nSTORY ref=story/9.1 failures=0 passes=0 warnings=0\n`).detail).toBe("w: SUMMARY variants=1 run=1 not-run=0 checked=3 differ=0 mode=fast seed=ab was a fast run");
     // A run-level ERROR line fails tests and xaravel-tests even when every line came out right.
     const crashed: HarnessResult = {
       code: 1,
@@ -549,10 +585,10 @@ xaravelTest(
     expect(renderClause(testsClause([B], rowRun, [], null))).toEqual(["FAIL tests: 1 problem(s) over 0 Test ID × Variant line(s)", `  ${B}: no Expectations line`]);
     expect(renderClause(xaravelClause(["XT-demo-1"], crashed))).toEqual(["FAIL xaravel-tests: the Xaravel run crashed", "  ERROR [xaravel] bun test exited 1 with no failing testcase"]);
     expect(lastSummary("2026-10-19T10:01:00Z SUMMARY a\nSUMMARY b\n2026-10-19T10:01:00.5Z not SUMMARY c")).toBe("SUMMARY b");
-    expect(fullRunClause("w", "success", "no summary here").detail).toBe("w: the log has no SUMMARY line");
-    // The job's conclusion is checked before the SUMMARY: only a finished, successful job can pass.
-    const fullLog = "SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0";
-    expect(fullRunClause("w", "success", fullLog)).toEqual({ clause: "full-run", pass: true, detail: `w: ${fullLog}`, items: [] });
+    expect(fullRunClause("w", "success", "no summary here").detail).toBe("w: the log has no STORY line from the ratchet story step");
+    // The job's conclusion is checked before the log: only a finished, successful job can pass.
+    const fullLog = storyLog("STORY ref=story/9.1 failures=0 passes=0 warnings=0");
+    expect(fullRunClause("w", "success", fullLog)).toEqual({ clause: "full-run", pass: true, detail: `w: ${storySummary}; STORY ref=story/9.1 failures=0 passes=0 warnings=0`, items: [] });
     expect(fullRunClause("w", "failure", fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job concluded failure, not success", items: [] });
     expect(fullRunClause("w", "cancelled", fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job concluded cancelled, not success", items: [] });
     expect(fullRunClause("w", null, fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job has not finished", items: [] });

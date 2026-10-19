@@ -47,9 +47,16 @@
 //                  (`/actions/runs?head_sha=`), its job `ratchet`
 //                  (`/actions/runs/<id>/jobs`): that job's `conclusion` is
 //                  `success`; only then is its log read
-//                  (`/actions/jobs/<id>/logs`), and its last `SUMMARY ` line,
-//                  timestamp removed, satisfies the harness's `isFullRun` and
-//                  reads `differ=0`.
+//                  (`/actions/jobs/<id>/logs`, timestamps removed). Per
+//                  ESC-5.9-2 the clause reads the `ratchet story` step: the
+//                  log's last `STORY ref=` line, and the last `SUMMARY ` line
+//                  between the `RATCHET ` line before it (the `run --scope`
+//                  step's end) and it. That SUMMARY satisfies the harness's
+//                  `isFullRun`, and the STORY verdict reads `failures=0
+//                  passes=0` (warned differences never fail it; SUMMARY's
+//                  `differ` is not read). `STORY ref=<r> skipped: no
+//                  test_ids` passes; no STORY line, `skipped: not a Story
+//                  ref`, a malformed one, or no SUMMARY in that segment fails.
 // `tests` and `xaravel-tests` also fail on a run-level ERROR line, and the
 // harness runs get the env without `GH_TOKEN` and `GITHUB_TOKEN`.
 //
@@ -326,11 +333,15 @@ export function escalationsClause(statuses: readonly { readonly id: string; read
   return items.length === 0 ? pass("escalations", `${statuses.length} Escalation(s), none open`) : fail("escalations", `${items.length} of ${statuses.length} Escalation(s) open`, items);
 }
 
+/** A job log's lines, each with its leading timestamp and trailing carriage return removed. */
+function logLines(log: string): string[] {
+  return log.split("\n").map((raw) => raw.replace(/\r$/, "").replace(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z /, ""));
+}
+
 /** The last `SUMMARY ` line of a job log, with each line's leading timestamp removed; null when there is none. */
 export function lastSummary(log: string): string | null {
   let found: string | null = null;
-  for (const raw of log.split("\n")) {
-    const line = raw.replace(/\r$/, "").replace(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z /, "");
+  for (const line of logLines(log)) {
     if (line.startsWith("SUMMARY ")) {
       found = line;
     }
@@ -338,7 +349,15 @@ export function lastSummary(log: string): string | null {
   return found;
 }
 
-/** `full-run`: the ratchet job concluded `success` and its last SUMMARY line is a full run's with `differ=0`. */
+const STORY_VERDICT = /^STORY ref=\S+ failures=(\d+) passes=(\d+) warnings=(\d+)$/;
+const STORY_NO_TEST_IDS = /^STORY ref=\S+ skipped: no test_ids$/;
+
+/**
+ * `full-run` (ESC-5.9-2): the ratchet job concluded `success`, and the `ratchet story` step's verdict passes. That step
+ * is the log's last `STORY ref=` line; its SUMMARY is the last one after the preceding `RATCHET ` line (the `run --scope`
+ * step's end) and before it, and must be a full run's. The verdict passes on `failures=0 passes=0` (warnings never fail
+ * it), or on `skipped: no test_ids`; anything else fails closed.
+ */
 export function fullRunClause(where: string, conclusion: string | null, log: string): ClauseResult {
   if (conclusion === null) {
     return fail("full-run", `${where}: the ratchet job has not finished`);
@@ -346,15 +365,39 @@ export function fullRunClause(where: string, conclusion: string | null, log: str
   if (conclusion !== "success") {
     return fail("full-run", `${where}: the ratchet job concluded ${conclusion}, not success`);
   }
-  const summary = lastSummary(log);
+  const lines = logLines(log);
+  let storyAt = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i]!.startsWith("STORY ref=")) {
+      storyAt = i;
+      break;
+    }
+  }
+  if (storyAt === -1) {
+    return fail("full-run", `${where}: the log has no STORY line from the ratchet story step`);
+  }
+  const story = lines[storyAt]!;
+  if (STORY_NO_TEST_IDS.test(story)) {
+    return pass("full-run", `${where}: ${story}`);
+  }
+  const verdict = STORY_VERDICT.exec(story);
+  if (verdict === null) {
+    return fail("full-run", `${where}: ${story} is not a Story verdict`);
+  }
+  let summary: string | null = null;
+  for (let i = storyAt - 1; i >= 0 && !lines[i]!.startsWith("RATCHET "); i--) {
+    if (lines[i]!.startsWith("SUMMARY ")) {
+      summary = lines[i]!;
+      break;
+    }
+  }
   if (summary === null) {
-    return fail("full-run", `${where}: the log has no SUMMARY line`);
+    return fail("full-run", `${where}: the ratchet story step printed no SUMMARY line`);
   }
   if (!isFullRun(summary)) {
     return fail("full-run", `${where}: ${summary} was a fast run`);
   }
-  const differ = / differ=(\d+)(?: |$)/.exec(summary)?.[1];
-  return differ === "0" ? pass("full-run", `${where}: ${summary}`) : fail("full-run", `${where}: ${summary} differed`);
+  return verdict[1] === "0" && verdict[2] === "0" ? pass("full-run", `${where}: ${summary}; ${story}`) : fail("full-run", `${where}: ${story} failed`);
 }
 
 // ---------------------------------------------------------------------------
