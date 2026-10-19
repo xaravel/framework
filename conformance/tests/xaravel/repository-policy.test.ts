@@ -840,7 +840,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
     expect(node["continue-on-error"]).toBeUndefined();
     expect(node["if"]).toBeUndefined();
   }
-  expect(phpFixtures.steps[0]).toEqual(audit.steps[0]!);
+  // Its oracle-story tests verify the real repository, whose per-Story requests are read in merge order (Story 5.6 AC5).
+  expect(phpFixtures.steps[0]).toEqual({ ...audit.steps[0]!, with: { "persist-credentials": false, "fetch-depth": 0 } });
   expect(phpFixtures.steps[1]).toEqual(audit.steps[1]!);
   expect(phpFixtures.steps.filter((step) => step.uses !== undefined).length).toBe(3);
   expect(phpFixtures.steps.find((step) => step.uses?.startsWith("shivammathur/setup-php@") === true)).toEqual({
