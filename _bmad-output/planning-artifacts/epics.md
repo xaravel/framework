@@ -111,7 +111,7 @@ Requirement IDs (FR-N, NFR-N, DIV-N, AD-N, OQ-N, NG-N, SM-N) are the PRD's and t
   - They cover every PHPUnit assertion used Upstream at the Pin. A scan lists them, and CI reports any that aren't covered.
   - `assertSame` follows PHP `===`, including key order and types. `assertEquals` follows PHP `==`.
   - `expectException` ends the test at the throw.
-  - `createMock` goes through `@xaravel/mockery`.
+  - `createMock` returns a PHPUnit test double (`MockObject`), as PHPUnit does (Story 4.7); Mockery is reached through `Mockery.mock()`.
   - Each rule has its own Xaravel Tests.
 
 #### Packages, runtime and distribution
@@ -2156,6 +2156,36 @@ So that every Upstream use is covered (FR-100).
 **Then** it lists every scanned Mockery API that has no implementation, and fails if any are missing
 **And** a PHP-only API, such as `overload:` class aliasing, needs an approved Escalation to be excluded.
 
+### Story 4.7: PHPUnit test doubles
+
+As a Framework Agent,
+I want PHPUnit's own MockObject API in the grader,
+So that Laravel's tests that call `createMock`, `getMockBuilder` and `createStub` port as written (ESC-4.4-2 item 6; Epic 4 retro R1).
+
+**Acceptance Criteria:**
+
+**Given** `this.createMock(X)`, `this.createStub(X)` and `this.getMockBuilder(X)->…->getMock()`
+**When** a Ported Test drives the double with `expects(this.once())`, `->method('m')`, `->with(…)`, `->willReturn(…)`, `->willReturnCallback(…)`, `->willReturnMap(…)`, `->willReturnSelf()` and `->willThrowException(…)`
+**Then** each behaves, counts and fails as PHPUnit 13's does, with PHPUnit's failure messages
+**And** `createMock` no longer goes through `@xaravel/mockery`.
+
+**Given** `addToAssertionCount(n)`, `stringContains`, `assertArraySubset` and the invocation matchers `once()`, `never()`, `any()`, `exactly(n)`, `atLeastOnce()`
+**When** they are used
+**Then** each matches PHPUnit's behaviour, and `assertArraySubset` records the kind `assertThat`, as the Inventory does (ESC-4.3-1 item 8).
+
+### Story 4.8: `jasonmccreary/double` port
+
+As a Framework Agent,
+I want `JMac\Testing\Double`'s `returns`, `throws` and `resolves` in the grader,
+So that the ai, mcp and boost suites' tests that use them port as written (ESC-4.6-1 item 6).
+
+**Acceptance Criteria:**
+
+**Given** the Upstream suites' uses of `returns`, `throws` and `resolves`
+**When** they run against the port
+**Then** each behaves as the PHP library does
+**And** `bun run mockery:coverage` lists none of the three as pending.
+
 ## Epic 5: Harness, Expectations File, Ratchet & CI pipeline
 
 Every Story's result is measured the same way locally and in CI, any drift from the Expectations File fails the build, and agents in parallel worktrees never share backends.
@@ -2259,6 +2289,10 @@ So that I see exactly which Test IDs differ (FR-9, FR-113).
 **Given** a local machine without Postgres or Redis running
 **When** the harness runs
 **Then** those variants are printed as `NOT-RUN`, are not counted as failures and are never written to the Expectations File.
+
+**Given** declared tests that run concurrently, an assertion recorded after its test has ended, and code under test that patches a JavaScript intrinsic (`Object.prototype`, `AsyncLocalStorage.prototype`, bun's `test`)
+**When** the harness runs
+**Then** counts never mix between tests, a late assertion fails its test instead of going uncounted, and the intrinsics are frozen before any Ported Test loads (Epic 4 retro S4; spec-4-1 and spec-4-2 deferrals).
 
 ### Story 5.4: Fast mode, seeds and filters
 
@@ -3127,9 +3161,33 @@ So that `instanceof` checks and `expectException` translate one to one (AD-19, A
 **Then** `getMessage()`, `getCode()` and `getPrevious()` return the arguments
 **And** it is `instanceof LogicException`, `Exception` and `Error`.
 
+**Given** PHP's SPL exception classes (`\RuntimeException`, `\LogicException`, `\BadMethodCallException`, `\UnexpectedValueException`, `\OutOfBoundsException`, `\InvalidArgumentException` and their parents) and the `\Error`/`\Exception` split
+**When** the runtime loads
+**Then** it publishes them through a `Symbol.for` protocol that the grader can read without importing `@xaravel/runtime` (ESC-4.3-1 items 10 and 14, ESC-4.4-2 item 7, ESC-4.5-1 item 2).
+
 **Given** the runtime package
 **When** the Epic closes
 **Then** `docs/` describes every runtime primitive, and `async-surface.json` is committed (empty if no method is async).
+
+### Story 9.11: Grader follow-ups to the runtime value model
+
+As a Framework Agent,
+I want `@xaravel/assert` and `@xaravel/mockery` to read the runtime's PHP classes and float marker,
+So that equality, exception and instanceof assertions match PHP once those values exist (component `assert`; Epic 4 retro S4).
+
+**Acceptance Criteria:**
+
+**Given** Story 9.5's float marker
+**When** `phpStrictEquals(1, 1.0)` and `assertSame(1, 1.0)` run
+**Then** they are false and fail, as in PHP (ESC-4.1-1's follow-up).
+
+**Given** Story 9.10's SPL and `\Error`/`\Exception` protocol
+**When** the grader and Mockery throw or compare exceptions
+**Then** their exceptions extend the runtime's SPL classes, `expectException(\RuntimeException::class)` matches a PHPUnit failure, and `ExceptionComparator` takes only `\Exception`s, which closes the ESC-4.3-1 item 10 divergence clause.
+
+**Given** a caught assertion failure
+**When** Laravel's `TestResponseAssert` appends to its message
+**Then** a supported grader API rewrites the message (ESC-4.3-1 item 11).
 
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 

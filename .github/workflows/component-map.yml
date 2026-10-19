@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  component-map:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

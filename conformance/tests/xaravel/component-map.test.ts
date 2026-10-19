@@ -484,8 +484,9 @@ test("XT-conformance-48: conformance/component-map is a Protected Path whose COD
   expect(Object.keys(workflow.on).sort()).toEqual(["merge_group", "pull_request", "push"]);
   expect(workflow.on["push"]).toEqual({ branches: ["main"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
-  expect(Object.keys(workflow.jobs)).toEqual(["check"]);
-  const job = workflow.jobs["check"]!;
+  // The job is not named `check`, so the required `check` context means only ci.yml's job.
+  expect(Object.keys(workflow.jobs)).toEqual(["component-map"]);
+  const job = workflow.jobs["component-map"]!;
   expect(job["permissions"]).toBeUndefined();
   expect(job["timeout-minutes"]).toBe(15);
   expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });
