@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testArrayKeysValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testArrayKeysValidationErrorMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testArrayKeysValidationErrorMessageCanReferenceTheUnexpectedKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testArrayKeysValidationRequiresAtLeastOneKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testItCorrectlyFormatsAStringVersionOfTheRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationArrayKeysRuleTest::testUnexpectedKeysArePlaceholderSafeAndEmptyForNonArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

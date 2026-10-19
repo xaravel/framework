@@ -1,0 +1,9 @@
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::custom name via as method is respected","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::flac audio gets flac extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::m4a audio gets m4a extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::mp3 audio gets mp3 extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::null mime defaults to mp3","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::ogg audio gets ogg extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::unknown mime defaults to mp3","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::wav audio gets wav extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/OpenAi/AudioFilenameTest.php::webm audio gets webm extension","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

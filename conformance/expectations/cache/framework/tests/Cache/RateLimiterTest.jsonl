@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testMacroable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testRegisterNamedRateLimiter#uses BackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testRegisterNamedRateLimiter#uses UnitEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testRegisterNamedRateLimiter#uses int","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testRegisterNamedRateLimiter#uses normal string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\RateLimiterTest::testShouldUseOriginKeyAsPrefixWhenMultipleLimiterWithSameKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

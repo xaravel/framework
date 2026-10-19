@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::cache key differs by provider options so distinct option sets do not collide","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::cache key is insensitive to provider option key order","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::cache key is stable for the same provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::closure provider options are not recorded on the queued prompt fake","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::closure provider options survive queue serialization round-trip","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::closure resolver receives the resolved provider and applies per-provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/EmbeddingsProviderOptionsTest.php::closure resolver returning null is treated as no options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

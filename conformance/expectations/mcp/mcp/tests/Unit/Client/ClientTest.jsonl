@@ -1,0 +1,24 @@
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it clears connected state when a request fails after the handshake","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it disconnects cleanly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it disconnects when the server negotiates a version the client does not support","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it does not reconnect when already connected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it keeps the connection open after a JSON-RPC error response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it lazily connects when ping is called first","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it parses icons with sizes and theme when the server includes them","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it performs the initialize handshake on connect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it pings the server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it preserves its shape across a serialize round-trip and wakes disconnected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it responds to server-initiated ping requests with an empty result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it responds with method-not-found to unsupported server-initiated requests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it restores a web client transport across a serialize round-trip","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it restores the pinned protocol version across a serialize round-trip","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it rethrows JSON-RPC errors and disconnects the transport on handshake failure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it skips notification frames received before the matching response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it stores the full server info and instructions from initialize","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the error payload is not an object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the initialize result is structurally invalid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the response carries both result and error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the response carries neither result nor error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the response is missing the jsonrpc version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it throws when the response payload is malformed JSON","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientTest.php::it times out when a stdio process stays silent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

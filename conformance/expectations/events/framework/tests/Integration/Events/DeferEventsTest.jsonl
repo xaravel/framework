@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Events\\DeferEventsTest::testDeferEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\DeferEventsTest::testDeferModelEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\DeferEventsTest::testDeferMultipleModelEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\DeferEventsTest::testDeferSpecificModelEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

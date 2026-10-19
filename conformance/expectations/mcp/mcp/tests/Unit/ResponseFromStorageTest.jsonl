@@ -1,0 +1,11 @@
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it allows explicit mime type override","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it auto-detects mime type for audio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it auto-detects mime type for images","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it creates audio response from specific disk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it creates audio response from storage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it creates image response from specific disk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it creates image response from storage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it throws for unsupported mime types","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it throws when file does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it throws when mime type cannot be determined","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFromStorageTest.php::it throws when storage disk throws on missing file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

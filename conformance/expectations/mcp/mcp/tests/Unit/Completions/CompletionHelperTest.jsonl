@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Completions/CompletionHelperTest.php::it filters items by prefix case-insensitively","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionHelperTest.php::it handles case-insensitive matching","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionHelperTest.php::it returns all items when prefix is empty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionHelperTest.php::it returns empty array when no matches","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking request includes model, query, and documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking request includes top_k when limit set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking request sends bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking response is correctly parsed into RankedDocuments","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/VoyageAi/RerankingTest.php::reranking response reports the total tokens","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingQueuedMailTest::testMailIsSentWhenForwardingQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingQueuedMailTest::testMailIsSentWhenRoutingQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingQueuedMailTest::testMailIsSentWithDefaultLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingQueuedMailTest::testMailIsSentWithDelay","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

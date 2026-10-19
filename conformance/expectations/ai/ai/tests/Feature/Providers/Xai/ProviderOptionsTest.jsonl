@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/Xai/ProviderOptionsTest.php::provider options are included in xai request body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ProviderOptionsTest.php::provider options are persisted in tool call follow up requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ProviderOptionsTest.php::request body does not contain provider options when agent does not implement interface","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/Responses/ImageResponseTest.php::firstImage throws when the response contains no images","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/ImageResponseTest.php::mime falls back to image/png when no mime type is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/ImageResponseTest.php::toHtml escapes the alt attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/ImageResponseTest.php::toHtml falls back to image/png when the image has no mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/ImageResponseTest.php::toHtml renders an img tag with the image mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

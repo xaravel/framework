@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeWhileStatementsTest::testNestedWhileStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeWhileStatementsTest::testWhileStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

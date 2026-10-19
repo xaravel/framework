@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::all generated images are returned when n is greater than one","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::image http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::image overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::image rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::image request includes model, prompt, and b64_json response format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::image response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::omits quality when provided because xAI does not support it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::omits size when provided because xAI does not support it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ImageGenerationTest.php::request sends bearer token authorization","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

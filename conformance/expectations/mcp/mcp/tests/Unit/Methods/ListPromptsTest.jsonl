@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Methods/ListPromptsTest.php::it returns a valid list prompts response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListPromptsTest.php::it returns empty list when no prompts registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListPromptsTest.php::it returns empty list when the single prompt is not eligible for registration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListPromptsTest.php::it returns empty list when the single prompt is not eligible for registration via request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

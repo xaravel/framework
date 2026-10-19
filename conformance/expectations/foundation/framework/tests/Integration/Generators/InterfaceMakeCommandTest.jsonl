@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\InterfaceMakeCommandTest::testItCanGenerateInterfaceFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\InterfaceMakeCommandTest::testItCanGenerateInterfaceFileWhenContractsFolderExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\InterfaceMakeCommandTest::testItCanGenerateInterfaceFileWhenInterfacesFolderExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

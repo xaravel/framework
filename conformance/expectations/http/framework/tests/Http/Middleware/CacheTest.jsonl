@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testAddCacheHeadersForMethodHEAD","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testAddHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testAddHeadersUsingArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testDoNotSetHeaderWhenMethodNotCacheable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testDoNotSetHeaderWhenNoContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testDoesNotOverrideEtag","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testGenerateEtag","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testInvalidOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testIsNotModified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testItCanGenerateDefinitionViaStaticMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testItDoesNotSetEtagHeadersForBinaryContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testLastModifiedStringDate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testLastModifiedUnixTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testSetHeaderToDownloadResponseEvenWithNoContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testSetHeaderToFileResponseEvenWithNoContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\CacheTest::testTrailingDelimiterIgnored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

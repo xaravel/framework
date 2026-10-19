@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ConsoleMakeCommandTest::testItCanGenerateConsoleFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ConsoleMakeCommandTest::testItCanGenerateConsoleFileWithCommandOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

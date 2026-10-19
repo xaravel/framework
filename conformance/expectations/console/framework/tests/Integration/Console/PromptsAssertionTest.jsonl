@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAlternativeAssertionForSelectPromptWithAnAssociativeArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForConfirmPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForMultisearchPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForNumberPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForOptionalMultiselectPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForPasswordPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForPausePrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForRequiredMultiselectPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForSearchPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForSelectPromptFollowedByMultisearchPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForSelectPromptWithAList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForSelectPromptWithAnAssociativeArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForSuggestPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForTextPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsAssertionTest::testAssertionForTextareaPrompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

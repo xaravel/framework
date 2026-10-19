@@ -2,15 +2,30 @@
 title: 'Story 5.1: Variant vocabulary and Expectations File'
 type: 'feature'
 created: '2026-10-18'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: 'efa6702c350b3afcda20ae567a17dd6915b3dc2d'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-5-context.md'
   - '{project-root}/conformance/escalations/ESC-5.1-1.md'
   - '{project-root}/decisions/ESC-5.1-1.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      pin-bump's applyBump keeps line order when it renames a Test ID, so a rename in a multi-line shard can leave it unsorted and fail expectations:check after a real pin:bump --apply.
+    evidence: |-
+      tools/pin-bump/pin-bump.ts applyBump rewrites renamed lines in place ("line order is kept"); expectations:check requires lines sorted by id then variant (Story 5.1 AC). No pin-bump test runs check on --apply output. The fix (re-sort touched shards) belongs in tools/pin-bump, outside this spec.
+    location: >-
+      tools/pin-bump/pin-bump.ts:426
+    severity: medium
+  - summary: >-
+      pin-bump resets a changed laravel/ai Test ID to not-ported-yet, while expectations:init writes deferred:ai-sdk for Component ai.
+    evidence: |-
+      applyBump's changed branch sets reason not-ported-yet for every Component; initialLine uses deferred:ai-sdk for ai. Stricter, not weaker; Story 5.2's reason rules may want them aligned.
+    location: >-
+      tools/pin-bump/pin-bump.ts:426
+    severity: low
 ---
 
 <intent-contract>
@@ -85,6 +100,43 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-18 — Review pass
+- verdicts: 33 findings — high 0, medium 9, low 18, false 6, maybe-false 0
+- findings:
+  - (intent-alignment) `[false]` `[reject]` `queue-database@pgsql` / `session-redis@redis` have no lines — AD-15: a Test ID's Variants are its Inventory `backends`; the AC names them as vocabulary members; now documented in `docs/ops/expectations.md`.
+  - (intent-alignment) `[false]` `[reject]` post-alpha Variants exceed the AC's list — approved by `decisions/ESC-5.1-1.md`.
+  - (intent-alignment) `[low]` `[reject]` init can't produce slice shards — `check` accepts any `.jsonl` under the Component dir, so sprint planning can split later; no everyday path reaches a defect.
+  - (intent-alignment) `[low]` `[reject]` real-Inventory init only shown by committed output — verified by hand: a fresh `init` into a temp copy of Inventory + variants is byte-identical to `conformance/expectations/` (`diff -r`); a permanent byte-compare test would break as Stories edit lines.
+  - (intent-alignment) `[false]` `[reject]` tests use `bun:test` `expect` — AGENTS.md's rule targets Ported Tests; every `conformance/tests/xaravel` file does this until 5.9.
+  - (edge) `[medium]` `[patch]` duplicate key after the six passes `check` — fixed: `check` compares each raw line with `serialiseLine(parsed)` (`not in canonical form`), tested.
+  - (edge) `[medium]` `[patch]` spaced line passes `check` — same fix, tested.
+  - (edge) `[low]` `[reject]` line under the right Component but not at `shardPathFor` — pin-bump's renames keep lines in the old shard by design (ESC-2.8-1), so an exact-path rule would fail after a Pin bump; the harness finds lines by unique pair.
+  - (edge) `[medium]` `[patch]` init rewrites invalid UTF-8 as U+FFFD — fixed: init decodes every shard with check's strict `textLines` and throws before writing; tested.
+  - (edge) `[medium]` `[patch]` init keeps a CR — same fix; tested with a CRLF shard.
+  - (edge) `[low]` `[reject]` partial write on I/O failure — unlikely (disk full/permissions) and git restores; temp-and-rename adds machinery.
+  - (edge) `[medium]` `[patch]` init keeps an existing duplicated pair — fixed: a pair already on an earlier line is an init fault; tested.
+  - (edge) `[low]` `[patch]` NUL in id breaks the duplicate message — fixed: `seen` stores `{id, variant}`.
+  - (edge) `[medium]` `[patch]` pin-bump parity test is circular — fixed: the test runs pin-bump's real `applyBump` rename on an init-produced shard and compares with `serialiseLine`.
+  - (verification-gap) `[low]` `[patch]` init's refusal on an unparsable line untested — added XT-90 cases (malformed JSON, invalid UTF-8, CRLF, duplicate) asserting throw, CLI exit 1 and unchanged snapshot.
+  - (verification-gap) `[low]` `[patch]` `empty shard`, `malformed JSON`, `lists no Variant`, `does not exist` untested — added.
+  - (verification-gap) `[medium]` `[defer]` pin-bump `applyBump` keeps line order on rename, so `check`'s sort rule can fail after a real `pin:bump --apply` — pre-existing pin-bump behaviour (Story 2.8) against the AC's sort rule; fix belongs in `tools/pin-bump`, which this spec excludes; deferred.
+  - (verification-gap other) `[low]` `[defer]` pin-bump resets a changed `ai` ID to `not-ported-yet`, not `deferred:ai-sdk` — pre-existing pin-bump behaviour; stricter, not weaker; deferred for 5.2's reason rules.
+  - (verification-gap other) `[low]` `[reject]` `check` doesn't enforce `shardPathFor` — same as the edge finding above.
+  - (verification-gap other) `[false]` `[reject]` docs example block empty — the file holds the example line (`docs/ops/expectations.md`).
+  - (blind) `[medium]` `[patch]` init silently changes lines with format faults — grouped with the init strict-decode fix.
+  - (blind) `[low]` `[patch]` within-shard duplicate reported twice — fixed: dropped the per-line message; the matrix row asserts one violation.
+  - (blind) `[low]` `[reject]` `check` doesn't enforce the path rule — same as the edge finding.
+  - (blind) `[low]` `[reject]` nothing checks committed shards are init output — verified by hand (byte-identical); see above.
+  - (blind) `[medium]` `[patch]` circular parity test — grouped with the edge fix.
+  - (blind) `[low]` `[patch]` unused vocabulary members unreported — documented in `docs/ops/expectations.md`.
+  - (blind) `[low]` `[reject]` `.DS_Store` / symlink loop under `conformance/expectations/` — unlikely in everyday use; ignoring files adds rules that could hide a real stray file.
+  - (blind) `[false]` `[reject]` `shardPathFor` trusts `source` — `source` comes from the generated, Protected Inventory, whose lister emits repo-relative `<repo>/tests/…:<a>-<b>` paths only.
+  - (blind) `[low]` `[patch]` documented violations and CLI exit 1 on a format fault untested — added (seventh key, canonical form, CLI `check` exit 1).
+  - (blind) `[low]` `[reject]` partial write — same as the edge finding.
+  - (blind) `[low]` `[patch]` docs miss the removed/renamed-ID case — added "After an Inventory change".
+  - (blind) `[low]` `[patch]` brittle `ci.yml` slice in XT-91 — deleted; `repository-policy.test.ts` pins the step list from parsed YAML.
+  - (blind) `[false]` `[reject]` field types beyond id/variant unchecked — status and reason values are Story 5.2's rules, and the canonical-form check already rejects non-JSON-stringify shapes; no consumer reads them yet.
+
 ## Design Notes
 
 ESC-5.1-1 (orchestrator-approved) adds the post-alpha backends to the vocabulary so the denominator stays full (FR-5); they start `not-ported-yet`. Expected line:
@@ -100,3 +152,28 @@ ESC-5.1-1 (orchestrator-approved) adds the post-alpha backends to the vocabulary
 - `bun run expectations:check` -- expected: `Expectations OK:` with pairs = sum of Inventory `backends` lengths.
 - `bun test conformance/tests/xaravel/expectations.test.ts` -- all pass.
 - `bun run test`, `bun run typecheck`, `bun run lint`, `bun run escalations:check` -- pass.
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** Added the closed Variant vocabulary (`conformance/variants`, 13 members per ESC-5.1-1), the `tools/expectations/` CLI (`expectations:init` additive/idempotent generator, `expectations:check` uniqueness and format gate), the initial Expectations File (23,291 lines in 1,551 shards, exactly `init` output), a CI step in the required `check` job, operator docs and XT-conformance-89/90/91.
+
+**Files changed.**
+- `conformance/variants` -- the vocabulary, with header.
+- `tools/expectations/expectations.ts` -- `init`, `check`, `parseVariants`, `shardPathFor`, `serialiseLine`.
+- `conformance/expectations/**` -- generated shards.
+- `conformance/tests/xaravel/expectations.test.ts` -- 13 Xaravel Tests.
+- `conformance/tests/xaravel/repository-policy.test.ts` -- XT-conformance-33's pinned `check` step list gains `bun run expectations:check`.
+- `.github/workflows/ci.yml` -- `Check the Expectations File` step.
+- `package.json`, `tsconfig.json` -- scripts; typecheck include.
+- `docs/ops/expectations.md` -- operator doc.
+- `conformance/escalations/ESC-5.1-1.md`, `decisions/ESC-5.1-1.md` -- post-alpha Variants; approved by the orchestrator under MAINT-2026-10-16.
+
+**Review.** 33 findings: 17 patched (init strict decoding and duplicate refusal, canonical-form check, single duplicate violation, real pin-bump parity test, missing violation tests, docs, brittle CI slice removed), 2 deferred (pin-bump rename ordering, pin-bump ai reason), 14 rejected with reasons in the triage log.
+
+**Follow-up review recommended: true.** Patched: 6 medium entries (canonical form, init strict decoding, init duplicate refusal, parity test, and grouped members), 0 high. Unverified risk: the post-review `init` fault path and `check` canonical-form rule were not re-reviewed.
+
+**Verification.** `expectations:init` re-run: `added 0`; fresh init into a temp copy is byte-identical to the committed shards (`diff -r`); `expectations:check`: OK, 23,291 lines / 1,551 shards / 23,291 pairs; `bun run test` 171 pass, 0 fail; `typecheck`, `lint`, `escalations:check`, `graph:check`, `scaffold:check` pass.
+
+**Residual risks.** The deferred pin-bump ordering issue can fail `expectations:check` after the next Pin bump with a rename; ESC-5.1-1 was ruled by the orchestrator, and the Maintainer may overrule it.

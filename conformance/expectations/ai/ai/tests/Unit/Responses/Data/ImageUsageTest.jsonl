@@ -1,0 +1,1 @@
+{"id":"ai/tests/Unit/Responses/Data/ImageUsageTest.php::image usage to array appends the image token counts to the text usage counts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

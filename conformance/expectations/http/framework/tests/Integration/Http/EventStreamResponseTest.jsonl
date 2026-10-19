@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamEndMessageWithLineBreaksIsSentAsMultipleDataLines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamExceptionDoesNotLeakToClient","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamExceptionIsReportedToExceptionHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamMessageCannotStartAnotherEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamMessagesWithLineBreaksAreSentAsMultipleDataLines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\EventStreamResponseTest::testEventStreamResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

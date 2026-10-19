@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testCustomMorphPivotClassDetachAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testCustomMorphPivotWithoutPrimaryKeyTouchesOwnersOnDetach","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testCustomPivotUpdateEventHasDirtyCorrect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testCustomPivotUpdateEventHasExistingAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testPivotWillTriggerEventsToBeFired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testPivotWithPivotCriteriaTriggerEventsToBeFiredOnCreateUpdateNoneOnDetach","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotEventsTest::testPivotWithPivotValueWillTriggerEventsToBeFired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

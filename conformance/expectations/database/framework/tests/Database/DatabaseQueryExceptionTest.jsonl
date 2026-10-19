@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testBackwardCompatibilityWithoutConnectionInfo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testBindingsAreEmbeddedInTheMessageByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testBindingsCanBeMaskedInTheMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testGetConnectionInfoReturnsConnectionInfo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testIfItEmbedsBindingsIntoSql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testIfItReturnsSameSqlWhenThereAreNoBindings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMaskingBindingsDoesNotAffectTheAccessors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMessageForSqliteOnlyShowsDatabase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMessageHandlesArrayHosts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMessageHandlesEmptyConnectionInfo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMessageIncludesConnectionInfo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryExceptionTest::testMessageIncludesUnixSocket","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

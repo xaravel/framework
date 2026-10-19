@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Gateway/Groq/ToolMappingTest.php::tool parameters are not wrapped in schema definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Groq/ToolMappingTest.php::tool with empty schema includes parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

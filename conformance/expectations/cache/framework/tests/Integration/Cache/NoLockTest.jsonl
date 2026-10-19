@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\NoLockTest::testLocksCanAlwaysBeAcquiredAndReleased","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\NoLockTest::testLocksCanBlockForSeconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

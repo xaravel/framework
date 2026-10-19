@@ -1,0 +1,14 @@
+{"id":"ai/tests/Unit/ToolChoiceTest.php::constructor and tool() build the expected mode and tool name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::forStep is a no-op when no tool choice is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::forStep keeps auto and none tool choices on every step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::forStep preserves other options when releasing the tool choice","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::forStep releases a forced tool choice after the first step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::from accepts array shorthand for tool selection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::from coerces instances and strings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::from rejects invalid values","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::non-tool modes reject a tool name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::options coerce a plain string from the method","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::options leave tool choice null when the agent declares none","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::options resolve tool choice from the attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::options resolve tool choice from the method over the attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ToolChoiceTest.php::tool mode requires a non-empty tool name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

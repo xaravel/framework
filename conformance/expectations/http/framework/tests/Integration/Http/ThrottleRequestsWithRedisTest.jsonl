@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsWithRedisTest::testItCanThrottleBasedOnResponse","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsWithRedisTest::testItReturnsConfiguredResponseWhenUsingAfterLimit","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsWithRedisTest::testItReturnsRemainingAttemptsHeaderWhenResponseIsNotCounted","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsWithRedisTest::testLockOpensImmediatelyAfterDecay","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it can create a notification with params","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it can return response as array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it can return response as json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it converts empty array params in notification to object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it converts empty array result to object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it does not escape unicode characters in json output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it does not include _meta when not in result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcResponseTest.php::it includes _meta in result when provided in result array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

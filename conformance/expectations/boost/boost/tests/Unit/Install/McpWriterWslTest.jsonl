@@ -1,0 +1,5 @@
+{"id":"boost/tests/Unit/Install/McpWriterWslTest.php::isRunningInsideWsl returns false when WSL env vars are empty strings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterWslTest.php::isRunningInsideWsl returns false when no WSL env vars are set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterWslTest.php::isRunningInsideWsl returns true when IS_WSL is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterWslTest.php::isRunningInsideWsl returns true when WSL_DISTRO_NAME is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterWslTest.php::isRunningInsideWsl returns true when both WSL env vars are set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

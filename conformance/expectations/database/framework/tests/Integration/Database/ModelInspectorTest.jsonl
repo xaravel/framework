@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\ModelInspectorTest::test_command_returns_json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\ModelInspectorTest::test_extracts_model_data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

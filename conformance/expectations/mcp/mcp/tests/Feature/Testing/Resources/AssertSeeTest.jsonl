@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it fails if the resource is not registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it fails if the resource is not registered due the should register method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it fails to assert that text is not seen when it is present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it fails to assert that text is seen when not present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it may assert that text is seen when providing arguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it may assert that text is seen when providing arguments that are wrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it may assert that text is seen when returning array content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertSeeTest.php::it may assert that text is seen when returning string content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

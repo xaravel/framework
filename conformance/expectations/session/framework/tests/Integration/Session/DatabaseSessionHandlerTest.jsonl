@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Session\\DatabaseSessionHandlerTest::test_basic_read_write_functionality","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Session\\DatabaseSessionHandlerTest::test_destroy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Session\\DatabaseSessionHandlerTest::test_garbage_collector","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Session\\DatabaseSessionHandlerTest::test_it_can_work_without_container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

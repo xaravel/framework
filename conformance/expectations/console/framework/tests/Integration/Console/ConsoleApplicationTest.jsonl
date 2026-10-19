@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallNow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallUsingCommandClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallUsingCommandName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallUsingCommandNameAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallUsingCommandNameAliasesUsingAsCommandAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanCallUsingCommandNameUsingAsCommandAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanInstantiateScheduleWhenNeed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\ConsoleApplicationTest::testArtisanWithMockCallAfterCallNow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

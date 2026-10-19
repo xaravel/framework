@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TestMakeCommandTest::testItCanGenerateFeatureTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TestMakeCommandTest::testItCanGenerateFeatureTestUsingPest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TestMakeCommandTest::testItCanGenerateUnitTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TestMakeCommandTest::testItCanGenerateUnitTestUsingPest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

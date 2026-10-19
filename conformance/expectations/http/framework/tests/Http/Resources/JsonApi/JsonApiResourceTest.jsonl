@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\JsonApiResourceTest::testFlushStateResetsMaxRelationshipDepthToDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\JsonApiResourceTest::testResponseWrapperIsHardCodedToData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\JsonApiResourceTest::testUnableToSetWrapper","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\JsonApiResourceTest::testUnableToUnsetWrapper","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"boost/tests/Feature/Console/InstallCommandMultiselectTest.php::multiselect behavior matches install command expectations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandMultiselectTest.php::multiselect returns keys for associative array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandMultiselectTest.php::multiselect returns values for indexed array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

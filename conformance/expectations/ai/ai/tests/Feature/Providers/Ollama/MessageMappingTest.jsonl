@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/Ollama/MessageMappingTest.php::assistant tool call message uses function format without type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/MessageMappingTest.php::document attachments throw exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/MessageMappingTest.php::image attachment maps to images array with base64","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/MessageMappingTest.php::tool result follow up uses tool_name not tool_call_id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/MessageMappingTest.php::user message maps to ollama format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

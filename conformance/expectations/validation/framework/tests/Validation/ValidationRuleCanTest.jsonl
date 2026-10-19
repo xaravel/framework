@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleCanTest::testCustomMessageUsingDotNotationAndFqcnWorks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleCanTest::testValidationFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleCanTest::testValidationPasses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

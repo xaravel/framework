@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testDefaultResultIsSuccess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testExceptionBubbles","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testExceptionIsFailure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testExceptionIsNotRethrownOnSubsequentRuns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testFalseResponseIsFailure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testOnFailureCallbackCanReceiveEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testOnSuccessCallbackCanReceiveEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\CallbackEventTest::testOutputCallbackCanReceiveEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

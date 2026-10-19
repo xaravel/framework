@@ -1,0 +1,12 @@
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it counts structured content once against the output limit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it drops the structured content text from streamed tool results","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it enforces the configured call and output limits","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it executes multiple independent tools synchronously","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it expands into two tools and rejects duplicate catalog names","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it forwards nested tool notifications","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it includes tool annotations in search results","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it keeps the text a tool returns alongside its structured content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it rejects generated tool name collisions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it searches hidden tools and returns their complete schemas","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it stops executing after the first tool error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolSearchTest.php::it supports declaring a searchable tool group on the server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

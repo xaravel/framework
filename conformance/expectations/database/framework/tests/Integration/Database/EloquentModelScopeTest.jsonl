@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelScopeTest::testModelDoesNotHaveScope","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelScopeTest::testModelDoesNotHaveScopeWhenPrivateVisibility","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelScopeTest::testModelHasAttributedScope","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelScopeTest::testModelHasScope","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

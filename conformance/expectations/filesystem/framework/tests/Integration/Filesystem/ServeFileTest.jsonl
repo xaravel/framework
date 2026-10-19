@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testItCanServeAFileWithUriDelimitersInThePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testItCanServeAnExistingFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testItWill403OnWrongSignature","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testItWill404OnMissingFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testTemporaryUrlPreservesPathSeparatorsInNestedPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ServeFileTest::testUriDelimitersInThePathCannotHideAnExpiredUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

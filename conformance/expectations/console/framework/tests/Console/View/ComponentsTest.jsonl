@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testAlert","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testBulletList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testChoice","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testConfirm","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testInfo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testSuccess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testTask","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testTwoColumnDetail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testTwoColumnDetailPreservesTrailingPunctuationInValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\View\\ComponentsTest::testWarn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

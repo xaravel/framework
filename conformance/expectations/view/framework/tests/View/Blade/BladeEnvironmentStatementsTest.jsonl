@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEnvironmentStatementsTest::testEnvStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEnvironmentStatementsTest::testEnvStatementsWithArrayParamAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEnvironmentStatementsTest::testEnvStatementsWithMultipleStringParamsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEnvironmentStatementsTest::testProductionStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

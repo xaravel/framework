@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Console\\Concerns\\InteractsWithIOTest::testWithProgressBarInteger","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Concerns\\InteractsWithIOTest::testWithProgressBarIterable#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Concerns\\InteractsWithIOTest::testWithProgressBarIterable#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

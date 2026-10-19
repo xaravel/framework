@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testForgetMock","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithMixRestoresOriginalHandlerAndReturnsInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithViteRestoresOriginalHandlerAndReturnsInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutDefer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutMixBindsEmptyHandlerAndReturnsInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutViteBindsEmptyHandlerAndReturnsInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutViteHandlesAsset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutViteHandlesReactRefresh","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Concerns\\InteractsWithContainerTest::testWithoutViteReturnsEmptyArrayForPreloadedAssets","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

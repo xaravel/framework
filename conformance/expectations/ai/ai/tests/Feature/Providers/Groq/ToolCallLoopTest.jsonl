@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/Groq/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolCallLoopTest.php::multi step tool loop returns accumulated response shape","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolCallLoopTest.php::unknown tool call throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

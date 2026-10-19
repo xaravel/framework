@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testAssociateWithId","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testAssociateWithIdUnsetsLoadedRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testAssociateWithModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testHasSelf","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testHasSelfCustomOwnerKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testNullParentIsNotModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testParentIsModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testParentIsNotAnotherModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testParentIsNotModelWithAnotherConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testParentIsNotModelWithAnotherTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentBelongsToTest\\EloquentBelongsToTest::testParentIsNotNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testHasOneWithArrayDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testHasOneWithDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testHasOneWithDynamicDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testHasOneWithDynamicDefaultUseParentModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testModelsAreProperlyMatchedToParents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testRelationCountQueryCanBeBuilt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneTest::testRelationIsProperlyInitialized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

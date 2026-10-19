@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testDelayedQueuedMailableRespectsQueueAndConnectionAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testLaterSetsQueueOnMailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testLaterWithoutQueueUsesDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueueSetsBackedEnumQueueOnMailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableDelayPropertyOverridesAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableForwardsDeduplicationIdMethodToQueueJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableForwardsDeduplicatorToQueueJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableForwardsMessageGroupFromMethodToQueueJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableForwardsMessageGroupFromPropertyOverridingMethodToQueueJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableRespectsDelayAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableRespectsDeleteWhenMissingModelsAndFailOnTimeoutAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableRespectsDeleteWhenMissingModelsAndFailOnTimeoutProperties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableRespectsQueueAndConnectionAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableWithAttachmentFromDiskSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableQueuedTest::testQueuedMailableWithAttachmentSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

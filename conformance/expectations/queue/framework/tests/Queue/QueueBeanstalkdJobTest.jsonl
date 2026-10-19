@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdJobTest::testBuryProperlyBuryTheJobFromBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdJobTest::testDeleteRemovesTheJobFromBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdJobTest::testFailProperlyCallsTheJobHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdJobTest::testFireProperlyCallsTheJobHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdJobTest::testReleaseProperlyReleasesJobOntoBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Bedrock/ReasoningTest.php::reasoning capture > captures reasoning content into replayBlocks","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/ReasoningTest.php::reasoning capture > joins reasoning blocks into the response reasoning","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

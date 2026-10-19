@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/Mistral/ErrorHandlingTest.php::error in 200 response throws ai exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ErrorHandlingTest.php::http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ErrorHandlingTest.php::overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ErrorHandlingTest.php::rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

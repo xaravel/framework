@@ -1,0 +1,9 @@
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it allows custom uri override","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it attribute domain overrides auto-resolved domain","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it configures ui meta via attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it defaults to mcp-app mime type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it defaults to ui:// uri scheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it includes _meta.ui in toArray output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it includes custom ui meta in toArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it serializes name title description and mimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/AppResourceTest.php::it uses the computed Claude domain when not set on app resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

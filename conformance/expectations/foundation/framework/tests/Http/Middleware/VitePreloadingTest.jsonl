@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testFontPreloadEntriesResultInLinkHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testFontPreloadsDoNotOverwriteExistingJsPreloads","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testItAddsPreloadLinkHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testItCanLimitNumberOfAssetsPreloaded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testItDoesNotAttachHeadersToNonIlluminateResponses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testItDoesNotOverwriteOtherLinkHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testItDoesNotSetLinkTagWhenNoTagsHaveBeenPreloaded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::testLimitAppliesToCombinedJsAndFontPreloads","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\VitePreloadingTest::test_it_can_configure_the_middleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

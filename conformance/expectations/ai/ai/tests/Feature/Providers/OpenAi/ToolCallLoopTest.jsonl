@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolCallLoopTest.php::a forced tool choice is released on the follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolCallLoopTest.php::multi step tool loop returns accumulated response shape","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

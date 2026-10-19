@@ -1,0 +1,6 @@
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may assert specific validation errors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may assert that things are ok","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may assert validation fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may assert validation passes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may fail to assert that things are ok","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertErrorsTest.php::it may fail to assert validation fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

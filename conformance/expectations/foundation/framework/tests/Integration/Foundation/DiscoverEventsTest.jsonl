@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testEventsCanBeDiscovered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testEventsCanBeDiscoveredUsingCustomClassNameGuessing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testListenersCanOptOutOfDiscovery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testMultipleDirectoriesCanBeDiscovered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testNoExceptionForEmptyDirectories","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\DiscoverEventsTest::testUnionEventsCanBeDiscovered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Providers/Tools/ToolSearchTest.php::carries provider options for a specific provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/Tools/ToolSearchTest.php::rejects an unknown search strategy","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/Tools/ToolSearchTest.php::withTools returns a new instance preserving the strategy and provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

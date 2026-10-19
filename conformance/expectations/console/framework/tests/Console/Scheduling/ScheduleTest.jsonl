@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testEventsDoNotRunOnOneServerByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testEveryEventMayRunOnOneServer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testItCanAddAttributesToEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testItCanAddAttributesToPendingEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testItCanFilterEventsByEnvironments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testJobHonoursDisplayNameIfMethodExists#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testJobHonoursDisplayNameIfMethodExists#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleTest::testJobIsNotInstantiatedIfSuppliedAsClassname","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateComponentFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateComponentFileWithCustomPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateComponentFileWithTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateInlineComponentFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateNestedComponentFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ComponentMakeCommandTest::testItCanGenerateNestedComponentFileWithCustomPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

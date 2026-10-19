@@ -1,0 +1,17 @@
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::an agent without skills does not receive the load skill tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it discovers skills in the resources directory by default","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it keeps a numeric skill name a string in the schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it lets the earliest source win a collision between keyed closure results","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it lists every discovered skill alphabetically in its description","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it lists no resources for a skill pointed at a missing directory","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it parses frontmatter as YAML","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it reads a file bundled with a skill","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it reports an unknown skill and an empty source","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it resolves object and closure sources and lets the earliest source win a collision","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it returns a skill body without its frontmatter and lists the bundled files","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it skips a skill without a description but loads one whose name does not match its directory","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it squishes every skill description into one catalog line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it throws on frontmatter that is not valid YAML","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it will not read a binary or oversized bundled file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it will not read a binary or oversized in-memory file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Tools/LoadSkillTest.php::it will not read a file outside of the skill directory","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

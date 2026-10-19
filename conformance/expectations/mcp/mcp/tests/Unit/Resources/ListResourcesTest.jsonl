@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Resources/ListResourcesTest.php::it returns a valid empty list resources response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListResourcesTest.php::it returns a valid populated list resources response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListResourcesTest.php::it returns empty list when the single prompt is not eligible for registration via request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListResourcesTest.php::it returns empty list when the single tool is not eligible for registration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

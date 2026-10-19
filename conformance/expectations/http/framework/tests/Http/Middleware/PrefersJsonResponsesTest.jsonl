@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItDoesNotMutateBodyMethodUriQueryOrOtherHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItDoesNotRewriteBareStarAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItInvokesNextAndReturnsItsResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesExplicitHtmlAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesExplicitJsonAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesExplicitPlainTextAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesExplicitXmlAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesMixedBroadAndExplicitAcceptList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesMultiValueExplicitAcceptList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItLeavesWildcardFirstMixedAcceptList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesApplicationWildcardAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesBroadAcceptHeaderWithQualityParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesEmptyAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesMissingAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesMultipleBroadMarkers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PrefersJsonResponsesTest::testItRewritesStarSlashStarAcceptHeader","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

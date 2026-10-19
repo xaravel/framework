@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Feature/CustomRequestTest.php::it can use the custom request class on prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CustomRequestTest.php::it can use the custom request class on resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CustomRequestTest.php::it can use the custom request class on tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

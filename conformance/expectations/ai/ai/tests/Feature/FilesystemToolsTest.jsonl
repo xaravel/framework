@@ -1,0 +1,35 @@
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::agent copies a file end to end","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::agent deletes a file end to end","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::copy file does not copy directories","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::copy file duplicates a file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::copy file reports a missing source","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::copy file reports copy failures","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::delete file does not report directories as files","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::delete file removes a file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::delete file reports a missing file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::delete file reports delete failures","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::every filesystem tool maps to a strict-compliant openai schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file exists does not report directories as files","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file exists reports presence and absence","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file metadata reports a missing file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file metadata returns size and mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file storage tools all returns every tool as a collection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file storage tools can be filtered as a collection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file storage tools readOnly returns only read tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file url does not generate urls for directories","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file url reports a missing file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::file url returns a usable string and never throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::filesystem tool names resolve to class basenames","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::filesystem tool schemas build","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::list files can recurse into subdirectories","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::list files returns files and directories under a path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::move file does not move directories","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::move file relocates a file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::move file reports a missing source","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::move file reports move failures","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::read file rejects a binary file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::read file rejects an oversized file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::read file reports a missing file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::read file returns text contents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::write file creates a file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FilesystemToolsTest.php::write file reports write failures","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

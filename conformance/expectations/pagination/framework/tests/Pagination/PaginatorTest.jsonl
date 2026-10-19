@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testCanTransformPaginatorItems","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testItRetrievesThePaginatorOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testPaginatorGeneratesUrlsWithoutTrailingSlash","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testPaginatorRemovesTrailingSlashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testPaginatorReturnsPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testPaginatorToJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testPaginatorToPrettyJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\PaginatorTest::testSimplePaginatorReturnsRelevantContextInformation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleWorkCommandTest::test_in_flight_executions_finish_before_the_worker_quits","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleWorkCommandTest::test_no_new_executions_are_started_after_a_stop_signal","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\ScheduleWorkCommandTest::test_stop_signal_marks_the_worker_to_quit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"boost/tests/Unit/Skills/Remote/AuditResultTest.php::it defaults optional fields to null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/AuditResultTest.php::it stores optional alerts and analyzedAt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

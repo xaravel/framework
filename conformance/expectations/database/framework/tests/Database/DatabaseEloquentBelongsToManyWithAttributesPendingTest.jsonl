@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesPendingTest::testCreatesPendingAttributesAndPivotValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesPendingTest::testMorphToManyPendingAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesPendingTest::testMorphedByManyPendingAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesPendingTest::testQueriesPendingAttributesAndPivotValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

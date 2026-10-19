@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\DatabaseSchemaBuilderTest::testAlterTableAddForeignKeyWithExpressionDefault","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\DatabaseSchemaBuilderTest::testAlterTableAddForeignKeyWithPrefix","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\DatabaseSchemaBuilderTest::testDropAllTablesWorksWithForeignKeys","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\DatabaseSchemaBuilderTest::testHasColumnAndIndexWithPrefixIndexDisabled","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\DatabaseSchemaBuilderTest::testHasColumnAndIndexWithPrefixIndexEnabled","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

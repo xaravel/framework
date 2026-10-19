@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleDoesntContainTest::testDoesntContainRuleDoesNotUseLooseComparisons#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleDoesntContainTest::testDoesntContainRuleDoesNotUseLooseComparisons#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleDoesntContainTest::testDoesntContainValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationRuleDoesntContainTest::testItCorrectlyFormatsAStringVersionOfTheRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"ai/tests/Unit/Files/DocumentPathTest.php::local document rejects empty path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/DocumentPathTest.php::local document rejects whitespace-only path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/DocumentPathTest.php::stored document rejects empty path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/DocumentPathTest.php::stored document rejects whitespace-only path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

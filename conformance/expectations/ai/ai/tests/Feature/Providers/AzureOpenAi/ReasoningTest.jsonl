@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/ReasoningTest.php::prompt reads reasoning items off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

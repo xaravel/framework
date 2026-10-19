@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeArray","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeBinary","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeBool","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeFloat","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeInt","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeNull","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeString","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeStringInvalidUtf8","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\EscapeTest::testEscapeStringNullByte","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

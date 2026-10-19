@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testBasicCronCompilation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testEnvironmentsWithEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testEventIsDueCheck","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testTimeBetweenChecks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testTimeBetweenChecksTimezoneCallOrder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleScheduledEventTest::testTimeUnlessBetweenChecks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

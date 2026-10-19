@@ -1,0 +1,17 @@
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it allows a property literally named like the annotation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it encodes every mirrored type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it mirrors a property whose name contains a dot","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it parses a nested annotation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it parses a valid annotation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects an integer beyond the safe range","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects annotations that are not statically reachable#dataset \"items\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects annotations that are not statically reachable#dataset \"oneOf\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects annotations that are not statically reachable#dataset \"root\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"array type\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"duplicate\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"empty\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"newline\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"not a string\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"number type\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it rejects invalid annotations#dataset \"space\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/MirroredParametersTest.php::it renders paths as json pointers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

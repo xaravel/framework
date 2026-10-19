@@ -1,0 +1,21 @@
+{"id":"ai/tests/Feature/StoreFakeTest.php::file assertions > can assert file added to store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file assertions > can assert file added to store with storable file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file assertions > can assert file not added to store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file assertions > can assert file not removed from store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file assertions > can assert file removed from store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > an added fake upload can still be read after the upload object is gone","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > can add an uploaded file to store from its path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > can add file to store with provider id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > can add storable file to store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > can remove file from store with provider id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > can remove file from store with string id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::file operations > cannot add an uploaded file that failed to upload to store","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store assertions > can assert no stores were created","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store assertions > can assert no stores were deleted","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store assertions > can assert store was created by name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store assertions > can assert store was created with closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store assertions > can assert store was deleted","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store operations > stores can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store operations > stores can be faked with a closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store operations > stores can be faked with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoreFakeTest.php::store operations > stores can prevent stray operations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

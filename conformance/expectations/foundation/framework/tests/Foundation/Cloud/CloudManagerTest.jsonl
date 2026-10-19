@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testCloudManagerIsMacroable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testFacadeResolvesTheCloudManager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testIsManagedQueueChecksTheConfiguredManagedQueues#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testIsManagedQueueChecksTheConfiguredManagedQueues#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testQueueThrowsWhenManagedQueuesAreNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testUsesManagedQueuesReflectsTheCloudConnectionDriver#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testUsesManagedQueuesReflectsTheCloudConnectionDriver#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\CloudManagerTest::testUsesManagedQueuesReflectsTheCloudConnectionDriver#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

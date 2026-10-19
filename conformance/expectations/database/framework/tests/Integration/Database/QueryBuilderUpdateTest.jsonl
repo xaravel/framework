@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#0","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#0","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#0","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#1","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#1","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#1","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#2","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#2","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testBasicUpdateForJson#2","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testSubqueryUpdate","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testSubqueryUpdate","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderUpdateTest::testSubqueryUpdate","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

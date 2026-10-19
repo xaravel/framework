@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testDecrementMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testFlushStaleTagsStopsScanningWhenTheCursorReturnsToItsStartingValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testFlushesCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testFlushesCachedLocks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testForgetMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testGetAndSetPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testGetReturnsNullWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testIncrementMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testRedisMultipleValuesAreReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testRedisValueIsReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testRedisValueIsReturnedForNumerics","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testSetMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testSetMethodProperlyCallsRedisForNumerics","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testSetMultipleMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testStoreItemForeverProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisStoreTest::testTouchMethodProperlyCallsRedis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

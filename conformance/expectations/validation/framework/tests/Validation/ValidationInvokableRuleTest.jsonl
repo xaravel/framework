@@ -1,0 +1,17 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testExplicitRuleCanUseInlineValidationMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testImplicitRuleCanUseInlineValidationMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanAccessDataDuringValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanAccessValidatorDuringValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanBeExplicit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanBeImplicit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanFail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanPass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanReturnInvokableRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanReturnMultipleErrorMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanSpecifyLocaleWhenTranslating","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanSpecifyTheValidationErrorKeyForTheErrorMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanTranslateMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItCanTranslateWithChoices","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItIsExplicitByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItLooksForLanguageFileCustomisations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationInvokableRuleTest::testItPerformsReplacementsWhenTranslating","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

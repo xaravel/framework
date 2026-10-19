@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_pending_dispatch_without_delay","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_pending_dispatch_without_delay","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_pending_dispatch_without_delay","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_pending_dispatch_without_delay","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_delay","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_delay","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_delay","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_delay","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_without_delay","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_without_delay","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_without_delay","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueDelayTest::test_queue_without_delay","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

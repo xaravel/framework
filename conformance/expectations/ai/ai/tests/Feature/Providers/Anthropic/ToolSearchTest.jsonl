@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolSearchTest.php::an agent with a ToolSearch tool emits the regex tool search entry and defers its nested tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

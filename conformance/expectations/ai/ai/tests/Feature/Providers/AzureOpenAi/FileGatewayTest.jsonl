@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/FileGatewayTest.php::provider options are resolved with the azure key, not openai","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/FileGatewayTest.php::put file uploads to the v1 endpoint with the assistants purpose","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

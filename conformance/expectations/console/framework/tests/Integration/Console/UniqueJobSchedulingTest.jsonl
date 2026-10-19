@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\UniqueJobSchedulingTest::testJobsPushedToQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\UniqueJobSchedulingTest::testUniqueJobsPushedToQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

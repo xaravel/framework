@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/Streaming/ReasoningDeltaTest.php::combine drops whitespace-only reasoning blocks","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/ReasoningDeltaTest.php::combine ignores events that are not reasoning deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/ReasoningDeltaTest.php::combine joins deltas of a single reasoning block without separators","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/ReasoningDeltaTest.php::combine returns an empty string when there are no reasoning deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/ReasoningDeltaTest.php::combine separates reasoning from different steps with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

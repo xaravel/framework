@@ -1,0 +1,10 @@
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking maps documents by index when results are returned out of order","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking request includes model, query, and documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking request includes top_n when limit set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking request sends bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking response is correctly parsed into RankedDocuments","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking response reports the total tokens","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking throws when the API returns an error","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/RerankingTest.php::reranking uses default model when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

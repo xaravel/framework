@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Tools/AgentToolTest.php::a failing sub-agent surfaces its error as the tool result on the streaming path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/AgentToolTest.php::a structured sub-agent answers through a regular prompt on the streaming path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/AgentToolTest.php::an agent tool streams its events by default and returns its final text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

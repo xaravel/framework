@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/Responses/Data/MetaTest.php::meta accepts null provider and model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/MetaTest.php::meta extracts provider and model from response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/MetaTest.php::meta json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/MetaTest.php::meta returns empty citations when not provided","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/MetaTest.php::meta to array includes provider model and citations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\RouteCacheCommandTest::testItLeavesTheFacadeRootsPointingAtTheCurrentApplication","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\RouteCacheCommandTest::testItRestoresTheContainerInstanceAfterBootingAFreshApplication","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\RouteCacheCommandTest::testItRestoresTheFacadeApplicationAfterBootingAFreshApplication","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\RouteCacheCommandTest::testRoutesRemainAnalyzableAfterCaching","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

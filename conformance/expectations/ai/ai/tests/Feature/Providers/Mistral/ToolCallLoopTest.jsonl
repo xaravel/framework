@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::follow up request includes original messages","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::follow up response with block content is flattened to text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::multi step tool loop returns accumulated response shape","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ToolCallLoopTest.php::unregistered tool call throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

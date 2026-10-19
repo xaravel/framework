@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testItCanDeleteDirectoryViaFilesystem","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testItCanDeleteViaFilesystemRequiresManualClearStatCacheOnFileExistsFromDifferentProcess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testItCanDeleteViaFilesystemRequiresManualClearStatCacheOnIsFileFromDifferentProcess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testItCanDeleteViaFilesystemShouldUpdatesFileExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testItCanDeleteViaFilesystemShouldUpdatesIsFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemTest::testSharedGetReadsEntireStreamEvenWhenReadIsPartial","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

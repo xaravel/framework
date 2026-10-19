@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Console\\OutputStyleTest::testDetectsNewLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\OutputStyleTest::testDetectsNewLineOnUnderlyingOutput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\OutputStyleTest::testDetectsNewLineOnWrite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\OutputStyleTest::testDetectsNewLineOnWriteln","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\OutputStyleTest::testDetectsNewLineOnlyOnOutput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

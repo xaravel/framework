@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::assistant tool calls and tool results are replayed in the follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::base64 image attachment maps to data uri","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::conversation history maps to chat messages","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::document attachments throw","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::remote image attachment maps to image url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/MessageMappingTest.php::uploaded image maps to data uri","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

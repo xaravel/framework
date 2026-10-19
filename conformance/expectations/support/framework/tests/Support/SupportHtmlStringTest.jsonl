@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Support\\SupportHtmlStringTest::testIsEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportHtmlStringTest::testIsNotEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportHtmlStringTest::testToHtml","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportHtmlStringTest::testToString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it avoids the outdated migration guidance from the original draft","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it contains core upgrade content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it has the correct name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it properly compiles blade assist helpers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it returns a valid response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it shows react-specific content when react adapter is installed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it shows svelte-specific content when svelte adapter is installed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeInertiav3Test.php::it shows vue-specific content when vue adapter is installed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertActingAsTest.php::it fails when asserting authenticated as a different user","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertActingAsTest.php::it may assert authenticated and authenticated as a specific user","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertActingAsTest.php::it may assert guest when no user is authenticated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertActingAsTest.php::it may assert the user is acting as the given user","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertActingAsTest.php::it may assert the user is not acting as a user","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

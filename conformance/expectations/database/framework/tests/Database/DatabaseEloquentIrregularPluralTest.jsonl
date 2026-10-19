@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentIrregularPluralTest::testItPluralizesMorphToManyRelationships","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentIrregularPluralTest::testItPluralizesTheTableName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentIrregularPluralTest::testItTouchesTheParentWithAnIrregularPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

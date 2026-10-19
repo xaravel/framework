@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationCacheBasedMaintenanceModeTest::test_it_determines_whether_maintenance_mode_is_active","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationCacheBasedMaintenanceModeTest::test_it_removes_payload_from_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationCacheBasedMaintenanceModeTest::test_it_retrieves_payload_from_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationCacheBasedMaintenanceModeTest::test_it_stores_payload_in_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Cohere/RawResponseTest.php::cohere text responses expose the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

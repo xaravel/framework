@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\Psr6RedisTest::testTransactionIsNotOpenedWhenSerializationFails#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\Psr6RedisTest::testTransactionIsNotOpenedWhenSerializationFails#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

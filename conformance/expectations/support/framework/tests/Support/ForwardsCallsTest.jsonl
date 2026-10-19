@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testForwardsCalls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testMissingAlphanumericForwardedCallThrowsCorrectError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testMissingForwardedCallThrowsCorrectError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testNestedForwardCalls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testNonForwardedErrorIsNotTamperedWith","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\ForwardsCallsTest::testThrowBadMethodCallException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

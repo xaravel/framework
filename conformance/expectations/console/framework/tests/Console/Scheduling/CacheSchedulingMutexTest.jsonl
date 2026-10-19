@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testCanUseCustomConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testChecksForAlreadyRunSchedule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testChecksForAlreadyRunScheduleWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testChecksForNonRunSchedule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testChecksForNonRunScheduleWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testMutexReceivesCorrectCreate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testMutexReceivesCorrectCreateWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testPreventsMultipleRuns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheSchedulingMutexTest::testPreventsMultipleRunsWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanBePassedAsCallable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanChooseSeveralTimes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanForceLosingResultInTests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanForceTheResultViaSequence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanForceWinningResultInTests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanHandleMissingSequenceItems","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanLose","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanLoseWithFloat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanReturnValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanWin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItCanWinWithFloat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItThrowsForFloatsOverOne","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testItThrowsForOutOfLessThanOne","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\LotteryTest::testWithoutSpecifiedClosuresBooleansAreReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

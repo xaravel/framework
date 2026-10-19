@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testUserWithCreatedAt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testUserWithCreatedAtAndUpdatedAt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testUserWithUpdatedAt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testWithoutTimestamp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testWithoutTimestampRestoresWhenClosureThrowsException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testWithoutTimestampWhenAlreadyIgnoringTimestamps","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentTimestampsTest::testWithoutTimestampsRespectsClasses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

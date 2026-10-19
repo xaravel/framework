@@ -1,0 +1,33 @@
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it applies a tools limit on the resolved client","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it applies oauth, cache and protocol version from config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it applies tool filters from config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it disconnects a resolved client when its name is re-registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it disconnects every resolved client and re-resolves afterwards","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it does not cache tools on the resolved client","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it enables the default cache when cache is true","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it exposes callTool / ping / connected / initializeResult / withTimeout on the resolved client","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it fetches a fresh tools list on every resolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it filters tools with only and except patterns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it gives a restored named client its own transport instead of aliasing the cached one","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it keeps disconnecting other clients when one throws during teardown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it keeps tool filters when a named client is restored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it keeps tool filters when an unnamed client is serialized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it prefers a registered client over the config entry","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it propagates a live fetch failure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it provides a headless playwright client from config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it provides a linear client from config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it provides a read only github client from config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it refuses to call an excluded tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it registers a named client and resolves it by name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it resolves a fresh instance when the same name is re-registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it resolves a local client defined in config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it resolves a subclassed client and preserves fluent chaining","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it resolves and memoizes a registered client per request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it resolves any client defined in config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it rethrows the authorization exception from a named client when no default is given","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it returns a tools list the application can cache and restore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it returns the given default from a named client when authorization is required","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it serializes a named client as its name only and re-resolves it when a restored tool is called","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it still installs a fresh factory when an old client fails to disconnect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it throws when a config client defines neither a url nor a command","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ClientManagerTest.php::it throws when resolving an unregistered client","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

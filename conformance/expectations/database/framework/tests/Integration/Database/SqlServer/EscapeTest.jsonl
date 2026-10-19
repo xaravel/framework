@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeArray","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeBinary","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeBool","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeFloat","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeInt","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeNull","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeString","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeStringInvalidUtf8","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\EscapeTest::testEscapeStringNullByte","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

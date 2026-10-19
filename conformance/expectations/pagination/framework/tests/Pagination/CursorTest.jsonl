@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testCanEncodeAndDecodeSuccessfully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testCanGetParam","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testCanGetParams","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testFromEncodedReturnsNullForInvalidJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testFromEncodedReturnsNullForNonStringInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testFromEncodedReturnsNullWhenDecodedPayloadIsNotAnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorTest::testFromEncodedReturnsNullWhenPointsToNextItemsKeyIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

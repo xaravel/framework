@@ -1,0 +1,13 @@
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::code execution tool sends type code_interpreter","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::file search metadata filters throw an exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::file search tool forwards xai provider options into the tool payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::file search tool sends file_search with vector store ids","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::provider tools xAI does not support are dropped after failing over to it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::tool parameters are not wrapped in schema definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::tool with empty schema includes parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::tool with parameters includes correct schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::tool without Strict attribute sends strict false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::web search tool forwards xai provider options into the tool payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::web search tool sends allowed_domains","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolMappingTest.php::web search tool sends type web_search","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

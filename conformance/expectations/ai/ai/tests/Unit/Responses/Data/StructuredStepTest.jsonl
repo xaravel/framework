@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/Data/StructuredStepTest.php::structured step jsonSerialize includes structured data","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/StructuredStepTest.php::structured step stores structured data","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/StructuredStepTest.php::structured step to array includes structured data","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

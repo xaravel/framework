@@ -1,0 +1,4 @@
+{"id":"ai/tests/Unit/Responses/Data/RankedDocumentTest.php::ranked document json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/RankedDocumentTest.php::ranked document stores index document and score","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/RankedDocumentTest.php::ranked document to array returns all properties","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/RankedDocumentTest.php::ranked document to string returns document content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

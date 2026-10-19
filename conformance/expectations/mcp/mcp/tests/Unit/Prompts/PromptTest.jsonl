@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Prompts/PromptTest.php::it can have custom meta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Prompts/PromptTest.php::it includes icons in toArray when declared on a prompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Prompts/PromptTest.php::it includes meta in array representation with other fields","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Prompts/PromptTest.php::it omits icons in toArray when none are declared on a prompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Prompts/PromptTest.php::it returns no meta by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

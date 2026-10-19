@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Queue\\PruneBatchesCommandTest::testAllowPruningAllCancelledBatches","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\PruneBatchesCommandTest::testAllowPruningAllUnfinishedBatches","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

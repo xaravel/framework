@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadSumTest\\EloquentModelLoadSumTest::testLoadSumMultipleRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadSumTest\\EloquentModelLoadSumTest::testLoadSumSingleRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

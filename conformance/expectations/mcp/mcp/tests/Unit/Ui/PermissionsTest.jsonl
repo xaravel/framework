@@ -1,0 +1,6 @@
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it allows permissions via enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it implements Arrayable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it serializes as empty when no permissions set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it serializes camera permission as empty object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it serializes multiple permissions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/PermissionsTest.php::it supports allow with multiple enums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

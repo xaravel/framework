@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testBasicMigrationsCallMigratorWithProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testMigrationRepositoryCreatedWhenNecessary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testMigrationsCanBeRunWithStoredSchema","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testStepMayBeSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testTheCommandMayBePretended","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMigrateCommandTest::testTheDatabaseMayBeSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

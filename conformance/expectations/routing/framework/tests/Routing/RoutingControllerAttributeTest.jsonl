@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Routing\\RoutingControllerAttributeTest::testControllerMiddlewareAttributesAreInherited","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingControllerAttributeTest::testControllerMiddlewareAttributesAreInheritedInDeclarationOrder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingControllerAttributeTest::testControllerMiddlewareMergesWithAttributeMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

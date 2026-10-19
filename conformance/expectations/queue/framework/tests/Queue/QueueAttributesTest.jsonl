@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_connection_attribute_keeps_string_as_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_connection_attribute_normalizes_backed_enum_to_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_connection_attribute_normalizes_unit_enum_to_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_queue_attribute_keeps_string_as_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_queue_attribute_normalizes_backed_enum_to_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueAttributesTest::test_queue_attribute_normalizes_unit_enum_to_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

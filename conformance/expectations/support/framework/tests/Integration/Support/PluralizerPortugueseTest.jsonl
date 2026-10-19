@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testBasicPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testBasicSingular","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testCaseSensitiveSingularPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testCaseSensitiveSingularUsage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testIrregulars","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testPluralAppliedForStringEndingWithNumericCharacter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testPluralStudlySupportsArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testPluralStudlySupportsCollections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testPluralSupportsArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\PluralizerPortugueseTest::testPluralSupportsCollections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\QueuePauseCommandTest::testDisabledError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\QueuePauseCommandTest::testDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\QueuePauseCommandTest::testPauseAllDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\QueuePauseCommandTest::testResumeAllDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

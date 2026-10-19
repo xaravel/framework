@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testCreateRepositoryCreatesProperDatabaseTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testDeleteMethodRemovesAMigrationFromTheTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testGetLastBatchNumberReturnsMaxBatch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testGetLastMigrationsGetsAllMigrationsWithTheLatestBatchNumber","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testGetNextBatchNumberReturnsLastBatchNumberPlusOne","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testGetRanMigrationsListMigrationsByPackage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRepositoryTest::testLogMethodInsertsRecordIntoMigrationTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

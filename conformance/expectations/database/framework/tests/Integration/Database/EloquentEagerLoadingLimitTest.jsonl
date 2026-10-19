@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testBelongsToMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testBelongsToManyWithOffset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testHasMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testHasManyThrough","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testHasManyThroughWithOffset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentEagerLoadingLimitTest\\EloquentEagerLoadingLimitTest::testHasManyWithOffset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"boost/tests/Feature/Console/InstallCommandRenderFailuresTest.php::it does not suggest a package update for files outside the vendor directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandRenderFailuresTest.php::it stays quiet when everything rendered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandRenderFailuresTest.php::it tells the user which packages to update when their guidelines could not be rendered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Container\\UtilTest::testArrayWrap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\UtilTest::testGetParameterClassName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\UtilTest::testUnwrapIfClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

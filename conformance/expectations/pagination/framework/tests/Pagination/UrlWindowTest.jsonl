@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Pagination\\UrlWindowTest::testCustomUrlRangeForAWindowOfLinks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\UrlWindowTest::testPresenterCanDetermineIfThereAreAnyPagesToShow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\UrlWindowTest::testPresenterCanGetAUrlRangeForASmallNumberOfUrls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\UrlWindowTest::testPresenterCanGetAUrlRangeForAWindowOfLinks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

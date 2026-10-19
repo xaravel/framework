@@ -1,0 +1,14 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::request does not include api-version query parameter","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::request includes model and input","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::request sends api-key header authentication","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::request without schema excludes text format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::request without tools excludes tool fields","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::response text is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::response usage is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::streaming request includes stream flag","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::structured output includes json schema text format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::structured response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::system instructions are sent as system message in input","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::temperature and max tokens are excluded when not set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::temperature and max tokens are included when set via attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/RequestMappingTest.php::tools include tool choice auto","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

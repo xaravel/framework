@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::a longer instructions ttl requires the tools cache to use the same ttl","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::a requested ttl is added to the bedrock cache point","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::an agent without cache attributes adds no cache points","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::cache instructions attribute appends a cache point","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::cache points survive provider options that override the same keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::cache tool definitions attribute appends a cache point to the tool config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/PromptCacheTest.php::the tools target is a no-op when the request carries no tool config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

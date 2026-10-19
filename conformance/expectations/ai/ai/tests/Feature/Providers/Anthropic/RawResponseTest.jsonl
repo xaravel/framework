@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::agent prompted event exposes the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::each step exposes the raw http response of its own request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::responses discard the raw http response when serialized","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::streamed responses have a null raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::structured responses expose the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::text responses expose the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/RawResponseTest.php::tool call loops expose the raw http response of the final step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

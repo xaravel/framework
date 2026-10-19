@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/Gateway/Concerns/ComposesSchemaInstructionsTest.php::appends schema instruction when instructions are blank","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ComposesSchemaInstructionsTest.php::non-ascii characters in schema descriptions are not unicode-escaped","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ComposesSchemaInstructionsTest.php::prepends instructions before schema instruction","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ComposesSchemaInstructionsTest.php::returns instructions unchanged when schema is blank","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ComposesSchemaInstructionsTest.php::returns null when both instructions and schema are blank","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

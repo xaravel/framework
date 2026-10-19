@@ -1,0 +1,15 @@
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using array fields#dataset \"cohere\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using array fields#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using array fields#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using closure#dataset \"cohere\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using closure#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using closure#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using string field#dataset \"cohere\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using string field#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::collections can be reranked using string field#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked with limit#dataset \"cohere\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked with limit#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked with limit#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked#dataset \"cohere\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/RerankingTest.php::documents can be reranked#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

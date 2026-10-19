@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Traits\\CanConfigureMigrationCommandsTest::testMigrateFreshUsingDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\Traits\\CanConfigureMigrationCommandsTest::testMigrateFreshUsingWithPropertySets","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

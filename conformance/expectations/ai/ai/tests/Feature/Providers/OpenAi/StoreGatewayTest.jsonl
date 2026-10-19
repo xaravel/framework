@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::add file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::add file with metadata includes attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::create store includes expiration when provided","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::create store includes file ids in request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::create store maps description to metadata","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::create store sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::delete store sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::get store sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/StoreGatewayTest.php::remove file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

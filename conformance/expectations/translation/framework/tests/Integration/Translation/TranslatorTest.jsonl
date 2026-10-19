@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testFileValidationDoesNotAttemptToTranslateAlreadyTranslatedMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanCheckKeyExistsWithoutTriggeringHandleMissingKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanCheckLanguageExistsHasFromLocaleForJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanGetFromLocaleForJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoice#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoice#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoice#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoice#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoiceWithChoiceSeparatorInReplaceString#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoiceWithChoiceSeparatorInReplaceString#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoiceWithChoiceSeparatorInReplaceString#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleChoiceWithChoiceSeparatorInReplaceString#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleMissingKeysNoReturn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItCanHandleMissingKeysUsingCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Translation\\TranslatorTest::testItReturnsCorrectLocaleForMissingKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

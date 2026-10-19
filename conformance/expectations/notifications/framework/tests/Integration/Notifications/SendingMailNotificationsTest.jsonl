@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentToMultipleAddresses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentToNamedAddress","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentUsingMailMessageWithHtmlAndPlain","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentUsingMailMessageWithHtmlOnly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentUsingMailMessageWithPlainOnly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentUsingMailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentWithCustomTheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailIsSentWithSubject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Notifications\\SendingMailNotificationsTest::testMailUsesDefaultThemeWhenNoneIsGiven","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

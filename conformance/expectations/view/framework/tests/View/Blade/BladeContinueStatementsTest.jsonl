@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsWithArgumentAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsWithExpressionAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsWithFaultyArgumentAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsWithSpacedArgumentAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

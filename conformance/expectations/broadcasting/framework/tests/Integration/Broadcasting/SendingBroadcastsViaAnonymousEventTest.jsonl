@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testBroadcastIsSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testBroadcastIsSentNow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testDefaultNameIsSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testDefaultPayloadIsSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testSendToMultipleChannels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testSendToOthersOnly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testSendToPresenceChannel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testSendToPrivateChannel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Broadcasting\\SendingBroadcastsViaAnonymousEventTest::testSendViaANonDefaultConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testBasicCreateDumpsAutoload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testBasicCreateGivesCreatorProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testBasicCreateGivesCreatorProperArgumentsWhenCreateTablePatternIsFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testBasicCreateGivesCreatorProperArgumentsWhenNameIsStudlyCase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testBasicCreateGivesCreatorProperArgumentsWhenTableIsSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationMakeCommandTest::testCanSpecifyPathToCreateMigrationsIn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

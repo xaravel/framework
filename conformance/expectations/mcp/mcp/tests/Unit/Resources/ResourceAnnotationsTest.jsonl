@@ -1,0 +1,17 @@
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts empty audience array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts only an assistant role","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts only user role","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts priority of 0.0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts priority of 1.0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it accepts valid ISO 8601 formats for lastModified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it includes annotations in resource toArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it includes audience annotation in resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it includes multiple annotations in resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it includes priority annotation in resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it includes the lastModified annotation in resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it rejects tool annotations on resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it returns no annotation object when no annotations are present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it validates audience roles","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it validates lastModified ISO 8601 format","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it validates priority range maximum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceAnnotationsTest.php::it validates priority range minimum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

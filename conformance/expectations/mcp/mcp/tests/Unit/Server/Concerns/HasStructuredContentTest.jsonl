@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Server/Concerns/HasStructuredContentTest.php::it can set structured content with array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasStructuredContentTest.php::it merges multiple setStructuredContent calls with arrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasStructuredContentTest.php::it merges structured content into base array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasStructuredContentTest.php::it overwrites existing keys when setting structured content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasStructuredContentTest.php::it returns base array when structured content is null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

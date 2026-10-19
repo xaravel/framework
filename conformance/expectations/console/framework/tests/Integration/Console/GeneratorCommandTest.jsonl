@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#4","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItCannotGenerateClassUsingReservedName#5","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItChopsPhpExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItChopsPhpExtensionFromMakeViewCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\GeneratorCommandTest::testItOnlyChopsPhpExtensionFromFilename","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

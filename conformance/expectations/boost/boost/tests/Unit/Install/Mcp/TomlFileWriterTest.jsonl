@@ -1,0 +1,20 @@
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it appends to an existing TOML file preserving other servers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it creates a new file with base config options","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it creates the new TOML file with the correct structure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it filters empty values from server config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it formats boolean values correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it formats numeric values correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles multiple servers in the same file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles nested env table correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles paths with spaces","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles server names with regex special characters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles special characters in string values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it handles windows-style paths with backslashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it preserves full codex config with top-level settings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it removes server with env subtable when updating","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it repeated updates do not accumulate blank lines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it treats a file with only whitespace as a new file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it treats an empty file as a new file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it updates a file that starts with a UTF-8 BOM without duplicating the server table","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it updates the existing server by removing an old section and appending a new one","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Mcp/TomlFileWriterTest.php::it uses a custom config key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

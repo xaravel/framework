@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\View\\BladeAnonymousComponentTest::test_anonymous_components_with_custom_paths_can_be_rendered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\View\\BladeAnonymousComponentTest::test_anonymous_components_with_custom_paths_cant_be_rendered_as_normal_views","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\View\\BladeAnonymousComponentTest::test_anonymous_components_with_custom_paths_cant_be_rendered_as_normal_views_even_with_no_prefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

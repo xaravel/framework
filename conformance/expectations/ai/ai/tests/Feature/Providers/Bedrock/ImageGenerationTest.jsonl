@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Bedrock/ImageGenerationTest.php::nested provider options are merged beneath the core image body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

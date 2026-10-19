@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Console\\SignalsTest::testRegister","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\SignalsTest::testUnregister","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

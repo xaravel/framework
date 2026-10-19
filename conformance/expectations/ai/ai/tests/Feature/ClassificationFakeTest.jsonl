@@ -1,0 +1,16 @@
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::boolean criteria may only describe true and false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::can assert classified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::can assert nothing classified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::can fake classification with closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::can prevent stray classifications","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::choice requires at least two options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::classify rejects blank state","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::classify rejects missing questions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::classify rejects questions without string keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::fake answers may be overridden per question","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::fake generates shape-valid answers for every question","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::fake records the attachments a classification was given","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::fakes reject attachments for providers that cannot classify them","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::missing answer throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::non-classification providers throw","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ClassificationFakeTest.php::score requires a list of at least two levels","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

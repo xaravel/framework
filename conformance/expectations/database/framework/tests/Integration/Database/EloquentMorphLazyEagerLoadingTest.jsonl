@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphLazyEagerLoadingTest\\EloquentMorphLazyEagerLoadingTest::testLazyEagerLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphLazyEagerLoadingTest\\EloquentMorphLazyEagerLoadingTest::testLazyEagerLoadingWithMorphMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

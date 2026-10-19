@@ -1,0 +1,7 @@
+{"id":"mcp/tests/ArchTest.php::commands extend command","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::contracts are interfaces","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::exceptions extend","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::mcp methods extend base class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::resource annotations implement annotation interface","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::strict and safe","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/ArchTest.php::tool annotations implement annotation interface","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testDimensionsRuleMaintainsCorrectOrder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testGeneratesTheCorrectValidationMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testItCorrectlyFormatsAStringVersionOfTheRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testItCorrectlyFormatsWithSpecialValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testOverridingValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDimensionsRuleTest::testRatioBetweenOverridesMinAndMaxRatio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

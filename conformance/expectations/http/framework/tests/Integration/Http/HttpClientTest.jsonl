@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testAsyncCanHandleThrownException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testCanSetRequestAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testForwardsCallsToPromise","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testGlobalMiddlewarePersistsAfterFacadeFlush","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testGlobalMiddlewarePersistsBeforeWeDispatchEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\HttpClientTest::testPoolCanForwardToUnderlyingPromise","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

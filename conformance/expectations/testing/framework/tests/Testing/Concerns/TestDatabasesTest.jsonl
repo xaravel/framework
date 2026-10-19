@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestDatabasesTest::testSwitchToDatabaseWithUrl#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestDatabasesTest::testSwitchToDatabaseWithUrl#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestDatabasesTest::testSwitchToDatabaseWithUrl#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestDatabasesTest::testSwitchToDatabaseWithoutUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

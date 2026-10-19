@@ -1,0 +1,14 @@
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::detects absolute path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::detects existing directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::detects multiple paths first exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::detects multiple paths second exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::detects with glob pattern","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::expands tilde home directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::expands windows environment variables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::fails for non existent directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::fails when no paths exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::fails with glob pattern no matches","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::handles missing environment variable on windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::identifies absolute paths correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::returns false when no paths config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/DirectoryDetectionStrategyTest.php::uses current directory when no base path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

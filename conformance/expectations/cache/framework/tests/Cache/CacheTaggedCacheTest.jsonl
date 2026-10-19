@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testCacheCanBeSavedWithMultipleTags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testCacheCanBeSetWithDatetimeArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testCacheSavedWithMultipleTagsCanBeFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testGetMultiple","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testGetMultipleWithDefaultValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testGetWithArrayOfEnumKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testManyWithDefaultValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testManyWithEnumKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testManyWithEnumKeysAndDefaultValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testTagsCacheForever","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testTagsWithDecrementCanBeFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testTagsWithIncrementCanBeFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testTagsWithStringArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testWithDecrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheTaggedCacheTest::testWithIncrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

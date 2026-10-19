@@ -1,0 +1,14 @@
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::missing images key yields empty collection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::nova canvas body uses text to image params","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::nova canvas response is parsed from images array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::parse size converts 2:3 ratio to portrait dimensions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::parse size converts 3:2 ratio to landscape dimensions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::parse size defaults to square dimensions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::stability body omits aspect ratio when size is null","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::stability body uses prompt and aspect ratio","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::stability response is parsed from images array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::titan image body defaults quality to standard","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::titan image body uses text to image params","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::titan response is parsed from images array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::unknown model family falls back to plain prompt body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockImageGatewayTest.php::unknown model family returns empty collection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

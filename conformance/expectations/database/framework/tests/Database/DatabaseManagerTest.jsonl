@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseManagerTest::testParseConnectionNameRecognizesDirectType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseManagerTest::testRefreshPdoConnectionsRefreshesDirectPdo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseManagerTest::testSetDefaultConnectionAcceptsEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseManagerTest::testSetPdoForDirectTypeSetsReadAndWritePdosToDirectPdo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseManagerTest::testUsingConnectionAcceptsEnumsAndRestoresTheDefaultConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

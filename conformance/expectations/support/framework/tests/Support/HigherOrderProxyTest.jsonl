@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Support\\HigherOrderProxyTest::test_call_forwards_and_returns_target","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\HigherOrderProxyTest::test_call_proxies_method_call_to_items","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\HigherOrderProxyTest::test_get_proxies_property_access_to_items","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

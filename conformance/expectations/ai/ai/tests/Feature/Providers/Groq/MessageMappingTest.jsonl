@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/Groq/MessageMappingTest.php::document attachments throw exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/MessageMappingTest.php::image attachment maps to image url content block","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/MessageMappingTest.php::local image attachment without explicit mime type detects mime from file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/MessageMappingTest.php::tool result follow up maps assistant and tool result messages","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/MessageMappingTest.php::user message maps to groq format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

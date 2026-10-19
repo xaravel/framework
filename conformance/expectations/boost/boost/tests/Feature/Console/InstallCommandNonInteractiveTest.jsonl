@@ -1,0 +1,2 @@
+{"id":"boost/tests/Feature/Console/InstallCommandNonInteractiveTest.php::it does not throw when no agents are saved and none are auto-detected in non-interactive mode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandNonInteractiveTest.php::it silently drops stale agents no longer in the available list in non-interactive mode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

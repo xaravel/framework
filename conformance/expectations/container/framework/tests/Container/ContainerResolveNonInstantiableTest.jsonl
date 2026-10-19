@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Container\\ContainerResolveNonInstantiableTest::testResolveVariadicPrimitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerResolveNonInstantiableTest::testResolvingNonInstantiableWithDefaultRemovesWiths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerResolveNonInstantiableTest::testResolvingNonInstantiableWithVariadicRemovesWiths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming accumulates tool call arguments and runs the tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming captures usage and finish reason","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming emits reasoning events before the text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming emits text events","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming error event stops stream","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming exposes the combined reasoning on the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/StreamingTest.php::streaming ignores tool plan deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

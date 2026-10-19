@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/Gateway/Concerns/ResolvesToolNameTest.php::findTool matches a tool by its declared name() when multiple share a class","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ResolvesToolNameTest.php::findTool returns null when no tool matches","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ResolvesToolNameTest.php::resolveToolName falls back to class basename when tool has no name() method","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ResolvesToolNameTest.php::resolveToolName falls back when name() is not callable","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ResolvesToolNameTest.php::resolveToolName prefers the declared name() method when present","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

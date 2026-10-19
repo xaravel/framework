@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::testItemsCanBeAtomicallyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::testItemsCanBeIncrementedAndDecremented","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::testItemsCanBeStoredAndRetrieved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\DynamoDbStoreTest::testLocksCanBeAcquired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

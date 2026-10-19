@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testAfterCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testAfterResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testAllOnConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testAllOnQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testBeforeCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testChain","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testDelay","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testDynamicallyProxyMethods","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testGetJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testOnConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testOnQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testUnlessMethodOfConditionableTraitWithFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testUnlessMethodOfConditionableTraitWithTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testWhenMethodOfConditionableTraitWithFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testWhenMethodOfConditionableTraitWithTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusPendingDispatchTest::testWithoutDelay","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseEloquentMySqlIntegrationTest::testCreateOrFirst","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseEloquentMySqlIntegrationTest::testCreateOrFirstWithinTransaction","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

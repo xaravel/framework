@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPrunableTest::testPrunableMethodMustBeImplemented","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPrunableTest::testPruneWithCustomPruneMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPrunableTest::testPruneWithExceptionAtOneOfModels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPrunableTest::testPrunesRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPrunableTest::testPrunesSoftDeletedRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

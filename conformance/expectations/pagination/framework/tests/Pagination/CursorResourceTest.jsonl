@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Pagination\\CursorResourceTest::testItCanGuessResourceWhenNotProvided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorResourceTest::testItCanTransformToExplicitResource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\CursorResourceTest::testItThrowsExceptionWhenResourceCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

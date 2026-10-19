@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/StoredMessageIdsTest.php::a remembered turn reports the rows it wrote","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoredMessageIdsTest.php::a streamed turn reports the rows it wrote once it has been consumed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/StoredMessageIdsTest.php::a turn that stores nothing reports no ids","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

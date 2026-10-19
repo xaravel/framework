@@ -1,0 +1,14 @@
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it adds structured content to existing ResponseFactory with withStructuredContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it adds structured content with meta to ResponseFactory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it creates a factory with a single response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it creates a factory with multiple responses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it creates a structured content response with Response::structured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it creates a structured content response with meta using Response::structured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it merges multiple withMeta calls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it merges multiple withStructuredContent calls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it separates content-level meta from result-level meta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it supports Conditionable trait","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it supports fluent withMeta for result-level metadata","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it supports unless from Conditionable trait","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it supports withMeta with key-value signature","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ResponseFactoryTest.php::it throws exception when Response::structured result is wrapped in ResponseFactory::make","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

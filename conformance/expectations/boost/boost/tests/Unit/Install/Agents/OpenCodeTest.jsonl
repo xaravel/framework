@@ -1,0 +1,5 @@
+{"id":"boost/tests/Unit/Install/Agents/OpenCodeTest.php::detectInProject returns false when only AGENTS.md exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/OpenCodeTest.php::httpMcpServerConfig returns remote type config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/OpenCodeTest.php::mcpConfigPath prefers opencode.jsonc when it exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/OpenCodeTest.php::mcpConfigPath returns opencode.json when jsonc does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/OpenCodeTest.php::projectDetectionConfig checks for both opencode.jsonc and opencode.json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

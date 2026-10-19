@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Feature/Console/MakePromptCommandTest.php::it can create a prompt class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakePromptCommandTest.php::it may publish a custom stub","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

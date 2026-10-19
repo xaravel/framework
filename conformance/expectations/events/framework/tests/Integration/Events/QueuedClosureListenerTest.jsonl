@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Events\\QueuedClosureListenerTest::testAnonymousQueuedListenerIsQueued","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\QueuedClosureListenerTest::testAnonymousQueuedListenerIsQueuedOnMessageGroup","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\QueuedClosureListenerTest::testAnonymousQueuedListenerIsQueuedWithDeduplicator","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

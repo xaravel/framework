@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationDatabasePresenceVerifierTest::testBasicCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDatabasePresenceVerifierTest::testBasicCountWithClosures","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDatabasePresenceVerifierTest::testGetCountWithValidExcludeId","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

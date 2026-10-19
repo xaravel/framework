@@ -1,0 +1,6 @@
+{"id":"boost/tests/Unit/Install/SkillTest.php::it can be marked as custom","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/SkillTest.php::it creates skill with all properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/SkillTest.php::it defaults custom to false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/SkillTest.php::it displays name with .ai/ prefix and asterisk when custom","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/SkillTest.php::it displays name without asterisk when not custom","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/SkillTest.php::it returns new instance with custom flag using withCustom","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

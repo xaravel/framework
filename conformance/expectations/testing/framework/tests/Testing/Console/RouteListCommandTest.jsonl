@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testClosurePathIsDisplayedInNonVerboseMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testClosurePathIsDisplayedInVerboseMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testClosurePathIsIncludedInJsonOutput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testControllerRouteHasNullPathInJsonOutput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testDisplayRoutesExceptVendor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testDisplayRoutesForCli","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testDisplayRoutesForCliInVerboseMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testDisplayRoutesWithBindingFieldsAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testRouteCanBeFilteredByAction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Console\\RouteListCommandTest::testRouteCanBeFilteredByName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

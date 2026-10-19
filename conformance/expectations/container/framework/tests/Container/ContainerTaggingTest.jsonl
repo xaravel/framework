@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Container\\ContainerTaggingTest::testContainerTags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerTaggingTest::testLazyLoadedTaggedServicesCanBeLoopedOverMultipleTimes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerTaggingTest::testTaggedServicesAreLazyLoaded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

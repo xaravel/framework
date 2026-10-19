@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testConnectToClusterFormatsRetryParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostAcceptsCaseInsensitiveMatchingScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostKeepsExplicitSchemeWhenMatchingHostScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostLeavesConfigUnchangedWhenHostHasNoScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostLeavesConfigUnchangedWhenHostIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostThrowsOnConflictingScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatHostUsesHostSchemeWhenSchemeNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryCreatesRetryFromScalarOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryCreatesRetryFromScalarOptionsWithNamedArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryDoesNotTreatPhpRedisBackoffOptionsAsPredisRetryConfig","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryKeepsExplicitRetryInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryThrowsForInvalidBackoffAlgorithm","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryUsesConstantBackoff","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\PredisConnectorTest::testFormatRetryUsesNoBackoff","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

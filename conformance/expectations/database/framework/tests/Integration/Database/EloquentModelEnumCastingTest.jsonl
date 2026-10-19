@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testAnAttributeWithoutACastCanBeSetToAnEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testAttributeCastToAnEnumCanNotBeSetToAValueNotDefinedOnTheEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testAttributeCastToAnEnumCanNotBeSetToAnotherEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testCreateOrFirst","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAcceptBackedValueOnSave","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAcceptNullOnSave","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAreCastableToArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAreCastableToArrayWhenNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAreConvertedOnSave","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsAreNotConvertedOnSaveWhenAlreadyCorrect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testEnumsReturnNullWhenNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testFirstOrCreate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEnumCastingTest::testFirstOrNew","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/ReasoningTest.php::prompt reads thinking blocks off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ReasoningTest.php::prompt separates each thinking block with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ReasoningTest.php::redacted thinking contributes no reasoning text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

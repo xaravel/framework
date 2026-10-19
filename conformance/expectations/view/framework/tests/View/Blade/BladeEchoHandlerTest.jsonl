@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testBladeHandlerCanInterceptEscapedEchos","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testBladeHandlerCanInterceptRawEchos","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testBladeHandlerCanInterceptRegularEchos","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerLogicWorksCorrectly#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerLogicWorksCorrectly#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerLogicWorksCorrectly#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerLogicWorksCorrectly#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerWorksWithIterables#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerWorksWithNonStringables#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerWorksWithNonStringables#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerWorksWithNonStringables#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testHandlerWorksWithNonStringables#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEchoHandlerTest::testWhitespaceIsPreservedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testCredentialValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testCredentialValidationFailed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testCredentialValidationFailsGracefullyWithNullPassword","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testDontRehashPasswordIfNotRequired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testModelsCanBeCreated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRegistersQueryHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRehashPasswordIfRequired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByBadTokenReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByCredentialsAcceptsCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByCredentialsReturnsUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByCredentialsWithMultiplyPasswordsReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByIDReturnsUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveByTokenReturnsUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrieveTokenWithBadIdentifierReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthEloquentUserProviderTest::testRetrievingWithOnlyPasswordCredentialReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

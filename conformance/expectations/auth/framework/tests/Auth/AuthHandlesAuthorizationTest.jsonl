@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthHandlesAuthorizationTest::testAllowMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthHandlesAuthorizationTest::testDenyHasNullStatus","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthHandlesAuthorizationTest::testDenyMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthHandlesAuthorizationTest::testItCanDenyAsNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthHandlesAuthorizationTest::testItCanDenyWithStatus","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

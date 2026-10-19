@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedLockTest::testIsLockedReturnsFalseWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedLockTest::testIsLockedReturnsTrueWhenOwnerIsStored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedLockTest::testIsOwnedByNullWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedLockTest::testReleaseReturnsFalseWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

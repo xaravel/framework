@@ -1,0 +1,4 @@
+{"id":"ai/tests/Unit/Gateway/TextGenerationOptionsTest.php::it accepts a Lab enum directly without re-normalizing","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/TextGenerationOptionsTest.php::it normalizes a string driver name to a Lab enum so the documented match idiom works","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/TextGenerationOptionsTest.php::it passes the raw string through when it does not match any Lab case","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/TextGenerationOptionsTest.php::it returns null when the agent does not implement HasProviderOptions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

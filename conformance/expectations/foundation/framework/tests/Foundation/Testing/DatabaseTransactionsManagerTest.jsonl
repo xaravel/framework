@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testCommittingDoesNotRemoveTheBasePendingTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testItExecutesCallbacksForTheSecondTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testItExecutesCallbacksImmediatelyIfThereIsOnlyOneTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testItExecutesTransactionCallbacksAtLevelOne","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testItIgnoresTheBaseTransactionForCallbackApplicableTransactions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTransactionsManagerTest::testSkipsTheNumberOfConnectionsTransacting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

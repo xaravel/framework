@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Notifications\\NotificationRoutesNotificationsTest::testNotificationCanBeDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationRoutesNotificationsTest::testNotificationCanBeSentNow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationRoutesNotificationsTest::testNotificationOptionRouting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationRoutesNotificationsTest::testOnDemandNotificationsCannotUseDatabaseChannel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

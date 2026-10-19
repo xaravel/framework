@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EloquentCastTest::testItCastTimestampsCreatedByTheBuilderWhenTimeHasNotPassed","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EloquentCastTest::testItCastTimestampsCreatedByTheBuilderWhenTimeHasPassed","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EloquentCastTest::testItCastTimestampsUpdatedByAMutator","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBasicBroadcasting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastNameCanBeDefined","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastNameDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastPayloadCanBeDefined","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastPayloadDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastingForSpecificEventsOnly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testBroadcastingOnModelTrashing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseEloquentBroadcastingTest::testChannelRouteFormatting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

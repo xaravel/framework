@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueListFailedCommandTest::testEncryptedJobShowsUnderlyingClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueListFailedCommandTest::testLegacyPayloadWithoutDisplayNameFallsBackToRegex","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueListFailedCommandTest::testMalformedPayloadDoesNotThrow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueListFailedCommandTest::testQueuedListenerShowsUnderlyingListenerClassNotWrapper","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueListFailedCommandTest::testRegularQueuedJobStillShowsJobClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

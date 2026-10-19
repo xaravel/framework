@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Files/RemoteFileTest.php::a failed fetch throws instead of inlining the error body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Files/RemoteFileTest.php::declared mime type wins without fetching the url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Files/RemoteFileTest.php::mime type falls back to the response content type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Files/RemoteFileTest.php::mime type is null when the response declares none","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Files/RemoteFileTest.php::the remote url is only fetched once","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,15 @@
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::tool parameters are not wrapped in schema definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::tool with empty schema includes parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::tool with parameters includes correct schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web fetch and web search can be used together","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web fetch tool forwards provider options into parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web fetch tool is sent as openrouter:web_fetch type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web fetch tool sends allowed_domains","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web fetch tool sends max_uses when maxSearches is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool forwards max_results through provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool forwards provider options into parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool is sent as openrouter:web_search type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool sends allowed_domains","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool sends max_uses when maxSearches is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ToolMappingTest.php::web search tool sends user_location","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

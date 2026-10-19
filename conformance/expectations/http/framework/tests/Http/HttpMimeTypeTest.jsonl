@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testMimeTypeFromExtensionExistsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testMimeTypeFromExtensionExistsTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testMimeTypeFromFileNameExistsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testMimeTypeFromFileNameExistsTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testMimeTypeSymfonyInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpMimeTypeTest::testSearchExtensionFromMimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

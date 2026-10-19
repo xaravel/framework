@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryGrammarTest::testCompileOrdersAcceptsExpression","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryGrammarTest::testCompileOrdersAcceptsExpressionWithPlaceholders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryGrammarTest::testWhereRawReturnsStringWhenExpressionPassed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseQueryGrammarTest::testWhereRawReturnsStringWhenStringPassed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

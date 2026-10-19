@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testNonModelFilesAreIgnoredTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testNonPrunableTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testNonPrunableTestWithATrait","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testPrunableModelAndExceptWithEachOther","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testPrunableModelWithPrunableRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testPrunableSoftDeletedModelWithPrunableRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testPrunableTestModelWithoutPrunableRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testTheCommandDispatchesEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testTheCommandMayBePretended","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\PruneCommandTest::testTheCommandMayBePretendedOnSoftDeletedModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

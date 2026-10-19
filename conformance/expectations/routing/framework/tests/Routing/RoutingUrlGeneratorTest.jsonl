@@ -1,0 +1,63 @@
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testAssetGeneration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGeneration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGenerationWithHostFormatting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGenerationWithPathFormatting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGenerationWithRequestBaseUrlWithFileSuffix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGenerationWithRequestBaseUrlWithSubfolder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicGenerationWithRequestBaseUrlWithSubfolderAndFileSuffix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testBasicRouteGeneration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testComplexRouteGenerationWithDefaultsAndBindingFields","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testComplexRouteGenerationWithDefaultsAndMixedParameterSyntax","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testControllerRoutesOutsideOfDefaultNamespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testControllerRoutesWithADefaultNamespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testDefaultsCanBeCombinedWithExtraQueryParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testEncodedRouteParametersAreNotEncodedAgain","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testFluentRouteNameDefinitions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testForceHttps","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testHttpOnlyRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testHttpsRoutesWithDomains","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testMissingNamedRouteResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testPassedParametersHavePrecedenceOverDefaults","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testPrevious","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testPreviousPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testPreviousPathWithBaseUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testQueryGeneration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutableInterfaceRouting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutableInterfaceRoutingAsQueryString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutableInterfaceRoutingWithCustomBindingField","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutableInterfaceRoutingWithSeparateBindingFieldOnlyForSecondParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutableInterfaceRoutingWithSingleParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteGenerationWithBackedEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteGenerationWithNestedBackedEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteGenerationWithNestedUnitEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteGenerationWithUnitEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteNotDefinedException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRouteParametersContainingPercentSignsAreEncoded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutesMaintainRequestScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutesWithDomains","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutesWithDomainsAndPorts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutesWithDomainsStripsProtocols","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testRoutesWithDomainsThroughProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSetAssetUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedRelativeUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlDoesNotTrustForwardedPrefixToChangeThePathBeingVerified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlImplicitModelBinding","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlParameterCannotBeNamedExpires","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlParameterCannotBeNamedSignature","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlWithArrayExpiresReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlWithArraySignatureReturnsFalseWithoutWarning","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testSignedUrlWithKeyResolver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlFormattersShouldReceiveTargetRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationForControllersRequiresPassingOfRequiredParameters#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationForControllersRequiresPassingOfRequiredParameters#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationForControllersRequiresPassingOfRequiredParameters#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameter \"one\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameter \"three\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameter \"two\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameters \"one\" and \"three\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameters \"one\" and \"two\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameters \"one\", \"two\" and \"three\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationThrowsExceptionForMissingParametersWithMeaningfulMessage#Missing parameters \"two\" and \"three\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUrlGenerationWithOptionalParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingUrlGeneratorTest::testUseRootUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

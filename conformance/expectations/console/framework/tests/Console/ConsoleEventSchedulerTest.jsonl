@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testCallCreatesNewJobWithTimezone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testCommandCreatesNewArtisanCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testCreateNewArtisanCommandUsingCommandClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testCreateNewArtisanCommandUsingCommandClassObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testExecCreatesNewCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testExecCreatesNewCommandWithTimezone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testItShouldBePossibleToOverwriteTheDescription","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testItUsesCommandDescriptionAsEventDescription","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleEventSchedulerTest::testMutexCanReceiveCustomStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

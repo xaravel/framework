@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Broadcasting\\CachingTokenProviderTest::testATokenWithoutExpIsCachedForever","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\CachingTokenProviderTest::testItMintsOnceWhileTheTokenIsFresh","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\CachingTokenProviderTest::testItReMintsOnceTheTokenNearsItsExpiry","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

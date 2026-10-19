@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Mcp/Tools/ApplicationInfoTest.php::it reports the driver name when the default connection has a custom name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/ApplicationInfoTest.php::it returns application info with no packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/ApplicationInfoTest.php::it returns application info with packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/ApplicationInfoTest.php::it returns updated package versions when roster binding changes in container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

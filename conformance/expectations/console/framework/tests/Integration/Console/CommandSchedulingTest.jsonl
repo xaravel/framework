@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandSchedulingTest::testExecutionOrder#Background","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandSchedulingTest::testExecutionOrder#Foreground","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

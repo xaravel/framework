@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolCallLoopTest.php::full compose: pause_turn + server_tool_use replay with input cast and block order preserved","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolCallLoopTest.php::pause_turn resumes when last block is text following a web_search_tool_result","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolCallLoopTest.php::server_tool_use input is serialized as object on follow-up replay","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

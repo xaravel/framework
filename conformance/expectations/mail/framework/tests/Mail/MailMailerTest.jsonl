@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testEventsAreDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testGlobalFromIsRespectedOnAllMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testGlobalReplyToIsRespectedOnAllMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testGlobalReturnPathIsRespectedOnAllMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testGlobalToIsRespectedOnAllMessages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMacroable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerRejectsAddressesContainingLineBreaks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerRejectsSymfonyAddressesContainingLineBreaks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithCcAndBccRecipients","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperPlainViewContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperPlainViewContentWhenExplicit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperViewContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperViewContentUsingHtmlMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperViewContentUsingHtmlStrings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testMailerSendSendsMessageWithProperViewContentUsingStringCallbacks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailMailerTest::testToAllowsEmailAndName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

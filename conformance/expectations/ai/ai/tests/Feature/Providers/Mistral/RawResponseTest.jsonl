@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Mistral/RawResponseTest.php::mistral text responses expose the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

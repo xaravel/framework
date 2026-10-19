@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphManyTest\\EloquentMorphManyTest::testCanMorphOne","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphManyTest\\EloquentMorphManyTest::testUpdateModelWithDefaultWithCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphManyTest\\EloquentMorphManyTest::test_self_referencing_existence_query","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

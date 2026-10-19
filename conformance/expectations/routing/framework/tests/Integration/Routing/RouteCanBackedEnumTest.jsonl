@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteCanBackedEnumTest::testSimpleRouteWithStringBackedEnumCanAbilityGuestAllowedThroughTheFramework","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteCanBackedEnumTest::testSimpleRouteWithStringBackedEnumCanAbilityGuestForbiddenThroughTheFramework","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlBuilderTest::testCreateDatabase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlBuilderTest::testDeleteWithJoinCompilesOrderByAndLimit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlBuilderTest::testDropDatabaseIfExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

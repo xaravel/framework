@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItContinuesWithAnotherMasterWhenTheCurrentMasterDisappears","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItFlushesAllMasterNodes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItFlushesAllMasterNodesAsync","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItKeepsNodeAffinityWhenMastersAreReordered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItKeepsScanningWhenAMasterReturnsNoKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItPreservesLargeStringCursors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItResumesAMasterFromTheEncodedCursor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItReturnsFalseWhenCursorIsZeroAndResultIsEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItScansEveryMasterInTurn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItScansStartingFromTheFirstMaster","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItScansUsingOptionNode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\Connections\\PhpRedisClusterConnectionTest::testItThrowsExceptionWithoutNodes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

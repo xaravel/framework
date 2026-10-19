@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/SubAgentTest.php::agent returned from tools is invoked when called by parent agent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::agent tool falls back to a generic description that does not leak instructions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::agent tool falls back to class basename for name when has tool metadata is not implemented","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::agent tool uses name and description from agent when defined","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::framework wraps an agent in tools automatically when resolving","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::nested agent delegates through a middle manager to a research agent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SubAgentTest.php::research agent can be faked independently","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

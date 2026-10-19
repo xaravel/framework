@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_can_handle_unserialize_exceptions_manually","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_can_hydrate_null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_handles_eloquent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_ignores_deleted_models_when_hydrating","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_ignores_deleted_models_within_collections_when_hydrating","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_throws_generic_unserialize_exceptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\ContextIntegrationTest::test_it_throws_on_incomplete_classes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

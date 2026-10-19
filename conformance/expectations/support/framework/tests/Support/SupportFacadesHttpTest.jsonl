@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsNotSharedByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsSharedWhenEnforcingFaking","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsSharedWhenEnforcingFakingWithAllowedUrls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsSharedWhenFaked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsSharedWhenFakedWithSequence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::testFacadeRootIsSharedWhenStubbingUrls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesHttpTest::test_can_set_prevents_to_prevents_stray_requests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

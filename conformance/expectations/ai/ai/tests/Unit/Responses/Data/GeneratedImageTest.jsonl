@@ -1,0 +1,6 @@
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image accepts null mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image content decodes base64 to string","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image stores base64 encoded image","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image to array includes image and mime","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/GeneratedImageTest.php::generated image to string returns decoded content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

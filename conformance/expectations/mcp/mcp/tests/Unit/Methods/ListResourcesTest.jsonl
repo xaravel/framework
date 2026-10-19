@@ -1,0 +1,9 @@
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it excludes an annotation key when a resource has no annotations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it excludes resource templates from list","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it handles mixed resources with and without annotations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it includes annotations when a resource has annotations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it returns a valid empty list resources response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it returns a valid populated list resources response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it returns empty list when the single prompt is not eligible for registration via request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it returns empty list when the single tool is not eligible for registration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourcesTest.php::it returns only static resources when both templates and static resources exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

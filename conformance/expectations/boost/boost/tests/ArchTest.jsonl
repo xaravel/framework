@@ -1,0 +1,5 @@
+{"id":"boost/tests/ArchTest.php::commands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/ArchTest.php::no debugging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/ArchTest.php::no direct env calls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/ArchTest.php::strict types","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/ArchTest.php::tests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

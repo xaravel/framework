@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MigrateMakeCommandTest::testItCanGenerateMigrationFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MigrateMakeCommandTest::testItCanGenerateMigrationFileUsingCreateKeyword","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MigrateMakeCommandTest::testItCanGenerateMigrationFileUsingCreateOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MigrateMakeCommandTest::testItCanGenerateMigrationFileWIthTableOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

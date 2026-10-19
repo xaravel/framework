@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/StreamableAgentResponseTest.php::a failure is reported to the catch callbacks once, however often the stream is re-iterated","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/StreamableAgentResponseTest.php::streamed response tool aggregates count a tool call once, not its preliminary output","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/StreamableAgentResponseTest.php::top level text and usage ignore the output a still running tool reported","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

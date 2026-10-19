@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Validation\\ValidatorTest::testExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\ValidatorTest::testImplicitAttributeFormatting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\ValidatorTest::testUnique","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\ValidatorTest::testUniqueWithCustomModelKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

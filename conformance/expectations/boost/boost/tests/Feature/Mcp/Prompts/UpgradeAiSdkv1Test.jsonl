@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeAiSdkv1Test.php::it contains core upgrade content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeAiSdkv1Test.php::it has the correct name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeAiSdkv1Test.php::it properly compiles blade assist helpers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeAiSdkv1Test.php::it returns a valid response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

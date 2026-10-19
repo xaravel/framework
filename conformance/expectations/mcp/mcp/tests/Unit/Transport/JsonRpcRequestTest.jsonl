@@ -1,0 +1,29 @@
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it can create a message from valid json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it defaults params to empty array and supports getters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it encodes a mirrored name that is not header safe","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it extracts _meta from params","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it has null meta when not provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it mirrors the method into a header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it mirrors the named target into a header#('prompts/get', 'name', 'summarize')","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it mirrors the named target into a header#('resources/read', 'uri', 'file:///projects/myapp/config.json')","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it mirrors the named target into a header#('tools/call', 'name', 'get_weather')","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it omits empty params when serializing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it omits the name header when the body carries no usable name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it passes meta to Request object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it serializes to an array with params when present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it serializes to json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for incorrect jsonrpc version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid arguments type#dataset \"boolean\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid arguments type#dataset \"integer\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid arguments type#dataset \"list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid arguments type#dataset \"null\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid arguments type#dataset \"string\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid id type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid params type#dataset \"boolean\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid params type#dataset \"integer\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid params type#dataset \"list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid params type#dataset \"null\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for invalid params type#dataset \"string\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for missing jsonrpc version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for missing method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/JsonRpcRequestTest.php::it throws exception for non string method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::first turn stream failover persists its reserved conversation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::single provider stream does not dispatch failover event when rate limited","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream conversation state survives failover","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream does not fail over when primary emits event then throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream does not fail over when primary succeeds","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream does not fail over when primary throws non failoverable exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream fails over to next provider when primary is rate limited","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream retries a rate limited provider after its Retry-After delay before failing over","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream then callback is invoked after failover","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentStreamFailoverTest.php::stream throws last exception when all providers fail","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings request includes model, texts, input_type, and embedding_types","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings request includes provider options and lets them override default input_type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings request sends bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings throw when the API returns an error","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::embeddings use default model when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::multiple inputs return multiple embeddings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/EmbeddingTest.php::provider options cannot override framework controlled keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

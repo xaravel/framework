@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPaginateTest::testPaginationOnTopOfColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPaginateTest::testPaginationWithDistinct","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPaginateTest::testPaginationWithDistinctAndSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPaginateTest::testPaginationWithDistinctColumnsAndSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPaginateTest::testPaginationWithDistinctColumnsAndSelectAndJoin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

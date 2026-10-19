@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\SchemaStateTest::testSchemaDumpOnSqlite","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\SchemaStateTest::testSchemaDumpWithFullTextSearchTableCanBeLoadedOnSqlite","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\SchemaStateTest::testSchemaDumpWithoutMigrationDataOnSqlite","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

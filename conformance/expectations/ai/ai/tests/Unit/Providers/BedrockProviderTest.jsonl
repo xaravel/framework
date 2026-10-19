@@ -1,0 +1,26 @@
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::allows custom embeddings config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::allows custom text models in config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::assume role configuration defaults to null when not set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::can be instantiated with config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::converts size ratios to dimensions for images","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::creates embedding gateway","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::creates image gateway","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::creates reranking gateway","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::creates text gateway","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::defaults to us east 1 region when not specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::filters out empty credential values","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::normalizes canonical quality values to bedrock values","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::preserves false value for use default credential provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns additional configuration with region","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns assume role configuration when provided","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns bearer token credential when provided","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns configured headers","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns configured reranking model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns default embeddings dimensions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns default embeddings model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns default image model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns default image options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns default reranking model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::returns iam credentials","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::reuses gateway instances","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Providers/BedrockProviderTest.php::reuses reranking gateway instance","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

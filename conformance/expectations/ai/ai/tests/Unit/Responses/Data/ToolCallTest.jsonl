@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/Data/ToolCallTest.php::tool call json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/ToolCallTest.php::tool call stores all properties","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/ToolCallTest.php::tool call to array returns all properties","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

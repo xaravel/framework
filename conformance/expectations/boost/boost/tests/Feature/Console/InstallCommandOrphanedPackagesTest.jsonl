@@ -1,0 +1,1 @@
+{"id":"boost/tests/Feature/Console/InstallCommandOrphanedPackagesTest.php::it passes only valid defaults to multiselect when orphaned packages exist in config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

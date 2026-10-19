@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertNotRegisteredTest.php::it may assert that prompt is not registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertNotRegisteredTest.php::it may fail to assert that prompt is not registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\JoinLateralTest::testJoinLateral","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\JoinLateralTest::testLeftJoinLateral","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

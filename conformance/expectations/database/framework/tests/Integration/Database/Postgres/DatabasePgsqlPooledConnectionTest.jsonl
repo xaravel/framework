@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabasePgsqlPooledConnectionTest::testEloquentModelsStayOnTheDirectConnection","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabasePgsqlPooledConnectionTest::testPooledAndDirectConnectionsUseExpectedPrepareModes","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabasePgsqlPooledConnectionTest::testPooledConnectionCanBindBooleansWithEmulatedPrepares","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabasePgsqlPooledConnectionTest::testRuntimeSchemaInspectionWorksThroughPooledConnection","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

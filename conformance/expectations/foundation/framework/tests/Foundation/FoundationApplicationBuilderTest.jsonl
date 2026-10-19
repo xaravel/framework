@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testBaseDirectoryWithArg","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testBaseDirectoryWithComposer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testBaseDirectoryWithEnv","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testPrefersJsonResponsesDefaultsToDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testPrefersJsonResponsesFalseDoesNotRegisterMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testPrefersJsonResponsesIsFluent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testPrefersJsonResponsesIsIdempotentWhenCalledMultipleTimes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testPrefersJsonResponsesRegistersMiddlewareWhenEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testStoragePathBasedOnBasePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testStoragePathCanBeCustomized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testStoragePathPrefersEnvVariable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testStoragePathWithGlobalEnvVariable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationApplicationBuilderTest::testStoragePathWithGlobalServerVariable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

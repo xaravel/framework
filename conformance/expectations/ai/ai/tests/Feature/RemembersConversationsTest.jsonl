@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it continues the given conversation for the participant","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it continues the last conversation through a store that ignores the participant type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it resolves the participant id via getKey for models with custom primary keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it starts a conversation for the participant when no conversation id is given","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it starts a conversation on the first turn and continues it on the next","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RemembersConversationsTest.php::it threads the participant type into latestConversationId when continuing the last conversation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

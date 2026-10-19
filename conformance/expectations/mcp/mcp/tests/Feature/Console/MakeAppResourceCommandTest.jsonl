@@ -1,0 +1,12 @@
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it can create an app resource class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it creates a blade view alongside the php class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it does not generate a js entry file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it forwards title to the app component in generated view","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it generates blade view with createMcpApp inline script","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it generates blade view with mcp app component","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it generates php class that extends app resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it generates stub without unused imports","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it generates unique views for different namespaces with same class name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it may publish custom stubs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it preserves namespace segments in view paths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/MakeAppResourceCommandTest.php::it respects force flag for existing files","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

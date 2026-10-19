@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Resources/ReadResourceTest.php::it returns a valid resource result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ReadResourceTest.php::it returns a valid resource result for blob resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ReadResourceTest.php::it throws error when uri is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ReadResourceTest.php::it throws exception when resource is not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

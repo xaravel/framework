@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\DeferredCallbackTest::test_callbacks_deferred_within_a_deferred_callback_are_invoked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\DeferredCallbackTest::test_deferred_callback_is_not_discarded_by_sync_job","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

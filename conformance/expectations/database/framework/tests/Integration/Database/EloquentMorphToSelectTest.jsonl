@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToSelectTest\\EloquentMorphToSelectTest::testAddSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToSelectTest\\EloquentMorphToSelectTest::testLazyLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToSelectTest\\EloquentMorphToSelectTest::testSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToSelectTest\\EloquentMorphToSelectTest::testSelectRaw","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToSelectTest\\EloquentMorphToSelectTest::testSelectSub","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

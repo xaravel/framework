@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseAbstractSchemaGrammarTest::testCreateDatabase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseAbstractSchemaGrammarTest::testDropDatabaseIfExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/AiManagerDefaultConfigTest.php::array default via Ai facade throws helpful error","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerDefaultConfigTest.php::array default via agent prompt throws helpful error","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerDefaultConfigTest.php::failover provider list still works","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerDefaultConfigTest.php::string default works","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

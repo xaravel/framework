@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Transport/FakeTransporterTest.php::it accepts onReceive handler without side effects","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/FakeTransporterTest.php::it send is a no-op and does not throw","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/FakeTransporterTest.php::it stream accepts a closure and does nothing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Transport/FakeTransporterTest.php::it throws when running since it is not implemented","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

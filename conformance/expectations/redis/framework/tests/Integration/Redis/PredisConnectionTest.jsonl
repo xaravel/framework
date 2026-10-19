@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Redis\\PredisConnectionTest::testPredisCanEmitEventWithArrayableArgumentObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

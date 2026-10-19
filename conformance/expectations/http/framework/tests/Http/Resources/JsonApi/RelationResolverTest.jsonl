@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\RelationResolverTest::testResolvesClosureReturningNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\RelationResolverTest::testResolvesClosureReturningRawModels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\RelationResolverTest::testResolvesClosureReturningResourceCollection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Resources\\JsonApi\\RelationResolverTest::testResolvesClosureReturningSingleResource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

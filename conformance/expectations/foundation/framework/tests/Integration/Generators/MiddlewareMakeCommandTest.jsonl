@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MiddlewareMakeCommandTest::testItCanGenerateMiddlewareFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MiddlewareMakeCommandTest::testItCanGenerateMiddlewareFile_with_tests","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Notifications\\NotificationSendQueuedNotificationTest::testNotificationCanSetMaxExceptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationSendQueuedNotificationTest::testNotificationRespectsFailOnTimeoutAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationSendQueuedNotificationTest::testNotificationsCanBeSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationSendQueuedNotificationTest::testSerializationOfNormalNotifiable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationSendQueuedNotificationTest::testSerializationOfNotifiableModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

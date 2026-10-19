@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2iHashing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2iNotSupported","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2iVerification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2idHashing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2idNotSupported","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicArgon2idVerification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicBcryptHashing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicBcryptNotSupported","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBasicBcryptVerification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testBcryptValueTooLong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testEmptyHashedValueReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testIsHashedWithNonHashedValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Hashing\\HasherTest::testNullHashedValueReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

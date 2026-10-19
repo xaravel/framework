@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testCanCheckExistenceOfLocalScope","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testDynamicLocalScopeIsApplied","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testLocalScopeIsApplied","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testLocalScopeNestingDoesntDoubleFirstWhereClauseNegation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testLocalScopeNestingGroupsOrNotWhereClause","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentLocalScopesTest::testLocalScopesCanChained","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

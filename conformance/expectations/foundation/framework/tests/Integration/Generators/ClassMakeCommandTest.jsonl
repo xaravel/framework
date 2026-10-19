@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ClassMakeCommandTest::testItCanGenerateClassFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ClassMakeCommandTest::testItCanGenerateInvokableClassFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

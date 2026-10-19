@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/AgentFakeTest.php::azure agent can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/AgentFakeTest.php::azure agent fake records prompts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/AgentFakeTest.php::azure agent fake with closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/AgentFakeTest.php::azure agent fake with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/AgentFakeTest.php::azure agent stream can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

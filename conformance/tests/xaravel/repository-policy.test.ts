@@ -794,6 +794,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
     "bun run test",
+    // Story 5.1: the Expectations File check (FR-3, AD-15, XT-conformance-91).
+    "bun run expectations:check",
     "bun run typecheck",
     "bun run lint",
     "bun run scaffold:check",

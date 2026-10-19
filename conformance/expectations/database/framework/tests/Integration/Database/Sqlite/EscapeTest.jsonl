@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeArray","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeBinary","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeBool","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeFloat","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeInt","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeNull","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeString","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeStringInvalidUtf8","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EscapeTest::testEscapeStringNullByte","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

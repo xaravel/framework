@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::attachment provider options closure receives the azure provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::azure store false enables stateless inline conversation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::document attachment maps to input_file content block","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::image attachment maps to input_image content block","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::tool result follow up uses previous response id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/MessageMappingTest.php::user message maps to azure format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

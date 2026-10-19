@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/OpenRouter/ProviderOptionsTest.php::agents using the docs idiom (no Lab::tryFrom workaround) have provider options reach the openrouter body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ProviderOptionsTest.php::provider options are included in openrouter request body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ProviderOptionsTest.php::provider options are persisted in tool call follow up requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/ProviderOptionsTest.php::request body does not contain provider options when agent does not implement interface","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

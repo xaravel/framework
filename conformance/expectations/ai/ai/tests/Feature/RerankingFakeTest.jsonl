@@ -1,0 +1,20 @@
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can assert not reranked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can assert nothing reranked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can assert reranked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can fake reranking","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can fake reranking with closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can fake reranking with custom response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can fake reranking with limit","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can get documents in reranked order","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can iterate over response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::can prevent stray rerankings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::collection rerank macro records timeout","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::fake reranking shuffles documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::prompt records limit","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::prompt records timeout","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank rejects blank document strings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank rejects empty collection of documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank rejects empty document list","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank rejects non-string documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RerankingFakeTest.php::rerank rejects whitespace-only document strings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

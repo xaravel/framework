@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueForgetFailedCommandTest::testItFailsWhenAJobCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueForgetFailedCommandTest::testItForgetsASingleJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueForgetFailedCommandTest::testItForgetsMultipleJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueForgetFailedCommandTest::testItForgetsTheRemainingJobsWhenOneCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

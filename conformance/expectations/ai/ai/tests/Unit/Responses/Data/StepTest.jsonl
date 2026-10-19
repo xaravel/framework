@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Responses/Data/StepTest.php::step json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/StepTest.php::step to array returns all properties including serialized usage and meta","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

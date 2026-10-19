@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Mail\\AttachableTest::testFromUploadedFileMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachableTest::testFromUrlMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachableTest::testItCanHaveMacroConstructors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachableTest::testItCanUtiliseExistingApisOnNonMailBasedResourcesWithArgs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachableTest::testItCanUtiliseExistingApisOnNonMailBasedResourcesWithPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

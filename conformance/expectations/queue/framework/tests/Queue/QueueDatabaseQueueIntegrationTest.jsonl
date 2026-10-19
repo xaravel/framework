@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testAvailableAndUnReservedJobsArePopped","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testCustomPayloadIsExposedOnInspectedJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testJobPayloadIsAvailableOnEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testPoppedJobsIncrementAttempts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testThatQueueCanBeCleared","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testThatReservedAndExpiredJobsArePopped","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testThatReservedJobsAreNotPopped","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueDatabaseQueueIntegrationTest::testUnavailableJobsAreNotPopped","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseConnectionsTest.php::it returns database connections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseConnectionsTest.php::it returns empty connections when none configured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

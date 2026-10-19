@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ClassificationTest.php::classification omits the authorization header when no key is configured","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ClassificationTest.php::classification posts to the decisions endpoint of the configured url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ClassificationTest.php::classification sends image attachments inline","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ClassificationTest.php::classification throws when no default model is configured and none is passed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

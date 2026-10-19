@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedConnectorTest::testServersAreAddedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedConnectorTest::testServersAreAddedCorrectlyWithPersistentConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedConnectorTest::testServersAreAddedCorrectlyWithSaslCredentials","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedConnectorTest::testServersAreAddedCorrectlyWithValidOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

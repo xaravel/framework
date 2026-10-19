@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Unit/Exceptions/NotImplementedExceptionTest.php::it can be thrown like any exception","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/NotImplementedExceptionTest.php::it creates exception for unimplemented method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/NotImplementedExceptionTest.php::it extends base exception class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

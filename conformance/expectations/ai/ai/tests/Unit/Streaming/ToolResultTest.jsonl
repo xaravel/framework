@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Streaming/ToolResultTest.php::a preliminary result flags itself while keeping the identity of the tool call it belongs to","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/ToolResultTest.php::a settled result says nothing about being preliminary","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

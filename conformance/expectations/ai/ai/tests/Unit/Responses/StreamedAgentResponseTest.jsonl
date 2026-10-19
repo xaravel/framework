@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/StreamedAgentResponseTest.php::a completed stream exposes the steps carried by the stream end","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/StreamedAgentResponseTest.php::a paused stream exposes the steps carried by the approval request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/StreamedAgentResponseTest.php::a stream carrying neither event exposes no steps","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

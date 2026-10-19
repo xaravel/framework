@@ -1,0 +1,13 @@
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming accumulates tool call arguments across chunks","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming captures usage from final chunk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming emits exactly one stream end across a tool loop","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming emits text events","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming error event also handles structured payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming error event stops stream with string payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming finish reason maps correctly#dataset \"length maps to Length\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming finish reason maps correctly#dataset \"stop maps to Stop\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming finish reason maps correctly#dataset \"tool_calls maps to ToolCalls\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming finish reason maps correctly#dataset \"unknown maps to Unknown\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming generates fallback id when tool call has no id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming handles tool calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/StreamingTest.php::streaming request sets stream to true","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

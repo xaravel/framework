@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Mail\\MailSesTransportTest::testGetTransport","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesTransportTest::testSend","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesTransportTest::testSendError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesTransportTest::testSesLocalConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

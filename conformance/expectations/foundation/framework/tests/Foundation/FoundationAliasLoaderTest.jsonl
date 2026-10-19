@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAliasLoaderTest::testGetInstanceCreatesOneInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAliasLoaderTest::testLoaderCanAliasAndLoadClasses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAliasLoaderTest::testLoaderCanBeCreatedAndRegisteredMergingAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAliasLoaderTest::testLoaderCanBeCreatedAndRegisteredOnce","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAliasLoaderTest::testSetAlias","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

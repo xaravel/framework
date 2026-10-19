@@ -1,0 +1,11 @@
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::displayName returns Amp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::guidelinesPath returns AGENTS.md by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::installHttpMcp writes url config directly to settings file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::installMcp overwrites existing amp server config while preserving unrelated settings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::installMcp returns false when existing settings json is invalid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::installMcp with env vars writes directly to settings file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::installMcp without env vars writes directly to settings file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::mcpInstallationStrategy returns FILE","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::name returns amp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::projectDetectionConfig only uses .amp directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AmpTest.php::skillsPath returns .agents/skills by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

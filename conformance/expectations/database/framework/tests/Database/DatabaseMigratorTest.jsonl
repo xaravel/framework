@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testCustomConnectionResolverCallbackKeepsPriority","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testResolveConnectionLeavesExplicitSuffixesUntouched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testResolveConnectionPassesThroughWhenDirectConnectionIsNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testResolveConnectionUsesDirectVariantWhenConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testRunMethodPreservesDirectConnectionName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testSetConnectionNullPreservesDefaultConnectionBehaviorWithoutDirectConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testSetConnectionNullUsesDirectVariantWhenDefaultConnectionHasDirectConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testSetConnectionUsesDirectVariantForRepositoryAndDefaultConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigratorTest::testUsingConnectionRestoresOriginalDefaultConnectionWithoutReroutingToDirect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

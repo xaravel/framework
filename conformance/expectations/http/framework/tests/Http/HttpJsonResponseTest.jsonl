@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testFromJsonString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testGetOriginalContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testGracefullyHandledSomeJsonErrorsWithPartialOutputOnError#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testGracefullyHandledSomeJsonErrorsWithPartialOutputOnError#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testGracefullyHandledSomeJsonErrorsWithPartialOutputOnError#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testInvalidArgumentExceptionOnJsonError#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testInvalidArgumentExceptionOnJsonError#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testInvalidArgumentExceptionOnJsonError#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveData#Array data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveData#Arrayable data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveData#JsonSerializable data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveData#Jsonable data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveData#stdClass data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveDefaultOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpJsonResponseTest::testSetAndRetrieveStatusCode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

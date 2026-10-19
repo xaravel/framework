@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testDefaultConfiguration","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testPhpRedisTcpKeepalive","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testPredisConfigurationWithSentinel","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testPredisConfigurationWithUsername","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testPrefixOverrideBehaviour","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testScheme","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testUrl","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisConnectorTest::testUrlWithScheme","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

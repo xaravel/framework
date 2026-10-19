@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/TranscriptionProviderOptionsTest.php::closure provider options are not recorded on the queued prompt fake","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionProviderOptionsTest.php::closure provider options survive queue serialization round-trip","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionProviderOptionsTest.php::closure resolver receives the resolved provider and applies per-provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionProviderOptionsTest.php::closure resolver returning null is treated as no options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionProviderOptionsTest.php::flat provider options are sent on the transcription request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

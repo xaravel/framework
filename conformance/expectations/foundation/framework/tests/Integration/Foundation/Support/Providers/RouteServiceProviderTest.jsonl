@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Support\\Providers\\RouteServiceProviderTest::test_it_can_register_multiple_route_service_providers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Support\\Providers\\RouteServiceProviderTest::test_it_can_uses_routes_registered_using_bootstrap_file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Support\\Providers\\RouteServiceProviderTest::test_it_can_uses_routes_registered_using_configuration_file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

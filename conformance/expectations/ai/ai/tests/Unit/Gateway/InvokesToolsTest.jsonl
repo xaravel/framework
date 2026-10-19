@@ -1,0 +1,7 @@
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::a failing tool handler is reported as a tool failure and rethrown","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::a listener that throws is not reported as a tool failure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::a tool invocation without a run context is silent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::each tool invocation reports against the context it was given","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::only the tool handler itself can fail a tool invocation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::the invoking and invoked events share a tool invocation id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/InvokesToolsTest.php::tool events carry the wall time spent in the handler","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

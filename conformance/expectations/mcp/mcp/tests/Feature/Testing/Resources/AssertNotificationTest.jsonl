@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotificationTest.php::it may assert that text is seen when returning string content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotificationTest.php::it may assert two notifications got sent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotificationTest.php::it may fail to assert a notification that was not sent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotificationTest.php::it may fail to assert a notification that was sent with wrong params","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotificationTest.php::it may fail to assert the notification count is wrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

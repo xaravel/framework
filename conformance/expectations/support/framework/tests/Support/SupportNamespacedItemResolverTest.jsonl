@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Support\\SupportNamespacedItemResolverTest::testParsedItemsAreCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportNamespacedItemResolverTest::testParsedItemsMayBeFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportNamespacedItemResolverTest::testResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

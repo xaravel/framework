@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking error in 200 response throws ai exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking maps documents by index when results are returned out of order","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking request includes model, query, and documents","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking request includes top_n when limit set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking response reports the total tokens and search units","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/RerankingTest.php::reranking uses default model when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

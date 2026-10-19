@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TraitMakeCommandTest::testItCanGenerateTraitFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TraitMakeCommandTest::testItCanGenerateTraitFileWhenConcernsFolderExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\TraitMakeCommandTest::testItCanGenerateTraitFileWhenTraitsFolderExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

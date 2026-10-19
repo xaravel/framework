@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Database\\TableGuesserTest::testMigrationIsProperlyParsed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\TableGuesserTest::testMigrationIsProperlyParsedWithoutTableSuffix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

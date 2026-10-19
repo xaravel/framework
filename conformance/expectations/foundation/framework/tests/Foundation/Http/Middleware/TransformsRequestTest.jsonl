@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TransformsRequestTest::testTransformOncePerArrayKeysWhenMethodIsPost","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TransformsRequestTest::testTransformOncePerKeyWhenContentTypeIsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TransformsRequestTest::testTransformOncePerKeyWhenMethodIsGet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TransformsRequestTest::testTransformOncePerKeyWhenMethodIsPost","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelBackedEnumSharesKeyWithStringEquivalent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelMethodAcceptsBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelMethodAcceptsUnitEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelMethodOnRepository","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelThrowsExceptionWhenStoreDoesNotSupportLocks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testFunnelWithFailureCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItFailsAfterRetryTimeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItFailsImmediatelyOrRetriesForAWhileBasedOnAGivenTimeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItLocksTasksWhenNoSlotAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItReleasesIfErrorIsThrown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItReleasesLockAfterTaskFinishes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testItReleasesLockIfTaskTookTooLong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ConcurrencyLimiterTest::testRetryTimeoutRespectsFakedSleep","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

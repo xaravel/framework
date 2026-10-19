@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testConcurrentRedisLocksAreReleasedSafely","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testIsLocked","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testOtherOwnerDoesNotOwnLockAfterRestore","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testOwnerStatusCanBeCheckedAfterRestoringLock","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockCanBeRefreshed","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockCanHaveASeparateConnection","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockCannotBeRefreshedByAnotherOwner","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockRefreshWithDefaultSeconds","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockRefreshWithNoExpirationDoesNotReleaseLock","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLockRefreshWithZeroSecondsRemovesExpirationWithoutReleasingLock","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLocksCanBeAcquiredAndReleased","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLocksCanBeReleasedUsingOwnerToken","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLocksCanBlockForSeconds","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheLockTest::testRedisLocksWithFailedBlockCallbackAreReleased","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

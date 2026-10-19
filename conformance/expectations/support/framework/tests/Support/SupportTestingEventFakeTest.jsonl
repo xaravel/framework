@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedOnce","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedTimes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedWithArrayOfProperties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedWithCallbackInt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedWithClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertDispatchedWithIgnore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertListening","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertNotDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertNotDispatchedWithClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTestingEventFakeTest::testAssertNothingDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::provider options are passed through when prompting","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::provider options default to null when not provided","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::text generation options accept string provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::text generation options can extract provider options for anthropic","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::text generation options can extract provider options for openai","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::text generation options have null provider options when agent does not implement interface","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentProviderOptionsTest.php::text generation options return empty array for unknown provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

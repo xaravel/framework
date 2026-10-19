@@ -1,0 +1,5 @@
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseSchema/SQLiteSchemaDriverTest.php::returns all triggers when no table specified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseSchema/SQLiteSchemaDriverTest.php::returns empty array when no triggers exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseSchema/SQLiteSchemaDriverTest.php::returns empty array when no views exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseSchema/SQLiteSchemaDriverTest.php::returns only triggers for specified table","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseSchema/SQLiteSchemaDriverTest.php::returns views from database","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

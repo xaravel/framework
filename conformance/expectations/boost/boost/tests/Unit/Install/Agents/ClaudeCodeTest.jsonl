@@ -1,0 +1,9 @@
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::guidelinesPath prefers CLAUDE.md when it exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::guidelinesPath returns AGENTS.md when CLAUDE.md does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::guidelinesPath returns configured path even when CLAUDE.md exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::httpMcpServerConfig returns default http config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::returns configured mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::returns default mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::returns relative PHP path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::returns relative artisan path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ClaudeCodeTest.php::uses relative paths for MCP","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

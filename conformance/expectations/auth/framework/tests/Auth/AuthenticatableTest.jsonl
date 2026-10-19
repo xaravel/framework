@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthenticatableTest::testItReturnsNullWhenRememberTokenNameWasSetToEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticatableTest::testItReturnsSameRememberTokenForString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticatableTest::testItReturnsStringAsRememberTokenWhenItWasSetToTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

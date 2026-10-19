@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\DatabaseEloquentMariaDbIntegrationTest::testCreateOrFirst","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\DatabaseEloquentMariaDbIntegrationTest::testCreateOrFirstWithinTransaction","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Broadcasting\\MercureChannelEncrypterTest::testChannelJwkExposesTheChannelKeyAsUnpaddedUrlSafeBase64","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\MercureChannelEncrypterTest::testChannelKeyIsHkdfDerivedAndChannelSpecific","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\MercureChannelEncrypterTest::testConstructorRejectsKeysThatAreNot32Bytes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\MercureChannelEncrypterTest::testEncryptRoundTripsThroughAStandardJweDecrypter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testDeleteCleansUpCacheKeyWhenCleanupEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testDeleteDoesNotCleanUpWhenCleanupDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testDeleteDoesNotCleanUpWhenNoPointer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testDeleteRemovesTheJobFromSqs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testFireProperlyCallsTheJobHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testGetRawBodyCachesResult","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testGetRawBodyResolvesPointerFromCache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testGetRawBodyReturnsNormalBodyWithoutPointer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testGetRawBodyReturnsPointerBodyWhenExtendedStoreIsDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsJobTest::testReleaseProperlyReleasesTheJobOntoSqs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

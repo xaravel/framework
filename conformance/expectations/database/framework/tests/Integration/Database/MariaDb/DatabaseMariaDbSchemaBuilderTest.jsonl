@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\DatabaseMariaDbSchemaBuilderTest::testAddCommentToTable","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

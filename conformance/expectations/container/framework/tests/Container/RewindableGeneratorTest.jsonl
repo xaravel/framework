@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Container\\RewindableGeneratorTest::testCountUsesProvidedValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\RewindableGeneratorTest::testCountUsesProvidedValueAsCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

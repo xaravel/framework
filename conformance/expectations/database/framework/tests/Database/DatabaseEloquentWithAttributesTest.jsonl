@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithAttributesTest::testAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithAttributesTest::testAddsWheres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithAttributesTest::testAddsWithCasts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithAttributesTest::testAddsWithCastsViaDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithAttributesTest::testForceCreateAddsAttributesViaDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

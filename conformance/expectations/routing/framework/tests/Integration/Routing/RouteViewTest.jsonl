@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteViewTest::testRouteView","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteViewTest::testRouteViewOverloadingStatusWithHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteViewTest::testRouteViewWithHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteViewTest::testRouteViewWithParams","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteViewTest::testRouteViewWithStatus","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

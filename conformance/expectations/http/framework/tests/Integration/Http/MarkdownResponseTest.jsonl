@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\MarkdownResponseTest::testMarkdownResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\MarkdownResponseTest::testMarkdownResponseCanBeNegotiated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\MarkdownResponseTest::testMarkdownResponseWithStatusAndHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

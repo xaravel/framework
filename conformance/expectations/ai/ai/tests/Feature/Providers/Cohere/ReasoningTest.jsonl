@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Cohere/ReasoningTest.php::prompt reads the thinking blocks off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/ReasoningTest.php::prompt separates each thinking block with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"boost/tests/Unit/BoostManagerTest.php::it can register a single agent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/BoostManagerTest.php::it can register multiple agents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/BoostManagerTest.php::it returns agents sorted alphabetically by key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/BoostManagerTest.php::it returns default agents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/BoostManagerTest.php::it throws an exception when registering a custom agent with a duplicate key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/BoostManagerTest.php::it throws an exception when registering a duplicate key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

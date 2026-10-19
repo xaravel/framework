@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testBasicPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testBasicSingular","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testCaseSensitiveSingularPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testCaseSensitiveSingularUsage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testIfEndOfWordPlural","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralAppliedForStringEndingWithNumericCharacter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralNotAppliedForStringEndingWithNonAlphanumericCharacter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralStudly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralStudlySupportsArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralStudlySupportsCollections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralStudlyWithCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralSupportsArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralSupportsCollections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportPluralizerTest::testPluralWithNegativeCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

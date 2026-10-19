@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testBoolean","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testFloat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testGetOriginalViewCompiledFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testHref","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testInteger","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testUnresolvableLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testUnresolvableSource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testWhenGetOriginalViewCompiledFileFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testWhenIsFileViewIsNotViewCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\HtmlDumperTest::testWhenIsFileViewIsViewCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

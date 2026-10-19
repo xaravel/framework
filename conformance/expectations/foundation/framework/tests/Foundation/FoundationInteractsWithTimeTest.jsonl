@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeSecondReturnsCallbackResult","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeSecondReturnsCallbackResultEvenWhenNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeSecondReturnsFrozenTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeTimeReturnsCallbackResult","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeTimeReturnsCallbackResultEvenWhenNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationInteractsWithTimeTest::testFreezeTimeReturnsFrozenTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testCanGetHasOneFromHasManyRelationship","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testCreateOrFirst","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testCreateOrFirstWithinTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testFirstOrCreate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testFirstOrCreateWithinTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testHasOneRelationshipFromHasMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasManyTest::testIncrementOrCreate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

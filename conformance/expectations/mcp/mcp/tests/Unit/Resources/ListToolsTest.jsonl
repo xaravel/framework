@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it caps per page at max pagination length","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it handles pagination correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it respects per page when bigger than default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it returns a valid list tools response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it returns empty list when the single prompt is not eligible for registration via request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it returns empty list when the single tool is not eligible for registration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it uses default per page when not provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ListToolsTest.php::it uses requested per page when valid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

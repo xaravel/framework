@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testBlockingPopProperlyPopsJobOffOfBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testBulkRespectsDelayAttributeWhenPushingOntoBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testDelayedPushProperlyPushesJobOntoBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testDeleteProperlyRemoveJobsOffBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testPopProperlyPopsJobOffOfBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueBeanstalkdQueueTest::testPushProperlyPushesJobOntoBeanstalkd","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

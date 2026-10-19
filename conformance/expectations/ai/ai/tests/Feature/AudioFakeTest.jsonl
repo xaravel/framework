@@ -1,0 +1,24 @@
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can be faked with a single closure that is invoked for every generation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can be faked with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can be generated from stringable macro","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can be stored under an explicit path and name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio can prevent stray generations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio is stored under a random name derived from its mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio rejects empty text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio rejects whitespace-only text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio timeout defaults to sdk fallback","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::audio voice and instructions are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::can assert no audio was generated","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::can assert no audio was queued","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::fake audio closure receives timeout","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::fake closures can throw exceptions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio can be faked and then callback is executed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio can be faked and then callback is not executed if queue is faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio timeout is recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::queued audio voice and instructions are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::storing audio publicly passes public visibility to the disk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioFakeTest.php::stringable audio macro passes through options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

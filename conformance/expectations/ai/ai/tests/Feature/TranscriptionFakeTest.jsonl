@@ -1,0 +1,21 @@
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::can assert no transcriptions were generated","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::can assert no transcriptions were queued","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::fake closures can throw exceptions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::fake transcriptions include segments","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcription accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcription language and diarize are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcription provider options are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcription timeout is recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcriptions can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcriptions can be faked and then callback is executed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::queued transcriptions can be faked and then callback is not executed if queue is faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcription can have timeouts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcription language and diarize are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcription provider options are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcription rejects empty audio string","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcription rejects empty base64 audio","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcriptions can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcriptions can be faked with a single closure that is invoked for every generation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcriptions can be faked with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/TranscriptionFakeTest.php::transcriptions can prevent stray generations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testAllowMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testAuthorizeMethodThrowsAuthorizationExceptionWhenResponseDenied","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testAuthorizeMethodThrowsAuthorizationExceptionWithDefaultMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testCastingToStringReturnsMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testDenyMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testDenyMethodWithNoMessageReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testItSetsEmptyStatusOnExceptionWhenAuthorizing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testItSetsStatusOnExceptionWhenAuthorizing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testResponseToArrayMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthAccessResponseTest::testThrowIfNeededDoesntThrowAuthorizationExceptionWhenResponseAllowed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

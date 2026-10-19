@@ -1,0 +1,12 @@
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it detects mcp client tool primitives","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it does not escape slashes in structured content json","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it does not own the mcp client lifecycle","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it drops an unresolvable $ref instead of failing the whole tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it falls back to title then name when description is null","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it keeps the properties of a nullable object root","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it marks fields nullable when anyOf or oneOf lists null after the typed branch","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it prefers structured content from successful mcp calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it resolves $ref against $defs and merges sibling keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it returns text content from successful mcp calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it surfaces application level mcp errors as tool output","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpToolTest.php::it translates mcp input schemas to laravel tool schemas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

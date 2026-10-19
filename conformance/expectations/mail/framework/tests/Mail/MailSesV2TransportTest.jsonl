@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testGetTransport","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testSend","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testSendError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testSendWithTenantName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testSendWithoutTenantNameDoesNotSetTheOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailSesV2TransportTest::testSesV2LocalConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

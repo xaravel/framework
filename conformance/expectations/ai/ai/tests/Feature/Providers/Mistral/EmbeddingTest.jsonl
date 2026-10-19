@@ -1,0 +1,8 @@
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings request includes model and input","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings request includes provider options in the request body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings request sends bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::embeddings response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/EmbeddingTest.php::multiple inputs return multiple embeddings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

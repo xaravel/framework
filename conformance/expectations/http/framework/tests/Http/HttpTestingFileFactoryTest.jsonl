@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#bmp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#gif","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#jpeg","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#png","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#wbmp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCallingCreateWithoutGDLoadedThrowsAnException#webp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCreateWithMimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testCreateWithoutMimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImageBmp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImageGif","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImageJpeg","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImagePng","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImageWbmp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpTestingFileFactoryTest::testImageWebp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

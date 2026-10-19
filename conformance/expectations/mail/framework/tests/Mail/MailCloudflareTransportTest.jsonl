@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testGetTransport","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testSend","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testSendThrowsOnApiFailure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testSendWithAttachment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testSendWithInlineAttachment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailCloudflareTransportTest::testSendWithNamedAddresses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

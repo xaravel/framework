@@ -1,0 +1,3 @@
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/MySQLSchemaDriverTest.php::getCheckConstraints filters on TABLE_NAME directly when the column exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/MySQLSchemaDriverTest.php::getCheckConstraints maps the table through TABLE_CONSTRAINTS when TABLE_NAME is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/MySQLSchemaDriverTest.php::getTables quotes the table type as a string literal","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

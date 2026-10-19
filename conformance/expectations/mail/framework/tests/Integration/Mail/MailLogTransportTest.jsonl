@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailLogTransportTest::testGetLogTransportWithConfiguredChannel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailLogTransportTest::testGetLogTransportWithPsrLogger","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailLogTransportTest::testItDecodesTheMessageBeforeLogging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailLogTransportTest::testItOnlyDecodesQuotedPrintablePartsOfTheMessageBeforeLogging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

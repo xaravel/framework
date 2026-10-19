@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testBasicFallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testFallbackWithPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testFallbackWithWildcards","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testNoFallbacks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testNoRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FallbackRouteTest::testRespondWithNamedFallbackRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

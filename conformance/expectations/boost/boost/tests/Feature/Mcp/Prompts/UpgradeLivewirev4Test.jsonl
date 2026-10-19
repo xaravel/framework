@@ -1,0 +1,6 @@
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it contains core upgrade content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it has the correct name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it properly compiles blade assist helpers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it returns a valid response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it uses configured executables for command snippets","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/UpgradeLivewirev4Test.php::it uses sail executables when boost.json enables sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

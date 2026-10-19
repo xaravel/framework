@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyAggregateTest::testWithSumDifferentTables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyAggregateTest::testWithSumExpression","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyAggregateTest::testWithSumSameTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

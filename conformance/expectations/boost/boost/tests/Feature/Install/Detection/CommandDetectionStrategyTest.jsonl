@@ -1,0 +1,7 @@
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::detects command with successful exit code","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::fails for command with non zero exit code","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::handles command with error output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::handles command with output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::returns false when no command config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::returns false when the process is signaled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Install/Detection/CommandDetectionStrategyTest.php::works with different platforms parameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

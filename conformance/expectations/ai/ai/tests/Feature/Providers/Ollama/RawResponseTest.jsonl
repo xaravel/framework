@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Ollama/RawResponseTest.php::ollama text responses expose the raw http response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

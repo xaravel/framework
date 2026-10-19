@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotSerializationTest::testCollectionOfMorphPivotsCanBeSerializedAndRestored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotSerializationTest::testCollectionOfPivotsCanBeSerializedAndRestored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotSerializationTest::testMorphPivotCanBeSerializedAndRestored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentPivotSerializationTest::testPivotCanBeSerializedAndRestored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

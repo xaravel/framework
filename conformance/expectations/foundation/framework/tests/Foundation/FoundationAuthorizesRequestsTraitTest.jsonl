@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testAcceptsBackedEnumAsAbility","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testBasicGateCheck","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testExceptionIsThrownIfGateCheckFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testPoliciesMayBeCalled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testPolicyMethodMayBeGuessedAndNormalized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testPolicyMethodMayBeGuessedPassingClassName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthorizesRequestsTraitTest::testPolicyMethodMayBeGuessedPassingModelInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

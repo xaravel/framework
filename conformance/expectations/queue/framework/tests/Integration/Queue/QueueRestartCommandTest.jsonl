@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testBroadcastsRestartSignal","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testBroadcastsRestartSignal","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testBroadcastsRestartSignal","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testBroadcastsRestartSignal","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testFailsWhenRestartingIsDisabled","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testFailsWhenRestartingIsDisabled","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testFailsWhenRestartingIsDisabled","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueRestartCommandTest::testFailsWhenRestartingIsDisabled","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

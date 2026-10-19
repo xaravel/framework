@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/Jina/BaseUrlTest.php::jina embedding requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/BaseUrlTest.php::jina requests fall back to the default base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Jina/BaseUrlTest.php::jina reranking requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

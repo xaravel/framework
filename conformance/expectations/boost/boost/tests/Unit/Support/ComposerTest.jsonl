@@ -1,0 +1,4 @@
+{"id":"boost/tests/Unit/Support/ComposerTest.php::it does not identify unknown packages as first party","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ComposerTest.php::it identifies non-scoped first party packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ComposerTest.php::it identifies scoped first party packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ComposerTest.php::it reads require and require-dev from composer.json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

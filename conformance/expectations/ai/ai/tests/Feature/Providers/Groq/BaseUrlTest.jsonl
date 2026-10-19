@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Groq/BaseUrlTest.php::groq requests fall back to the default base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/BaseUrlTest.php::groq text requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

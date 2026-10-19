@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\CastMakeCommandTest::testItCanGenerateCastFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\CastMakeCommandTest::testItCanGenerateInboundCastFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

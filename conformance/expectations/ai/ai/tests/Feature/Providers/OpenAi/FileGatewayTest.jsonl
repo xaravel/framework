@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/FileGatewayTest.php::delete file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/FileGatewayTest.php::get file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/FileGatewayTest.php::put file allows overriding the purpose via provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/FileGatewayTest.php::put file resolves provider options from a closure scoped to the provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/FileGatewayTest.php::put file sends multipart upload with user_data purpose","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

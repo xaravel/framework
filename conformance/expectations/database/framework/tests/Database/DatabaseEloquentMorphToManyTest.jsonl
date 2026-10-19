@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToManyTest::testAttachInsertsPivotTableRecord","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToManyTest::testDetachMethodClearsAllPivotRecordsWhenNoIDsAreGiven","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToManyTest::testDetachRemovesPivotTableRecord","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToManyTest::testEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToManyTest::testQueryExpressionCanBePassedToDifferentPivotQueryBuilderClauses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

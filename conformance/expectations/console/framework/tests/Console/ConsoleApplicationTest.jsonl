@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testAddSetsLaravelInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCallFullyStringCommandLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCallMethodCanCallArtisanCommandUsingCommandClassObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCommandInputDoesntPromptWhenRequiredArgumentIsPassed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCommandInputDoesntPromptWhenRequiredArgumentsArePassed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCommandInputPromptsWhenRequiredArgumentIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testCommandInputPromptsWhenRequiredArgumentsAreMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testLaravelNotSetOnSymfonyCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testLoadIgnoresTestFiles","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testResolveAddsCommandViaApplicationResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testResolvingCommandsWithAliasViaAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testResolvingCommandsWithAliasViaProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testResolvingCommandsWithNoAliasViaAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleApplicationTest::testResolvingCommandsWithNoAliasViaProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

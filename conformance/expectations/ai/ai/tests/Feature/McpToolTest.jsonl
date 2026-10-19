@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/McpToolTest.php::agents can return mcp client tools directly","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/McpToolTest.php::it runs mcp client tools whose schema uses unrepresentable json schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/McpToolTest.php::mcp client tools that are not read-only can require approval","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

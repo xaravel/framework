@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireDoesNotDoubleWrapPreExistingHashTags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireUsesHashTagsOnPhpRedisClusterConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireUsesHashTagsOnPredisClusterConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireUsesPlainKeysOnNonClusterConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireUsesPlainKeysOnPredisNonClusterConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireWrapsEmptyBracesOnCluster","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testAcquireWrapsUnmatchedBraceOnCluster","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrencyLimiterTest::testReleaseKeyMatchesAcquireKeyOnCluster","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

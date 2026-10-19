@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testCheckingForOverlapDoesNotAcquireLockWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testCustomConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testOverlapsForNonRunningTask","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testOverlapsForNonRunningTaskWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testOverlapsForRunningTask","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testOverlapsForRunningTaskWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testOverlapsForRunningTaskWithLockThatCannotReportWhetherItIsLocked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testPreventOverlap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testPreventOverlapFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testPreventOverlapFailsWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testPreventOverlapWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testResetOverlap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\Scheduling\\CacheEventMutexTest::testResetOverlapWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

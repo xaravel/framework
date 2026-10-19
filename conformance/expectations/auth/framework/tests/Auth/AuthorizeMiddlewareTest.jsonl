@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testItCanGenerateDefinitionViaStaticMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testModelAuthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testModelInstanceAsParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testModelTypeAuthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testModelTypeUnauthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testModelUnauthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityAuthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityUnauthorized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithBackedEnumParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithNullParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithOptionalParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithStringParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithStringParameter0FromRouteParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizeMiddlewareTest::testSimpleAbilityWithStringParameterFromRouteParameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

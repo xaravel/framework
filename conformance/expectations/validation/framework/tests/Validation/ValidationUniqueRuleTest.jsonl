@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItCorrectlyFormatsAStringVersionOfTheRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItHandlesNullPrimaryKeyInIgnoreModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItHandlesWhereWithSpecialValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItIgnoresSoftDeletes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItOnlyTrashedSoftDeletes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItValidatesUniqueRuleWithBooleanWhere","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationUniqueRuleTest::testItValidatesUniqueRuleWithWhereInAndWhereNotIn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::a null target withholds nothing","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::broadcast agent withholds listed events from the channel but resolves the full response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::broadcast withholds listed events from the channel but assembles the full response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::events not listed in the attribute are not withheld","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::it rejects event classes that are not stream events","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::listed events are withheld when the attribute is present","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/WithoutBroadcastingTest.php::no events are withheld when the attribute is absent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

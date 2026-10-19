@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertMetadataTest.php::it fails to assert the description is wrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertMetadataTest.php::it fails to assert the name is wrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertMetadataTest.php::it fails to assert the title is wrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Prompts/AssertMetadataTest.php::it may assert the title","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

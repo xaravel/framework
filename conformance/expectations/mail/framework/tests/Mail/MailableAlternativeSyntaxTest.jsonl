@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Mail\\MailableAlternativeSyntaxTest::testBasicMailableInspection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\MailableAlternativeSyntaxTest::testEnvelopesCanReceiveAdditionalRecipients","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

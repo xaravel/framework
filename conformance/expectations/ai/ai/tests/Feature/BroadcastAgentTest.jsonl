@@ -1,0 +1,8 @@
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::a resume streams the decision map instead of the prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::an oversized broadcast frame does not abort the stream and then still resolves","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::failed broadcasts a stream_failed event with recoverable false on the configured channel","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::failed broadcasts on every channel when given an array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::failed event shares the invocation id with broadcasts from handle","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::multiple then callbacks all receive streamed agent response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::streamed response passed to then is fully resolved","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/BroadcastAgentTest.php::then callback receives streamed agent response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

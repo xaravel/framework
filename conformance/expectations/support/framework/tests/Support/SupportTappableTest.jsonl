@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Support\\SupportTappableTest::testTappableClassWithCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTappableTest::testTappableClassWithInvokableClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTappableTest::testTappableClassWithNoneInvokableClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTappableTest::testTappableClassWithoutCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

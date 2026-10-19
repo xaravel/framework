@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/Data/StoreFileCountsTest.php::store file counts json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/StoreFileCountsTest.php::store file counts stores completed pending and failed counts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/StoreFileCountsTest.php::store file counts to array returns all counts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

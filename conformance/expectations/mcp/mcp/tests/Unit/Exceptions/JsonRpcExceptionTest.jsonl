@@ -1,0 +1,6 @@
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it coerces non-string and non-integer request ids to null#dataset \"array\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it coerces non-string and non-integer request ids to null#dataset \"bool\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it coerces non-string and non-integer request ids to null#dataset \"float\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it coerces non-string and non-integer request ids to null#dataset \"object\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it converts to JsonRpc error with id and without data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Exceptions/JsonRpcExceptionTest.php::it converts to JsonRpc error without id and with data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

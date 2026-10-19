@@ -20,6 +20,7 @@
     "tools/component-map/**/*.ts",
     "tools/inventory/**/*.ts",
     "tools/pin-bump/**/*.ts",
+    "tools/expectations/**/*.ts",
     "tools/scans/**/*.ts",
     "tools/assert-coverage/**/*.ts",
     "tools/mockery-coverage/**/*.ts",

@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::code execution tool sends a code_execution definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::empty schema omits parameters key","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::function tools are declared flat with a function type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::mixed function and provider tools are sent side by side","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::nested object parameters recursively exclude additional properties","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::nullable tool parameters use OpenAPI-style nullable format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::provider tools are sent without a tool choice","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolMappingTest.php::tool without a name() method falls back to class basename","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

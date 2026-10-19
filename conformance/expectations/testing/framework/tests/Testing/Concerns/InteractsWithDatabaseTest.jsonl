@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDatabaseTest::testCastToJsonMariaDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDatabaseTest::testCastToJsonMySql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDatabaseTest::testCastToJsonPostgres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDatabaseTest::testCastToJsonSqlServer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDatabaseTest::testCastToJsonSqlite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

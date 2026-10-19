@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensionWithTheMaxRatioMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensionWithTheMinRatioMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensionWithTheRatioBetweenMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensionWithTheRatioMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationImageFileRuleTest::testDimensionsWithCustomImageSizeMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

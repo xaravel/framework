@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandManualFailTest::testCreatesAnExceptionFromNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandManualFailTest::testCreatesAnExceptionFromString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandManualFailTest::testFailArtisanCommandManually","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandManualFailTest::testThrowsTheOriginalThrowableInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

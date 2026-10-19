@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Console\\CommandMutexTest::testCanRunCommandAgainAfterOtherCommandFinished","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandMutexTest::testCanRunCommandAgainNonAutomated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandMutexTest::testCanRunIsolatedCommandIfNotBlocked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandMutexTest::testCannotRunIsolatedCommandIfBlocked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TrimStringsTest::testTrimStringsIgnoringExceptAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\TrimStringsTest::testTrimStringsNBSP","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

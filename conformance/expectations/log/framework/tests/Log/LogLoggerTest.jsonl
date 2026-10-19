@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testComplexContextManipulation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testContextIsAddedToAllSubsequentLogs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testContextIsFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testContextKeysCanBeRemovedForSubsequentLogs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testListenShortcut","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testListenShortcutFailsWithNoDispatcher","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testLoggerFiresEventsDispatcher","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testMethodsPassErrorAdditionsToMonolog","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testSerializesWhenLogLevelIsHandled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Log\\LogLoggerTest::testSkipsSerializationWhenLogLevelNotHandled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testAddToMiddlewarePriorityAfter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testAddToMiddlewarePriorityAfterAdjacentMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testAddToMiddlewarePriorityAfterFirstMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testAddToMiddlewarePriorityBefore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testGetMiddlewareGroups","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testGetMiddlewarePriority","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testGetRouteMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\KernelTest::testItTriggersTerminatingEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

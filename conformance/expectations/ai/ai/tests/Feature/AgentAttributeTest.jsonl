@@ -1,0 +1,7 @@
+{"id":"ai/tests/Feature/AgentAttributeTest.php::agent methods take priority over attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::non-public or parameterized option methods are ignored","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::null return from agent method falls back to attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::provider attribute is used when prompting","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::text generation options are null when agent has no attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::text generation options can be created from agent attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentAttributeTest.php::text generation options can be resolved from agent methods","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

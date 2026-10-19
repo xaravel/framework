@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeJsonTest::testEncodingOptionsCanBeOverwritten","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeJsonTest::testStatementIsCompiledWithSafeDefaultEncodingOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

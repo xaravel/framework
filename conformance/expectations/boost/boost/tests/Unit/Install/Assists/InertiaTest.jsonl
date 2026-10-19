@@ -1,0 +1,3 @@
+{"id":"boost/tests/Unit/Install/Assists/InertiaTest.php::it returns PascalCase Pages directory as default when no resources/js directory exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Assists/InertiaTest.php::it returns PascalCase Pages directory when it exists on disk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Assists/InertiaTest.php::it returns lowercase pages directory when it exists on disk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

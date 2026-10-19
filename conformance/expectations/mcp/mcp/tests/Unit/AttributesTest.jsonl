@@ -1,0 +1,32 @@
+{"id":"mcp/tests/Unit/AttributesTest.php::it child attribute overrides parent attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it child server attribute overrides parent server attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to auto-generated when no attribute or property for name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to auto-generated when no attribute or property for uri","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to property when no attribute for name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to property when no attribute for server name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to property when no attribute for uri","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it falls back to text/plain when no attribute or property for mime type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it ignores uri attribute when resource implements HasUriTemplate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it includes attributes in toArray output for prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it includes attributes in toArray output for resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it includes attributes in toArray output for tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it inherits attribute from parent class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it inherits attribute from parent server class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for description","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for mime type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for server name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for title","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it prefers attribute over property for uri","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves description from attribute on a prompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves description from attribute on a tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves mime type from attribute on a resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves multiple attributes on a single class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves name from attribute on a prompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves name from attribute on a resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves name from attribute on a tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves server instructions from attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves server name from attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves server version from attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves title from attribute on a tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/AttributesTest.php::it resolves uri from attribute on a resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

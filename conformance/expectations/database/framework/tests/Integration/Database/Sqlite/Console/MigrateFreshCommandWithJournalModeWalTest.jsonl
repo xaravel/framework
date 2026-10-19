@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\Console\\MigrateFreshCommandWithJournalModeWalTest::testRunningMigrateFreshCommandWithWalJournalMode","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

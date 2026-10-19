@@ -1,0 +1,40 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testMySqlConnectCallsCreateConnectionWithIsolationLevel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testMySqlConnectCallsCreateConnectionWithProperArguments#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testMySqlConnectCallsCreateConnectionWithProperArguments#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testMySqlConnectCallsCreateConnectionWithProperArguments#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testOptionResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresApplicationNameIsSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresApplicationUseAlternativeDatabaseName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresApplicationUseAlternativeDatabaseNameAndPort","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresConnectCallsCreateConnectionWithProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresConnectorReadsIsolationLevelFromConfig","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresKeepaliveOptionsAreOmittedWhenNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresKeepaliveOptionsAreSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathFallbackToConfigKeySchema","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#all-lowercase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#array with delimiter characters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#array with variable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#case-sensitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#delimit comma","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#delimit comma and space","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#delimit newline","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#delimit space","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#double-quoted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#double-quoted many","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#quoted space is unsupported in string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#single-quoted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#single-quoted many","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#special characters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresSearchPathIsSet#variable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresServerOptionValuesAreEscaped","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresServerOptionsAreOmittedWhenNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testPostgresServerOptionsAreSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSQLiteFileDatabasesMayBeConnectedTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSQLiteMemoryDatabasesMayBeConnectedTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSQLiteNamedMemoryDatabasesMayBeConnectedTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSqlServerConnectBuildsDsnWithAdditionalOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSqlServerConnectCallsCreateConnectionWithOptionalArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSqlServerConnectCallsCreateConnectionWithPreferredODBC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSqlServerConnectCallsCreateConnectionWithProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectorTest::testSqlServerConnectDoesNotSetApplicationIntentForFalseReadonly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

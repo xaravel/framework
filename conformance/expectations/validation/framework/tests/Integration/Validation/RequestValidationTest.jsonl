@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Validation\\RequestValidationTest::testValidateMacro","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\RequestValidationTest::testValidateMacroWhenItFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\RequestValidationTest::testValidateWithBagMacro","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\RequestValidationTest::testValidateWithBagMacroWhenItFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

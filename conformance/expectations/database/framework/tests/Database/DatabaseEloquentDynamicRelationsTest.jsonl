@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testBasicDynamicRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testBasicDynamicRelationsOverride","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testDynamicRelationsCanNotHaveTheSameNameAsNormalRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testInharitedDynamicRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testInheritedDynamicRelationsOverride","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentDynamicRelationsTest::testRelationResolvers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

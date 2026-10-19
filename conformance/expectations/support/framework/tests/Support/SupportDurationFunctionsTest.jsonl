@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Support\\SupportDurationFunctionsTest::testDurationFunctionsAcceptIntegers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportDurationFunctionsTest::testDurationFunctionsKeepFractionalValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

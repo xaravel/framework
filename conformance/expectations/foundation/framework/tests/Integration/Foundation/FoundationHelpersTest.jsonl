@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testFakeReturnsSameInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testFakeUsesLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testMixOnlyThrowsAndReportsOneExceptionWhenAssetIsMissingFromManifestWhenInDebugMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testMixReportsExceptionWhenAssetIsMissingFromManifest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testMixSilentlyFailsWhenAssetIsMissingFromManifestWhenNotInDebugMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testMixThrowsExceptionWhenAssetIsMissingFromManifestWhenInDebugMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\FoundationHelpersTest::testRescue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it does not return info or warning entries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it falls back to a log file when no cached error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it falls back to log file when cache is unreachable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it finds error in JSON-formatted log entries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it finds error in Logstash-formatted log entries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it it returns an error when a log file does not exist and no cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it points at the registered browser logs tool name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it returns a cached error when available","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it returns an error when no error entry is found in a log file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it returns error when no error entry in JSON-formatted logs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/LastErrorTest.php::it uses a daily log driver correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

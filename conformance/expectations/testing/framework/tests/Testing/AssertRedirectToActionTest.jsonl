@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToActionTest::testAssertRedirectToActionWithParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToActionTest::testAssertRedirectToActionWithoutParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

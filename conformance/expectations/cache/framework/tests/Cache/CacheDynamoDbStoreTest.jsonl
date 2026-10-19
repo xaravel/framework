@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheDynamoDbStoreTest::testManyMethodPreservesNumericKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDynamoDbStoreTest::testTouchMethodCorrectlyCallsDynamoDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

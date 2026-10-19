@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testClosureCanBeUsedForCustomEnvironmentDetection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetectionDoesNotUseArgumentThatStartsWithEnv","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetectionDoesNotUseArgumentThatStartsWithEnvSeparatedWithSpace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetectionDoesNotUseArgumentThatStartsWithEnvWithNoValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetectionSeparatedWithSpace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationEnvironmentDetectorTest::testConsoleEnvironmentDetectionWithNoValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

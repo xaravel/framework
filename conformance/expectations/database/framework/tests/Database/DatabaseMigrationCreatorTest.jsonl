@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testBasicCreateMethodCallsPostCreateHooks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testBasicCreateMethodStoresMigrationFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testMigrationsCreatedWithinTheSameSecondHaveIncreasingDatePrefixes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testOverriddenCreateMethodRetainsExistingDatePrefixBehavior","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testOverriddenDatePrefixRetainsExistingBehavior","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testTableCreationMigrationStoresMigrationFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testTableUpdateMigrationStoresMigrationFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationCreatorTest::testTableUpdateMigrationWontCreateDuplicateClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

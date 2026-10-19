@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_close","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_destroy_deletes_session_file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_gc_deletes_old_session_files","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_it_creates_session_ids","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_open","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_read_returns_data_when_file_exists_and_is_valid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_read_returns_data_when_file_exists_but_expired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_read_returns_empty_string_when_file_does_not_exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_validate_id_checks_file_exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\FileSessionHandlerTest::test_write_stores_data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

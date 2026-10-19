@@ -1,0 +1,4 @@
+{"id":"ai/tests/Unit/Files/VideoPathTest.php::local video rejects empty path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/VideoPathTest.php::local video rejects whitespace-only path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/VideoPathTest.php::stored video rejects empty path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/VideoPathTest.php::stored video rejects whitespace-only path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"ai/tests/Integration/AgentReasoningTest.php::models can replay conversation history with tool calls#dataset \"openai-gpt-4-1\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AgentReasoningTest.php::models can replay conversation history with tool calls#dataset \"openai-gpt-6-luna\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AgentReasoningTest.php::reasoning conversation roundtrips through database storage","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Unit/Methods/ListResourceTemplatesTest.php::it includes template metadata in the listing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourceTemplatesTest.php::it lists only resource templates","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ListResourceTemplatesTest.php::it returns an empty list when no templates exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

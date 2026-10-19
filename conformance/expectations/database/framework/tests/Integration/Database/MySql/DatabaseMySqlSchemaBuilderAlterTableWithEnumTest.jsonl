@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseMySqlSchemaBuilderAlterTableWithEnumTest::testChangeColumnOnTableWithEnum","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseMySqlSchemaBuilderAlterTableWithEnumTest::testGetTablesAndColumnListing","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseMySqlSchemaBuilderAlterTableWithEnumTest::testRenameColumnOnTableWithEnum","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

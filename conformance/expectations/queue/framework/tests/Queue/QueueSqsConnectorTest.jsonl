@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialCacheHitsDoNotInvokeTheUnderlyingProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialResolutionCachesCredentialsWithoutAnExpiration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialResolutionFallsBackToADirectFetchWhenEveryCacheStoreIsUnavailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialResolutionFallsBackToADirectFetchWhenTheCacheStoreIsUnavailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialResolutionRefreshesCredentialsBeforeTheyExpire","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialResolutionReusesCredentialsRefreshedByAnotherProcess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsAreNotWrappedWhenCachingIsDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsAreNotWrappedWhenCachingIsNotConfigured","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsAreServedFromTheFallbackStoreWhenThePrimaryStoreIsUnavailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsAreWrappedWithASharedCacheProviderWhenCachingIsEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsAreWrittenThroughToTheFallbackStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testCredentialsCacheKeyIsScopedToThePodIdentityAndConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testExplicitCredentialsAreLeftUntouched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testStaticKeyAndSecretCredentialsAreLeftUntouched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSqsConnectorTest::testThePrimaryStoreIsPreferredOverTheFallbackStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

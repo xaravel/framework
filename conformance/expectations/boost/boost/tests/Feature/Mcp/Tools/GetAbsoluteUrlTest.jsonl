@@ -1,0 +1,5 @@
+{"id":"boost/tests/Feature/Mcp/Tools/GetAbsoluteUrlTest.php::it handles empty path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/GetAbsoluteUrlTest.php::it prioritizes path over route when both are provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/GetAbsoluteUrlTest.php::it returns absolute url for given path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/GetAbsoluteUrlTest.php::it returns absolute url for named route","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/GetAbsoluteUrlTest.php::it returns absolute url for root path by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

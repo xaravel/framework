@@ -1,0 +1,24 @@
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::appPath normalizes separators to forward slashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::appPath returns customized path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::appPath returns default app path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::blank executable path config is treated as unset#dataset \"empty string\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::blank executable path config is treated as unset#dataset \"false\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::composer executable config takes precedence over Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::composer executable falls back to Sail when no config is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::enumContents includes all discovered enum files in stable order","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::enumContents returns empty string when app directory does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::enumContents skips enum paths that are not files","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasMcpEnabled returns false when MCP is disabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasMcpEnabled returns true when MCP is enabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasSkills property can be set to true","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasSkills property defaults to false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasSkillsEnabled returns false when skills are disabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::hasSkillsEnabled returns true when skills are enabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::npm executable config takes precedence over Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::npm executable falls back to Sail when no config is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::npm executable falls back to npm when no config and no Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::php executable config takes precedence over Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::php executable falls back to Sail when no config is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::vendor bin prefix config takes precedence over Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::vendor bin prefix falls back to Sail when no config is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineAssistTest.php::vendor bin prefix falls back to vendor/bin when no config and no Sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

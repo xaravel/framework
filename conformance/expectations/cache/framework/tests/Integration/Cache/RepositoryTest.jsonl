@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testFlexibleDeferLabelIsScopedToTagGroup","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testFlexibleLockIsScopedToTagGroup","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testItCanAlwaysDefer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testItHandlesStrayTtlKeyAfterMainKeyIsForgotten","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testItImplicitlyClearsTtlKeysFromDatabaseCache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testItImplicitlyClearsTtlKeysFromFileDriver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testItRoundsDateTimeValuesToAccountForTimePassedDuringScriptExecution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testStaleWhileRevalidate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RepositoryTest::testWorksWithEnumKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

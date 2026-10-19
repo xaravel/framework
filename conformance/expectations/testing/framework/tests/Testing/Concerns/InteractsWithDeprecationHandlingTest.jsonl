@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDeprecationHandlingTest::testWithDeprecationHandling","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\InteractsWithDeprecationHandlingTest::testWithoutDeprecationHandling","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

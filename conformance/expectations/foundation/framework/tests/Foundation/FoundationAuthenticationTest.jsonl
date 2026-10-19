@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthenticationTest::testAssertAuthenticated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthenticationTest::testAssertAuthenticatedAs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthenticationTest::testAssertCredentials","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthenticationTest::testAssertCredentialsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationAuthenticationTest::testAssertGuest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

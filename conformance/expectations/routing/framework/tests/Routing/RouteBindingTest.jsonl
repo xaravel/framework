@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Routing\\RouteBindingTest::test_it_can_resolve_the_explicit_model_for_the_given_route","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RouteBindingTest::test_it_can_resolve_the_explicit_soft_deleted_model_for_the_given_route_with_trashed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RouteBindingTest::test_it_cannot_resolve_the_explicit_soft_deleted_model_for_the_given_route","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

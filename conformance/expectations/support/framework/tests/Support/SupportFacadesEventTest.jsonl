@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesEventTest::testCacheFlushDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesEventTest::testCacheFlushLocksDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesEventTest::testFakeFor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesEventTest::testFakeForSwapsDispatchers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesEventTest::testFakeSwapsDispatchersInResolvedCacheRepositories","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

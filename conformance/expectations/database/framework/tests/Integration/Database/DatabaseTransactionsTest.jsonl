@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseTransactionsTest::testAfterRollbackCallbacksAreExecuted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseTransactionsTest::testTransactionCallbacks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseTransactionsTest::testTransactionCallbacksDoNotInterfereWithOneAnother","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseTransactionsTest::testTransactionsDoNotAffectDifferentConnections","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

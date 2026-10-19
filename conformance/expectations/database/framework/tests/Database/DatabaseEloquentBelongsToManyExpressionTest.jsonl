@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyExpressionTest::testAmbiguousColumnsExpression","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyExpressionTest::testGlobalScopesAreAppliedToBelongsToManyRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyExpressionTest::testGlobalScopesCanBeRemovedFromBelongsToManyRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyExpressionTest::testQualifiedColumnExpression","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

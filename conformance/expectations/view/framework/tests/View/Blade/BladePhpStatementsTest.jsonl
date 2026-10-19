@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testItDoesNotCompileInvalidSyntax","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testNestedTagCalls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testPhpStatementsDontParseBladeCode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testPhpStatementsWithExpressionAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testPhpStatementsWithoutExpressionAreIgnored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testStringWithEmptyStringDataValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testStringWithEscapingDataValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testStringWithOpeningParenthesisCanBeCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testStringWithParenthesisCanBeCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testStringWithParenthesisWithEndPHP","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testUnclosedParenthesisForBladeTags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePhpStatementsTest::testVerbatimAndPhpStatementsDontGetMixedUp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,12 @@
+{"id":"ai/tests/Feature/AgentInputTest.php::a user message keeps its attachments when broadcasting on the queue","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::a user message may be given as the prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::a user message may be given as the prompt when streaming","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::ad-hoc message history does not leak into a later prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::ad-hoc message history is sent ahead of the prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::ad-hoc message history may be given as UI message arrays","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::ad-hoc message history may be given as raw arrays","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::ad-hoc message history may not be combined with a conversational agent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::agent input resolves to its approval decisions before its user message","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::agent input resolves to its approval decisions when broadcasting on the queue","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::agent input resolves to its user message","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentInputTest.php::empty agent input is rejected","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

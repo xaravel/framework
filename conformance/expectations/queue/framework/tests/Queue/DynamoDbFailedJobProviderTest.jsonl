@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Queue\\DynamoDbFailedJobProviderTest::testASingleJobCanBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DynamoDbFailedJobProviderTest::testCanProperlyLogFailedJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DynamoDbFailedJobProviderTest::testCanRetrieveAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DynamoDbFailedJobProviderTest::testJobsCanBeDeleted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DynamoDbFailedJobProviderTest::testNullIsReturnedIfJobNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

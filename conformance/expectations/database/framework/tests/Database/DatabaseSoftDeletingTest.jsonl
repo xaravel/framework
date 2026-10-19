@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingTest::testCastingToStringOverridesAutomaticDateCastingToRetainPreviousBehaviour","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingTest::testDeletedAtIsAddedToCastsAsDefaultType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingTest::testDeletedAtIsCastToCarbonInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingTest::testExistingCastOverridesAddedDateCast","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingTest::testExistingMutatorOverridesAddedDateCast","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

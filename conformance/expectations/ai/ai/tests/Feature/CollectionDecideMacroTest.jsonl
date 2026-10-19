@@ -1,0 +1,13 @@
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::a list of strings decides between its values","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::a string keyed collection is treated as items once a resolver is given","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::a string keyed collection of strings uses its values as descriptions and returns the key","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::at least two items are required","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::enum cases are labeled automatically and the case is returned","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::items are labeled by a field and described by a field","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::items may be labeled and described by closures or described by several fields","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::items resolving to the same name are rejected","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::items without a resolvable name require a by field or closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::null is returned when the chosen option falls below the threshold","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::stringable names are cast to strings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::the macro passes through provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/CollectionDecideMacroTest.php::the text may be structured","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

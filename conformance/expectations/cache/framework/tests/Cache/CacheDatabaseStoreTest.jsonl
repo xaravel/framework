@@ -1,0 +1,17 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testDecrementReturnsCorrectValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testDecryptedValueIsReturnedWhenItemIsValid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testForeverCallsStoreItemWithReallyLongTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testIncrementReturnsCorrectValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testItemsMayBeFlushedFromCache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testItemsMayBeRemovedFromCache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testLocksMayBeFlushedFromCache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testNullIsReturnedAndItemDeletedWhenItemIsExpired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testNullIsReturnedWhenItemNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testTouchExtendsTtl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testTouchExtendsTtlOnPostgres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testTouchExtendsTtlOnSqlite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testValueIsReturnedOnPostgres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testValueIsReturnedOnSqlite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testValueIsUpserted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testValueIsUpsertedOnPostgres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheDatabaseStoreTest::testValueIsUpsertedOnSqlite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

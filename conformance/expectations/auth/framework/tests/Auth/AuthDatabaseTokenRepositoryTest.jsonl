@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testCreateInsertsNewRecordIntoTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testDeleteExpiredMethodDeletesExpiredTokens","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testDeleteMethodDeletesByToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testExistReturnsFalseIfInvalidToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testExistReturnsFalseIfNoRowFoundForUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testExistReturnsFalseIfRecordIsExpired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testExistReturnsTrueIfValidRecordExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testRecentlyCreatedReturnsFalseIfNoRowFoundForUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testRecentlyCreatedReturnsFalseIfValidRecordExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseTokenRepositoryTest::testRecentlyCreatedReturnsTrueIfRecordIsRecentlyCreated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

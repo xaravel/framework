@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsAreDispatchedWithQueueRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsAreForwardedToConnectionByQueueName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsAreQueuedUsingAttributesInheritedFromParentClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsThatShouldQueueIsQueued","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsThatShouldQueueIsQueuedUsingCustomHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testCommandsThatShouldQueueIsQueuedUsingCustomQueueAndDelay","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testDispatchBulk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testDispatchNowShouldNeverQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testDispatcherCanDispatchStandAloneHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testExplicitConnectionWinsOverForwardedQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusDispatcherTest::testOnConnectionOnJobWhenDispatching","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
