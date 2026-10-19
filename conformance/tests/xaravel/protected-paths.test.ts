@@ -170,6 +170,7 @@ xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-1
     include("/PORTING.md"),
     include("/stories/"),
     include("/.github/"),
+    include("/.devcontainer/"),
     include("/tools/"),
     include("/packages/assert/"),
     include("/packages/mockery/"),
@@ -289,7 +290,7 @@ xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every
   // Divergence names the first differing line.
   const drifted = committed.replace("/tools/ @edanisko\n", "");
   expect(checkMirror(listText, drifted, phases)).toEqual([
-    `codeowners drift: ${CODEOWNERS_PATH} line 13 is "/packages/assert/ @edanisko", expected "/tools/ @edanisko"; run \`bun run protected-paths:codeowners\` (AD-16)`,
+    `codeowners drift: ${CODEOWNERS_PATH} line 14 is "/packages/assert/ @edanisko", expected "/tools/ @edanisko"; run \`bun run protected-paths:codeowners\` (AD-16)`,
   ]);
   const lineCount = committed.trimEnd().split("\n").length;
   expect(checkMirror(listText, committed + "/extra/ @someone\n", phases)[0]).toContain(`line ${lineCount + 1} is "/extra/ @someone", expected end of file`);
@@ -301,7 +302,7 @@ xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every
     writeFileSync(join(drift!, CODEOWNERS_PATH), renderCodeowners(entries, NONE).replace("/tools/ @edanisko\n", ""));
     const failing = await runCli(["codeowners", "--check", "--root", drift!]);
     expect(failing.code).toBe(1);
-    expect(failing.stderr).toContain(`codeowners drift: ${CODEOWNERS_PATH} line 13`);
+    expect(failing.stderr).toContain(`codeowners drift: ${CODEOWNERS_PATH} line 14`);
 
     // Past Phase 1 the committed CODEOWNERS is stale until it lists contracts.
     expect((await runCli(["codeowners", "--check", "--root", exited!])).code).toBe(1);
@@ -374,7 +375,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     expect(contracts.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-1-EXIT.md");
     const staleHead = await runPr({ files: [file("packages/support/src/y.ts")], head: { ...exitedHead, [CODEOWNERS_PATH]: renderCodeowners(entries, NONE) } }, exited!);
     expect(staleHead.code).toBe(1);
-    expect(staleHead.stderr).toContain('codeowners drift: .github/CODEOWNERS line 16 is "/package.json @edanisko", expected "/packages/contracts/ @edanisko"');
+    expect(staleHead.stderr).toContain('codeowners drift: .github/CODEOWNERS line 17 is "/package.json @edanisko", expected "/packages/contracts/ @edanisko"');
 
     // A rename out of a protected directory lists the old name.
     const renamed = await runPr({ files: [file("packages/x/a.ts", "tools/a.ts")] }, base!);
@@ -411,7 +412,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
       base!,
     );
     expect(phase2Stale.code).toBe(1);
-    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 28 is end of file, expected "/docs/ @edanisko"');
+    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 29 is end of file, expected "/docs/ @edanisko"');
     const phase2Open = await runPr(
       { files: [file("packages/support/src/y.ts")], head: { [LIST_PATH]: phase2List, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
       base!,
@@ -441,7 +442,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
       base!,
     );
     expect(drift.code).toBe(1);
-    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 28 is end of file, expected "/docs/ @edanisko"');
+    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 29 is end of file, expected "/docs/ @edanisko"');
 
     // The base list judges the PR: a head list that drops `/tools/` and `/conformance/`, with a matching CODEOWNERS, still fails.
     const weakenedList = listText.split("\n").filter((line) => !line.startsWith("/tools/") && !line.startsWith("/conformance/")).join("\n");

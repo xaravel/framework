@@ -10,6 +10,7 @@
 /PORTING.md @edanisko
 /stories/ @edanisko
 /.github/ @edanisko
+/.devcontainer/ @edanisko
 /tools/ @edanisko
 /packages/assert/ @edanisko
 /packages/mockery/ @edanisko

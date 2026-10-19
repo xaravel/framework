@@ -365,7 +365,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   - **The list.** `conformance/protected-paths` (globs, itself Protected) is mirrored into `CODEOWNERS` with the Maintainer as owner. It covers:
     - in `conformance/`: everything except `expectations/`, `escalations/`, `oracle-requests/` and the signed `fixtures/`;
     - `decisions/`, `PORTING.md` and `stories/`;
-    - `.github/`;
+    - `.github/` and `.devcontainer/` (the reference environment's pins, AD-17);
     - `tools/`;
     - `packages/assert`, `packages/mockery` and `packages/contracts` (contracts after Phase 1);
     - the root `package.json`, `bun.lock`, the root `bunfig.toml`, the root `tsconfig*.json` and `tsconfig.base.json`, `.oxlintrc.json`, `.gitattributes`, `.bun-version` and the root `LICENSE`. Package `tsconfig.json` files are generated and checked (AD-2).

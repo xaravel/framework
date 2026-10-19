@@ -21,6 +21,7 @@
 /PORTING.md
 /stories/
 /.github/
+/.devcontainer/
 /tools/
 
 /packages/assert/
