@@ -244,7 +244,7 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   });
   const statusParameters = ruleOf(MAIN, "required_status_checks")["parameters"] as Record<string, unknown>;
   expect(statusParameters["strict_required_status_checks_policy"]).toBe(false);
-  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "fixtures", "ownership", "protected-paths"]);
+  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "check", "fixtures", "ownership", "protected-paths"]);
   for (const check of checksOf(MAIN)) {
     expect(check.integration_id).toBe(15368);
   }
@@ -264,6 +264,7 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   expect(REQUIRED_CHECKS).toContain("protected-paths");
   expect(REQUIRED_CHECKS).toContain("ownership");
   expect(REQUIRED_CHECKS).toContain("fixtures");
+  expect(REQUIRED_CHECKS).toContain("check");
 
   // Normalisation: order, extra API fields and the admin actor_id do not matter.
   const live = liveOf(MAIN, 25223480);
