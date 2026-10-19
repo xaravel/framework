@@ -7,7 +7,7 @@ paradigm: 'Ported Laravel: service-container microkernel; Contract -> Manager ->
 scope: 'xaravel/framework monorepo: every Upstream and Xaravel Component, the Conformance System, Skeleton, Installer, CI and release'
 status: final
 created: '2026-10-16'
-updated: '2026-10-16'
+updated: '2026-10-19'
 binds: [FR-1..FR-116, NFR-1..NFR-11, DIV-1..DIV-12]
 sources:
   - ../../prds/prd-xaravel-2026-10-15/prd.md
@@ -381,7 +381,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
 
 ### AD-17 — Backend isolation per worktree
 
-- **Binds:** FR-9, NFR-7, NFR-10
+- **Binds:** FR-9, NFR-1, NFR-7, NFR-10
 - **Prevents:** parallel agents on one machine corrupting each other's backends; Redis isolation that breaks faithful `flushdb` ports.
 - **Rule:**
   - **Worktree key.** The harness takes the first 8 hex characters of SHA-256 over the worktree path plus its git worktree creation id.
@@ -389,6 +389,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   - **SQLite:** files under the worktree's `.cache/`.
   - **Redis:** one `redis-server` per worktree, on a unix socket in `.cache/` with no persistence. Tests may `flushdb`, and no harness prefix is injected. In CI, each job's own service is its server.
   - **One runner per worktree.** A lock file `.cache/harness.lock` keeps out a second runner in the same worktree.
+  - **Reference environment (optional).** `.devcontainer/` is the Linux reference environment: Bun at `.bun-version`, `redis-server` at CI's Redis version inside the workspace (for the rule above), and a Postgres sidecar from CI's image. It is never required: every harness, tool and done check runs natively on macOS and Linux (NFR-1, PRD OQ-9, Story 2.2), where a backend that isn't running is `NOT-RUN`. Its pins are the Stack table's and CI's, checked mechanically. The workspace, or at least `.cache/`, lives on a container volume, not a host bind mount, so the Redis socket and the harness's I/O work. The container gets no Docker socket: the Oracle and Inventory jobs run in CI or on the host. A post-alpha engine (MySQL, MariaDB, SQL Server, memcached, Beanstalkd, DynamoDB Local) gets its sidecar from the Phase 9 Story that brings its driver; an amd64-only image is an optional Compose profile. A worktree used both inside and outside the container has two keys, and so two sets of databases.
 
 ### AD-18 — Lockstep release from CI only
 
@@ -590,6 +591,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
 | @faker-js/faker | 10.6.0 |
 | PostgreSQL (CI) | 18 |
 | Redis (CI; minimum supported 7.2) | 8.10.2 |
+| Dev container (optional, AD-17) | `.devcontainer/`; images and versions as above |
 | Oracle: PHP | 8.5.11 |
 | Upstream Baseline Pin (`laravel/framework`) | v13.37.0 |
 
