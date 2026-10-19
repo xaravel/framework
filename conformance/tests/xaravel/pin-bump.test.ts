@@ -442,14 +442,14 @@ xaravelTest("XT-conformance-63", "--apply resets a changed Test ID's Expectation
 
 xaravelTest("XT-conformance-64", "--apply rewrites a renamed Test ID's lines (same hash and component) to the new ID keeping status, reason, adapted and escalation, and the record keeps both IDs and the prior expectations (FR-7.3)", async () => {
   const before = {
-    "support.jsonl": inventory([entry(`${SUPPORT}::testOld`, "support", "8"), entry(`${SUPPORT}::testTwinA`, "support", "9"), entry(`${SUPPORT}::testTwinB`, "support", "9")]),
+    "support.jsonl": inventory([entry(`${SUPPORT}::testNote`, "support", "b"), entry(`${SUPPORT}::testOld`, "support", "8"), entry(`${SUPPORT}::testTwinA`, "support", "9"), entry(`${SUPPORT}::testTwinB`, "support", "9")]),
     "bus.jsonl": inventory([entry(`${BUS}::testMoved`, "bus", "a")]),
   };
   const after = {
-    "support.jsonl": inventory([entry(`${SUPPORT}::testNew`, "support", "8"), entry(`${SUPPORT}::testTwinC`, "support", "9"), entry(`${SUPPORT}::testMovedHere`, "support", "a")]),
+    "support.jsonl": inventory([entry(`${SUPPORT}::testNew`, "support", "8"), entry(`${SUPPORT}::testNote`, "support", "b"), entry(`${SUPPORT}::testTwinC`, "support", "9"), entry(`${SUPPORT}::testMovedHere`, "support", "a")]),
   };
   const fx = diffFixture(before, after, {
-    [SHARD_STR]: `${expectation(`${SUPPORT}::testOld`, "sqlite", "skip", "blocked-by:database", null, "ESC-5.1-2")}\n${expectation(`${SUPPORT}::testTwinA`, "none", "pass", null)}\n`,
+    [SHARD_STR]: `${expectation(`${SUPPORT}::testNote`, "none", "pass", null)}\n${expectation(`${SUPPORT}::testOld`, "sqlite", "skip", "blocked-by:database", null, "ESC-5.1-2")}\n${expectation(`${SUPPORT}::testTwinA`, "none", "pass", null)}\n`,
     [SHARD_STR2]: `${expectation(`${SUPPORT}::testOld`, "pgsql", "pass", null, "DIV-9.1")}\n`,
   });
   await withFixture(fx, async () => {
@@ -460,7 +460,8 @@ xaravelTest("XT-conformance-64", "--apply rewrites a renamed Test ID's lines (sa
     // Ambiguous hash (two removed twins, one added) and a cross-Component match are not renames.
     expect(result.stdout).toContain(`Added (2)\n  ${SUPPORT}::testMovedHere\n  ${SUPPORT}::testTwinC\n`);
     expect(result.stdout).toContain(`Removed (3)\n  ${BUS}::testMoved\n  ${SUPPORT}::testTwinA\n  ${SUPPORT}::testTwinB\n`);
-    expect(read(fx, SHARD_STR)).toBe(`${expectation(`${SUPPORT}::testNew`, "sqlite", "skip", "blocked-by:database", null, "ESC-5.1-2")}\n`);
+    // The rename moves the line ahead of testNote, so the shard is re-sorted by id then variant.
+    expect(read(fx, SHARD_STR)).toBe(`${expectation(`${SUPPORT}::testNew`, "sqlite", "skip", "blocked-by:database", null, "ESC-5.1-2")}\n${expectation(`${SUPPORT}::testNote`, "none", "pass", null)}\n`);
     expect(read(fx, SHARD_STR2)).toBe(`${expectation(`${SUPPORT}::testNew`, "pgsql", "pass", null, "DIV-9.1")}\n`);
     for (const shard of [SHARD_STR, SHARD_STR2]) {
       expect(read(fx, shard)).not.toContain("testOld");
