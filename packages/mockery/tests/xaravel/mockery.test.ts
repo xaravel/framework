@@ -351,6 +351,8 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   const spy = Mockery.spy(XtFoo);
   spy.bar();
   expect(spy.shouldReceive()).toBeInstanceOf(HigherOrderMessage);
+  // A HigherOrderMessage is no thenable: `then` reads undefined, so awaiting one sends no `then` message.
+  expect(Mockery.mock(XtFoo).shouldReceive().then).toBeUndefined();
   expect(spy.shouldHaveReceived("bar")).toBeInstanceOf(VerificationDirector);
   // A proxied partial's own method runs with the partial object as `this`.
   class Counter {
@@ -374,6 +376,12 @@ test("fixture-free: a class value in with() matches an instance and its class-na
   expect(typed.bar(function () {})).toBe("closure");
   expect(typed.baz(function () {})).toBe("callable");
   expect(thrown(() => typed.bar(XtFoo))).toBeInstanceOf(NoMatchingExpectationException);
+  // type('int') and type('float') split numbers as the grader's value layer does: 2 ** 53 is not a safe integer.
+  const numeric = Mockery.mock(XtFoo);
+  numeric.shouldReceive("bar").with(Mockery.type("float")).andReturn("float");
+  numeric.shouldReceive("baz").with(Mockery.type("int")).andReturn("int");
+  expect(numeric.bar(2 ** 53)).toBe("float");
+  expect(numeric.baz(2 ** 53 - 1)).toBe("int");
   // A class that declares its own `allows` keeps it (Mockery's AvoidMethodClashPass): the call is dispatched.
   class Gate {
     allows(_ability: string): boolean {
@@ -739,6 +747,22 @@ test("XT-mockery-5: a mocked model (its instances carry MODEL_STATE, its constru
   expect(plain["relation"]).toBe("plain member");
   expect(escape(plain)["relation"]?.value).toBe("plain member");
   expect(Object.getPrototypeOf(escape(plain))).toBeNull();
+  // An accessor member reads through its getter and takes an assignment through its setter; a read-only member
+  // refuses one.
+  let accessed: unknown = "got";
+  Object.defineProperty(plain, "accessor", {
+    get: (): unknown => accessed,
+    set: (value: unknown): void => {
+      accessed = value;
+    },
+    configurable: true,
+  });
+  expect(plain["accessor"]).toBe("got");
+  plain["accessor"] = "set";
+  expect(accessed).toBe("set");
+  Object.defineProperty(plain, "fixed", { value: "fixed", writable: false, configurable: true });
+  expect(Reflect.set(plain, "fixed", "changed")).toBe(false);
+  expect(plain["fixed"]).toBe("fixed");
 
   // A Foo[m] partial: the real constructor ran (its Proxy is the instance) and the real getTable reaches the mock.
   const partial = Mockery.mock("XtModel[getConnectionName]");

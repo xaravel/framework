@@ -228,10 +228,13 @@ function cleanupArray(argument: unknown, nesting: number): unknown {
 
 function cleanupNesting(argument: unknown, nesting: number): unknown {
   if (isPhpObject(argument)) {
-    const object = objectToArray(argument, nesting - 1);
-    if (object instanceof Pairs) {
-      object.set("class", getClass(argument));
+    const formatted = objectToArray(argument, nesting - 1);
+    // PHP's `$object['class'] = get_class($argument)` lands on the `['...']` cutoff too: `[0 => '...', 'class' => <class>]`.
+    const object = formatted instanceof Pairs ? formatted : new Pairs();
+    if (object !== formatted) {
+      object.set(0, "...");
     }
+    object.set("class", getClass(argument));
     return object;
   }
   if (isPhpArray(argument)) {

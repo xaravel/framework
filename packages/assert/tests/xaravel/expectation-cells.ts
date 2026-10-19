@@ -367,12 +367,16 @@ export const THAT_CELLS: readonly DirectCell[] = [
 
 const TMP_TS = tmpdir();
 
-/** `[PHP path expression, TS path, contents]` of the files the setup writes. */
+/**
+ * `[PHP path expression, TS path, contents]` of the files the setup writes. The TS paths carry the process id, so
+ * concurrent runs never share (or delete) each other's files; no path reaches a message, so the PHP side's fixed
+ * names stay as signed.
+ */
 export const FILES: readonly (readonly [php: string, ts: string, contents: string])[] = [
-  ["$xtFile1", join(TMP_TS, "xt-assert-12-1.txt"), "abc"],
-  ["$xtFile2", join(TMP_TS, "xt-assert-12-2.txt"), "line 1\nline 2\nline 3\n"],
-  ["$xtFile3", join(TMP_TS, "xt-assert-12-3.txt"), ""],
-  ["$xtFile4", join(TMP_TS, "xt-assert-12-4.txt"), "Ünïcödé\n"],
+  ["$xtFile1", join(TMP_TS, `xt-assert-12-${process.pid}-1.txt`), "abc"],
+  ["$xtFile2", join(TMP_TS, `xt-assert-12-${process.pid}-2.txt`), "line 1\nline 2\nline 3\n"],
+  ["$xtFile3", join(TMP_TS, `xt-assert-12-${process.pid}-3.txt`), ""],
+  ["$xtFile4", join(TMP_TS, `xt-assert-12-${process.pid}-4.txt`), "Ünïcödé\n"],
 ];
 
 export const FILE_SETUP: readonly string[] = FILES.map(([php, , contents], index) => `${php} = sys_get_temp_dir() . '/xt-assert-12-${index + 1}.txt'; file_put_contents(${php}, ${phpString(contents)});`);

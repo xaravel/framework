@@ -26,8 +26,9 @@ export class ExceptionMessageMatchesRegularExpression extends Constraint {
     if (typeof other !== "string") {
       return false;
     }
-    // `search` ignores `lastIndex` and the `g`/`y` state, as one preg_match() call does.
-    return other.search(this.regularExpression) !== -1;
+    // One preg_match() call: a fresh RegExp without `g`/`y`, so neither `lastIndex` nor sticky anchoring applies
+    // (as Constraint\RegularExpression does).
+    return new RegExp(this.regularExpression.source, this.regularExpression.flags.replace(/[gy]/g, "")).test(other);
   }
 
   override failureDescription(other: unknown): string {

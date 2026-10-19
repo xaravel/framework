@@ -9,7 +9,9 @@ import { Assert } from "../Assert";
 type Write = typeof process.stdout.write;
 
 // The real `process.stdout.write`, taken once on load: a buffer always restores this one, so a test bun abandoned
-// (its lifecycle never stopped its buffer) cannot leave a capture in place for the tests after it.
+// (a timeout: its lifecycle never stopped its buffer) leaves its capture in place only until the next TestCase
+// test's buffer stops. Output that non-TestCase tests write in between goes into the abandoned capture and is lost.
+// A wrapper someone installs over `process.stdout.write` after this module loads is replaced when a buffer stops.
 // oxlint-disable-next-line typescript/unbound-method -- called with process.stdout
 const REAL_WRITE: Write = process.stdout.write;
 

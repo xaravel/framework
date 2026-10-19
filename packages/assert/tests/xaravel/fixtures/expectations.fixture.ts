@@ -98,6 +98,35 @@ portedTest(`${ID}::testSkippedInSetUp`, { case: SkipInSetUp }, function () {
   probe("bodyAfterSkippedSetUp", true);
 });
 
+// tearDown runs after a passing and after a failing body (PHPUnit's tearDownTest). An error it throws fails a
+// passing test; after a body's assertion failure, which PHPUnit keeps over a tearDown error that is not an
+// assertion failure, the body's failure wins.
+class ProbeTearDown extends TestCase {
+  probeName = "";
+  tearDown(): void {
+    probe(this.probeName, true);
+  }
+}
+portedTest(`${ID}::testTearDownRuns`, { case: ProbeTearDown }, function () {
+  this.probeName = "tearDownAfterPass";
+  this.assertTrue(true);
+});
+portedTest(`${ID}::testTearDownRunsAfterFailure`, { case: ProbeTearDown }, function () {
+  this.probeName = "tearDownAfterFailure";
+  this.fail("body failed");
+});
+class ThrowInTearDown extends TestCase {
+  tearDown(): void {
+    throw new Error("boom from tearDown");
+  }
+}
+portedTest(`${ID}::testTearDownThrows`, { case: ThrowInTearDown }, function () {
+  this.assertTrue(true);
+});
+portedTest(`${ID}::testBodyFailsThenTearDownThrows`, { case: ThrowInTearDown }, function () {
+  this.fail("body failed");
+});
+
 // expectNotToPerformAssertions, then an assertion: risky, still passing.
 portedTest(`${ID}::testRisky`, { case: XtCase }, function () {
   this.expectNotToPerformAssertions();
