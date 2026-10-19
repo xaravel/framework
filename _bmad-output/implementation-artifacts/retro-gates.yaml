@@ -29,4 +29,5 @@ epic-4:
   doc: _bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-4-retro-item-7-rule-contract-escalations
