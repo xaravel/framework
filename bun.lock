@@ -744,6 +744,10 @@
       "name": "@xaravel/skeleton",
       "version": "0.0.0",
     },
+    "tools/bench": {
+      "name": "@xaravel/bench",
+      "version": "0.0.0",
+    },
     "tools/boost-framework": {
       "name": "@xaravel/boost-framework",
       "version": "0.0.0",
@@ -849,6 +853,8 @@
     "@xaravel/assert": ["@xaravel/assert@workspace:packages/assert"],
 
     "@xaravel/auth": ["@xaravel/auth@workspace:packages/auth"],
+
+    "@xaravel/bench": ["@xaravel/bench@workspace:tools/bench"],
 
     "@xaravel/boost": ["@xaravel/boost@workspace:packages/boost"],
 

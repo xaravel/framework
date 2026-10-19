@@ -1,20 +1,22 @@
 # The Ratchet and line ownership
 
-The Ratchet keeps conformance from moving dishonestly (FR-3, AD-15, AD-16, AD-28; Story 5.6). It has two halves:
+The Ratchet keeps conformance from moving dishonestly (FR-3, AD-2, AD-15, AD-16, AD-28; Stories 5.6 and 5.7). It has two halves:
 
-- the `ratchet` check, which runs the full [harness](harness.md) and fails on any result that differs from the [Expectations File](expectations.md) in a way the run is accountable for;
+- the `ratchet` check, a required check on `main`, which runs the [harness](harness.md) and fails on any result that differs from the [Expectations File](expectations.md) in a way the run is accountable for;
 - the line rules of the ownership check, which stop a PR from rewriting Expectations lines or `portedTest` blocks it does not own, or demoting a `pass` without an approved Escalation.
 
 ## The `ratchet` command
 
 ```sh
-bun run ratchet run [--root <dir>] --ref <head-ref>
+bun run ratchet run [--root <dir>] --ref <head-ref> [--scope <file>]
+bun run ratchet scope --base <dir> --head <dir> --out <file>
+bun run ratchet story [--root <dir>] --ref <head-ref>
 bun run ratchet overlay --base <dir> --head <dir>
 ```
 
-The script is `bun tools/ratchet/ratchet.ts`. Exit codes: 0 when nothing fails (warnings never do); 1 when there is an unexpected failure or an owned unexpected pass, when the harness fails a precondition, or when the Story manifests cannot be read; 2 on a usage error (an unknown or repeated flag, a missing value, `run` without `--ref`).
+The script is `bun tools/ratchet/ratchet.ts`. Exit codes: 0 when nothing fails (warnings never do); 1 when there is an unexpected failure or an owned unexpected pass, when the harness fails a precondition, when the Story manifests or the scope file cannot be read, or on any other failure; 2 on a usage error (an unknown or repeated flag, a missing value, `run` or `story` without `--ref`, `scope` without all three flags).
 
-`run` runs the harness over the root in full mode (no filter, no sample) and classifies each difference it counted:
+`run` runs the harness over the root in full mode (no filter, no sample), or over a scope (below), and classifies each difference it counted:
 
 | Line (stdout) | When | Counts as |
 | --- | --- | --- |
@@ -23,11 +25,37 @@ The script is `bun tools/ratchet/ratchet.ts`. Exit codes: 0 when nothing fails (
 | `WARNING UNEXPECTED-PASS … (owned by open Story <s>; fails that Story's next run)` | an unexpected pass owned by another open Story | a warning |
 | `WARNING UNEXPECTED-PASS … (owned by no open Story)` | an unexpected pass no open Story owns (on `main`, every unexpected pass is one of these two warnings) | a warning |
 
-When the harness exits non-zero but counted no difference at all, `run` adds `UNEXPECTED-FAILURE harness exited <n> with no counted difference` and counts it as a failure (fail closed). The last line is `RATCHET ref=<ref> failures=<f> passes=<p> warnings=<w>`. Under `GITHUB_ACTIONS=true` each warning is also printed as a `::warning::` annotation. The harness's own report (its NOT-RUN, difference and SUMMARY lines) and its diagnostics go to stderr. A harness precondition failure prints no `RATCHET` line.
+When the harness exits non-zero but counted no difference at all, `run` adds `UNEXPECTED-FAILURE harness exited <n> with no counted difference` and counts it as a failure (fail closed). The last line is `RATCHET ref=<ref> scope=<mode> failures=<f> passes=<p> warnings=<w>`, where `<mode>` is the scope's, `full` without `--scope`. Under `GITHUB_ACTIONS=true` each warning is also printed as a `::warning::` annotation. The harness's own report (its NOT-RUN, difference and SUMMARY lines) and its diagnostics go to stderr. A harness precondition failure prints no `RATCHET` line.
 
 A Story is open when its effective status (sprint status through `sprint_key`, as `ownership:check` reads it) is not `done`. It owns a Test ID `X#k` (a dataset row) when its `test_ids` list `X#k` or `X`.
 
 An unowned or foreign unexpected pass is a warning on PR runs too, not only on `main`. The ownership rules forbid a Story from editing a line outside its `test_ids`, so failing its run would leave the PR no legal fix. The owner's next run fails, and Story 5.8's promotion bot handles passes no open Story owns.
+
+## The scope (Story 5.7)
+
+`scope` compares the file contents of two trees (the top-level `.git` and every `node_modules` at any depth are skipped, so an installed tree compares equal to a fresh checkout, and so is either tree when it is nested inside the other, as CI's `pr/` is inside the base checkout; symlinks compare by target) and writes `{"mode":"full"|"components"|"none","components":[…],"reason":"…"}` to `--out`. Each changed path counts as:
+
+| Changed path | Effect |
+| --- | --- |
+| `packages/<p>/**` | changes package `p` |
+| `conformance/expectations/<c>/**`, `conformance/fixtures/<c>/**` | changes Component `c` |
+| `docs/`, `_bmad-output/`, `stories/`, `conformance/escalations/`, `conformance/oracle-requests/`, `.github/`, any root `*.md` except `AGENTS.md` | nothing graded: the manifests are read from the base and the workflows run from it |
+| anything else (`tools/`, the harness, `decisions/`, whose `DIV-<n>.md` the harness reads for assertion-floor waivers, `bunfig.toml`, `package.json`, `AGENTS.md`, …) | mode `full`; `reason` names the first such path in sorted order |
+
+Otherwise `components` is the AD-2 reverse-dependency closure of the changed packages (`reverseClosure` in `tools/graph/graph.ts`: every package that reaches a changed one over any `dependencies`, `devDependencies`, `peerDependencies` or `optionalDependencies` edge, the changed ones included, read from both trees so an edge the PR adds or removes still counts), plus the changed Components, intersected with the directory names under the head's `conformance/expectations/`. When that is empty the mode is `none`. Two cases are `full` instead, naming the path: a changed Component's data (`conformance/expectations/<c>/` or `conformance/fixtures/<c>/`) whose Component has no Expectations directory in the head, such as a deleted one; and a package in the closure with `packages/<p>/tests/ported/` in the head but no Expectations directory, whose Ported Tests only a full run reports as `UNKNOWN`.
+
+`run --scope <file>` then grades only those Components (`runHarness(root, {components})`, the harness's `--component` selection; the UNKNOWN check still uses the whole Expectations File). In `none` mode it runs no harness and prints `RATCHET ref=<r> scope=none failures=0 passes=0 warnings=0`, exit 0. In `full` mode it is the full run.
+
+Scope compares the base tip with the PR head, not git history: when `main` has moved on since the PR branched, the difference includes `main`'s own changes, which only widens the scope. It runs before the overlay, so a PR that edits a grader package (which the overlay then restores) still widens the scope.
+
+## The Story's tests (Story 5.7)
+
+`story` runs the harness over the `test_ids` of the Story a `story/<epic>.<story>` ref names (`harness --story <id>`), in full, never as a sample, with the inherited environment (in CI, `CI=true` makes every alpha Variant run). It prints the harness's report and exits with the harness's code. Exactly two cases skip, with exit 0:
+
+- `STORY ref=<r> skipped: not a Story ref`, for any other ref;
+- `STORY ref=<r> skipped: no test_ids`, for a manifest whose `test_ids` is empty (a Conformance System Story with only Xaravel Tests).
+
+A missing or invalid manifest exits 1. The scope grades what a PR could break; `story` makes sure the Story's own Test IDs ran on every Variant even when they sit outside it.
 
 ## The overlay
 
@@ -37,15 +65,23 @@ So the harness, `tools/`, `@xaravel/assert` and `@xaravel/mockery`, `stories/`, 
 
 ## CI (`.github/workflows/ratchet.yml`)
 
-Job `ratchet` runs on `pull_request_target` into `main` (opened, synchronize, reopened, ready_for_review) and on push to `main`, with `permissions: contents: read`, no secrets, and `persist-credentials: false` on every checkout:
+Job `ratchet` runs on `pull_request_target` into `main` (opened, synchronize, reopened, ready_for_review), in the merge queue (`merge_group`) and on push to `main`, with `contents: read` and `pull-requests: read`, no secrets, and `persist-credentials: false` on every checkout. [CI pipeline](ci.md) maps it into the whole AD-28 pipeline.
 
-1. It checks out the base commit at `.` and, on a PR, the PR head at `pr/`.
-2. It runs `bun tools/ratchet/ratchet.ts overlay --base . --head pr`, then `bun install --frozen-lockfile --ignore-scripts` in `pr/`.
-3. It runs `bun tools/ratchet/ratchet.ts run --root pr --ref <head ref>` (the head ref reaches the shell only through env). On push it installs and runs `--root . --ref main`.
+On a PR:
 
-`CI=true` makes every alpha Variant run: the job has `postgres:18` and `redis:8.10.2` services, and sets `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `REDIS_HOST` and `REDIS_PORT` as the harness reads them. An unreachable alpha Variant is an unexpected failure.
+1. It checks out the base commit at `.` and the PR head at `pr/`.
+2. `bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"`, before anything changes `pr/`.
+3. `overlay --base . --head pr`, then `bun install --frozen-lockfile --ignore-scripts` in `pr/`.
+4. `run --root pr --ref <head ref> --scope "$RUNNER_TEMP/ratchet-scope.json"`.
+5. `story --root pr --ref <head ref>`.
 
-The workflow runs PR code from a workflow and tool the PR cannot change (AD-28). Its safety rests on four things: `contents: read`, no secrets, `persist-credentials: false`, and the overlay. Because `pull_request_target` uses the base's copy of the workflow, the job did not run on Story 5.6's own PR; its first live run is the push to `main` after merge. Story 5.7 makes `ratchet` a required check and adds the merge-queue run.
+The head ref reaches the shell only through env.
+
+In the merge queue GitHub runs the workflow from the merge group commit, so the PR's own copy runs; its trust rests on the `pull_request_target` run of the base copy having gated the PR first, as in `ownership.yml`. The job checks out the group commit (`github.sha`), installs from its lockfile, takes the PR number from the queue ref (`bun tools/ruleset/ruleset.ts merge-group-pr`), reads the PR's head branch with `gh pr view <n> --json headRefName` (`GH_TOKEN: github.token`, the job's only use of `pull-requests: read`), and runs the full `run --root . --ref <head ref>`, so the Story's own unexpected passes still fail. The group commit holds every PR queued ahead of this one too, but it is graded under this PR's ref, so an unexpected pass owned by an earlier queued PR's Story is only a warning there. On push to `main` it installs and runs the full `run --root . --ref main`.
+
+`CI=true` makes every alpha Variant run: the job has `postgres:18` and `redis:8.10.2` services, and sets `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `REDIS_HOST` and `REDIS_PORT` as the harness reads them. An unreachable alpha Variant is an unexpected failure. No step passes `--fast`.
+
+The PR run executes PR code from a workflow and tool the PR cannot change (AD-28). Its safety rests on four things: `contents: read`, no secrets, `persist-credentials: false`, and the overlay. Because `pull_request_target` uses the base's copy of the workflow, a PR that changes this workflow is graded by the old copy: Story 5.7's scope and story steps first run on the PR after it merged.
 
 ## Line ownership
 

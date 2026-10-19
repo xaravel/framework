@@ -1,30 +1,47 @@
-# The Ratchet (Story 5.6; FR-3, AD-15, AD-16, AD-28).
+# The Ratchet (Stories 5.6 and 5.7; FR-3, AD-2, AD-15, AD-16, AD-28).
 #
-# `ratchet` runs the full conformance harness and fails on every unexpected
+# `ratchet` runs the conformance harness and fails on every unexpected
 # failure, and on every unexpected pass that the run's own Story owns
 # (`bun tools/ratchet/ratchet.ts run`, docs/ops/ratchet.md). Other unexpected
-# passes are warnings.
+# passes are warnings. It is a required check on main
+# (.github/rulesets/main.json, Story 5.7).
 #
-# It runs under `pull_request_target`, so this workflow and the tool come
-# from the base. The base is checked out at `.` and the PR head at `pr/`;
-# `overlay` then restores every Protected Path (the harness, tools/, the
-# grader packages, stories/, the root bunfig.toml, package.json and bun.lock)
-# and the sprint status from the base into `pr/`. So the check's workflow, tool
-# and Protected Paths are the base's at the start of the run. Code a PR's
-# tests run in-process is not contained, as with any test runner; the
+# On a PR it runs under `pull_request_target`, so this workflow and the tool
+# come from the base. The base is checked out at `.` and the PR head at `pr/`.
+# `scope` first compares the two trees and writes the AD-2 reverse-dependency
+# closure of what the PR changed (before the overlay, so a PR's change to a
+# grader package still widens the scope). `overlay` then restores every
+# Protected Path (the harness, tools/, the grader packages, stories/, the root
+# bunfig.toml, package.json and bun.lock) and the sprint status from the base
+# into `pr/`. So the check's workflow, tool and Protected Paths are the base's
+# at the start of the run. `run --scope` grades only that closure (none at
+# all for a docs-only PR; everything when a non-package path changed), and
+# `story` then runs the Story's own `test_ids` in full on every Variant
+# (skipped for a non-Story branch or a manifest with no `test_ids`). Code a
+# PR's tests run in-process is not contained, as with any test runner; the
 # Ratchet's outcome comparison and review guard that. The job's safety rests
 # on `contents: read`, no secrets, `persist-credentials: false`, and the
-# overlay. On push to main it grades main itself.
+# overlay.
+#
+# In the merge queue (`merge_group`) GitHub runs this workflow from the merge
+# group commit, so the PR's own copy runs; its trust rests on the
+# `pull_request_target` run of the base copy having gated the PR first, as in
+# ownership.yml. It checks out the group commit (`github.sha`), takes the PR
+# number from the queue ref with `ruleset.ts merge-group-pr`, reads the PR's
+# head branch with `gh pr view` (the job's only use of `pull-requests: read`)
+# and runs the full Ratchet for that ref. On push to main it grades main
+# itself, in full. The nightly matrix is nightly.yml.
 #
 # Every alpha Variant runs (`CI=true`: an unreachable one is a failure), with
-# the Postgres 18 and Redis 8.10.2 services. Story 5.7 makes it a required
-# check and adds the merge-queue run.
+# the Postgres 18 and Redis 8.10.2 services. No step passes `--fast`.
 name: ratchet
 
 on:
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -35,6 +52,9 @@ jobs:
   ratchet:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: read
     services:
       postgres:
         image: postgres:18
@@ -80,6 +100,9 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: Scope the PR
+        if: github.event_name == 'pull_request_target'
+        run: bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"
       - name: Restore the grader from the base
         if: github.event_name == 'pull_request_target'
         run: bun tools/ratchet/ratchet.ts overlay --base . --head pr
@@ -87,14 +110,37 @@ jobs:
         if: github.event_name == 'pull_request_target'
         working-directory: pr
         run: bun install --frozen-lockfile --ignore-scripts
-      - name: Ratchet the PR
+      - name: Ratchet the PR over its scope
         if: github.event_name == 'pull_request_target'
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF"
+        run: bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"
+      - name: Run the Story's tests in full
+        if: github.event_name == 'pull_request_target'
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: bun tools/ratchet/ratchet.ts story --root pr --ref "$HEAD_REF"
       - name: Install from the lockfile
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'merge_group'
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Find the queued PR's head branch
+        id: pr
+        if: github.event_name == 'merge_group'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          number="$(bun tools/ruleset/ruleset.ts merge-group-pr "$QUEUE_REF")"
+          ref="$(gh pr view "$number" --repo "$REPO" --json headRefName --jq .headRefName)"
+          test -n "$ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Ratchet the merge group
+        if: github.event_name == 'merge_group'
+        env:
+          HEAD_REF: ${{ steps.pr.outputs.ref }}
+        run: bun tools/ratchet/ratchet.ts run --root . --ref "$HEAD_REF"
       - name: Ratchet main
         if: github.event_name == 'push'
         run: bun tools/ratchet/ratchet.ts run --root . --ref main

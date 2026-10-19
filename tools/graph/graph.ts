@@ -23,6 +23,11 @@
 //   undeclared import:     a `src/**` or `tests/**` import names a package the
 //                          manifest does not declare for that file
 //   unparseable source:    `Bun.Transpiler` cannot scan a source file
+//
+// `reverseClosure(root, changed)` (Story 5.7) is the AD-2 reverse-dependency
+// closure the Ratchet's `scope` grades: every package from which a changed
+// package is reachable over any `EDGE_FIELDS` edge (dependencies, dev, peer,
+// optional), the changed packages included, as package dir names.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
 import { extname, join, relative, resolve } from "node:path";
@@ -330,6 +335,47 @@ export function checkGraph(root: string): string[] {
   }
 
   return [...violations].sort(compare);
+}
+
+/**
+ * The AD-2 reverse-dependency closure of `changed` under `root` (Story 5.7): every package that reaches a changed one
+ * over any `EDGE_FIELDS` edge, the changed ones included. Names are package dir names (`packages/<name>`), sorted. A
+ * root with no package table, or a row with no `package.json`, contributes no edge; a changed name with no row is kept.
+ */
+export function reverseClosure(root: string, changed: readonly string[]): string[] {
+  const tablePath = join(root, TABLE_PATH);
+  const rows = existsSync(tablePath) ? readTable(tablePath) : [];
+  const dirName = (row: PackageRow): string => row.dir.split("/").at(-1) ?? row.dir;
+  const byNpm = new Map(rows.map((row) => [row.npm, dirName(row)]));
+  const dependents = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const manifestPath = join(root, row.dir, "package.json");
+    if (!existsSync(manifestPath)) {
+      continue;
+    }
+    const pkg: Package = { row, manifest: JSON.parse(readFileSync(manifestPath, "utf8")) as Manifest };
+    for (const field of EDGE_FIELDS) {
+      for (const dep of Object.keys(pkg.manifest[field] ?? {})) {
+        const target = byNpm.get(dep);
+        if (target !== undefined) {
+          const set = dependents.get(target) ?? new Set<string>();
+          set.add(dirName(pkg.row));
+          dependents.set(target, set);
+        }
+      }
+    }
+  }
+  const seen = new Set<string>(changed);
+  const queue = [...changed];
+  while (queue.length > 0) {
+    for (const next of dependents.get(queue.pop()!) ?? []) {
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return [...seen].sort(compare);
 }
 
 function main(argv: readonly string[]): number {

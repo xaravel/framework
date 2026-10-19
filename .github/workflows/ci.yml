@@ -28,8 +28,9 @@
 # builds the locked framework install at /tmp/xaravel-inv/framework as
 # docs/ops/inventory.md documents (the snapshot, the Oracle lock and
 # COMPOSER_ROOT_VERSION read from conformance/baseline-pin), and runs the
-# real-PHP blocks of oracle-fixtures.test.ts and oracle-story.test.ts against
-# it and those of oracle-extract.test.ts (Epic 3 retro item 3). All of them
+# real-PHP blocks of oracle-fixtures.test.ts, oracle-story.test.ts and
+# oracle-recheck.test.ts (Story 5.7) against it and those of
+# oracle-extract.test.ts (Epic 3 retro item 3). All of them
 # run with XARAVEL_PHP_FIXTURES=require, so a missing PHP or vendor/ fails
 # instead of skipping (Epic 2 retro R5); oracle-fixtures.test.ts and
 # oracle-story.test.ts also fail on a PHP other than 8.5.11, one without
@@ -39,8 +40,11 @@
 # because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
 # until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
-# on a required check. The Ratchet runs in ratchet.yml (Story 5.6); the
-# rest of the harness CI and the service matrix arrive with Story 5.7.
+# on a required check. The Ratchet runs in ratchet.yml (Stories 5.6 and 5.7:
+# the PR's reverse-dependency closure and its Story's tests, the full run in
+# the merge queue and on main), and the nightly linux/macOS x64/arm64 matrix
+# and benchmarks in nightly.yml (Story 5.7); docs/ops/ci.md maps the whole
+# AD-28 pipeline.
 # `check`, `fixtures` and `php-fixtures` check out full history (`fetch-depth: 0`): the
 # per-Story Oracle request files are read in merge order (Story 5.6 AC5).
 name: ci
@@ -195,4 +199,4 @@ jobs:
           cp conformance/oracle/locks/framework/composer.lock /tmp/xaravel-inv/framework/composer.lock
           COMPOSER_ROOT_VERSION="$version" composer install --no-interaction --no-progress --no-plugins --no-scripts --prefer-dist --working-dir=/tmp/xaravel-inv/framework
       - name: Run the PHP scripts against the fixtures
-        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts
+        run: XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts conformance/tests/xaravel/oracle-recheck.test.ts

@@ -106,7 +106,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
     "stories/11.1.md": manifest("11.1", [A]),
   });
   const ok = await runRatchet(clean, "story/11.1", { env: await env() });
-  expect(ok.out).toEqual(["RATCHET ref=story/11.1 failures=0 passes=0 warnings=0"]);
+  expect(ok.out).toEqual(["RATCHET ref=story/11.1 scope=full failures=0 passes=0 warnings=0"]); // Story 5.7: scope=full suffix
   expect(ok.code).toBe(0);
   expect(ok.err).toContain("SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0");
 
@@ -128,7 +128,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
     `UNEXPECTED-PASS ${B} [none] expected=fail-known actual=pass asserts=1/1`,
     `UNEXPECTED-FAILURE FAIL ${C} [none] expected=pass actual=fail asserts=1/1`,
     `UNEXPECTED-PASS ${D}#0 [none] expected=fail-known actual=pass asserts=1/1`,
-    "RATCHET ref=story/11.1 failures=1 passes=2 warnings=0",
+    "RATCHET ref=story/11.1 scope=full failures=1 passes=2 warnings=0", // Story 5.7: scope=full suffix
   ]);
   expect(run.code).toBe(1);
   // The harness report goes to stderr, unchanged.
@@ -137,7 +137,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
   // An unexpected failure fails on every ref, main included, even when another Story owns the Test ID.
   const onMain = await runRatchet(dir, "main", { env: await env() });
   expect(onMain.out.filter((line) => line.startsWith("UNEXPECTED-FAILURE "))).toEqual([`UNEXPECTED-FAILURE FAIL ${C} [none] expected=pass actual=fail asserts=1/1`]);
-  expect(onMain.out.at(-1)).toBe("RATCHET ref=main failures=1 passes=0 warnings=2");
+  expect(onMain.out.at(-1)).toBe("RATCHET ref=main scope=full failures=1 passes=0 warnings=2"); // Story 5.7: scope=full suffix
   expect(onMain.code).toBe(1);
 
   // In CI an unreachable alpha Variant is an unexpected failure.
@@ -183,7 +183,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
     "stories/11.1.md": manifest("11.1", [A]),
   });
   const errored = await runRatchet(erroring, "story/11.1", { env: await env() });
-  expect(errored.out).toEqual(["UNEXPECTED-FAILURE ERROR [none] bun test exited 1 with no failing testcase", "RATCHET ref=story/11.1 failures=1 passes=0 warnings=0"]);
+  expect(errored.out).toEqual(["UNEXPECTED-FAILURE ERROR [none] bun test exited 1 with no failing testcase", "RATCHET ref=story/11.1 scope=full failures=1 passes=0 warnings=0"]); // Story 5.7: scope=full suffix
   expect(errored.code).toBe(1);
 
   // A harness that exits 1 with no counted difference never reads as clean.
@@ -191,7 +191,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
     env: await env(),
     harness: () => Promise.resolve({ code: 1, out: ["SUMMARY variants=1 run=1 not-run=0 checked=1 differ=1"], err: [], results: [], differences: [], sample: null, worktree: null }),
   });
-  expect(uncounted.out).toEqual(["UNEXPECTED-FAILURE harness exited 1 with no counted difference", "RATCHET ref=main failures=1 passes=0 warnings=0"]);
+  expect(uncounted.out).toEqual(["UNEXPECTED-FAILURE harness exited 1 with no counted difference", "RATCHET ref=main scope=full failures=1 passes=0 warnings=0"]); // Story 5.7: scope=full suffix
   expect(uncounted.code).toBe(1);
 
   // A harness precondition failure fails closed with no RATCHET line; so do unreadable manifests.
@@ -209,7 +209,7 @@ test("XT-conformance-115: a PR run lists every unexpected failure and every unex
   // The CLI: streams, exit codes and the package.json script.
   const cli = Bun.spawnSync([process.execPath, CLI, "run", "--root", dir, "--ref", "story/11.1"], { env: await env(), stdout: "pipe", stderr: "pipe" });
   expect(cli.exitCode).toBe(1);
-  expect(cli.stdout.toString()).toEndWith("RATCHET ref=story/11.1 failures=1 passes=2 warnings=0\n");
+  expect(cli.stdout.toString()).toEndWith("RATCHET ref=story/11.1 scope=full failures=1 passes=2 warnings=0\n"); // Story 5.7: scope=full suffix
   expect(cli.stderr.toString()).toContain("SUMMARY variants=1 run=1 not-run=0 checked=4 differ=3");
   for (const args of [["run"], ["run", "--ref"], ["run", "--ref", "main", "--bogus", "x"], ["overlay", "--base", "."], ["nope"], []]) {
     const usage = Bun.spawnSync([process.execPath, CLI, ...args], { stdout: "pipe", stderr: "pipe" });
@@ -227,13 +227,16 @@ test("XT-conformance-115: the ratchet workflow runs the PR's code under pull_req
     permissions: Record<string, string>;
     jobs: Record<string, { permissions?: unknown; services: Record<string, { image: string }>; env: Record<string, string>; steps: Step[]; "continue-on-error"?: unknown }>;
   };
-  expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "push"]);
+  // Story 5.7: the merge queue runs the Ratchet too (XT-conformance-120).
+  expect(Object.keys(workflow.on)).toEqual(["pull_request_target", "merge_group", "push"]);
+  expect(workflow.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "synchronize", "reopened", "ready_for_review"] });
   expect(workflow.on["push"]).toEqual({ branches: ["main"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
   expect(Object.keys(workflow.jobs)).toEqual(["ratchet"]);
   const job = workflow.jobs["ratchet"]!;
-  expect(job.permissions).toBeUndefined();
+  // Story 5.7: read-only job permissions; `pull-requests: read` only lets the merge-group run read the queued PR's head branch.
+  expect(job.permissions).toEqual({ contents: "read", "pull-requests": "read" });
   expect(text).not.toMatch(/secrets\./);
   for (const node of [job, ...job.steps]) {
     expect(node["continue-on-error"]).toBeUndefined();
@@ -248,15 +251,26 @@ test("XT-conformance-115: the ratchet workflow runs the PR's code under pull_req
   const setup = job.steps.find((step) => (step.uses ?? "").startsWith("oven-sh/setup-bun@"))!;
   expect(setup.with).toEqual({ "bun-version-file": ".bun-version" });
   const runs = job.steps.filter((step) => step.run !== undefined).map((step) => [step.if, step.run, step["working-directory"] ?? null]);
-  expect(runs).toEqual([
+  // Story 5.7: scope before the overlay, the PR graded over its scope, then the Story's tests in full; the merge
+  // group's full run; main's full run.
+  expect(runs.map(([condition, run, dir]) => [condition, (run ?? "").startsWith("set -euo pipefail") ? "<find the PR>" : run, dir])).toEqual([
+    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"', null],
     ["github.event_name == 'pull_request_target'", "bun tools/ratchet/ratchet.ts overlay --base . --head pr", null],
     ["github.event_name == 'pull_request_target'", "bun install --frozen-lockfile --ignore-scripts", "pr"],
-    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF"', null],
-    ["github.event_name == 'push'", "bun install --frozen-lockfile --ignore-scripts", null],
+    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"', null],
+    ["github.event_name == 'pull_request_target'", 'bun tools/ratchet/ratchet.ts story --root pr --ref "$HEAD_REF"', null],
+    ["github.event_name == 'push' || github.event_name == 'merge_group'", "bun install --frozen-lockfile --ignore-scripts", null],
+    ["github.event_name == 'merge_group'", "<find the PR>", null],
+    ["github.event_name == 'merge_group'", 'bun tools/ratchet/ratchet.ts run --root . --ref "$HEAD_REF"', null],
     ["github.event_name == 'push'", "bun tools/ratchet/ratchet.ts run --root . --ref main", null],
   ]);
   // The PR's head ref reaches the shell only through env, never interpolated into the script.
   expect(job.steps.find((step) => (step.run ?? "").includes("--root pr"))!.env).toEqual({ HEAD_REF: "${{ github.event.pull_request.head.ref }}" });
+  // Story 5.7: so does it for every step that names it.
+  for (const step of job.steps.filter((candidate) => (candidate.run ?? "").includes("$HEAD_REF"))) {
+    expect(step.run).not.toContain("${{");
+    expect(Object.keys(step.env ?? {})).toContain("HEAD_REF");
+  }
 });
 
 test("XT-conformance-115: the overlay restores every Protected Path and the sprint status from the base into the PR tree, and leaves the PR's own code (AD-16)", () => {
@@ -356,7 +370,7 @@ test("XT-conformance-118: an unexpected pass owned by no open Story warns and ex
   expect(onMain.out).toEqual([
     `WARNING ${passA} (owned by no open Story)`,
     `WARNING ${passB} (owned by open Story 11.2; fails that Story's next run)`,
-    "RATCHET ref=main failures=0 passes=0 warnings=2",
+    "RATCHET ref=main scope=full failures=0 passes=0 warnings=2", // Story 5.7: scope=full suffix
   ]);
   expect(onMain.code).toBe(0);
   const annotated = await runRatchet(dir, "main", { env: await env({ GITHUB_ACTIONS: "true" }), harness: cached });
@@ -365,27 +379,27 @@ test("XT-conformance-118: an unexpected pass owned by no open Story warns and ex
     `::warning::WARNING ${passA} (owned by no open Story)`,
     `WARNING ${passB} (owned by open Story 11.2; fails that Story's next run)`,
     `::warning::WARNING ${passB} (owned by open Story 11.2; fails that Story's next run)`,
-    "RATCHET ref=main failures=0 passes=0 warnings=2",
+    "RATCHET ref=main scope=full failures=0 passes=0 warnings=2", // Story 5.7: scope=full suffix
   ]);
   expect(annotated.code).toBe(0);
 
   // Story 11.1's run: B belongs to open Story 11.2, so it only warns here.
   const other = await runRatchet(dir, "story/11.1", { env: await env(), harness: cached });
-  expect(other.out).toEqual([`WARNING ${passA} (owned by no open Story)`, `WARNING ${passB} (owned by open Story 11.2; fails that Story's next run)`, "RATCHET ref=story/11.1 failures=0 passes=0 warnings=2"]);
+  expect(other.out).toEqual([`WARNING ${passA} (owned by no open Story)`, `WARNING ${passB} (owned by open Story 11.2; fails that Story's next run)`, "RATCHET ref=story/11.1 scope=full failures=0 passes=0 warnings=2"]); // Story 5.7: scope=full suffix
   expect(other.code).toBe(0);
   // Story 11.2's own run fails on it.
   const owner = await runRatchet(dir, "story/11.2", { env: await env(), harness: cached });
-  expect(owner.out).toEqual([`WARNING ${passA} (owned by no open Story)`, passB, "RATCHET ref=story/11.2 failures=0 passes=1 warnings=1"]);
+  expect(owner.out).toEqual([`WARNING ${passA} (owned by no open Story)`, passB, "RATCHET ref=story/11.2 scope=full failures=0 passes=1 warnings=1"]); // Story 5.7: scope=full suffix
   expect(owner.code).toBe(1);
 
   // Once sprint status marks Story 11.2 done, nobody open owns B: a warning on its branch too.
   writeFileSync(join(dir, "_bmad-output", "implementation-artifacts", "sprint-status.yaml"), "development_status:\n  11-2-x: done\n");
   const done = await runRatchet(dir, "story/11.2", { env: await env(), harness: cached });
-  expect(done.out).toEqual([`WARNING ${passA} (owned by no open Story)`, `WARNING ${passB} (owned by no open Story)`, "RATCHET ref=story/11.2 failures=0 passes=0 warnings=2"]);
+  expect(done.out).toEqual([`WARNING ${passA} (owned by no open Story)`, `WARNING ${passB} (owned by no open Story)`, "RATCHET ref=story/11.2 scope=full failures=0 passes=0 warnings=2"]); // Story 5.7: scope=full suffix
   expect(done.code).toBe(0);
 
   // The CLI exits 0 on warnings alone; a root it cannot read fails closed.
   const cli = Bun.spawnSync([process.execPath, CLI, "run", "--root", dir, "--ref", "main"], { env: await env(), stdout: "pipe", stderr: "pipe" });
-  expect([cli.exitCode, cli.stdout.toString()]).toEqual([0, `WARNING ${passA} (owned by no open Story)\nWARNING ${passB} (owned by no open Story)\nRATCHET ref=main failures=0 passes=0 warnings=2\n`]);
+  expect([cli.exitCode, cli.stdout.toString()]).toEqual([0, `WARNING ${passA} (owned by no open Story)\nWARNING ${passB} (owned by no open Story)\nRATCHET ref=main scope=full failures=0 passes=0 warnings=2\n`]); // Story 5.7: scope=full suffix
   expect(await main(["run", "--ref", "main", "--root", join(dir, "missing")])).toBe(1);
 }, 120_000);

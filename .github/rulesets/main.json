@@ -36,7 +36,8 @@
           { "context": "check", "integration_id": 15368 },
           { "context": "fixtures", "integration_id": 15368 },
           { "context": "ownership", "integration_id": 15368 },
-          { "context": "protected-paths", "integration_id": 15368 }
+          { "context": "protected-paths", "integration_id": 15368 },
+          { "context": "ratchet", "integration_id": 15368 }
         ]
       }
     },

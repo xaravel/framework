@@ -1,9 +1,14 @@
-// The Ratchet (Story 5.6; FR-3, AD-15, AD-16, AD-28).
+// The Ratchet (Stories 5.6 and 5.7; FR-3, AD-2, AD-15, AD-16, AD-28).
 //
-//   bun tools/ratchet/ratchet.ts run [--root <dir>] --ref <head-ref>
+//   bun tools/ratchet/ratchet.ts run [--root <dir>] --ref <head-ref> [--scope <file>]
 //       (`bun run ratchet run --ref <ref>`) runs the harness over the root in
 //       full mode (`runHarness(root, {})`: no filter, no sample) and turns its
-//       differences into a verdict for the run of `<head-ref>`:
+//       differences into a verdict for the run of `<head-ref>`. With
+//       `--scope <file>` (written by `scope`, below) in `components` mode it
+//       grades only those Components (`runHarness(root, {components})`); in
+//       `none` mode it runs no harness and prints
+//       `RATCHET ref=<r> scope=none failures=0 passes=0 warnings=0`, exit 0;
+//       in `full` mode, or with no `--scope`, it runs in full. The verdict:
 //
 //         UNEXPECTED-FAILURE <difference>   every difference but an unexpected
 //                                           pass: FAIL, FLOOR, SKIPPED,
@@ -22,7 +27,8 @@
 //                                           fails that Story's next run` or
 //                                           `owned by no open Story`
 //
-//       then `RATCHET ref=<r> failures=<f> passes=<p> warnings=<w>`, all on
+//       then `RATCHET ref=<r> scope=<mode> failures=<f> passes=<p> warnings=<w>`,
+//       where <mode> is the scope's (`full` with no `--scope`), all on
 //       stdout. Under `GITHUB_ACTIONS=true` each warning is also printed as a
 //       `::warning::` annotation. The harness's own report and diagnostics go
 //       to stderr.
@@ -49,18 +55,60 @@
 //       (as with any test runner): the Ratchet's outcome comparison and review
 //       guard that. The top-level `.git` and `node_modules` are skipped.
 //
+//   bun tools/ratchet/ratchet.ts scope --base <dir> --head <dir> --out <file>
+//       (Story 5.7) compares the file contents of the two trees (the top-level
+//       `.git`, every `node_modules` at any depth, and either tree nested
+//       inside the other, are skipped; symlinks compare by target) and writes to <file>
+//       `{"mode":"full"|"components"|"none","components":[…],"reason":"…"}`:
+//         packages/<p>/**                      changes package `p`;
+//         conformance/expectations/<c>/**,
+//         conformance/fixtures/<c>/**          change Component `c`;
+//         docs/, _bmad-output/, stories/, conformance/escalations/,
+//         conformance/oracle-requests/, .github/ and any root `*.md` but
+//         AGENTS.md                            change nothing graded (the
+//                                              manifests are read from the
+//                                              base, the workflows run from it);
+//         any other path                       `full`, and `reason` names the
+//                                              first such path, sorted.
+//       Otherwise `components` is the AD-2 reverse-dependency closure of the
+//       changed packages (`reverseClosure`, tools/graph/graph.ts, over both
+//       trees' edges), plus the changed Components, intersected with the
+//       directory names under the head's `conformance/expectations/`, sorted;
+//       empty, the mode is `none`. It is `full` instead, naming the path, when
+//       a changed Component's data has no Expectations directory in the head
+//       (a deleted Expectations directory, or fixtures of a Component without
+//       one), or when a package in the closure has
+//       `packages/<p>/tests/ported/` in the head but no Expectations directory
+//       (its Ported Tests would be UNKNOWN, so only a full run grades them).
+//       `decisions/` is not data-only: the harness reads `decisions/DIV-<n>.md`
+//       for assertion-floor waivers. Comparing the base tip with the head errs
+//       toward a larger scope when main has moved on.
+//
+//   bun tools/ratchet/ratchet.ts story --root <dir> --ref <head-ref>
+//       (Story 5.7) for a `story/<id>` ref whose manifest `stories/<id>.md`
+//       lists `test_ids`, runs the harness over those IDs in full, never as a
+//       sample (`runHarness(root, {story: id})`, inheriting the environment, so
+//       `CI=true` makes every alpha Variant run), prints its report and exits
+//       with its code. A ref that is not `story/<epic>.<story>` prints
+//       `STORY ref=<r> skipped: not a Story ref`, a manifest with no
+//       `test_ids` `STORY ref=<r> skipped: no test_ids`, both exit 0; a
+//       missing or invalid manifest exits 1.
+//
 // Exit codes: 0 when nothing fails (warnings never do), 1 when
-// failures + passes > 0, the harness failed a precondition (no SUMMARY line) or
-// the manifests could not be read, 2 on a usage error.
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+// failures + passes > 0, the harness failed a precondition (no SUMMARY line),
+// the manifests or the scope file could not be read, or any other failure, 2 on
+// a usage error.
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { runHarness, type HarnessResult } from "../../conformance/harness/harness";
 import type { Difference } from "../../conformance/harness/compare";
+import { reverseClosure } from "../graph/graph";
 import { compareUnits } from "../inventory/inventory";
-import { applySprintStatus, covers, readManifests, SPRINT_STATUS, type Manifest } from "../ownership/ownership";
+import { applySprintStatus, covers, parseManifest, readManifests, SPRINT_STATUS, type Manifest } from "../ownership/ownership";
 import { activePhases, isProtected, LIST_PATH, parseList } from "../protected-paths/protected-paths";
 
 const STORY_BRANCH = "story/";
+const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
 const SKIPPED = new Set([".git", "node_modules"]);
 
 export class UsageError extends Error {}
@@ -139,8 +187,10 @@ export interface RatchetRun {
 
 export interface RatchetOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
-  /** Runs the harness (internal: tests pass bun args through it); default `runHarness(root, {})` with `env`. */
-  readonly harness?: (root: string) => Promise<HarnessResult>;
+  /** Runs the harness (internal: tests pass bun args through it); default `runHarness(root, {})` with `env` and the scope's Components. */
+  readonly harness?: (root: string, components: readonly string[] | null) => Promise<HarnessResult>;
+  /** The scope (`scope`'s output); null or absent grades in full. */
+  readonly scope?: Scope | null;
 }
 
 /** Runs the Ratchet over `root` for `ref` (see the header). */
@@ -149,6 +199,17 @@ export async function runRatchet(rootArg: string, ref: string, options: RatchetO
   const env = options.env ?? process.env;
   const err: string[] = [];
   const out: string[] = [];
+  const scope = options.scope ?? null;
+  const mode = scope === null ? "full" : scope.mode;
+  if (mode === "none") {
+    err.push(`ratchet: scope none (${scope?.reason ?? ""}); no harness run`);
+    out.push(`RATCHET ref=${ref} scope=none failures=0 passes=0 warnings=0`);
+    return { code: 0, out, err };
+  }
+  const components = mode === "components" ? (scope?.components ?? []) : null;
+  if (components !== null) {
+    err.push(`ratchet: scope components (${scope?.reason ?? ""}): ${components.join(", ")}`);
+  }
   let open: Manifest[];
   try {
     open = openManifests(root);
@@ -156,8 +217,8 @@ export async function runRatchet(rootArg: string, ref: string, options: RatchetO
     err.push(`ratchet: the Story manifests could not be read; failing closed: ${error instanceof Error ? error.message : String(error)}`);
     return { code: 1, out, err };
   }
-  const harness = options.harness ?? ((dir: string) => runHarness(dir, { env }));
-  const result = await harness(root);
+  const harness = options.harness ?? ((dir: string, selected: readonly string[] | null) => runHarness(dir, selected === null ? { env } : { env, components: selected }));
+  const result = await harness(root, components);
   err.push(...result.out, ...result.err);
   if (!result.out.some((line) => line.startsWith("SUMMARY "))) {
     err.push("ratchet: the harness failed a precondition before it compared anything; failing closed");
@@ -178,19 +239,196 @@ export async function runRatchet(rootArg: string, ref: string, options: RatchetO
     failures++;
     out.push(`UNEXPECTED-FAILURE harness exited ${result.code} with no counted difference`);
   }
-  out.push(`RATCHET ref=${ref} failures=${failures} passes=${verdict.passes} warnings=${verdict.warnings}`);
+  out.push(`RATCHET ref=${ref} scope=${mode} failures=${failures} passes=${verdict.passes} warnings=${verdict.warnings}`);
   return { code: failures + verdict.passes > 0 ? 1 : 0, out, err };
+}
+
+// ---------------------------------------------------------------------------
+// Story
+
+/** Runs the harness over the `test_ids` of the Story `ref` names, in full (see the header). */
+export async function runStoryTests(rootArg: string, ref: string, options: Pick<RatchetOptions, "env"> & { readonly harness?: (root: string, story: string) => Promise<HarnessResult> } = {}): Promise<RatchetRun> {
+  const root = resolve(rootArg);
+  const env = options.env ?? process.env;
+  const id = ref.startsWith(STORY_BRANCH) ? ref.slice(STORY_BRANCH.length) : "";
+  if (!STORY_ID.test(id)) {
+    return { code: 0, out: [`STORY ref=${ref} skipped: not a Story ref`], err: [] };
+  }
+  const file = `stories/${id}.md`;
+  const path = join(root, file);
+  if (!existsSync(path)) {
+    return { code: 1, out: [], err: [`ratchet story: ${file} does not exist`] };
+  }
+  const parsed = parseManifest(file, readFileSync(path, "utf8"));
+  if (parsed.manifest === null) {
+    return { code: 1, out: [], err: [`ratchet story: ${parsed.violations.join("; ")}`] };
+  }
+  if (parsed.manifest.testIds.length === 0) {
+    return { code: 0, out: [`STORY ref=${ref} skipped: no test_ids`], err: [] };
+  }
+  const harness = options.harness ?? ((dir: string, story: string) => runHarness(dir, { env, story }));
+  const result = await harness(root, id);
+  return { code: result.code, out: result.out, err: result.err };
+}
+
+// ---------------------------------------------------------------------------
+// Scope
+
+export type ScopeMode = "full" | "components" | "none";
+
+export interface Scope {
+  readonly mode: ScopeMode;
+  readonly components: readonly string[];
+  readonly reason: string;
+}
+
+/** Changed paths that grade nothing: data the base supplies, or that no test reads (see the header). */
+const NO_EFFECT = ["docs/", "_bmad-output/", "stories/", "conformance/escalations/", "conformance/oracle-requests/", ".github/"];
+const COMPONENT_DATA = ["conformance/expectations/", "conformance/fixtures/"];
+
+function noEffect(path: string): boolean {
+  return NO_EFFECT.some((prefix) => path.startsWith(prefix)) || (!path.includes("/") && path.endsWith(".md") && path !== "AGENTS.md");
+}
+
+/** Whether the two entries differ in kind, content or link target. */
+function differs(a: string, b: string): boolean {
+  const left = lstatSync(a);
+  const right = lstatSync(b);
+  if (left.isSymbolicLink() || right.isSymbolicLink()) {
+    return !(left.isSymbolicLink() && right.isSymbolicLink()) || readlinkSync(a) !== readlinkSync(b);
+  }
+  if (left.size !== right.size) {
+    return true;
+  }
+  return !readFileSync(a).equals(readFileSync(b));
+}
+
+/** The prefix of `inner` inside `outer`, or null when it is not strictly inside. */
+function nested(outer: string, inner: string): string | null {
+  const rel = relative(outer, inner);
+  return rel === "" || rel.startsWith("..") || isAbsolute(rel) ? null : `${rel.split("\\").join("/")}/`;
+}
+
+/** The paths whose contents differ between `base` and `head`, sorted (see the header). */
+export function changedPaths(baseArg: string, headArg: string): string[] {
+  const base = resolve(baseArg);
+  const head = resolve(headArg);
+  const inBase = nested(base, head);
+  const inHead = nested(head, base);
+  const baseFiles = entries(base, true).filter((path) => inBase === null || !path.startsWith(inBase));
+  const headFiles = entries(head, true).filter((path) => inHead === null || !path.startsWith(inHead));
+  const headSet = new Set(headFiles);
+  const changed = new Set<string>();
+  for (const path of baseFiles) {
+    if (!headSet.has(path) || differs(join(base, path), join(head, path))) {
+      changed.add(path);
+    }
+  }
+  const baseSet = new Set(baseFiles);
+  for (const path of headFiles) {
+    if (!baseSet.has(path)) {
+      changed.add(path);
+    }
+  }
+  return [...changed].sort(compareUnits);
+}
+
+/** The Components with an Expectations directory under `root`. */
+function expectationComponents(root: string): Set<string> {
+  const dir = join(root, "conformance", "expectations");
+  if (!existsSync(dir)) {
+    return new Set();
+  }
+  return new Set(
+    readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+  );
+}
+
+/** The scope of the change from `base` to `head` (see the header). */
+export function computeScope(baseArg: string, headArg: string): Scope {
+  const base = resolve(baseArg);
+  const head = resolve(headArg);
+  const packages = new Set<string>();
+  const data = new Map<string, string>();
+  for (const path of changedPaths(base, head)) {
+    if (noEffect(path)) {
+      continue;
+    }
+    const parts = path.split("/");
+    if (parts[0] === "packages" && parts.length >= 3) {
+      packages.add(parts[1]!);
+      continue;
+    }
+    if (COMPONENT_DATA.some((prefix) => path.startsWith(prefix)) && parts.length >= 4) {
+      if (!data.has(parts[2]!)) {
+        data.set(parts[2]!, path);
+      }
+      continue;
+    }
+    return { mode: "full", components: [], reason: path };
+  }
+  const changed = [...packages].sort(compareUnits);
+  const graded = expectationComponents(head);
+  // Data of a Component with no Expectations directory in the head (deleted, or never there): only a full run grades it.
+  for (const name of [...data.keys()].sort(compareUnits)) {
+    if (!graded.has(name)) {
+      return { mode: "full", components: [], reason: data.get(name)! };
+    }
+  }
+  const packageClosure = new Set([...reverseClosure(base, changed), ...reverseClosure(head, changed)]);
+  // A package with Ported Tests but no Expectations directory: its tests are UNKNOWN, which only a full run reports.
+  for (const name of [...packageClosure].sort(compareUnits)) {
+    const ported = `packages/${name}/tests/ported/`;
+    if (!graded.has(name) && existsSync(join(head, ported))) {
+      return { mode: "full", components: [], reason: ported };
+    }
+  }
+  const closure = new Set([...packageClosure, ...data.keys()]);
+  const components = [...closure].filter((name) => graded.has(name)).sort(compareUnits);
+  const what = [changed.length > 0 ? `packages ${changed.join(", ")}` : null, data.size > 0 ? `Component data ${[...data.keys()].sort(compareUnits).join(", ")}` : null].filter((part) => part !== null);
+  if (components.length === 0) {
+    return { mode: "none", components: [], reason: what.length === 0 ? "no graded path changed" : `${what.join("; ")} changed; no Component in their closure has Expectations` };
+  }
+  return { mode: "components", components, reason: `${what.join("; ")} changed; reverse-dependency closure with Expectations` };
+}
+
+/** Reads and validates a scope file. */
+export function readScope(file: string): Scope {
+  let value: unknown;
+  try {
+    value = JSON.parse(readFileSync(file, "utf8")) as unknown;
+  } catch (error) {
+    throw new Error(`the scope file ${file} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const scope = value as { mode?: unknown; components?: unknown; reason?: unknown };
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !["full", "components", "none"].includes(scope.mode as string) ||
+    !Array.isArray(scope.components) ||
+    !scope.components.every((name) => typeof name === "string" && /^[a-z][a-z0-9-]*$/.test(name)) ||
+    typeof scope.reason !== "string" ||
+    (scope.mode === "components" && scope.components.length === 0)
+  ) {
+    throw new Error(`the scope file ${file} is not {"mode":"full"|"components"|"none","components":[…],"reason":"…"}`);
+  }
+  return { mode: scope.mode as ScopeMode, components: scope.components as string[], reason: scope.reason };
 }
 
 // ---------------------------------------------------------------------------
 // Overlay
 
-/** Every non-directory entry under `dir` (symlinks not followed), repo-relative, sorted. */
-function entries(dir: string): string[] {
+/**
+ * Every non-directory entry under `dir` (symlinks not followed), repo-relative, sorted. The top-level `.git` and
+ * `node_modules` are skipped; with `anyNodeModules` (the scope's walk), every `node_modules` is.
+ */
+function entries(dir: string, anyNodeModules = false): string[] {
   const found: string[] = [];
   const walk = (at: string, prefix: string): void => {
     for (const name of readdirSync(at)) {
-      if (prefix === "" && SKIPPED.has(name)) {
+      if ((prefix === "" && SKIPPED.has(name)) || (anyNodeModules && name === "node_modules")) {
         continue;
       }
       const path = join(at, name);
@@ -268,7 +506,21 @@ function isLink(path: string): boolean {
 // ---------------------------------------------------------------------------
 // CLI
 
-const USAGE = ["Usage:", "  bun tools/ratchet/ratchet.ts run [--root <dir>] --ref <head-ref>", "  bun tools/ratchet/ratchet.ts overlay --base <dir> --head <dir>"].join("\n");
+const USAGE = [
+  "Usage:",
+  "  bun tools/ratchet/ratchet.ts run [--root <dir>] --ref <head-ref> [--scope <file>]",
+  "  bun tools/ratchet/ratchet.ts scope --base <dir> --head <dir> --out <file>",
+  "  bun tools/ratchet/ratchet.ts story [--root <dir>] --ref <head-ref>",
+  "  bun tools/ratchet/ratchet.ts overlay --base <dir> --head <dir>",
+].join("\n");
+
+function print(result: RatchetRun): number {
+  if (result.err.length > 0) {
+    process.stderr.write(result.err.map((line) => `${line}\n`).join(""));
+  }
+  process.stdout.write(result.out.map((line) => `${line}\n`).join(""));
+  return result.code;
+}
 
 function parseFlags(argv: readonly string[], allowed: readonly string[]): Map<string, string> {
   const flags = new Map<string, string>();
@@ -293,18 +545,37 @@ export async function main(argv: readonly string[]): Promise<number> {
   const [command, ...rest] = argv;
   try {
     if (command === "run") {
-      const flags = parseFlags(rest, ["--root", "--ref"]);
+      const flags = parseFlags(rest, ["--root", "--ref", "--scope"]);
       const ref = flags.get("--ref");
       if (ref === undefined) {
         throw new UsageError("run needs --ref <head-ref>");
       }
       const root = flags.get("--root") ?? resolve(import.meta.dir, "..", "..");
-      const result = await runRatchet(root, ref);
-      if (result.err.length > 0) {
-        process.stderr.write(result.err.map((line) => `${line}\n`).join(""));
+      const scopeFile = flags.get("--scope");
+      const scope = scopeFile === undefined ? null : readScope(scopeFile);
+      return print(await runRatchet(root, ref, { scope }));
+    }
+    if (command === "story") {
+      const flags = parseFlags(rest, ["--root", "--ref"]);
+      const ref = flags.get("--ref");
+      if (ref === undefined) {
+        throw new UsageError("story needs --ref <head-ref>");
       }
-      process.stdout.write(result.out.map((line) => `${line}\n`).join(""));
-      return result.code;
+      const root = flags.get("--root") ?? resolve(import.meta.dir, "..", "..");
+      return print(await runStoryTests(root, ref));
+    }
+    if (command === "scope") {
+      const flags = parseFlags(rest, ["--base", "--head", "--out"]);
+      const base = flags.get("--base");
+      const head = flags.get("--head");
+      const out = flags.get("--out");
+      if (base === undefined || head === undefined || out === undefined) {
+        throw new UsageError("scope needs --base <dir>, --head <dir> and --out <file>");
+      }
+      const scope = computeScope(base, head);
+      writeFileSync(out, `${JSON.stringify({ mode: scope.mode, components: scope.components, reason: scope.reason })}\n`);
+      process.stdout.write(`Ratchet scope: ${scope.mode}${scope.components.length > 0 ? ` (${scope.components.join(", ")})` : ""}: ${scope.reason}\n`);
+      return 0;
     }
     if (command === "overlay") {
       const flags = parseFlags(rest, ["--base", "--head"]);

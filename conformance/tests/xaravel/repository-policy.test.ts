@@ -244,7 +244,8 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   });
   const statusParameters = ruleOf(MAIN, "required_status_checks")["parameters"] as Record<string, unknown>;
   expect(statusParameters["strict_required_status_checks_policy"]).toBe(false);
-  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "check", "fixtures", "ownership", "protected-paths"]);
+  // Story 5.7: `ratchet` is required too.
+  expect(checksOf(MAIN).map((check) => check.context).sort(byString)).toEqual(["audit", "check", "fixtures", "ownership", "protected-paths", "ratchet"]);
   for (const check of checksOf(MAIN)) {
     expect(check.integration_id).toBe(15368);
   }
@@ -265,6 +266,8 @@ test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and
   expect(REQUIRED_CHECKS).toContain("ownership");
   expect(REQUIRED_CHECKS).toContain("fixtures");
   expect(REQUIRED_CHECKS).toContain("check");
+  // Story 5.7: `ratchet` is a required check.
+  expect(REQUIRED_CHECKS).toContain("ratchet");
 
   // Normalisation: order, extra API fields and the admin actor_id do not matter.
   const live = liveOf(MAIN, 25223480);
@@ -853,7 +856,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
     "bun run php-fixtures:install",
     "bun run upstream:sync",
     FRAMEWORK_INSTALL,
-    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts",
+    // Story 5.7: plus the real-PHP block of oracle-recheck.test.ts (XT-conformance-188).
+    "XARAVEL_PHP_FIXTURES=require bun test conformance/tests/xaravel/php-scripts.test.ts conformance/tests/xaravel/api-surface.test.ts conformance/tests/xaravel/oracle-fixtures.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-extract.test.ts conformance/tests/xaravel/oracle-recheck.test.ts",
   ]);
   // The real-PHP Oracle blocks run against the locked framework install docs/ops/inventory.md documents, at the version
   // conformance/baseline-pin names, never a version written into the workflow (Epic 3 retro item 3).

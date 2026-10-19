@@ -64,7 +64,7 @@ If `GITHUB_TOKEN` is set, `oracle:build` passes it to the build as the BuildKit 
 - `build` runs on a pull request to `main` that touches `conformance/baseline-pin`, `conformance/oracle/**`, `conformance/api-surface/**`, `conformance/component-map`, `tools/component-map/**`, `tools/inventory/**`, `tools/scaffold/packages.jsonl`, `tools/scaffold/table.ts`, `tools/oracle/**`, `tools/upstream/**` or the workflow itself. It syncs and checks the snapshot, then runs `oracle:check` and `oracle:build`, then, in the image it built, `bun run oracle:api-surface --check` ([API surface](#api-surface-bun-run-oracleapi-surface)) and `bun run oracle:extract --check` ([Requests](#requests-bun-run-oracleextract)); drift in either fails it. It has no write scope and never logs in or pushes.
 - `oracle` runs on a push to `main` that touches the same paths except the API-surface, component-map, scaffold and inventory ones, or on a manual `workflow_dispatch` from `main`. It syncs, checks and builds as `build` does but runs neither drift check, then logs in to GHCR with the job's token and pushes `ghcr.io/<owner>/xaravel-oracle:<tag>`. It is the only job that holds `packages: write` or pushes; `story` logs in to GHCR only to pull, with a read-only token. The workflow permissions check (`bun run workflows:check`) allows a write scope only in `oracle.yml#oracle`. After the push it runs the fixture batch in the pushed image (`bun run oracle:fixtures --image <ref>`, [Fixtures](#fixtures-bun-run-oraclefixtures)). It runs in the GitHub environment `oracle`, the only place the secret `ORACLE_SIGNING_KEY` exists (the `story` job, [The workflow](#the-workflow-oracleymlstory), is the only other job in that environment and so also reads the key), and, when the batch succeeds, uploads `conformance/fixtures/` as the artifact `oracle-fixtures`. Any `conformance/escalations/ESC-bot-*.md` it wrote is uploaded as the artifact `oracle-escalation`, even when the batch fails.
 - `story` runs on a Story PR that touches `conformance/oracle-requests/**`, under `pull_request_target` ([Per-Story requests](#per-story-requests-bun-run-oraclestory)).
-- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image and checks the API surface and the Oracle requests as `build` does, then runs `bun run oracle:fixtures --determinism` against the image `xaravel-oracle:<oracle tag>` that `oracle:build` built. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`.
+- `determinism` runs nightly (`schedule`). It syncs and checks the snapshot, builds and verifies the image and checks the API surface and the Oracle requests as `build` does, then runs `bun run oracle:fixtures --determinism` against the image `xaravel-oracle:<oracle tag>` that `oracle:build` built. It holds no write scope and no secret, and writes no fixtures. On a difference it fails and uploads the `ESC-bot-<n>.md` it wrote as the artifact `oracle-determinism`. Then, whenever the image built (`if: ${{ !cancelled() && steps.build.outcome == 'success' }}`, so even after the determinism step failed), it runs `bun run oracle:recheck` in that image ([Recheck](#recheck-bun-run-oraclerecheck), Story 5.7).
 
 ## Requests (`bun run oracle:extract`)
 
@@ -234,6 +234,24 @@ Keys in that order, compact, LF, sorted by `id` then `sha256`, no duplicates. A 
 
 `--determinism` (the nightly job) applies the same rules without a key.
 
+### Recheck (`bun run oracle:recheck`)
+
+A fixture's signature binds neither the Baseline Pin nor the image, so a fixture signed before a Pin bump would still verify after it. The nightly recheck (Story 5.7, Epic 3 retro S5) catches that:
+
+```sh
+bun run oracle:recheck [--root <dir>] [--image <ref> | --local <dir> [--php <bin>]]
+```
+
+The script is `bun tools/oracle/recheck.ts`. It covers every batch request under its Component, except those listed in `conformance/oracle/nondeterminism.jsonl` (they get no fixture) and those an accepted merged per-Story file holds (that Story's fixture covers them), plus every per-Story request, accepted or shadowed, under its manifest's Component. Each request whose committed fixture `conformance/fixtures/<component>/<sha256>.json` exists is evaluated once by evaluate.php, in the image (default `xaravel-oracle:<oracle tag>`, the image `oracle:build` built locally at the current tag) or with `--local` against a locked local install, and its canonical JSON is compared with the fixture's `output`. Each differing fixture prints
+
+```
+stale fixture: conformance/fixtures/<c>/<sha256>.json (<id>): committed <digest> vs evaluated <digest>
+```
+
+(digests are SHA-256 of the canonical JSON), then `Oracle recheck: <n> fixtures compared, <d> differ, <m> requests without a fixture`, on stdout. A request with no fixture is counted, never failed (`oracle:verify-fixtures` and the done check own missing fixtures). It never signs or writes anything. Exit codes: 0 when nothing differs, 1 when a fixture differs or anything fails (`Oracle recheck failed: …` on stderr: an unreadable fixture, a failed evaluation), 2 on a usage error.
+
+A stale fixture is regenerated the usual way: the batch for batch requests (`oracle.yml` `workflow_dispatch`), `oracle:story` on the owning Story's branch for per-Story ones. How to handle a request whose output depends on the date, which the two same-day determinism passes cannot see, is the Maintainer's ruling on `conformance/escalations/ESC-5.7-1.md` (it proposes freezing the Oracle's clock). Listing such a request in `nondeterminism.jsonl` drops its fixture and so removes a Differential check; it needs that ruling. A `--local` run differs from the image wherever the output contains a host path or depends on the local PHP build, so only the image run is authoritative.
+
 ### Maintainer-run steps
 
 These are never agent steps. Until `ORACLE_SIGNING_KEY` and `conformance/oracle/oracle.pub` both exist, the `oracle` job's batch step fails on every run, after the image has been pushed.
@@ -243,7 +261,7 @@ These are never agent steps. Until `ORACLE_SIGNING_KEY` and `conformance/oracle/
 3. Run `bun run oracle:fixtures fingerprint` and record the value in [Fixture format and signature](#fixture-format-and-signature). Commit `oracle.pub` and the fingerprint through a PR (both Protected).
 4. Run `oracle.yml` from `main` (`workflow_dispatch`), download the `oracle-fixtures` artifact, and commit `conformance/fixtures/` through a PR.
 
-Regenerate fixtures after a Pin bump or a change of the committed requests or of evaluate.php.
+Regenerate fixtures after a Pin bump or a change of the committed requests or of evaluate.php. The nightly recheck names every fixture that a missed regeneration left stale.
 
 ## Per-Story requests (`bun run oracle:story`)
 
