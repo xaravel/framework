@@ -9,7 +9,11 @@ export const MODEL_STATE: unique symbol = Symbol("xaravel.model.state");
 @inject({ mailer: Mailer })
 export class Notifier {
   [MODEL_STATE]: Map<string, unknown> = new Map();
-  mailer: MailerShape | null = null;
+  readonly mailer: MailerShape | null;
+
+  constructor(mailer: MailerShape | null = null) {
+    this.mailer = mailer;
+  }
 
   identity(): string {
     return fqcn(this);

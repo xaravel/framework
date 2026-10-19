@@ -327,6 +327,23 @@ const PROVIDER = [
   "",
   "        $this->app->make(Registry::class)->addpath(__DIR__);",
   "",
+  // Receivers that resolve to a bound class (Story 6.3): `app(K)->`, `$this->app[K]->`, `resolve(Y::class)->`,
+  // `X::`, a facade line of conformance/scans/facades.jsonl, and a facade class in the snapshot.
+  "        app('widgets.queue')->addRoute('jobs');",
+  "        $this->app['widgets']->addDriver('array');",
+  "        resolve(StoreContract::class)->put('x');",
+  "        Hub::reset();",
+  "        Jar::setSecure(true);",
+  "        Widgets::setLocale('de');",
+  // Receivers that resolve to no bound class seed nothing.
+  "        $store->tag('a');",
+  "        $app->make(StoreContract::class)->tag('b');",
+  "        app('missing')->tag('c');",
+  "        Missing::tag('d');",
+  "        static::tag('e');",
+  "        $this->app->make(Contracts\\Clock::class)->tag('f');",
+  "        $this->other->make(StoreContract::class)->tag('g');",
+  "",
   "        $this->registerCommands(array_merge(",
   "            $this->commands,",
   "            $this->devCommands",
@@ -358,14 +375,16 @@ const PROVIDER = [
 const SINGLETON_SNAPSHOT: Record<string, string> = {
   "framework/src/Illuminate/Support/ServiceProvider.php": php("Illuminate\\Support", "abstract class ServiceProvider\n{\n    protected $app;\n\n    public function __construct($app)\n    {\n        $this->app = $app;\n    }\n}"),
   "framework/src/Illuminate/Foundation/Support/Providers/BaseProvider.php": php("Illuminate\\Foundation\\Support\\Providers", "abstract class BaseProvider extends ServiceProvider\n{\n}", ["Illuminate\\Support\\ServiceProvider"]),
-  "ai/src/WidgetServiceProvider.php": php("Laravel\\Ai", PROVIDER, ["Illuminate\\Foundation\\Support\\Providers\\BaseProvider", "Laravel\\Ai\\Contracts\\Store as StoreContract"]),
+  "ai/src/WidgetServiceProvider.php": php("Laravel\\Ai", PROVIDER, ["Illuminate\\Foundation\\Support\\Providers\\BaseProvider", "Laravel\\Ai\\Contracts\\Store as StoreContract", "Laravel\\Ai\\Facades\\Jar", "Laravel\\Ai\\Facades\\Widgets"]),
+  "framework/src/Illuminate/Support/Facades/Facade.php": php("Illuminate\\Support\\Facades", "abstract class Facade\n{\n}"),
+  "ai/src/Facades/Widgets.php": php("Laravel\\Ai\\Facades", "class Widgets extends Facade\n{\n    protected static function getFacadeAccessor()\n    {\n        return 'widgets.translator';\n    }\n}", ["Illuminate\\Support\\Facades\\Facade"]),
   "ai/src/Contracts/Store.php": php("Laravel\\Ai\\Contracts", "interface Store\n{\n}"),
   "ai/src/Contracts/Hub.php": php("Laravel\\Ai\\Contracts", "interface Hub\n{\n}"),
   "ai/src/Contracts/Clock.php": php("Laravel\\Ai\\Contracts", "interface Clock\n{\n}"),
-  "ai/src/DatabaseStore.php": php("Laravel\\Ai", "class DatabaseStore implements Contracts\\Store\n{\n}"),
-  "ai/src/Hub.php": php("Laravel\\Ai", "class Hub implements Contracts\\Hub\n{\n}"),
-  "ai/src/WidgetManager.php": php("Laravel\\Ai", "class WidgetManager\n{\n}"),
-  "ai/src/Translator.php": php("Laravel\\Ai", "class Translator\n{\n    protected $fallback;\n\n    public function setFallback($fallback)\n    {\n        $this->fallback = $fallback;\n    }\n}"),
+  "ai/src/DatabaseStore.php": php("Laravel\\Ai", "class DatabaseStore implements Contracts\\Store\n{\n    protected $items = [];\n\n    protected $tags = [];\n\n    public function put($key)\n    {\n        $this->items[] = $key;\n    }\n\n    public function tag($tag)\n    {\n        $this->tags[] = $tag;\n    }\n}"),
+  "ai/src/Hub.php": php("Laravel\\Ai", "class Hub implements Contracts\\Hub\n{\n    protected static $resets = 0;\n\n    public static function reset()\n    {\n        static::$resets = 1;\n    }\n}"),
+  "ai/src/WidgetManager.php": php("Laravel\\Ai", "class WidgetManager\n{\n    protected $drivers = [];\n\n    public function addDriver($driver)\n    {\n        $this->drivers[] = $driver;\n    }\n}"),
+  "ai/src/Translator.php": php("Laravel\\Ai", "class Translator\n{\n    protected $fallback;\n\n    protected $locale;\n\n    public function setFallback($fallback)\n    {\n        $this->fallback = $fallback;\n    }\n\n    public function setLocale($locale)\n    {\n        $this->locale = $locale;\n    }\n}"),
   "ai/src/CookieJar.php": php(
     "Laravel\\Ai",
     [
@@ -374,6 +393,13 @@ const SINGLETON_SNAPSHOT: Record<string, string> = {
       "    protected $path;",
       "",
       "    protected $queued = [];",
+      "",
+      "    protected $secure = false;",
+      "",
+      "    public function setSecure($secure)",
+      "    {",
+      "        $this->secure = $secure;",
+      "    }",
       "",
       "    public function setDefaultPathAndDomain($path, $domain)",
       "    {",
@@ -389,7 +415,7 @@ const SINGLETON_SNAPSHOT: Record<string, string> = {
       "}",
     ].join("\n"),
   ),
-  "ai/src/QueueManager.php": php("Laravel\\Ai", "class QueueManager\n{\n    protected $connectors = [];\n\n    public function addConnector($name)\n    {\n        $this->connectors[] = $name;\n    }\n}"),
+  "ai/src/QueueManager.php": php("Laravel\\Ai", "class QueueManager\n{\n    protected $connectors = [];\n\n    protected $routes = [];\n\n    public function addConnector($name)\n    {\n        $this->connectors[] = $name;\n    }\n\n    public function addRoute($route)\n    {\n        $this->routes[] = $route;\n    }\n}"),
   "ai/src/Console/MakeCommand.php": php("Laravel\\Ai\\Console", "class MakeCommand\n{\n}"),
   "ai/src/Console/ServeCommand.php": php("Laravel\\Ai\\Console", "class ServeCommand\n{\n}"),
   "ai/src/Concerns/RegistersPaths.php": php(
@@ -608,6 +634,23 @@ const SINGLETONS_JSON = [
   '    "Laravel\\\\Ai\\\\Registry",',
   '    "Laravel\\\\Ai\\\\Translator",',
   '    "Laravel\\\\Ai\\\\WidgetManager"',
+  "  ],",
+  // Each boot-only property with its writers: the register/boot path no-boot-only-write allows (Story 6.3).
+  '  "bootOnly": [',
+  ...[
+    ["Laravel\\Ai\\CookieJar::$secure", "setsecure"],
+    ["Laravel\\Ai\\DatabaseStore::$items", "put"],
+    ["Laravel\\Ai\\Hub::$resets", "reset"],
+    ["Laravel\\Ai\\QueueManager::$routes", "addroute"],
+    ["Laravel\\Ai\\Registry::$count", "addpath"],
+    ["Laravel\\Ai\\Registry::$extensions", "extend"],
+    ["Laravel\\Ai\\Registry::$first", "group"],
+    ["Laravel\\Ai\\Registry::$listeners", "listen"],
+    ["Laravel\\Ai\\Registry::$normalized", "normalize"],
+    ["Laravel\\Ai\\Registry::$paths", "addpath"],
+    ["Laravel\\Ai\\Translator::$locale", "setlocale"],
+    ["Laravel\\Ai\\WidgetManager::$drivers", "adddriver"],
+  ].map(([property, writer], i, all) => `    ${renderJson({ property: property!, writers: [writer!] })}${i < all.length - 1 ? "," : ""}`),
   "  ]",
   "}",
   "",
@@ -627,30 +670,47 @@ const BOOT_ONLY = [
   // inside listen()); $mode (setMode() is called only inside a closure in watch(), a runtime
   // caller); $ref (&), $listed (list() destructuring), $sorted (sort()) and $shared (parent::$shared),
   // each also written in pop(); $anon (written in an anonymous class inside listen()); the
-  // Translator, CookieJar and QueueManager setters (called only in closures).
+  // Translator, CookieJar and QueueManager setters setFallback, setDefaultPathAndDomain and
+  // addConnector (called only in closures).
+  // Story 6.3: a boot entry call seeds only the classes its receiver resolves to. Listed:
+  // CookieJar::$secure (the facades.jsonl line Jar, accessor widgets.cookie), DatabaseStore::$items
+  // (resolve(StoreContract::class), bound to DatabaseStore), Hub::$resets (Hub::reset()),
+  // QueueManager::$routes (app('widgets.queue')), Translator::$locale (the facade class Widgets,
+  // accessor widgets.translator) and WidgetManager::$drivers ($this->app['widgets']). Not listed:
+  // DatabaseStore::$tags, as tag() is called only on receivers that resolve to no bound class (a
+  // variable, $app->make, an unbound abstract, an unindexed class, static::, an interface bound to no
+  // class, $this->other->make).
+  "Laravel\\Ai\\CookieJar::$secure",
+  "Laravel\\Ai\\DatabaseStore::$items",
+  "Laravel\\Ai\\Hub::$resets",
+  "Laravel\\Ai\\QueueManager::$routes",
   "Laravel\\Ai\\Registry::$count",
   "Laravel\\Ai\\Registry::$extensions",
   "Laravel\\Ai\\Registry::$first",
   "Laravel\\Ai\\Registry::$listeners",
   "Laravel\\Ai\\Registry::$normalized",
   "Laravel\\Ai\\Registry::$paths",
+  "Laravel\\Ai\\Translator::$locale",
+  "Laravel\\Ai\\WidgetManager::$drivers",
   "",
 ].join("\n");
 
 const PROVIDER_FILE = "conformance/upstream/ai/src/WidgetServiceProvider.php";
 // The null bindings, printed for review with the line of each `singleton(` call (the provider
-// file has a 7-line header, so PROVIDER's first line is line 8).
+// file has a 9-line header, so PROVIDER's first line is line 10).
 const REVIEW = [
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\BaseRegistry (${PROVIDER_FILE}:68)`,
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\Contracts\\Clock (${PROVIDER_FILE}:72)`,
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\Contracts\\Hub (${PROVIDER_FILE}:12)`,
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.driver (${PROVIDER_FILE}:79)`,
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.jar (${PROVIDER_FILE}:47)`,
-  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.twice (${PROVIDER_FILE}:61)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\BaseRegistry (${PROVIDER_FILE}:70)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\Contracts\\Clock (${PROVIDER_FILE}:74)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider Laravel\\Ai\\Contracts\\Hub (${PROVIDER_FILE}:14)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.driver (${PROVIDER_FILE}:81)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.jar (${PROVIDER_FILE}:49)`,
+  `singletons: class null, for review: Laravel\\Ai\\WidgetServiceProvider widgets.twice (${PROVIDER_FILE}:63)`,
 ];
 
 xaravelTest("XT-conformance-84", "scan:singletons writes tools/lint-rules/singletons.json with every class an Upstream provider binds with singleton(), and seeds conformance/boot-only-state, deterministically (Story 3.6)", () => {
   withSnapshot(SINGLETON_SNAPSHOT, (dir) => {
+    // A facade line, read from conformance/scans/facades.jsonl (its class need not be in the snapshot).
+    writeTree(dir, { [FACADES_FILE]: `${renderJson({ facade: "Laravel\\Ai\\Facades\\Jar", accessor: "widgets.cookie", root: "Laravel\\Ai\\CookieJar", methods: [] })}\n` });
     const built = buildSingletons(dir);
     expect(built.singletons).toBe(SINGLETONS_JSON);
     expect(built.bootOnlyState).toBe(BOOT_ONLY);
@@ -660,7 +720,7 @@ xaravelTest("XT-conformance-84", "scan:singletons writes tools/lint-rules/single
     const first = run(singletonsMain, ["--root", dir]);
     expect(first.stderr).toBe("");
     expect(first.code).toBe(0);
-    expect(first.stdout).toBe(`${REVIEW.join("\n")}\nsingletons: 16 bindings (6 with class null), 9 classes, 6 boot-only properties; wrote ${SINGLETONS_FILE}, ${BOOT_ONLY_FILE}.\n`);
+    expect(first.stdout).toBe(`${REVIEW.join("\n")}\nsingletons: 16 bindings (6 with class null), 9 classes, 12 boot-only properties; wrote ${SINGLETONS_FILE}, ${BOOT_ONLY_FILE}.\n`);
     const files = (): string[] => [readFileSync(join(dir, SINGLETONS_FILE), "utf8"), readFileSync(join(dir, BOOT_ONLY_FILE), "utf8")];
     expect(files()).toEqual([SINGLETONS_JSON, BOOT_ONLY]);
     expect(run(singletonsMain, ["--root", dir]).code).toBe(0);
@@ -672,7 +732,7 @@ xaravelTest("XT-conformance-84", "scan:singletons writes tools/lint-rules/single
     rmSync(join(dir, SINGLETONS_FILE));
     const drift = run(singletonsMain, ["--root", dir, "--check"]);
     expect(drift.code).toBe(1);
-    expect(drift.stderr.split("\n").slice(0, 2)).toEqual([`singletons drift: ${SINGLETONS_FILE} is missing`, `singletons drift: ${BOOT_ONLY_FILE} differs from the scan (first difference at line 10)`]);
+    expect(drift.stderr.split("\n").slice(0, 2)).toEqual([`singletons drift: ${SINGLETONS_FILE} is missing`, `singletons drift: ${BOOT_ONLY_FILE} differs from the scan (first difference at line 16)`]);
   });
 
   // A dynamic abstract outside the foreach rule fails the run and writes nothing.
@@ -702,7 +762,28 @@ xaravelTest("XT-conformance-249", "the committed singletons.json and boot-only-s
   }
   // UrlGenerator::setRequest runs in RoutingServiceProvider's request rebinder closure, per request (AD-5).
   expect(built.bootOnly).not.toContain("Illuminate\\Routing\\UrlGenerator::$request");
-  expect(built.bootOnly).toContain("Illuminate\\Cache\\CacheManager::$customCreators");
+  // A boot entry call seeds only the class its receiver resolves to (Story 6.3, Epic 3 retro S5): the false
+  // entries an any-receiver `->extend(` / `->after(` / `->addConnector(` match listed are gone, and the
+  // genuine ones stay, each with its writers (Route::group, ParallelTesting::setUp*, Mcp::local).
+  for (const absent of [
+    "Illuminate\\Queue\\QueueManager::$connectors",
+    "Illuminate\\Auth\\Access\\Gate::$afterCallbacks",
+    "Illuminate\\Translation\\Translator::$handleMissingTranslationKeys",
+    "Illuminate\\Cache\\CacheManager::$customCreators",
+    "Illuminate\\Routing\\Router::$binders",
+    "Illuminate\\Validation\\Factory::$extensions",
+  ]) {
+    expect([absent, built.bootOnly.includes(absent)]).toEqual([absent, false]);
+  }
+  expect(built.writers).toEqual([
+    { property: "Illuminate\\Routing\\Router::$groupStack", writers: ["group", "updategroupstack"] },
+    { property: "Illuminate\\Testing\\ParallelTesting::$setUpProcessCallbacks", writers: ["setupprocess"] },
+    { property: "Illuminate\\Testing\\ParallelTesting::$setUpTestCaseCallbacks", writers: ["setuptestcase"] },
+    { property: "Illuminate\\Testing\\ParallelTesting::$tearDownProcessCallbacks", writers: ["teardownprocess"] },
+    { property: "Laravel\\Mcp\\Server\\Registrar::$localServers", writers: ["local"] },
+  ]);
+  expect(built.bootOnly).toEqual(built.writers.map((entry) => entry.property));
+  expect((JSON.parse(built.singletons) as { bootOnly: unknown }).bootOnly).toEqual(built.writers);
   // The foreach rule resolves ArtisanServiceProvider::registerCommands' singleton($command).
   expect(built.bindings).toContainEqual({ provider: "Illuminate\\Foundation\\Providers\\ArtisanServiceProvider", abstract: "Illuminate\\Foundation\\Console\\AboutCommand", class: "Illuminate\\Foundation\\Console\\AboutCommand" });
   // FoundationServiceProvider::$singletons.

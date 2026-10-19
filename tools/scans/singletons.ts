@@ -28,7 +28,10 @@
 //     the closure's own depth is `new X(…)`; otherwise null (ESC-3.6-1). The
 //     run prints each null binding (provider, abstract, file:line) for review.
 // Any other argument shape, an unresolved call, or a foreach-rule X that is
-// not indexed fails the run, naming file:line.
+// not indexed fails the run, naming file:line. `singletons.json` is
+// `{"comment","bindings","classes","bootOnly"}`; `bootOnly` is one
+// `{"property":"<FQCN>::$<p>","writers":[…]}` per boot-only property, sorted
+// by property.
 //
 // Boot-only state (ESC-3.6-1). For each bound class C: C's methods with those
 // of its indexed ancestors and of the traits they use, transitively. A target
@@ -44,13 +47,22 @@
 // themselves) is construction, with at least one caller; their writes are
 // excluded. The boot entry points are the top-level (outside any closure)
 // calls of every provider's `register()` / `boot()` and of the provider methods
-// they reach by top-level `$this->m(`, transitively. A method of C is
-// boot-reachable when its name is called as `->name(` / `::name(` at a boot
-// entry point, or when it has callers within C's methods (`$this->name(`,
-// `static::name(`, `self::name(`) other than itself and each is boot-reachable
-// or construction (a fixed point). Method names compare case-insensitively. P
-// is boot-only when it has a non-construction write and every method writing
-// it is boot-reachable.
+// they reach by top-level `$this->m(`, transitively. A boot entry call `->m(` /
+// `::m(` seeds method m of class C only when its receiver resolves to C
+// (Story 6.3): `F::m(` where F (through `use`) is a facade (a line of
+// `conformance/scans/facades.jsonl`, or another indexed class whose `extends`
+// chain reaches `Facade` with a literal accessor) whose accessor is bound to C
+// or is C; `X::m(` with X resolving to C; `$this->app->make(K)->m(`,
+// `$this->app[K]->m(`, `app(K)->m(` or `resolve(K)->m(` with K a string
+// literal or `Y::class` bound to C or equal to C. Any other receiver seeds
+// nothing. A method of C is boot-reachable when it is seeded, or when it has
+// callers within C's methods (`$this->name(`, `static::name(`, `self::name(`)
+// other than itself and each is boot-reachable or construction (a fixed
+// point). Method names compare case-insensitively. P is boot-only when it has
+// a non-construction write and every method writing it is boot-reachable; its
+// writers (those non-construction methods, lower-case) are listed with it in
+// `singletons.json` `bootOnly`, the register/boot path Story 6.3's
+// `no-boot-only-write` lint allows.
 //
 //   … --check
 //       builds both files in memory and compares them byte for byte with the
@@ -58,8 +70,10 @@
 //       missing file. It writes nothing.
 //
 // Exit codes: 0 pass, 1 any failure (nothing is written), 2 usage error.
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { compareUnits, renderJson } from "../oracle/request";
-import { runScan } from "./facades";
+import { accessorOf, FACADE_BASE, FACADES_FILE, runScan } from "./facades";
 import {
   ancestors,
   buildIndex,
@@ -94,6 +108,8 @@ export interface SingletonsResult {
   bindings: Binding[];
   classes: string[];
   bootOnly: string[];
+  /** Each boot-only property with its writers, sorted by property (the `bootOnly` of `singletons.json`). */
+  writers: BootOnly[];
   /** One line per null binding, `<provider> <abstract> (<file>:<line>)`, in binding order, for review. */
   unresolved: string[];
 }
@@ -939,13 +955,134 @@ function writesOf(body: Body, analysed: ReadonlySet<string>): Event[] {
 // ---------------------------------------------------------------------------
 // Boot-only state
 
+/** Where a boot entry call's receiver resolves: the bindings by abstract, and the facades' accessors by facade FQCN. */
+export interface Receivers {
+  /** Abstract → the non-null classes bound to it. */
+  bound: ReadonlyMap<string, readonly string[]>;
+  /** Facade FQCN → its accessor. */
+  facades: ReadonlyMap<string, string>;
+}
+
 /**
- * The names called as `->name(` / `::name(` at the boot entry points: the
- * top-level calls of every provider's `register()` / `boot()`, and of the
- * provider methods they reach by top-level `$this->m(`, transitively.
+ * The facade accessors by facade FQCN: each line of `conformance/scans/facades.jsonl` under `root` (none when the file
+ * is absent), then each other non-abstract indexed class whose `extends` chain reaches `Facade` and whose
+ * `getFacadeAccessor()` returns a string literal or `X::class` (the package facades outside `Support/Facades`, such as
+ * `Laravel\Mcp\Facades\Mcp`).
  */
-function bootEntryCalls(index: Index, providers: readonly Declaration[]): Set<string> {
-  const out = new Set<string>();
+export function facadeAccessors(root: string, index: Index): Map<string, string> {
+  const out = new Map<string, string>();
+  const file = join(root, FACADES_FILE);
+  if (existsSync(file)) {
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      if (line.trim() !== "") {
+        const parsed = JSON.parse(line) as { facade: string; accessor: string };
+        out.set(parsed.facade, parsed.accessor);
+      }
+    }
+  }
+  for (const parsed of index.files) {
+    for (const decl of parsed.declarations) {
+      if (decl.kind !== "class" || decl.abstract || decl.fqcn === FACADE_BASE || out.has(decl.fqcn) || index.byFqcn.get(decl.fqcn) !== decl || !extendsChainReaches(index, decl, FACADE_BASE)) {
+        continue;
+      }
+      try {
+        out.set(decl.fqcn, accessorOf(decl));
+      } catch (error) {
+        if (!(error instanceof ScanError)) {
+          throw error;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** The positions of the brackets in `run`: closer position → opener position. */
+function openers(code: Code, run: Run): Map<number, number> {
+  const out = new Map<number, number>();
+  const stack: number[] = [];
+  for (let k = 0; k < run.length; k++) {
+    const t = code.tok(run[k]!);
+    if (isOpener(t)) {
+      stack.push(k);
+    } else if (isCloser(t) && stack.length > 0) {
+      out.set(k, stack.pop()!);
+    }
+  }
+  return out;
+}
+
+/**
+ * The classes the receiver of the call whose operator (`->`, `?->` or `::`) is at position `k` of `run` resolves to:
+ * `F::m(` with F a facade whose accessor is bound to C or is C, or with F resolving to C; `$this->app->make(K)->m(`,
+ * `$this->app[K]->m(`, `app(K)->m(` or `resolve(K)->m(` with K (a string literal or `Y::class`) bound to C or equal to
+ * C. Any other receiver resolves to nothing.
+ */
+function receiverClasses(index: Index, code: Code, run: Run, k: number, brackets: ReadonlyMap<number, number>, receivers: Receivers): string[] {
+  const at = (m: number): Token | null => (m < 0 || run[m] === undefined ? null : code.tok(run[m]!));
+  const text = (m: number): string => at(m)?.text.toLowerCase() ?? "";
+  const classesOf = (key: string): string[] => {
+    const out = [...(receivers.bound.get(key) ?? [])];
+    if (index.byFqcn.get(key)?.kind === "class" && !out.includes(key)) {
+      out.push(key);
+    }
+    return out;
+  };
+  const keyOf = (open: number): string | null => {
+    const first = code.args(run[open]!)[0];
+    return first === undefined ? null : (code.stringLiteral(first) ?? code.classConstant(first));
+  };
+  const op = text(k);
+  const head = at(k - 1);
+  if (head === null) {
+    return [];
+  }
+  if (op === "::") {
+    if (head.kind !== "name" || RELATIVE.has(head.text.toLowerCase())) {
+      return [];
+    }
+    const name = code.resolve(head.text);
+    const accessor = receivers.facades.get(name);
+    const out = accessor === undefined ? [] : classesOf(accessor);
+    for (const cls of classesOf(name)) {
+      if (!out.includes(cls)) {
+        out.push(cls);
+      }
+    }
+    return out;
+  }
+  const open = brackets.get(k - 1);
+  if (open === undefined) {
+    return [];
+  }
+  const thisApp = (m: number): boolean => text(m) === "app" && text(m - 1) === "->" && text(m - 2) === "$this";
+  let key: string | null = null;
+  if (head.text === "]") {
+    // `$this->app[K]->m(`.
+    if (thisApp(open - 1)) {
+      key = keyOf(open);
+    }
+  } else if (head.text === ")") {
+    const callee = at(open - 1);
+    const calleeName = callee?.kind === "name" ? callee.text.replace(/^\\/, "").toLowerCase() : "";
+    if (calleeName === "make" && text(open - 2) === "->" && thisApp(open - 3)) {
+      // `$this->app->make(K)->m(`.
+      key = keyOf(open);
+    } else if ((calleeName === "app" || calleeName === "resolve") && !["->", "?->", "::", "function", "new"].includes(text(open - 2))) {
+      // `app(K)->m(`, `resolve(K)->m(`.
+      key = keyOf(open);
+    }
+  }
+  return key === null ? [] : classesOf(key);
+}
+
+/**
+ * The methods each class's boot entry calls seed, by class: a top-level call `->m(` / `::m(` of every provider's
+ * `register()` / `boot()`, and of the provider methods they reach by top-level `$this->m(`, transitively, seeds m of
+ * each class its receiver resolves to (`receiverClasses`).
+ */
+function bootEntryCalls(index: Index, providers: readonly Declaration[], receivers: Receivers): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
   for (const provider of providers) {
     const lookup = new Map<string, { owner: Declaration; method: Method }>();
     for (const owner of analysedDeclarations(index, provider)) {
@@ -960,13 +1097,25 @@ function bootEntryCalls(index: Index, providers: readonly Declaration[]): Set<st
     const seen = new Set(queue);
     while (queue.length > 0) {
       const { owner, method } = lookup.get(queue.shift()!)!;
-      const calls = callsOf(bodyOf(new Code(owner), method));
-      for (const call of calls.any) {
-        if (!call.nested) {
-          out.add(call.name);
+      const body = bodyOf(new Code(owner), method);
+      const { code, run, nested } = body;
+      const brackets = openers(code, run);
+      for (let k = 0; k + 2 < run.length; k++) {
+        const op = code.tok(run[k]!);
+        const name = code.tok(run[k + 1]!);
+        if (!(op.text === "->" || op.text === "?->" || op.text === "::") || name.kind !== "name" || code.tok(run[k + 2]!).text !== "(" || inRanges(nested, run[k]!)) {
+          continue;
+        }
+        if (run[k + 4] !== undefined && code.tok(run[k + 3]!).text === "..." && code.tok(run[k + 4]!).text === ")") {
+          continue;
+        }
+        for (const cls of receiverClasses(index, code, run, k, brackets, receivers)) {
+          const set = out.get(cls) ?? new Set<string>();
+          set.add(name.text.toLowerCase());
+          out.set(cls, set);
         }
       }
-      for (const call of calls.this) {
+      for (const call of callsOf(body).this) {
         if (!call.nested && lookup.has(call.name) && !seen.has(call.name)) {
           seen.add(call.name);
           queue.push(call.name);
@@ -999,8 +1148,14 @@ function closeOver(names: ReadonlySet<string>, callers: ReadonlyMap<string, Read
   return out;
 }
 
-/** The boot-only properties of class C, as `<C>::$<P>`. */
-function bootOnlyOf(index: Index, fqcn: string, entry: ReadonlySet<string>): string[] {
+/** A boot-only property, `<C>::$<P>`, and the non-construction methods that write it (lower-case, sorted). */
+export interface BootOnly {
+  property: string;
+  writers: string[];
+}
+
+/** The boot-only properties of class C, given the methods of C its boot entry calls seed. */
+function bootOnlyOf(index: Index, fqcn: string, entry: ReadonlySet<string>): BootOnly[] {
   const decl = index.byFqcn.get(fqcn);
   if (decl === undefined) {
     return [];
@@ -1034,11 +1189,11 @@ function bootOnlyOf(index: Index, fqcn: string, entry: ReadonlySet<string>): str
   }
   const construction = closeOver(names, callers, names.has("__construct") ? ["__construct"] : []);
   const reachable = closeOver(names, callers, [...names].filter((name) => entry.has(name)), construction);
-  const out: string[] = [];
+  const out: BootOnly[] = [];
   for (const [property, methods] of writers) {
     const runtime = [...methods].filter((method) => !construction.has(method));
     if (runtime.length > 0 && runtime.every((method) => reachable.has(method))) {
-      out.push(`${fqcn}::$${property}`);
+      out.push({ property: `${fqcn}::$${property}`, writers: runtime.sort(compareUnits) });
     }
   }
   return out;
@@ -1055,7 +1210,7 @@ const BOOT_ONLY_HEADER = [
 ];
 
 /** Renders `tools/lint-rules/singletons.json`. */
-export function renderSingletons(bindings: readonly Binding[], classes: readonly string[]): string {
+export function renderSingletons(bindings: readonly Binding[], classes: readonly string[], bootOnly: readonly BootOnly[] = []): string {
   const lines = ["{", `  "comment": ${JSON.stringify(COMMENT)},`];
   if (bindings.length === 0) {
     lines.push('  "bindings": [],');
@@ -1067,11 +1222,20 @@ export function renderSingletons(bindings: readonly Binding[], classes: readonly
     lines.push("  ],");
   }
   if (classes.length === 0) {
-    lines.push('  "classes": []');
+    lines.push('  "classes": [],');
   } else {
     lines.push('  "classes": [');
     classes.forEach((cls, i) => {
       lines.push(`    ${JSON.stringify(cls)}${i < classes.length - 1 ? "," : ""}`);
+    });
+    lines.push("  ],");
+  }
+  if (bootOnly.length === 0) {
+    lines.push('  "bootOnly": []');
+  } else {
+    lines.push('  "bootOnly": [');
+    bootOnly.forEach((entry, i) => {
+      lines.push(`    ${renderJson({ property: entry.property, writers: [...entry.writers] })}${i < bootOnly.length - 1 ? "," : ""}`);
     });
     lines.push("  ]");
   }
@@ -1101,14 +1265,32 @@ export function buildSingletons(root: string, index: Index = buildIndex(root)): 
   const sorted = [...unique.values()].sort((a, b) => compareBindings(a.binding, b.binding));
   const bindings = sorted.map((found) => found.binding);
   const classes = [...new Set(bindings.map((binding) => binding.class).filter((cls): cls is string => cls !== null))].sort(compareUnits);
-  const entry = bootEntryCalls(index, providers);
-  const bootOnly = [...new Set(classes.flatMap((cls) => bootOnlyOf(index, cls, entry)))].sort(compareUnits);
+  const bound = new Map<string, string[]>();
+  for (const binding of bindings) {
+    if (binding.class !== null) {
+      const list = bound.get(binding.abstract) ?? [];
+      if (!list.includes(binding.class)) {
+        list.push(binding.class);
+      }
+      bound.set(binding.abstract, list);
+    }
+  }
+  const entry = bootEntryCalls(index, providers, { bound, facades: facadeAccessors(root, index) });
+  const byProperty = new Map<string, BootOnly>();
+  for (const cls of classes) {
+    for (const found of bootOnlyOf(index, cls, entry.get(cls) ?? new Set())) {
+      byProperty.set(found.property, found);
+    }
+  }
+  const writers = [...byProperty.values()].sort((a, b) => compareUnits(a.property, b.property));
+  const bootOnly = writers.map((found) => found.property);
   return {
-    singletons: renderSingletons(bindings, classes),
+    singletons: renderSingletons(bindings, classes, writers),
     bootOnlyState: [...BOOT_ONLY_HEADER, ...bootOnly].map((line) => `${line}\n`).join(""),
     bindings,
     classes,
     bootOnly,
+    writers,
     unresolved: sorted.filter((found) => found.binding.class === null).map((found) => `${found.binding.provider} ${found.binding.abstract} (${found.where})`),
   };
 }

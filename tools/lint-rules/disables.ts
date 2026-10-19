@@ -44,8 +44,9 @@ import { dirname, join, posix, resolve } from "node:path";
 
 /**
  * The rules the spine names: AD-6 async safety (NFR-3, Story 6.1), then the `xaravel` plugin's identity, value and
- * test-hygiene rules (`./plugin.ts`, Story 6.2; AD-10, AD-23, AD-15, AD-1, AD-7, AD-3). Story 6.3 appends its custom
- * rule names here; a rule is named by its last `/` segment, so a name must not collide with an oxlint built-in.
+ * test-hygiene rules (`./plugin.ts`, Story 6.2; AD-10, AD-23, AD-15, AD-1, AD-7, AD-3), then its async-signature,
+ * frame-state and declaration rules (Story 6.3; AD-6, AD-5, AD-25, AD-4, AD-7). A rule is named by its last `/`
+ * segment, so a name must not collide with an oxlint built-in.
  */
 export const SPINE_RULES: readonly string[] = [
   "no-floating-promises",
@@ -57,6 +58,13 @@ export const SPINE_RULES: readonly string[] = [
   "no-type-import-injection",
   "no-model-private",
   "no-package-default-export",
+  "no-maybe-promise-return",
+  "no-async-thenable-return",
+  "no-singleton-field-write",
+  "no-boot-only-write",
+  "no-arrow-test-body",
+  "no-inject-param-mismatch",
+  "no-dynamic-column-default",
 ];
 
 /** The options a spine rule must carry, each with the value it must have. */

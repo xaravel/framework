@@ -393,5 +393,12 @@
     "Laravel\\Mcp\\Server\\Registrar",
     "Laravel\\Roster\\ProjectManager",
     "Symfony\\Component\\Cache\\Adapter\\Psr16Adapter"
+  ],
+  "bootOnly": [
+    {"property":"Illuminate\\Routing\\Router::$groupStack","writers":["group","updategroupstack"]},
+    {"property":"Illuminate\\Testing\\ParallelTesting::$setUpProcessCallbacks","writers":["setupprocess"]},
+    {"property":"Illuminate\\Testing\\ParallelTesting::$setUpTestCaseCallbacks","writers":["setuptestcase"]},
+    {"property":"Illuminate\\Testing\\ParallelTesting::$tearDownProcessCallbacks","writers":["teardownprocess"]},
+    {"property":"Laravel\\Mcp\\Server\\Registrar::$localServers","writers":["local"]}
   ]
 }

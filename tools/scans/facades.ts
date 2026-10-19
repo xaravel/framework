@@ -118,7 +118,7 @@ function docLines(doc: Token): { text: string; line: number }[] {
 }
 
 /** What `getFacadeAccessor()` returns. */
-function accessorOf(decl: Declaration): string {
+export function accessorOf(decl: Declaration): string {
   const method = decl.methods.find((m) => m.name.toLowerCase() === "getfacadeaccessor");
   if (method === undefined || method.bodyStart === -1) {
     throw new ScanError(`${decl.file}:${decl.line}: ${decl.fqcn} has no getFacadeAccessor() body`);

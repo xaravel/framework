@@ -3,13 +3,13 @@
 Five static scans turn Upstream source into committed data that later work reads (Stories 3.6 and 3.7):
 
 - the facade generator (Story 28.x) reads `conformance/scans/facades.jsonl`;
-- the singleton lint (Story 6.3) reads `tools/lint-rules/singletons.json`;
+- the singleton lints (Story 6.3) read `tools/lint-rules/singletons.json`;
 - AD-5's sealed-write guard reads `conformance/boot-only-state`;
 - the closure codec (AD-14) reads `conformance/scans/allowed-identifiers.json`;
 - `PORTING.md` (AD-7, AD-26, Epic 8) reads `conformance/scans/div12-pairs.jsonl`;
 - the grader coverage reports (Stories 4.4 and 4.6, FR-116, FR-100) read `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`.
 
-The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. `scan:test-api` also reads the committed Inventory. All share a small PHP lexer in `tools/scans/php.ts` and one CLI (`runScan` in `tools/scans/facades.ts`).
+The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. `scan:test-api` also reads the committed Inventory, and `scan:singletons` the committed `conformance/scans/facades.jsonl` (so regenerate facades first when both change). All share a small PHP lexer in `tools/scans/php.ts` and one CLI (`runScan` in `tools/scans/facades.ts`).
 
 ## Commands
 
@@ -104,10 +104,11 @@ Each X then gives a binding with abstract = class = X, and every X must be in th
 
 Any other argument shape, or a variable abstract the rule does not resolve, fails the run and names the file and line.
 
-The file is `{"comment","bindings","classes"}`, in that key order and indented by 2 spaces, with one binding object per line:
+The file is `{"comment","bindings","classes","bootOnly"}`, in that key order and indented by 2 spaces, with one binding object per line:
 
 - bindings are deduplicated and sorted by provider, then abstract, then class (null first);
-- `classes` lists the non-null `class` values, unique and sorted.
+- `classes` lists the non-null `class` values, unique and sorted;
+- `bootOnly` has one `{"property","writers"}` object per line for each entry of `conformance/boot-only-state` (below), sorted by property. `property` is the same `<FQCN>::$<property>` text; `writers` lists the lower-case names of the non-construction methods that write it, sorted, all boot-reachable. They are the class's register/boot path for that property: Story 6.3's `xaravel/no-boot-only-write` lint allows writes to the property only there and in the constructor ([lint.md](lint.md)). Publishing them here keeps `conformance/boot-only-state`'s line format, which AD-5's runtime guard reads, unchanged.
 
 ## `conformance/boot-only-state`
 
@@ -125,12 +126,34 @@ The file has a `#` comment header that names the generator, then one `<FQCN>::$<
   A write belongs to the method whose own depth holds it. A write inside a closure, an arrow function or an anonymous class nested in a method is a **runtime write**: it runs later, not as part of that method. The same holds for a `$this->name(` call inside a nested closure: it is a runtime caller.
 - **Construction.** `__construct` is construction, and so is a method whose every caller among C's analysed methods (other than itself) is construction, with at least one such caller. Writes in construction methods are ignored.
 - **Boot entry points.** The calls at the top level (outside any closure) of every provider's `register()` and `boot()`, plus the top-level calls of the provider methods reached from those by a top-level `$this->m(`, transitively (inherited provider methods included). A call inside a closure is not a boot entry point (ESC-3.6-1). That covers rebinding, resolving and listener callbacks, which run later, and also `booted` callbacks, even though `Application::boot()` fires them at the end of boot (`RouteServiceProvider::register` loads routes in `$this->booted(...)`). State written only from a `booted` callback is therefore under-listed: it stays unsealed, which is the safe direction. A first-class callable (`->m(...)`) is not a call.
+- **Receivers (Story 6.3).** A boot entry call `->m(` or `::m(` seeds method m of class C only when its receiver resolves to C. The receiver shapes are:
+  - `F::m(`, where F (resolved through `use`) is a facade whose accessor is bound to C or is C. The facades are the lines of `conformance/scans/facades.jsonl`, plus any other non-abstract indexed class whose `extends` chain reaches `Illuminate\Support\Facades\Facade` and whose `getFacadeAccessor()` returns a string literal or `X::class` (the package facades outside `Support/Facades`, such as `Laravel\Mcp\Facades\Mcp`);
+  - `X::m(`, where X resolves to C;
+  - `$this->app->make(K)->m(`, `$this->app[K]->m(`, `app(K)->m(` or `resolve(K)->m(`, where K is a string literal or `Y::class` and is bound to C (some binding has abstract K and class C) or is C.
+
+  Any other receiver seeds nothing: a variable, `$app->make(…)`, `static::` / `self::` / `parent::`, an abstract bound to no class. Before Story 6.3 any receiver seeded the name on every class (ESC-3.6-1's reading), which listed 21 false entries such as `QueueManager::$connectors` and `Gate::$afterCallbacks` because some provider called an unrelated `->addConnector(` or `->after(` (Epic 3 retro S5). Dropping the `*Manager::$customCreators` entries is safe: AD-5 makes `extend` base-only after `sealed` independently of this file.
 - **Boot-reachable methods.** A method of C is boot-reachable when either holds:
-  - its name is called as `->name(` or `::name(` at a boot entry point;
+  - it is seeded by a boot entry call whose receiver resolves to C;
   - it has at least one caller among C's analysed methods (`$this->name(`, `static::name(`, `self::name(`) other than itself, and every such caller other than itself is boot-reachable or construction. This is computed to a fixed point.
 
   Method names compare case-insensitively, as in PHP.
 - **Boot-only.** P is boot-only when it has at least one non-construction write and every method that writes it is boot-reachable. A runtime write makes P not boot-only.
+
+At the Pin the file lists 5 properties: `Router::$groupStack` (writers `group`, `updategroupstack`), the three `ParallelTesting` callback lists (`setupprocess`, `setuptestcase`, `teardownprocess`), and `Laravel\Mcp\Server\Registrar::$localServers` (`local`, from `Mcp::local(...)` in `BoostServiceProvider::boot`).
+
+Story 6.3 dropped 21 entries the any-receiver rule listed. Each came from a boot call of the same method name on a receiver that does not resolve to the class (paths under `framework/src/Illuminate/`, lines at the Pin):
+
+| Dropped entries | Writer | Boot call that seeded it | Why the receiver does not resolve to the class |
+| --- | --- | --- | --- |
+| `$customCreators` of `AuthManager`, `BroadcastManager`, `CacheManager`, `ConcurrencyManager`, `FilesystemManager`, `MaintenanceModeManager`, `HashManager`, `LogManager`, `MailManager`, `Notifications\ChannelManager`, `RedisManager`, `SessionManager`, `Laravel\Ai\AiManager`; `Validation\Factory::$extensions`; `View\Compilers\BladeCompiler::$extensions` | `extend` | `$this->app->extend(` (`Routing/RoutingServiceProvider.php:70`) | the receiver is the container (`$this->app`), not a resolved manager |
+| `Queue\QueueManager::$connectors` | `addconnector` (reached from `QueueManager::extend`) | `$this->app->extend(` (`Routing/RoutingServiceProvider.php:70`) | the container again; `QueueServiceProvider` calls `addConnector` only inside closures |
+| `Auth\Access\Gate::$afterCallbacks` | `after` | `Str::after(` (`Encryption/EncryptionServiceProvider.php:65`) | `Str` is not bound to `Gate` and is not a facade for it |
+| `Queue\QueueRoutes::$routes` | `set` | `$config->set(` (`Support/ServiceProvider.php:168`, `mergeConfigFrom`) | a local variable |
+| `Routing\Router::$binders` | `bind` | `$this->app->bind(` (`Auth/AuthServiceProvider.php:49` and 13 more) | the container, not the router |
+| `Translation\Translator::$handleMissingTranslationKeys` | `has`, `handlemissingtranslationkey` (reached from `has()` through `get()`) | `$this->app->has(` (`Foundation/Providers/FoundationServiceProvider.php:74`) | the container, not the translator |
+| `View\Engines\EngineResolver::$resolvers` | `register` | `$this->app->register(` (`Support/AggregateServiceProvider.php:31`), `parent::register(` (`Foundation/Providers/FoundationServiceProvider.php:88`), `HtmlDumper::register(` / `CliDumper::register(` (lines 133 and 134) and 3 more | the container, the parent provider, or unrelated classes |
+
+App-level `extend`, `bind`, provider registration and `Blade.directive` writes do not need this file: AD-5's base-only API guard makes them throw `ScopeFrameException` after `sealed` (outside a test frame) whatever the receiver.
 
 For example, at the Pin `UrlGenerator::$request` is not listed: `RoutingServiceProvider::requestRebinder` calls `setRequest` inside the rebinding closure, which runs per request, so AD-5 keeps it in frame state. `Router::$groupStack` is listed, because `group()`, which pushes it and `array_pop`s it, is called at a boot entry point (`Route::group(...)` in `McpServiceProvider::registerRoutes`, reached from `boot()`); AD-5 makes route registration boot-only after `sealed`.
 

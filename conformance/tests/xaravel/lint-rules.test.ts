@@ -108,10 +108,24 @@ const PASSING: readonly { readonly fixture: string; readonly placements: readonl
 // XT-conformance-132
 
 xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule fails naming exactly its rule at its scoped paths and each passing fixture passes, under bun --bun oxlint --type-aware -c .oxlintrc.json; the root config holds all six rules as errors with the plugin loaded, and lint:disables rejects disabling them (AD-1, AD-3, AD-7, AD-10, AD-15, AD-23, AD-16.4)", () => {
-  // The config and the plugin: six rules, errors at the top level, plugin loaded, spine rules.
+  // The config and the plugin: the six rules (with Story 6.3's seven after them), errors at the top level, plugin loaded, spine rules.
   const config = JSON.parse(readFileSync(join(root, CONFIG), "utf8")) as { jsPlugins: unknown; rules: Record<string, unknown>; overrides?: unknown };
   expect(config.jsPlugins).toEqual(["./tools/lint-rules/plugin.ts"]);
-  expect(RULE_NAMES).toEqual(["no-identity-constructor-name", "no-framework-json-stringify", "no-ported-bun-expect", "no-type-import-injection", "no-model-private", "no-package-default-export"]);
+  expect(RULE_NAMES).toEqual([
+    "no-identity-constructor-name",
+    "no-framework-json-stringify",
+    "no-ported-bun-expect",
+    "no-type-import-injection",
+    "no-model-private",
+    "no-package-default-export",
+    "no-maybe-promise-return",
+    "no-async-thenable-return",
+    "no-singleton-field-write",
+    "no-boot-only-write",
+    "no-arrow-test-body",
+    "no-inject-param-mismatch",
+    "no-dynamic-column-default",
+  ]);
   expect(plugin.meta.name).toBe("xaravel");
   expect(Object.keys(plugin.rules)).toEqual([...RULE_NAMES]);
   for (const name of RULE_NAMES) {
@@ -225,7 +239,7 @@ function edgeCases(): void {
     "packages/demo/src/inject/InjectMember.ts": ['import * as container from "./support";\nimport type { Mailer } from "./support";\n\nexport const decorate = container.inject({ mailer: Mailer as never });\nexport type M = Mailer;\n', x(INJECT)],
     "packages/demo/src/inject/InjectShorthand.ts": ['import { inject } from "./support";\nimport type { Mailer } from "./support";\n\nexport const decorate = inject({ Mailer });\nexport type M = Mailer;\n', x(INJECT)],
     "packages/demo/src/inject/InjectDecorator.ts": [
-      'import * as container from "./support";\nimport type { Mailer } from "./support";\n\n@container.inject({ mailer: Mailer })\nexport class Notifier {\n  mailer: Mailer | null = null;\n}\n',
+      'import * as container from "./support";\nimport type { Mailer } from "./support";\n\n@container.inject({ mailer: Mailer })\nexport class Notifier {\n  constructor(readonly mailer: Mailer | null = null) {}\n}\n',
       x(INJECT),
     ],
     "packages/demo/src/inject/InjectHoisted.ts": ['import { inject } from "./support";\n\nexport const decorate = inject({ mailer: Mailer });\nexport type M = Mailer;\n\nimport type { Mailer } from "./support";\n', x(INJECT)],
