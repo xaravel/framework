@@ -238,7 +238,7 @@ Status: done
 - `packages/assert/src/declarations/AssertionCounter.ts`, `Declarations.ts`: the late-assertion protocol, with functions captured at load.
 - `packages/assert/src/comparison/PhpComparison.ts`: reads a tamed `constructor` accessor on a hardened prototype, so built-in detection still works under the preload.
 - `conformance/tests/xaravel/harness.test.ts`: XT-conformance-101..105 and 185.
-- `conformance/escalations/ESC-5.3-1.md`, `ESC-5.3-2.md`, `ESC-5.3-3.md`: the `BlockedByComponentError` contract, the DIV `fewer_assertions` form, and a failing late assertion throwing into the running test.
+- `conformance/escalations/ESC-5.3-1.md`, `ESC-5.3-2.md`: the `BlockedByComponentError` contract and the DIV `fewer_assertions` form.
 - `stories/5.3.md`: XT-conformance-185 for AC 6. `_bmad-output/implementation-artifacts/story-manifests.md`: the ID registry, where the next free ID is now 186.
 - `package.json` (the `harness` script) and `docs/ops/harness.md`.
 
