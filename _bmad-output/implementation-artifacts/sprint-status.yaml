@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 14:56
+last_updated: 10-19-2026 15:13
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1055,7 +1055,7 @@ action_items:
       and passes on the Ratchet's verdict (job success, failures=0, no unwarned unexpected
       pass) instead of differ=0 (ruling ESC-5.9-2)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-5.9-2.md"
   - id: "epic-5-retro-item-16-bot-app-bypass"
     epic: 5

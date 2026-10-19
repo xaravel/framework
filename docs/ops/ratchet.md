@@ -50,7 +50,13 @@ Scope compares the base tip with the PR head, not git history: when `main` has m
 
 ## The Story's tests (Story 5.7)
 
-`story` runs the harness over the `test_ids` of the Story a `story/<epic>.<story>` ref names (`harness --story <id>`), in full, never as a sample, with the inherited environment (in CI, `CI=true` makes every alpha Variant run). It prints the harness's report and exits with the harness's code. Exactly two cases skip, with exit 0:
+`story` runs the harness over the `test_ids` of the Story a `story/<epic>.<story>` ref names (`harness --story <id>`), in full, never as a sample, with the inherited environment (in CI, `CI=true` makes every alpha Variant run). It prints the harness's report on stdout (diagnostics on stderr), then classifies the harness's differences exactly as `run` does: the same lines from the table above, the same `::warning::` annotations under `GITHUB_ACTIONS=true`, and the same fail-closed rules (unreadable Story manifests, a harness precondition failure, a non-zero harness exit with no counted difference). Its last line is the verdict
+
+```text
+STORY ref=<ref> failures=<f> passes=<p> warnings=<w>
+```
+
+and it exits 1 only when `failures + passes > 0`, not on the harness's code, so a run whose only differences are warned passes exits 0 (ESC-5.9-2). A harness precondition failure or unreadable manifests exit 1 with no `STORY` line. The done check's `full-run` clause reads this line ([done-check.md](done-check.md)). Exactly two cases skip, with exit 0:
 
 - `STORY ref=<r> skipped: not a Story ref`, for any other ref;
 - `STORY ref=<r> skipped: no test_ids`, for a manifest whose `test_ids` is empty (a Conformance System Story with only Xaravel Tests).

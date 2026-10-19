@@ -88,11 +88,18 @@
 //       (Story 5.7) for a `story/<id>` ref whose manifest `stories/<id>.md`
 //       lists `test_ids`, runs the harness over those IDs in full, never as a
 //       sample (`runHarness(root, {story: id})`, inheriting the environment, so
-//       `CI=true` makes every alpha Variant run), prints its report and exits
-//       with its code. A ref that is not `story/<epic>.<story>` prints
-//       `STORY ref=<r> skipped: not a Story ref`, a manifest with no
-//       `test_ids` `STORY ref=<r> skipped: no test_ids`, both exit 0; a
-//       missing or invalid manifest exits 1.
+//       `CI=true` makes every alpha Variant run), prints its report on stdout
+//       (diagnostics on stderr), then classifies its differences exactly as
+//       `run` does (the same lines, `::warning::` annotations and fail-closed
+//       rules, against `openManifests(root)`) and ends with
+//         STORY ref=<r> failures=<f> passes=<p> warnings=<w>
+//       exiting on that verdict, not the harness's code (ESC-5.9-2): the done
+//       check's `full-run` clause reads this line. A ref that is not
+//       `story/<epic>.<story>` prints `STORY ref=<r> skipped: not a Story
+//       ref`, a manifest with no `test_ids` `STORY ref=<r> skipped: no
+//       test_ids`, both exit 0; a missing or invalid manifest, unreadable
+//       manifests, or a harness precondition failure (no SUMMARY) exit 1 with
+//       no STORY line.
 //
 // Exit codes: 0 when nothing fails (warnings never do), 1 when
 // failures + passes > 0, the harness failed a precondition (no SUMMARY line),
@@ -220,16 +227,33 @@ export async function runRatchet(rootArg: string, ref: string, options: RatchetO
   const harness = options.harness ?? ((dir: string, selected: readonly string[] | null) => runHarness(dir, selected === null ? { env } : { env, components: selected }));
   const result = await harness(root, components);
   err.push(...result.out, ...result.err);
-  if (!result.out.some((line) => line.startsWith("SUMMARY "))) {
-    err.push("ratchet: the harness failed a precondition before it compared anything; failing closed");
+  const judged = judge(result, ref, open, env);
+  if (judged === null) {
+    err.push(`ratchet: ${PRECONDITION}`);
     return { code: 1, out, err };
+  }
+  out.push(...judged.lines, `RATCHET ref=${ref} scope=${mode} failures=${judged.failures} passes=${judged.passes} warnings=${judged.warnings}`);
+  return { code: judged.code, out, err };
+}
+
+const PRECONDITION = "the harness failed a precondition before it compared anything; failing closed";
+
+/**
+ * The verdict on one harness run for `ref`, shared by `run` and `story`: the classified lines (each warning followed by
+ * its `::warning::` annotation under `GITHUB_ACTIONS=true`, and the silent-crash failure last), the counts, and the
+ * exit code; null when the harness printed no SUMMARY (a precondition failure, which fails closed).
+ */
+function judge(result: HarnessResult, ref: string, open: readonly Manifest[], env: Readonly<Record<string, string | undefined>>): { lines: string[]; failures: number; passes: number; warnings: number; code: 0 | 1 } | null {
+  if (!result.out.some((line) => line.startsWith("SUMMARY "))) {
+    return null;
   }
   const verdict = classify(result.differences, ref, open);
   const annotate = env["GITHUB_ACTIONS"] === "true";
+  const lines: string[] = [];
   for (const line of verdict.lines) {
-    out.push(line.text);
+    lines.push(line.text);
     if (annotate && line.kind === "warning") {
-      out.push(`::warning::${line.text}`);
+      lines.push(`::warning::${line.text}`);
     }
   }
   let failures = verdict.failures;
@@ -237,10 +261,9 @@ export async function runRatchet(rootArg: string, ref: string, options: RatchetO
   // warned passes also exits 1 from the harness; that is the warning case, not this one.)
   if (result.code !== 0 && result.differences.length === 0) {
     failures++;
-    out.push(`UNEXPECTED-FAILURE harness exited ${result.code} with no counted difference`);
+    lines.push(`UNEXPECTED-FAILURE harness exited ${result.code} with no counted difference`);
   }
-  out.push(`RATCHET ref=${ref} scope=${mode} failures=${failures} passes=${verdict.passes} warnings=${verdict.warnings}`);
-  return { code: failures + verdict.passes > 0 ? 1 : 0, out, err };
+  return { lines, failures, passes: verdict.passes, warnings: verdict.warnings, code: failures + verdict.passes > 0 ? 1 : 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -266,9 +289,23 @@ export async function runStoryTests(rootArg: string, ref: string, options: Pick<
   if (parsed.manifest.testIds.length === 0) {
     return { code: 0, out: [`STORY ref=${ref} skipped: no test_ids`], err: [] };
   }
+  let open: Manifest[];
+  try {
+    open = openManifests(root);
+  } catch (error) {
+    return { code: 1, out: [], err: [`ratchet story: the Story manifests could not be read; failing closed: ${error instanceof Error ? error.message : String(error)}`] };
+  }
   const harness = options.harness ?? ((dir: string, story: string) => runHarness(dir, { env, story }));
   const result = await harness(root, id);
-  return { code: result.code, out: result.out, err: result.err };
+  const out = [...result.out];
+  const err = [...result.err];
+  const judged = judge(result, ref, open, env);
+  if (judged === null) {
+    err.push(`ratchet story: ${PRECONDITION}`);
+    return { code: 1, out, err };
+  }
+  out.push(...judged.lines, `STORY ref=${ref} failures=${judged.failures} passes=${judged.passes} warnings=${judged.warnings}`);
+  return { code: judged.code, out, err };
 }
 
 // ---------------------------------------------------------------------------

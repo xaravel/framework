@@ -16,6 +16,7 @@ import { main as benchMain, runBenchmarks } from "../../../tools/bench/bench";
 import { reverseClosure } from "../../../tools/graph/graph";
 import { computeScope, main as ratchetMain, readScope, runRatchet, runStoryTests } from "../../../tools/ratchet/ratchet";
 import { ACTIONS_INTEGRATION_ID, policyViolations, REQUIRED_CHECKS } from "../../../tools/ruleset/ruleset";
+import type { Difference } from "../../harness/compare";
 import type { HarnessResult } from "../../harness/harness";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -128,8 +129,8 @@ async function env(extra: Record<string, string | undefined> = {}): Promise<Reco
   return { ...process.env, CI: undefined, GITHUB_ACTIONS: undefined, PGHOST: "127.0.0.1", PGPORT: port, REDIS_HOST: "127.0.0.1", REDIS_PORT: port, ...extra };
 }
 
-function fakeHarness(code: 0 | 1, out: string[] = ["SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0"]): HarnessResult {
-  return { code, out, err: [], results: [], differences: [], sample: null, worktree: null, xaravel: null };
+function fakeHarness(code: 0 | 1, out: string[] = ["SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0"], differences: Difference[] = []): HarnessResult {
+  return { code, out, err: [], results: [], differences, sample: null, worktree: null, xaravel: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -263,7 +264,7 @@ xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure 
   expect(await ratchetMain(["run", "--ref", "main", "--root", root, "--scope", out])).toBe(1);
 }, 60_000);
 
-xaravelTest("XT-conformance-202", "run --scope grades only the scope's Components, none runs no harness, full and no scope run in full; story runs the Story's test_ids in full and forwards the harness's exit (FR-3, FR-4.1, AD-28.1)", async () => {
+xaravelTest("XT-conformance-202", "run --scope grades only the scope's Components, none runs no harness, full and no scope run in full; story runs the Story's test_ids in full and exits on the Ratchet's verdict (FR-3, FR-4.1, AD-28.1)", async () => {
   const manifest = (id: string, testIds: string[]): string =>
     `---\nstory_id: "${id}"\nepic: ${id.split(".")[0]}\ncomponent: support\nstatus: in-progress\ntest_ids:${testIds.length === 0 ? ' []\nxaravel_test_ids:\n  - "XT-conformance-999"' : `\n${testIds.map((t) => `  - ${JSON.stringify(t)}`).join("\n")}`}\n---\n\n# Story ${id}\n`;
   const CLASS = "Illuminate\\Tests\\Support\\SupportCiTest";
@@ -331,22 +332,74 @@ xaravelTest("XT-conformance-202", "run --scope grades only the scope's Component
   expect(await runStoryTests(dir, "story/11.3")).toEqual({ code: 0, out: ["STORY ref=story/11.3 skipped: no test_ids"], err: [] });
   const missing = await runStoryTests(dir, "story/11.9");
   expect([missing.code, missing.err]).toEqual([1, ["ratchet story: stories/11.9.md does not exist"]]);
-  // The harness gets the Story ID, never a sample, and its exit is forwarded.
+  // The harness gets the Story ID, never a sample; a non-zero exit with no counted difference fails closed (ESC-5.9-2).
   const stories: string[] = [];
   const forwarded = await runStoryTests(dir, "story/11.2", {
+    env: await env(),
     harness: (_root, story) => {
       stories.push(story);
       return Promise.resolve(fakeHarness(1, ["X", "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=1"]));
     },
   });
   expect(stories).toEqual(["11.2"]);
-  expect(forwarded).toEqual({ code: 1, out: ["X", "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=1"], err: [] });
+  expect(forwarded).toEqual({
+    code: 1,
+    out: ["X", "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=1", "UNEXPECTED-FAILURE harness exited 1 with no counted difference", "STORY ref=story/11.2 failures=1 passes=0 warnings=0"],
+    err: [],
+  });
+  // The verdict is the Ratchet's, classified as `run` classifies: unexpected passes on lines the Story may not edit
+  // (another open Story's A, nobody's C) are warnings and exit 0 although the harness exited 1.
+  const unexpectedPass = (id: string): Difference => ({ id, variant: "none", kind: "unexpected-pass", text: `UNEXPECTED-PASS ${id} [none] expected=fail-known actual=pass asserts=1/1`, detail: null });
+  const differ2 = "SUMMARY variants=1 run=1 not-run=0 checked=2 differ=2";
+  const warned = await runStoryTests(dir, "story/11.2", { env: await env({ GITHUB_ACTIONS: "true" }), harness: () => Promise.resolve(fakeHarness(1, [differ2], [unexpectedPass(A), unexpectedPass(C)])) });
+  expect(warned).toEqual({
+    code: 0,
+    out: [
+      differ2,
+      `WARNING UNEXPECTED-PASS ${A} [none] expected=fail-known actual=pass asserts=1/1 (owned by open Story 11.1; fails that Story's next run)`,
+      `::warning::WARNING UNEXPECTED-PASS ${A} [none] expected=fail-known actual=pass asserts=1/1 (owned by open Story 11.1; fails that Story's next run)`,
+      `WARNING UNEXPECTED-PASS ${C} [none] expected=fail-known actual=pass asserts=1/1 (owned by no open Story)`,
+      `::warning::WARNING UNEXPECTED-PASS ${C} [none] expected=fail-known actual=pass asserts=1/1 (owned by no open Story)`,
+      "STORY ref=story/11.2 failures=0 passes=0 warnings=2",
+    ],
+    err: [],
+  });
+  // An unexpected pass the ref's own open Story owns, and any failure, fail it.
+  const own = await runStoryTests(dir, "story/11.2", {
+    env: await env(),
+    harness: () => Promise.resolve(fakeHarness(1, [differ2], [unexpectedPass(B), { id: C, variant: "none", kind: "unexpected-failure", text: `FAIL ${C} [none] expected=pass actual=fail asserts=1/1`, detail: null }])),
+  });
+  expect(own).toEqual({
+    code: 1,
+    out: [differ2, `UNEXPECTED-PASS ${B} [none] expected=fail-known actual=pass asserts=1/1`, `UNEXPECTED-FAILURE FAIL ${C} [none] expected=pass actual=fail asserts=1/1`, "STORY ref=story/11.2 failures=1 passes=1 warnings=0"],
+    err: [],
+  });
+  // Unreadable manifests fail closed before the harness runs, with no STORY line.
+  const badRoot = makeRoot({ "stories/11.2.md": manifest("11.2", [B]), "stories/11.4.md": "not a manifest\n" }, true);
+  let called = false;
+  const badManifests = await runStoryTests(badRoot, "story/11.2", {
+    env: await env(),
+    harness: () => {
+      called = true;
+      return Promise.resolve(fakeHarness(0));
+    },
+  });
+  expect(badManifests.code).toBe(1);
+  expect(badManifests.out.some((line) => line.startsWith("STORY ref="))).toBe(false);
+  expect(badManifests.err).toHaveLength(1);
+  expect(badManifests.err[0]).toStartWith("ratchet story: the Story manifests could not be read; failing closed: invalid manifest: stories/11.4.md");
+  expect(called).toBe(false);
+  // A precondition failure (no SUMMARY) fails closed with no STORY line.
+  const precondition = await runStoryTests(dir, "story/11.2", { env: await env(), harness: () => Promise.resolve(fakeHarness(1, ["ERROR no Variants"])) });
+  expect(precondition).toEqual({ code: 1, out: ["ERROR no Variants"], err: ["ratchet story: the harness failed a precondition before it compared anything; failing closed"] });
   // The real harness over the Story's test_ids: 11.1's A passes (exit 0); 11.2's B fails (exit 1); full mode, no sample.
   const ok = Bun.spawnSync([process.execPath, RATCHET, "story", "--root", dir, "--ref", "story/11.1"], { env: await env(), stdout: "pipe", stderr: "pipe" });
-  expect([ok.exitCode, ok.stdout.toString()]).toEqual([0, "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0\n"]);
+  expect([ok.exitCode, ok.stdout.toString()]).toEqual([0, "SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0\nSTORY ref=story/11.1 failures=0 passes=0 warnings=0\n"]);
   const failing = Bun.spawnSync([process.execPath, RATCHET, "story", "--root", dir, "--ref", "story/11.2"], { env: await env(), stdout: "pipe", stderr: "pipe" });
   expect(failing.exitCode).toBe(1);
-  expect(failing.stdout.toString()).toBe(`FAIL ${B} [none] expected=pass actual=fail asserts=1/1\nSUMMARY variants=1 run=1 not-run=0 checked=1 differ=1\n`);
+  expect(failing.stdout.toString()).toBe(
+    `FAIL ${B} [none] expected=pass actual=fail asserts=1/1\nSUMMARY variants=1 run=1 not-run=0 checked=1 differ=1\nUNEXPECTED-FAILURE FAIL ${B} [none] expected=pass actual=fail asserts=1/1\nSTORY ref=story/11.2 failures=1 passes=0 warnings=0\n`,
+  );
   const skipped = Bun.spawnSync([process.execPath, RATCHET, "story", "--root", dir, "--ref", "planning/x"], { stdout: "pipe", stderr: "pipe" });
   expect([skipped.exitCode, skipped.stdout.toString()]).toEqual([0, "STORY ref=planning/x skipped: not a Story ref\n"]);
 }, 120_000);
