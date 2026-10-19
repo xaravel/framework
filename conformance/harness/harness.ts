@@ -138,7 +138,7 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { UsageError, readVariants } from "../../tools/expectations/expectations";
 import { ALPHA_VARIANTS, compareUnits } from "../../tools/inventory/inventory";
-import { parseManifest } from "../../tools/ownership/ownership";
+import { coveringIds, parseManifest } from "../../tools/ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../../tools/pin-bump/pin-bump";
 import { backendFor, probe, type ProbeResult } from "./backends";
 import { compare, type Difference, type HarnessLine, type HarnessReport, type Result, type VariantRun } from "./compare";
@@ -419,7 +419,7 @@ function describeFilters(options: HarnessOptions): string {
   return parts.length === 0 ? "the Expectations File" : parts.join(" ");
 }
 
-/** The `test_ids` of `stories/<story>.md`; diagnoses those with no Expectations line. */
+/** The `test_ids` of `stories/<story>.md`; diagnoses those with no Expectations line, for themselves or a row `X#<key>`. */
 function storyIds(root: string, story: string, universe: ReadonlyMap<string, string>, err: string[]): string[] {
   const file = `stories/${story}.md`;
   const path = join(root, file);
@@ -433,7 +433,15 @@ function storyIds(root: string, story: string, universe: ReadonlyMap<string, str
   if (parsed.manifest.testIds.length === 0) {
     throw new PreconditionError(`${file} lists no test_ids`);
   }
-  const unknown = parsed.manifest.testIds.filter((id) => !universe.has(id));
+  // A listed `X` has a line when `X` or one of its rows `X#<key>` does (ownership's `covers`).
+  const listed = new Set(parsed.manifest.testIds);
+  const known = new Set<string>();
+  for (const id of universe.keys()) {
+    for (const covering of coveringIds(listed, id)) {
+      known.add(covering);
+    }
+  }
+  const unknown = parsed.manifest.testIds.filter((id) => !known.has(id));
   if (unknown.length > 0) {
     const shown = unknown.slice(0, 10).join(", ");
     err.push(`harness: ${file} lists ${unknown.length} Test ID(s) with no Expectations line: ${shown}${unknown.length > 10 ? ", …" : ""}`);

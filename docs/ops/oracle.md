@@ -265,7 +265,7 @@ Regenerate fixtures after a Pin bump or a change of the committed requests or of
 
 ## Per-Story requests (`bun run oracle:story`)
 
-The batch covers only the mechanically extracted Differential set. A Story that needs expected values for other inputs (an Xaravel Differential suite, a dataset the batch missed) commits `conformance/oracle-requests/<story-id>.jsonl` (FR-6, AD-15). It is one of the paths a Story may edit and is not Protected. Each line is a request in the [batch's format](#request-format), validated by the same schema; its `id` must be one of the Story's own `test_ids` or `xaravel_test_ids` (`stories/<story-id>.md`). Fidelity Review checks each request against Upstream: a request can make PHP compute anything, so the signature proves only that the Oracle computed it.
+The batch covers only the mechanically extracted Differential set. A Story that needs expected values for other inputs (an Xaravel Differential suite, a dataset the batch missed) commits `conformance/oracle-requests/<story-id>.jsonl` (FR-6, AD-15). It is one of the paths a Story may edit and is not Protected. Each line is a request in the [batch's format](#request-format), validated by the same schema; its `id` must be one of the Story's own `test_ids` or `xaravel_test_ids` (`stories/<story-id>.md`), or a row `X#<key>` of a listed `X`. Fidelity Review checks each request against Upstream: a request can make PHP compute anything, so the signature proves only that the Oracle computed it.
 
 ### Command and modes
 

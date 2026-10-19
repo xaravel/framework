@@ -14,16 +14,20 @@
 //   manifest       `stories/<id>.md` parses with no violation (`parseManifest`),
 //                  so a manifest with no assigned tests fails;
 //   tests          a full `--story` harness run (never fast): each Test ID ×
-//                  Variant line of the manifest's `test_ids` passes when its
-//                  status is `pass` and it does not differ, or when it is a
-//                  `skip` whose reason is not `not-ported-yet` and `checkLine`
-//                  accepts it. `fail-known`, `quarantined`, a difference, a
-//                  NOT-RUN Variant and an id with no Expectations line fail.
-//                  With no `test_ids` the clause passes as `none assigned`;
+//                  Variant line of the manifest's `test_ids` (a listed `X`
+//                  also takes its dataset rows `X#<key>`, as ownership's
+//                  `covers` does) passes when its status is `pass` and it
+//                  does not differ, or when it is a `skip` whose reason is
+//                  not `not-ported-yet` and `checkLine` accepts it.
+//                  `fail-known`, `quarantined`, a difference, a NOT-RUN
+//                  Variant and an id with no Expectations line for itself or
+//                  a row fail. With no `test_ids` the clause passes as
+//                  `none assigned`;
 //   xaravel-tests  every `xaravel_test_ids` entry passes in an Xaravel run
 //                  filtered to those ids (`--xaravel --id …`); a skip fails;
-//   fixtures       every assigned id (`test_ids` ∪ `xaravel_test_ids`) that is
-//                  the `id` of a committed request (tools/oracle/verify.ts's
+//   fixtures       every assigned id (`test_ids` ∪ `xaravel_test_ids`, and the
+//                  rows `X#<key>` of a listed `X`) that is the `id` of a
+//                  committed request (tools/oracle/verify.ts's
 //                  `committedRequests`), less the requests listed in
 //                  `conformance/oracle/nondeterminism.jsonl`, needs
 //                  `conformance/fixtures/<component>/<sha256>.json` that
@@ -63,7 +67,7 @@ import { checkLine, contextFor, type Context } from "../expectations/reasons";
 import { compareUnits } from "../inventory/inventory";
 import { FIXTURES_DIR, readNondeterminism, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
-import { parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { coveringIds, covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../pin-bump/pin-bump";
 import { GitHub } from "../protected-paths/protected-paths";
 
@@ -134,8 +138,8 @@ function harnessFailure(run: HarnessResult): string {
 }
 
 /**
- * `tests`: `run` is the full `--story` harness run, `lines` the Expectations lines of `testIds` (any Variant), and
- * `context` the Skip Reason rules' context.
+ * `tests`: `run` is the full `--story` harness run, `lines` the Expectations lines of `testIds` and of their rows
+ * `X#<key>` (any Variant), and `context` the Skip Reason rules' context.
  */
 export function testsClause(testIds: readonly string[], run: HarnessResult | null, lines: readonly AssignedLine[], context: Context | null): ClauseResult {
   if (testIds.length === 0) {
@@ -153,6 +157,8 @@ export function testsClause(testIds: readonly string[], run: HarnessResult | nul
     differing.set(`${difference.id}\n${difference.variant}`, difference.text);
   }
   const items: string[] = [];
+  const listed = new Set(testIds);
+  /** The listed ids that have a line: the id itself, or a row `X#<key>` of a listed `X` (ownership's `covers`). */
   const withLine = new Set<string>();
   let total = 0;
   for (const { line, at } of lines) {
@@ -160,7 +166,9 @@ export function testsClause(testIds: readonly string[], run: HarnessResult | nul
     const variant = String(line["variant"]);
     const status = String(line["status"]);
     const reason = typeof line["reason"] === "string" ? line["reason"] : null;
-    withLine.add(id);
+    for (const covering of coveringIds(listed, id)) {
+      withLine.add(covering);
+    }
     total++;
     const key = `${id}\n${variant}`;
     const result = results.get(key);
@@ -244,7 +252,7 @@ export interface FixturesInput {
 export function fixturesClause(input: FixturesInput): ClauseResult {
   const assigned = new Set(input.assigned);
   const due = [...input.requests]
-    .filter(([sha256, request]) => assigned.has(request.id) && !input.listed.has(sha256))
+    .filter(([sha256, request]) => covers(assigned, request.id) && !input.listed.has(sha256))
     .sort(([a, x], [b, y]) => compareUnits(x.id, y.id) || compareUnits(a, b));
   if (due.length === 0) {
     return pass("fixtures", "no assigned Differential Test ID");
@@ -505,13 +513,13 @@ function parseArgs(argv: readonly string[]): { storyId: string; pr: number | nul
   return { storyId, pr, root };
 }
 
-/** The Expectations lines of `ids`, with their `<shard>:<line>`. */
+/** The Expectations lines of `ids` (a listed `X` also takes its rows `X#<key>`), with their `<shard>:<line>`. */
 function assignedLines(root: string, ids: readonly string[]): AssignedLine[] {
   const wanted = new Set(ids);
   const out: AssignedLine[] = [];
   for (const shard of readExpectations(root)) {
     shard.lines.forEach((line, index) => {
-      if (wanted.has(String(line["id"]))) {
+      if (covers(wanted, String(line["id"]))) {
         out.push({ line, at: `${shard.path}:${index + 1}` });
       }
     });

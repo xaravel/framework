@@ -554,17 +554,28 @@ export function contentReads(headRef: string, files: readonly PrFile[]): Content
   return [...reads.values()];
 }
 
-/** Whether `ids` (a Test ID list) covers `id`: it lists `id`, or `X` where `id` is a row `X#<key>` (Story 5.6). */
-export function covers(ids: ReadonlySet<string>, id: string): boolean {
+/**
+ * The entries of `ids` (a Test ID list) that cover `id`: `id` itself, and each `X` where `id` is a row `X#<key>`
+ * (Story 5.6). The one Test ID matcher: ownership, the Ratchet, `harness --story`, `story:check` and `oracle:story`
+ * all use it.
+ */
+export function coveringIds(ids: ReadonlySet<string>, id: string): string[] {
+  const out: string[] = [];
   if (ids.has(id)) {
-    return true;
+    out.push(id);
   }
   for (let i = id.indexOf("#"); i !== -1; i = id.indexOf("#", i + 1)) {
-    if (ids.has(id.slice(0, i))) {
-      return true;
+    const prefix = id.slice(0, i);
+    if (ids.has(prefix)) {
+      out.push(prefix);
     }
   }
-  return false;
+  return out;
+}
+
+/** Whether `ids` (a Test ID list) covers `id`: it lists `id`, or `X` where `id` is a row `X#<key>` (Story 5.6). */
+export function covers(ids: ReadonlySet<string>, id: string): boolean {
+  return coveringIds(ids, id).length > 0;
 }
 
 /** Whether `ids` covers the `portedTest` block `id`: it lists `id` or one of its rows `id#<key>`. */
