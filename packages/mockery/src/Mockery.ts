@@ -16,6 +16,14 @@
 // and the error is rethrown; when it resolves, `Mockery.close()` runs.
 // `close()` called outside a run closes the process slot as before.
 //
+// Loading installs both globals non-writable and non-configurable. If either
+// symbol already holds a property that is not this evaluation's own value, the
+// load throws `LogicException` naming it and installs neither (Epic 4 retro
+// R4): a foreign `run` would otherwise turn off every verification silently.
+// The own-value check is per evaluation, so a second copy of the module throws
+// too: two copies keep separate containers, and the run protocol could not
+// verify the second copy's mocks.
+//
 // `close()` records one `mockeryExpectation` assertion per
 // call-count-constrained expectation (`mockery_getExpectationCount()`, which
 // PHPUnit adds to its assertion count), detaches the container, then verifies
@@ -190,12 +198,30 @@ async function run<T>(fn: () => T | Promise<T>): Promise<T> {
   return result;
 }
 
-function install(key: symbol, value: unknown): void {
-  if (Object.getOwnPropertyDescriptor(globalThis, key) !== undefined) {
-    return;
+const mockGlobal = Object.freeze((...args: unknown[]): MockObject => (Mockery.mock as (...args: unknown[]) => MockObject)(...args));
+const runGlobal = Object.freeze(run);
+
+// Checks both slots before defining either, so a conflict on one never leaves
+// the other half-installed. A slot holding this evaluation's own value is left
+// as is; any other property there, whatever its value, throws (R4), including
+// one a second copy of this module installed.
+function installAll(globals: ReadonlyArray<readonly [string, unknown]>): void {
+  const missing: Array<readonly [symbol, unknown]> = [];
+  for (const [name, value] of globals) {
+    const key = Symbol.for(name);
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
+    if (descriptor === undefined) {
+      missing.push([key, value]);
+    } else if (!("value" in descriptor) || descriptor.value !== value) {
+      throw new LogicException(`Symbol.for('${name}') was already defined by other code or another copy of @xaravel/mockery; @xaravel/mockery will not install over it`);
+    }
   }
-  Object.defineProperty(globalThis, key, { value, writable: false, configurable: false, enumerable: false });
+  for (const [key, value] of missing) {
+    Object.defineProperty(globalThis, key, { value, writable: false, configurable: false, enumerable: false });
+  }
 }
 
-install(Symbol.for("xaravel.mockery.mock"), Object.freeze((...args: unknown[]): MockObject => (Mockery.mock as (...args: unknown[]) => MockObject)(...args)));
-install(Symbol.for("xaravel.mockery.run"), Object.freeze(run));
+installAll([
+  ["xaravel.mockery.mock", mockGlobal],
+  ["xaravel.mockery.run", runGlobal],
+]);
