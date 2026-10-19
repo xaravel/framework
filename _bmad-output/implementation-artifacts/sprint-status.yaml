@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 15:13
+last_updated: 10-19-2026 15:25
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1064,7 +1064,7 @@ action_items:
       verify/apply to accept exactly that actor on that ruleset, and update identities.md
       and bots.md; the Maintainer applies it at the Epic 8 checkpoint (ruling ESC-5.8-1)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/ESC-5.8-1.md"
   - id: "epic-5-retro-item-17-pin-bump-sort"
     epic: 5
