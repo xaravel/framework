@@ -1,0 +1,10 @@
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it adds table prefix to queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it allows queries starting with any allowed keyword even when identifiers look like SQL keywords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it allows read-only queries containing write keyword look-alikes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it blocks destructive queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it blocks extended destructive keywords for mysql postgres and sqlite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it blocks write operations disguised as read-only queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it executes allowed read-only queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it handles empty queries gracefully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it only treats backslashes as escapes on mysql#('mysql', 'SELECT 'a\\' AS x, 'b' AS y FR…' AS z')","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/DatabaseQueryTest.php::it only treats backslashes as escapes on mysql#('pgsql', 'SELECT 'a\\' AS x, 'b' AS y FR…' AS z')","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

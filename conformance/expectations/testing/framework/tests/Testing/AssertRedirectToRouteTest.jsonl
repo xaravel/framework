@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToRouteTest::testAssertRedirectToRouteWithRouteName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToRouteTest::testAssertRedirectToRouteWithRouteNameAndParams","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToRouteTest::testAssertRedirectToRouteWithRouteNameAndParamsWhenRouteUriIsEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

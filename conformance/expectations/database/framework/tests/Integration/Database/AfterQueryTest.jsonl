@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryHookOnBelongsToManyRelationship","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryHookOnHasManyThroughRelationship","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryKeyByOnEagerBelongsToManyRelationship","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnBaseBuilder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnBaseBuilderCanAlterReturnedResult","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnBaseBuilderCursor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnBaseBuilderPluck","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnEloquentBuilder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnEloquentBuilderCanAlterReturnedResult","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnEloquentCursor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\AfterQueryTest::testAfterQueryOnEloquentPluck","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearLocksCannotBeUsedWithTags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearLocksWillFailWhenFlushLocksFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearLocksWillFailWhenNotSupportedByStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearLocksWithNoStoreArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearLocksWithStoreArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWillClearRealTimeFacades","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWillNotClearRealTimeFacadesIfCacheDirectoryDoesntExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWithInvalidStoreArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWithNoStoreArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWithStoreArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWithStoreArgumentAndTagsOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\ClearCommandTest::testClearWithTagsOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

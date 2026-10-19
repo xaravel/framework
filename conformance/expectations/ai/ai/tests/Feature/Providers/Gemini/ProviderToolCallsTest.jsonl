@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Gemini/ProviderToolCallsTest.php::code execution steps land on the step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ProviderToolCallsTest.php::google search steps are reported as provider tool calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

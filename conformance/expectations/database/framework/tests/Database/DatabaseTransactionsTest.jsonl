@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testNestedTransactionIsRecordeForDifferentConnectionsdAndCommitted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testNestedTransactionIsRecordedAndCommitted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testNestedTransactionsAreRolledBack","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testTransactionIsRecordedAndCommitted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testTransactionIsRecordedAndCommittedUsingTheSeparateMethods","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testTransactionIsRolledBack","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseTransactionsTest::testTransactionIsRolledBackUsingSeparateMethods","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

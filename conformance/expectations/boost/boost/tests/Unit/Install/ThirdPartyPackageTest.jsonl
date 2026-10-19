@@ -1,0 +1,12 @@
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it creates a package with all properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it discovers third-party packages from both ecosystems and excludes first-party ones","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it ignores packages that are not installed on disk","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it ignores packages without a resources/boost directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it ignores transitive dependencies so an indirect package cannot inject guidelines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct display label#dataset \"both features\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct display label#dataset \"guidelines only\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct display label#dataset \"skills only\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct feature label#dataset \"both features\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct feature label#dataset \"guidelines only\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct feature label#dataset \"no features\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/ThirdPartyPackageTest.php::it returns correct feature label#dataset \"skills only\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

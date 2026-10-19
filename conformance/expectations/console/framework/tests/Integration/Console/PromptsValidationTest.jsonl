@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsValidationTest::testValidationForPrompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsValidationTest::testValidationWithLaravelRulesAndNoCustomization","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsValidationTest::testValidationWithLaravelRulesInlineMessagesAndAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\PromptsValidationTest::testValidationWithLaravelRulesMessagesAndAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

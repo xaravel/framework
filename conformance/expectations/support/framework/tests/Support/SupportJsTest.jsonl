@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testArrayable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testBackedEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testHtmlable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testJsonSerializable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testJsonable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testObjects","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportJsTest::testScalars","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

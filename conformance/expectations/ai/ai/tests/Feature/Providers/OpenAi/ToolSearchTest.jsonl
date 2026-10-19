@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolSearchTest.php::an agent whose only tool is an empty ToolSearch omits the tool fields","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolSearchTest.php::an agent with a ToolSearch tool emits a tool_search entry and defers its nested tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ToolSearchTest.php::rejects a ToolSearch tool when response storage is disabled","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

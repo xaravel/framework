@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testConcurrentlyCommandNoRestartFromFlagOrConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testConcurrentlyCommandRestartsByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testConcurrentlyCommandTimestampsFromFlagOrConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandBufferSizes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandDefaultsToTabs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandJsonFlag","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandKeepsColonsInLabels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandModeFlagOverridesConfiguredMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandModeFlags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandNoRestartFromFlagOrConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandTimestampsFromFlagOrConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandUsesAppNameInTitleWhenSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\DevCommandTest::testMultiplexCommandUsesConfiguredModeWhenNoFlagGiven","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EloquentModelConnectionsTest::testChildObeysParentConnection","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EloquentModelConnectionsTest::testChildUsesItsOwnConnectionIfSet","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Sqlite\\EloquentModelConnectionsTest::testChildUsesItsOwnConnectionIfSetEvenIfParentExplicitConnection","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

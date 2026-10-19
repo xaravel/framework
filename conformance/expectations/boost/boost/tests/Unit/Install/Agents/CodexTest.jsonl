@@ -1,0 +1,19 @@
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::builds MCP server config with config \"boost.executable_paths.current_directory\" override","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::builds MCP server config with env when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::builds MCP server config without cwd by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::detectInProject returns false when only AGENTS.md exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::filters empty values from server config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::httpMcpServerConfig returns npx mcp-remote config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::includes config.toml in project detection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::installMcp creates TOML config file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::projectDetectionConfig only uses .codex dir and config.toml","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct MCP config key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct MCP config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct display name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct guidelines path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::returns correct skills path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::system detection uses where command on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::system detection uses which command on Darwin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::system detection uses which command on Linux","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/CodexTest.php::uses FILE-based MCP installation strategy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

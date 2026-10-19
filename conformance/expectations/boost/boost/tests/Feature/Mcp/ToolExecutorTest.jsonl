@@ -1,0 +1,13 @@
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::buildCommand falls back to PHP_BINARY when the configured path is blank#dataset \"empty string\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::buildCommand falls back to PHP_BINARY when the configured path is blank#dataset \"false\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::buildCommand preserves absolute paths with spaces","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::buildCommand splits multi-token wrapper commands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::buildCommand uses PHP_BINARY when no config is set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::can execute tool in subprocess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::clamps timeout values correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::output buffering discards stray stdout during tool execution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::rejects unregistered tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::resolves timeout from argument, then config, then default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::respects custom timeout parameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::subprocess proves fresh process isolation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolExecutorTest.php::subprocess sees modified autoloaded code changes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

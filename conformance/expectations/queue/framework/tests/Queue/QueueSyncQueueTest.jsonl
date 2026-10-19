@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testCreatesPayloadObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testFailedJobGetsHandledWhenAnExceptionIsThrown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testFailedJobHasAccessToJobInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testItAddsATransactionCallbackForAfterCommitJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testItAddsATransactionCallbackForAfterCommitUniqueJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testItAddsATransactionCallbackForInterfaceBasedAfterCommitJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testItAddsATransactionCallbackForInterfaceBasedAfterCommitUniqueJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueSyncQueueTest::testPushShouldFireJobInstantly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

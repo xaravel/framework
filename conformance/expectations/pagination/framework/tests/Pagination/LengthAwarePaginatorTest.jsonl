@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testItRetrievesThePaginatorOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorCanGenerateUrls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorCanGenerateUrlsWithQuery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorCanGenerateUrlsWithoutTrailingSlashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorCanGiveMeRelevantPageInformation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorCorrectlyGenerateUrlsWithQueryAndSpaces","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorDoesNotDivideByZeroWhenPerPageIsZero","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorGetAndSetPageName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorOnFirstAndLastPage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Pagination\\LengthAwarePaginatorTest::testLengthAwarePaginatorSetCorrectInformationWithNoItems","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

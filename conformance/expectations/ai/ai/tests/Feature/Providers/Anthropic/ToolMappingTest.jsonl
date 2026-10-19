@@ -1,0 +1,14 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::code execution tool sends dated type and name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::empty schema still includes input schema with type object","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::tool parameters are not wrapped in schema definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool forwards a custom max_uses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool forwards provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool omits max_uses when none is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool result skips citations for a failed fetch","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool result surfaces the fetched url as a citation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web fetch tool sends allowed_domains","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web search tool forwards anthropic provider options into the tool payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web search tool omits user_location when no location set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web search tool sends allowed_domains","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Anthropic/ToolMappingTest.php::web search tool sends user_location when location is set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

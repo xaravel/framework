@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testConditionalRulesCanBeAddedToForEachWithAssociativeArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testConditionalRulesCanBeAddedToForEachWithList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testConditionalRulesCanBeAddedToForEachWithObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanBeRecursivelyNested","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanContainMultipleRegexRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanProperlySegmentRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanReturnArraysOfValidationRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanReturnDifferentRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksCanReturnMultipleValidationRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachCallbacksDoNotBreakRegexRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachRulesAreAppliedToEmptyKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationForEachTest::testForEachWithEmptyAndNullValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

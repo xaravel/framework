@@ -1,0 +1,7 @@
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage add keeps a detail null only when neither side reported it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage add sums every count","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage defaults to zero tokens and unreported details","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage derives totals from the inclusive input and output counts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage from array restores what to array serialized","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage to array serializes every count","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TextUsageTest.php::usage treats unreported cache counts as zero when deriving the uncached input","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

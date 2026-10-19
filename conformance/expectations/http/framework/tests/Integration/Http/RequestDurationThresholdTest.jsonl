@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItCanExceedThresholdWhenSpecifyingDurationAsDateTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItCanExceedThresholdWhenSpecifyingDurationAsMilliseconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItCanHandleExceedingRequestDuration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItCanStayUnderThresholdWhenSpecifyingDurationAsDateTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItCanStayUnderThresholdWhenSpecifyingDurationAsMilliseconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItClearsStartTimeAfterHandlingRequest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItDoesntCallWhenExactlyThresholdDuration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItHandlesCallingTerminateWithoutHandle","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testItProvidesRequestToHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\RequestDurationThresholdTest::testUsesTheConfiguredDateTimezone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"boost/tests/Unit/Support/RenderFailuresTest.php::does not attribute a package to files outside the vendor directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/RenderFailuresTest.php::handles windows separators when attributing a package","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/RenderFailuresTest.php::records a failure against the vendor package that shipped the file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/RenderFailuresTest.php::records each file once and reports every failing package","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

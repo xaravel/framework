@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeIfAuthStatementsTest::testIfStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeIfAuthStatementsTest::testPlainIfStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

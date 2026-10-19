@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionErrorBagOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionErrorOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionErrorZeroErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionGetResponseOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionRedirectToOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionStatusOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionSummarizesOneError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionSummarizesThreeOrMoreErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionSummarizesTwoErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionSummarizesZeroErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionTranslatedSummarizesFiveOrMoreErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionTranslatedSummarizesThreeOrMoreErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testExceptionTranslatedSummarizesTwoErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExceptionTest::testGetExceptionClassFromValidator","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

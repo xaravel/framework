@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testAddingExtensionPrependsNotAppends","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testAddingExtensionsReplacesOldOnes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testBasicViewFinding","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testCascadingFileLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testCascadingNamespacedFileLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testDirectoryCascadingFileLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testDirectoryCascadingNamespacedFileLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testExceptionThrownOnInvalidViewName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testExceptionThrownWhenNoHintPathIsRegistered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testExceptionThrownWhenViewNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testNamespacedBasicFileLoading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testNormalizedPaths#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testPassingViewWithFalseHintReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testPassingViewWithHintReturnsTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewFileViewFinderTest::testPassingViewWithoutHintReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

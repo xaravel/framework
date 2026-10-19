@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Responses/Data/TranscriptionSegmentTest.php::transcription segment json serialize returns to array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TranscriptionSegmentTest.php::transcription segment stores text speaker and timestamps","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TranscriptionSegmentTest.php::transcription segment to array returns all properties","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

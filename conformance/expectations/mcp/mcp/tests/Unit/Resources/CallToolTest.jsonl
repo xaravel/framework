@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Resources/CallToolTest.php::it may resolve dependencies out of the container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/CallToolTest.php::it returns a valid call tool response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/CallToolTest.php::it returns a valid call tool response that contains two messages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/CallToolTest.php::it returns a valid call tool response with validation error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

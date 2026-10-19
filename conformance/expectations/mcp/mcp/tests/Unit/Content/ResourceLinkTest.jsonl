@@ -1,0 +1,10 @@
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it casts to string as the URI","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it converts to array with required fields","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it includes all spec-defined fields when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it includes annotations when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it includes icons when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it may be used in tools and prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it may not be used in resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it omits icons key when none are provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it omits optional fields when null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/ResourceLinkTest.php::it supports meta via setMeta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

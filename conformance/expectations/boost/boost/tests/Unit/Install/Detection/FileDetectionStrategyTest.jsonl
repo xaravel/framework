@@ -1,0 +1,10 @@
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::detects existing file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::detects files in subdirectories","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::detects files with special characters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::detects multiple files first exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::detects multiple files second exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::fails for non existent file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::fails when no files exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::handles empty files array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::returns false when no files config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/FileDetectionStrategyTest.php::uses current directory when no base path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

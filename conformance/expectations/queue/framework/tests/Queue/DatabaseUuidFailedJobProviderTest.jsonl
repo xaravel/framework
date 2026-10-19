@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testFindingFailedJobsById","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testGettingAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testGettingIdsOfAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testJobsCanBeCounted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testJobsCanBeCountedByConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testJobsCanBeCountedByQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testJobsCanBeCountedByQueueAndConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testPruningFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testPruningFailedJobsWithRelativeHoursAndMinutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testRemovingAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseUuidFailedJobProviderTest::testRemovingJobsById","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

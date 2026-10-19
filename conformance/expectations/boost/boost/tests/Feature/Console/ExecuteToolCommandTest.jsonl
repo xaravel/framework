@@ -1,0 +1,6 @@
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it catches tool exceptions and outputs error JSON with failure exit code","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it exits with error when decoded arguments contain invalid JSON","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it exits with error when the tool class is not in the registry","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it exits with error when the tool is in the exclude config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it outputs JSON with isError false on successful tool execution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ExecuteToolCommandTest.php::it outputs JSON with isError true when the tool returns an error response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

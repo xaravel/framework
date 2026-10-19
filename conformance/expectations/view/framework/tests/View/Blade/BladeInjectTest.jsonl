@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeInjectTest::testDependenciesAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeInjectTest::testDependenciesAreCompiledWithDoubleQuotes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeInjectTest::testDependenciesInjectedAsStringsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeInjectTest::testDependenciesInjectedAsStringsAreCompiledWhenInjectedWithDoubleQuotes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

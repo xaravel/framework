@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testGetMultipleReturnsMultipleNulls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testHasSeparateLockStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testIncrementAndDecrementReturnFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testItemsCanNotBeCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testLocksCanBeFlushed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheNullStoreTest::testTouchReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

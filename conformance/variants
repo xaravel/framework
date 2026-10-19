@@ -1,0 +1,28 @@
+# The closed Backend Variant vocabulary (Story 5.1, FR-3, AD-15; decisions/ESC-5.1-1.md).
+#
+# Every Expectations line's `variant` and every Inventory `backends` value must
+# be listed here; `bun run expectations:init` and `bun run expectations:check`
+# fail on anything else. A Test ID's Variants are exactly its Inventory
+# `backends`. Besides the alpha Variants and the AC's examples, this lists the
+# post-alpha backends the Inventory already tags (`mariadb`, `mysql`, `sqlsrv`,
+# `queue-beanstalkd@beanstalkd`), per ESC-5.1-1, so the denominator stays full.
+# Which Variants are alpha is defined by PRD SM-1 and AD-28, not here.
+#
+# Format: UTF-8, LF, one Variant per line, sorted by UTF-16 code units and
+# unique. Lines starting with `#` and blank lines are ignored. A Variant is
+# `<backend>` (`^[a-z0-9]+$`) or `<driver>@<backend>`
+# (`^[a-z0-9]+(-[a-z0-9]+)*@[a-z0-9]+$`).
+
+mariadb
+mysql
+none
+pgsql
+queue-beanstalkd@beanstalkd
+queue-database@pgsql
+queue-database@sqlite
+queue-redis@redis
+queue-sync@none
+redis
+session-redis@redis
+sqlite
+sqlsrv

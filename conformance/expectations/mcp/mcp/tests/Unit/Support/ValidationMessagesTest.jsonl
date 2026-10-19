@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Unit/Support/ValidationMessagesTest.php::implodes all messages a single one","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/ValidationMessagesTest.php::returns a generic message if no messages are available","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Ollama/ReasoningTest.php::prompt reads the thinking off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/ReasoningTest.php::streaming emits reasoning events before the text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

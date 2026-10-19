@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/OpenRouter/BaseUrlTest.php::openrouter file requests ignore an in-region base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/BaseUrlTest.php::openrouter requests fall back to the default base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/BaseUrlTest.php::openrouter text requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

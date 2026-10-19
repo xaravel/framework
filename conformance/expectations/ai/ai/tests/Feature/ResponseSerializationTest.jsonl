@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/ResponseSerializationTest.php::serialization preserves private properties declared on step subclasses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ResponseSerializationTest.php::serialization preserves private properties declared on text response subclasses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

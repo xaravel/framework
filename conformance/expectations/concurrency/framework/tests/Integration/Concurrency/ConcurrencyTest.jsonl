@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testContextIsPropagatedToConcurrentProcesses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testContextIsPropagatedToDeferredConcurrentProcesses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testDriverCanBeResolvedUsingBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testOutputIsMappedToArrayInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testProcessDriverRunMayUseCustomTimeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorCode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithCustomExceptionWithParam","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithCustomExceptionWithoutParam","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithDefaultExceptionWithoutParam","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithFalseyParam#empty string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithFalseyParam#false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunHandlerProcessErrorWithFalseyParam#zero","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunPreservesCallbackOrder#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testRunPreservesCallbackOrder#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\ConcurrencyTest::testWorkCanBeDistributed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

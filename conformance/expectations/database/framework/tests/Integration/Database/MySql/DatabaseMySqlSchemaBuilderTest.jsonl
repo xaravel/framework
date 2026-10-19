@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseMySqlSchemaBuilderTest::testAddCommentToTable","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\DatabaseMySqlSchemaBuilderTest::testGetRawIndex","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

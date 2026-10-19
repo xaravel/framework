@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testAttributeParentInheritance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testDataExposure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testIgnoredMethodsAreNotExposedToViewData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testItIgnoresExceptedMethodsAndProperties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testMethodsOverridePropertyValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testPublicMethodsWithNoArgsAreConvertedToStringableCallablesInvokedAndNotCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewComponentTest::testSlotAttributeParentInheritance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

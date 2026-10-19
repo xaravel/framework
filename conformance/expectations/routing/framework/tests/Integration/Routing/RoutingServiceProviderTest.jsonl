@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RoutingServiceProviderTest::testResolvingPsrRequest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RoutingServiceProviderTest::testResolvingPsrResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

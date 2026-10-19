@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testAction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testAwayDoesntValidateTheUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testBackRedirectToHttpReferer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testBasicRedirectTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testComplexRedirectTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testGuestPutCurrentUrlInSession","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testGuestPutPreviousUrlInSession","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testIntendedRedirectToIntendedUrlInSession","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testIntendedWithoutIntendedUrlInSession","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testItSetsAndGetsValidIntendedUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testRefreshRedirectToCurrentUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testSecureRedirectToHttpsUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testSignedRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Routing\\RoutingRedirectorTest::testTemporarySignedRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

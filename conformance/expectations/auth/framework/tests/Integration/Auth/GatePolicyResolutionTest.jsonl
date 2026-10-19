@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testGateEvaluationEventIsFired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testGuessedPolicyTakesPrecedenceOverInheritedAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyCanBeGivenByAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyCanBeGuessedForParallelClassHierarchies","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyCanBeGuessedMultipleTimes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyCanBeGuessedUsingCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyCanBeGuessedUsingClassConventions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyGivenByAttributeIsInheritedByChildClasses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testPolicyGivenByAttributeOnChildClassOverridesParentAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\GatePolicyResolutionTest::testRegisteredPolicyTakesPrecedenceOverInheritedAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

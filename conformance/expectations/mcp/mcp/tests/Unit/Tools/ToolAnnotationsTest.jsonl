@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Tools/ToolAnnotationsTest.php::it accepts multiple tool annotations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolAnnotationsTest.php::it accepts valid tool annotations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolAnnotationsTest.php::it rejects priority annotation on tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/ToolAnnotationsTest.php::it rejects resource annotations on tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

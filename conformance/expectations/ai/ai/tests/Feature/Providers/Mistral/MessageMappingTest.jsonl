@@ -1,0 +1,14 @@
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::assistant message with tool calls maps correctly","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::base64 document maps to an inline document url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::base64 image attachment maps to data uri","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::document without a name or mime type falls back to a pdf data uri","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::image attachment maps to image url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::local document maps to an inline document url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::local image attachment without explicit mime type detects mime from file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::remote document maps to document url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::stored document maps to an inline document url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::system instructions are in messages array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::unsupported attachment type throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::uploaded avif image maps to an image url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::uploaded document maps to an inline document url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/MessageMappingTest.php::user message maps to chat format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

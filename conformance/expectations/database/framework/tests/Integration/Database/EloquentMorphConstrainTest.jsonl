@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphConstrainTest\\EloquentMorphConstrainTest::testMorphConstraints","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphConstrainTest\\EloquentMorphConstrainTest::testMorphConstraintsWithMorphMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

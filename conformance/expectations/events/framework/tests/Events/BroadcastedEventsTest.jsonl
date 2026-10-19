@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testBroadcastWithCustomConnectionName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testBroadcastWithCustomEventName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testBroadcastWithCustomPayload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testBroadcastWithMultipleChannels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testEventBroadcastsUsingNamedArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testShouldBroadcastAsQueuedAndCallNormalListeners","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testShouldBroadcastFail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Events\\BroadcastedEventsTest::testShouldBroadcastSuccess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

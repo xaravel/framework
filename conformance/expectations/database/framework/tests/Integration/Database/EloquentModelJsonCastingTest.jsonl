@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelJsonCastingTest\\EloquentModelJsonCastingTest::testArraysAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelJsonCastingTest\\EloquentModelJsonCastingTest::testCollectionsAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelJsonCastingTest\\EloquentModelJsonCastingTest::testObjectsAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelJsonCastingTest\\EloquentModelJsonCastingTest::testStringsAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

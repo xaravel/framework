@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Ui/CspTest.php::it implements Arrayable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/CspTest.php::it serializes all domain types","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/CspTest.php::it serializes as empty when no domains set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/CspTest.php::it serializes connect domains","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/CspTest.php::it supports constructor parameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

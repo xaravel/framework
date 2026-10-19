@@ -1,0 +1,35 @@
+{"id":"ai/tests/Integration/FileTest.php::can delete files#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can delete files#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can delete files#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can delete files#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can delete files#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can get files#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can get files#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can get files#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can get files#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can get files#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from local paths#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from local paths#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from local paths#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from local paths#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from local paths#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from remote paths#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from remote paths#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from remote paths#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from remote paths#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from remote paths#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from storage paths#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from storage paths#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from storage paths#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from storage paths#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files from storage paths#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::can store files#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::exception is thrown if stored file does not exist#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::exception is thrown if stored file does not exist#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::exception is thrown if stored file does not exist#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::exception is thrown if stored file does not exist#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/FileTest.php::exception is thrown if stored file does not exist#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

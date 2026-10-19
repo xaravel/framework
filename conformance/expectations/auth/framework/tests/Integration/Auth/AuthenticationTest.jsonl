@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testAuthViaAttemptRemembering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testBasicAuthFailsOnWrongCredentials","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testBasicAuthPassesOnCorrectCredentials","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testBasicAuthProtectsRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testBasicAuthRespectsAdditionalConditions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testDispatcherChangesIfThereIsOneOnTheAuthGuard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testDispatcherChangesIfThereIsOneOnTheCustomAuthGuard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testHasNoProblemIfThereIsNoDispatchingTheAuthCustomGuard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingInFailsViaAttempt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingInOutCurrentDeviceViaRemembering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingInOutViaAttemptRemembering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingInSucceedsViaAttempt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingInUsingId","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingOut","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testLoggingOutOtherDevices","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\AuthenticationTest::testPasswordMustBeValidToLogOutOtherDevices","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

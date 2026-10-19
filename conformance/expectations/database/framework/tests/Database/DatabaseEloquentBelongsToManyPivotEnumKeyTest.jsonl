@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyPivotEnumKeyTest::testSyncAcceptsBackedEnumIds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyPivotEnumKeyTest::testToggleAcceptsBackedEnumIds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

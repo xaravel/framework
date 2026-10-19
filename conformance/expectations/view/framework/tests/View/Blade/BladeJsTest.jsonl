@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeJsTest::testEncodingDepthCanBeSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeJsTest::testJsonFlagsCanBeSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeJsTest::testStatementIsCompiledWithoutAnyOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/Groq/ReasoningTest.php::no reasoning format is sent unless the caller asks for one","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ReasoningTest.php::prompt reads the parsed reasoning off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ReasoningTest.php::streaming emits reasoning events before the text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ReasoningTest.php::the reasoning format can be set with provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

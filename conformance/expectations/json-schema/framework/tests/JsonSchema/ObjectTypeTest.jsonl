@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_be_initialized_with_a_closure_but_may_have_properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_be_initialized_with_a_closure_but_without_properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_disable_additional_properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_have_properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_not_have_properties","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_it_may_set_enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\ObjectTypeTest::test_numeric_string_property_names_remain_strings_in_required_array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

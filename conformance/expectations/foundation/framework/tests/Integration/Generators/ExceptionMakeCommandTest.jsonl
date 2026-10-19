@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ExceptionMakeCommandTest::testItCanGenerateExceptionFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ExceptionMakeCommandTest::testItCanGenerateExceptionFileWithRenderOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ExceptionMakeCommandTest::testItCanGenerateExceptionFileWithReportAndRenderOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ExceptionMakeCommandTest::testItCanGenerateExceptionFileWithReportOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

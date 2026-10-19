@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotRegisteredTest.php::it may assert that resource is not registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Resources/AssertNotRegisteredTest.php::it may fail to assert that resource is not registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

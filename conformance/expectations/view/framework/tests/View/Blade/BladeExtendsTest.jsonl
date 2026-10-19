@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeExtendsTest::testExtendsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeExtendsTest::testExtendsFirstAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeExtendsTest::testSequentialCompileStringCalls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

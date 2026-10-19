@@ -1,0 +1,8 @@
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it does not install nightwatch mcp when nightwatch is null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it installs boost mcp successfully without sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it installs boost mcp with sail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it installs nightwatch mcp when nightwatch is provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it installs with both sail and nightwatch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it throws exception when boost mcp installation returns false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it throws exception when boost mcp installation throws exception","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/McpWriterTest.php::it throws exception when nightwatch mcp installation returns false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

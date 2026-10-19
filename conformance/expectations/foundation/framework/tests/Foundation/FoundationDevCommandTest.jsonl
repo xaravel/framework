@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testBlueColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testColorCanBeSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testColorMethodsAreFluent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testGreenColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testNameCanBeExplicitlySet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testNameDefaultsToFirstWordOfCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testOrangeColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testPinkColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testPurpleColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testToArrayReturnsCommandDetails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevCommandTest::testYellowColor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testApplyingScopeToABuilder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testCreateOrRestoreExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testOnlyTrashedExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testRestoreExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testRestoreOrCreateExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testWithTrashedExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSoftDeletingScopeTest::testWithoutTrashedExtension","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

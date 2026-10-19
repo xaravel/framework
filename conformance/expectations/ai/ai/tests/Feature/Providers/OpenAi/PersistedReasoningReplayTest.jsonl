@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/PersistedReasoningReplayTest.php::a live reasoning turn still names its function call item within the same run","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/PersistedReasoningReplayTest.php::a stored reasoning turn replays its tool call without the item id its reasoning no longer backs","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

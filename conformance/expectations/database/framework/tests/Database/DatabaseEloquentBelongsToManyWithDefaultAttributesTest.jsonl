@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithDefaultAttributesTest::testWithPivotValueMethodSetsDefaultArgumentsForInsertion","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithDefaultAttributesTest::testWithPivotValueMethodSetsWhereConditionsForFetching","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

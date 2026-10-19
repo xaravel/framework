@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testDecrementMethodProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testFlushesCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testForgetMethodProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testGetAndSetPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testGetReturnsNullWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testIncrementMethodProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testLockAcquireProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testLockAcquireWithShortDurationProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testLockAcquireWithoutExpirationProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testLockRefreshProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testLockRefreshWithShortDurationProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testMemcacheGetMultiValuesAreReturnedWithCorrectKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testMemcacheValueIsReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testSetMethodProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testStoreItemForeverProperlyCallsMemcached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemcachedStoreTest::testTouchMethodProperlyCallsMemcache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

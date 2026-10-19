@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Unit/Methods/DiscoverAppTest.php::it advertises no extensions when only regular resources are registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/DiscoverAppTest.php::it advertises the extensions declared on the server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/DiscoverAppTest.php::it advertises the ui extension when app resources are registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

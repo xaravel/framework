@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testCredentialValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testCredentialValidationFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testCredentialValidationFailsGracefullyWithNullPassword","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testDontRehashPasswordIfNotRequired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRehashPasswordIfRequired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByBadTokenReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByCredentialsAcceptsCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByCredentialsReturnsNullWhenUserIsFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByCredentialsReturnsUserWhenUserIsFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByCredentialsWithMultiplyPasswordsReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByIDReturnsNullWhenUserIsNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByIDReturnsUserWhenUserIsFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveByTokenReturnsUser","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthDatabaseUserProviderTest::testRetrieveTokenWithBadIdentifierReturnsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

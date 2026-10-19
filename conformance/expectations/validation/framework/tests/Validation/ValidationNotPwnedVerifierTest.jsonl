@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testApiGoesDown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testApiResponseGoesWrong","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testDnsDown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testEmptyValues#empty string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testEmptyValues#false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testEmptyValues#zero","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationNotPwnedVerifierTest::testMagicHashDoesNotCauseFalsePositive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

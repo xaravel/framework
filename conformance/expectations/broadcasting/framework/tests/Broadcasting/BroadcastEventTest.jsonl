@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testBasicEventBroadcastParameterFormatting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testBroadcastAsBackedEnumResolvesToValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testBroadcastAsStringIsUsedAsEventName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testDeletesWhenMissingModelsByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testDeletingWhenMissingModelsCanBeDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testManualParameterSpecification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testMiddlewareProxiesFailedHandlerFromUnderlyingEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testMiddlewareProxiesMiddlewareFromUnderlyingEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testSpecificBroadcasterGiven","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testSpecificChannelsPerConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testUniqueBroadcastEventChildPropertyOverridesInheritedAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testUniqueBroadcastEventReadsInheritedUniqueForAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testUniqueBroadcastEventReadsUniqueForAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Broadcasting\\BroadcastEventTest::testUniqueBroadcastEventUniqueForMethodOverridesAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

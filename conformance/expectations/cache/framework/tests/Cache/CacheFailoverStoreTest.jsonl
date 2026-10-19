@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheFailoverStoreTest::testFlushLocksCallsFlushLocksOnAllBackingStores","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheFailoverStoreTest::testFlushLocksReturnsTrueWhenNoStoreSupportsIt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheFailoverStoreTest::testImplementsCanFlushLocks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

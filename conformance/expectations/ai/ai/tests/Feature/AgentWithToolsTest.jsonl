@@ -1,0 +1,11 @@
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::a paused approval resumes only when the runtime tools are re-applied","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::a resume prompt keeps its tools when middleware attempts a swap","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::a runtime tool closure receives the declared tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::an agent declaring a load skill tool has its skills merged into it with a warning","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::an agent with skills receives the load skill tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::an ungated tool call in the resumed history is settled instead of executed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::middleware may swap the tools for a step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::runtime tools persist across invocations of the same instance","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::runtime tools reach an agent that does not implement has tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::runtime tools replace the tools the agent declares","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AgentWithToolsTest.php::with tools is chainable and the last call wins","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

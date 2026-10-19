@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testLocaleIsNotSentWithModelPreferredLocaleWhenThereAreMultipleRecipients","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testLocaleIsSentWithModelPreferredLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testLocaleIsSentWithModelPreferredLocaleWillIgnorePreferredLocaleOfTheCcRecipient","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testLocaleIsSentWithSelectedLocaleOverridingModelPreferredLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testLocaleIsSetBackToDefaultAfterMailSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testMailIsSentWithDefaultLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testMailIsSentWithLocaleFromMailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testMailIsSentWithLocaleUpdatedListenersCalled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMailWithLocaleTest::testMailIsSentWithSelectedLocale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

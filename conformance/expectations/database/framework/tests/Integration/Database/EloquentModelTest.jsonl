@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelTest::testAttributeChanges","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelTest::testDiscardChanges","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelTest::testInsertRecordWithReservedWordFieldName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelTest::testUserCanUpdateNullableDate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

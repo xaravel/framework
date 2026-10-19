@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabaseEloquentPostgresIntegrationTest::testCreateOrFirst","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\DatabaseEloquentPostgresIntegrationTest::testCreateOrFirstWithinTransaction","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

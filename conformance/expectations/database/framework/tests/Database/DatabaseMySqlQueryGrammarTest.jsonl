@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testTimeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testTimeoutNullRemovesTimeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testTimeoutThrowsExceptionForNegativeValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testTimeoutWithAggregate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testTimeoutWithDistinct","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlQueryGrammarTest::testToRawSql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

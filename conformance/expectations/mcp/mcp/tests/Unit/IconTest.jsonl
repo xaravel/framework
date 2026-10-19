@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/IconTest.php::it accepts data URIs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it accepts https URLs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it accepts light and dark themes#(Laravel\\Mcp\\Enums\\IconTheme Enum (Dark, 'dark'))","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it accepts light and dark themes#(Laravel\\Mcp\\Enums\\IconTheme Enum (Light, 'light'))","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it emits all set fields in toArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it omits null and empty fields in toArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it passes Icon attribute https URLs through unchanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/IconTest.php::it resolves Icon attribute relative paths via asset()","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

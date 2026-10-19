@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testClassComponentsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testComponentsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testEndComponentClassesAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testEndComponentsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testEndSlotsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testPropsAreExtractedFromParentAttributesCorrectlyForClassComponents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeComponentsTest::testSlotsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

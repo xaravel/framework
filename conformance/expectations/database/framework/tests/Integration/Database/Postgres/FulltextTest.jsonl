@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\FulltextTest::testWhereFulltext","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\FulltextTest::testWhereFulltextWithPhrase","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\FulltextTest::testWhereFulltextWithPlain","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\FulltextTest::testWhereFulltextWithWebsearch","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

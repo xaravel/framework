@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\Middleware\\PreventRequestForgeryExceptTest::testItCanExceptFullUrlPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Middleware\\PreventRequestForgeryExceptTest::testItCanExceptFullUrlWildcardPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Middleware\\PreventRequestForgeryExceptTest::testItCanExceptPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Middleware\\PreventRequestForgeryExceptTest::testItCanExceptWildcardPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Middleware\\PreventRequestForgeryExceptTest::testPathsCanBeGloballyIgnored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

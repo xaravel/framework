@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Gateway/FindToolTest.php::finds a tool nested inside a ToolSearch tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/FindToolTest.php::finds a top-level tool by name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/FindToolTest.php::returns null when the tool is not present anywhere","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Feature/Server/OAuthChallengeTest.php::it challenges when authentication is applied through the auth alias","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/OAuthChallengeTest.php::it challenges when authentication is not part of the middleware priority list","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/OAuthChallengeTest.php::it challenges when authentication is sorted ahead of the route middleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/OAuthChallengeTest.php::it does not challenge on routes that are not mcp servers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/OAuthChallengeTest.php::it does not challenge when the middleware is excluded from the route","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

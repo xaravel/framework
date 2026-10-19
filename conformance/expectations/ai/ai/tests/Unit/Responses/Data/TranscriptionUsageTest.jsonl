@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Responses/Data/TranscriptionUsageTest.php::transcription usage can be created from a text usage","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/TranscriptionUsageTest.php::transcription usage to array extends the base usage array with the audio duration","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

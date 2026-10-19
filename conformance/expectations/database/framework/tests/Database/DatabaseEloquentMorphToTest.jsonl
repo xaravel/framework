@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testAssociateMethodIgnoresNullValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testAssociateMethodSetsForeignKeyAndTypeOnModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testCreateModelByTypeThrowsWhenTypeNotInMorphMapAndRequireMorphMapIsOn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testDissociateMethodDeletesUnsetsKeyAndTypeOnModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testLookupDictionaryIsProperlyConstructed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testLookupDictionaryIsProperlyConstructedForEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMatchToMorphParentsNormalizesKeyWhenOwnerKeyIsNullAndResultKeyIsObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithArrayDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithDynamicDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithEmptyStringMorphType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithSpecifiedClassDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphToTest::testMorphToWithZeroMorphType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

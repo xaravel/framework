@@ -1,0 +1,1 @@
+{"id":"ai/tests/Unit/Responses/Data/RerankingUsageTest.php::reranking usage to array appends the search units to the base usage counts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testLoadTranslationsFromWithNamespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testLoadTranslationsFromWithoutNamespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testMultipleAssetsArePublishedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testMultipleTaggedAssetsAreMergedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testMultipleTaggedAssetsArePublishedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testPublishableGroups","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testPublishableServiceProviders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testPublishesMigrations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testSimpleAssetsArePublishedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::testSimpleTaggedAssetsArePublishedCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportServiceProviderTest::test_can_remove_provider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresSchemaStateTest::testBaseVariablesDoNotExportEmptySslMode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresSchemaStateTest::testBaseVariablesUseConfiguredConnectionByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresSchemaStateTest::testBaseVariablesUseDirectConnectionConfigurationWhenAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

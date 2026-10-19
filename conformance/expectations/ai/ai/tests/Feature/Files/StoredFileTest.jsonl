@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Files/StoredFileTest.php::mime type is null when the disk cannot detect it#('Laravel\\Ai\\Files\\StoredAudio')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Files/StoredFileTest.php::mime type is null when the disk cannot detect it#('Laravel\\Ai\\Files\\StoredDocument')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

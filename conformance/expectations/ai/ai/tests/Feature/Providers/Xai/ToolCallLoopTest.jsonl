@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/Xai/ToolCallLoopTest.php::follow up request preserves tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

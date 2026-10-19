@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_collection_nullable_with_custom_collection_class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_collection_with_map_callback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_collection_with_map_into","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_custom_collection_with_map_callback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_custom_collection_with_map_into","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_as_html_string_is_serialized_as_string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_custom_casting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_custom_casting_nullable_values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_custom_casting_using_create","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_default_casts_still_persist_null_as_json_null_literal","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\DatabaseCustomCastsTest::test_nullable_class_casts_persist_real_null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

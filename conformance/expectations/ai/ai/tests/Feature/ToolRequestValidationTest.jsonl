@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/ToolRequestValidationTest.php::a validation failure is returned to the model as the tool result","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolRequestValidationTest.php::invalid tool request arguments throw a validation exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolRequestValidationTest.php::tool request arguments can be validated","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

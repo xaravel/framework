@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/DecideMacroTest.php::decision can be made from stringable macro","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/DecideMacroTest.php::decision honors the given threshold","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/DecideMacroTest.php::decision macro passes through criteria and options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

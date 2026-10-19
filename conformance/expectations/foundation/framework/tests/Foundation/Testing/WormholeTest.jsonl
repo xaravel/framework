@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\WormholeTest::testCanTravelBackToPresent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\WormholeTest::testCarbonImmutableCompatibility","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\WormholeTest::testItCanTravelByMicroseconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

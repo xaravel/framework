@@ -1,0 +1,10 @@
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it asks for route parameter values when building the server url","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it fails when a route parameter is left blank","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it fails when a route parameter only contains whitespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it fails when no servers are registered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it fails with invalid handle","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it handles non-string handle argument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it handles single server with unknown type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it normalizes mixed paths correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it retrieves php binary path correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/McpInspectorCommandTest.php::it validates handle argument is required","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayEmptyList","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayEmptyListAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayEventsAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayFilteredEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Events\\EventListCommandTest::testDisplayFilteredEventAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

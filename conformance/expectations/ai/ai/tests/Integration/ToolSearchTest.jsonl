@@ -1,0 +1,3 @@
+{"id":"ai/tests/Integration/ToolSearchTest.php::agents discover and call a deferred tool through hosted tool search#dataset \"anthropic\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/ToolSearchTest.php::agents discover and call a deferred tool through hosted tool search#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/ToolSearchTest.php::agents discover and call a deferred tool through hosted tool search#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

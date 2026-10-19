@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Feature/Server/SubscriptionsTest.php::it acknowledges an empty filter first and carries the subscription id","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/SubscriptionsTest.php::it closes the subscription immediately with an empty result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings default to 1536 dimensions when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings request includes model, input, and dimensions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings request includes provider options in the request body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings request sends bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::embeddings use default model when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::multiple inputs return multiple embeddings","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/EmbeddingTest.php::provider options cannot override framework controlled keys","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

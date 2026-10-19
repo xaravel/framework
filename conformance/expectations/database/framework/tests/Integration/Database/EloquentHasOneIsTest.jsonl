@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testChildIsModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testChildIsNotAnotherModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testChildIsNotModelWithAnotherConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testChildIsNotModelWithAnotherTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testChildIsNotNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentHasOneIsTest\\EloquentHasOneIsTest::testNullChildIsNotModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"ai/tests/Integration/EmbeddingsTest.php::embeddings can be generated with custom dimensions#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/EmbeddingsTest.php::embeddings can be generated with custom dimensions#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/EmbeddingsTest.php::embeddings can be generated#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/EmbeddingsTest.php::embeddings can be generated#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/EmbeddingsTest.php::queued embeddings with closure provider options run end-to-end through a real queue driver#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/EmbeddingsTest.php::queued embeddings with closure provider options run end-to-end through a real queue driver#dataset \"voyageai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

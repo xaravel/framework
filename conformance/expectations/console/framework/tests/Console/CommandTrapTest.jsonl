@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Console\\CommandTrapTest::testNestedTraps","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTrapTest::testTrapWhenAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTrapTest::testTrapWhenNotAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTrapTest::testUntrap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

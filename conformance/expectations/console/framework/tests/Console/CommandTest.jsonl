@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testAliasesAttributeCanSetAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testAliasesAttributeOverridesSignatureAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testAliasesProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testCallingClassCommandResolveCommandViaApplicationResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testChoiceIsSingleSelectByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testChoiceWithMultiselect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testGettingCommandArgumentsAndOptionsByClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testGettingCommandInputAsFluentData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testHelpAttributeCanSetHelp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testHiddenAttributeHidesCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testHiddenProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testSetHidden","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testSignatureAttributeCanSetAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testTheInputSetterOverwrite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testTheOutputSetterOverwrite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CommandTest::testUsageAttributeCanSetUsages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

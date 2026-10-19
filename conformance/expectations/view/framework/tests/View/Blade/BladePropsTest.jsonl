@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePropsTest::testPropsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePropsTest::testPropsAreExtractedFromParentAttributesCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

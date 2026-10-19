@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Completions/EnumCompletionResponseTest.php::it extracts backed enum values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/EnumCompletionResponseTest.php::it extracts non-backed enum names","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/EnumCompletionResponseTest.php::it filters enum values by prefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/EnumCompletionResponseTest.php::it throws exception for invalid enum class","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

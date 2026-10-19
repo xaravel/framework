@@ -1,0 +1,10 @@
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with audio requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with embeddings requests and never in the body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with file uploads","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with image requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with reranking requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers are sent with transcription requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers do not participate in the embeddings cache key","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers replace configured headers regardless of casing","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::extra headers resolved from a closure survive serialization","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/RequestHeadersTest.php::file upload provider options are resolved once","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

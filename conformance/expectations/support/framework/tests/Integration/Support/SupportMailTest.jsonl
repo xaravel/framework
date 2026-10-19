@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\SupportMailTest::testEmailSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\SupportMailTest::testItRegisterAndCallMacros","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\SupportMailTest::testItRegisterAndCallMacrosWhenFaked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

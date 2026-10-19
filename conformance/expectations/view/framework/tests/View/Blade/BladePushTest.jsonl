@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testElsePushIfWithCommaInStringIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testElsePushIfWithMoreThanOneCommaIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIfElseIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIfIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIfWithCommaInStringIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIfWithMoreThanOneCommaIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushIsCompiledWithParenthesis","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushOnceIsCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladePushTest::testPushOnceIsCompiledWhenIdIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

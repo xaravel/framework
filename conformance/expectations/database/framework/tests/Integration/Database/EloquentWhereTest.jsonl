@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testChunkMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testFirstWhere","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testSole","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testSoleFailsForMultipleRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testSoleFailsIfNoRecords","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testSoleValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testWhereAndWhereOrBehavior","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testWhereIn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testWhereInCanAcceptQueryable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testWhereIntegerInRaw","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentWhereTest::testWhereNot","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,7 @@
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::agent prompt accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::agent prompt accepts array of ai provider enum values for failover","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::agent queue accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::agent stream accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::audio generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::embeddings generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AiProviderEnumTest.php::transcription generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

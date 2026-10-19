@@ -1,0 +1,6 @@
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::executes code and returns output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::executes code without semicolon","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::handles errors gracefully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::is not registered by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::is registered when tinker_tool_enabled config is true","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/TinkerTest.php::strips php tags from code","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

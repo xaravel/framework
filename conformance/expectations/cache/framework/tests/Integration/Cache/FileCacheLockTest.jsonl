@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testCacheRememberReturnsValueWhenLockWithSameKeyExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testConcurrentLocksAreReleasedSafely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testExceptionIfBlockCanNotAcquireLock","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testIsLocked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLockCanBeRefreshed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLockCannotBeRefreshedByAnotherOwner","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLockRefreshWithDefaultSeconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLocksCanBeAcquiredAndReleased","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLocksCanBeReleasedUsingOwnerToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLocksCanBlockForSeconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testLocksWithFailedBlockCallbackAreReleased","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testOtherOwnerDoesNotOwnLockAfterRestore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\FileCacheLockTest::testOwnerStatusCanBeCheckedAfterRestoringLock","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

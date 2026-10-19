@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testBothOuterAndPreviousContextEnrichedOnDirectLogging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testBothOuterAndPreviousContextOnReport","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testContextCallbacksAreIncludedInFormatterEnrichment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testExceptionContextIsEnrichedOnDirectLogging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testExceptionContextIsNotDuplicatedWhenGoingThroughReport","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testExceptionWithoutContextMethodIsNotEnriched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testFormatterHandlesNormalizationDepthLimit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testNoHandlerSet_mergesExceptionContext","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testNonScalarContextValuesAreNormalized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testPreviousExceptionContextIsAlsoEnriched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testReportEnrichesPreviousExceptionContext","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testStackDriverEnrichesBothHandlersOnDirectLogging","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Log\\JsonFormatterTest::testStackDriverSkipsEnrichmentOnBothHandlersWhenReporting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

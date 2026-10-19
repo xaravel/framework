@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testArgumentDefaultValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testBasicParameterParsing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testDefaultValueParsing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testNameInEmptyException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testNameIsSpacesException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testOptionDefaultValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConsoleParserTest::testShortcutNameParsing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

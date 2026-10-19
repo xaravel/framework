@@ -1,0 +1,8 @@
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it decodes nested objects as arrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve agents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve guidelines status","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve mcp status","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve nightwatch status","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it may store and retrieve skills as an array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/ConfigTest.php::it reads the legacy nightwatch_mcp key when the new nightwatch key is absent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\StorageTest::testConditionable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\StorageTest::testItCanDeleteDirectoryViaStorage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\StorageTest::testItCanDeleteViaFilesystemRequiresManualClearStatCacheOnStorageFromDifferentProcess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\StorageTest::testItCanDeleteViaFilesystemShouldUpdatesStorage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\StorageTest::testItCanDeleteViaStorage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

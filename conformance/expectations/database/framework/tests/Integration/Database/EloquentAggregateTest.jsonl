@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentAggregateTest::testAvg","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentAggregateTest::testMinMax","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentAggregateTest::testNumericAggregate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentAggregateTest::testSum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

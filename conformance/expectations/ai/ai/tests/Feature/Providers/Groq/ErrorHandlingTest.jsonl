@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::error in 200 response throws ai exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::flex tier capacity exceeded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::http error response throws request exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::overloaded response throws provider overloaded exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::rate limit response throws rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ErrorHandlingTest.php::undocumented gateway status code does not fail over","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

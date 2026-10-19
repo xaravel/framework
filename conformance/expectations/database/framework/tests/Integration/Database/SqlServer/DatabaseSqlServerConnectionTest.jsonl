@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerConnectionTest::testWhereJsonContainsKey","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

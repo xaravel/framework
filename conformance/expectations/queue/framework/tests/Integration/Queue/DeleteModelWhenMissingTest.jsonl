@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Queue\\DeleteModelWhenMissingTest::test_deleteModelWhenMissing_and_display_name","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\DeleteModelWhenMissingTest::test_deleteModelWhenMissing_and_display_name","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\DeleteModelWhenMissingTest::test_deleteModelWhenMissing_and_display_name","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\DeleteModelWhenMissingTest::test_deleteModelWhenMissing_and_display_name","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\DeleteModelWhenMissingTest::test_deleteModelWhenMissing_and_display_name","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRefreshCommandTest::testRefreshCommandCallsCommandsWithProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRefreshCommandTest::testRefreshCommandCallsCommandsWithStep","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRefreshCommandTest::testRefreshCommandExitsWhenProhibited","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

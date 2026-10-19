@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Bus\\BusBatchableTest::test_batch_may_be_retrieved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusBatchableTest::test_batching_reflects_cancelled_state","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusBatchableTest::test_batching_returns_false_when_batch_is_finished","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\BusBatchableTest::test_with_fake_batch_sets_and_returns_fake","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

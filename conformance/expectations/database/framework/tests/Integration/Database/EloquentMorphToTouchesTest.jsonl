@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToTouchesTest\\EloquentMorphToTouchesTest::testNotNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToTouchesTest\\EloquentMorphToTouchesTest::testNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

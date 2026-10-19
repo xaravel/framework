@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Session\\SessionManagerTest::testRedisDriverFallsBackToCachePrefixWhenNoSessionPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\SessionManagerTest::testRedisDriverUsesConfiguredSessionPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\SessionManagerTest::testSetDefaultDriverAcceptsBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

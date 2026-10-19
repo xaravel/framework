@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueClearCommandTest::testClearingDefaultQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueClearCommandTest::testClearingMultipleQueues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueClearCommandTest::testClearingMultipleQueuesWithDuplicates","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueClearCommandTest::testClearingMultipleQueuesWithEmptyValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueClearCommandTest::testClearingMultipleQueuesWithWhitespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

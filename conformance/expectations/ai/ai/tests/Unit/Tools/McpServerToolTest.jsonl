@@ -1,0 +1,10 @@
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it detects mcp server tool primitives","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it does not escape slashes in structured content json","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it exposes the tool name, description, and schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it invokes the underlying tool and returns text content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it returns only the final item from an array response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it returns only the final yielded response and ignores notifications and intermediate updates","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it serializes structured tool responses as json","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::it surfaces tool errors with the standard prefix","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::lazily yielded responses still resolve the scoped mcp request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Tools/McpServerToolTest.php::the mcp request binding is cleared after the call","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

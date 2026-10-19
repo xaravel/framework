@@ -1,0 +1,2 @@
+{"id":"boost/tests/Feature/Console/StartCommandTest.php::it invokes mcp:start with laravel-boost as the server name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/StartCommandTest.php::it returns the same exit code that mcp:start returns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

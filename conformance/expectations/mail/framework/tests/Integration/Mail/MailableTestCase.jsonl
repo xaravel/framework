@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithSecuredEncodingTest::testItCanAssertMarkdownEncodedString#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithSecuredEncodingTest::testItCanAssertMarkdownEncodedString#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithSecuredEncodingTest::testItCanAssertMarkdownEncodedString#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithSecuredEncodingTest::testItCanAssertMarkdownEncodedString#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithSecuredEncodingTest::testItCanAssertMarkdownEncodedString#4","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithoutSecuredEncodingTest::testItCanAssertMarkdownEncodedString#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithoutSecuredEncodingTest::testItCanAssertMarkdownEncodedString#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithoutSecuredEncodingTest::testItCanAssertMarkdownEncodedString#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithoutSecuredEncodingTest::testItCanAssertMarkdownEncodedString#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailableWithoutSecuredEncodingTest::testItCanAssertMarkdownEncodedString#4","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

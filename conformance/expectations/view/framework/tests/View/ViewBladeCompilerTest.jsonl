@@ -1,0 +1,30 @@
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testAnonymousComponentNamespacesCanBeStored","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCannotConstructWithBadCachePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileCompilesAndGetThePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileCompilesFileAndReturnsContents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileCompilesFileAndReturnsContentsCreatingDirectory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileKeepsCacheIfUnchanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompilePathIsProperlyCreated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileRefreshesCacheTimestampIfUnchangedButExpired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileSetAndGetThePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileUpdatesCacheIfChanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testCompileWithPathSetBefore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testComponentAliasesCanBeConventionallyDetermined","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testDontIncludeEmptyPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testDontIncludeNullPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Echo XML declaration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Ending PHP block without closing ?>","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Ending PHP block.","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Multiple PHP blocks without closing ?>","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Multiple PHP blocks.","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#No PHP blocks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#PHP block between content.","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Short open echo tag","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIncludePathToTemplate#Single PHP block without closing ?>","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIsExpiredReturnsFalseWhenIgnoreCacheTimestampsIsTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIsExpiredReturnsFalseWhenUseCacheIsTrueAndNoFileModification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIsExpiredReturnsTrueIfCompiledFileDoesntExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIsExpiredReturnsTrueWhenModificationTimesWarrant","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testIsExpiredReturnsTrueWhenUseCacheIsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testRawTagsCanBeSetToLegacyValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewBladeCompilerTest::testShouldStartFromStrictTypesDeclaration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

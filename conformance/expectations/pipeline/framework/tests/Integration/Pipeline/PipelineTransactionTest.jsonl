@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Pipeline\\PipelineTransactionTest::testConnection#null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Pipeline\\PipelineTransactionTest::testConnection#string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Pipeline\\PipelineTransactionTest::testConnection#unit enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Pipeline\\PipelineTransactionTest::testExceptionThrownRollsBackTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Pipeline\\PipelineTransactionTest::testPipelineTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

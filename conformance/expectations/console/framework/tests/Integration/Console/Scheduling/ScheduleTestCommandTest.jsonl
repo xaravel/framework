@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\ScheduleTestCommandTest::testRunNoDefinedCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\ScheduleTestCommandTest::testRunNoMatchingCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\ScheduleTestCommandTest::testRunUsingChoices","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\ScheduleTestCommandTest::testRunUsingNameOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

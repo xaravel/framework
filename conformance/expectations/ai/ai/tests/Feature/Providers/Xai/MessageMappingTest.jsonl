@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::base64 document without an explicit name falls back to a mime-based filename","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::base64 image attachment maps to data uri","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::local image attachment without explicit mime type detects mime from file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::reasoning blocks are interleaved with associated tool calls on assistant replay","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::remote document maps to input file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::remote image attachment maps to input image","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::system instructions are in input array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::tool call follow up uses previous response id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Xai/MessageMappingTest.php::user message maps to responses api format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

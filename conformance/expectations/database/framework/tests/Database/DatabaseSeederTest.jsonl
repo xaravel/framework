@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseSeederTest::testCallResolveTheClassAndCallsRun","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSeederTest::testInjectDependenciesOnRunMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSeederTest::testSendParamsOnCallMethodWithDeps","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSeederTest::testSetCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSeederTest::testSetContainer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

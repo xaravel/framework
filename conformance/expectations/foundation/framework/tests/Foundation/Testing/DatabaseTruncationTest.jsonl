@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesOnPgsqlWithSearchPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithConnectionPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithExceptTablesProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithSchema","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithSchemaAndExceptTablesProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithSchemaTablesToTruncateProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Testing\\DatabaseTruncationTest::testTruncateTablesWithTablesToTruncateProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

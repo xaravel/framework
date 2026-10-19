@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testDeleteMethodDeletesModelByKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testFromRawAttributesDoesNotDoubleMutate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testFromRawAttributesDoesNotMutate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testKeysCanBeSetProperly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testMutatorsAreCalledFromConstructor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPivotModelTableNameIsSingular","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPivotModelWithParentReturnsParentsTimestampColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPivotModelWithoutParentReturnsModelTimestampColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPropertiesAreSetCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPropertiesChangedAreDirty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testPropertiesUnchangedAreNotDirty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testTimestampPropertyIsSetIfCreatedAtInAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testTimestampPropertyIsTrueWhenCreatingFromRawAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentPivotTest::testWithoutRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

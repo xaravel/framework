@@ -1,0 +1,23 @@
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it adds frontmatter when agent supports it and file has no existing frontmatter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it avoids adding extra newline if one already exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it creates directory when it does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it does not add frontmatter when agent does not support it","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it does not add frontmatter when agent supports it but file already has frontmatter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it does not interfere with other XML-like tags","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it handles empty file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it handles file with only whitespace","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it handles multiline existing guidelines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it handles multiple guideline blocks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it leaves existing user content untouched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it leaves user content around an existing block untouched when replacing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it preserves backslash and dollar patterns in guidelines when replacing existing block","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it preserves dollar-sign literals in guidelines when replacing existing block","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it preserves file content structure with proper spacing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it preserves user content after guidelines when replacing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it replaces existing guidelines in-place","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it retries file locking on contention","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it returns NOOP when guidelines are empty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it throws exception when directory creation fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it throws exception when file cannot be opened","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it writes guidelines to existing file without existing guidelines","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/GuidelineWriterTest.php::it writes guidelines to new file","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

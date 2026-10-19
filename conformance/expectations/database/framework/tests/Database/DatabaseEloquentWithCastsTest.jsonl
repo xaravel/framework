@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithCastsTest::testThrowsExceptionIfCastableAttributeWasNotRetrievedAndPreventMissingAttributesIsEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithCastsTest::testWithCastsOnClonedQueryDoesNotAffectOriginalQuery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithCastsTest::testWithCreateOrFirst","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithCastsTest::testWithFirstOrCreate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentWithCastsTest::testWithFirstOrNew","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

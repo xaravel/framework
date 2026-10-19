@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testAcquireResetsAfterDecay","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testAcquireSetsDecaysAtAndRemaining","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testBlockReturnsTrueWithoutCallback","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testClearResetsLimiter","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testItFailsImmediatelyOrRetriesForAWhileBasedOnAGivenTimeout","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testItLocksTasksWhenNoSlotAvailable","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testItReturnsTheCallbackResult","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\DurationLimiterTest::testTooManyAttemptsReportsCorrectly","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

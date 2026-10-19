@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Mcp/Resources/ApplicationInfoTest.php::it propagates tool executor error response directly to the client","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Resources/ApplicationInfoTest.php::it returns a parsing error when tool response is empty string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Resources/ApplicationInfoTest.php::it returns parsing error when tool response contains malformed json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Resources/ApplicationInfoTest.php::it returns php version, laravel version, packages, and models when tool executes successfully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

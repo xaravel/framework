@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Http\\HttpUploadedFileTest::testUploadedFileCanRetrieveContentsFromTextFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\HttpUploadedFileTest::testUploadedFileInRequestContainsOriginalPathAndName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

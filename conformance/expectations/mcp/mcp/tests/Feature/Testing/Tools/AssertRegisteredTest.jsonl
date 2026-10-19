@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Feature/Testing/Tools/AssertRegisteredTest.php::it may assert that tools are not registered on a server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertRegisteredTest.php::it may assert that tools are registered on a server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertRegisteredTest.php::it may fail to assert that tools are not registered on a server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Testing/Tools/AssertRegisteredTest.php::it may fail to assert that tools are registered on a server","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

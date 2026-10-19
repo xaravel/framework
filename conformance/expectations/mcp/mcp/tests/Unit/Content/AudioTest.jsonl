@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it casts to string as raw data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it converts to array with type, data and mimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it defaults mimeType to audio/wav","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it does not include meta if null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it may be used in prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it may be used in resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it may be used in tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/AudioTest.php::it supports meta via setMeta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

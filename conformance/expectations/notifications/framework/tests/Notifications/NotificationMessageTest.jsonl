@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Notifications\\NotificationMessageTest::testLevelCanBeRetrieved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationMessageTest::testMessageFormatsMultiLineText","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

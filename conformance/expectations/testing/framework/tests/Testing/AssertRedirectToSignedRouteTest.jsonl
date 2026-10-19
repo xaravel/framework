@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToSignedRouteTest::testAssertRedirectToSignedRouteWithRouteName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToSignedRouteTest::testAssertRedirectToSignedRouteWithRouteNameAndParams","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToSignedRouteTest::testAssertRedirectToSignedRouteWithRouteNameToTemporarySignedRoute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertRedirectToSignedRouteTest::testAssertRedirectToSignedRouteWithoutRouteName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Queue\\QueueTransactionTest::testItCanHandleTimeoutJob#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Queue\\QueueTransactionTest::testItCanHandleTimeoutJob#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Queue\\QueueTransactionTest::testItCanHandleTimeoutJob#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Queue\\QueueTransactionTest::testItCanHandleTimeoutJob#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

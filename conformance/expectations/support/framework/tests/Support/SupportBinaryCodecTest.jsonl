@@ -1,0 +1,20 @@
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testDecodeReturnsNullForNullAndEmpty#empty string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testDecodeReturnsNullForNullAndEmpty#null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testDecodeThrowsOnInvalidFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testEncodeReturnsNullForNullAndEmpty#empty string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testEncodeReturnsNullForNullAndEmpty#null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testEncodeThrowsOnInvalidFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testFormatsReturnsDefaultFormats","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testIsBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testRegisterAddsCustomFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testRegisterOverridesDefaultFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUlidDecodeFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUlidDecodeFromString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUlidEncodeFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUlidEncodeFromInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUlidEncodeFromString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUuidDecodeFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUuidDecodeFromString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUuidEncodeFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUuidEncodeFromInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportBinaryCodecTest::testUuidEncodeFromString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

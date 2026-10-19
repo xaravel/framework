@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::conversation and message keep their string keys when created","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::conversation can retrieve its participant using relationship","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::conversation can retrieve messages using relationship","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::conversation model uses configured database connection","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::message tool calls and results flatten across steps in order and serialize with the model","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ConversationRelationshipTest.php::model can retrieve conversations using relationship","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

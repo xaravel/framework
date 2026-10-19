@@ -1,0 +1,12 @@
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it keeps caching through a serialize round-trip","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it keeps private results out of another authorization context","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it leaves the transport uncached until asked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it never caches a page of a paginated list","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it never caches a result the server marked immediately stale","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it never caches an interim result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it never resolves the transport recipe for an uncacheable method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it never serves one resource for another","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it re-fetches once the ttl has elapsed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it serves a fresh result without touching the transport again","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it shares public results across authorization contexts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/CachingTest.php::it stops caching once the cache is turned back off","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testGetActualClassNameForMorphFallsBackToRawStringWhenRequireMorphMapIsOff","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testGetActualClassNameForMorphReturnsMappedClassWhenRequireMorphMapIsOn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testGetActualClassNameForMorphThrowsWhenTypeNotInMorphMapAndRequireMorphMapIsOn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testMapCanBeEnforcedToCustomPivotClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testMapIgnoreGenericPivotClass","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testMapsCanBeEnforcedInOneMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testMorphToLazyLoadingThrowsWhenTypeNotInMorphMapAndRequireMorphMapIsOn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testStrictModeDoesNotThrowExceptionWhenMorphMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentStrictMorphsTest::testStrictModeThrowsAnExceptionOnClassMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

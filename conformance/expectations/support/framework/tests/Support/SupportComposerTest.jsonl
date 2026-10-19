@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testDumpAutoloadRunsTheCorrectCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testDumpAutoloadRunsTheCorrectCommandWhenCustomComposerPharIsPresent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testDumpAutoloadRunsTheCorrectCommandWithExtraArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testDumpOptimizedTheCorrectCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testRemovePackagesRunsTheCorrectCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportComposerTest::testRequirePackagesRunsTheCorrectCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

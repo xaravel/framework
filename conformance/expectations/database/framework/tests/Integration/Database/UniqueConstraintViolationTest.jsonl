@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testMysqlUniqueCompositeConstraint","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testMysqlUniqueConstraint","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testPostgresUniqueCompositeConstraint","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testPostgresUniqueConstraint","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testSqlServerUniqueCompositeConstraint","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testSqlServerUniqueConstraint","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testSqliteUniqueCompositeConstraint","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\UniqueConstraintViolationTest::testSqliteUniqueConstraint","variant":"sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

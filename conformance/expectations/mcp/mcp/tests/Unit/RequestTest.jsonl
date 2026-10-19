@@ -1,0 +1,17 @@
+{"id":"mcp/tests/Unit/RequestTest.php::it can get uri when set via constructor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it can set uri to null using setUri method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it can set uri using setUri method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it can update uri using setUri method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it does not resolve literal dotted keys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it interact with data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it may be returned as array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it may return all data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it may return null if no user is logged in","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it may return specific set of keys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it may return the current logged in user","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it retrieves nested input using dot notation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it returns null for uri when explicitly set to null in constructor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it returns null for uri when not set via constructor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it supports method chaining with merge and setUri","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it throws ValidationException with custom messages and attributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/RequestTest.php::it validates and returns only validated data on success","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

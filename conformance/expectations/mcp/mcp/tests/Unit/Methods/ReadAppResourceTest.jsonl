@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Unit/Methods/ReadAppResourceTest.php::it does not include _meta.ui on content items for regular resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ReadAppResourceTest.php::it includes _meta.ui on content items for ui resources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/ReadAppResourceTest.php::it includes auto-resolved Claude domain in _meta.ui content when no appMeta set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

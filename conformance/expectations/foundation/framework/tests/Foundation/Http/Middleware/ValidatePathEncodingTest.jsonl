@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testInvalidPathsAreFailing#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testInvalidPathsAreFailing#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testValidPathsArePassing#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testValidPathsArePassing#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testValidPathsArePassing#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testValidPathsArePassing#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ValidatePathEncodingTest::testValidPathsArePassing#4","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

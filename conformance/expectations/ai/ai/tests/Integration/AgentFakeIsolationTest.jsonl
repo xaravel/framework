@@ -1,0 +1,1 @@
+{"id":"ai/tests/Integration/AgentFakeIsolationTest.php::faking one agent doesnt affect another agent","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

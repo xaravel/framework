@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\SeedCommandTest::testFailedSeederRestoresPreviousDefaultConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\SeedCommandTest::testHandle","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\SeedCommandTest::testProhibitable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\SeedCommandTest::testWithoutModelEvents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

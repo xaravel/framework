@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testAfterOrEqualSpecificDateRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testAfterSpecificDateRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testAfterTodayRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testBeforeOrEqualSpecificDateRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testBeforeSpecificDateRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testBeforeTodayRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testBetweenDatesRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testBetweenOrEqualDatesRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testChainedRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testDateEqualsRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testDateFormatRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testDateValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testDefaultDateRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testFutureRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationDateRuleTest::testPastRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

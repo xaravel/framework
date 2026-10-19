@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubsetMayFail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubsetMayFailIfArrayIsNotArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubsetMayFailIfSubsetIsNotArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubsetWithStrict","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\AssertTest::testArraySubsetWithStrictMayFail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

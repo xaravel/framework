@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailRoundRobinTransportTest::testGetRoundRobinTransportWithConfiguredTransports","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\MailRoundRobinTransportTest::testGetRoundRobinTransportWithLaravel6StyleMailConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

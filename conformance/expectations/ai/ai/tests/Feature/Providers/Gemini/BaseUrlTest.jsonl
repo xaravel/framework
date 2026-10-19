@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Gemini/BaseUrlTest.php::gemini requests fall back to the default base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/BaseUrlTest.php::gemini requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

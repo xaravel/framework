@@ -1,0 +1,17 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testBasicUpdate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testDecrementEachOnModelInstanceOnlyAffectsThatRow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementCastsExtraAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachDoesNotResetUnrelatedDirtyAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachOnModelInstanceOnlyAffectsThatRow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachOnModelInstanceUpdatesTimestamps","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachOnSoftDeletedModelIgnoresGlobalScopes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachSyncsPrevious","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementEachViaQueryBuilderStillAffectsAllMatchingRows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementOrDecrementIgnoresGlobalScopes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testIncrementSyncsPrevious","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testSaveSyncsPrevious","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testSoftDeleteWithJoins","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testUpdateSyncsPrevious","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testUpdateWithLimitsAndOrders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentUpdateTest::testUpdatedAtWithJoins","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

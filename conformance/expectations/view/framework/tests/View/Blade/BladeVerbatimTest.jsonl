@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testMultilineTemplatesWithRawBlocksAreRenderedInTheRightOrder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testMultipleVerbatimBlocksAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testNewlinesAreInsertedCorrectlyAfterEcho","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testRawBlocksAreRenderedInTheRightOrder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testRawBlocksDontGetMixedUpWhenSomeAreRemovedByBladeComments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testVerbatimBlocksAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeVerbatimTest::testVerbatimBlocksWithMultipleLinesAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

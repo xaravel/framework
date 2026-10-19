@@ -1,0 +1,4 @@
+{"id":"boost/tests/Unit/Console/InstallCommandBuildGuidelineConfigTest.php::hasMcp is false when mcp is in stored config but running interactively without mcp selected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Console/InstallCommandBuildGuidelineConfigTest.php::hasMcp is false when mcp is neither in selected features nor stored config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Console/InstallCommandBuildGuidelineConfigTest.php::hasMcp is true when mcp is in selected boost features","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Console/InstallCommandBuildGuidelineConfigTest.php::hasMcp is true when mcp is in stored config and running in explicit flag mode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

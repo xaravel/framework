@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Validation\\Rules\\DateFormatValidationTest::test_it_can_validate_regardless_of_timezone#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Validation\\Rules\\DateFormatValidationTest::test_it_can_validate_regardless_of_timezone#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

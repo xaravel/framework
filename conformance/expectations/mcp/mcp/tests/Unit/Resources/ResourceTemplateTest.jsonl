@@ -1,0 +1,7 @@
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it does not match URIs with different path structure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it end to end template reads uri extracts variables and returns response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it extracts variables from matching URI","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it handles complex URI templates with multiple path segments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it handles template resource with extracted variables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it handles template with single variable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/ResourceTemplateTest.php::it matches URIs against a template pattern","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

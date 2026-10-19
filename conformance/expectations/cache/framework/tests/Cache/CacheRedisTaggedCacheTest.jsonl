@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#add","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#decrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#forever","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#increment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#put","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testFailedWritesDoNotRegisterTagEntries#touch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#add","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#decrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#forever","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#increment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#put","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRedisTaggedCacheTest::testTagEntriesAreRegisteredAfterSuccessfulWrites#touch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

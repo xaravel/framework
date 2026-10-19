@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Exceptions\\RenderBladeFilesTest::testFormattedSourceTooltipRendersMultilineSafely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Exceptions\\RenderBladeFilesTest::testQueryTooltipRendersMultilineSafely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Exceptions\\RenderBladeFilesTest::testRequestHeaderTooltipRendersMultilineSafely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Exceptions\\RenderBladeFilesTest::testRoutingTooltipRendersMultilineSafely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanAccessAllQueriesWhenQueryLoggingIsActive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanHandleReachingADurationThresholdInTheDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanResetTotalQueryDuration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanRestoreAlreadyRunHandlers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanSpecifyMultipleHandlersWithDifferentIntervals","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItCanSpecifyMultipleHandlersWithTheSameIntervals","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItHasAccessToConnectionInHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItHasSpecifyThresholdWithFloat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItHasSpecifyThresholdWithInt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItIsOnlyCalledOnce","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\QueryDurationThresholdTest::testItIsOnlyCalledOnceWhenGivenDateTime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

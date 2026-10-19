@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_bindings_match_placeholder_count_in_truncated_sql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_excess_bindings_are_trimmed_to_match_placeholders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_large_sql_is_truncated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_listener_caps_at_100_queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_normal_query_skips_truncation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_queries_returns_expected_shape_after_query_executed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_query_with_no_bindings_is_unchanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Exceptions\\Renderer\\ListenerTest::test_short_sql_and_bindings_are_not_modified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

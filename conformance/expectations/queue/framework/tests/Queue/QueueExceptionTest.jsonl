@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueExceptionTest::test_it_can_create_max_attempts_exception_for_job","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueExceptionTest::test_it_can_create_timeout_exception_for_job","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

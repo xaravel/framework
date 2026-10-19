@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testDropColumnWithTablePrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testHasColumnAndIndexWithPrefixIndexDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testHasColumnAndIndexWithPrefixIndexEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testHasColumnWithTablePrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testHasForeignKeyCanMatchForeignKeyNamesAndColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderIntegrationTest::testHasForeignKeyWithSQLiteForeignKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

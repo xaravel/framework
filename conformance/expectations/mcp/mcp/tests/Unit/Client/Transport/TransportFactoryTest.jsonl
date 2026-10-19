@@ -1,0 +1,6 @@
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it rebuilds a stdio transport from its recipe","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it rebuilds an http transport with its custom headers from a recipe","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it rebuilds an http transport with its token and timeout from a recipe","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it throws for an unknown transport driver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it throws when a stdio recipe is missing its command","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/Transport/TransportFactoryTest.php::it throws when an http recipe is missing its url","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

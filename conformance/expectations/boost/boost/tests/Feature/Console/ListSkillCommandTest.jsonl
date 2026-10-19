@@ -1,0 +1,3 @@
+{"id":"boost/tests/Feature/Console/ListSkillCommandTest.php::it lists available skills","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ListSkillCommandTest.php::it shows message when no skills available","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/ListSkillCommandTest.php::it shows user-defined skills with local source","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

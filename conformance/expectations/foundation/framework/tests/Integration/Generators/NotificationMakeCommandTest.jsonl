@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFileWithMarkdownOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFileWithMarkdownOptionWithoutValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFileWithMarkdownTemplateWithNotInitialInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFileWithNotInitialInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\NotificationMakeCommandTest::testItCanGenerateNotificationFileWithTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

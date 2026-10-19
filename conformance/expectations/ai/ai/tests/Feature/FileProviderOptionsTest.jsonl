@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/FileProviderOptionsTest.php::array provider options resolve for the given provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileProviderOptionsTest.php::closure provider options resolve per provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileProviderOptionsTest.php::closure provider options survive php serialization","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileProviderOptionsTest.php::headers resolve separately from provider options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

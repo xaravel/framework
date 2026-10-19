@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItFailsAfterRetryTimeout","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItFailsImmediatelyOrRetriesForAWhileBasedOnAGivenTimeout","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItLocksTasksWhenNoSlotAvailable","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItReleasesIfErrorIsThrown","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItReleasesLockAfterTaskFinishes","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\ConcurrentLimiterTest::testItReleasesLockIfTaskTookTooLong","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

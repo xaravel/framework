@@ -1,0 +1,3 @@
+{"id":"mcp/tests/Unit/Completions/DirectCompletionResponseTest.php::it does not allow more than 100 items","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/DirectCompletionResponseTest.php::it returns self when resolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/DirectCompletionResponseTest.php::it throws exception when the constructor receives more than 100 items","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

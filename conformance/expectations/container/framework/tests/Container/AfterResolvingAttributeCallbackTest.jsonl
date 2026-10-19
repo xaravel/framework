@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Container\\AfterResolvingAttributeCallbackTest::testCallbackIsCalledAfterClassWithAttributeIsResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\AfterResolvingAttributeCallbackTest::testCallbackIsCalledAfterClassWithConstructorAndAttributeIsResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\AfterResolvingAttributeCallbackTest::testCallbackIsCalledAfterDependencyResolutionWithAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\AfterResolvingAttributeCallbackTest::testCallbackIsCalledOnAppCall","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

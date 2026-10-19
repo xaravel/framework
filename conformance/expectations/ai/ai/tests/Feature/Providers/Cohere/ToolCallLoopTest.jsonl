@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/Cohere/ToolCallLoopTest.php::empty tool call arguments decode to an empty array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/ToolCallLoopTest.php::multi step tool loop accumulates usage","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/ToolCallLoopTest.php::tool call arguments are decoded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Cohere/ToolCallLoopTest.php::unregistered tool call throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

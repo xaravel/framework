@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testAddDoesNotOverwriteExistingValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testExpiredItemsReturnNullAndGetDeleted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testFlushRemovesScopedDirectory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testForgetRemovesFlexibleCreatedKeyOnlyWhenParentIsForgotten","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testIncrementAndDecrementRetainExpiration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testTouchUpdatesExpiration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheStorageStoreTest::testValuesCanBeStoredAndRetrieved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

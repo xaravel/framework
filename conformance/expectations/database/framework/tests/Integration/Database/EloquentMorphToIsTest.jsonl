@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testNullParentIsNotModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testParentIsModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testParentIsNotAnotherModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testParentIsNotModelWithAnotherConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testParentIsNotModelWithAnotherTable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentMorphToIsTest\\EloquentMorphToIsTest::testParentIsNotNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

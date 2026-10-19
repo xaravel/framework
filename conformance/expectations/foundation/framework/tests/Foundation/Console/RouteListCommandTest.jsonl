@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testClosureRouteShowsPathInCli","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testControllerRoutePathIsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testFilterByMiddleware","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testJsonOutputIsEmptyArrayWhenApplicationHasNoRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testJsonOutputIsEmptyArrayWhenNoRoutesMatch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testMiddlewareGroupsAssignmentInCli","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testMiddlewareGroupsAssignmentInJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testMiddlewareGroupsExpandCorrectlySortedIfVeryVerbose","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testMiddlewareGroupsExpandInCliIfVeryVerbose","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testMiddlewareGroupsExpandInJsonIfVeryVerbose","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testNoMiddlewareIfNotVerbose","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testSortRouteListAsc","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testSortRouteListDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testSortRouteListDesc","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\RouteListCommandTest::testSortRouteListPrecedence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

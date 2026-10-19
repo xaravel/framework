@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testAsSetFilename","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFluentChaining","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromDataCreatesAttachment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlThrowsForEmptyString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlThrowsForFileScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlThrowsForFtpScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlThrowsForInvalidUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlThrowsForMailtoScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlWithHttpScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testFromUrlWithHttpsScheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testIsEquivalentWithDifferentPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testIsEquivalentWithSamePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Mail\\AttachmentTest::testWithMimeSetsMimeType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

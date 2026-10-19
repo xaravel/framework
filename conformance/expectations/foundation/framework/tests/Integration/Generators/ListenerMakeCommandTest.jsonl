@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateListenerFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateListenerFileForEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateListenerFileForIlluminateEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateQueuedListenerFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateQueuedListenerFileForEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateQueuedListenerFileForIlluminateEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\ListenerMakeCommandTest::testItCanGenerateQueuedListenerFileWithTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

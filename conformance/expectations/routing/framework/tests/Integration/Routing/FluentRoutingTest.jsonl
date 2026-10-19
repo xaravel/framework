@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FluentRoutingTest::testEmptyMiddlewareGroupAreHandledGracefully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\FluentRoutingTest::testMiddlewareRunWhenRegisteredAsArrayOrParams","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

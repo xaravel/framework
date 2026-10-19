@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Mcp/Prompts/LaravelCodeSimplifierTest.php::it contains core guideline content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/LaravelCodeSimplifierTest.php::it has a description","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/LaravelCodeSimplifierTest.php::it has correct name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Prompts/LaravelCodeSimplifierTest.php::it returns a valid response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

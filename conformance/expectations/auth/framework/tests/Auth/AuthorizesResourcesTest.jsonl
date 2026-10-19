@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testCreateMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testDestroyMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testEditMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testShowMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testStoreMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthorizesResourcesTest::testUpdateMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

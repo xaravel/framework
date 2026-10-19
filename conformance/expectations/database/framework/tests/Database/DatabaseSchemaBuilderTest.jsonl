@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderTest::testCreateDatabase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderTest::testDropDatabaseIfExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderTest::testGetColumnTypeAddsPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderTest::testHasTableCorrectlyCallsGrammar","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseSchemaBuilderTest::testTableHasColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

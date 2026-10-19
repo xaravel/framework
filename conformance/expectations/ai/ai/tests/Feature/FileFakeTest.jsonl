@@ -1,0 +1,18 @@
+{"id":"ai/tests/Feature/FileFakeTest.php::a stored fake upload can still be read after the upload object is gone","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can assert file was deleted","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can assert file was stored","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can assert no files were deleted","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can assert no files were stored","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the filename when storing an existing storable file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the filename when storing files from a local path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the filename when storing files from a storage disk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the filename when storing files from each document constructor","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the mime type when storing files from each source","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can override the name and mime type when storing an existing storable file","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::can store an uploaded file from its path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::cannot store an uploaded file that failed to upload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::files can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::files can be faked with a closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::files can be faked with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::files can prevent stray operations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileFakeTest.php::storing an uploaded file does not copy it to another temporary path","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

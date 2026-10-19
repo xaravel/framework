@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanFlushFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanFlushFailedJobsForASingleQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanFlushFailedJobsForASingleQueueByHours","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanGetAllFailedJobIds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanGetAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanProperlyLogFailedJob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanPruneFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanPruneFailedJobsWithRelativeHoursAndMinutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanRemoveFailedJobsById","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testCanRetrieveFailedJobsById","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testJobsCanBeCounted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testJobsCanBeCountedByConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testJobsCanBeCountedByQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\DatabaseFailedJobProviderTest::testJobsCanBeCountedByQueueAndConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

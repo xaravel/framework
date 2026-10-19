@@ -1,0 +1,12 @@
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming captures usage","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming emits text events","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming error event stops stream","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"content_filter maps to ContentFilter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"error maps to Error\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"length maps to Length\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"model_length maps to Length\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"stop maps to Stop\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"tool_calls maps to ToolCalls\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming finish reason maps correctly#dataset \"unknown maps to Unknown\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming flattens block content deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/StreamingTest.php::streaming handles tool calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

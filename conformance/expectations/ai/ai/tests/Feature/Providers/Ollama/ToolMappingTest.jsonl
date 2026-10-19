@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/Ollama/ToolMappingTest.php::tool definition includes name and description","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/ToolMappingTest.php::tool with empty schema includes parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/ToolMappingTest.php::tool with parameters includes correct schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\SchedulePauseCommandTest::testDispatchesEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\Scheduling\\SchedulePauseCommandTest::testFailsWhenPausingIsDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

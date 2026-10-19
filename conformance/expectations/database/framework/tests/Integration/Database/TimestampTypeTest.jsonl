@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\TimestampTypeTest::testChangeDatetimeColumnToTimestampColumn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\TimestampTypeTest::testChangeStringColumnToTimestampColumn","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\TimestampTypeTest::testChangeStringColumnToTimestampColumn","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\TimestampTypeTest::testChangeTimestampColumnToDatetimeColumn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

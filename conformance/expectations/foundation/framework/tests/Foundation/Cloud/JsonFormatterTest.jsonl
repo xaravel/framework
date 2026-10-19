@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\JsonFormatterTest::test_adds_cloud_request_id_as_top_level_key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\JsonFormatterTest::test_does_not_add_field_when_no_header_present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\JsonFormatterTest::test_does_not_add_field_when_no_request_bound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Cloud\\JsonFormatterTest::test_preserves_existing_log_fields","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

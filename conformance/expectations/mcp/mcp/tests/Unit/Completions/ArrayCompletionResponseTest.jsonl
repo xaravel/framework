@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Unit/Completions/ArrayCompletionResponseTest.php::it filters by prefix when resolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/ArrayCompletionResponseTest.php::it starts with empty values until resolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

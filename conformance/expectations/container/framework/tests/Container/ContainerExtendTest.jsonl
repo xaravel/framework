@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendBindRebindingCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendCanBeCalledBeforeBind","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendContextualBinding","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendContextualBindingAfterResolution","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendInstanceRebindingCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendInstancesArePreserved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendIsLazyInitialized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtendedBindings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testExtensionWorksOnAliasedBindings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testMultipleExtends","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Container\\ContainerExtendTest::testUnsetExtend","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

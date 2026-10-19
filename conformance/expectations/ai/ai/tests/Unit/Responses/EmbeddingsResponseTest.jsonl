@@ -1,0 +1,1 @@
+{"id":"ai/tests/Unit/Responses/EmbeddingsResponseTest.php::embeddings response serializes its usage under a usage key","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

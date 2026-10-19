@@ -1,0 +1,15 @@
+{"id":"ai/tests/Feature/FileToArrayTest.php::base64 document toArray reflects name and mime","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::base64 video toArray reflects name and mime","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::local image toArray does not touch the filesystem","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::local image toArray returns the explicitly set mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::local image toArray uses basename and the raw mime property","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::local video toArray returns the explicitly set mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::local video toArray uses basename and the raw mime property","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::remote document toArray handles urls without a path component","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::remote document toArray never issues an HTTP request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::remote image toArray returns the explicitly set mime type without HTTP calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::remote video toArray returns the explicitly set mime type without HTTP calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::stored audio toArray falls back to basename","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::stored document toArray falls back to basename without touching the disk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::stored image toArray falls back to basename","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/FileToArrayTest.php::stored video toArray falls back to basename","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

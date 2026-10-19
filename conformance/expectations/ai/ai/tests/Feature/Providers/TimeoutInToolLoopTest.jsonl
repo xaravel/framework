@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/TimeoutInToolLoopTest.php::anthropic timeout is preserved in tool call follow up","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/TimeoutInToolLoopTest.php::gemini timeout is preserved in tool call follow up","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/TimeoutInToolLoopTest.php::groq timeout is preserved in tool call follow up","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/TimeoutInToolLoopTest.php::openai timeout is preserved in tool call follow up","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

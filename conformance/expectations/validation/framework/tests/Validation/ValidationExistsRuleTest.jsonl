@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItChoosesValidRecordsUsingConditionalModifiers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItChoosesValidRecordsUsingWhereInRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItChoosesValidRecordsUsingWhereNotInAndWhereNotInRulesTogether","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItChoosesValidRecordsUsingWhereNotInRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItChoosesValidRecordsUsingWhereNotRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItCorrectlyFormatsAStringVersionOfTheRule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItIgnoresSoftDeletes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItIsAPartOfListRules","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExistsRuleTest::testItOnlyTrashedSoftDeletes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

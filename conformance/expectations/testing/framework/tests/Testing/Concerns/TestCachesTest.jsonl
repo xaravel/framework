@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testBootTestCacheRegistersSetUpTestCaseCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testBootTestCacheSkipsIsolationIfOptedOut","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testCachePrefixAppendsToken#empty prefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testCachePrefixAppendsToken#with prefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testCachePrefixPreservesOriginalPrefix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testSwitchToCachePrefixDoesNotRemoveResolvedDrivers","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestCachesTest::testSwitchToCachePrefixUpdatesConfig","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

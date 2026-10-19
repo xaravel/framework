@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testHttpExceptionsAreNotReThrownAsViewExceptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testRegularExceptionsAreReThrownAsViewExceptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testThatViewsAreNotAskTwiceIfTheyAreExpired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreNotRecompiledIfTheyAreNotExpired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreNotRecompiledIfTheyWereJustCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreNotRecompiledOnRegularViewException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreRecompiledJustOnceWhenCompiledViewIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreRecompiledWhenCompiledViewIsMissingViaFileNotFoundException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsAreRecompiledWhenCompiledViewIsMissingViaRequireException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\ViewCompilerEngineTest::testViewsMayBeRecompiledAndRendered","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

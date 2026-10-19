@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/DeepSeek/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/DeepSeek/ToolCallLoopTest.php::multi step tool loop returns accumulated response shape","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/DeepSeek/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/DeepSeek/ToolCallLoopTest.php::unknown tool call throws no such tool exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteCachingTest::testQueryRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteCachingTest::testRedirectRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteCachingTest::testWildcardCatchAllRoutes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

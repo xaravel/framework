@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testAPCFalseValueIsReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testAPCValueIsReturned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testDecrementMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testFlushesCached","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testForgetMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testGetMultipleReturnsNullWhenNotFoundAndValueWhenFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testGetReturnsNullWhenNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testIncrementMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testSetMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testSetMultipleMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testStoreItemForeverProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheApcStoreTest::testTouchMethodProperlyCallsAPC","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

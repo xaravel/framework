@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testAlwaysUnsetBelongsToRelationWhenReceivedModelId","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testHigherOrderHasThroughApi","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testOverriddenRelationships","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testPendingHasThroughRelationship","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testStandardRelationships","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentRelationshipsTest::testStringyHasThroughApi","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

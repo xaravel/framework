@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\EnumMakeCommandTest::testItCanGenerateEnumFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\EnumMakeCommandTest::testItCanGenerateEnumFileInEnumerationsFolder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\EnumMakeCommandTest::testItCanGenerateEnumFileInEnumsFolder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\EnumMakeCommandTest::testItCanGenerateEnumFileWithInt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\EnumMakeCommandTest::testItCanGenerateEnumFileWithString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

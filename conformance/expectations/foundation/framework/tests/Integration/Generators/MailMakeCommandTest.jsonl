@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testErrorsWillBeDisplayedWhenMarkdownsAlreadyExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testErrorsWillBeDisplayedWhenViewsAlreadyExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailFileWithMarkdownOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailFileWithTest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailFileWithViewOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailWithMarkdownViewWithNoInitialInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailWithNoInitialInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\MailMakeCommandTest::testItCanGenerateMailWithViewWithNoInitialInput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

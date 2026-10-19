@@ -1,0 +1,5 @@
+{"id":"ai/tests/Unit/ObjectSchemaTest.php::deeply nested objects include additional properties false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ObjectSchemaTest.php::nested objects include additional properties false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ObjectSchemaTest.php::nullable nested objects include additional properties false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ObjectSchemaTest.php::objects in nested arrays include additional properties false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/ObjectSchemaTest.php::objects nested in arrays include additional properties false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

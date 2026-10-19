@@ -1,0 +1,8 @@
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote audio rejects empty url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote audio rejects whitespace-only url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote document rejects empty url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote document rejects whitespace-only url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote image rejects empty url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote image rejects whitespace-only url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote video rejects empty url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Files/RemoteUrlTest.php::remote video rejects whitespace-only url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

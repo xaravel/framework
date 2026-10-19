@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testAsPivot","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testItDoesNotSyncPreviousOnRefresh","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testItRefreshesASoftDeletedModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testItRefreshesModelExcludedByGlobalScope","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testItRefreshesModelForUpdate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelRefreshTest\\EloquentModelRefreshTest::testItSyncsOriginalOnRefresh","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

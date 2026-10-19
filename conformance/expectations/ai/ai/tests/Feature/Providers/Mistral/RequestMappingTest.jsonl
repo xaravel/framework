@@ -1,0 +1,18 @@
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::named tool choice forces a specific function","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::none tool choice prevents tool calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::request includes model and messages","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::request sends bearer token authorization","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::request without tools excludes tool fields","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::required tool choice can be set via attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::required tool choice forces the model to call a tool","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::response text is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::response usage is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::response usage reports cached prompt tokens","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::streaming request includes stream options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::structured output includes json schema response format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::structured output without Strict attribute sends strict false in response format","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::structured response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::system instructions are sent as system message","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::temperature and max tokens are excluded when not set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::temperature and max tokens are included when set via attributes","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/RequestMappingTest.php::tools include tool choice auto","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

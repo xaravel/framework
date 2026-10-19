@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Client/OAuth/OAuthTransportTest.php::it exposes the configured endpoint url","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/OAuth/OAuthTransportTest.php::it parses mixed www authenticate challenges with quoted commas and unquoted values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/OAuth/OAuthTransportTest.php::it resolves a closure token at request time","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/OAuth/OAuthTransportTest.php::it throws AuthorizationRequiredException on a 401 with a challenge","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/OAuth/OAuthTransportTest.php::it throws AuthorizationRequiredException on a 403","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

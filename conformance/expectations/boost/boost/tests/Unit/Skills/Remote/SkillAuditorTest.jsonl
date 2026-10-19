@@ -1,0 +1,8 @@
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it returns audit results for multiple skills","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it returns audit results for skills","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it returns empty array on connection timeout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it returns empty array on malformed response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it returns empty array on network failure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it sends correct query parameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it skips non-array partner data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Skills/Remote/SkillAuditorTest.php::it skips partner entries without risk field","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

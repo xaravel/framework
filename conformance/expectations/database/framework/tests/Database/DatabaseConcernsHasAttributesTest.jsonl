@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseConcernsHasAttributesTest::testCastingEmptyStringToArrayDoesNotError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConcernsHasAttributesTest::testRelationsToArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConcernsHasAttributesTest::testUnsettingCachedAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConcernsHasAttributesTest::testWithConstructorArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConcernsHasAttributesTest::testWithoutConstructor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

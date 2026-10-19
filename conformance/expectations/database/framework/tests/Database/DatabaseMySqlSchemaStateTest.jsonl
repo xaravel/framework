@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testConnectionString#default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testConnectionString#no_ssl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testConnectionString#ssl_ca","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testConnectionString#ssl_cert_and_key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testConnectionString#unix socket","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMySqlSchemaStateTest::testExecuteDumpProcessForDepth","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

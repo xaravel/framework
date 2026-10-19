@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\JsonResponseTest::testResponseSetDataPassesWithPriorJsonErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\JsonResponseTest::testResponseWithInvalidJsonThrowsException","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

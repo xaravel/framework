@@ -1,0 +1,20 @@
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it accepts valid URI templates","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it casts to string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it does not match variables across slashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it exposes variable names","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it extracts multiple variables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it extracts variables from simple strings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it handles empty segments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it handles extremely long input strings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it handles invalid UTF-8 sequences","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it handles maximum template expression limit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it handles pathological regex patterns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it matches nested path segments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it rejects partial matches and incomplete URIs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it requires a valid URI scheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it requires at least one placeholder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it returns null for non-matching URIs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it throws for unclosed template expressions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it throws when URI exceeds maximum length","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it throws when the template exceeds the maximum length","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Support/UriTemplateTest.php::it throws when the template has too many expressions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Console/Commands/StartCommandTest.php::it asserts handle is a string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/StartCommandTest.php::it fails when server handle is not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/StartCommandTest.php::it requires handle argument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Console/Commands/StartCommandTest.php::it starts a registered local server successfully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEscapedTest::testEscapedWithAtDirectivesAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeEscapedTest::testNestedEscapes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

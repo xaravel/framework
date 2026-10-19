@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::a response paused on a tool approval carries the reasoning so far","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::a structured response carries the reasoning that produced it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::a summary and the raw reasoning of one item stay separate blocks","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::prompt joins reasoning blocks exactly as a stream of the same reasoning does","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::prompt reads raw reasoning text exactly as a stream of the same reasoning does","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ReasoningTest.php::reasoning is joined across every step of a tool calling turn","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

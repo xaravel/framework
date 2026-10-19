@@ -1,0 +1,13 @@
+{"id":"ai/tests/Feature/ToolApprovalTest.php::a mixed resume dispatches the tool approval resolved event with approved and denied results","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::a paused prompt dispatches the tool approval requested event with its conversation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::a paused response exposes everything a controller needs to build its own approval envelope","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::a paused stream dispatches the tool approval requested event","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::a run that only pauses does not dispatch the tool approval resolved event","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::an approval mismatch renders as a 409 carrying the pending approvals","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::an approved streamed resume dispatches the tool approval resolved event","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::approval overrides take precedence over the tool default","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::approval resumes flow through queue and broadcast delivery styles","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::decision maps may approve or reject every remaining tool call","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::decision maps normalize booleans, blank reasons, and blanket helpers","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::invalid decision maps are rejected","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ToolApprovalTest.php::non-paused responses render without the approval envelope","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

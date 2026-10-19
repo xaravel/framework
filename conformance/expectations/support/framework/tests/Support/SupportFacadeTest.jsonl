@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testCanBeMockedWithoutUnderlyingInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testExpectsReturnsAMockeryMockWithExpectationRequired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testFacadeCallsUnderlyingApplication","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testFacadeResolvesAgainAfterClearingAll","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testFacadeResolvesAgainAfterClearingSpecific","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testShouldReceiveCanBeCalledTwice","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testShouldReceiveReturnsAMockeryMock","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadeTest::testSpyReturnsAMockerySpy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

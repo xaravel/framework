@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_cleans_up_old_sessions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_closes_the_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_creates_session_ids","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_destroys_a_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_implements_the_session_handler_interface","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_initializes_the_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_reads_data_from_a_non_existing_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_reads_data_from_an_almost_expired_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_reads_data_from_an_expired_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_reads_data_from_the_session","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_validates_session_ids","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\ArraySessionHandlerTest::test_it_writes_session_data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

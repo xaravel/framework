@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandTest::testHostAndPortParsing#IPv4 address with port","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandTest::testHostAndPortParsing#IPv6 address with port","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandTest::testHostAndPortParsing#IPv6 address without port","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandTest::testHostAndPortParsing#hostname with port","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandTest::testHostAndPortParsing#hostname without port","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

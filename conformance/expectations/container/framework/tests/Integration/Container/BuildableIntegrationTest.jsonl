@@ -1,0 +1,1 @@
+{"id":"Illuminate\\Tests\\Integration\\Container\\BuildableIntegrationTest::test_build_method_can_resolve_itself_via_container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

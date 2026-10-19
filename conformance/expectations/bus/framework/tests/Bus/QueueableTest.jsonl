@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnConnection#uses BackedEnum #1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnConnection#uses BackedEnum #2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnConnection#uses null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnConnection#uses string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnQueue#uses BackedEnum #1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnQueue#uses BackedEnum #2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnQueue#uses null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testAllOnQueue#uses string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses BackedEnum #1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses BackedEnum #2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnConnection#uses string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnQueue#uses BackedEnum #1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnQueue#uses BackedEnum #2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnQueue#uses null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Bus\\QueueableTest::testOnQueue#uses string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

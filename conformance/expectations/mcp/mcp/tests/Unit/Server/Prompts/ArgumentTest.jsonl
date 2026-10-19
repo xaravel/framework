@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Server/Prompts/ArgumentTest.php::it converts optional argument to array correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Prompts/ArgumentTest.php::it converts to array correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Prompts/ArgumentTest.php::it creates an argument with all parameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Prompts/ArgumentTest.php::it creates an argument with required parameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Prompts/ArgumentTest.php::it implements Arrayable interface","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

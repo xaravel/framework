@@ -1,0 +1,5 @@
+{"id":"boost/tests/Unit/Install/AgentsDetectorTest.php::it returns an array of detected agent names for project discovery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/AgentsDetectorTest.php::it returns an array of detected agents names for system discovery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/AgentsDetectorTest.php::it returns an empty array when no agents are detected for project discovery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/AgentsDetectorTest.php::it returns an empty array when no agents are detected for system discovery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/AgentsDetectorTest.php::it returns collection of all registered agents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

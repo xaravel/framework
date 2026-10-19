@@ -1,0 +1,12 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testArraysAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testAsEncryptedArrayObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testAsEncryptedArrayObjectJsonAttributeIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testAsEncryptedCollection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testAsEncryptedCollectionJsonAttributeIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testAsEncryptedCollectionMap","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testCollectionIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testCustomEncrypterCanBeSpecified","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testJsonAttributeIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testJsonIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testObjectIsCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelEncryptedCastingTest::testStringsAreCastable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

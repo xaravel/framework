@@ -1,0 +1,11 @@
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles accept header with quality values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles empty accept header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles json already first in list","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles missing accept header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles multiple json types correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles no json in accept header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it handles whitespace in accept header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it leaves non-comma separated accept header unchanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it leaves single accept header unchanged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it passes request through middleware correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Middleware/ReorderJsonAcceptTest.php::it reorders multiple accept headers to prioritize json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

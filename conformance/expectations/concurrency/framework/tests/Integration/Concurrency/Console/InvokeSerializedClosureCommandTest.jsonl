@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\Console\\InvokeSerializedClosureCommandTest::testItCanInvokeSerializedClosureFromArgument","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\Console\\InvokeSerializedClosureCommandTest::testItCanInvokeSerializedClosureFromEnvironment","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\Console\\InvokeSerializedClosureCommandTest::testItHandlesCustomExceptionWithParameters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\Console\\InvokeSerializedClosureCommandTest::testItHandlesExceptionsGracefully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Concurrency\\Console\\InvokeSerializedClosureCommandTest::testItReturnsNullWhenNoClosureIsProvided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

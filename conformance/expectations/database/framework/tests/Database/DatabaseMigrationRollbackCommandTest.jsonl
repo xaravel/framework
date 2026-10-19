@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRollbackCommandTest::testRollbackCommandCallsMigratorWithProperArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRollbackCommandTest::testRollbackCommandCallsMigratorWithStepOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRollbackCommandTest::testRollbackCommandCanBePretended","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationRollbackCommandTest::testRollbackCommandCanBePretendedWithStepOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"ai/tests/Feature/AiManagerTest.php::a configured provider casts to its driver","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::an on-demand provider cannot replace a configured provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::an on-demand provider cannot take a built-in provider name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::an on-demand provider keeps its internal flag out of its additional configuration","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::can get an openai provider instance","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::driver extensions survive between queue jobs","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::flushing state forgets on-demand providers but keeps configured providers","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::on-demand providers are flushed when an octane operation terminates","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::on-demand providers are flushed while the queue worker loops","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::provider type is ensured","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AiManagerTest.php::rebuilding a named on-demand provider uses the new configuration","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

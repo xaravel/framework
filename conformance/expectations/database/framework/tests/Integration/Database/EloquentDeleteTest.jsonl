@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testDeleteQuietly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testDeleteUseLimitWithJoins","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testDeleteUseLimitWithoutJoins","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testDeleteWithLimitAndJoinThrowsExceptionOnMySql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testDestroy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testForceDeletedEventIsFired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentDeleteTest::testForceDeletingEventIsFired","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

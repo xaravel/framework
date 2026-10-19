@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Tools/RendersAppTest.php::it does not include _meta.ui when RendersApp attribute is absent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/RendersAppTest.php::it includes _meta.ui.resourceUri when RendersApp attribute is present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/RendersAppTest.php::it includes default visibility when RendersApp attribute is present","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Tools/RendersAppTest.php::it supports custom visibility","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

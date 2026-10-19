@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testIgnorePretendModeForCallbackData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testIgnorePretendModeForCallbackOutputDynamicContentIsShown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testIgnorePretendModeForCallbackOutputDynamicContentNotShown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testMigrate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testMigrateWithoutOutput","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testPretendMigrate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testRollback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testShouldSkip","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Migration\\MigratorTest::testWithSkippedMigrations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

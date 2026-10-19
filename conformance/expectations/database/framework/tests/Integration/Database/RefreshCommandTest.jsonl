@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\RefreshCommandTest::testRefreshWithRealpath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\RefreshCommandTest::testRefreshWithoutRealpath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

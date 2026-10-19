@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it casts to string as method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it converts to array with method and params","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it does not include _meta if not set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it may be used in prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it may be used in resources without adding metadata","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it may be used in tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it supports _meta in params","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/NotificationTest.php::it supports _meta via setMeta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

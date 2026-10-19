@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/ElevenLabs/BaseUrlTest.php::elevenlabs audio requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/ElevenLabs/BaseUrlTest.php::elevenlabs requests fall back to the default base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/ElevenLabs/BaseUrlTest.php::elevenlabs transcription requests use the configured base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

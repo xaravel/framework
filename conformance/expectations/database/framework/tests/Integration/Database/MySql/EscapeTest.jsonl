@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeArray","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeBinary","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeBool","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeFloat","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeInt","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeNull","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeString","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeStringInvalidUtf8","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MySql\\EscapeTest::testEscapeStringNullByte","variant":"mysql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,14 @@
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"prompts/list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"resources/list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"resources/read\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"resources/templates/list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"server/discover\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it adds caching hints to every cacheable result#dataset \"tools/list\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it leaves caching hints off a request retried with input responses#dataset \"inputResponses\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it leaves caching hints off a request retried with input responses#dataset \"requestState\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it leaves caching hints off a result that is not cacheable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it never emits a negative ttl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it prefers the per method hint over the server attribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it prefers the resource attribute over the server hints","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it returns tools in the same order on every request","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/CachingTest.php::it uses the hint the server attribute declares","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

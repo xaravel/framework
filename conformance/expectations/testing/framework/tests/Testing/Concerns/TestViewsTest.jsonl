@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testCompiledViewPath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testCompiledViewPathAppendsToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testCompiledViewPathReturnsNullWhenEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testCompiledViewPathTrimsTrailingSlash","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testCompiledViewPathWithDifferentToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testSetUpProcessToleratesDirectoryCreatedByConcurrentRun","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testSwitchToCompiledViewPathUpdatesCompilerCachePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testSwitchToCompiledViewPathUpdatesConfig","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testTearDownProcessDeletesCompiledViewDirectory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Testing\\Concerns\\TestViewsTest::testTearDownProcessToleratesDirectoryRemovedByConcurrentRun","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,14 @@
+{"id":"ai/tests/Integration/StoreTest.php::can add and remove file from store#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can add and remove file from store#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can add and remove file from store#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create get and delete store#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create get and delete store#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create get and delete store#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create store with expiration#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create store with expiration#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::can create store with expiration#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::file search > can actually prompt an agent with file search data#dataset \"azure\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::file search > can actually prompt an agent with file search data#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::file search > can actually prompt an agent with file search data#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::file search > can actually prompt an agent with filtered search data","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/StoreTest.php::file search > can follow up a stateless file search and function call made in the same step","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

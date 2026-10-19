@@ -1,0 +1,13 @@
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::displayName returns Factory Droid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::guidelinesPath returns AGENTS.md by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::httpMcpServerConfig returns default http config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::installMcp writes factory project mcp config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::mcpConfigPath returns .factory/mcp.json by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::mcpServerConfig includes environment variables","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::mcpServerConfig returns factory stdio config","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::name returns factory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::projectDetectionConfig detects via .factory directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::skillsPath returns .factory/skills by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::systemDetectionConfig detects droid on macOS and linux#(Laravel\\Boost\\Install\\Enums\\Platform Enum (Darwin, 'darwin'))","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::systemDetectionConfig detects droid on macOS and linux#(Laravel\\Boost\\Install\\Enums\\Platform Enum (Linux, 'linux'))","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/FactoryTest.php::systemDetectionConfig detects droid on windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

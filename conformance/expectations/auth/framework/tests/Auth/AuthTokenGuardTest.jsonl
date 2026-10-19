@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testItAllowsToPassCustomRequestInSetterAndUseItForValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testTokenCanBeHashed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByAuthHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByAuthHeadersWithCustomField","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByBearerToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByBearerTokenWithCustomKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByQueryStringVariable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCanBeRetrievedByQueryStringVariableWithCustomKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testUserCannotBeRetrievedWithNonStringToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateCanDetermineIfCredentialsAreInvalid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateCanDetermineIfCredentialsAreInvalidWithCustomKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateCanDetermineIfCredentialsAreValid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateCanDetermineIfCredentialsAreValidWithCustomKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateIfApiTokenIsEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateIfApiTokenIsEmptyWithCustomKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthTokenGuardTest::testValidateRejectsNonStringToken","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

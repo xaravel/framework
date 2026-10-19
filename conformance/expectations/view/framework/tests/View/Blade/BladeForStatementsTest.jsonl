@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeForStatementsTest::testForStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\Blade\\BladeForStatementsTest::testNestedForStatementsAreCompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

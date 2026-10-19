@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheSpyMemoTest::test_cache_spy_memo_returns_spied_repository","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheSpyMemoTest::test_cache_spy_tracks_remember_calls_on_memoized_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheSpyMemoTest::test_cache_spy_tracks_remember_on_memoized_cache_as_described_in_issue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheSpyMemoTest::test_cache_spy_works_with_memoized_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

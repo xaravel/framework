@@ -1,0 +1,4 @@
+{"id":"ai/tests/Unit/Concerns/JoinsReasoningTest.php::combining reasoning deltas applies the same rule","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Concerns/JoinsReasoningTest.php::it drops blocks that hold no text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Concerns/JoinsReasoningTest.php::it joins a collection the same way it joins an array","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Concerns/JoinsReasoningTest.php::it separates each block with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testAttemptsCallbackReturnsCallbackReturn","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testAttemptsCallbackReturnsFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testAttemptsCallbackReturnsTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testAvailableInReturnsPositiveValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testClearClearsTheCacheKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testDecrementProperlyDecrementsAttemptCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testHitHasNoMemoryLeak","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testHitProperlyIncrementsAttemptCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testIncrementProperlyIncrementsAttemptCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testIncrementWithCustomAmountHasNoMemoryLeak","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testKeyIsSanitizedOnlyOnce","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testKeysAreSanitizedFromUnicodeCharacters","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testRemainingIsNotNegative","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testRetriesLeftReturnsCorrectCount","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheRateLimiterTest::testTooManyAttemptsReturnTrueIfAlreadyLockedOut","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

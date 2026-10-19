@@ -1,0 +1,16 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testCombinedFilterAndVendorOptions","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testEmptyStateWithFilterReturnsFailure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testEmptyStateWithNoCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testExceptVendorExcludesVendorCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFilterByCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFilterByName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFilterReturnsFailureWhenNoMatch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFormatSourceWithClassAndFunction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFormatSourceWithEmptyArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testFormatSourceWithFileAndLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testJsonOutputContainsAllFields","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testJsonOutputIncludesSource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testJsonOutputWithFilterContainsOnlyMatchingCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testListsRegisteredCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testOnlyVendorWithNoVendorCommandsReturnsEmpty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationDevListCommandTest::testShowsSingularCommandLabel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

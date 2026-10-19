@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/Ollama/AgentFakeTest.php::ollama agent can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/AgentFakeTest.php::ollama agent fake records prompts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/AgentFakeTest.php::ollama agent fake with closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/AgentFakeTest.php::ollama agent fake with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/AgentFakeTest.php::ollama agent stream can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it deduplicates library domains in csp","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it implements Arrayable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it merges library domains into csp resource domains","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it merges library domains with existing csp resource domains","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it omits empty csp and permissions objects","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it omits null values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it returns libraries via getLibraries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it serializes all fields when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it serializes as empty when no fields set","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppMetaTest.php::it supports fluent builder via make()","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

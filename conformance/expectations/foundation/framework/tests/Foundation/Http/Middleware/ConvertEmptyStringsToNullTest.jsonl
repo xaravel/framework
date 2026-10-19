@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNullTest::testConvertsEmptyStringsToNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNullTest::testSkipConvertsEmptyStringsToNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

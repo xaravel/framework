@@ -1,0 +1,5 @@
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/SchemaDriverFactoryTest.php::creates MySQLSchemaDriver for mariadb connection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/SchemaDriverFactoryTest.php::creates MySQLSchemaDriver for mysql connection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/SchemaDriverFactoryTest.php::creates NullSchemaDriver for sqlsrv driver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/SchemaDriverFactoryTest.php::creates PostgreSQLSchemaDriver for pgsql connection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Mcp/Tools/DatabaseSchema/SchemaDriverFactoryTest.php::creates SQLiteSchemaDriver for sqlite connection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

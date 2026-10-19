@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/AudioProviderOptionsTest.php::closure provider options receive the resolved audio provider","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioProviderOptionsTest.php::closure provider options survive queue serialization round-trip","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioProviderOptionsTest.php::falsy provider options are not dropped from the audio request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioProviderOptionsTest.php::flat provider options are recorded on the queued audio prompt fake","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/AudioProviderOptionsTest.php::provider options may not override the core audio request payload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

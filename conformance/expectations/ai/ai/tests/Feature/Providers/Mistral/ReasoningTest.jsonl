@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/Mistral/ReasoningTest.php::a delta carrying both the last thinking and the first text closes one reasoning block","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ReasoningTest.php::prompt reads the thinking chunks off the response","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ReasoningTest.php::prompt separates each thinking chunk with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Mistral/ReasoningTest.php::streaming emits reasoning events before the text","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

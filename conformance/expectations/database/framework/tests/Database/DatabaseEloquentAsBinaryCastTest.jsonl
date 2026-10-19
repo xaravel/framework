@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testCastThrowsOnInvalidFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testCastThrowsWhenFormatMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testGetDecodesUlidFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testGetDecodesUuidFromBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testGetReturnsNullForNullValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testOfHelperMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testSetEncodesNullToNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testSetEncodesUlidToBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testSetEncodesUuidToBinary","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testUlidHelperMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsBinaryCastTest::testUuidHelperMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeArray","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeBinary","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeBool","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeFloat","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeInt","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeNull","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeString","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeStringInvalidUtf8","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\EscapeTest::testEscapeStringNullByte","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

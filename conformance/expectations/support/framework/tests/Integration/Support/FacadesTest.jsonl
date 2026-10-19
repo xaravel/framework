@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\FacadesTest::testDefaultAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\FacadesTest::testFacadeResolvedCanResolveCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\FacadesTest::testFacadeResolvedCanResolveCallbackAfterAccessRootHasBeenResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testBooleanConditionFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testBooleanConditionTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testClosureConditionFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testClosureConditionTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testFieldIsExcludedWhenConditionFalse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testFieldIsKeptWhenConditionTrue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testInstanceOf","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationExcludeUnlessRuleTest::testInvalidConditionThrows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

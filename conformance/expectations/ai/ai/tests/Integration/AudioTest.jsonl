@@ -1,0 +1,11 @@
+{"id":"ai/tests/Integration/AudioTest.php::audio can be generated#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::audio can be generated#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::audio can be generated#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::audio can be transcribed after generation#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::audio can be transcribed after generation#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::audio can be transcribed after generation#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::transcription can be diarized#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::transcription can be diarized#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::transcription can be generated from local path#dataset \"gemini\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::transcription can be generated from local path#dataset \"openai\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Integration/AudioTest.php::transcription can be generated from local path#dataset \"openrouter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

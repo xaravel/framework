@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_close","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_destroy_removes_data_from_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_gc_returns_zero","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_get_cache_returns_cache_instance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_it_creates_session_ids","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_open","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_read_returns_data_from_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_read_returns_empty_string_if_no_data","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_validate_id_checks_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Session\\CacheBasedSessionHandlerTest::test_write_stores_data_in_cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

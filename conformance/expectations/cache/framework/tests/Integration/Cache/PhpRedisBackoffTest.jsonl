@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testAnInvalidPhpRedisBackoffAlgorithmIsConvertedToDefault","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testItFailsWithAnInvalidPhpRedisAlgorithm","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#2","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#3","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#4","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithm#5","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#2","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#3","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#4","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\PhpRedisBackoffTest::testPhpRedisBackoffAlgorithmParsing#5","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

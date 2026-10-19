@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testCursorPaginationOnTopOfColumns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testLatestAndOldestPaginationWithJoin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithAliasedOrderBy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithDistinct","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithDistinctColumnsAndSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithDistinctColumnsAndSelectAndJoin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithHasClause","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithMultipleAliases","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithMultipleUnionAndMultipleWhereClauses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithMultipleWhereClauses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithUnion","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithWhereClause","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithWhereExistsClause","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCursorPaginateTest::testPaginationWithWhereHasClause","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

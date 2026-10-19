@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Feature/CompletionTest.php::Context-Aware Completions > it completes projectId and taskId with context dependency","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::Context-Aware Completions > it completes userId and fileId with context dependency","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it filters by prefix and returns all when empty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::from() - Basic Completions > it refines completions as user types","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::fromArray() - Array Completions > it returns and filters locations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::fromEnum() - Enum Completions > it returns backed enum values with filtering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::fromEnum() - Enum Completions > it returns non-backed enum names with filtering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/CompletionTest.php::result() - Raw Completions Without Filtering > it returns raw array without filtering","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

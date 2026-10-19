@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testCustomResolverIsCalled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testExcludeAndIncludeUnvalidatedArrayKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testFakeDnsLookupsDelegatesToTheValidator","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testMakeMethodCreatesValidValidator","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testSetContainer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testValidateCallsValidateOnTheValidator","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationFactoryTest::testValidateMethodCanBeCalledPublicly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

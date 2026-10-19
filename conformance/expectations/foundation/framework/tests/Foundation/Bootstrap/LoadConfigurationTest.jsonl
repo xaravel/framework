@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Foundation\\Bootstrap\\LoadConfigurationTest::testConfigurationArrayKeysMatchLoadedFilenames","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Bootstrap\\LoadConfigurationTest::testDontLoadBaseConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Bootstrap\\LoadConfigurationTest::testLoadsBaseConfiguration","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Bootstrap\\LoadConfigurationTest::testLoadsConfigurationInIsolation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Bootstrap\\LoadConfigurationTest::testSetsEnvironmentResolver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

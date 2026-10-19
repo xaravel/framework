@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemServiceProviderTest::test_it_throws_when_served_disks_have_conflicting_uris","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\FilesystemServiceProviderTest::test_served_disks_with_unique_urls_do_not_conflict","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

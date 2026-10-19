@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLike","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLikeCaseSensitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLikeWithPercentWildcard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLikeWithPercentWildcardCaseSensitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLikeWithUnderscoreWildcard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\QueryBuilderWhereLikeTest::testWhereLikeWithUnderscoreWildcardCaseSensitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

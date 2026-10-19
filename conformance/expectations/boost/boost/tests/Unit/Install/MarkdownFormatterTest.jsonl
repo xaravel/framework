@@ -1,0 +1,11 @@
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it does not corrupt content containing a fence placeholder","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it does not pair an inline backtick run with a real fence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it keeps blank lines inside a fenced code block","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it leaves an unclosed fence alone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it leaves comment lines inside a fenced code block alone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it leaves comment lines inside a tilde fenced code block alone","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it only treats a hash at the start of a line as a heading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it still adds a blank line before and after a heading","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it still adds a blank line between a heading and a following code fence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it still collapses consecutive blank lines outside a fence","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/MarkdownFormatterTest.php::it still normalizes carriage returns","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

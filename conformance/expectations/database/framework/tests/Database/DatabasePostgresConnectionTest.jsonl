@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresConnectionTest::testBooleanBindingsAreStringifiedWhenUsingEmulatedPrepares","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresConnectionTest::testBooleanBindingsAreStringifiedWhenUsingTruthyEmulatedPreparesOption","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresConnectionTest::testBooleanBindingsUseDefaultIntegerConversionWhenNotUsingEmulatedPrepares","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresConnectionTest::testBooleanBindingsUseDirectPdoConfigWhenDirectConnectionIsActive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresConnectionTest::testBooleanBindingsUseReadPdoConfigWhenReadConnectionIsActive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

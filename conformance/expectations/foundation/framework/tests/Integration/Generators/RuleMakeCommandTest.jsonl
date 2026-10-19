@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Generators\\RuleMakeCommandTest::testItCanGenerateImplicitRuleFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\RuleMakeCommandTest::testItCanGenerateInvokableRuleFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Generators\\RuleMakeCommandTest::testItCanGenerateRuleFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

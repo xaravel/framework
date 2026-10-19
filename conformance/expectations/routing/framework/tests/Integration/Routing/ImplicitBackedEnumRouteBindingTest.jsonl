@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\ImplicitBackedEnumRouteBindingTest::testWithRouteCachingEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\ImplicitBackedEnumRouteBindingTest::testWithoutRouteCachingEnabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

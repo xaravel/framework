@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceCollectionTest::testItCanGuessResourceWhenNotProvided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceCollectionTest::testItCanTransformToExplicitResource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceCollectionTest::testItCanTransformToResourceViaUseResourceAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceCollectionTest::testItCanTransformToResourceViaUseResourceCollectionAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceCollectionTest::testItThrowsExceptionWhenResourceCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Unit/Primitive/EligibleForRegistrationTest.php::it calls shouldRegister with the Request and honors its return value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Primitive/EligibleForRegistrationTest.php::it returns true by default when shouldRegister is not defined","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

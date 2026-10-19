@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/Providers/Anthropic/ProviderToolCallsTest.php::server tool use and result blocks land on the step keyed by the tool use","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

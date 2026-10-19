@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Console/InstallCommandCloudSkillTest.php::it does not install the cloud skill when the integration is not selected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandCloudSkillTest.php::it does not install the cloud skill when the skills feature is not selected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandCloudSkillTest.php::it does not prompt for integrations when none are available","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Console/InstallCommandCloudSkillTest.php::it installs the bundled cloud skill when the skills feature is selected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testConvertEmptyStringsToNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testEncryptCookies","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testPreventRequestForgery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testPreventRequestsDuringMaintenance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testRedirectGuestsToNullRegistersNullCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testRedirectUsersToDoesNotOverwriteRedirectGuestsTo","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testTrimStrings","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testTrustHeaders","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testTrustHosts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Configuration\\MiddlewareTest::testTrustProxies","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

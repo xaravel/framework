@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Queue\\RetryBatchCommandTest::testItCanBeRunInIsolation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\RetryBatchCommandTest::testItFailsWhenTheBatchCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\RetryBatchCommandTest::testItFailsWhenTheBatchHasNoFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/ElevenLabs/GatewayCachingTest.php::audio gateway is memoized across calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/ElevenLabs/GatewayCachingTest.php::transcription gateway is memoized across calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

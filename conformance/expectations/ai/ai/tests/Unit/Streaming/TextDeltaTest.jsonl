@@ -1,0 +1,7 @@
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine drops a step that produced only whitespace","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine ignores events that are not text deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine joins deltas that arrive before any step start","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine joins the deltas of a single step without separators","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine keeps a step whole when a provider splits it around a citation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine returns an empty string when there are no text deltas","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Streaming/TextDeltaTest.php::combine separates the text of different steps with a blank line","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,10 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testEmbed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testEmbedData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testEmbedMultilineImage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testEmbeddedImageContentIdConsistencyAcrossMailerFailoverClones","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testEmbeddedImagesAreInlinedWhenRenderingMailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testMailIsSent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testMailMayHaveSpecificTextView","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testMessageAsPublicPropertyMayBeDefinedAsViewData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testMessageAsWithNamedParameterMayBeDefinedAsViewData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\SendingMarkdownMailTest::testTheme","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testInvalidArgumentExceptionOnInvalidValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testInvalidArgumentExceptionOnNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testModelWithCustomCastsCanBeGuardedAgainstMassAssigned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testModelWithCustomCastsCompareFunction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testModelWithCustomCastsUnguardedCanBeMassAssigned","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testModelWithCustomCastsWorkWithCustomIncrementDecrement","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testModelsWithCustomCastsCanBeConvertedToArrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\EloquentModelCustomCastingTest::testSavingCastedAttributesToDatabase","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

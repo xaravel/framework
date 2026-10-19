@@ -1,0 +1,5 @@
+{"id":"boost/tests/Feature/Mcp/Methods/CallToolWithExecutorTest.php::arguments are properly passed to executor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Methods/CallToolWithExecutorTest.php::successful tool execution returns proper response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Methods/CallToolWithExecutorTest.php::throws JsonRpcException when name parameter is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Methods/CallToolWithExecutorTest.php::throws JsonRpcException when tool does not exist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Methods/CallToolWithExecutorTest.php::tool execution exceptions are caught and returned as error responses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

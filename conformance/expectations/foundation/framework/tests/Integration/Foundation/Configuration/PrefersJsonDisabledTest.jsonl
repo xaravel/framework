@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Configuration\\PrefersJsonDisabledTest::testPlainStringRouteReturnsHtmlUnderWildcardAcceptWhenDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Configuration\\PrefersJsonDisabledTest::testUnauthenticatedWildcardStillRedirectsWhenDisabled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/McpServerToolTest.php::agents can return mcp server tools directly","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/McpServerToolTest.php::mcp server tools expose their annotations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,21 @@
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it answers the legacy initialize handshake over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can call a tool over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can call a tool over stdio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can discover a server over stdio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can list dynamically added tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can list resources over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can list tools over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can list tools over stdio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can read a resource over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can stream a tool response over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it can stream a tool response over stdio","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it does not add WWW-Authenticate header when response is not 401","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it does not return a session id over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it handles consecutive requests without any prior handshake","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it ignores an inbound session id header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it returns 405 for DELETE requests to MCP web routes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it returns 405 for GET requests to MCP web routes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it returns OAuth WWW-Authenticate header for nested MCP paths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it returns OAuth WWW-Authenticate header when OAuth routes are enabled and response is 401","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it returns Sanctum WWW-Authenticate header when OAuth routes are not enabled and response is 401","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Console/StartCommandTest.php::it serves legacy requests without mcp headers over http","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

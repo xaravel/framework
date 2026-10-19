@@ -1,0 +1,34 @@
+{"id":"mcp/tests/Unit/ServerTest.php::it answers a legacy ping message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it answers the legacy initialize handshake","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it calls boot method on connect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can add a capability","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a call tool message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a custom method message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a discover message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a list tools message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a notification message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle a tool streaming multiple messages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it can handle an unknown method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it discovers an empty capability set as a json object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it falls back to the latest legacy version for a malformed initialize version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it falls back to the latest legacy version for an unknown initialize version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it forwards icons() into the server context","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it handles capability with non-array existing value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it handles exceptions in debug mode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it handles exceptions in production mode","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it handles json decode errors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it keeps the result type and metadata a method supplied itself","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it lets addMethod override the built-in initialize handler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it merges Icon attributes with icons() method output","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it reads class-level Icon attributes into the server context","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request with a null id instead of treating it as a notification","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"list capabilities\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"missing capabilities\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"missing version\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"non-array capabilities\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"non-string version\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects a request without the required protocol metadata#dataset \"null version\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it rejects an unsupported protocol version","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it returns protocol errors for invalid parameter shapes#dataset \"tool arguments\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it returns protocol errors for invalid parameter shapes#dataset \"top-level params\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/ServerTest.php::it serves a legacy request without protocol metadata","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

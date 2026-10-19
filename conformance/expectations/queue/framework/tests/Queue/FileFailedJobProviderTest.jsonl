@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanFindFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanFlushFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanFlushFailedJobsForASingleQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanFlushFailedJobsForASingleQueueByHours","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanForgetFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanLogFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanPruneFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanPruneFailedJobsWithRelativeHours","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testCanRetrieveAllFailedJobs","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testEmptyFailedJobsByDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testJobsCanBeCounted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testJobsCanBeCountedByConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testJobsCanBeCountedByQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testJobsCanBeCountedByQueueAndConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FileFailedJobProviderTest::testNullIsReturnedIfJobNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

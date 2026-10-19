@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Support\\DateFacadeTest::testCarbonImmutable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\DateFacadeTest::testMacro","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\DateFacadeTest::testUseClassName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\DateFacadeTest::testUseClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\DateFacadeTest::testUseInvalidHandler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

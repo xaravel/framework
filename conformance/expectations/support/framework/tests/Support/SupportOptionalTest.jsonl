@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testGetExistItemOnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testGetExistItemOnObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testGetNotExistItemOnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testGetNotExistItemOnObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testIssetExistItemOnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testIssetExistItemOnNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testIssetExistItemOnObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testIssetNotExistItemOnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportOptionalTest::testIssetNotExistItemOnObject","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

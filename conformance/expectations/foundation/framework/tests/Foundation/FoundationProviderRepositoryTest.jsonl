@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testLoadManifestReturnsParsedJSON","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testManifestIsProperlyRecompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testServicesAreRegisteredWhenManifestIsNotRecompiled","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testShouldRecompileReturnsCorrectValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testWriteManifestStoresToProperLocation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\FoundationProviderRepositoryTest::testWriteManifestThrowsExceptionIfManifestDirDoesntExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

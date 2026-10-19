@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseEloquentSqlServerIntegrationTest::testCreateOrFirst","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseEloquentSqlServerIntegrationTest::testCreateOrFirstWithinTransaction","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

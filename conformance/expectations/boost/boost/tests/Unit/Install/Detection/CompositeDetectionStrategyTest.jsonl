@@ -1,0 +1,9 @@
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::handles empty strategies array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::handles mixed strategy types","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::handles null platform parameter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::handles single strategy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::passes platform parameter to all strategies","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::returns false when all strategies fail","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::returns true when first strategy succeeds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::returns true when second strategy succeeds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Detection/CompositeDetectionStrategyTest.php::stops execution after first success","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

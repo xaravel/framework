@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/BaseUrlTest.php::azure requests do not include api-version query parameter","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/BaseUrlTest.php::azure requests use api-key header not bearer token","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/BaseUrlTest.php::azure text requests use the v1 responses endpoint","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

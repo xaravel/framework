@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Queue\\FailoverQueueTest::test_bulk_respects_job_delays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\FailoverQueueTest::test_push_fails_over_on_exception","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

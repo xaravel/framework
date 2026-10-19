@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Http\\JsonResourceTest::testJsonResourceNullAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\JsonResourceTest::testJsonResourceToJsonSucceedsWithPriorErrors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\JsonResourceTest::testJsonResourceToPrettyPrint","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

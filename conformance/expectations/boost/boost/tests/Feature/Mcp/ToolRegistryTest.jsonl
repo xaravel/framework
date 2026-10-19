@@ -1,0 +1,4 @@
+{"id":"boost/tests/Feature/Mcp/ToolRegistryTest.php::it can check if the tool is allowed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolRegistryTest.php::it can clear cache","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolRegistryTest.php::it can discover available tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/ToolRegistryTest.php::it can get tool names","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,22 @@
+{"id":"ai/tests/Feature/ImageFakeTest.php::can assert no images were generated","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::can assert no images were queued","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::fake closures can throw exceptions","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::generate accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image can be stored under an explicit path and name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image custom size is recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image is stored under a random name derived from its mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image portrait aspect ratio is recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image rejects empty prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image rejects whitespace-only prompt","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image size and quality are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::image timeout is recorded for generated and queued prompts","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::images can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::images can be faked with a single closure that is invoked for every generation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::images can be faked with no predefined responses","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::images can prevent stray generations","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::queued image accepts ai provider enum","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::queued image size and quality are recorded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::queued images can be faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::queued images can be faked and then callback is executed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::queued images can be faked and then callback is not executed if queue is faked","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/ImageFakeTest.php::storing an image publicly passes public visibility to the disk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

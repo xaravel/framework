@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Cookie\\CookieTest::test_cookie_is_sent_back_with_proper_expire_time_when_should_expire_on_close","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cookie\\CookieTest::test_cookie_is_sent_back_with_proper_expire_time_with_respect_to_lifetime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

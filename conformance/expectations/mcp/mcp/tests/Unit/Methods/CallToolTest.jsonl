@@ -1,0 +1,18 @@
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it does not set uri on request when calling tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it includes result meta when responses provide it","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it may resolve dependencies out of the container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns ResponseFactory with structured content added via withStructuredContent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a resource link content block in the wire payload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a result with result-level meta when using ResponseFactory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response that contains two messages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response with authentication error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response with authentication error from generator tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response with authorization error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response with authorization error from generator tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns a valid call tool response with validation error","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns structured content in tool response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it returns structured content with meta in tool response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it separates content-level meta from result-level meta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it throws an exception when the name parameter is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CallToolTest.php::it throws an exception when the tool is not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Enums/ProtocolVersionTest.php::it declares the cases newest first, which is the preference order","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Enums/ProtocolVersionTest.php::it defines the handshake for each protocol version explicitly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Enums/ProtocolVersionTest.php::it has no mutual version when the server shares none","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Enums/ProtocolVersionTest.php::it lists versions supported by each protocol flow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Enums/ProtocolVersionTest.php::it picks the version this client prefers regardless of the order the server lists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

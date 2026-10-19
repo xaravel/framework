@@ -1,0 +1,14 @@
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonAllowsCustomSerializer","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonCanSerializeToJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonIsConditionable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonIsMacroableWhenCalledStatically","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonIsMacroableWhenNotCalledStatically","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonRaisesExceptionWhenMacroIsNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCarbonRaisesExceptionWhenStaticMacroIsNotFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testCreateFromUid","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testDeserializationOccursCorrectly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testMinus","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testPlus","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testSetStateReturnsCorrectType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCarbonTest::testSetTestNowWillPersistBetweenImmutableAndMutableInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

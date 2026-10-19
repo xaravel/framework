@@ -1,0 +1,5 @@
+{"id":"mcp/tests/Unit/Server/Transport/StdioTransportTest.php::it executes stream callback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Transport/StdioTransportTest.php::it handles run method with handler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Transport/StdioTransportTest.php::it implements transport interface","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Transport/StdioTransportTest.php::it sends message to stdout","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Transport/StdioTransportTest.php::it sets receive handler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

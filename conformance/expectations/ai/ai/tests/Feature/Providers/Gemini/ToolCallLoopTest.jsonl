@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::function result carries the originating call id","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::max steps limits tool call depth","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::multi step tool loop returns accumulated response shape","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::parallel function calls preserve unique ids","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::the user input echoed by gemini is not replayed twice","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::thought steps are replayed verbatim across the tool call continuation","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::tool calls trigger follow up request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::tool declaring a name() method routes the function call back to itself","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/ToolCallLoopTest.php::unregistered tool call throws","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

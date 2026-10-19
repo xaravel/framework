@@ -1,0 +1,6 @@
+{"id":"boost/tests/Unit/Install/HerdTest.php::getHomePath returns HOME on non-Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/HerdTest.php::getHomePath uses USERPROFILE on Windows when HOME is not set and normalizes slashes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/HerdTest.php::isInstalled returns false when herd config directory is missing on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/HerdTest.php::isInstalled returns true when herd config directory exists on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/HerdTest.php::isWindowsPlatform returns false on non-Windows platforms","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/HerdTest.php::isWindowsPlatform returns true on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"ai/tests/Unit/Attributes/StrictTest.php::isAppliedTo returns false when target does not have the attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Attributes/StrictTest.php::isAppliedTo returns false when target is null","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Attributes/StrictTest.php::isAppliedTo returns true when target has the attribute","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

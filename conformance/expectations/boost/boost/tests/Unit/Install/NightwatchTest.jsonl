@@ -1,0 +1,2 @@
+{"id":"boost/tests/Unit/Install/NightwatchTest.php::MCP_URL constant matches mcpUrl return value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/NightwatchTest.php::mcpUrl returns the nightwatch mcp url","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

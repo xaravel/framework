@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasManyTest::testEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasManyTest::testEagerConstraintsAreProperlyAddedWithStringKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasManyTest::testModelsAreProperlyMatchedToParents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasManyTest::testRelationIsProperlyInitialized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasManyTest::testRelationUpsertFillsForeignKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

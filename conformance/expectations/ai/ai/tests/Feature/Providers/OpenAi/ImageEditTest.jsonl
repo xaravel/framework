@@ -1,0 +1,8 @@
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a base64 image is sent to the edits endpoint as the image content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a document attachment cannot be used for edits","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a local image is sent as the image content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a provider image cannot be used for edits","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a remote image is fetched and sent as the image content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::a stored image is sent as the image content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::an uploaded file is sent as the image content","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAi/ImageEditTest.php::non gpt-image models send a single image field","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

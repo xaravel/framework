@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Support\\SupportCapsuleManagerTraitTest::testSetupContainerForCapsule","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCapsuleManagerTraitTest::testSetupContainerForCapsuleWhenConfigIsBound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

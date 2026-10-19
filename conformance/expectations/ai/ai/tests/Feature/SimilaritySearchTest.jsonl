@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::search results are returned","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::using model applies custom query closure","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::using model creates similarity search","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::using model excludes embedding column from results","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::using model rejects blank column name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SimilaritySearchTest.php::using model rejects blank model class","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

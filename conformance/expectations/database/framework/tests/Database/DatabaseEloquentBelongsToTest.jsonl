@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testAssociateMethodSetsForeignKeyOnModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testAssociateMethodSetsForeignKeyOnModelById","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testBelongsToWithArrayDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testBelongsToWithDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testBelongsToWithDynamicDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testDefaultEagerConstraintsWhenIncrementing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testDefaultEagerConstraintsWhenIncrementingAndNonIntKeyType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testDissociateMethodUnsetsForeignKeyOnModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testIdsInEagerConstraintsCanBeBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testIdsInEagerConstraintsCanBeZero","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testModelsAreProperlyMatchedToParents","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToTest::testRelationIsProperlyInitialized","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

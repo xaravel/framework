@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddFalse#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddFalse#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddNull#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddNull#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddTwice#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheAddTwice#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheRateLimiter#0","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Cache\\RedisCacheIntegrationTest::testRedisCacheRateLimiter#1","variant":"redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

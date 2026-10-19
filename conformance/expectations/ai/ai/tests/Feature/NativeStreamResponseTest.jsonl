@@ -1,0 +1,1 @@
+{"id":"ai/tests/Feature/NativeStreamResponseTest.php::a streamed response is sent with headers that stop a proxy buffering it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

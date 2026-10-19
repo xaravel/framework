@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testDownloadUrlCannotBeUsedForUpload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testItCanReceiveAFile","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testItCanReceiveAFileWithUriDelimitersInThePath","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testItWill403OnExpiredUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testItWill403OnWrongSignature","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testTemporaryUploadUrlPreservesPathSeparatorsInNestedPaths","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testUploadUrlCannotBeUsedForDownload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Filesystem\\ReceiveFileTest::testUriDelimitersInThePathCannotHideAnExpiredUploadUrl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

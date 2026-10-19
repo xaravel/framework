@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testColumnListing","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testComputedColumnsListing","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testCreateIndexesOnline","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testGetTables","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testGetViews","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\SqlServer\\DatabaseSqlServerSchemaBuilderTest::testGetViewsWhenNoneExist","variant":"sqlsrv","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,3 @@
+{"id":"ai/tests/Feature/Console/MakeAgentCommandTest.php::can create a structured agent class","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Console/MakeAgentCommandTest.php::can create an agent class","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Console/MakeAgentCommandTest.php::may publish custom stubs","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

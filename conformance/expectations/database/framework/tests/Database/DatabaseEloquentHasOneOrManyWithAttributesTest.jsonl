@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testAttributesCanBeAppended","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testHasManyAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testHasManyAddsCastedAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testHasManyForceCreateAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testHasOneAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testMorphManyAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testMorphManyForceCreateAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testMorphOneAddsAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testNullValueIsAccepted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testOneKeepsAttributesFromHasMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testOneKeepsAttributesFromMorphMany","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testQueryingDoesNotBreakWither","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testSingleAttributeApi","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testWheresAreSet","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentHasOneOrManyWithAttributesTest::testWithAttributesCanBeOverridden","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItAcceptsCallableAndBooleanArguments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItRejectsNonCallableNonBooleanArguments#float","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItRejectsNonCallableNonBooleanArguments#int","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItRejectsNonCallableNonBooleanArguments#object","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItRejectsNonCallableNonBooleanArguments#string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItReturnsStringVersionOfRuleWhenCast","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testItThrowsExceptionIfRuleIsNotSerializable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationProhibitedIfTest::testProhibitedIfRuleValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

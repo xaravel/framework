@@ -1,0 +1,2 @@
+{"id":"ai/tests/Feature/Providers/Bedrock/HeadersTest.php::bedrock requests do not include custom headers when none are set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Bedrock/HeadersTest.php::custom headers are included in bedrock requests","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

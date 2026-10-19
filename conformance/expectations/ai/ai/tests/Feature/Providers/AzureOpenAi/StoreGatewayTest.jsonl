@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/StoreGatewayTest.php::create store sends request to the v1 endpoint with the api-key header","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/StoreGatewayTest.php::file search metadata filters throw an exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/StoreGatewayTest.php::file search without filters returns vector store ids","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/AzureOpenAi/StoreGatewayTest.php::get store sends request to the v1 endpoint with the api-key header","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

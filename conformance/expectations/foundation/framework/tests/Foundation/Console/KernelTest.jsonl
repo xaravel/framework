@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testClosureCommandsAreOnlyRegisteredWithTheKernelThatDefinedThem","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testFindCommandDoesNotResolveOtherLazilyRegisteredCommands","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testFindCommandRetrievesTheCommand","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testFindCommandReturnsNullWhenTheCommandDoesNotExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testFindCommandReturnsTheSameInstanceOnSubsequentCalls","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\KernelTest::testItDispatchesTerminatingEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

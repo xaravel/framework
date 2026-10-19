@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueSizeTest::test_queue_size","variant":"queue-beanstalkd@beanstalkd","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueSizeTest::test_queue_size","variant":"queue-database@sqlite","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueSizeTest::test_queue_size","variant":"queue-redis@redis","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Queue\\QueueSizeTest::test_queue_size","variant":"queue-sync@none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

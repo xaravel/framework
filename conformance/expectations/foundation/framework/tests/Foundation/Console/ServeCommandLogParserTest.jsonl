@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithEmptyLogLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithInvalidPortFormat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithMissingPort","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithRandomString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithValidLogLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithValidLogLineAndExtraData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithValidLogLineWithoutDate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\ServeCommandLogParserTest::testExtractRequestPortWithWhitespaceOnlyLine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it does not retry a tool call that fails for any other reason","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it does not retry when the refreshed definition mirrors nothing new","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it excludes a tool whose annotation is invalid from the tool list","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it mirrors annotated parameters into headers on a tool call","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it mirrors parameters when calling through the tool primitive","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it re-lists and retries once when the server reports a header mismatch","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it sends no mirrored headers on the legacy protocol era","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Client/ToolHeaderTest.php::it sends only the standard headers when calling a tool by name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

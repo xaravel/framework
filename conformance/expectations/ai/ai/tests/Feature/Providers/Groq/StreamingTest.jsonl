@@ -1,0 +1,12 @@
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming captures reasoning tokens","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming captures usage from final chunk","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming emits provider tool events for executed built-in tools","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming emits text events","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming error event stops stream","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming finish reason maps correctly#dataset \"content_filter maps to ContentFilter\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming finish reason maps correctly#dataset \"length maps to Length\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming finish reason maps correctly#dataset \"stop maps to Stop\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming finish reason maps correctly#dataset \"tool_calls maps to ToolCalls\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming finish reason maps correctly#dataset \"unknown maps to Unknown\"","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming handles tool calls","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/StreamingTest.php::streaming tool call loop emits a single accumulated stream end","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

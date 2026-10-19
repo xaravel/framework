@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testCreatePayloadUsingDoesNotResolveTheDefaultConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testDefaultConnectionCanBeResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testEnumConnectionCanBeChecked","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testEnumConnectionCanBeResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testNullConnectionCanBeResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testOtherConnectionCanBeResolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueueManagerTest::testSetDefaultDriverAcceptsBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

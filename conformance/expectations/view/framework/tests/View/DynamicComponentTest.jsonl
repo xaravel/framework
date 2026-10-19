@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\View\\DynamicComponentTest::testCompileSlotsExcludesDefaultSlot","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\View\\DynamicComponentTest::testCompileSlotsReturnsEmptyStringWhenOnlyDefaultSlotIsPresent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

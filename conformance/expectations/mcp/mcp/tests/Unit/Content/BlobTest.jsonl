@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it casts to string as raw content","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it converts to array with type and raw blob","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it does not include meta if null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it encodes content to resource payload with metadata","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it preserves meta when converting to a resource payload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it supports meta via setMeta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it throws when used in prompts","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Content/BlobTest.php::it throws when used in tools","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

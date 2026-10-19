@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testBasicStringValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testBasicValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testCustomMessageUsingDotNotationAndFqcnWorks","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testNestedValidation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testStarRuleNested","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testStarRuleSimple","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Validation\\ValidationAnyOfRuleTest::testTaggedUnionObjects","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

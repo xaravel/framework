@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testGetDecodesBinaryVector","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testGetDecodesBinaryVectorBeginningWithOpeningBracketByte","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testGetDecodesTextVector","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testGetReturnsNullForNullValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testSetAcceptsArrayable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testSetOnMariaDbWrapsVectorInVecFromText","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testSetOnPostgresStoresJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testSetRejectsNonArrayValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testSetStoresNullAsNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testVectorCanBeReadBackBeforeSavingOnMariaDb","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentAsVectorCastTest::testVectorCanBeReadBackBeforeSavingOnPostgres","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

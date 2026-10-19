@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Responses/Data/ScoreAnswerTest.php::score answer reports the most probable level","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Responses/Data/ScoreAnswerTest.php::score answer rounds the score when no distribution was reported","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

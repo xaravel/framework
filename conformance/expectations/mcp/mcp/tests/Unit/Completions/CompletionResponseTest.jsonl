@@ -1,0 +1,7 @@
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it applies filtering with match but not with result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it auto-truncates values to 100 items and sets hasMore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it creates a completion result with values","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it creates an empty completion result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it returns raw array data without filtering using a result","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it returns single string as array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Completions/CompletionResponseTest.php::it truncates raw array data to 100 items","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

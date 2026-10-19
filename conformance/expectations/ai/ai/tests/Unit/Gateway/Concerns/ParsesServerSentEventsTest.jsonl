@@ -1,0 +1,2 @@
+{"id":"ai/tests/Unit/Gateway/Concerns/ParsesServerSentEventsTest.php::reads stream byte by byte to prevent event batching","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Concerns/ParsesServerSentEventsTest.php::yields each event before reading next events data","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

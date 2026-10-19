@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Cache\\CacheMemoizedStoreTest::testFlushLocksThrowsWhenUnderlyingStoreDoesNotSupportIt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemoizedStoreTest::testHasSeparateLockStoreDelegatestoUnderlyingStore","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemoizedStoreTest::testLocksCanBeFlushedWhenUnderlyingStoreSupportsIt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Cache\\CacheMemoizedStoreTest::testTouchExtendsTtl","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

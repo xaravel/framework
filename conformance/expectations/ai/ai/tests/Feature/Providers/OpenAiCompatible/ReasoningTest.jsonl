@@ -1,0 +1,4 @@
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ReasoningTest.php::prompt reads reasoning off the response#('reasoning')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ReasoningTest.php::prompt reads reasoning off the response#('reasoning_content')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ReasoningTest.php::streaming emits reasoning events before the text#('reasoning')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenAiCompatible/ReasoningTest.php::streaming emits reasoning events before the text#('reasoning_content')","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

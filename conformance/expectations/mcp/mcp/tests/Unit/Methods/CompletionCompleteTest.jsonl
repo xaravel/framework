@@ -1,0 +1,16 @@
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it completes for prompt","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it completes for resource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it extracts and passes context arguments to completion method","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it finds resource by exact template string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it finds resource by template match","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it passes empty context when context is not provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it return empty array when primitive does not support completion","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws an exception when an argument is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws an exception when completion capability is not declared","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws an exception when the argument name is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws an exception when the ref is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws exception for invalid reference type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws exception when prompt name is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws exception when prompt not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws exception when resource URI is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/CompletionCompleteTest.php::it throws exception when resource not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

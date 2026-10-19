@@ -1,0 +1,9 @@
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::delete file normalizes id with prefix","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::delete file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::file gateway uses custom base url","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::get file normalizes id with prefix","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::get file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::put file merges flat provider options into the upload body","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::put file provider options deep-merge into the file metadata without wiping the display name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::put file provider options override only the file metadata keys they specify","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/FileGatewayTest.php::put file sends multipart upload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testAddTableCommentOnExistingTable","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testAddTableCommentOnNewTable","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testCreateIndexesOnline","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testDropAllTablesOnAllSchemas","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testDropAllTablesUsesDontDropConfigOnAllSchemas","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testDropAllTablesUsesDontDropConfigOnOneSchema","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testDropAllViewsOnAllSchemas","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testDropPartitionedTables","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testGetRawIndex","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testGetTables","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\Postgres\\PostgresSchemaBuilderTest::testGetViews","variant":"pgsql","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

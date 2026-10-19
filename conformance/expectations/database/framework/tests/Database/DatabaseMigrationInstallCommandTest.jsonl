@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationInstallCommandTest::testFireCallsRepositoryToInstall","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseMigrationInstallCommandTest::testFireCallsRepositoryToInstallExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

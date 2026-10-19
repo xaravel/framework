@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesTest::testCreatesWithAttributesAndPivotValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesTest::testMorphToManyWithAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesTest::testMorphedByManyWithAttributes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentBelongsToManyWithAttributesTest::testQueriesWithAttributesAndPivotValues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

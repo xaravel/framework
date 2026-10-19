@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testDatabaseChannelCreatesDatabaseRecordWithProperData","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testNotificationIsBroadcastedNow","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testNotificationIsBroadcastedOnCustomChannels","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testNotificationIsBroadcastedWithCustomAdditionalPayload","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testNotificationIsBroadcastedWithCustomDataType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Notifications\\NotificationBroadcastChannelTest::testNotificationIsBroadcastedWithCustomEventName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

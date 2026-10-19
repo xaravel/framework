@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Mail\\AttachingFromStorageTest::testItCanAttachFromStorage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\AttachingFromStorageTest::testItCanAttachFromStorageAndFallbackToStorageNameAndMime","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\AttachingFromStorageTest::testItCanChainAttachWithMailMessage","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Mail\\AttachingFromStorageTest::testItCanCheckForStorageBasedAttachments","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

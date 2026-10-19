@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Unit/Ui/AppResourceLibraryTest.php::it returns correct domains for alpine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppResourceLibraryTest.php::it returns correct domains for tailwind","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppResourceLibraryTest.php::it returns script tags for alpine","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Ui/AppResourceLibraryTest.php::it returns script tags for tailwind","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

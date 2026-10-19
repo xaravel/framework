@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Redis\\RedisManagerExtensionTest::testParseConnectionConfigurationForCluster","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisManagerExtensionTest::testPurgeAcceptsUnitEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisManagerExtensionTest::testUsingCustomRedisConnectorWithRedisClusterInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisManagerExtensionTest::testUsingCustomRedisConnectorWithSingleRedisInstance","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

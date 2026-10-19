@@ -1,0 +1,5 @@
+{"id":"boost/tests/Unit/Install/Agents/KiroTest.php::guidelinesPath returns AGENTS.md by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/KiroTest.php::httpMcpServerConfig returns url without type field","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/KiroTest.php::mcpConfigPath returns .kiro/settings/mcp.json by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/KiroTest.php::projectDetectionConfig detects via .kiro directory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/KiroTest.php::skillsPath returns .kiro/skills by default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

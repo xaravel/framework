@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresQueryGrammarTest::testCompileTruncate","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresQueryGrammarTest::testCustomOperators","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabasePostgresQueryGrammarTest::testToRawSql","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

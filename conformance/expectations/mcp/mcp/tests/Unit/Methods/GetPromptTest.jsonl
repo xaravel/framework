@@ -1,0 +1,9 @@
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it includes exception message in prompt error when APP_DEBUG is true","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it passes arguments to prompt handler","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it resolves the handle method from the IOC container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it returns a prompt result with result-level meta when using ResponseFactory","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it returns a valid get prompt response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it returns plain message in prompt error when APP_DEBUG is false","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it throws -32603 when prompt handler throws a generic exception","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it throws exception when name parameter is missing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Methods/GetPromptTest.php::it throws exception when prompt not found","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

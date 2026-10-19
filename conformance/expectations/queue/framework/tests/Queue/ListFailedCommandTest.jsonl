@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Queue\\ListFailedCommandTest::testItDisplaysEmptyFailedJobsAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\ListFailedCommandTest::testItDisplaysFailedJobsAsJson","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\ListFailedCommandTest::testItFiltersFailedJobsByQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

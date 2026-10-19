@@ -1,0 +1,7 @@
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it can set meta with a key-value signature","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it can set meta with an array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it merges meta into base array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it merges multiple setMeta calls with arrays","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it overwrites existing keys when setting meta","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it returns base array when meta is null","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Server/Concerns/HasMetaTest.php::it throws exception when using key-value signature without value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

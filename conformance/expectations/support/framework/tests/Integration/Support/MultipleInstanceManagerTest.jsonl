@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\MultipleInstanceManagerTest::test_configurable_instances_can_be_resolved","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\MultipleInstanceManagerTest::test_custom_driver_closure_bound_object_is_multiple_instance_manager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\MultipleInstanceManagerTest::test_unresolvable_instances_throw_errors","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

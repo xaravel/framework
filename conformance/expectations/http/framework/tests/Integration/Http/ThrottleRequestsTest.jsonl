@@ -1,0 +1,17 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanCombineRateLimitsWithoutSpecifyingUniqueKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanGenerateDefinitionViaStaticMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanThrottleBasedOnResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanThrottlePerMinute#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanThrottlePerMinute#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanThrottlePerMinute#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItCanThrottlePerSecond","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItDoesNotHitLimiterUntilResponseHasBeenGenerated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItFailsIfNamedLimiterDoesNotExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItFailsIfNamedLimiterDoesNotExistAndAuthenticatedUserDoesNotHaveFallbackProperty","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItFallbacksToUserAccessorWhenThereIsNoNamedLimiterWhenAuthenticated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItFallbacksToUserPropertyWhenThereIsNoNamedLimiterWhenAuthenticated","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testItReturnsConfiguredResponseWhenUsingAfterLimit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testLimitOrderDoesNotAffectBehavior","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testLimitingUsingNamedLimiter","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testLockOpensImmediatelyAfterDecay","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\ThrottleRequestsTest::testMultipleDistinctKeysDoNotOverThrottle","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

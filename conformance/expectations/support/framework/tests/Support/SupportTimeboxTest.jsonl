@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeExecutesCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeShouldNotSleepWhenEarlyReturnHasBeenFlagged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeShouldNotSleepWhenEarlyReturnHasBeenFlaggedAndExceptionIsThrown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeShouldSleepWhenDontEarlyReturnHasBeenFlagged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeWaitsForMicroseconds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportTimeboxTest::testMakeWaitsForMicrosecondsWhenExceptionIsThrown","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

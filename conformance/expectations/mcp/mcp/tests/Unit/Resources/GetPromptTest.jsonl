@@ -1,0 +1,2 @@
+{"id":"mcp/tests/Unit/Resources/GetPromptTest.php::it resolves the handle method from the IOC container","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Resources/GetPromptTest.php::it returns a valid get prompt response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

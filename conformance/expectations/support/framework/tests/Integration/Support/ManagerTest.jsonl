@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\ManagerTest::testCustomDriverClosureBoundObjectIsManager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\ManagerTest::testCustomDriverStaticClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\ManagerTest::testDefaultDriverCannotBeNull","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\ManagerTest::testInvokableObjectDriverClosure","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

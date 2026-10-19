@@ -1,0 +1,4 @@
+{"id":"mcp/tests/Feature/Server/HttpTransportStreamTest.php::it does not double emit when stream callback echoes directly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/HttpTransportStreamTest.php::it streams generator responses returned from the stream callback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/HttpTransportStreamTest.php::it streams generator responses when Octane is flagged","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Feature/Server/HttpTransportStreamTest.php::it streams iterable responses returned from the stream callback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

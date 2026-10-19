@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testCastsAreRespectedOnAttach","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testCastsAreRespectedOnAttachArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testCastsAreRespectedOnSync","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testCastsAreRespectedOnSyncArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testCastsAreRespectedOnSyncArrayWhileUpdatingExisting","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentCustomPivotCastTest::testDefaultAttributesAreRespectedAndCastsAreRespected","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

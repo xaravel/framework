@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Redis\\RedisEventsTest::testCommandExecutedEventIsNotDispatchedWhenCommandFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisEventsTest::testCommandFailedEventContainsConnectionName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisEventsTest::testCommandFailedEventIsDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Redis\\RedisEventsTest::testListenForFailuresRegistersCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

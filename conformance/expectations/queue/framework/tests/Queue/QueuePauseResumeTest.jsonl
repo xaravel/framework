@@ -1,0 +1,17 @@
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testEnumsAreAccepted","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testEnumsAreAcceptedWhenCheckingIfAQueueIsPaused","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testGetPausedQueues","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testParsingQueueString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseAllDispatchesQueuesPausedEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseAllPausesEveryQueueAndResumeAllResumesThem","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseChecksDoNotBatchTheGlobalKeyWithQueueKeys","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseDispatchesQueuePausedEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseForDispatchesQueuePausedEventWithTTL","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseQueueIndefinitely","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseQueueWithConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPauseQueueWithTTL","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPausingDifferentQueuesOnSameConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testPausingQueueOnOneConnectionDoesNotAffectAnother","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testResumeDispatchesQueueResumedEvent","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testResumeQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\QueuePauseResumeTest::testResumingOnlyAffectsSpecificQueue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

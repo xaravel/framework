@@ -1,0 +1,18 @@
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#assoc with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#assoc with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#list with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#list with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#numeric keys with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#numeric keys with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required assoc with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required assoc with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required list with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required list with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required numeric keys with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testMultiselectFallback#required numeric keys with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#assoc with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#assoc with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#list with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#list with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#numeric keys with default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\ConfiguresPromptsTest::testSelectFallback#numeric keys with no default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

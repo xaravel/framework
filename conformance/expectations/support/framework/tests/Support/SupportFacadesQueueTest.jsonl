@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeExcept","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeExceptFor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeExceptForReturnValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeExceptForSwapsQueueManager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeFor","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeForReturnValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportFacadesQueueTest::testFakeForSwapsQueueManager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

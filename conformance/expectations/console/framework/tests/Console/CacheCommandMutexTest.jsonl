@@ -1,0 +1,8 @@
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCanCreateMutex","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCanCreateMutexWithCustomConnection","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCanCreateMutexWithCustomConnectionWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCanCreateMutexWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCannotCreateMutexIfAlreadyExist","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCannotCreateMutexIfAlreadyExistWithLockProvider","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCommandMutexNameWithIsolatedMutexNameMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Console\\CacheCommandMutexTest::testCommandMutexNameWithoutIsolatedMutexNameMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

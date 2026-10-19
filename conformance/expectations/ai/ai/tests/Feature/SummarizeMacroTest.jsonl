@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/SummarizeMacroTest.php::summary can be generated from static Str macro","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SummarizeMacroTest.php::summary can be generated from stringable macro","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SummarizeMacroTest.php::summary honors requested sentence count","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SummarizeMacroTest.php::summary macro passes through options","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/SummarizeMacroTest.php::summary uses the cheapest model by default","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

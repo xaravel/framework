@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadMissingTest\\EloquentModelLoadMissingTest::testLoadMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadMissingTest\\EloquentModelLoadMissingTest::testLoadMissingNoUnnecessaryAttributeMutatorAccess","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

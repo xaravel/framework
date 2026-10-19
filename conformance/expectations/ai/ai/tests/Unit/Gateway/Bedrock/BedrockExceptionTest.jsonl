@@ -1,0 +1,11 @@
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::internal server error maps to provider overloaded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::model not ready maps to provider overloaded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::model stream error maps to provider overloaded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::model timeout maps to provider overloaded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::non-bedrock exception with credit balance message maps to insufficient credits","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::non-bedrock exception with quota exceeded message maps to insufficient credits","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::non-bedrock generic exception wraps as ai exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::service quota exceeded maps to insufficient credits","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::service unavailable maps to provider overloaded","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::throttling maps to rate limited exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Unit/Gateway/Bedrock/BedrockExceptionTest.php::unknown bedrock error falls through to generic ai exception","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

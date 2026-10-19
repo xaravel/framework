@@ -1,0 +1,3 @@
+{"id":"boost/tests/Unit/Support/NpmTest.php::it does not identify unknown packages as first party","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/NpmTest.php::it identifies non-scoped first party packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Support/NpmTest.php::it identifies scoped first party packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

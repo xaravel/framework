@@ -1,0 +1,2 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadMaxTest\\EloquentModelLoadMaxTest::testLoadMaxMultipleRelations","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\EloquentModelLoadMaxTest\\EloquentModelLoadMaxTest::testLoadMaxSingleRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

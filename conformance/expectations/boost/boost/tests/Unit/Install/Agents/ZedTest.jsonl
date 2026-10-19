@@ -1,0 +1,14 @@
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::httpMcpServerConfig returns url-only config without type","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it projectDetectionConfig detects .zed path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns Zed display name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns configured guidelines path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns configured mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns configured skills path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns context_servers as mcp config key","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns default guidelines path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns default mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns default skills path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it returns zed name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it system detection uses Zed.app path on Darwin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it system detection uses command -v on Linux","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/ZedTest.php::it system detection uses where on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

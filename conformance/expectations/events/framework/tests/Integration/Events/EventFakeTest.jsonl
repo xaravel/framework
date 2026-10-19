@@ -1,0 +1,13 @@
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testAssertListening","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testAssertNothingDispatchedShouldDispatchAfterCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testEventsListedInExceptAreProperlyDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testFakeExceptAllowsGivenEventToBeDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testFakeExceptAllowsGivenEventsToBeDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testMissingMethodsAreForwarded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testNonFakedEventGetsProperlyDispatched","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testNonFakedEventGetsProperlyDispatchedAndCancelsFutureListeners","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testNonFakedEventGetsProperlyDispatchedAndReturnsResponses","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testNonFakedHaltedEventGetsProperlyDispatchedAndReturnsResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testShouldDispatchAfterCommitEventsAreDispatchedIfThereIsNoTransaction","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testShouldDispatchAfterCommitEventsAreDispatchedIfTransactionSucceeds","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Events\\EventFakeTest::testShouldDispatchAfterCommitEventsAreNotDispatchedIfTransactionFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

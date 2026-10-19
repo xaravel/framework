@@ -1,0 +1,8 @@
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it falls back to the first page for a negative offset","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it falls back to the first page for cursors that do not decode to an offset#dataset \"non-array JSON\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it falls back to the first page for cursors that do not decode to an offset#dataset \"object without an offset key\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it falls back to the first page for cursors that do not decode to an offset#dataset \"valid base64 but invalid JSON\"","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it handles cursor based pagination","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it handles invalid cursor gracefully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it handles last page correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"mcp/tests/Unit/Pagination/CursorPaginatorTest.php::it paginates collections correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

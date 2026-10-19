@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItCanGuessResourceName","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItCanGuessResourceWhenNotProvided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItCanGuessResourceWhenNotProvidedWithNonResourceSuffix","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItCanTransformToExplicitResource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItCanTransformToResourceViaUseResourceAttribute","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentResourceModelTest::testItThrowsExceptionWhenResourceCannotBeFound","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

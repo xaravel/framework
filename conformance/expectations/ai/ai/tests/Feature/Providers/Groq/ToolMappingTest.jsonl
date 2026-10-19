@@ -1,0 +1,6 @@
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::code execution tool is sent as code_interpreter type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::tool parameters are not wrapped in schema definition","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::tool with a name() method emits the declared name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::tool with empty schema includes parameters","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::tool with parameters includes correct schema","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Groq/ToolMappingTest.php::web search tool is sent as browser_search type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

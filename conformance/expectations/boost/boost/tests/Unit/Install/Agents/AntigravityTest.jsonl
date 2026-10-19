@@ -1,0 +1,13 @@
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it only uses the antigravity specific mcp_config.json","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns Antigravity display name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns antigravity name","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns configured guidelines path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns configured mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns configured skills path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns default guidelines path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns default mcp config path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns default skills path","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it returns false when only .agents/skills exists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it system detection uses command -v on Darwin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it system detection uses command -v on Linux","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Unit/Install/Agents/AntigravityTest.php::it system detection uses where on Windows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

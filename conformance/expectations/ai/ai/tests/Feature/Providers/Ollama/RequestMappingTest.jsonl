@@ -1,0 +1,15 @@
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::non-streaming request sets stream to false","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::request includes model and messages","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::request is sent to the chat endpoint","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::request without schema excludes format field","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::request without tools excludes tools field","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::response text is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::response usage is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::response usage reports cached prompt tokens","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::structured output appends json schema instruction to system message","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::structured output includes format field","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::structured response is correctly parsed","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::system instructions are sent as system message","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::temperature and max tokens are excluded when not set","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::temperature and max tokens are sent in options object","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Ollama/RequestMappingTest.php::tools are included in the request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

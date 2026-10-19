@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphTest::testMorphManyEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphTest::testMorphManySetsProperConstraints","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphTest::testMorphOneEagerConstraintsAreProperlyAdded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphTest::testMorphOneSetsProperConstraints","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphTest::testMorphRelationUpsertFillsForeignKey","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

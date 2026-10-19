@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\ConfigCacheCommandTest::testConfigurationCacheFailsWithNestedNonSerializableValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\ConfigCacheCommandTest::testConfigurationCacheFailsWithNonSerializableValue","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\ConfigCacheCommandTest::testConfigurationCacheIsDeletedWhenSerializationFails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Foundation\\Console\\ConfigCacheCommandTest::testConfigurationCanBeCachedSuccessfully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

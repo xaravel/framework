@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteApiResourceTest::testApiResource","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteApiResourceTest::testApiResourceWithOnly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Routing\\RouteApiResourceTest::testApiResources","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

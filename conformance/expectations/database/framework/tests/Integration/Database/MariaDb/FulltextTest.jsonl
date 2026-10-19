@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\FulltextTest::testWhereFulltext","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\FulltextTest::testWhereFulltextWithBooleanMode","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Database\\MariaDb\\FulltextTest::testWhereFulltextWithExpandedQuery","variant":"mariadb","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

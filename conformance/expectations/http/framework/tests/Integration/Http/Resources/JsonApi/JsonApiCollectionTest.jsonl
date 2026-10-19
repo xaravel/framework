@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Integration\\Http\\Resources\\JsonApi\\JsonApiCollectionTest::testItCanGenerateJsonApiResponse","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Resources\\JsonApi\\JsonApiCollectionTest::testItCanGenerateJsonApiResponseWithEmptyRelationshipsUsingSparseIncluded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Resources\\JsonApi\\JsonApiCollectionTest::testItCanGenerateJsonApiResponseWithRelationshipsUsingSparseIncluded","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Http\\Resources\\JsonApi\\JsonApiCollectionTest::testItCanGenerateJsonApiResponseWithSparseFieldsets","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

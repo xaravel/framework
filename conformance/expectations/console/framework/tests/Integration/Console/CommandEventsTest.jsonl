@@ -1,0 +1,3 @@
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandEventsTest::testCommandEventsReceiveParsedInput#Foreground with array","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandEventsTest::testCommandEventsReceiveParsedInput#Foreground with string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Console\\CommandEventsTest::testCommandEventsReceiveParsedInputFromBackground","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

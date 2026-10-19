@@ -1,0 +1,15 @@
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testAuthManagerCanResolveBackedEnumGuard","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testCustomDriverClosureBoundObjectIsAuthManager","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testCustomDriverStatic","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testCustomInvokableDriver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testDefaultAuthenticatedKeepsDefaultDriver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testDefaultUnauthenticatedThrows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testDefaultUnauthenticatedThrowsWithGuards","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testItCanGenerateDefinitionViaStaticMethod","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testItCanGenerateDefinitionViaStaticMethodForBasic","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testMultipleDriversAuthenticatedUpdatesDefault","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testMultipleDriversUnauthenticatedThrows","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testMultipleDriversUnauthenticatedThrowsWithGuards","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testSecondaryAuthenticatedUpdatesDefaultDriver","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testSetDefaultDriverAcceptsBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Auth\\AuthenticateMiddlewareTest::testShouldUseAcceptsBackedEnum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

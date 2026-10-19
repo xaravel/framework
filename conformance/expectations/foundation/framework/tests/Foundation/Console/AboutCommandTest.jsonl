@@ -1,0 +1,4 @@
+{"id":"Illuminate\\Tests\\Foundation\\Console\\AboutCommandTest::testItCanFormatForCliInterface#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\AboutCommandTest::testItCanFormatForCliInterface#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\AboutCommandTest::testItCanFormatForJsonInterface#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Foundation\\Console\\AboutCommandTest::testItCanFormatForJsonInterface#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

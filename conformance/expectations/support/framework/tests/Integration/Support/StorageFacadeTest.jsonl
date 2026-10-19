@@ -1,0 +1,7 @@
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testFake_whenDiskNotConfigured_doesNotThrowExceptionOnError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testFake_whenThrowOverwritten_usesOverwrite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testFake_whenThrowSetToDisk_throwsExceptionOnError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testPersistentFake_whenDiskNotConfigured_doesNotThrowExceptionOnError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testPersistentFake_whenThrowOverwritten_usesOverwrite","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testPersistentFake_whenThrowSetToDisk_throwsExceptionOnError","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Support\\StorageFacadeTest::testStorageFakeMethodsWithEnums","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

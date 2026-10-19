@@ -1,0 +1,17 @@
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it advertises itself as a read-only tool","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it caps token_limit at maximum of 1000000","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it filters empty queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it formats package data correctly","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it handles API error response","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it handles empty results","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it handles packages passed as a JSON-encoded string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it handles queries passed as a JSON-encoded string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for JSON object string in packages","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for JSON object string in queries","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for malformed JSON in packages string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for malformed JSON in queries string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for non-array JSON in packages string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it returns error for non-array JSON in queries string","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it searches documentation successfully","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it sends the remaining queries as a list when some are filtered out","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"boost/tests/Feature/Mcp/Tools/SearchDocsTest.php::it uses custom token_limit when provided","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

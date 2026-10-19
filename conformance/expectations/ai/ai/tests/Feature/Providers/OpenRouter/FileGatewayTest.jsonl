@@ -1,0 +1,5 @@
+{"id":"ai/tests/Feature/Providers/OpenRouter/FileGatewayTest.php::delete file sends correct request","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/FileGatewayTest.php::get file exposes a null mime type when the provider omits it","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/FileGatewayTest.php::get file sends correct request and exposes the mime type","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/FileGatewayTest.php::provider options are resolved with the openrouter key","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/OpenRouter/FileGatewayTest.php::put file sends the file as a multipart upload","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testEagerLoadingAppliesConstraintsToInnerJoinSubQuery","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testForceCreateMorphType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testMorphType","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testReceivingModel","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testWithExists","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testWithExistsWithConstraintsInJoinSubSelect","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testWithWhereHas","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseEloquentMorphOneOfManyTest::testWithWhereRelation","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

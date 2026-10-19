@@ -1,0 +1,5 @@
+{"id":"Illuminate\\Tests\\Queue\\BeforeCommitContractTest::testJobWithContractAndAfterCommitFalseRespectsBeforeCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\BeforeCommitContractTest::testJobWithContractAndExplicitAfterCommitTrueStillSchedulesAfterCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\BeforeCommitContractTest::testJobWithContractDefaultsToAfterCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\BeforeCommitContractTest::testJobWithoutContractRespectsAfterCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Queue\\BeforeCommitContractTest::testJobWithoutContractRespectsBeforeCommit","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

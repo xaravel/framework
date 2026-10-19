@@ -1,0 +1,9 @@
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_does_not_match_unrelated_eof_message","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#2","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#3","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#4","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#5","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#6","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Database\\DatabaseConnectionLostTest::test_lost_connection_detector_matches_exception_message#7","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

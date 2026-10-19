@@ -1,0 +1,11 @@
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::a response without an audio block fails loudly","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio instructions are prepended to the prompt instead of sent in speech config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio request includes model, prompt text, and voice name","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio request passes custom voice name through unchanged","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio request resolves default voice aliases","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio response defaults to zero usage when gemini omits the usage","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio response honours the sample rate and channels gemini reports","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio response is wrapped as wav with correct meta","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio response reports the usage returned by gemini","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::audio uses default model when none specified","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}
+{"id":"ai/tests/Feature/Providers/Gemini/AudioTest.php::nested generation config provider options are merged beneath the core config","variant":"none","status":"skip","reason":"deferred:ai-sdk","adapted":null,"escalation":null}

@@ -1,0 +1,6 @@
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenDashboardNamedRouteIsAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenDashboardSlugIsAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenGuest","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenHomeNamedRouteIsAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenHomeOrDashboardAreNotAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Integration\\Auth\\Middleware\\RedirectIfAuthenticatedTest::testWhenHomeSlugIsAvailable","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}

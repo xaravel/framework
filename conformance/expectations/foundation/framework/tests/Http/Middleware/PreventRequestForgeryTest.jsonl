@@ -1,0 +1,11 @@
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_cross_site_with_valid_token_passes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_cross_site_without_token_fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_missing_header_without_token_fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_origin_only_mode_passes_same_origin","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_origin_only_mode_rejects_cross_site","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_origin_only_mode_rejects_missing_header","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_query_request_with_valid_token_passes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_query_request_without_token_fails","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_same_origin_header_passes","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_same_site_header_passes_when_allowed","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Http\\Middleware\\PreventRequestForgeryTest::test_same_site_header_rejected_by_default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
