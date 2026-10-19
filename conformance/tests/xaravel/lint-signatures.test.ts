@@ -401,8 +401,9 @@ function tempSingletons(): void {
     const broken = tempDir(`xaravel-lint-133-${label}-`);
     write(broken, { "tools/lint-rules/singletons.json": text, "packages/demo/src/Hub.ts": source });
     cpSync(join(FIXTURES, "support.ts"), join(broken, "packages/demo/src/support.ts"));
-    // The default format prints the plugin's error (`--format unix` drops it).
-    const proc = Bun.spawnSync([process.execPath, "--bun", "oxlint", "--type-aware", "-c", CONFIG, broken], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    // The default format prints the plugin's error (`--format unix` drops it). Name it explicitly: on GitHub
+    // Actions oxlint otherwise picks its `github` format, which drops the message too.
+    const proc = Bun.spawnSync([process.execPath, "--bun", "oxlint", "--type-aware", "-c", CONFIG, "--format", "default", broken], { cwd: root, stdout: "pipe", stderr: "pipe" });
     expect(proc.exitCode).not.toBe(0);
     expect(proc.stdout.toString() + proc.stderr.toString()).toContain(`xaravel lint: ${label === "malformed" ? "cannot read " : ""}${join(broken, "tools/lint-rules/singletons.json")}`);
   }
