@@ -28,7 +28,8 @@ A TypeScript port of Laravel 13 (`laravel/framework` v13.37.0) to Bun, server-re
 - Use only the decided toolchain (spine § Stack): Bun 1.4.3 (pinned in `.bun-version`), TypeScript 7.0.2 with `tsc --strict`, oxlint 1.88.0 with oxlint-tsgolint, and `bun test` under the conformance harness. Never substitute Node, npm, pnpm, Jest, Vitest, ESLint or Prettier.
 - Claude Code 2.1.277 or later is required to load this file.
 - `bun run harness` is the test entry point for a full run. It runs `bun test` once per Variant, prints one line per Test ID × Variant that differs from the Expectations File, and ends with a `SUMMARY` line; it exits non-zero on any difference. A Variant whose backend is not running locally prints `NOT-RUN` and is not a failure.
-- TODO (Story 5.4): `bun run harness --fast --story <story-id>` while iterating. Replace this line with the verified invocation once the flags exist.
+- While iterating: `bun run harness --story <story-id>` runs only that Story's `test_ids` (it fails on a manifest with none); add `--fast` for a sample, which prints its seed, and `--seed <s>` to rerun the same sample. `--component <c>` and `--id <glob>` filter too, and `bun run harness --xaravel` runs the Xaravel Tests. A fast run never satisfies the Story done check (`bun run story:check <story-id>`).
+- `.devcontainer/` is an optional Linux reference environment that runs every alpha Variant with only Docker on the host; see `docs/ops/devcontainer.md`. It is never required: everything above also runs natively on macOS and Linux (AD-17).
 
 ## Conventions that differ from defaults
 
