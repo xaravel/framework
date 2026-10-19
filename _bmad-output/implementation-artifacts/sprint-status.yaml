@@ -1057,3 +1057,13 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-5.9-2.md"
+  - id: "epic-5-retro-item-16-bot-app-bypass"
+    epic: 5
+    action: "Add the xaravel-bot App (Integration, App ID 5386144, bypass_mode always)
+      as a bypass actor on .github/rulesets/agent-push.json only, teach tools/ruleset
+      verify/apply to accept exactly that actor on that ruleset, and update
+      identities.md and bots.md; the Maintainer applies it at the Epic 8 checkpoint
+      (ruling ESC-5.8-1)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-5.8-1.md"
