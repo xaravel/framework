@@ -22,7 +22,8 @@
     "tools/pin-bump/**/*.ts",
     "tools/scans/**/*.ts",
     "tools/assert-coverage/**/*.ts",
-    "tools/mockery-coverage/**/*.ts"
+    "tools/mockery-coverage/**/*.ts",
+    "tools/coverage-report/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

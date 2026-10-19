@@ -905,7 +905,7 @@ action_items:
       records an assertion; a Mockery name is callable on a mock), not just presence,
       and share the two tools skeleton (findings R5, A2)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
   - id: "epic-4-retro-item-6-followup-reviews-4-x"
     epic: 4
