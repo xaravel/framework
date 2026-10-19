@@ -720,7 +720,8 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
   expect(determinism.if).toBe("github.event_name == 'schedule'");
   expect(determinism.permissions).toBeUndefined();
   expect(determinism["environment"]).toBeUndefined();
-  expect(runs(determinism)).toEqual([...runs(build), "bun run oracle:fixtures --determinism"]);
+  // Story 5.7 (XT-conformance-188): then the recheck of every committed fixture in the image just built.
+  expect(runs(determinism)).toEqual([...runs(build), "bun run oracle:fixtures --determinism", "bun run oracle:recheck"]);
   // oracle (Story 3.2): after the push, the fixture batch in the pushed image, with the key only from environment oracle.
   expect(oracle["environment"]).toBe("oracle");
   expect(oracleRuns[8]).toBe('bun run oracle:fixtures --image "$IMAGE"');
@@ -749,7 +750,11 @@ test("XT-conformance-43: CI publishes the image to GHCR tagged <Pin>-<imagehash>
             ["always()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
           ]
         : job === determinism
-          ? [["failure()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"]]
+          ? [
+              // Story 5.7: the recheck runs whenever the image built, even after the determinism step failed.
+              ["${{ !cancelled() && steps.build.outcome == 'success' }}", "bun run oracle:recheck"],
+              ["failure()", "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"],
+            ]
           : [],
     );
   }

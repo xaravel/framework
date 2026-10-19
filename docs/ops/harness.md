@@ -8,7 +8,7 @@ bun run harness [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id 
 
 The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error. The usage errors are an unknown flag, a missing value, a second `--seed` or `--story`, a `--story` value not of the form `<epic>.<story>`, and a seed that doesn't match `^[A-Za-z0-9._-]{1,64}$`.
 
-The [Ratchet](ratchet.md) (Story 5.6) turns the harness's differences into a CI verdict; the rest of the CI wiring is Story 5.7. `runHarness` returns each counted difference with its kind (`HarnessResult.differences`): `unexpected-pass` for an `UNEXPECTED-PASS` line, `unexpected-failure` for every other one, including `UNKNOWN`, and each `ERROR` line and CI `NOT-RUN` of an alpha Variant (with id `-`). The printed report is the same either way.
+The [Ratchet](ratchet.md) (Story 5.6) turns the harness's differences into a CI verdict. In CI (Story 5.7, [CI pipeline](ci.md)) a PR's Ratchet runs the harness with `--component` over its reverse-dependency closure and then with `--story` over its Story's `test_ids`; the merge queue, `main` and the nightly matrix run it in full. CI never passes `--fast`. `runHarness` returns each counted difference with its kind (`HarnessResult.differences`): `unexpected-pass` for an `UNEXPECTED-PASS` line, `unexpected-failure` for every other one, including `UNKNOWN`, and each `ERROR` line and CI `NOT-RUN` of an alpha Variant (with id `-`). The printed report is the same either way.
 
 ## What it runs
 

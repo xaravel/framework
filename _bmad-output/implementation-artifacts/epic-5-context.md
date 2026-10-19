@@ -4,7 +4,7 @@
 
 ## Goal
 
-Make every Story's result measurable the same way locally and in CI. This epic delivers the sharded Expectations File and its closed Variant vocabulary, CI checks that validate each Skip Reason against its rule, and one agent-operable harness: full and seeded fast modes, filters, greppable output, not-run handling and assertion-floor checks. It also delivers per-worktree backend isolation so parallel agents never share databases or Redis, the Ratchet and Expectations line-ownership checks, the AD-28 CI pipeline (per-PR, merge queue, nightly matrix), the quarantine and promotion bots, and a computed Story done check. After this epic, "done" is computed rather than claimed, and conformance can only move honestly.
+Make every Story's result measurable the same way locally and in CI. This epic delivers the sharded Expectations File and its closed Variant vocabulary, CI checks that validate each Skip Reason against its rule, and one agent-operable harness: full and seeded fast modes, filters, greppable output, not-run handling and assertion-floor checks. It also delivers per-worktree backend isolation so parallel agents never share databases or Redis, the Ratchet and Expectations line-ownership checks, the AD-28 CI pipeline (per-PR, merge queue, nightly matrix), the quarantine and promotion bots, a computed Story done check, and an optional devcontainer that runs every alpha Variant locally with only Docker on the host. After this epic, "done" is computed rather than claimed, and conformance can only move honestly.
 
 ## Stories
 
@@ -17,6 +17,7 @@ Make every Story's result measurable the same way locally and in CI. This epic d
 - Story 5.7: CI pipeline: PR checks, merge queue and nightly matrix
 - Story 5.8: Promotion and quarantine bots
 - Story 5.9: Xaravel Test coverage check and the Story done check
+- Story 5.10: Portable development environment (devcontainer)
 
 ## Requirements & Constraints
 
@@ -67,6 +68,15 @@ Make every Story's result measurable the same way locally and in CI. This epic d
   - **SQLite:** files under `.cache/`.
   - **Redis:** locally, one `redis-server` per worktree on a unix socket in `.cache/` with no persistence. `flushdb` is allowed and no prefix is injected. In CI, each job's service is its server.
   - **Lock:** `.cache/harness.lock` keeps out a second runner; the message names the holder.
+- **Devcontainer (optional reference environment, Story 5.10):**
+  - `.devcontainer/` is the Linux reference environment: a non-root workspace on linux/arm64 and amd64 with Bun at `.bun-version`, a frozen-lockfile install, and `redis-server` at CI's Redis version; Postgres is a sidecar from CI's image, reached through the `PG*` variables.
+  - It is never required. Every harness command, tool and done check runs natively on macOS and Linux, where a backend that isn't running is `NOT-RUN`. Requiring it would contradict the supported-platform and no-Docker requirements.
+  - Its Bun, Postgres and Redis pins must match `.bun-version`, CI's service images and the spine's Stack table, checked mechanically.
+  - The workspace, or at least `.cache/`, is on a container volume, not a host bind mount, so the Redis unix socket and harness I/O work.
+  - No Docker socket in the container: the Oracle and Inventory jobs run in CI or on the host.
+  - A worktree used both inside and outside the container has two isolation keys, and so two sets of databases. That is safe and only needs documenting.
+  - Post-alpha engines get their sidecars from the Phase 9 Story that brings their driver; an amd64-only image is an optional Compose profile.
+  - CI: one linux-x64 job (on `.devcontainer/**` PRs and nightly) builds the image and runs `bun run harness` inside it, with no alpha Variant `NOT-RUN`. It does not duplicate the nightly matrix. No secret or `APP_KEY` is baked into the image.
 - **Story manifest:** `stories/<story-id>.md`, with `test_ids:` and `component:` read from the **base branch**. A Test ID belongs to at most one open Story.
 - **Ownership:** a PR changing Expectations lines or `portedTest` blocks outside its `test_ids` fails.
   - **Unowned unexpected pass on `main`:** a warning, and the bot opens a promotion PR.
@@ -85,7 +95,7 @@ Make every Story's result measurable the same way locally and in CI. This epic d
   - **Nightly:**
     - the full matrix on linux and macOS, x64 and arm64, with Postgres and Redis installed natively on macOS;
     - benchmarks;
-    - an Oracle re-evaluation of every committed fixture in the current-Pin image, failing on any stale output.
+    - an Oracle re-evaluation of every committed request (batch and per-Story) in the image at the current Baseline Pin, failing and naming each fixture whose output differs. The fixture signature binds neither the Pin nor the image, so without this a fixture signed before a Pin bump can stay stale unnoticed.
   - **Required checks:** `protected-paths` and `ratchet` run from `pull_request_target` workflows pinned to the default branch, so a PR can't change its own checks.
   - **Permissions:** workflows default to `contents: read`; history is linear.
 - **Quarantine:** triggered when a test fails on `main` then passes on rerun, or is inconsistent across 3 runs. The bot pushes a `bot/*` branch setting `quarantined` and opens `ESC-bot-<n>` with the evidence. ESC files that the Oracle `determinism` job writes are committed the same way through a `bot/*` PR, not only uploaded as workflow artifacts.
@@ -100,6 +110,7 @@ Make every Story's result measurable the same way locally and in CI. This epic d
   - 5.3 is the base for 5.4 (fast mode, filters, the `xaravel.api.signature` lookup), 5.5 (isolation at harness start) and 5.6 (Ratchet). The lookup was moved from 5.3 to 5.4 by the ESC-4.8-1 ruling.
   - 5.6 feeds 5.7 (`ratchet` becomes a required check in the Story 1.7 ruleset verification) and 5.8 (bot exemptions and promotion).
   - 5.9 needs 5.3, 5.4 and 5.6. When 5.9 merges, all Epic 1–4 Xaravel Tests run through `xaravelTest` under the harness.
+  - 5.10 comes last. It builds on 5.5's isolation rules and must stay consistent with 5.7's CI service versions and nightly matrix. After it merges, the Maintainer adds a devcontainer line to `AGENTS.md`. Whether the orchestrator runs inside the container is a separate decision, deferred.
 - **Upstream epics:**
   - Epic 1: manifests, the ownership and protected-paths checks, the Escalation formats, the ruleset.
   - Epic 2: Inventory with `backends`, `assertions` and `oracle` outcomes; the component map.

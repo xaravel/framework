@@ -1,0 +1,178 @@
+# The nightly matrix and benchmarks (Story 5.7; FR-9, AD-17, AD-28).
+#
+# `linux` and `macos` run the full Ratchet on the checked-out ref (main on the
+# schedule; the dispatched branch on `workflow_dispatch`; it reaches the shell
+# through env: `bun tools/ratchet/ratchet.ts run --root . --ref "$REF"`,
+# docs/ops/ratchet.md)
+# on linux and macOS, x64 and arm64. Every alpha Variant runs (`CI=true`: an
+# unreachable one is a failure). On linux Postgres 18 and Redis 8.10.2 are
+# the same service images as ratchet.yml; on macOS, where runners have no
+# service containers, Homebrew installs `postgresql@18` and `redis` natively,
+# starts them, creates the `postgres` role the `PG*` env names, and prints
+# both server versions (Homebrew's are not pinned). No step
+# passes `--fast`. `fail-fast` is off so one platform's failure never hides
+# another's.
+#
+# `bench` runs the benchmark suite (`bun run bench`, tools/bench/bench.ts) and
+# appends its report to the job summary. Benchmarks are information only: the
+# step and the job are `continue-on-error`, and the runner itself always exits
+# 0 except on a usage error.
+#
+# The Oracle re-evaluation of every committed request (`oracle:recheck`) runs
+# in oracle.yml's nightly `determinism` job, after it builds the image.
+#
+# Read-only (`contents: read`), no secrets, `persist-credentials: false`.
+name: nightly
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8.10.2
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Ratchet the checked-out ref
+        env:
+          REF: ${{ github.ref_name }}
+        run: bun tools/ratchet/ratchet.ts run --root . --ref "$REF"
+
+  macos:
+    name: macos-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x64
+          - os: macos-15
+            arch: arm64
+    env:
+      CI: "true"
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install and start Postgres 18 and Redis natively
+        run: |
+          set -euo pipefail
+          brew install postgresql@18 redis
+          prefix="$(brew --prefix postgresql@18)"
+          echo "${prefix}/bin" >> "$GITHUB_PATH"
+          brew services start postgresql@18
+          brew services start redis
+          for _ in $(seq 1 60); do
+            if "${prefix}/bin/pg_isready" -h 127.0.0.1 -p 5432; then break; fi
+            sleep 2
+          done
+          "${prefix}/bin/pg_isready" -h 127.0.0.1 -p 5432
+          # Homebrew's cluster's superuser is the runner's login; the harness connects as `postgres`.
+          PGUSER="$(whoami)" "${prefix}/bin/psql" -h 127.0.0.1 -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres';"
+          for _ in $(seq 1 30); do
+            if redis-cli -h 127.0.0.1 -p 6379 ping; then break; fi
+            sleep 1
+          done
+          redis-cli -h 127.0.0.1 -p 6379 ping
+          # Homebrew's versions are not pinned: put the ones this run used on record.
+          "${prefix}/bin/postgres" --version
+          redis-server --version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Ratchet the checked-out ref
+        env:
+          REF: ${{ github.ref_name }}
+        run: bun tools/ratchet/ratchet.ts run --root . --ref "$REF"
+
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Run the benchmarks
+        continue-on-error: true
+        run: |
+          {
+            echo '## Benchmarks'
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          bun run bench > "$RUNNER_TEMP/bench.txt" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/bench.txt"
+          {
+            cat "$RUNNER_TEMP/bench.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

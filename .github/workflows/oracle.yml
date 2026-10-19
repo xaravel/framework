@@ -41,7 +41,12 @@
 # `determinism` runs nightly: it builds the image and checks the API surface
 # and the Oracle requests as `build` does, then re-runs the two passes with
 # `oracle:fixtures --determinism` (no key, no fixtures). A difference fails
-# it, and the Escalation it wrote is uploaded.
+# it, and the Escalation it wrote is uploaded. Then, whenever the image built
+# (even after an earlier step failed), `oracle:recheck` (Story 5.7) evaluates
+# every committed request, batch and per-Story, once in that image at the
+# current Pin and fails naming each committed fixture whose output differs (a
+# fixture's signature binds neither the Pin nor the image). It signs and
+# writes nothing.
 #
 # `story` (Story 3.4) runs on a Story PR that touches
 # `conformance/oracle-requests/**`, under `pull_request_target`, so it runs
@@ -226,6 +231,7 @@ jobs:
       - name: Check the Oracle locks
         run: bun run oracle:check
       - name: Build the Oracle image twice and verify both builds
+        id: build
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -238,6 +244,9 @@ jobs:
         run: bun run oracle:extract --check
       - name: Evaluate every request twice and compare
         run: bun run oracle:fixtures --determinism
+      - name: Re-evaluate every committed request against its fixture
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run oracle:recheck
       - name: Upload the Escalation
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
