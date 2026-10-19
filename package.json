@@ -17,7 +17,8 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "bun --bun tsc -b",
-    "lint": "bun --bun oxlint --type-aware",
+    "lint": "bun --bun oxlint --type-aware && bun run lint:disables",
+    "lint:disables": "bun --no-env-file tools/lint-rules/disables.ts",
     "scaffold": "bun tools/scaffold/scaffold.ts",
     "scaffold:check": "bun tools/scaffold/scaffold.ts --check",
     "scaffold:table": "bun tools/scaffold/table.ts",

@@ -92,7 +92,7 @@ development_status:
   epic-5-retrospective: done
 
   epic-6: in-progress
-  6-1-type-aware-async-safety-lint: in-progress
+  6-1-type-aware-async-safety-lint: done  # ESC-6.1-1 (open-question) waits on the Maintainer
   6-2-lint-rules-for-identity-values-and-test-hygiene: backlog
   6-3-lint-rules-for-async-signatures-frame-state-and-declarations: backlog
   6-4-async-surface-json-generator-and-drift-check: backlog

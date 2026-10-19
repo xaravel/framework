@@ -833,7 +833,7 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
   const checkScripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(checkScripts["test"]).toBe("bun test");
   expect(checkScripts["typecheck"]).toBe("bun --bun tsc -b");
-  expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware");
+  expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware && bun run lint:disables");
   expect(checkScripts["scaffold:check"]).toBe("bun tools/scaffold/scaffold.ts --check");
   expect(checkScripts["graph:check"]).toBe("bun tools/graph/graph.ts");
   expect(checkScripts["oracle:verify-fixtures"]).toBe("bun tools/oracle/verify.ts");

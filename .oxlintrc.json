@@ -3,11 +3,18 @@
   "categories": {
     "correctness": "error"
   },
+  "rules": {
+    "typescript/no-floating-promises": ["error", { "checkThenables": true }],
+    "typescript/await-thenable": "error",
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": true }],
+    "unicorn/no-thenable": "off"
+  },
   "ignorePatterns": [
     "_bmad/**",
     "_bmad-output/**",
     "conformance/upstream/**",
     ".claude/**",
-    "node_modules/**"
+    "node_modules/**",
+    "tools/lint-rules/fixtures/**"
   ]
 }

@@ -27,7 +27,8 @@
     "tools/coverage-report/**/*.ts",
     "tools/xt-coverage/**/*.ts",
     "tools/story-check/**/*.ts",
-    "tools/devcontainer/**/*.ts"
+    "tools/devcontainer/**/*.ts",
+    "tools/lint-rules/**/*.ts"
   ],
   "exclude": [
     "conformance/upstream"
