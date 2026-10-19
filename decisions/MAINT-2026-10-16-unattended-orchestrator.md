@@ -44,6 +44,14 @@ The `ownership` check (Story 1.5) allows a Story to edit only `packages/<compone
 - A `missing manifest` violation, or an out-of-scope path outside `_bmad-output/implementation-artifacts/` in a Story from Epic 9 on, still blocks.
 - The orchestrator never edits `tools/ownership/`, a manifest's `component`, or `.github/workflows/ownership.yml` to make the check pass.
 
+## Amendment 2026-10-18: Phase 0 retrospective fixes in `packages/**`
+
+`decisions/MAINT-2026-10-17-epic-1-items.md` (item 15) forbids `packages/**` and `conformance/expectations/**` on `planning/*` branches. The orchestrator does retrospective action items on `planning/retro-<N>-*` branches, and an action item has no Story manifest, so a fix to a grader package could not merge (Epic 4 retro items 1-3, PR #126). This is my approval of a Phase 0 exception, matching the one the second amendment gives Phase 0 Stories.
+
+- On a `planning/retro-<N>-*` branch with N ≤ 8, an `ownership` failure does not block the merge when every violation is `planning scope:` for a path under `packages/**`, or another violation this ruling already allows. The other merge conditions still apply, and the orchestrator merges with `--admin`.
+- A `planning scope:` violation for `conformance/expectations/**` still blocks on every branch: no retrospective fix may change grader data.
+- From Epic 9 on (N ≥ 9) the rule stays strict. The Maintainer decides the route for code-changing retrospective items at the Epic 8 checkpoint.
+
 ## Revoking
 
 Delete this file, or create `~/.xaravel-orchestrator/STOP` on the M1.

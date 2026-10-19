@@ -11,7 +11,7 @@ import { Mockery } from "../Mockery";
 import { InvalidArgumentException } from "../php/InvalidArgumentException";
 import { OutOfBoundsException } from "../php/OutOfBoundsException";
 import { graderExceptionClass } from "../support/classes";
-import { classNameOf, FQCN, instanceOfName, isClass, isPhpObject, phpString } from "../support/values";
+import { classNameOf, FQCN, instanceOfName, isClass, isPhpClass, isPhpObject, phpString } from "../support/values";
 import { AtLeast } from "./CountValidator/AtLeast";
 import { AtMost } from "./CountValidator/AtMost";
 import type { CountValidatorAbstract } from "./CountValidator/CountValidatorAbstract";
@@ -414,7 +414,7 @@ export class Expectation {
     if (expected instanceof MatcherAbstract) {
       return expected.match(actual);
     }
-    if (isClass(expected)) {
+    if (isPhpClass(expected)) {
       // A class value stands in for PHP's `Foo::class` string, which also matches the string 'Foo' through `==`.
       if (typeof actual === "string") {
         return actual === classNameOf(expected);
