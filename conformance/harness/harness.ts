@@ -1,8 +1,42 @@
-// The conformance harness runner (Story 5.3; FR-3, FR-9, FR-113, AD-15).
+// The conformance harness runner (Stories 5.3 and 5.4; FR-3, FR-9, FR-113,
+// AD-15).
 //
-//   bun --no-env-file conformance/harness/harness.ts [--root <dir>]
-//       (`bun run harness`) runs every Ported Test once per Variant and
+//   bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast]
+//       [--seed <s>] [--component <c>]… [--id <glob>]… [--story <story-id>]
+//       (`bun run harness`) runs the Ported Tests once per Variant and
 //       compares the results with the Expectations File
+//
+// Selection (Story 5.4, ./select.ts). With no filter and no `--fast`, every
+// Expectations line is checked. Otherwise the universe is the Expectations
+// Test IDs, each in the Component that is the first path segment of its shard:
+//   --component <c>  IDs of Component `c`;
+//   --id <glob>      IDs the glob matches whole (`*` any run, `?` one
+//                    character, the rest literal);
+//   --story <s>      the `test_ids` of `stories/<s>.md` (`parseManifest`); a
+//                    missing or invalid manifest, or one with no `test_ids`,
+//                    fails a precondition; a value not of the form
+//                    `<epic>.<story>` is a usage error. The listed IDs with no
+//                    Expectations line go to stderr as one diagnostic with
+//                    their count and at most the first 10.
+// A repeated filter takes the union of its values; different filters
+// intersect. An empty selection fails a precondition:
+//   no Test ID matches <the filters>
+// `--fast` (implied by `--seed <s>`; without one the seed is 8 random hex
+// characters) samples the first min(100, n) selected IDs ranked by the hex
+// SHA-256 of `<seed>\n<id>` (ties by `compareUnits`), prints first
+//   FAST seed=<s> sample=<k>/<n>
+// and appends ` mode=fast seed=<s>` to the SUMMARY line. `isFullRun(summary)`
+// is false for such a line: a fast run never satisfies the Story done check
+// (Story 5.9). Filters alone don't make a run a sample.
+//
+// On a selection, only the Variants with selected lines are listed and probed,
+// each checks only its selected lines, and each run gets only the Ported Test
+// files under `packages/<c>/tests/ported/` of its selected Components, plus
+// `-t ^(?:<escaped ids>)$` unless every Expectations line of those Components
+// on that Variant is selected or the pattern exceeds 65,536 characters. A run
+// given `-t` that exits non-zero with `matched 0 tests` on stderr is empty:
+// every selected line is `missing` (bun 1.4.3 may still write a junit file of
+// skipped testcases then). The UNKNOWN check still uses the full Expectations.
 //
 // Preconditions, checked before anything runs (each failure exits 1):
 //   - `<root>/bunfig.toml` exists, and no other `bunfig.toml` exists under the
@@ -20,8 +54,10 @@
 //     --reporter=junit --reporter-outfile=<tmp> <every packages/*/tests/ported/**/*.test.ts>
 //
 // with cwd the root (so the root `bunfig.toml` applies) and the parent's env
-// plus `XARAVEL_VARIANT=<variant>` and `XARAVEL_HARNESS_OUT=<tmp jsonl>`, to
-// which the preload appends the reports and late assertions. With no Ported
+// plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>`, to
+// which the preload appends the reports and late assertions, and
+// `XARAVEL_API_SURFACE=<root>/conformance/api-surface`, which the preload's
+// API signature lookup reads (ESC-4.8-1 item 1). With no Ported
 // Test file nothing is spawned and every result is `missing`. A run that
 // leaves no junit file fails the harness (exit 1), quoting its stderr. Temp
 // files live in the OS temp directory; nothing is written under the root.
@@ -55,21 +91,27 @@
 //
 // Exit codes: 0 when no line differs, 1 on a difference or a failed
 // precondition, 2 on a usage error.
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { UsageError, readVariants } from "../../tools/expectations/expectations";
 import { ALPHA_VARIANTS, compareUnits } from "../../tools/inventory/inventory";
+import { parseManifest } from "../../tools/ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../../tools/pin-bump/pin-bump";
 import { backendFor, probe, type ProbeResult } from "./backends";
 import { compare, type Difference, type HarnessLine, type HarnessReport, type Result, type VariantRun } from "./compare";
 import { parseJunit } from "./junit";
+import { FAST_SAMPLE, SEED, namePattern, sampleIds, selectIds } from "./select";
 
 /** The preload every run gets: this directory's, whatever the root. */
 export const PRELOAD = join(import.meta.dir, "preload.ts");
 export const PORTED_GLOB = "packages/*/tests/ported/**/*.test.ts";
 const SKIPPED_DIRS: ReadonlySet<string> = new Set(["node_modules", ".git", ".cache"]);
 const SKIPPED_PATHS: ReadonlySet<string> = new Set(["conformance/upstream"]);
+/** The longest `-t` pattern passed; past it the run gets every test of its files. */
+export const MAX_PATTERN = 65_536;
+const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -78,6 +120,23 @@ export interface HarnessOptions {
   readonly env?: Env;
   /** Extra `bun test` arguments, before the files (internal: tests use `--concurrent`). */
   readonly bunArgs?: readonly string[];
+  /** Sample the selection (`--fast`). */
+  readonly fast?: boolean;
+  /** The sample's seed (`--seed`, implies `fast`); default 8 random hex characters. */
+  readonly seed?: string | null;
+  /** `--component` values. */
+  readonly components?: readonly string[];
+  /** `--id` globs. */
+  readonly ids?: readonly string[];
+  /** `--story` Story ID. */
+  readonly story?: string | null;
+}
+
+/** A fast run's sample: its seed, its size and the selection it was drawn from. */
+export interface HarnessSample {
+  readonly seed: string;
+  readonly size: number;
+  readonly of: number;
 }
 
 export interface HarnessResult {
@@ -87,6 +146,13 @@ export interface HarnessResult {
   /** Diagnostics (stderr). */
   readonly err: string[];
   readonly results: Result[];
+  /** The sample in fast mode, null otherwise. */
+  readonly sample: HarnessSample | null;
+}
+
+/** Whether `summaryLine` is the SUMMARY line of a full (not fast) run; Story 5.9's done check must use it. */
+export function isFullRun(summaryLine: string): boolean {
+  return summaryLine.startsWith("SUMMARY ") && !summaryLine.includes(" mode=fast");
 }
 
 class PreconditionError extends Error {}
@@ -212,7 +278,7 @@ function tail(text: string, n: number): string[] {
 }
 
 /** Spawns one `bun test` run for `variant`; `error` is the ERROR line when bun exited non-zero with no failing testcase. */
-async function runVariant(root: string, variant: string, files: readonly string[], env: Env, bunArgs: readonly string[], err: string[]): Promise<VariantRun & { error: string | null }> {
+async function runVariant(root: string, variant: string, files: readonly string[], pattern: string | null, env: Env, bunArgs: readonly string[], err: string[]): Promise<VariantRun & { error: string | null }> {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-harness-"));
   try {
     const junitPath = join(dir, "junit.xml");
@@ -228,6 +294,7 @@ async function runVariant(root: string, variant: string, files: readonly string[
     delete childEnv["NODE_OPTIONS"];
     childEnv["XARAVEL_VARIANT"] = variant;
     childEnv["XARAVEL_HARNESS_OUT"] = outPath;
+    childEnv["XARAVEL_API_SURFACE"] = join(root, "conformance", "api-surface");
     const args = [
       process.execPath,
       "--no-env-file",
@@ -237,10 +304,15 @@ async function runVariant(root: string, variant: string, files: readonly string[
       "--reporter=junit",
       `--reporter-outfile=${junitPath}`,
       ...bunArgs,
+      ...(pattern === null ? [] : ["-t", pattern]),
       ...files.map((file) => join(root, file)),
     ];
     const child = Bun.spawn(args, { cwd: root, env: childEnv, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
     const [, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+    if (pattern !== null && exitCode !== 0 && stderr.includes("matched 0 tests")) {
+      err.push(`harness: [${variant}] bun test matched none of the selected tests over ${files.length} file(s)`);
+      return emptyRun();
+    }
     if (!existsSync(junitPath)) {
       throw new PreconditionError(`[${variant}] bun test wrote no junit report (exit ${String(exitCode)}): ${stderr.trim()}`);
     }
@@ -257,13 +329,53 @@ async function runVariant(root: string, variant: string, files: readonly string[
   }
 }
 
+function emptyRun(): VariantRun & { error: string | null } {
+  return { junit: new Map(), reports: new Map(), late: new Set<string>(), duplicates: new Set<string>(), error: null };
+}
+
+/** The filters as given on the command line, for the empty-selection message. */
+function describeFilters(options: HarnessOptions): string {
+  const parts = [...(options.components ?? []).map((c) => `--component ${c}`), ...(options.ids ?? []).map((g) => `--id ${g}`)];
+  if (options.story !== undefined && options.story !== null) {
+    parts.push(`--story ${options.story}`);
+  }
+  return parts.length === 0 ? "the Expectations File" : parts.join(" ");
+}
+
+/** The `test_ids` of `stories/<story>.md`; diagnoses those with no Expectations line. */
+function storyIds(root: string, story: string, universe: ReadonlyMap<string, string>, err: string[]): string[] {
+  const file = `stories/${story}.md`;
+  const path = join(root, file);
+  if (!STORY_ID.test(story) || !existsSync(path)) {
+    throw new PreconditionError(`--story ${story}: ${file} does not exist`);
+  }
+  const parsed = parseManifest(file, readFileSync(path, "utf8"));
+  if (parsed.manifest === null) {
+    throw new PreconditionError(parsed.violations.join("; "));
+  }
+  if (parsed.manifest.testIds.length === 0) {
+    throw new PreconditionError(`${file} lists no test_ids`);
+  }
+  const unknown = parsed.manifest.testIds.filter((id) => !universe.has(id));
+  if (unknown.length > 0) {
+    const shown = unknown.slice(0, 10).join(", ");
+    err.push(`harness: ${file} lists ${unknown.length} Test ID(s) with no Expectations line: ${shown}${unknown.length > 10 ? ", …" : ""}`);
+  }
+  return parsed.manifest.testIds;
+}
+
 /** Runs the harness over `root` (see the header). */
 export async function runHarness(root: string, options: HarnessOptions = {}): Promise<HarnessResult> {
   const env = options.env ?? process.env;
   const out: string[] = [];
   const err: string[] = [];
   const results: Result[] = [];
+  let sample: HarnessSample | null = null;
   try {
+    const seedOption = options.seed ?? null;
+    if (seedOption !== null && !SEED.test(seedOption)) {
+      throw new PreconditionError(`the seed ${JSON.stringify(seedOption)} does not match ${String(SEED)}`);
+    }
     if (!existsSync(join(root, "bunfig.toml"))) {
       throw new PreconditionError("the root bunfig.toml does not exist (AD-15)");
     }
@@ -286,8 +398,11 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     const inventory = new Map(inventoryEntries.map((entry) => [entry.id, entry.assertions] as const));
     const byVariant = new Map<string, HarnessLine[]>();
     const knownIds = new Set<string>();
+    /** Each Test ID's Component: the first path segment of its shard under conformance/expectations/. */
+    const universe = new Map<string, string>();
     const vocabularySet = new Set(vocabulary.variants);
     for (const shard of shards) {
+      const component = shard.path.split("/")[2] ?? "";
       shard.lines.forEach((raw, index) => {
         const variant = raw["variant"];
         const status = raw["status"];
@@ -296,13 +411,40 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
         }
         const line: HarnessLine = { id: raw["id"] as string, variant, status: typeof status === "string" ? status : String(status), reason: stringOrNull(raw["reason"]), adapted: stringOrNull(raw["adapted"]) };
         knownIds.add(line.id);
+        if (!universe.has(line.id)) {
+          universe.set(line.id, component);
+        }
         const list = byVariant.get(variant) ?? [];
         list.push(line);
         byVariant.set(variant, list);
       });
     }
-    const variants = vocabulary.variants.filter((variant) => byVariant.has(variant));
-    const files = portedTestFiles(root);
+    const components = options.components ?? [];
+    const globs = options.ids ?? [];
+    const story = options.story ?? null;
+    const fast = options.fast === true || seedOption !== null;
+    let selected: Set<string> | null = null;
+    if (fast || components.length > 0 || globs.length > 0 || story !== null) {
+      const chosen = selectIds(universe, { components, ids: globs, story: story === null ? null : storyIds(root, story, universe, err) });
+      if (chosen.length === 0) {
+        throw new PreconditionError(`no Test ID matches ${describeFilters(options)}`);
+      }
+      if (fast) {
+        const seed = seedOption ?? randomBytes(4).toString("hex");
+        const picked = sampleIds(chosen, seed, FAST_SAMPLE);
+        sample = { seed, size: picked.length, of: chosen.length };
+        out.push(`FAST seed=${seed} sample=${picked.length}/${chosen.length}`);
+        selected = new Set(picked);
+      } else {
+        selected = new Set(chosen);
+      }
+    }
+    const linesOf = (variant: string): HarnessLine[] => {
+      const all = byVariant.get(variant) ?? [];
+      return selected === null ? all : all.filter((line) => selected.has(line.id));
+    };
+    const variants = vocabulary.variants.filter((variant) => linesOf(variant).length > 0);
+    const allFiles = portedTestFiles(root);
     const ci = env["CI"] === "true";
     const waived = waiverFor(root);
     const differences: Difference[] = [];
@@ -314,7 +456,7 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     let ciDifferences = 0;
     const probes = new Map<string, Promise<ProbeResult>>();
     for (const variant of variants) {
-      const lines = byVariant.get(variant)!;
+      const lines = linesOf(variant);
       const backend = backendFor(variant);
       const pending = probes.get(backend) ?? probe(backend, env);
       probes.set(backend, pending);
@@ -330,7 +472,18 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
       }
       run++;
       checked += lines.length;
-      const variantRun = files.length === 0 ? { junit: new Map(), reports: new Map(), late: new Set<string>(), duplicates: new Set<string>(), error: null } : await runVariant(root, variant, files, env, options.bunArgs ?? [], err);
+      let files = allFiles;
+      let pattern: string | null = null;
+      if (selected !== null) {
+        const selectedComponents = new Set(lines.map((line) => universe.get(line.id) ?? ""));
+        files = allFiles.filter((file) => selectedComponents.has(file.split("/")[1] ?? ""));
+        const ofComponents = byVariant.get(variant)!.filter((line) => selectedComponents.has(universe.get(line.id) ?? "")).length;
+        const candidate = namePattern(lines.map((line) => line.id));
+        if (ofComponents !== lines.length && candidate.length <= MAX_PATTERN) {
+          pattern = candidate;
+        }
+      }
+      const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, options.bunArgs ?? [], err);
       const compared = compare({ variant, lines, knownIds, run: variantRun, inventory, waived });
       results.push(...compared.results);
       if (variantRun.error !== null) {
@@ -349,40 +502,74 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     }
     out.push(...reportLines);
     const differ = differences.length + errors.length + ciDifferences;
-    out.push(`SUMMARY variants=${variants.length} run=${run} not-run=${notRun} checked=${checked} differ=${differ}`);
-    return { code: differ === 0 ? 0 : 1, out, err, results };
+    const mode = sample === null ? "" : ` mode=fast seed=${sample.seed}`;
+    out.push(`SUMMARY variants=${variants.length} run=${run} not-run=${notRun} checked=${checked} differ=${differ}${mode}`);
+    return { code: differ === 0 ? 0 : 1, out, err, results, sample };
   } catch (error) {
     if (error instanceof PreconditionError) {
       err.push(`harness: ${error.message}`);
-      return { code: 1, out, err, results };
+      return { code: 1, out, err, results, sample };
     }
     err.push(`harness failed: ${message(error)}`);
-    return { code: 1, out, err, results };
+    return { code: 1, out, err, results, sample };
   }
 }
 
-const USAGE = "Usage: bun --no-env-file conformance/harness/harness.ts [--root <dir>]";
+const USAGE = "Usage: bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]";
 
-function parseArgs(argv: readonly string[]): string {
+/** The CLI's root and options; throws `UsageError` (exit 2). */
+export function parseArgs(argv: readonly string[]): { root: string; options: HarnessOptions } {
   let root = resolve(import.meta.dir, "..", "..");
+  let fast = false;
+  let seed: string | null = null;
+  let story: string | null = null;
+  const components: string[] = [];
+  const ids: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
-    if (arg !== "--root") {
+    if (arg === "--fast") {
+      fast = true;
+      continue;
+    }
+    if (!["--root", "--seed", "--component", "--id", "--story"].includes(arg)) {
       throw new UsageError(`Unknown argument: ${arg}`);
     }
     const value = argv[++i];
     if (value === undefined || value === "" || value.startsWith("--")) {
       throw new UsageError(`${arg} needs a value`);
     }
-    root = resolve(value);
+    if (arg === "--root") {
+      root = resolve(value);
+    } else if (arg === "--seed") {
+      if (seed !== null) {
+        throw new UsageError("--seed may be given once");
+      }
+      if (!SEED.test(value)) {
+        throw new UsageError(`--seed must match ${String(SEED)}, got ${JSON.stringify(value)}`);
+      }
+      seed = value;
+    } else if (arg === "--story") {
+      if (story !== null) {
+        throw new UsageError("--story may be given once");
+      }
+      if (!STORY_ID.test(value)) {
+        throw new UsageError(`--story must be a Story ID of the form <epic>.<story>, got ${JSON.stringify(value)}`);
+      }
+      story = value;
+    } else if (arg === "--component") {
+      components.push(value);
+    } else {
+      ids.push(value);
+    }
   }
-  return root;
+  return { root, options: { fast: fast || seed !== null, seed, components, ids, story } };
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
   let root: string;
+  let options: HarnessOptions;
   try {
-    root = parseArgs(argv);
+    ({ root, options } = parseArgs(argv));
   } catch (error) {
     if (error instanceof UsageError) {
       process.stderr.write(`${error.message}\n${USAGE}\n`);
@@ -390,7 +577,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     }
     throw error;
   }
-  const result = await runHarness(root);
+  const result = await runHarness(root, options);
   if (result.err.length > 0) {
     process.stderr.write(result.err.map((line) => `${line}\n`).join(""));
   }

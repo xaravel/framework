@@ -1,14 +1,14 @@
 # The conformance harness
 
-The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Story 5.3; FR-3, FR-9, FR-113, AD-15). Its code is in `conformance/harness/`.
+The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Stories 5.3 and 5.4; FR-3, FR-9, FR-113, AD-15). Its code is in `conformance/harness/`.
 
 ```sh
-bun run harness [--root <dir>]
+bun run harness [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]
 ```
 
-The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error.
+The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error. The usage errors are an unknown flag, a missing value, a second `--seed` or `--story`, a `--story` value not of the form `<epic>.<story>`, and a seed that doesn't match `^[A-Za-z0-9._-]{1,64}$`.
 
-Fast mode, seeds and filters (Story 5.4), per-worktree backends (Story 5.5), the Ratchet (Story 5.6) and CI wiring (Story 5.7) come later.
+Per-worktree backends (Story 5.5), the Ratchet (Story 5.6) and CI wiring (Story 5.7) come later.
 
 ## What it runs
 
@@ -20,7 +20,31 @@ Fast mode, seeds and filters (Story 5.4), per-worktree backends (Story 5.5), the
    bun --no-env-file test --preload conformance/harness/preload.ts --reporter=junit --reporter-outfile=<tmp> <every packages/*/tests/ported/**/*.test.ts>
    ```
 
-   It runs with the root as cwd, so the root `bunfig.toml` applies. The env is the parent's, without `BUN_OPTIONS` and `NODE_OPTIONS` (they could add a preload or flags), plus `XARAVEL_VARIANT=<variant>` and `XARAVEL_HARNESS_OUT=<tmp jsonl>`. With no Ported Test file, nothing is spawned and every result is `missing`. A run that leaves no junit file fails the harness and quotes its stderr. Temp files go in the OS temp directory; the harness never writes under the root.
+   It runs with the root as cwd, so the root `bunfig.toml` applies. The env is the parent's, without `BUN_OPTIONS` and `NODE_OPTIONS` (they could add a preload or flags), plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>` and `XARAVEL_API_SURFACE=<root>/conformance/api-surface`. With no Ported Test file, nothing is spawned and every result is `missing`. A run that leaves no junit file fails the harness and quotes its stderr. Temp files go in the OS temp directory; the harness never writes under the root.
+
+## Filters and fast mode
+
+With no filter and no `--fast`, every Expectations line is checked. Otherwise the harness first picks Test IDs from the Expectations File (`conformance/harness/select.ts`). Each Test ID's Component is the first path segment of its shard under `conformance/expectations/`.
+
+| Filter | Selects |
+| --- | --- |
+| `--component <c>` | the Test IDs of Component `c` |
+| `--id <glob>` | the Test IDs the glob matches as a whole: `*` matches any run of characters, `?` matches one, and everything else is literal, including `\` |
+| `--story <story-id>` | the `test_ids` of `stories/<story-id>.md`. A value not of the form `<epic>.<story>` is a usage error. A missing or invalid manifest fails a precondition, and so does one with no `test_ids` (`stories/<s>.md lists no test_ids`). Listed Test IDs with no Expectations line go to stderr as one diagnostic with their count and at most the first 10 of them |
+
+A repeated filter takes the union of its values, and different filters intersect. An empty selection fails a precondition with `harness: no Test ID matches <the filters>`.
+
+**Fast mode.** `--fast` samples the selection. `--seed <s>` implies `--fast`; without it, the seed is 8 random hex characters. The sample is the first 100 selected Test IDs (or all of them, when fewer are selected), ranked by the hex SHA-256 of `<seed>\n<id>`, with ties broken by Test ID. It depends only on the seed and the selected set, so the same seed on the same commit runs the same sample. The first stdout line is
+
+```
+FAST seed=<s> sample=<k>/<n>
+```
+
+and the SUMMARY line ends ` mode=fast seed=<s>`. Rerun a fast run with `--seed <s>` to reproduce it. Filters alone don't make a run a sample: a filtered run's SUMMARY has no `mode=`.
+
+**The done check.** `isFullRun(summaryLine)` in `conformance/harness/harness.ts` is true only for a `SUMMARY ` line without ` mode=fast`, and `runHarness` returns `sample: {seed, size, of}` in fast mode and `null` otherwise. Story 5.9's done check must use `isFullRun`, so a fast run never satisfies it.
+
+**Running a selection.** Only the Variants with selected lines are listed and probed, and each checks only its selected lines; `checked` counts those. Each Variant's run gets only the Ported Test files under `packages/<c>/tests/ported/` of its selected Components, plus `-t ^(?:<escaped ids>)$`, so bun runs only the selected tests. The `-t` is left out when every Expectations line of those Components on that Variant is selected, or when the pattern would be longer than 65,536 characters; the comparison is restricted either way. When a run with `-t` exits with bun's `matched 0 tests` error, the run counts as empty and every selected line is `missing`. The `UNKNOWN` check still knows every Expectations Test ID.
 
 ## Backends and NOT-RUN
 
@@ -96,7 +120,7 @@ SUMMARY variants=<v> run=<r> not-run=<nr> checked=<c> differ=<d>
 
 ## The preload and its protocols
 
-`conformance/harness/preload.ts` runs before any Ported Test file loads, and it imports nothing graded. It does two things:
+`conformance/harness/preload.ts` runs before any Ported Test file loads, and it imports nothing graded. It does three things:
 
 1. **Hardens the intrinsics** (`conformance/harness/intrinsics.ts`). It freezes:
    - the constructors and prototypes of the JS built-ins, the native errors, the typed arrays, `AsyncLocalStorage` and the iterator prototypes;
@@ -107,6 +131,7 @@ SUMMARY variants=<v> run=<r> not-run=<nr> checked=<c> differ=<d>
 2. **Installs two globals**, both non-writable and non-configurable (ESC-4.2-1 item 4). Each appends one JSON line to `XARAVEL_HARNESS_OUT`:
    - `Symbol.for('xaravel.harness.report')` is the ESC-4.2-1 reporter. It writes `{"report":<report>}`.
    - `Symbol.for('xaravel.harness.late')` is the late-assertion hook. It writes `{"late":{"id":…,"kind":…}}`.
+3. **Installs the API signature lookup** (`conformance/harness/signatures.ts`, ESC-4.8-1 item 1) at `Symbol.for('xaravel.api.signature')`. It is non-writable and non-enumerable but, unlike the two hooks, **configurable**, so a test that saves and restores the descriptor (Mockery's `double-scenarios.ts`) keeps working. The lookup is `(fqcn, member) => row | null`, where `row` is the member's `kind: "method"` line of `conformance/api-surface/*.jsonl` as committed: `fqcn`, `member`, `static`, `parameters` (each with `name`, `type`, `nullable`, `default`, `optional`, `variadic` and `byRef`), `returns` and `nullable`. The index is built on the first call and keyed exactly on `fqcn` and `member`. Rows are deep-frozen and each call for a key returns the same object. A missing member, a missing directory or a non-string argument gives null; a malformed line throws an `Error` naming `file:line`. It reads the directory in `XARAVEL_API_SURFACE`, which the harness sets to the root's `conformance/api-surface`; the default is the preload's sibling `../api-surface`. Mockery's Double reads `returns` and `nullable` from it.
 
 **Late assertions.** `@xaravel/assert` ends each test's counts when its body settles. A later assertion, for example from an un-awaited promise or a timer, is not counted. It goes to the late hook with the full Test ID and its kind (`null` for the kind-less count), and the harness reports the test as `late`. The hook call never throws, because a throw there would fail whichever test happened to be running at the time.
 

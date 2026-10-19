@@ -2,8 +2,8 @@
 title: 'Story 5.4: Fast mode, seeds and filters'
 type: 'feature'
 created: '2026-10-19'
-status: 'ready-for-dev'
-baseline_revision: 'c2ec7d6e91f889f9a78f0a840d86d1b9fbb82996'
+status: 'done'
+baseline_revision: 'e50427c1ca449271b75838e404c6588779a8a69b'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -108,6 +108,35 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-19 — Review pass
+- verdicts: 25 findings — high 0, medium 3, low 16, false 6, maybe-false 0 (the intent-alignment report is descriptive and counted as one row)
+- findings:
+  - (blind) `[low]` `[patch]` `--story` on a manifest with empty `test_ids` (every conformance Story) fails with the generic "no Test ID matches" — now fails with `stories/<s>.md lists no test_ids`. Grouped with edge 4. Selecting `xaravel_test_ids` is not this Story's: the AC says `test_ids`, and Xaravel Tests come under the harness in 5.9.
+  - (blind) `[false]` `[reject]` the `matched 0 tests` rule hides import failures — checked on bun 1.4.3: a selected file that throws at import reports `1 fail / 1 error`, never `matched 0 tests`, so the empty-run rule doesn't fire. Grouped with edge 5.
+  - (blind) `[false]` `[reject]` `isFullRun` is true for filtered runs — by design: Story 5.7's per-PR run is "a full run of the Story's `test_ids`", i.e. a filtered unsampled run, and 5.9's "last CI run was a full run" means not sampled. Grouped with edge 6.
+  - (blind) `[low]` `[reject]` UNKNOWN lines appear only when `-t` is omitted — an UNKNOWN is a Ported Test with no Expectations line, which every full run reports; making a filtered run consistent needs a new branch in `compare`, and the case is rare.
+  - (blind) `[medium]` `[patch]` new paths untested, chiefly the MAX_PATTERN fallback — added a >65,536-character partial selection case to XT-108. Grouped with verification-gap 1 and edge 1/edge claim. The other listed paths (fast+filter, invalid seed via `runHarness`) are direct code covered by the same branches.
+  - (blind) `[low]` `[patch]` a malformed `--story` id exits 1 with "does not exist" — now a usage error (exit 2) naming `<epic>.<story>`.
+  - (blind) `[low]` `[reject]` `--root` can repeat — last-wins, as in 5.3; no harm named.
+  - (blind) `[low]` `[reject]` the signature lookup is configurable — deliberate (spec Always): Mockery's own tests save and restore its descriptor (`double-scenarios.ts:212-235`), ESC-4.8-1 sets no non-configurable requirement, and a replaced lookup changes only Double's default return values, which fidelity review sees. Grouped with edge 10.
+  - (blind) `[low]` `[reject]` `signatures.ts` validates little (duplicates, row shape, lazy throw) — the committed surface has no duplicate method rows (checked with jq) and is generated and checked by Story 3.5's tool; a lazy throw needs malformed committed data. Grouped with edge 8, edge 9.
+  - (blind) `[low]` `[reject]` exact-case lookup — Double asks with `fqcn()`'s declared-case FQCN, the same text the surface records (ESC-4.8-1 item 1); PHP-style case folding would add a normalisation rule nothing calls for.
+  - (blind) `[low]` `[patch]` the unknown `--story` ID diagnostic is unbounded — it now prints the count and at most 10 IDs.
+  - (blind) `[low]` `[reject]` XT-186 hard-codes the committed `Arr::__call` row's 2 parameters — a pin bump regenerates the surface and re-runs this suite, where a changed row is visible at once.
+  - (edge 1) `[medium]` `[patch]` oversized pattern runs every test of the files — grouped with the MAX_PATTERN test patch; the behaviour (slower, comparison still restricted) is the spec's and is documented.
+  - (edge 2) `[low]` `[reject]` the same Test ID in two Components' shards — an Inventory ID has exactly one Component and shards mirror it; `expectations:check` ties lines to the Inventory.
+  - (edge 3) `[low]` `[reject]` a shard directly under `conformance/expectations/` — the Story 5.1 layout requires `<component>/…`, and none exists.
+  - (edge 4) `[low]` `[patch]` empty `test_ids` — grouped with blind 1.
+  - (edge 5) `[false]` `[reject]` import errors swallowed by `matched 0 tests` — refuted by the bun 1.4.3 check above.
+  - (edge 6) `[false]` `[reject]` filtered SUMMARY counted as full — see blind 3.
+  - (edge 7) `[low]` `[patch]` `signatures.ts` reads `node:fs` functions at first call, so a `mock.module('node:fs')` in a Ported Test would be read through — the functions are captured at load.
+  - (edge 8) `[low]` `[reject]` a malformed line throws inside the first calling test — grouped with blind 9.
+  - (edge 9) `[false]` `[reject]` duplicate rows depend on file order — none exist in the committed surface (checked).
+  - (edge 10) `[low]` `[reject]` a test can delete the configurable global — grouped with blind 8.
+  - (edge claim) `[false]` `[reject]` "only matching Test IDs run" is broken when `-t` is omitted — with no `-t` because every Component line is selected, the only extra tests are ones with no Expectations line; past MAX_PATTERN the spec accepts a slower run with an unchanged comparison.
+  - (verification-gap 1) `[medium]` `[patch]` the MAX_PATTERN branch is never exercised — test added (grouped above).
+  - (intent) `[low]` `[reject]` descriptive: AC 1/2 are tested on fixture roots and the CLI, not the real repo's commit — the real-repo CLI runs are in Verification; AC 4's done check is 5.9's, bound through `isFullRun`; AC 5's harness test uses a fixture surface, with the committed surface read directly and through the preload default.
+
 ## Design Notes
 
 Ranking by a per-ID hash, rather than shuffling with a PRNG, keeps the sample independent of file order and stable when unrelated IDs are added. Filtering through `-t` and per-Component files keeps a fast run fast as the port grows, while the full-set comparison semantics stay in `compare`. The 64 KiB cap keeps a single argv entry under Linux's 128 KiB `MAX_ARG_STRLEN`. Past the cap the run is only slower, never wrong, because the comparison is restricted anyway.
@@ -119,3 +148,50 @@ Ranking by a per-ID hash, rather than shuffling with a PRNG, keeps the sample in
 - `bun run harness --fast --seed demo` twice -- identical output with `FAST seed=demo sample=100/<n>`; exit 0.
 - `bun run harness --component support` -- SUMMARY with checked equal to the support lines on run variants; exit 0.
 - `bun run test`, `bun run typecheck`, `bun run lint`, `bun run escalations:check`, `bun run expectations:check`, `bun run protected-paths:codeowners` -- all pass.
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** `bun run harness` gains a selection layer and the API signature lookup.
+- **Filters.** `--component <c>`, `--id <glob>` and `--story <story-id>`. A repeated filter is a union and different filters intersect. `--story` reads the manifest's `test_ids` through `parseManifest`.
+- **Fast mode.** `--fast`, or `--seed <s>`, samples up to 100 selected Test IDs, ranked by SHA-256 of `<seed>\n<id>`. It prints `FAST seed=<s> sample=<k>/<n>` first and appends ` mode=fast seed=<s>` to SUMMARY. `isFullRun(summary)` is false for such a run, and `docs/ops/harness.md` binds Story 5.9's done check to it.
+- **Running a selection.** Each Variant run gets only the selected Components' Ported Test files, plus a `-t` name pattern when the selection is partial and the pattern is at most 64 KiB. The comparison checks only the selected lines.
+- **Signature lookup.** The preload installs `globalThis[Symbol.for('xaravel.api.signature')]`, built lazily from `<root>/conformance/api-surface/*.jsonl`. It returns deep-frozen method rows or null (ESC-4.8-1 item 1).
+
+**Files changed.**
+- `conformance/harness/select.ts` (new): glob, sample, selection and the `-t` pattern.
+- `conformance/harness/signatures.ts` (new): `signatureLookup(dir)`.
+- `conformance/harness/preload.ts`: installs the lookup (configurable, non-writable).
+- `conformance/harness/harness.ts`: the CLI flags, selection, per-Variant files and pattern, FAST and SUMMARY, `isFullRun`, `sample`, and `XARAVEL_API_SURFACE`.
+- `conformance/tests/xaravel/harness-select.test.ts` (new): XT-conformance-106..109 and 186.
+- `stories/5.4.md`: XT-conformance-186 for AC 5. `story-manifests.md`: the next free ID is 187.
+- `docs/ops/harness.md`: the filters, fast mode, the done-check contract and the lookup.
+
+**Deviation from the spec's text (not its intent).** The contract says a `-t` run that matches nothing leaves no junit file. On bun 1.4.3 it writes one, with every testcase skipped, and exits 1 with `matched 0 tests`. The empty-run rule therefore keys on a non-zero exit plus that stderr text, whether or not a junit file exists. The selected lines come out `missing`, as intended. An import failure doesn't trigger the rule: bun reports it as `1 fail / 1 error` (checked).
+
+**Review.** 25 findings: 3 medium, 16 low, 6 false.
+- **Patched: 5 entries** (1 medium, 4 low):
+  - the MAX_PATTERN fallback test;
+  - a malformed `--story` is now a usage error;
+  - `lists no test_ids` for an empty manifest;
+  - the unknown-ID diagnostic is capped at 10 IDs;
+  - the `node:fs` functions in `signatures.ts` are captured at load.
+- **Deferred:** none.
+- **Rejected:** each with its reason in the triage log.
+  - The false findings: the import-failure swallow, filtered runs counting as full, duplicate surface rows, and "only matching IDs run".
+  - The low ones: UNKNOWN consistency without `-t`, a repeated `--root`, the configurable lookup (Mockery's tests save and restore it), surface validation and the lazy throw, exact-case matching, the same ID in two Components, a shard without a Component directory, and the hard-coded `Arr::__call` row.
+
+**Follow-up review recommended: false.** The only medium patched was a test addition, so 1 medium and 4 low were patched.
+
+**Verification.**
+- `bun test` on `harness-select.test.ts` and `harness.test.ts`: 11 pass.
+- `bun run harness --fast --seed demo`, run twice: identical output (`FAST seed=demo sample=100/22070`, `SUMMARY variants=9 run=4 not-run=5 checked=97 differ=0 mode=fast seed=demo`), exit 0.
+- `bun run harness --component support`: `SUMMARY variants=1 run=1 not-run=0 checked=1260 differ=0`.
+- `bun run test`: 195 pass, 0 fail.
+- `typecheck`, `lint`, `escalations:check` (only the existing ESC-5.3-2/3 warnings), `expectations:check` and `protected-paths:codeowners` all pass, with no CODEOWNERS drift.
+
+**Residual risks.**
+- **Manual check under the preload.** Story 5.3's manual check `bun test --preload conformance/harness/preload.ts packages` now has one failure: XT-mockery-7 (`packages/mockery/tests/xaravel/mockery.test.ts:983`) asserts that no lookup is installed. The harness never runs that file. Story 5.9 brings Xaravel Tests under the harness and must resolve it; 5.4 may not edit `packages/**`.
+- **The `--story` workflow.** It selects nothing for any Story whose `test_ids` are empty (all Phase 0 Stories), by AC.
+- **Configurable lookup.** It is configurable, so a Ported Test could replace it.
