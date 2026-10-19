@@ -490,6 +490,100 @@ test("XT-mockery-2: an unmet expectation fails the test when it finishes, with t
   checkScenarios("XT-mockery-2");
 }, CHILD_TIMEOUT);
 
+const OUTSIDE_RUN_FIXTURE = "./packages/mockery/tests/xaravel/fixtures/outside-run.fixture.ts";
+
+interface OutsideRun {
+  exitCode: number | null;
+  results: Map<string, string | null>;
+  /** The JUnit `<failure type="…">` of each failed test, keyed like `results`. */
+  types: Map<string, string>;
+  reports: Record<string, Record<string, number>>;
+  probe: unknown;
+}
+
+/** Runs outside-run.fixture.ts in a child `bun test` for one scenario. */
+function runOutsideRunFixture(scenario: "unmet" | "met" | "body-fails"): OutsideRun {
+  const dir = mkdtempSync(join(tmpdir(), "xt-mockery-outside-run-"));
+  tempDirs.push(dir);
+  const junit = join(dir, "junit.xml");
+  const reportFile = join(dir, "reports.jsonl");
+  const probeFile = join(dir, "probe.json");
+  const env = { ...process.env, XT_OUTSIDE_RUN_SCENARIO: scenario, XT_OUTSIDE_RUN_REPORT_FILE: reportFile, XT_OUTSIDE_RUN_PROBE_FILE: probeFile };
+  const child = Bun.spawnSync([process.execPath, "test", OUTSIDE_RUN_FIXTURE, "--reporter=junit", `--reporter-outfile=${junit}`], {
+    cwd: root,
+    env,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: SPAWN_TIMEOUT,
+  });
+  const output = child.stdout.toString() + child.stderr.toString();
+  for (const path of [junit, reportFile, probeFile]) {
+    if (!existsSync(path)) {
+      throw new Error(`the ${scenario} fixture run wrote no ${path} (exit ${child.exitCode}); its output:\n${output}`);
+    }
+  }
+  const results = new Map<string, string | null>();
+  const types = new Map<string, string>();
+  for (const match of readFileSync(junit, "utf8").matchAll(/<testcase name="([^"]*)"[^>]*?(\/>|>\s*<failure[^>]*?type="([^"]*)"[^>]*?message="([^"]*)")/g)) {
+    const name = unescapeXml(match[1] ?? "");
+    results.set(name, match[4] === undefined ? null : unescapeXml(match[4]));
+    if (match[3] !== undefined) {
+      types.set(name, unescapeXml(match[3]));
+    }
+  }
+  const reports = Object.fromEntries(
+    readFileSync(reportFile, "utf8")
+      .split("\n")
+      .filter((line) => line !== "")
+      .map((line) => JSON.parse(line) as { id: string; assertions: Record<string, number> })
+      .map((report) => [report.id, report.assertions]),
+  );
+  return { exitCode: child.exitCode, results, types, reports, probe: JSON.parse(readFileSync(probeFile, "utf8")) as unknown };
+}
+
+test("outside-run (Epic 4 retro R3): a mock made outside a run is adopted by the next run, sharing its container, verified and counted when the body resolves (an unmet once() fails that test with InvalidCountException), purged unverified when the body fails; the process slot is then empty and the run after starts with no container", () => {
+  const T = "Tests\\Unit\\MockeryOutsideRunTest";
+  const adopts = `${T}::testAdopts`;
+  const nextRun = `${T}::testNextRun`;
+  const probe = { adoptedMocks: 1, sharedMocks: 2, nextRunEmpty: true, processSlotEmpty: true };
+
+  // R3 repro: the unmet once() of the outside mock fails the first test, naming run and once.
+  const unmet = runOutsideRunFixture("unmet");
+  expect(unmet.exitCode).toBe(1);
+  expect(unmet.reports).toEqual({ [adopts]: { assertTrue: 1, mockeryExpectation: 1 }, [nextRun]: { assertTrue: 1 } });
+  expect(unmet.probe).toEqual(probe);
+  expect([...unmet.results.keys()].sort()).toEqual([adopts, nextRun].sort());
+  const message = unmet.results.get(adopts) ?? "";
+  expect(message).toContain("run(");
+  expect(message).toContain("exactly 1 times but called 0 times");
+  expect(unmet.types.get(adopts)).toBe("InvalidCountException");
+  expect(unmet.results.get(nextRun)).toBeNull();
+  // Closing the same unmet expectation throws InvalidCountException (TS-side).
+  const verifyError = thrown(() => {
+    Mockery.mock(XtFoo).shouldReceive("run").once();
+    Mockery.close();
+  });
+  expect(verifyError).toBeInstanceOf(InvalidCountException);
+  expect((verifyError as Error).message).toBe(message);
+
+  // Met: both tests pass, and the adopted expectation is counted.
+  const met = runOutsideRunFixture("met");
+  expect(met.exitCode).toBe(0);
+  expect(met.reports).toEqual({ [adopts]: { assertTrue: 1, mockeryExpectation: 1 }, [nextRun]: { assertTrue: 1 } });
+  expect(met.probe).toEqual(probe);
+  expect(met.results.get(adopts)).toBeNull();
+  expect(met.results.get(nextRun)).toBeNull();
+
+  // Body fails: the body's error wins; the adopted container is purged, neither verified nor counted.
+  const bodyFails = runOutsideRunFixture("body-fails");
+  expect(bodyFails.exitCode).toBe(1);
+  expect(bodyFails.reports).toEqual({ [adopts]: { assertTrue: 1 }, [nextRun]: { assertTrue: 1 } });
+  expect(bodyFails.probe).toEqual(probe);
+  expect(bodyFails.results.get(adopts)).toBe("body");
+  expect(bodyFails.types.get(adopts)).toBe("Error");
+  expect(bodyFails.results.get(nextRun)).toBeNull();
+}, 3 * SPAWN_TIMEOUT + 10_000);
+
 test("XT-mockery-3: a call that matches no expectation throws Mockery's BadMethodCallException (declared or undeclared method) or NoMatchingExpectationException (arguments matching none, with Objects: (…) for an object), with the Oracle's messages", () => {
   // TS-side: the hierarchy, before any fixture is read.
   const m = Mockery.mock(XtFoo);

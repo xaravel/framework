@@ -4,13 +4,22 @@
 //
 // Test finish (ESC-4.5-1 item 1). `getContainer()` returns the container of
 // the current run (an AsyncLocalStorage store), else a process-level one.
-// `globalThis[Symbol.for('xaravel.mockery.run')](fn)` runs `fn` with a fresh
-// container: when `fn` rejects, the container is closed without verifying and
-// the error is rethrown; when it resolves, `Mockery.close()` runs. `close()`
-// records one `mockeryExpectation` assertion per call-count-constrained
-// expectation (`mockery_getExpectationCount()`, which PHPUnit adds to its
-// assertion count), detaches the container, then verifies it
-// (`mockery_teardown`). `portedTest` and `xaravelTest` call the protocol.
+// `globalThis[Symbol.for('xaravel.mockery.run')](fn)` runs `fn` with the run's
+// own container. A run adopts the process-level container, if one exists (a
+// mock made at file load or in a bare `bun:test` hook), as its container and
+// empties the process slot, so the next test to finish verifies it, as
+// PHPUnit's tearDown closes Mockery's one global container; otherwise the run
+// starts with none. A process-level container with no run after it (made
+// after the last run, or in a file with no later test) is never closed, as
+// PHPUnit's global container is closed only by a test's tearDown. When `fn`
+// rejects, the run's container (adopted or not) is closed without verifying
+// and the error is rethrown; when it resolves, `Mockery.close()` runs.
+// `close()` called outside a run closes the process slot as before.
+//
+// `close()` records one `mockeryExpectation` assertion per
+// call-count-constrained expectation (`mockery_getExpectationCount()`, which
+// PHPUnit adds to its assertion count), detaches the container, then verifies
+// it (`mockery_teardown`). `portedTest` and `xaravelTest` call the protocol.
 //
 // Mutable state lives in module variables and the store, never in statics.
 import { recordAssertion } from "@xaravel/assert";
@@ -158,9 +167,14 @@ export class Mockery {
   }
 }
 
-/** The run protocol: `fn` with a fresh container, closed (and verified) when `fn` resolves. */
+/**
+ * The run protocol: `fn` with the run's container, closed (and verified) when `fn` resolves. The run adopts the
+ * process-level container, if any, and empties the process slot (PHPUnit closes Mockery's one global container
+ * at the next test's tearDown).
+ */
 async function run<T>(fn: () => T | Promise<T>): Promise<T> {
-  const slot: ContainerSlot = { container: null };
+  const slot: ContainerSlot = { container: processSlot.container };
+  processSlot.container = null;
   let result: T;
   try {
     result = await storage.run(slot, fn);
