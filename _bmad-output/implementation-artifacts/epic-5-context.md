@@ -45,7 +45,7 @@ Make every Story's result measurable the same way locally and in CI. This epic d
   - no open Escalations;
   - the last CI run was a full run.
 
-  A manifest with no assigned tests fails.
+  A manifest with no assigned tests fails. A Story's Differential Test IDs also need a verified fixture in their Component's `conformance/fixtures/`. A fixture whose output is an evaluation error also fails, unless Upstream's expected outcome is that error.
 - **Benchmarks:** run nightly for information only and never fail a job.
 - **Agent operability:** every Story runs unattended in its own git worktree, with machine-readable Test IDs, commands and acceptance check.
 
@@ -59,6 +59,7 @@ Make every Story's result measurable the same way locally and in CI. This epic d
 - **Harness:** runs `bun test` once per variant with the Protected root `bunfig.toml`, setting `XARAVEL_VARIANT`. It fails if any package-level `bunfig.toml` exists.
   - **Grader isolation:** the harness, `@xaravel/assert` and `@xaravel/mockery` import no graded package. They detect values by `Symbol.for` brand and open frames only through the runtime's global protocol.
   - **Frames:** the harness opens the test frame first. Discarding it resets all per-test state.
+  - **API signature lookup (Story 5.4):** before any Ported Test loads, the harness installs `globalThis[Symbol.for('xaravel.api.signature')]` as `(fqcn, member) => row | null`, built from the committed `conformance/api-surface/*.jsonl`. `row` is the member's whole surface line: `returns`, `nullable` and `parameters`, where each parameter has `name`, `type`, `nullable`, `default`, `optional` and `variadic`. A missing member returns null. Mockery's Double reads `returns` and `nullable`, and takes parameter names from the row when there is one. The harness reads committed data, not graded code, so grader isolation holds.
 - **`blocked-by:<c>`:** matches only when the test fails with `BlockedByComponentError(<c>)`, which is raised when a token, alias or FQCN owned by `<c>` (per the component map) is resolved and `<c>` isn't installed. Any other failure under a `blocked-by` expectation is a mismatch.
 - **Backend isolation:**
   - **Worktree key:** the first 8 hex characters of SHA-256 over the worktree path plus its git worktree creation id.
@@ -96,14 +97,15 @@ Make every Story's result measurable the same way locally and in CI. This epic d
 
 - **Within the epic:**
   - 5.1 is the base for everything else: 5.2 validates its lines, and 5.3 compares results against them.
-  - 5.3 is the base for 5.4 (fast mode, filters), 5.5 (isolation at harness start) and 5.6 (Ratchet).
+  - 5.3 is the base for 5.4 (fast mode, filters, the `xaravel.api.signature` lookup), 5.5 (isolation at harness start) and 5.6 (Ratchet). The lookup was moved from 5.3 to 5.4 by the ESC-4.8-1 ruling.
   - 5.6 feeds 5.7 (`ratchet` becomes a required check in the Story 1.7 ruleset verification) and 5.8 (bot exemptions and promotion).
   - 5.9 needs 5.3, 5.4 and 5.6. When 5.9 merges, all Epic 1–4 Xaravel Tests run through `xaravelTest` under the harness.
 - **Upstream epics:**
   - Epic 1: manifests, the ownership and protected-paths checks, the Escalation formats, the ruleset.
   - Epic 2: Inventory with `backends`, `assertions` and `oracle` outcomes; the component map.
   - Epic 3: Oracle requests, signed fixtures, verification.
-  - Epic 4: `portedTest` / `xaravelTest`, assertion counting.
+  - Epic 4: `portedTest` / `xaravelTest`, assertion counting. Mockery's Double (Story 4.8) consumes the `xaravel.api.signature` lookup, and resolves class return types through `Symbol.for('xaravel.class.lookup')`.
+  - The API-surface data in `conformance/api-surface/*.jsonl` comes from the Oracle's export of Upstream's public members.
 - **Downstream:**
   - The Epic 7 dashboard reads these data files.
   - Epic 8 needs `decisions/DIV-<n>.md` for the `intentional-divergence` check, and its reviewers' checklist references the precedence rule documented in `conformance/README.md`.

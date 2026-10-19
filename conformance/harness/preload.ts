@@ -1,4 +1,5 @@
-// The harness preload (Story 5.3, AD-15, ESC-4.2-1 items 1 and 4).
+// The harness preload (Stories 5.3 and 5.4, AD-15, ESC-4.2-1 items 1 and 4,
+// ESC-4.8-1 item 1).
 //
 // `bun run harness` passes this file to `bun test --preload`, so it runs
 // before any Ported Test file loads. It imports nothing graded. In order, it:
@@ -10,13 +11,21 @@
 //        `XARAVEL_HARNESS_OUT`;
 //      - `Symbol.for('xaravel.harness.late')`, the late-assertion hook
 //        (packages/assert's AssertionCounter), which appends
-//        `{"late":{"id":<id>,"kind":<kind>}}` the same way.
+//        `{"late":{"id":<id>,"kind":<kind>}}` the same way;
+//   3. installs `Symbol.for('xaravel.api.signature')`, the API signature
+//      lookup (./signatures.ts), non-writable and non-enumerable but
+//      configurable, so a test that saves and restores the descriptor (Mockery's
+//      `double-scenarios.ts`) still works. It reads the directory named by
+//      `XARAVEL_API_SURFACE` (the harness sets `<root>/conformance/api-surface`),
+//      by default this file's sibling `../api-surface`.
 //
 // Without `XARAVEL_HARNESS_OUT` both functions still exist and write nothing.
 // The lines are tool data, not framework values, so they are written with
 // JSON.stringify (AD-23 covers framework values).
 import { appendFileSync } from "node:fs";
+import { join } from "node:path";
 import { hardenIntrinsics } from "./intrinsics";
+import { signatureLookup } from "./signatures";
 
 // Captured at load, before any test can reassign a global.
 const stringify = JSON.stringify;
@@ -26,6 +35,7 @@ const append = appendFileSync;
 
 const REPORT = Symbol.for("xaravel.harness.report");
 const LATE = Symbol.for("xaravel.harness.late");
+const SIGNATURE = Symbol.for("xaravel.api.signature");
 
 hardenIntrinsics();
 
@@ -48,4 +58,12 @@ install(REPORT, (report: unknown): void => {
 install(LATE, (late: unknown): void => {
   const value = (typeof late === "object" && late !== null ? late : {}) as { id?: unknown; kind?: unknown };
   write({ late: { id: value.id ?? null, kind: value.kind ?? null } });
+});
+
+const surface = process.env["XARAVEL_API_SURFACE"];
+defineProperty(globalThis, SIGNATURE, {
+  value: freeze(signatureLookup(surface !== undefined && surface !== "" ? surface : join(import.meta.dir, "..", "api-surface"))),
+  writable: false,
+  enumerable: false,
+  configurable: true,
 });
