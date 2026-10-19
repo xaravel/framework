@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-18-2026 22:00
+last_updated: 10-19-2026 07:35
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -89,7 +89,7 @@ development_status:
   5-8-promotion-and-quarantine-bots: done
   5-9-xaravel-test-coverage-check-and-the-story-done-check: done  # ESC-5.9-1 (open-question) waits on the Maintainer
   5-10-portable-development-environment-devcontainer: done  # added by the Maintainer, 2026-10-19
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   epic-6: backlog
   6-1-type-aware-async-safety-lint: backlog
@@ -943,3 +943,93 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-18.md"
+  - id: "epic-5-retro-item-1-ratchet-fork-guard"
+    epic: 5
+    action: "Guard the ratchet pull_request_target job against fork PRs (head.repo.full_name
+      == github.repository, as oracle.yml does) and document it (finding C1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-2-full-run-meaning"
+    epic: 5
+    action: "Raise an Escalation for the Maintainer to rule what the done check full-run
+      clause means on a PR: an unfiltered run, and the Ratchet verdict instead of
+      SUMMARY differ=0 (findings H1, C2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-3-full-run-conclusion-and-manifest-sync"
+    epic: 5
+    action: "Make story:check full-run require the ratchet job conclusion success,
+      set stories/5.7-5.10.md to status done, and add a check that fails when a done
+      sprint-status Story has a manifest not done (findings C3, S1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-4-bots-empty-plan"
+    epic: 5
+    action: "Skip bots.yml job open on an empty plan and fail clearly when the bot
+      App is not configured (finding S2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-5-one-test-id-matcher"
+    epic: 5
+    action: "Make harness --story selection and story-check assignedLines expand a
+      bare Test ID X to its rows X#<key>, sharing ownership covers (finding H2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-6-variant-membership-escalation"
+    epic: 5
+    action: "Raise an Escalation before Phase 1 ports: run or grade a Ported Test
+      only on the Variants its Inventory backends name, and reset the SQLite cache
+      before every Variant that uses it (finding H3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-7-rule-epic-5-escalations"
+    epic: 5
+    action: "Rule on ESC-5.7-1, ESC-5.8-1 and ESC-5.9-1, correct ESC-5.7-1 test_ids,
+      and after ESC-5.9-1 refine XT FR/AD citations to bullets (findings S3, S4, S5)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-8-maintainer-live-steps"
+    epic: 5
+    action: "Run ruleset:apply, supervise first live CI and bots runs, create the
+      bot App, attach the 59 off-manifest XT IDs, decide .devcontainer/ protection,
+      and update AGENTS.md harness and devcontainer lines (findings S9-S12)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-9-story-check-fixtures-gaps"
+    epic: 5
+    action: "Make story:check fixtures fail an assigned Differential Test with no
+      Oracle request, and require the Upstream-recorded error for the error exemption
+      (finding S6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-10-target-epic-5-deferrals"
+    epic: 5
+    action: "Name covering Stories in epics.md or Escalations for the Epic 5 untargeted
+      deferrals (finding S8)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-11-devcontainer-job-ratchet"
+    epic: 5
+    action: "Judge the devcontainer CI job by the Ratchet verdict, not the raw harness
+      exit (finding C4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-12-bots-proposal-bookkeeping"
+    epic: 5
+    action: "Skip a bot proposal only while its branch has an open PR, queue pending
+      escalation proposals, list escalations via the git trees API, and never overwrite
+      an ESC-bot file (findings C5, C6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
