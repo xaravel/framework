@@ -7,7 +7,9 @@
 //   --id <glob>      IDs the glob matches as a whole: `*` matches any run of
 //                    characters, `?` matches one, everything else is literal
 //                    (including `\`)
-//   --story <s>      the `test_ids` of `stories/<s>.md` (read by the caller)
+//   --story <s>      the `test_ids` of `stories/<s>.md` (read by the caller),
+//                    matched as ownership's `covers` does: a listed `X` also
+//                    selects its dataset rows `X#<key>`
 //
 // A repeated filter takes the union of its values; different filters
 // intersect. The fast sample is the first `min(size, n)` IDs ranked by the hex
@@ -15,6 +17,7 @@
 // on the seed and the selected set.
 import { createHash } from "node:crypto";
 import { compareUnits } from "../../tools/inventory/inventory";
+import { covers } from "../../tools/ownership/ownership";
 
 /** The fast-mode sample size. */
 export const FAST_SAMPLE = 100;
@@ -27,7 +30,7 @@ export interface Filters {
   readonly components: readonly string[];
   /** `--id` globs; empty means no id filter. */
   readonly ids: readonly string[];
-  /** The Story manifest's `test_ids`, or null without `--story`. */
+  /** The Story manifest's `test_ids` (a listed `X` also admits its rows `X#<key>`), or null without `--story`. */
   readonly story: readonly string[] | null;
 }
 
@@ -71,7 +74,7 @@ export function selectIds(universe: ReadonlyMap<string, string>, filters: Filter
     if (globs.length > 0 && !globs.some((glob) => glob.test(id))) {
       continue;
     }
-    if (story !== null && !story.has(id)) {
+    if (story !== null && !covers(story, id)) {
       continue;
     }
     selected.push(id);

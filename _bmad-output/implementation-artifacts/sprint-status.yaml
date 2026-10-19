@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 08:24
+last_updated: 10-19-2026 08:48
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -978,7 +978,7 @@ action_items:
     action: "Make harness --story selection and story-check assignedLines expand a
       bare Test ID X to its rows X#<key>, sharing ownership covers (finding H2)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
   - id: "epic-5-retro-item-6-variant-membership-escalation"
     epic: 5

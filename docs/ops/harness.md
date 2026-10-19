@@ -31,7 +31,7 @@ With no filter and no `--fast`, every Expectations line is checked. Otherwise th
 | --- | --- |
 | `--component <c>` | the Test IDs of Component `c` |
 | `--id <glob>` | the Test IDs the glob matches as a whole: `*` matches any run of characters, `?` matches one, and everything else is literal, including `\` |
-| `--story <story-id>` | the `test_ids` of `stories/<story-id>.md`. A value not of the form `<epic>.<story>` is a usage error. A missing or invalid manifest fails a precondition, and so does one with no `test_ids` (`stories/<s>.md lists no test_ids`). Listed Test IDs with no Expectations line go to stderr as one diagnostic with their count and at most the first 10 of them |
+| `--story <story-id>` | the `test_ids` of `stories/<story-id>.md`. A listed `X` also selects its dataset rows `X#<key>`, as ownership's `covers` does (`docs/ops/ratchet.md`); a listed row `X#k` selects only itself. A value not of the form `<epic>.<story>` is a usage error. A missing or invalid manifest fails a precondition, and so does one with no `test_ids` (`stories/<s>.md lists no test_ids`). Listed Test IDs with no Expectations line, for themselves or a row, go to stderr as one diagnostic with their count and at most the first 10 of them |
 
 A repeated filter takes the union of its values, and different filters intersect. An empty selection fails a precondition with `harness: no Test ID matches <the filters>`.
 

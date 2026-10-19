@@ -406,6 +406,19 @@ xaravelTest(
     expect(unexpected.out[1]).toBe("FAIL tests: 1 problem(s) over 2 Test ID × Variant line(s)");
     expect(unexpected.out[2]).toBe(`  ${B} [none]: differs: UNEXPECTED-PASS ${B} [none] expected=skip:upstream-skip actual=pass asserts=1/1`);
 
+    // A listed bare R covers its dataset rows R#<key> (ownership's covers): their lines are graded, and R itself is not
+    // "no Expectations line"; an id that merely starts with R is not a row. A listed Z with neither line still is.
+    const R = `${CLASS}::testR`;
+    const rowRoot = storyRoot({
+      "stories/9.1.md": manifest("9.1", [R, `${CLASS}::testZ`], []),
+      "conformance/inventory/support.jsonl": [inventoryLine(`${R}#a`, { none: "pass" }, 0), inventoryLine(`${R}#b`, { none: "fail" }, 1), inventoryLine(`${R}y`, { none: "pass" }, 2)].join(""),
+      [SHARD]: [expectation(`${R}#a`, "pass"), expectation(`${R}#b`, "fail-known"), expectation(`${R}y`, "fail-known")].join(""),
+      [PORTED]: [`import { Assert, portedTest } from ${JSON.stringify(ASSERT)};`, `portedTest(${JSON.stringify(`${R}#a`)}, {}, () => { Assert.assertTrue(true); });`, `portedTest(${JSON.stringify(`${R}#b`)}, {}, () => { Assert.assertTrue(false); });`].join("\n"),
+    });
+    const rows = await runStoryCheck(["9.1", "--root", rowRoot], { env: env() });
+    expect(rows.out.slice(1, 4)).toEqual(["FAIL tests: 2 problem(s) over 2 Test ID × Variant line(s)", `  ${R}#b [none]: fail-known is not done`, `  ${CLASS}::testZ: no Expectations line`]);
+    expect(rows.code).toBe(1);
+
     // A manifest with no assigned tests fails, and so does every clause that needs it; with no GH_TOKEN the GitHub
     // clauses fail and never pass silently.
     const empty = storyRoot({ "stories/9.1.md": manifest("9.1", [], []) });
@@ -514,6 +527,26 @@ xaravelTest(
       "FAIL tests: 1 problem(s) over 1 Test ID × Variant line(s)",
       "  ERROR [none] bun test exited 1 with no failing testcase",
     ]);
+    // The pure tests clause: a listed bare A covers its rows A#<key>, so it has lines; a passing row is done and a
+    // fail-known row is not; an exact listed row is graded as before.
+    const rowRun: HarnessResult = {
+      ...crashed,
+      code: 1,
+      out: ["SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0"],
+      results: [
+        { id: `${A}#a`, variant: "none", outcome: "pass", belowFloor: false, performed: 1, upstream: 1 },
+        { id: `${A}#b`, variant: "none", outcome: "fail", belowFloor: false, performed: 1, upstream: 1 },
+      ],
+      differences: [],
+    };
+    const rowLine = (id: string, status: string): { line: Record<string, unknown>; at: string } => ({ line: { id, variant: "none", status, reason: null }, at: "s:1" });
+    expect(renderClause(testsClause([A], { ...rowRun, results: rowRun.results.slice(0, 1) }, [rowLine(`${A}#a`, "pass")], null))).toEqual(["PASS tests: 1 Test ID × Variant line(s) done"]);
+    expect(renderClause(testsClause([A], rowRun, [rowLine(`${A}#a`, "pass"), rowLine(`${A}#b`, "fail-known")], null))).toEqual([
+      "FAIL tests: 1 problem(s) over 2 Test ID × Variant line(s)",
+      `  ${A}#b [none]: fail-known is not done`,
+    ]);
+    expect(renderClause(testsClause([`${A}#a`], rowRun, [rowLine(`${A}#a`, "pass")], null))).toEqual(["PASS tests: 1 Test ID × Variant line(s) done"]);
+    expect(renderClause(testsClause([B], rowRun, [], null))).toEqual(["FAIL tests: 1 problem(s) over 0 Test ID × Variant line(s)", `  ${B}: no Expectations line`]);
     expect(renderClause(xaravelClause(["XT-demo-1"], crashed))).toEqual(["FAIL xaravel-tests: the Xaravel run crashed", "  ERROR [xaravel] bun test exited 1 with no failing testcase"]);
     expect(lastSummary("2026-10-19T10:01:00Z SUMMARY a\nSUMMARY b\n2026-10-19T10:01:00.5Z not SUMMARY c")).toBe("SUMMARY b");
     expect(fullRunClause("w", "success", "no summary here").detail).toBe("w: the log has no SUMMARY line");
@@ -750,6 +783,11 @@ xaravelTest(
     expect(fixturesClause(input({ assigned: ["XT-support-1", A] }))).toEqual({ clause: "fixtures", pass: true, detail: "2 fixture(s) verified", items: [] });
     expect(fixturesClause(input({ assigned: ["XT-support-8", "XT-none-1"] }))).toEqual({ clause: "fixtures", pass: true, detail: "no assigned Differential Test ID", items: [] });
     expect(fixturesClause(input({ assigned: ["XT-support-1"], key: { error: "conformance/oracle/oracle.pub is missing" } })).detail).toBe("cannot verify 1 fixture(s): conformance/oracle/oracle.pub is missing");
+    // A bare assigned X covers its row requests X#<key> (ownership's covers): one with no fixture fails, named by its row.
+    expect(renderClause(fixturesClause(input({ assigned: [C], requests: new Map([[sha(2), { id: `${C}#k`, component: "support" }]]) })))).toEqual([
+      "FAIL fixtures: 1 of 1 assigned request(s) lack a verified fixture",
+      `  ${C}#k ${sha(2)}: no fixture conformance/fixtures/support/${sha(2)}.json`,
+    ]);
     // Any evaluation error counts, at any stage, and only an all-`fail` oracle map excuses it (an all-`skip` one does not).
     const staged = (stage: string): Json => ({ error: { stage, class: "RuntimeException", message: "boom" }, results: [] });
     const stagedFixtures = new Map<string, string>([

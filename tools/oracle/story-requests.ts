@@ -11,7 +11,8 @@
 //     the schema, has a wrong `sha256`, or is not byte-identical to its
 //     canonical rendering (Story 3.1's `validateRequest` / `renderRequest`);
 //   - its `id` is in neither the manifest's `test_ids` nor its
-//     `xaravel_test_ids` (`id <id> is not owned by Story <id>`);
+//     `xaravel_test_ids`, nor a row `X#<key>` of a listed `X` (ownership's
+//     `covers`) (`id <id> is not owned by Story <id>`);
 //   - its `sha256` repeats an earlier line of the file;
 //   - its `sha256` is a batch request (`conformance/oracle/requests/`): the
 //     batch already evaluates and signs it (a candidate only, below);
@@ -43,7 +44,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { PEST_SUITES } from "../inventory/inventory";
-import { parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { mergeOrder } from "./merge-order";
 import { ORACLE_DIR } from "./oracle";
 import { renderRequest, validateRequest, type JsonObject, type OracleRequest } from "./request";
@@ -149,7 +150,7 @@ export function judgeStoryRequests(
     if (isPestTestId(request.id)) {
       reasons.push(pestReason(request.id));
     }
-    if (!owned.has(request.id)) {
+    if (!covers(owned, request.id)) {
       reasons.push(`id ${request.id} is not owned by Story ${manifest.storyId}; it is in neither test_ids nor xaravel_test_ids of ${STORIES_DIR}/${manifest.storyId}.md`);
     }
     const earlier = seen.get(request.sha256);

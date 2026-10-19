@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { MAX_PATTERN, PRELOAD, isFullRun, parseArgs, runHarness, type HarnessOptions } from "../../harness/harness";
 import { FAST_SAMPLE, globToRegExp, namePattern, sampleIds, selectIds } from "../../harness/select";
 import { signatureLookup } from "../../harness/signatures";
+import { coveringIds } from "../../../tools/ownership/ownership";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -298,6 +299,22 @@ xaravelTest("XT-conformance-108", "--component, --id and --story run only the ma
   ]);
   expect(selectIds(universe, { components: [], ids: ["X\\T::test*"], story: null })).toEqual(["X\\T::testA"]);
   expect(selectIds(universe, { components: ["collections", "support"], ids: [], story: ["X\\Tz::testA", "Y\\T::testA"] })).toEqual(["X\\Tz::testA", "Y\\T::testA"]);
+  // --story matches as ownership's covers: a listed X also admits its rows X#<key>; a listed row admits only itself;
+  // an id that merely starts with X (Xy, X::t) is not a row of X.
+  const rowUniverse = new Map([
+    ["X\\T::testR#a", "support"],
+    ["X\\T::testR#b", "support"],
+    ["X\\T::testRy", "support"],
+    ["X\\T::testR::t", "support"],
+    ["Y\\T::testA", "collections"],
+  ]);
+  expect(selectIds(rowUniverse, { components: [], ids: [], story: ["X\\T::testR"] })).toEqual(["X\\T::testR#a", "X\\T::testR#b"]);
+  expect(selectIds(rowUniverse, { components: [], ids: [], story: ["X\\T::testR#a"] })).toEqual(["X\\T::testR#a"]);
+  expect(selectIds(rowUniverse, { components: [], ids: [], story: ["Y\\T::testA"] })).toEqual(["Y\\T::testA"]);
+  expect(selectIds(rowUniverse, { components: [], ids: [], story: ["X\\T::test"] })).toEqual([]);
+  expect(selectIds(rowUniverse, { components: [], ids: [], story: ["X\\T::testR", "X\\T::testR#a"] })).toEqual(["X\\T::testR#a", "X\\T::testR#b"]);
+  expect(coveringIds(new Set(["X", "X#a"]), "X#a#b")).toEqual(["X", "X#a"]);
+  expect(coveringIds(new Set(["X#a"]), "X#a")).toEqual(["X#a"]);
   // The -t pattern matches exactly its IDs.
   const pattern = new RegExp(namePattern(["X\\T::test(a)#x.y", "Z::b"]));
   expect(pattern.test("X\\T::test(a)#x.y")).toBe(true);
@@ -311,6 +328,26 @@ xaravelTest("XT-conformance-108", "--component, --id and --story run only the ma
   expect(story.out).toEqual(["SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0"]);
   expect(story.results.map((result) => result.id)).toEqual([s("testA")]);
   expect(story.err.filter((line) => line.includes("no Expectations line"))).toEqual([`harness: stories/9.9.md lists 1 Test ID(s) with no Expectations line: ${s("testZ")}`]);
+  loaded();
+  // A listed bare X whose lines are only its dataset rows X#<key> runs both rows and has no "no Expectations line"
+  // diagnostic; a listed row runs only itself; ids that merely start with X (Xy, X::t) are not its rows.
+  const rowLines: Line[] = [{ id: s("testA") }, { id: s("testR#a") }, { id: s("testR#b") }, { id: s("testR::t") }, { id: s("testRy") }];
+  const rowFiles = { [FILES.support.test]: ported(rowLines.map((line) => line.id), seen) };
+  const bareRoot = makeRoot(rowLines, { ...rowFiles, "stories/9.9.md": manifest([s("testR")]) });
+  const bare = await harness(bareRoot, { story: "9.9" });
+  expect(bare.out).toEqual(["SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0"]);
+  expect(bare.code).toBe(0);
+  expect(bare.results.map((result) => [result.id, result.outcome])).toEqual([
+    [s("testR#a"), "pass"],
+    [s("testR#b"), "pass"],
+  ]);
+  expect(bare.err.filter((line) => line.includes("no Expectations line"))).toEqual([]);
+  loaded();
+  const rowRoot = makeRoot(rowLines, { ...rowFiles, "stories/9.9.md": manifest([s("testR#a"), s("testA")]) });
+  const row = await harness(rowRoot, { story: "9.9" });
+  expect(row.out).toEqual(["SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0"]);
+  expect(row.results.map((result) => result.id)).toEqual([s("testA"), s("testR#a")]);
+  expect(row.err.filter((line) => line.includes("no Expectations line"))).toEqual([]);
   loaded();
   // A missing or invalid manifest fails a precondition.
   const missing = await harness(dir, { story: "9.9" });

@@ -600,6 +600,12 @@ xaravelTest(
     writeFileSync(join(fx.dir, file), lines(LOWER, XT));
     expect(cliInProcess(["check", "9.1", "--root", fx.dir], {})).toEqual({ code: 0, stdout: `Oracle story requests: Story 9.1: 2 request(s) in ${file}; 2 accepted for Component support.\n`, stderr: "" });
 
+    // A row X#<key> of a listed X is owned (ownership's covers), so its request is accepted.
+    const row = makeRequest(`${OWNED_PHPUNIT}#a`, "php-expr", { bindings: { value: "'DEF'" }, setup: [], exprs: ["\\Illuminate\\Support\\Str::lower($value)"] });
+    writeFileSync(join(fx.dir, file), lines(row));
+    expect(cliInProcess(["check", "9.1", "--root", fx.dir], {})).toEqual({ code: 0, stdout: `Oracle story requests: Story 9.1: 1 request(s) in ${file}; 1 accepted for Component support.
+`, stderr: "" });
+
     // No final LF: the last line is still judged (and accepted), and the file has one problem.
     writeFileSync(join(fx.dir, file), lines(LOWER, XT).slice(0, -1));
     const unterminated = cliInProcess(["check", "9.1", "--root", fx.dir], {});
