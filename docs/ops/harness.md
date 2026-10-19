@@ -49,7 +49,7 @@ and the SUMMARY line ends ` mode=fast seed=<s>`. Rerun a fast run with `--seed <
 
 ## Backend isolation
 
-Parallel agents on one machine each run the harness in their own git worktree, and never share a database or a Redis server (Story 5.5, AD-17). The code is in `conformance/harness/isolation.ts`.
+Parallel agents on one machine each run the harness in their own git worktree, and never share a database or a Redis server (Story 5.5, AD-17). The code is in `conformance/harness/isolation.ts`. The optional devcontainer runs every alpha Variant with only Docker on the host: see [devcontainer.md](devcontainer.md).
 
 **Worktree key.** The root must be the top level of a git worktree (`git rev-parse --show-toplevel` equals the root's realpath); otherwise the harness exits 1 with `<root> is not the top level of a git worktree (AD-17)`, followed by `: <git's last stderr line>` when git printed one. Git records no creation id, so the harness keeps one: 32 lowercase hex characters in `<git-dir>/xaravel-worktree-id`, created from 16 random bytes on the first run. The key is the first 8 hex characters of SHA-256 over `<realpath of the top level>\n<creation id>`. Deleting `.cache/` keeps the key. `git worktree remove` deletes the worktree's git dir, so a new worktree at the same path gets a new key and never inherits stale databases. `runHarness` returns `worktree: {path, key}` once the key is known.
 

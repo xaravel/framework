@@ -1,0 +1,53 @@
+# The Xaravel devcontainer (Story 5.10; AD-17, AD-28): the `workspace` service
+# (Bun, git and CI's `redis-server`) and a `postgres` sidecar from CI's image.
+# Optional: every harness command also runs natively (docs/ops/devcontainer.md).
+#
+# `.cache/` and `node_modules/` are named volumes, not bind mounts, so the
+# harness's Redis unix socket and its I/O work. No Docker socket is mounted.
+# The workspace never sets CI, REDIS_HOST, REDIS_PORT or XARAVEL_REDIS_SERVER:
+# the harness starts the worktree's own `redis-server` on `.cache/redis.sock`.
+services:
+  workspace:
+    # An init as PID 1 forwards SIGTERM and reaps the harness's redis-server.
+    init: true
+    build:
+      context: .
+      args:
+        XARAVEL_UID: ${XARAVEL_UID:-1000}
+        XARAVEL_GID: ${XARAVEL_GID:-1000}
+    volumes:
+      - ..:/workspaces/xaravel
+      - xaravel-cache:/workspaces/xaravel/.cache
+      - xaravel-node-modules:/workspaces/xaravel/node_modules
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/xaravel-ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 180
+      start_period: 10s
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      # Over TCP: initdb's temporary server listens only on the socket.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql
+
+volumes:
+  xaravel-cache:
+  xaravel-node-modules:

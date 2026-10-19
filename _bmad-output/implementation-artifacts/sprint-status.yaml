@@ -78,7 +78,7 @@ development_status:
   4-8-jasonmccreary-double-port: done  # ESC-4.6-1 item 6 (decisions/ESC-4.6-1.md); ESC-4.8-1 approved (decisions/ESC-4.8-1.md)
   epic-4-retrospective: done
 
-  epic-5: in-progress
+  epic-5: done
   5-1-variant-vocabulary-and-expectations-file: done  # ESC-5.1-1 (decisions/ESC-5.1-1.md, orchestrator ruling)
   5-2-skip-reason-rule-checks: done
   5-3-harness-runner-and-greppable-report: done
@@ -88,7 +88,7 @@ development_status:
   5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: done
   5-8-promotion-and-quarantine-bots: done
   5-9-xaravel-test-coverage-check-and-the-story-done-check: done  # ESC-5.9-1 (open-question) waits on the Maintainer
-  5-10-portable-development-environment-devcontainer: backlog  # added by the Maintainer, 2026-10-19
+  5-10-portable-development-environment-devcontainer: done  # added by the Maintainer, 2026-10-19
   epic-5-retrospective: optional
 
   epic-6: backlog
