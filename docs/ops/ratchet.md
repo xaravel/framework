@@ -29,7 +29,7 @@ When the harness exits non-zero but counted no difference at all, `run` adds `UN
 
 A Story is open when its effective status (sprint status through `sprint_key`, as `ownership:check` reads it) is not `done`. It owns a Test ID `X#k` (a dataset row) when its `test_ids` list `X#k` or `X`.
 
-An unowned or foreign unexpected pass is a warning on PR runs too, not only on `main`. The ownership rules forbid a Story from editing a line outside its `test_ids`, so failing its run would leave the PR no legal fix. The owner's next run fails, and Story 5.8's promotion bot handles passes no open Story owns.
+An unowned or foreign unexpected pass is a warning on PR runs too, not only on `main`. The ownership rules forbid a Story from editing a line outside its `test_ids`, so failing its run would leave the PR no legal fix. The owner's next run fails. On `main`, the promotion bot ([bots.md](bots.md)) opens a `bot/promote-…` PR for a pass no open Story owns, once it has passed on every rerun, and the quarantine bot quarantines a line whose result is inconsistent across reruns.
 
 ## The scope (Story 5.7)
 
@@ -93,7 +93,7 @@ The PR run executes PR code from a workflow and tool the PR cannot change (AD-28
   `unowned ported test: <id> at <file>:<line> changes, but Story <id>'s test_ids do not list it (AD-16)`
   A `portedTest` whose id does not resolve, including one that is aliased or not called directly, fails closed:
   `unresolved ported test id: <file>:<line> has a portedTest whose id is not a string literal or a template of top-level string constants; failing closed (AD-16)`
-- **Pass demotion**, on every branch except `bot/*` (Story 5.8 owns the bot rules) and `planning/*` (which may not change Expectations at all): a key whose merge-base lines include `pass` and whose head lines do not, because the status changed or the line was removed, needs an approved Escalation listing its Test ID (or `X` for a row `X#<key>`):
+- **Pass demotion**, on every branch except `bot/*` (bounded instead by the bot rules below) and `planning/*` (which may not change Expectations at all): a key whose merge-base lines include `pass` and whose head lines do not, because the status changed or the line was removed, needs an approved Escalation listing its Test ID (or `X` for a row `X#<key>`):
   `pass demoted: <id> [<variant>] changes from pass to <status|removed> in <shard> with no approved Escalation listing it (AD-16)`
   An Escalation counts when `conformance/escalations/ESC-<id>.md` lists the Test ID (on the base, or in the PR head when the PR adds or changes it) and `decisions/ESC-<id>.md` on the base is `approved` and bound to that exact text by its `escalation_sha256`.
 
@@ -104,5 +104,15 @@ unreadable content: <path> at <sha> could not be read; failing closed (AD-16)
 unparsable expectation: <path>:<line> at <sha> is not an Expectations line with a string id, variant and status; failing closed (AD-16)
 unparsable ported test file: <path> at <sha>: <problem>; failing closed (AD-16)
 ```
+
+### Bot PRs (Story 5.8)
+
+A `bot/*` PR may change only `conformance/expectations/**` and `conformance/escalations/ESC-bot-<n>.md` (the path rule, `bot scope:`). On top of that:
+
+- **Identity.** Its author (`GET /pulls/<n>` `user`) must be the `xaravel-bot` App, `{type: "Bot", login: "xaravel-bot[bot]"}`:
+  `bot identity: <ref> was opened by <login> (type <type>), not the xaravel-bot App (xaravel-bot[bot]); only its bot/* PRs are exempt (AD-16)`
+- **Status values only** (`botValueProblems`). Each changed `.jsonl` shard is read at the merge base and the head. A bot changes only a line's status triple, `status`, `reason` and `escalation`: no shard is added, removed or renamed, each shard keeps the same keys in the same order, and `id`, `variant`, `adapted` (and any other field) stay. A changed line's status must be `pass` (a promotion: `reason` null, `escalation` unchanged) or `quarantined` (a quarantine of a `pass` or `fail-known` line: `reason` null, `escalation` an `ESC-bot-<n>` whose file the same PR adds). Any other file under `conformance/expectations/` is a violation, and so is an `ESC-bot-<n>.md` the PR modifies, removes or renames: a bot only adds one. Each problem is one `bot value: …` line, and unreadable content fails closed as above.
+
+The pass-demotion rule does not apply to `bot/*`: a quarantine moves a `pass` line to `quarantined` under its own new Escalation.
 
 The check reads content only for the files these rules judge, and fetches the merge base only when a file has a base side to read.

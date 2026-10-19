@@ -752,6 +752,10 @@
       "name": "@xaravel/boost-framework",
       "version": "0.0.0",
     },
+    "tools/bots": {
+      "name": "@xaravel/bots",
+      "version": "0.0.0",
+    },
   },
   "packages": {
     "@oxlint-tsgolint/darwin-arm64": ["@oxlint-tsgolint/darwin-arm64@7.0.2004", "", { "os": "darwin", "cpu": "arm64" }, "sha512-uJk3ttju7Lz+Nv8WG4CsLyewoL1qf/Ny8S8OksJ7Bm/F14Tc9gMfW6arM1PCc57IzH/X/I79YsCWTgxX1FKibQ=="],
@@ -859,6 +863,8 @@
     "@xaravel/boost": ["@xaravel/boost@workspace:packages/boost"],
 
     "@xaravel/boost-framework": ["@xaravel/boost-framework@workspace:tools/boost-framework"],
+
+    "@xaravel/bots": ["@xaravel/bots@workspace:tools/bots"],
 
     "@xaravel/broadcasting": ["@xaravel/broadcasting@workspace:packages/broadcasting"],
 

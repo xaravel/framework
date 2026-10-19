@@ -1,0 +1,185 @@
+# The quarantine and promotion bots and the Oracle Escalation collector
+# (Story 5.8; FR-3, AD-16, AD-28; docs/ops/bots.md).
+#
+# `detect` runs after a `ratchet` run of a push to main or a `nightly` run
+# (and on a manual dispatch). It runs the full harness on main, reruns each
+# differing Test ID × Variant 3 times (`bun tools/bots/bots.ts detect`; a
+# manual dispatch only from main) and
+# uploads the plan of quarantines and promotions as the `bot-plan` artifact.
+# It runs graded code, so it holds no secret, no environment and only
+# `contents: read`.
+#
+# `collect` runs after an `oracle` run of a push to main, the nightly
+# schedule or a manual dispatch, on that run's commit. It lists that run's
+# artifacts and downloads its `oracle-escalation` and `oracle-determinism`
+# artifacts when present (any API or download error fails it), turns every
+# ESC-bot-<n>.md in them into a plan (`collect`) and uploads it as
+# `bot-plan`. It runs no test.
+#
+# `open` holds the xaravel-bot App token, in the `bot` environment
+# (restricted to main), one run at a time (concurrency group `bots-open`). It checks out main, downloads this run's `bot-plan`
+# and runs only main's `tools/bots` (`apply`), which re-validates the plan
+# (the before-line check and the ownership bot value rule) and opens one
+# `bot/*` PR per proposal. It never runs a test or the harness, and never
+# merges. `workflow_run` always runs the default branch's copy of this file.
+# No step passes `--fast`.
+name: bots
+
+on:
+  workflow_run:
+    workflows: [ratchet, nightly, oracle]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      ((github.event.workflow_run.name == 'ratchet' || github.event.workflow_run.name == 'nightly') &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8.10.2
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Detect flaky tests and unowned passes on main
+        run: bun tools/bots/bots.ts detect --root . --ref main --out .cache/bots/plan.json
+      - name: Upload the plan
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bot-plan
+          path: .cache/bots/plan.json
+          if-no-files-found: error
+
+  collect:
+    if: >-
+      github.event_name == 'workflow_run' && github.event.workflow_run.name == 'oracle' &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Download the Oracle's Escalations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          mkdir -p .cache/bots/esc
+          # A run that wrote no Escalation uploaded no artifact: not an error. Any API or download error fails the step.
+          names="$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts" --paginate --jq '.artifacts[].name')"
+          for name in oracle-escalation oracle-determinism; do
+            if grep -qx "$name" <<< "$names"; then
+              gh run download "$RUN_ID" --repo "$REPO" -n "$name" -D ".cache/bots/esc/${name}"
+            else
+              echo "No ${name} artifact in run ${RUN_ID}."
+            fi
+          done
+      - name: Collect the Escalations into a plan
+        env:
+          SOURCE: ${{ github.event.workflow_run.html_url }}
+        run: bun tools/bots/bots.ts collect --from .cache/bots/esc --source "$SOURCE" --out .cache/bots/plan.json
+      - name: Upload the plan
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bot-plan
+          path: .cache/bots/plan.json
+          if-no-files-found: error
+
+  open:
+    needs: [detect, collect]
+    if: always() && (needs.detect.result == 'success' || needs.collect.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: bot
+    # One open job at a time, so two runs never pick the same next ESC-bot-<n>.
+    concurrency:
+      group: bots-open
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Download the plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: gh run download "$RUN_ID" --repo "$REPO" -n bot-plan -D .cache/bots
+      - name: Get the xaravel-bot App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.XARAVEL_BOT_APP_ID }}
+          private-key: ${{ secrets.XARAVEL_BOT_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Open the bot PRs
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: bun tools/bots/bots.ts apply --plan .cache/bots/plan.json --repo "$REPO"

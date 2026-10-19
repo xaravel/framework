@@ -4,7 +4,20 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { allowedPath, applySprintStatus, botAllowedPath, checkDuplicates, evaluatePr, parseManifest, planningAllowedPath, readManifests, SPRINT_STATUS, STORIES_DIR, type Manifest } from "../../../tools/ownership/ownership";
+import {
+  allowedPath,
+  applySprintStatus,
+  BOT_LOGIN,
+  botAllowedPath,
+  checkDuplicates,
+  evaluatePr,
+  parseManifest,
+  planningAllowedPath,
+  readManifests,
+  SPRINT_STATUS,
+  STORIES_DIR,
+  type Manifest,
+} from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -100,10 +113,18 @@ interface FakePr {
   fail?: string[];
   /** Head contents by path; served for any ref, to prove the check never asks. */
   head?: Record<string, string>;
+  /** Story 5.8: contents at the merge base by path; when given, the PR has a base sha, the compare API answers, and the merge base is served from here. */
+  base?: Record<string, string>;
+  /** Story 5.8: the PR's `user`. */
+  user?: { login: string; type: string };
 }
 
 /** An Expectations line of Story 9.1's own Test ID (`story("9.1")` lists `T-9.1`). */
 const OWN_LINE = '{"id":"T-9.1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}\n';
+/** `OWN_LINE` promoted, the status-only change a bot/* PR may make (Story 5.8). */
+const OWN_PASS = '{"id":"T-9.1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}\n';
+/** The xaravel-bot App, the only author a bot/* PR may have (Story 5.8). */
+const BOT = { login: BOT_LOGIN, type: "Bot" };
 
 const file = (filename: string, previous?: string): PrFile =>
   previous === undefined ? { filename, status: "added" } : { filename, previous_filename: previous, status: "renamed" };
@@ -129,13 +150,18 @@ async function runPr(pr: FakePr, rootDir: string): Promise<{ code: number; stdou
         return new Response("boom", { status: 500 });
       }
       if (url.pathname === `${base}/pulls/7`) {
-        return Response.json({ number: 7, head: { sha: "a".repeat(40), ref: pr.ref }, changed_files: pr.changedFiles ?? pr.files.length });
+        const extra = { ...(pr.base === undefined ? {} : { base: { sha: "c".repeat(40) } }), ...(pr.user === undefined ? {} : { user: pr.user }) };
+        return Response.json({ number: 7, head: { sha: "a".repeat(40), ref: pr.ref }, changed_files: pr.changedFiles ?? pr.files.length, ...extra });
+      }
+      if (pr.base !== undefined && url.pathname === `${base}/compare/${"c".repeat(40)}...${"a".repeat(40)}`) {
+        return Response.json({ merge_base_commit: { sha: "b".repeat(40) } });
       }
       if (url.pathname === `${base}/pulls/7/files`) {
         return page(pr.files, url);
       }
       if (url.pathname.startsWith(`${base}/contents/`)) {
-        const content = (pr.head ?? {})[url.pathname.slice(`${base}/contents/`.length)];
+        const side = pr.base !== undefined && url.searchParams.get("ref") === "b".repeat(40) ? pr.base : (pr.head ?? {});
+        const content = side[url.pathname.slice(`${base}/contents/`.length)];
         return content === undefined ? new Response("not found", { status: 404 }) : new Response(content);
       }
       return new Response("not found", { status: 404 });
@@ -282,7 +308,8 @@ test("XT-conformance-23: a story/<story-id> PR is judged by the manifest on the 
       code: 0,
       stdout: "Ownership OK: PR #7: planning/x passed the planning rule; no file is under packages/ or conformance/expectations/.\n",
     });
-    expect(evaluatePr(base!, { headRef: "bot/expectations", files: [file("conformance/expectations/support/x.jsonl")], changedFiles: 1 })).toEqual({
+    // Story 5.8: a bot/* PR now also needs the xaravel-bot App as author and a status-only change of an existing shard.
+    expect(evaluatePr(base!, { headRef: "bot/expectations", files: [{ filename: "conformance/expectations/support/x.jsonl", status: "modified" }], changedFiles: 1, author: BOT, content: (_path, side) => (side === "base" ? OWN_LINE : OWN_PASS) })).toEqual({
       storyId: null,
       outOfScope: [],
       violations: [],
@@ -559,30 +586,46 @@ test("XT-conformance-181: a bot/* PR may change only conformance/expectations/**
   const scope = (path: string) =>
     `bot scope: ${path} is outside conformance/expectations/** and conformance/escalations/ESC-bot-<n>.md, the only paths a bot/* branch may change (AD-16)`;
 
+  // Story 5.8: the bot value rule rejects an added shard and the identity rule needs the App as author, so the allowed
+  // PR modifies an existing shard (a promotion) from the xaravel-bot App.
+  const botFiles: PrFile[] = [{ filename: allowed[0]!, status: "modified" }, file(allowed[1]!)];
+  const botBase = { [allowed[0]!]: OWN_LINE };
+  const botHead = { [allowed[0]!]: OWN_PASS };
+  const botContent = (path: string, side: "base" | "head"): string | null => (side === "base" ? botBase : botHead)[path] ?? null;
+
   await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([base]) => {
     // Allowed.
-    expect(evaluatePr(base!, { headRef: "bot/q", files: allowed.map((path) => file(path)), changedFiles: 2 })).toEqual({ storyId: null, outOfScope: [], violations: [] });
-    expect(await runPr({ ref: "bot/q", files: allowed.map((path) => file(path)) }, base!)).toMatchObject({
+    expect(evaluatePr(base!, { headRef: "bot/q", files: botFiles, changedFiles: 2, author: BOT, content: botContent })).toEqual({ storyId: null, outOfScope: [], violations: [] }); // Story 5.8: author and content inputs
+    expect(await runPr({ ref: "bot/q", files: botFiles, base: botBase, head: botHead, user: BOT }, base!)).toMatchObject({
       code: 0,
-      stdout: "Ownership OK: PR #7: bot/q passed the bot path rule (path-level only; Story 5.8 adds the status-only check); every file is under conformance/expectations/ or a conformance/escalations/ESC-bot-<n>.md.\n",
+      stdout: "Ownership OK: PR #7: bot/q passed the bot rules (path, identity, status-only values).\n", // Story 5.8: the OK text names the three bot rules
       stderr: "",
     });
 
     // Forbidden: one bot scope line per path, sorted.
     const sorted = [...forbidden].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-    expect(evaluatePr(base!, { headRef: "bot/q", files: forbidden.map((path) => file(path)), changedFiles: 4 })).toEqual({
+    expect(evaluatePr(base!, { headRef: "bot/q", files: forbidden.map((path) => file(path)), changedFiles: 4, author: BOT })).toEqual({ // Story 5.8: author input
       storyId: null,
       outOfScope: sorted,
       violations: sorted.map(scope),
     });
-    const failing = await runPr({ ref: "bot/q", files: [...allowed, ...forbidden].map((path) => file(path)) }, base!);
+    // Story 5.8: the allowed half is the App's status-only change, so only the path rule fails.
+    const failing = await runPr({ ref: "bot/q", files: [...botFiles, ...forbidden.map((path) => file(path))], base: botBase, head: botHead, user: BOT }, base!);
     expect(failing.code).toBe(1);
     expect(failing.stderr).toBe(`Ownership violations (AD-16):\n${sorted.map((path) => `  ${scope(path)}`).join("\n")}\n`);
     expect(failing.stderr).not.toContain("out of scope:");
 
     // A rename into Expectations still lists the previous name.
-    const renamed = evaluatePr(base!, { headRef: "bot/q", files: [file("conformance/expectations/support/x.jsonl", "tools/x.ts")], changedFiles: 1 });
-    expect(renamed.violations).toEqual([scope("tools/x.ts")]);
+    const renamed = evaluatePr(base!, { headRef: "bot/q", files: [file("conformance/expectations/support/x.jsonl", "tools/x.ts")], changedFiles: 1, author: BOT, content: botContent }); // Story 5.8: author and content inputs
+    // Story 5.8: the bot value rule also rejects the shard the rename adds.
+    expect(renamed.violations).toEqual([
+      scope("tools/x.ts"),
+      "bot value: conformance/expectations/support/x.jsonl is added (or renamed to); a bot/* branch never adds, removes or renames an Expectations shard (AD-16)",
+    ]);
+    // Story 5.8: a bot/* PR within the paths but not from the App fails the identity rule.
+    expect(evaluatePr(base!, { headRef: "bot/q", files: botFiles, changedFiles: 2, author: { login: "someone", type: "User" }, content: botContent }).violations).toEqual([
+      `bot identity: bot/q was opened by someone (type User), not the xaravel-bot App (${BOT_LOGIN}); only its bot/* PRs are exempt (AD-16)`,
+    ]);
 
     // A truncated file list fails closed.
     const truncated = await runPr({ ref: "bot/q", files: [file(allowed[0]!)], changedFiles: 2 }, base!);

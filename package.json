@@ -62,6 +62,7 @@
     "expectations:reasons": "bun tools/expectations/reasons.ts check",
     "harness": "bun --no-env-file conformance/harness/harness.ts",
     "ratchet": "bun tools/ratchet/ratchet.ts",
+    "bots": "bun tools/bots/bots.ts",
     "bench": "bun tools/bench/bench.ts",
     "php-fixtures:install": "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest"
   },

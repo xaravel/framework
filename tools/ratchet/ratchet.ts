@@ -127,7 +127,7 @@ export interface RatchetVerdict {
 }
 
 /** The open Stories owning `id` (sorted by Story ID). */
-function ownersOf(open: readonly Manifest[], id: string): string[] {
+export function ownersOf(open: readonly Manifest[], id: string): string[] {
   return open
     .filter((manifest) => covers(new Set(manifest.testIds), id))
     .map((manifest) => manifest.storyId)

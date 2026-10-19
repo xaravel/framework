@@ -37,8 +37,9 @@ CI holds only these secrets. Each lives in one GitHub environment, so only the j
 | --- | --- | --- | --- |
 | `ORACLE_SIGNING_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#oracle`, `oracle.yml#story` | The Ed25519 private key (PKCS#8 PEM) that signs Oracle fixtures. Its public half is `conformance/oracle/oracle.pub`, and its fingerprint is in [oracle.md](oracle.md#fixture-format-and-signature). |
 | `XARAVEL_ORACLE_APP_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#story` | The private key of the `xaravel-oracle` GitHub App ([below](#the-xaravel-oracle-github-app)). Only the pinned `actions/create-github-app-token` step reads it, to mint a short-lived installation token. |
+| `XARAVEL_BOT_APP_KEY` | `bot`, restricted to the `main` branch | `bots.yml#open` | The private key of the `xaravel-bot` GitHub App ([below](#the-xaravel-bot-github-app), Story 5.8). Only the pinned `actions/create-github-app-token` step reads it. |
 
-The App's ID is the repository variable `XARAVEL_ORACLE_APP_ID` (not a secret).
+The Apps' IDs are the repository variables `XARAVEL_ORACLE_APP_ID` and `XARAVEL_BOT_APP_ID` (not secrets).
 
 The Maintainer generates the Oracle key pair off the agent host, stores the private key only as this secret, and commits the public key ([oracle.md](oracle.md#maintainer-run-steps)). The agent account never sees it, and no tool writes it to disk.
 
@@ -52,6 +53,26 @@ One-time setup (Maintainer):
 2. Install it on `xaravel/framework` only.
 3. Generate a private key for it on a Maintainer machine. Store it as the secret `XARAVEL_ORACLE_APP_KEY` of the environment `oracle`, then delete the downloaded file. Store the App ID as the repository variable `XARAVEL_ORACLE_APP_ID`.
 4. Do not add the App as a ruleset bypass actor. It pushes only to `story/*` branches, which the rulesets leave open; `main` stays reachable only through PRs.
+
+## The `xaravel-bot` GitHub App
+
+The quarantine and promotion bots and the Oracle Escalation collector ([bots.md](bots.md), Story 5.8) push `bot/*` branches and open PRs to `main` as the GitHub App `xaravel-bot`. The ownership check exempts a `bot/*` PR only when its author is that App's bot user, `xaravel-bot[bot]` (type `Bot`), and it changes only Expectations status values. Only `bots.yml#open`, which checks out `main`, runs no test and runs only `main`'s `tools/bots`, mints its token.
+
+| | |
+| --- | --- |
+| Repository permissions | *Contents: read and write*, *Pull requests: read and write*, *Metadata: read*; nothing else |
+| Environment | `bot`, deployment branches restricted to `main` |
+| Variable | `XARAVEL_BOT_APP_ID` (repository) |
+| Secret | `XARAVEL_BOT_APP_KEY` (environment `bot`) |
+| Ruleset bypass | none, until [ESC-5.8-1](../../conformance/escalations/ESC-5.8-1.md) is ruled |
+
+One-time setup (Maintainer):
+
+1. Create a GitHub App owned by the organisation, named `xaravel-bot` (so its bot user is `xaravel-bot[bot]`), with no webhook and the permissions above.
+2. Install it on `xaravel/framework` only.
+3. Create the environment `bot` (Settings → Environments) and restrict its deployment branches to `main`.
+4. Generate a private key on a Maintainer machine. Store it as the secret `XARAVEL_BOT_APP_KEY` of the environment `bot`, then delete the downloaded file. Store the App ID as the repository variable `XARAVEL_BOT_APP_ID`.
+5. Do not add it as a ruleset bypass actor yet. `agent-push.json` is disabled through Phase 0, so the App can create `bot/*` today; when it is re-enabled at the Epic 8 checkpoint it would block the App, which ESC-5.8-1 asks the Maintainer to rule on.
 
 ## Bootstrapping
 
