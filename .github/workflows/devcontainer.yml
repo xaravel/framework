@@ -19,7 +19,9 @@
 # `bun run devcontainer:alpha` finds no alpha Variant NOT-RUN in the merged
 # output (the Ratchet writes the harness report to stderr; non-alpha backends
 # have no sidecar until Phase 9, so their NOT-RUN is expected; epics.md 5.10
-# AC2). It runs on PRs that change the devcontainer, nightly and on dispatch.
+# AC2). It runs on PRs that change the devcontainer, the harness
+# (`conformance/harness/**`) or the root pins (`package.json`, `bun.lock`,
+# `.bun-version`; retro 5 item 18), nightly and on dispatch.
 # It does not duplicate the nightly matrix (nightly.yml); arm64 is not built
 # here.
 #
@@ -34,8 +36,12 @@ name: devcontainer
 on:
   pull_request:
     paths:
+      - ".bun-version"
       - ".devcontainer/**"
       - ".github/workflows/devcontainer.yml"
+      - "bun.lock"
+      - "conformance/harness/**"
+      - "package.json"
       - "tools/devcontainer/**"
   schedule:
     - cron: "17 4 * * *"
