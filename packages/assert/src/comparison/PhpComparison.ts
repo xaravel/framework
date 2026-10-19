@@ -47,10 +47,28 @@ const SAFE_MIN = BigInt(Number.MIN_SAFE_INTEGER);
 const reflectApply = Reflect.apply;
 const getPrototypeOf = Object.getPrototypeOf;
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+const isFrozen = Object.isFrozen;
 const objectPrototype = Object.prototype;
 // oxlint-disable-next-line typescript/unbound-method -- called only through Reflect.apply
 const functionToString = Function.prototype.toString;
 const NATIVE_CODE = /\{\s*\[native code\]\s*\}\s*$/;
+
+/**
+ * The own `constructor` of `prototype`, or undefined. Under the harness preload (Story 5.3,
+ * conformance/harness/intrinsics.ts) a hardened intrinsic prototype's `constructor` is a non-configurable accessor
+ * on a frozen prototype (override taming); only that form's getter is read.
+ */
+function ownConstructor(prototype: object): unknown {
+  const descriptor = getOwnPropertyDescriptor(prototype, "constructor");
+  if (descriptor === undefined) {
+    return undefined;
+  }
+  if ("value" in descriptor) {
+    return descriptor.value;
+  }
+  const getter: unknown = Reflect.get(descriptor, "get");
+  return typeof getter === "function" && descriptor.configurable === false && isFrozen(prototype) ? reflectApply(getter as () => unknown, prototype, []) : undefined;
+}
 
 /** Per prototype: whether it, or a prototype above it (below Object.prototype), has a native constructor. */
 const nativePrototypes = new WeakMap<object, boolean>();
@@ -63,7 +81,7 @@ function isNativePrototype(prototype: object | null): boolean {
   if (known !== undefined) {
     return known;
   }
-  const constructor: unknown = getOwnPropertyDescriptor(prototype, "constructor")?.value;
+  const constructor: unknown = ownConstructor(prototype);
   const native =
     (typeof constructor === "function" && NATIVE_CODE.test(reflectApply(functionToString, constructor, []) as string)) ||
     isNativePrototype(getPrototypeOf(prototype) as object | null);
