@@ -2879,6 +2879,7 @@ So that weakened, removed or mislabelled assertions are caught before merge (FR-
 - no assertion is removed without a DIV clause;
 - every new Skip Reason is justified, and its precedence is right, citing the "Precedence" section of `conformance/README.md` (ESC-5.2-1);
 - every `adapted` marker matches its clause;
+- every Oracle fixture whose output is an error is the error Upstream's test expects (Epic 5 retro item 9; the Inventory does not record it yet);
 - every Xaravel Test verifies the consequence it declares;
 - no stub, fake or partial implementation of another Component;
 - every `@asyncRoot` tag is true.
