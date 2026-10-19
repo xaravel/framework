@@ -253,7 +253,7 @@ Status: done
   - new tests: the preload `ownConstructor` path, the hooks being non-writable, a no-junit run, an unknown Variant, `test.skip`, a stronger real-repo no-write check, and a regex in place of a pinned diagnostic;
   - `addToAssertionCount(0)` after the end is no longer late;
   - the ID registry.
-- **Deferred: 1.** E2: a failing late assertion throws into the running test. Raised as ESC-5.3-3 and proposed for Story 9.11.
+- **Deferred: 1.** E2: a failing late assertion throws into the running test. ESC-5.3-3 (proposed for Story 9.11) is raised in a planning PR after this one merges: the `escalations` check reads its Test ID, XT-conformance-185, from the base-branch manifest, which gains it only with this PR.
 - **Rejected:** each with its reason in the triage log. These cover:
   - the narrow taming list, on purpose (SES-moderate);
   - mockery partial mocks of intrinsic subclasses under the preload;
