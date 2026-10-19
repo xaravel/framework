@@ -92,7 +92,7 @@ function initialised(): string {
 // ---------------------------------------------------------------------------
 // XT-conformance-89: the closed Variant vocabulary
 
-xaravelTest("XT-conformance-89", "conformance/variants is the closed vocabulary and every Inventory backend is a member", () => {
+xaravelTest("XT-conformance-89", "conformance/variants is the closed vocabulary and every Inventory backend is a member (AD-15.2)", () => {
   const { variants, violations } = readVariants(root);
   expect(violations).toEqual([]);
   expect(variants).toEqual([
@@ -122,7 +122,7 @@ xaravelTest("XT-conformance-89", "conformance/variants is the closed vocabulary 
   }
 });
 
-xaravelTest("XT-conformance-204", "a malformed, duplicated or unsorted vocabulary line is a violation naming the line", () => {
+xaravelTest("XT-conformance-204", "a malformed, duplicated or unsorted vocabulary line is a violation naming the line (AD-15.2)", () => {
   expect(parseVariants("# c\n\nnone\nsqlite\n").violations).toEqual([]);
   expect(parseVariants("MySQL\nnone\n").violations).toEqual([`${VARIANTS_FILE}:1: not a Variant: "MySQL"`]);
   expect(parseVariants("none\nnone\n").violations).toEqual([`${VARIANTS_FILE}:2: duplicate Variant none`]);
@@ -150,7 +150,7 @@ xaravelTest("XT-conformance-204", "a malformed, duplicated or unsorted vocabular
   }
 });
 
-xaravelTest("XT-conformance-205", "an Inventory backend outside the vocabulary fails init and check, naming the id and backend", () => {
+xaravelTest("XT-conformance-205", "an Inventory backend outside the vocabulary fails init and check, naming the id and backend (AD-15.2)", () => {
   const dir = fixture({ "support.jsonl": entry(A, "support", ["oracle"], "framework/tests/Support/SupportStrTest.php:10-12") });
   try {
     expect(() => init(dir)).toThrow(`unknown backend: ${A} has backend oracle`);
@@ -167,7 +167,7 @@ xaravelTest("XT-conformance-205", "an Inventory backend outside the vocabulary f
 // ---------------------------------------------------------------------------
 // XT-conformance-90: init
 
-xaravelTest("XT-conformance-90", "init writes one sorted shard per source file, skip / not-ported-yet, deferred:ai-sdk for ai", () => {
+xaravelTest("XT-conformance-90", "init writes one sorted shard per source file, skip / not-ported-yet, deferred:ai-sdk for ai (AD-15.2)", () => {
   const dir = fixture();
   try {
     expect(init(dir)).toEqual({ added: 4, shards: [AI_SHARD, SUPPORT_SHARD] });
@@ -247,7 +247,7 @@ xaravelTest("XT-conformance-209", "bun run expectations:init --root works and pr
   }
 });
 
-xaravelTest("XT-conformance-210", "a serialised line has AD-15's six keys in order, as pin-bump writes and reads them", () => {
+xaravelTest("XT-conformance-210", "a serialised line has AD-15's six keys in order, as pin-bump writes and reads them (AD-15.2)", () => {
   const id = "Illuminate\\Tests\\Integration\\Support\\AuthFacadeTest::testItFailsIfTheUiPackageIsMissing";
   const serialised = serialiseLine(initialLine({ id, component: "support" }, "none"));
   expect(serialised).toBe(String.raw`{"id":"Illuminate\\Tests\\Integration\\Support\\AuthFacadeTest::testItFailsIfTheUiPackageIsMissing","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}`);
@@ -275,7 +275,7 @@ xaravelTest("XT-conformance-210", "a serialised line has AD-15's six keys in ord
 // ---------------------------------------------------------------------------
 // XT-conformance-91: check
 
-xaravelTest("XT-conformance-91", "a pair on two shards is a duplicate listing both paths", () => {
+xaravelTest("XT-conformance-91", "a pair on two shards is a duplicate listing both paths (AD-15.2)", () => {
   const dir = initialised();
   try {
     write(dir, "conformance/expectations/a.jsonl", `${line(A, "none")}\n`);
@@ -290,7 +290,7 @@ xaravelTest("XT-conformance-91", "a pair on two shards is a duplicate listing bo
   }
 });
 
-xaravelTest("XT-conformance-211", "a deleted line is missing, a fake id is unknown", () => {
+xaravelTest("XT-conformance-211", "a deleted line is missing, a fake id is unknown (AD-15.2)", () => {
   const dir = initialised();
   try {
     write(dir, SUPPORT_SHARD, `${line(A, "none")}\n${line(B, "mysql")}\n${line(`${B}Fake`, "none")}\n`);
@@ -303,7 +303,7 @@ xaravelTest("XT-conformance-211", "a deleted line is missing, a fake id is unkno
   }
 });
 
-xaravelTest("XT-conformance-212", "each format fault is one violation naming file:line", () => {
+xaravelTest("XT-conformance-212", "each format fault is one violation naming file:line (AD-15.2)", () => {
   const EXTRA = "conformance/expectations/support/framework/tests/Support/Extra.jsonl";
   const extra: [string, string, string][] = [
     ["empty shard", "", `${EXTRA}: empty shard`],
@@ -375,7 +375,7 @@ xaravelTest("XT-conformance-212", "each format fault is one violation naming fil
   }
 });
 
-xaravelTest("XT-conformance-213", "check passes on the repository and the package scripts run the tool", () => {
+xaravelTest("XT-conformance-213", "check passes on the repository and the package scripts run the tool (AD-15.2)", () => {
   const report = check(root);
   expect(report.violations).toEqual([]);
   const pairs = readWorkingInventory(root).reduce((sum, item) => sum + item.backends.length, 0);

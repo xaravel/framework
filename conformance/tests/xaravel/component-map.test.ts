@@ -144,7 +144,7 @@ function replaced(component: string, line: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-45
 
-xaravelTest("XT-conformance-45", "component-map:check maps every selected Upstream test file to exactly one Component and fails on an unmapped, doubly mapped, stale or redundant entry (FR-1)", async () => {
+xaravelTest("XT-conformance-45", "component-map:check maps every selected Upstream test file to exactly one Component and fails on an unmapped, doubly mapped, stale or redundant entry (FR-1.7)", async () => {
   await withFixture(async (fx) => {
     // The fixture map is current: counts per repository, exit 0.
     const ok = await cli(["check", "--root", fx.dir]);
@@ -231,7 +231,7 @@ xaravelTest("XT-conformance-45", "component-map:check maps every selected Upstre
 // ---------------------------------------------------------------------------
 // XT-conformance-46
 
-xaravelTest("XT-conformance-46", "each hand remap resolves to its Component, Foundation Cloud is tagged deferred:foundation-cloud, and every ai, mcp and boost test is its own Component (FR-1)", () => {
+xaravelTest("XT-conformance-46", "each hand remap resolves to its Component, Foundation Cloud is tagged deferred:foundation-cloud, and every ai, mcp and boost test is its own Component (FR-1.7)", () => {
   const owner = (path: string): string | null => componentForTest(realMap, path)?.component ?? null;
   const remaps: [string, string][] = [
     ["framework/tests/Support/SupportArrTest.php", "collections"],
@@ -455,7 +455,7 @@ xaravelTest("XT-conformance-203", "a bad record fails with its line number, and 
 // ---------------------------------------------------------------------------
 // XT-conformance-48
 
-xaravelTest("XT-conformance-48", "conformance/component-map is a Protected Path whose CODEOWNERS owner is the Maintainer, and the check runs in its own read-only workflow (FR-1, AD-16)", () => {
+xaravelTest("XT-conformance-48", "conformance/component-map is a Protected Path whose CODEOWNERS owner is the Maintainer, and the check runs in its own read-only workflow (FR-1.7, AD-16.1, AD-16.3)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   expect(isProtected(entries, phases, COMPONENT_MAP_FILE)).toBe(true);

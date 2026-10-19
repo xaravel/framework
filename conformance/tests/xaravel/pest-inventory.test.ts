@@ -215,7 +215,7 @@ function ids(text: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-53
 
-xaravelTest("XT-conformance-53", "bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
+xaravelTest("XT-conformance-53", "bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1.1, FR-1.3, FR-1.4, AD-15.2, AD-15.3)", async () => {
   await withFixture(async (fx) => {
     // Valid files, since generating all reads each suite's files for carry-over (a file that does not parse stops it).
     const stays = (id: string, component: string, source: string): string => `{"id":${JSON.stringify(id)},"component":"${component}","kind":"unit","backends":["none"],"source":"${source}","hash":"${"0".repeat(64)}","assertions":null,"oracle":{}}\n`;
@@ -433,7 +433,7 @@ xaravelTest("XT-conformance-53", "bun run inventory gives every Pest test in the
 // ---------------------------------------------------------------------------
 // XT-conformance-54
 
-xaravelTest("XT-conformance-54", "each Pest with() dataset is its own entry carrying Pest's dataset label (FR-1)", async () => {
+xaravelTest("XT-conformance-54", "each Pest with() dataset is its own entry carrying Pest's dataset label (FR-1.1, FR-1.2, FR-1.6)", async () => {
   await withFixture((fx) => {
     generate(fx.dir, { suite: "mcp", local: fx.local("mcp"), php: fx.php });
     const entries = parseInventory(fx.inventory()["mcp.jsonl"]!, "mcp.jsonl", "mcp").filter((entry) => entry.id.includes("it takes a dataset"));
@@ -473,7 +473,7 @@ xaravelTest("XT-conformance-54", "each Pest with() dataset is its own entry carr
 // ---------------------------------------------------------------------------
 // XT-conformance-55
 
-xaravelTest("XT-conformance-55", "every laravel/ai entry is Component ai in ai.jsonl, mcp and boost entries are mcp and boost, and a Pest file mapped to another Component fails (FR-1)", async () => {
+xaravelTest("XT-conformance-55", "every laravel/ai entry is Component ai in ai.jsonl, mcp and boost entries are mcp and boost, and a Pest file mapped to another Component fails (FR-1.3, FR-1.4, FR-1.7)", async () => {
   for (const suite of PEST_SUITES) {
     const entries = committed(suite);
     expect([suite, entries.every((entry) => entry.component === suite)]).toEqual([suite, true]);

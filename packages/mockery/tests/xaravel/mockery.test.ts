@@ -150,7 +150,7 @@ function thrown(fn: () => unknown): unknown {
   return null;
 }
 
-xaravelTest("XT-mockery-8", "fixture-free: the run global, the frozen exports, the imports and the mock object's dispatch", () => {
+xaravelTest("XT-mockery-8", "fixture-free: the run global, the frozen exports, the imports and the mock object's dispatch (AD-15.9)", () => {
   // The run global is installed on load, non-writable and non-configurable. The `xaravel.mockery.mock` hook
   // `createMock` once delegated to is gone (ESC-4.7-1 item 4, Story 4.8 AC 1).
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("xaravel.mockery.run"));

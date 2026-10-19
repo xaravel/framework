@@ -89,7 +89,7 @@ const SAMPLES: { [K in RequestKind]: InputByKind[K] } = {
 };
 
 // Verifies: FR-6, AD-15 (the request schema: four keys in order, Test ID or XT ID, five kinds with typed inputs, sha256 of the canonical request)
-xaravelTest("XT-conformance-68", "conformance/oracle/schema.json requires id (Test ID or XT ID), kind (the five), a typed input and the sha256 of the canonical request, and a wrong hash fails (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-68", "conformance/oracle/schema.json requires id (Test ID or XT ID), kind (the five), a typed input and the sha256 of the canonical request, and a wrong hash fails (FR-6, AD-15.4)", () => {
   expect(existsSync(join(root, SCHEMA_FILE))).toBe(true);
   // Each kind validates, keys in order, with exactly the kind's input keys.
   const ids = ["Illuminate\\Tests\\Support\\SupportStrTest::testUpper", "Illuminate\\Tests\\Support\\SupportStrTest::testPairs#data set \"one\"", "ai/tests/Feature/AgentTest.php::agents > it runs#dataset \"x\"", "XT-support-12"];
@@ -790,7 +790,7 @@ async function cli(args: string[]): Promise<{ code: number; stdout: string; stde
 // XT-conformance-69
 
 // Verifies: FR-6, AD-15 (the five family modules read the closed Differential set mechanically into sorted per-Component request files)
-phpTest("XT-conformance-69", "bun run oracle:extract runs the five family modules over the Differential files and writes conformance/oracle/requests/<component>.jsonl, sorted, one request per readable Test ID x dataset (x segment, grammar or template), and none for an unreadable body (FR-6, AD-15)", async () => {
+phpTest("XT-conformance-69", "bun run oracle:extract runs the five family modules over the Differential files and writes conformance/oracle/requests/<component>.jsonl, sorted, one request per readable Test ID x dataset (x segment, grammar or template), and none for an unreadable body (FR-6, AD-15.4)", async () => {
   await withFixture(async (fx) => {
     writeFiles(join(fx.dir, REQUESTS_DIR), { "routing.jsonl": "stale\n" });
     const run = await cli(["--root", fx.dir, "--local", fx.local, "--php", fx.php]);
@@ -823,7 +823,7 @@ phpTest("XT-conformance-69", "bun run oracle:extract runs the five family module
 });
 
 // Verifies: FR-6 (the committed requests are valid, sorted, de-duplicated and name Inventory Test IDs of their own Component)
-xaravelTest("XT-conformance-214", "every committed conformance/oracle/requests/<component>.jsonl line validates against the schema with its hash, is sorted by id then sha256, and names an Inventory Test ID of that Component (FR-6)", () => {
+xaravelTest("XT-conformance-214", "every committed conformance/oracle/requests/<component>.jsonl line validates against the schema with its hash, is sorted by id then sha256, and names an Inventory Test ID of that Component (FR-6, AD-15.4)", () => {
   const dir = join(root, REQUESTS_DIR);
   const names = readdirSync(dir).sort();
   expect(names.length).toBeGreaterThan(0);
@@ -845,7 +845,7 @@ xaravelTest("XT-conformance-214", "every committed conformance/oracle/requests/<
 });
 
 // Verifies: AD-15 (literal decoding and dataset rows: what is a literal, and what is not)
-xaravelTest("XT-conformance-215", "PHP literals decode as PHP evaluates them, and dataset exports split into literal sources, refusing objects, closures, hex, resources, recursion and {root} rewrites (AD-15)", () => {
+xaravelTest("XT-conformance-215", "PHP literals decode as PHP evaluates them, and dataset exports split into literal sources, refusing objects, closures, hex, resources, recursion and {root} rewrites (AD-15.4)", () => {
   const tokens = (source: string, list: [string, string][]): ReturnType<typeof parseTokenLines> => parseTokenLines(`${JSON.stringify({ file: source, tokens: list.map(([name, text]) => [name, text, 1]) })}\n`);
   const code = (list: [string, string][]) => tokens("x", list).get("x")!;
   expect(decodeLiteral(code([["T_CONSTANT_ENCAPSED_STRING", "'a\\'b\\\\c\\n'"], [".", "."], ["T_CONSTANT_ENCAPSED_STRING", '"\\t\\x41\\u{1F600}\\$"']]))).toBe("a'b\\c\\n\tA😀$");
@@ -873,7 +873,7 @@ xaravelTest("XT-conformance-215", "PHP literals decode as PHP evaluates them, an
 });
 
 // Verifies: AD-15 (the closed set moves with the snapshot, never silently)
-xaravelTest("XT-conformance-216", "the run fails naming each listed Differential file that is missing from the snapshot or has no listed tests, and each tests/View/Blade/*Test.php file the Blade list lacks (AD-15)", () => {
+xaravelTest("XT-conformance-216", "the run fails naming each listed Differential file that is missing from the snapshot or has no listed tests, and each tests/View/Blade/*Test.php file the Blade list lacks (AD-15.4)", () => {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-oracle-closed-"));
   try {
     const listed = ["tests/Support/SupportStrTest.php", "tests/Support/SupportCarbonTest.php", "tests/View/Blade/BladeEchoTest.php", BLADE_BASE];
@@ -913,7 +913,7 @@ function tokenize(source: string): Token[] {
 }
 
 // Verifies: AD-15 (catch types are resolved; an unreadable setUp clock or a missing date.timezone fails the run)
-phpTest("XT-conformance-217", "class names in catch clauses resolve like other class names, and the date family fails on an unreadable setUp() setTestNow or a missing date.timezone instead of guessing (AD-15)", () => {
+phpTest("XT-conformance-217", "class names in catch clauses resolve like other class names, and the date family fails on an unreadable setUp() setTestNow or a missing date.timezone instead of guessing (AD-15.4)", () => {
   const file = parseFile("x.php", tokenize("<?php\nnamespace App;\nuse Some\\Thing;\nclass T {\n  public function testA() {\n    $f = function () { try { x(); } catch (Thing | \\Other\\E $e) { } catch (Local) { } };\n  }\n}\n"));
   const body = file.classes[0]!.methods.get("testa")!.body!;
   expect(renderSource(file.classes[0]!.scope, body)).toBe("$f = function () { try { x(); } catch (\\Some\\Thing | \\Other\\E $e) { } catch (\\App\\Local) { } };");

@@ -107,7 +107,7 @@ const PASSING: readonly { readonly fixture: string; readonly placements: readonl
 
 // XT-conformance-132
 
-xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule fails naming exactly its rule at its scoped paths and each passing fixture passes, under bun --bun oxlint --type-aware -c .oxlintrc.json; the root config holds all six rules as errors with the plugin loaded, and lint:disables rejects disabling them (AD-1, AD-3, AD-7, AD-10, AD-15, AD-23, AD-16.4)", () => {
+xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule fails naming exactly its rule at its scoped paths and each passing fixture passes, under bun --bun oxlint --type-aware -c .oxlintrc.json; the root config holds all six rules as errors with the plugin loaded, and lint:disables rejects disabling them (AD-1, AD-3, AD-7, AD-10, AD-15.1, AD-23, AD-16.4)", () => {
   // The config and the plugin: the six rules (with Story 6.3's seven after them), errors at the top level, plugin loaded, spine rules.
   const config = JSON.parse(readFileSync(join(root, CONFIG), "utf8")) as { jsPlugins: unknown; rules: Record<string, unknown>; overrides?: unknown };
   expect(config.jsPlugins).toEqual(["./tools/lint-rules/plugin.ts"]);

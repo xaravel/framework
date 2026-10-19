@@ -73,7 +73,7 @@ function jsonLines(text: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-xaravelTest("XT-assert-8", "each core assertion passes, fails with PHPUnit's message and compared values, or throws, exactly as the signed PHPUnit 13.4.3 Oracle does over its operand matrix, and counts its own kind", () => {
+xaravelTest("XT-assert-8", "each core assertion passes, fails with PHPUnit's message and compared values, or throws, exactly as the signed PHPUnit 13.4.3 Oracle does over its operand matrix, and counts its own kind (FR-116.2)", () => {
   // The Story's enumerated assertions, each on Assert and on its prototype. The spec's list names 51 of the 82
   // scan names (it says "50"; the other 31 are Story 4.4's).
   expect(ASSERTIONS).toHaveLength(51);
@@ -134,7 +134,7 @@ xaravelTest("XT-assert-8", "each core assertion passes, fails with PHPUnit's mes
   expect([...ran].sort()).toEqual([...ASSERTIONS].sort());
 }, CHILD_TIMEOUT);
 
-xaravelTest("XT-assert-9", "assertSame fails and assertEquals passes on an array and the same entries in another key order (list, plain object and branded forms), with the Oracle's messages", () => {
+xaravelTest("XT-assert-9", "assertSame fails and assertEquals passes on an array and the same entries in another key order (list, plain object and branded forms), with the Oracle's messages (FR-116.2)", () => {
   const { problems, cells, ran } = runRequests("XT-assert-9");
   expect(problems).toEqual([]);
   expect(cells).toBeGreaterThan(0);

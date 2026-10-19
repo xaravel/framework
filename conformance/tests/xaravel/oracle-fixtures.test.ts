@@ -187,7 +187,7 @@ async function cli(args: string[], env: Record<string, string> = {}): Promise<{ 
 // ---------------------------------------------------------------------------
 // XT-conformance-71
 
-xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<component>/<sha256>.json with the request hash, the output and an Ed25519 signature over both, verifiable with oracle.pub (FR-6, AD-15)", async () => {
+xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<component>/<sha256>.json with the request hash, the output and an Ed25519 signature over both, verifiable with oracle.pub (FR-6.2, AD-15.4)", async () => {
   const fx = fixtureRoot();
   try {
     // Generators are reference files the batch never touches; a stray fixture is deleted.
@@ -290,7 +290,7 @@ xaravelTest("XT-conformance-71", "the batch writes conformance/fixtures/<compone
   }
 });
 
-xaravelTest("XT-conformance-219", "the private key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; a wrong or missing key or pub writes nothing (FR-6, AD-15)", async () => {
+xaravelTest("XT-conformance-219", "the private key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; a wrong or missing key or pub writes nothing (FR-6, AD-15.4)", async () => {
   const fx = fixtureRoot();
   try {
     const out = join(fx.dir, FIXTURES_DIR);
@@ -372,7 +372,7 @@ function phpTest(id: string, consequence: string, body: () => void): void {
   );
 }
 
-phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of each kind in real PHP, records a throwing expr as throws and a failing stage as error (FR-6, AD-15)", () => {
+phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of each kind in real PHP, records a throwing expr as throws and a failing stage as error (AD-15.4)", () => {
   const committed = readCommittedRequests(root).flatMap((entry) => entry.requests);
   const listed = new Set(parseNondeterminism(readFileSync(join(root, NONDETERMINISM_FILE), "utf8")).map((entry) => entry.sha256));
   const kinds = ["php-expr", "sql-grammar", "blade-render", "validation-message", "date-format"] as const;
@@ -446,7 +446,7 @@ phpTest("XT-conformance-220", "evaluate.php evaluates one committed request of e
 // ---------------------------------------------------------------------------
 // XT-conformance-72
 
-xaravelTest("XT-conformance-72", "two passes over the same Pin and requests must be identical; an unlisted difference fails, writes no fixture and writes an Escalation (FR-6, AD-15, ESC-3.2-1)", async () => {
+xaravelTest("XT-conformance-72", "two passes over the same Pin and requests must be identical; an unlisted difference fails, writes no fixture and writes an Escalation (FR-6.1, AD-15.4, ESC-3.2-1)", async () => {
   const fx = fixtureRoot();
   try {
     // Identical passes: two runs give identical bytes.
@@ -645,7 +645,7 @@ xaravelTest("XT-conformance-224", "the committed nondeterminism.jsonl lists the 
 // ---------------------------------------------------------------------------
 // XT-conformance-73
 
-xaravelTest("XT-conformance-73", "conformance/oracle/oracle.pub is a Protected Path and docs/ops/oracle.md records its fingerprint (FR-6, AD-16)", async () => {
+xaravelTest("XT-conformance-73", "conformance/oracle/oracle.pub is a Protected Path and docs/ops/oracle.md records its fingerprint (FR-6, AD-15.4, AD-16.1)", async () => {
   const entries = parseList(readFileSync(join(root, "conformance", "protected-paths"), "utf8"));
   const phases = activePhases(root);
   expect(isProtected(entries, phases, PUBLIC_KEY_FILE)).toBe(true);

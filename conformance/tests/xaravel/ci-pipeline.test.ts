@@ -135,7 +135,7 @@ function fakeHarness(code: 0 | 1, out: string[] = ["SUMMARY variants=1 run=1 not
 // ---------------------------------------------------------------------------
 // XT-conformance-119
 
-xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-paths, ownership and dependency-graph checks, bun audit, the Ratchet over its scope and the Story's tests in full, on linux-x64 with SQLite, Postgres 18 and Redis 8.10.2 (FR-3, FR-9, AD-28)", () => {
+xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-paths, ownership and dependency-graph checks, bun audit, the Ratchet over its scope and the Story's tests in full, on linux-x64 with SQLite, Postgres 18 and Redis 8.10.2 (FR-3, FR-9.4, AD-28.1, AD-28.5)", () => {
   // ci.yml: lint, typecheck, graph and audit on every PR and in the queue.
   const ci = workflow("ci.yml").data;
   expect(Object.keys(ci.on)).toEqual(["pull_request", "merge_group", "push"]);
@@ -181,7 +181,7 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   expect(scripts["bench"]).toBe("bun tools/bench/bench.ts");
 });
 
-xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure of the changed packages that has Expectations; data-only paths add nothing, any other path makes it full (AD-2, AD-28)", async () => {
+xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure of the changed packages that has Expectations; data-only paths add nothing, any other path makes it full (AD-2, AD-28.1)", async () => {
   // The closure: every edge kind, transitively, the changed package included, by dir name.
   const tree = makeRoot(packageTree());
   expect(reverseClosure(tree, ["support"])).toEqual(["collections", "support", "validation"]);
@@ -263,7 +263,7 @@ xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure 
   expect(await ratchetMain(["run", "--ref", "main", "--root", root, "--scope", out])).toBe(1);
 }, 60_000);
 
-xaravelTest("XT-conformance-202", "run --scope grades only the scope's Components, none runs no harness, full and no scope run in full; story runs the Story's test_ids in full and forwards the harness's exit (FR-3, AD-28)", async () => {
+xaravelTest("XT-conformance-202", "run --scope grades only the scope's Components, none runs no harness, full and no scope run in full; story runs the Story's test_ids in full and forwards the harness's exit (FR-3, FR-4.1, AD-28.1)", async () => {
   const manifest = (id: string, testIds: string[]): string =>
     `---\nstory_id: "${id}"\nepic: ${id.split(".")[0]}\ncomponent: support\nstatus: in-progress\ntest_ids:${testIds.length === 0 ? ' []\nxaravel_test_ids:\n  - "XT-conformance-999"' : `\n${testIds.map((t) => `  - ${JSON.stringify(t)}`).join("\n")}`}\n---\n\n# Story ${id}\n`;
   const CLASS = "Illuminate\\Tests\\Support\\SupportCiTest";
@@ -354,7 +354,7 @@ xaravelTest("XT-conformance-202", "run --scope grades only the scope's Component
 // ---------------------------------------------------------------------------
 // XT-conformance-120
 
-xaravelTest("XT-conformance-120", "the merge queue runs the full Ratchet on all alpha Variants for the queued PR's head ref, and the committed ruleset requires the queue on main (AD-16, AD-28)", () => {
+xaravelTest("XT-conformance-120", "the merge queue runs the full Ratchet on all alpha Variants for the queued PR's head ref, and the committed ruleset requires the queue on main (AD-16, AD-28.2)", () => {
   const { text, data } = workflow("ratchet.yml");
   expect(data.on["merge_group"]).toEqual({ types: ["checks_requested"] });
   const job = data.jobs["ratchet"]!;
@@ -393,7 +393,7 @@ xaravelTest("XT-conformance-120", "the merge queue runs the full Ratchet on all 
 // ---------------------------------------------------------------------------
 // XT-conformance-121
 
-xaravelTest("XT-conformance-121", "the nightly runs the full matrix on linux and macOS, x64 and arm64, with native Postgres and Redis on macOS, and the benchmarks report and never fail the job (FR-9, AD-17, AD-28)", async () => {
+xaravelTest("XT-conformance-121", "the nightly runs the full matrix on linux and macOS, x64 and arm64, with native Postgres and Redis on macOS, and the benchmarks report and never fail the job (FR-9.4, AD-17, AD-28.3)", async () => {
   const { text, data } = workflow("nightly.yml");
   expect(Object.keys(data.on)).toEqual(["schedule", "workflow_dispatch"]);
   expect(data.on["schedule"]).toEqual([{ cron: expect.stringMatching(/^\d+ \d+ \* \* \*$/) as unknown as string }]);
@@ -480,7 +480,7 @@ xaravelTest("XT-conformance-121", "the nightly runs the full matrix on linux and
 // ---------------------------------------------------------------------------
 // XT-conformance-122
 
-xaravelTest("XT-conformance-122", "ratchet is a required check pinned to GitHub Actions in REQUIRED_CHECKS and the committed main ruleset, and the policy check flags a ruleset without it (AD-16, AD-28)", () => {
+xaravelTest("XT-conformance-122", "ratchet is a required check pinned to GitHub Actions in REQUIRED_CHECKS and the committed main ruleset, and the policy check flags a ruleset without it (AD-16.2, AD-28)", () => {
   expect(REQUIRED_CHECKS).toContain("ratchet");
   expect(ACTIONS_INTEGRATION_ID).toBe(15368);
   const main = JSON.parse(readFileSync(join(root, ".github", "rulesets", "main.json"), "utf8")) as { rules: { type: string; parameters?: { required_status_checks?: { context: string; integration_id: number }[] } }[] };

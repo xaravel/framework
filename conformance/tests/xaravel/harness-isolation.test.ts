@@ -202,7 +202,7 @@ class FakePostgres {
 // ---------------------------------------------------------------------------
 // XT-conformance-110
 
-xaravelTest("XT-conformance-110", "the harness derives the worktree key from SHA-256 over the worktree path and its creation id, and a full run drops and recreates exactly the xaravel_test_<key>[_<name>] databases (AD-17)", async () => {
+xaravelTest("XT-conformance-110", "the harness derives the worktree key from SHA-256 over the worktree path and its creation id, and a full run drops and recreates exactly the xaravel_test_<key>[_<name>] databases (AD-17.1, AD-17.2)", async () => {
   const lines: Line[] = [{ id: A, variant: "none" }, { id: B, variant: "pgsql" }];
   const seen = join(tempDir("xt-iso-seen-"), "env");
   const body = ported(
@@ -415,7 +415,7 @@ xaravelTest("XT-conformance-110", "the harness derives the worktree key from SHA
 // ---------------------------------------------------------------------------
 // XT-conformance-111
 
-xaravelTest("XT-conformance-111", "the SQLite variant's database files live under the worktree's .cache/ (AD-17)", async () => {
+xaravelTest("XT-conformance-111", "the SQLite variant's database files live under the worktree's .cache/ (AD-17.3)", async () => {
   const lines: Line[] = [{ id: A, variant: "sqlite" }];
   const body = ported(
     [
@@ -536,7 +536,7 @@ function alive(pid: number): boolean {
   }
 }
 
-xaravelTest("XT-conformance-112", "locally the harness launches one redis-server per worktree on a unix socket in .cache/ with no persistence, tests may flushdb it, and it stops afterwards (AD-17)", async () => {
+xaravelTest("XT-conformance-112", "locally the harness launches one redis-server per worktree on a unix socket in .cache/ with no persistence, tests may flushdb it, and it stops afterwards (AD-17.4)", async () => {
   const lines: Line[] = [{ id: A, variant: "redis" }];
   const body = ported(
     [
@@ -665,7 +665,7 @@ xaravelTest("XT-conformance-112", "locally the harness launches one redis-server
 // ---------------------------------------------------------------------------
 // XT-conformance-113
 
-xaravelTest("XT-conformance-113", "a second harness started in the same worktree while .cache/harness.lock is held exits 1 naming the holder (AD-17)", async () => {
+xaravelTest("XT-conformance-113", "a second harness started in the same worktree while .cache/harness.lock is held exits 1 naming the holder (AD-17.5)", async () => {
   const lines: Line[] = [{ id: A, variant: "none" }, { id: B, variant: "none" }];
   const body = ported(`${HOLD}\nportedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`);
   const dir = makeRoot(lines, { [TEST_FILE]: body });
@@ -736,7 +736,7 @@ xaravelTest("XT-conformance-113", "a second harness started in the same worktree
 // ---------------------------------------------------------------------------
 // XT-conformance-114
 
-xaravelTest("XT-conformance-114", "two worktrees running in parallel against one Postgres each drop and recreate only their own databases (AD-17)", async () => {
+xaravelTest("XT-conformance-114", "two worktrees running in parallel against one Postgres each drop and recreate only their own databases (AD-17.1, AD-17.2)", async () => {
   const lines: Line[] = [{ id: A, variant: "pgsql", status: "skip" }];
   const one = makeRoot(lines);
   const two = makeRoot(lines);

@@ -61,7 +61,7 @@ function xtFile(body: string): string {
 
 xaravelTest(
   "XT-conformance-126",
-  "conformance/xaravel-consequences/<component>.jsonl is generated from the PRD's FR consequences and the spine's AD rules and passes --check; bun run xt:coverage <component> lists every consequence that no passing xaravelTest declares and exits 1 while any remain (FR-115.2; FR-115, AD-15)",
+  "conformance/xaravel-consequences/<component>.jsonl is generated from the PRD's FR consequences and the spine's AD rules and passes --check; bun run xt:coverage <component> lists every consequence that no passing xaravelTest declares and exits 1 while any remain (FR-115.2; AD-15)",
   async () => {
     // The committed file is the generator's output (the drift check), and the scripts exist.
     const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
@@ -347,7 +347,7 @@ const ESCALATION = "---\ntest_ids:\n  - XT-demo-1\ntrigger: open-question\npropo
 
 xaravelTest(
   "XT-conformance-127",
-  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals count by distinct reviewer identity (AD-15.8, FR-111.1; FR-111, FR-114, FR-115, AD-15, AD-16, AD-28)",
+  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals count by distinct reviewer identity (AD-15.8, FR-111.1, AD-16.5, AD-16.9; FR-114, FR-115, AD-28)",
   async () => {
     const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["story:check"];
     expect(script).toBe("bun --no-env-file tools/story-check/story-check.ts");
@@ -577,7 +577,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-conformance-128",
-  "every test in an Xaravel Test file is an xaravelTest with a unique ID, all of them run in the harness's Xaravel run, and a plain test() there is reported UNDECLARED (FR-115.1, FR-2.2, AD-15.1; FR-115, AD-15)",
+  "every test in an Xaravel Test file is an xaravelTest with a unique ID, all of them run in the harness's Xaravel run, and a plain test() there is reported UNDECLARED (FR-115.1, FR-2.2, AD-15.1)",
   async () => {
     // The real root: every Xaravel Test file declares only through xaravelTest (or a wrapper that calls it).
     const files = xaravelTestFiles(root);
@@ -729,7 +729,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-conformance-196",
-  "story:check fails each assigned Differential Test ID with no verified fixture in its Component's conformance/fixtures/, or with a fatal or setup error fixture that Upstream's outcome does not expect (AD-15.4; FR-6, FR-115, AD-15)",
+  "story:check fails each assigned Differential Test ID with no verified fixture in its Component's conformance/fixtures/, or with a fatal or setup error fixture that Upstream's outcome does not expect (AD-15.4; FR-6, FR-115)",
   async () => {
     const { pub, priv } = keyPair();
     const pem = pub.export({ type: "spki", format: "pem" }).toString();

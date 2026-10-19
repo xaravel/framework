@@ -183,7 +183,7 @@ const workflow = (): Record<string, unknown> => Bun.YAML.parse(readFileSync(join
 
 // XT-conformance-56
 // Verifies: FR-3, FR-113 (each Inventory entry carries the assertion kinds and Oracle outcome of the baseline run)
-xaravelTest("XT-conformance-56", "the baseline workflow runs every leg in the Oracle image with Postgres 18 and Redis 8.10.2, and every Inventory entry gets assertions and oracle keyed by exactly its alpha variants (FR-3, FR-113)", async () => {
+xaravelTest("XT-conformance-56", "the baseline workflow runs every leg in the Oracle image with Postgres 18 and Redis 8.10.2, and every Inventory entry gets assertions and oracle keyed by exactly its alpha variants (FR-3, FR-113, AD-15.2)", async () => {
   // Variants: the alpha set, each entry's oracle keys, and each variant's environment.
   expect(ALPHA_VARIANTS).toEqual(["none", "pgsql", "queue-database@sqlite", "queue-redis@redis", "queue-sync@none", "redis", "sqlite"]);
   expect(variantsFor(["none"])).toEqual(["none"]);
@@ -461,7 +461,7 @@ xaravelTest("XT-conformance-56", "the baseline workflow runs every leg in the Or
 
 // XT-conformance-57
 // Verifies: FR-3 (an Upstream skip or failure at the Pin is recorded as such, for the upstream-skip check)
-xaravelTest("XT-conformance-57", "a test that Upstream skips or fails on a variant is recorded as skip or fail there, and the ESC-2.4-1 SchemaBuilderSchemaNameTest IDs are not pass on sqlite (FR-3)", () => {
+xaravelTest("XT-conformance-57", "a test that Upstream skips or fails on a variant is recorded as skip or fail there, and the ESC-2.4-1 SchemaBuilderSchemaNameTest IDs are not pass on sqlite (FR-3, AD-15.2)", () => {
   const plan = planRun("framework", "none", ENTRIES, RAWS);
   const [first, second] = [`${QUEUEABLE}::testOnConnection#uses string`, `${QUEUEABLE}::testOnQueue`];
 
@@ -492,7 +492,7 @@ xaravelTest("XT-conformance-57", "a test that Upstream skips or fails on a varia
 
 // XT-conformance-58
 // Verifies: FR-113 (repeated baseline runs give identical assertions; a difference is an Oracle non-determinism finding)
-xaravelTest("XT-conformance-58", "two attempts on the same Pin merge into the Inventory when identical; any difference is reported as oracle non-determinism and exits 1 without writing (FR-113)", async () => {
+xaravelTest("XT-conformance-58", "two attempts on the same Pin merge into the Inventory when identical; any difference is reported as oracle non-determinism and exits 1 without writing (FR-6.1, FR-113)", async () => {
   const id = `${QUEUEABLE}::testOnQueue`;
   expect(compareAttempts(id, "none", result(id, "pass", { assertSame: 2 }), result(id, "pass", { assertSame: 2 }))).toBeNull();
   expect(compareAttempts(id, "none", result(id, "pass", { assertSame: 2 }), result(id, "pass", { assertSame: 3 }))).toBe(

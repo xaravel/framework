@@ -147,7 +147,7 @@ async function env(extra: Record<string, string> = {}): Promise<Record<string, s
 // ---------------------------------------------------------------------------
 // XT-conformance-101
 
-xaravelTest("XT-conformance-101", "bun run harness runs bun test with the root bunfig.toml once per variant, setting XARAVEL_VARIANT, and fails first on a package-level bunfig.toml (FR-9, AD-15)", async () => {
+xaravelTest("XT-conformance-101", "bun run harness runs bun test with the root bunfig.toml once per variant, setting XARAVEL_VARIANT, and fails first on a package-level bunfig.toml (FR-9, AD-15.1, AD-15.2, AD-15.9)", async () => {
   const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["harness"];
   expect(script).toBe("bun --no-env-file conformance/harness/harness.ts");
 
@@ -236,7 +236,7 @@ xaravelTest("XT-conformance-101", "bun run harness runs bun test with the root b
 // ---------------------------------------------------------------------------
 // XT-conformance-102
 
-xaravelTest("XT-conformance-102", "results that differ from the Expectations print one greppable line per differing Test ID × variant, sorted, then a summary line (FR-3, FR-9)", async () => {
+xaravelTest("XT-conformance-102", "results that differ from the Expectations print one greppable line per differing Test ID × variant, sorted, then a summary line (FR-3, FR-4.1, FR-4.2, FR-9.2, FR-113.3)", async () => {
   const F = `${CLASS}::testF`;
   const G = `${CLASS}::testG`;
   const H = `${CLASS}::testH`;
@@ -344,7 +344,7 @@ xaravelTest("XT-conformance-102", "results that differ from the Expectations pri
 // ---------------------------------------------------------------------------
 // XT-conformance-103
 
-xaravelTest("XT-conformance-103", "a pass whose assertion kinds fall below the Inventory's is a FLOOR failure unless its DIV clause allows fewer (ESC-5.3-2) (FR-113)", async () => {
+xaravelTest("XT-conformance-103", "a pass whose assertion kinds fall below the Inventory's is a FLOOR failure unless its DIV clause allows fewer (ESC-5.3-2) (FR-113.2, FR-113.3)", async () => {
   const body = ported(
     [
       `portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertSame(1, 1); });`,
@@ -393,7 +393,7 @@ xaravelTest("XT-conformance-103", "a pass whose assertion kinds fall below the I
 // ---------------------------------------------------------------------------
 // XT-conformance-104
 
-xaravelTest("XT-conformance-104", "skip:blocked-by:<c> matches only a BlockedByComponentError(<c>) failure; any other failure is a mismatch (ESC-5.3-1) (FR-3, AD-15)", async () => {
+xaravelTest("XT-conformance-104", "skip:blocked-by:<c> matches only a BlockedByComponentError(<c>) failure; any other failure is a mismatch (ESC-5.3-1) (FR-3, AD-15.6)", async () => {
   const body = ported(
     [
       `class BlockedByComponentError extends Error { constructor(component: string) { super("BlockedByComponentError(" + component + "): Illuminate\\\\Database\\\\Capsule is not installed"); this.name = "BlockedByComponentError"; } }`,
@@ -430,7 +430,7 @@ xaravelTest("XT-conformance-104", "skip:blocked-by:<c> matches only a BlockedByC
 // ---------------------------------------------------------------------------
 // XT-conformance-105
 
-xaravelTest("XT-conformance-105", "a variant whose backend is not running locally is NOT-RUN, never a failure and never written; in CI an alpha variant must run (FR-9)", async () => {
+xaravelTest("XT-conformance-105", "a variant whose backend is not running locally is NOT-RUN, never a failure and never written; in CI an alpha variant must run (FR-9.3, FR-9.4)", async () => {
   const body = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`);
   const entries = [{ id: A }, { id: B, backends: ["mysql", "pgsql", "redis"] }];
   const lines: Line[] = [
@@ -503,7 +503,7 @@ xaravelTest("XT-conformance-105", "a variant whose backend is not running locall
 // ---------------------------------------------------------------------------
 // XT-conformance-185
 
-xaravelTest("XT-conformance-185", "under the harness, concurrent tests never mix counts, a late assertion fails its test, and the intrinsics are frozen before any Ported Test loads (AD-15, FR-113)", async () => {
+xaravelTest("XT-conformance-185", "under the harness, concurrent tests never mix counts, a late assertion fails its test, and the intrinsics are frozen before any Ported Test loads (AD-15.9, FR-113.3)", async () => {
   // Concurrent: A and B interleave (B checks that A is mid-run); each report holds only its own counts.
   const concurrent = ported(
     [

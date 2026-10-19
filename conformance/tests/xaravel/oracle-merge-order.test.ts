@@ -107,7 +107,7 @@ function fixture(dir: string, priv: KeyObject, component: string, request: Oracl
 const FILE_34 = `${STORY_REQUESTS_DIR}/3.4.jsonl`;
 const FILE_101 = `${STORY_REQUESTS_DIR}/10.1.jsonl`;
 
-xaravelTest("XT-conformance-187", "between two Stories' files the earlier-merged one owns a shared request, whatever the file names; both stay valid (FR-6, AD-16)", () => {
+xaravelTest("XT-conformance-187", "between two Stories' files the earlier-merged one owns a shared request, whatever the file names; both stay valid (FR-6, AD-15.4, AD-16)", () => {
   // 10.1.jsonl sorts before 3.4.jsonl by name, but merges after it.
   const { dir, priv } = repo([
     [FILE_34, lines(SHARED)],
@@ -174,7 +174,7 @@ xaravelTest("XT-conformance-187", "between two Stories' files the earlier-merged
   expect(mergeOrder(plain, ["3.4.jsonl", "10.1.jsonl"])).toEqual(["10.1.jsonl", "3.4.jsonl"]);
 });
 
-xaravelTest("XT-conformance-225", "a merged per-Story request that the batch also produces keeps the file valid, and the batch skips it (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-225", "a merged per-Story request that the batch also produces keeps the file valid, and the batch skips it (FR-6, AD-15.4)", () => {
   const { dir, priv } = repo([[FILE_34, lines(SHARED)]]);
   // The batch extraction omits every request a merged per-Story file holds (tools/oracle/extract.ts filters by this set).
   expect([...storyHeldShas(dir)]).toEqual([SHARED.sha256]);
@@ -198,7 +198,7 @@ const PHP = Bun.which("php");
 const REQUIRE = process.env["XARAVEL_PHP_FIXTURES"] === "require";
 
 // The extraction case runs the real PHP tokenizer (as oracle-extract.test.ts does): skipped with the reason without php, failed under XARAVEL_PHP_FIXTURES=require.
-xaravelTest("XT-conformance-226", "oracle:extract leaves out of the batch a request a merged per-Story file holds, and --check agrees (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-226", "oracle:extract leaves out of the batch a request a merged per-Story file holds, and --check agrees (FR-6, AD-15.4)", () => {
   if (PHP === null) {
     if (REQUIRE) {
       throw new Error("XARAVEL_PHP_FIXTURES=require: php not on PATH");
@@ -260,7 +260,7 @@ xaravelTest("XT-conformance-226", "oracle:extract leaves out of the batch a requ
   expect(extract(dir, { ...options, check: true }).drift).toEqual([`oracle requests drift: ${REQUESTS_DIR}/support.jsonl differs from the extracted requests (first difference at line 2)`]);
 });
 
-xaravelTest("XT-conformance-227", "oracle:story still rejects a new candidate's batch request and a request a committed per-Story file holds (FR-6, AD-16)", () => {
+xaravelTest("XT-conformance-227", "oracle:story still rejects a new candidate's batch request and a request a committed per-Story file holds (FR-6, AD-15.4, AD-16)", () => {
   const { dir } = repo([[FILE_34, lines(SHARED)]]);
   const candidate = join(dir, "candidate.jsonl");
   writeFileSync(candidate, lines(UPPER, SHARED));

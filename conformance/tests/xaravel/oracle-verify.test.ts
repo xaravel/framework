@@ -98,7 +98,7 @@ function linesFor(stderr: string, path: string): string[] {
 // XT-conformance-74
 
 xaravelTest(
-  "XT-conformance-74", "fixtures signed with oracle.pub's key, each for a committed unlisted request, pass; generators/ is skipped (FR-6, AD-15)",
+  "XT-conformance-74", "fixtures signed with oracle.pub's key, each for a committed unlisted request, pass; generators/ is skipped (FR-6, AD-15.4)",
   withRoot(async (fx) => {
     writeValid(fx);
     mkdirSync(join(fx.dir, FIXTURES_DIR, "generators", "nested"), { recursive: true });
@@ -109,7 +109,7 @@ xaravelTest(
 );
 
 xaravelTest(
-  "XT-conformance-240", "a fixture whose signature does not verify against oracle.pub, or whose request hash does not match its request, fails naming the file (FR-6, AD-15)",
+  "XT-conformance-240", "a fixture whose signature does not verify against oracle.pub, or whose request hash does not match its request, fails naming the file (FR-6, AD-15.4)",
   withRoot(async (fx) => {
     const valid = writeValid(fx);
     const other = generateKeyPairSync("ed25519").privateKey;
@@ -180,7 +180,7 @@ xaravelTest(
 );
 
 xaravelTest(
-  "XT-conformance-242", "a missing or non-Ed25519 oracle.pub, or an unreadable request file or listing, fails closed naming the cause; bad arguments exit 2 (FR-6, AD-15)",
+  "XT-conformance-242", "a missing or non-Ed25519 oracle.pub, or an unreadable request file or listing, fails closed naming the cause; bad arguments exit 2 (FR-6, AD-15.4)",
   withRoot(async (fx) => {
     writeValid(fx);
     rmSync(join(fx.dir, PUBLIC_KEY_FILE));
@@ -227,7 +227,7 @@ xaravelTest(
   }),
 );
 
-xaravelTest("XT-conformance-243", "the committed repository verifies, and ci.yml's required fixtures job runs oracle:verify-fixtures on pull_request, merge_group and push (FR-6, AD-15)", async () => {
+xaravelTest("XT-conformance-243", "the committed repository verifies, and ci.yml's required fixtures job runs oracle:verify-fixtures on pull_request, merge_group and push (FR-6, AD-15.4)", async () => {
   const run = await cli([]);
   expect(run.stderr).toBe("");
   expect(run.code).toBe(0);
@@ -260,7 +260,7 @@ xaravelTest("XT-conformance-243", "the committed repository verifies, and ci.yml
 // XT-conformance-75
 
 xaravelTest(
-  "XT-conformance-75", "a signed fixture whose output is hand-edited in the file fails the CLI, naming that file and not the unedited one (FR-6, AD-15)",
+  "XT-conformance-75", "a signed fixture whose output is hand-edited in the file fails the CLI, naming that file and not the unedited one (FR-6, AD-15.4)",
   withRoot(async (fx) => {
     const [edited, untouched] = writeValid(fx);
     const file = join(fx.dir, edited!);
@@ -280,7 +280,7 @@ xaravelTest(
 // ---------------------------------------------------------------------------
 // XT-conformance-76
 
-xaravelTest("XT-conformance-76", "CODEOWNERS gives conformance/fixtures/ no owner, it is not a Protected Path, and Story 1.4's codeowners --check passes (FR-6, AD-16)", async () => {
+xaravelTest("XT-conformance-76", "CODEOWNERS gives conformance/fixtures/ no owner, it is not a Protected Path, and Story 1.4's codeowners --check passes (FR-6, AD-15.4, AD-16.1)", async () => {
   const path = `${FIXTURES_DIR}/support/${"0".repeat(64)}.json`;
   const rules = readFileSync(join(root, CODEOWNERS_PATH), "utf8")
     .split("\n")

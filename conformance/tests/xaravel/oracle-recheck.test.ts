@@ -178,7 +178,7 @@ function tree(dir: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-188
 
-xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed request, batch and per-Story, in the image and fails naming each fixture whose output differs; listed and Story-held batch requests are skipped (FR-6, AD-15, AD-28)", () => {
+xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed request, batch and per-Story, in the image and fails naming each fixture whose output differs; listed and Story-held batch requests are skipped (FR-6.1, AD-15.4, AD-28)", () => {
   const dir = fixtureRoot();
   const before = tree(dir).map((path) => [path, readFileSync(join(dir, path), "utf8")]);
 
@@ -259,7 +259,7 @@ xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed reque
   expect(scripts["oracle:recheck"]).toBe("bun tools/oracle/recheck.ts");
 });
 
-xaravelTest("XT-conformance-229", "oracle.yml's nightly determinism job runs the recheck after the image build, even when the determinism step failed (AD-28)", () => {
+xaravelTest("XT-conformance-229", "oracle.yml's nightly determinism job runs the recheck after the image build, even when the determinism step failed (AD-28.3)", () => {
   type Step = { name?: string; id?: string; if?: string; run?: string; env?: unknown };
   const workflow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "oracle.yml"), "utf8")) as { jobs: Record<string, { if?: string; steps: Step[] }> };
   const job = workflow.jobs["determinism"]!;
@@ -317,7 +317,7 @@ function phpTest(id: string, consequence: string, body: () => void): void {
   );
 }
 
-phpTest("XT-conformance-230", "--local re-evaluates batch and per-Story requests through evaluate.php for real and names a stale fixture (FR-6, AD-15)", () => {
+phpTest("XT-conformance-230", "--local re-evaluates batch and per-Story requests through evaluate.php for real and names a stale fixture (FR-6.1, AD-15.4)", () => {
   const real = (request: OracleRequest): Json => {
     const values: Record<string, string> = { [UPPER.sha256]: "A", [LOWER.sha256]: "abc", [XT.sha256]: "hello-world" };
     return { error: null, results: [{ value: values[request.sha256] ?? null }] };

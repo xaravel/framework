@@ -83,7 +83,7 @@ const unownedLine = (key: string, shards: string): string => `unowned expectatio
 // ---------------------------------------------------------------------------
 // XT-conformance-116
 
-xaravelTest("XT-conformance-116", "a Story PR changing Expectations lines outside its test_ids fails and lists each one; its own lines, dataset rows of its tests and moved lines pass (AD-16)", () => {
+xaravelTest("XT-conformance-116", "a Story PR changing Expectations lines outside its test_ids fails and lists each one; its own lines, dataset rows of its tests and moved lines pass (FR-4.3, AD-16.5)", () => {
   const dir = baseRoot();
   const before = { [S1]: line(A, "skip") + line(B, "skip") + line(`${X}#0`, "skip") + line(`${Y}#0`, "skip") };
 
@@ -122,7 +122,7 @@ xaravelTest("XT-conformance-116", "a Story PR changing Expectations lines outsid
   expect(evaluatePr(dir, { headRef: "story/11.1", files: [added(S2)], changedFiles: 1 }).violations).toEqual([`unreadable content: ${S2} at the head commit could not be read; failing closed (AD-16)`]);
 });
 
-xaravelTest("XT-conformance-244", "a Story PR changing portedTest blocks outside its test_ids fails and lists each one; a dynamic id or an unbalanced file fails closed (AD-16)", () => {
+xaravelTest("XT-conformance-244", "a Story PR changing portedTest blocks outside its test_ids fails and lists each one; a dynamic id or an unbalanced file fails closed (AD-16.5)", () => {
   const dir = baseRoot();
   const file = (blocks: string[]): string => [`import { Assert, portedTest } from "@xaravel/assert";`, `const BASE = ${JSON.stringify(CLASS)};`, ...blocks].join("\n") + "\n";
   const block = (id: string, body = "Assert.assertTrue(true);"): string => `portedTest(${JSON.stringify(id)}, {}, () => {\n  ${body}\n});`;
@@ -173,7 +173,7 @@ xaravelTest("XT-conformance-244", "a Story PR changing portedTest blocks outside
   expect(scanPortedBlocks("const s = 'open").error).toBe("an unterminated string on line 1");
 });
 
-xaravelTest("XT-conformance-245", "the pr command reads changed shards at the merge base from the compare API and at the head, and lists each unowned line (AD-16)", async () => {
+xaravelTest("XT-conformance-245", "the pr command reads changed shards at the merge base from the compare API and at the head, and lists each unowned line (FR-4.3, AD-16.5)", async () => {
   const dir = baseRoot();
   const paths: string[] = [];
   const server = Bun.serve({
@@ -216,7 +216,7 @@ xaravelTest("XT-conformance-245", "the pr command reads changed shards at the me
 // ---------------------------------------------------------------------------
 // XT-conformance-117
 
-xaravelTest("XT-conformance-117", "moving an entry from pass to any other status, or removing it, needs an approved Escalation listing its Test ID; bot/* branches are exempt here (AD-16)", () => {
+xaravelTest("XT-conformance-117", "moving an entry from pass to any other status, or removing it, needs an approved Escalation listing its Test ID; bot/* branches are exempt here (FR-4.4, AD-16.8, AD-16.9)", () => {
   const ESC = "conformance/escalations/ESC-11.1-1.md";
   const DEC = "decisions/ESC-11.1-1.md";
   const before = { [S1]: line(A, "pass") + line(`${X}#0`, "pass") };

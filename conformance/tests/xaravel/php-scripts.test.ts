@@ -179,7 +179,7 @@ const PHPUNIT_RECORDED_LINES: RecorderLine[] = [
 ];
 
 // Verifies: FR-1 (the lister's PHPUnit raw lines, run for real, list exactly the runner's tests with their datasets)
-phpTest("XT-conformance-173", "lister.php lists the PHPUnit fixture's tests in listing order with exact ids, sources, tokens and dataset exports, and the ids equal phpunit --list-tests (FR-1)", "phpunit", () => {
+phpTest("XT-conformance-173", "lister.php lists the PHPUnit fixture's tests in listing order with exact ids, sources, tokens and dataset exports, and the ids equal phpunit --list-tests (FR-1.1, FR-1.5)", "phpunit", () => {
   const raws = parseRaw(lister("phpunit"));
   expect(raws.map(({ tokens: _tokens, ...rest }) => rest)).toEqual([
     { id: FORK, class: "Fixture\\Tests\\ForkTest", method: "testFork", dataset: null, file: "tests/ForkTest.php", source: { file: "tests/ForkTest.php", start: 13, end: 26 }, data: null, requiresDatabase: null, redis: false },
@@ -242,7 +242,7 @@ const PEST_TESTS = [
 ] as const;
 
 // Verifies: FR-1 (the lister's Pest raw lines, run for real, give the Pest Test IDs of exactly the runner's tests)
-phpTest("XT-conformance-177", "lister.php in pest mode lists the Pest fixture's tests with exact describe, name, dataset and source, pestTestId gives the describe > name#dataset ids, and the ids equal pest --list-tests (FR-1)", "pest", () => {
+phpTest("XT-conformance-177", "lister.php in pest mode lists the Pest fixture's tests with exact describe, name, dataset and source, pestTestId gives the describe > name#dataset ids, and the ids equal pest --list-tests (FR-1.1, FR-1.5)", "pest", () => {
   const raws: PestRawTest[] = parsePestRaw(lister("pest"));
   expect(raws.map(({ tokens: _tokens, ...rest }) => rest)).toEqual(
     PEST_TESTS.map(([method, describe, name, dataset, start, end, data]) => ({

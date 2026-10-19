@@ -666,7 +666,7 @@ const job = (id: string, body: string): string => `  ${id}:\n    runs-on: ubuntu
 const steps = (...runs: string[]): string => `    steps:\n${runs.map((run) => `      - run: ${run}\n`).join("")}`;
 const wf = (top: string, ...jobs: string[]): string => `name: x\non: push\n${top}jobs:\n${jobs.join("")}`;
 
-xaravelTest("XT-conformance-38", "no workflow but the release job has `id-token: write` or runs `npm publish`, the release-authority check fails if one does, and docs/ops/release.md documents the bootstrap publish (AD-18, NFR-11)", async () => {
+xaravelTest("XT-conformance-38", "no workflow but the release job has `id-token: write` or runs `npm publish`, the release-authority check fails if one does, and docs/ops/release.md documents the bootstrap publish (AD-18, NFR-11, AD-16.3)", async () => {
   const RELEASE = ".github/workflows/release.yml";
   const OTHER = ".github/workflows/other.yml";
   const ONLY = "only job release of .github/workflows/release.yml may (AD-18)";

@@ -279,7 +279,7 @@ const report = (run: FixtureRun, label: string): Record<string, unknown> | undef
 
 // ---------------------------------------------------------------------------
 
-xaravelTest("XT-assert-11", "expectException(X) ends the test at the throw and passes for X or a subclass; nothing thrown, another class or a propagating assertion failure fails with PHPUnit 13.4.3's messages", () => {
+xaravelTest("XT-assert-11", "expectException(X) ends the test at the throw and passes for X or a subclass; nothing thrown, another class or a propagating assertion failure fails with PHPUnit 13.4.3's messages (FR-116.3)", () => {
   const run = runFixture();
   // No statement after the throw runs.
   expect(run.probes).toMatchObject({ beforeThrow: true });
@@ -498,7 +498,7 @@ const PENDING = [
   "pending testbench: assertMigrationFileExists (Orchestra\\Testbench\\Concerns\\InteractsWithPublishedFiles)",
 ];
 
-xaravelTest("XT-assert-14", "bun run assert:coverage lists no missing assert name and the 15 non-PHPUnit names as pending testing or testbench, and fails naming each name a scan adds or an owner file lacks", () => {
+xaravelTest("XT-assert-14", "bun run assert:coverage lists no missing assert name and the 15 non-PHPUnit names as pending testing or testbench, and fails naming each name a scan adds or an owner file lacks (FR-116.1)", () => {
   const scanText = readFileSync(join(root, "conformance/scans/phpunit-assertions.jsonl"), "utf8");
   const scanNames = scanText
     .split("\n")

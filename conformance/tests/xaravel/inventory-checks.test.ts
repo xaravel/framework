@@ -166,7 +166,7 @@ const WORKFLOW = join(root, ".github", "workflows", "inventory.yml");
 // ---------------------------------------------------------------------------
 // XT-conformance-59
 
-xaravelTest("XT-conformance-59", "bun run inventory --check regenerates the Inventory in memory and fails, naming the file, on any byte difference from the committed files; it never writes (FR-1)", async () => {
+xaravelTest("XT-conformance-59", "bun run inventory --check regenerates the Inventory in memory and fails, naming the file, on any byte difference from the committed files; it never writes (FR-1.2)", async () => {
   await withFixture(async (fx) => {
     const inv = join(fx.dir, INVENTORY_DIR);
     // Generate the framework, then baseline one file (carry-over keeps it), and add files --check never compares.
@@ -264,7 +264,7 @@ xaravelTest("XT-conformance-59", "bun run inventory --check regenerates the Inve
 // ---------------------------------------------------------------------------
 // XT-conformance-60
 
-xaravelTest("XT-conformance-60", "bun run inventory:cross-check compares each suite's phpunit or pest --list-tests in the Oracle with the Inventory and lists the missing and extra Test IDs (FR-1)", async () => {
+xaravelTest("XT-conformance-60", "bun run inventory:cross-check compares each suite's phpunit or pest --list-tests in the Oracle with the Inventory and lists the missing and extra Test IDs (FR-1.5)", async () => {
   // Parsing: headers, blank lines, int and named datasets, Pest's INFO header and trailing dot.
   expect(parseRunnerListing(PHPUNIT_LISTING, "phpunit")).toEqual(RAWS.map((entry) => entry.id));
   expect(parseRunnerListing(' - C::m"uses string"\n - C::m#0\n', "phpunit")).toEqual(["C::m#uses string", "C::m#0"]);
@@ -402,7 +402,7 @@ xaravelTest("XT-conformance-60", "bun run inventory:cross-check compares each su
 // ---------------------------------------------------------------------------
 // XT-conformance-61
 
-xaravelTest("XT-conformance-61", "a PR that edits conformance/inventory/ fails protected-paths unless the Maintainer approved the head commit, because the Inventory is Protected (FR-1)", () => {
+xaravelTest("XT-conformance-61", "a PR that edits conformance/inventory/ fails protected-paths unless the Maintainer approved the head commit, because the Inventory is Protected (FR-1, FR-112.1, FR-112.2, FR-112.3, AD-16.1, AD-16.2)", () => {
   const listText = readFileSync(join(root, LIST_PATH), "utf8");
   const entries = parseList(listText);
   const phases = activePhases(root);

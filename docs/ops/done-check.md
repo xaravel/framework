@@ -34,7 +34,7 @@ An Xaravel Test declares consequence `X` when its consequence string (the second
 
 Exit codes: 0 when nothing is uncovered, 1 when something is, 2 on a usage error. A Component with no file fails with `xt:coverage: conformance/xaravel-consequences/<c>.jsonl does not exist`. The harness's own lines go to stderr.
 
-The converted Xaravel Tests (every Xaravel Test in `conformance/tests/xaravel` and `packages/{assert,mockery}/tests/xaravel` (231 at merge)) cite FRs, not bullets (`(FR-3, AD-15)`), so `bun run xt:coverage conformance` fails today and lists nearly every consequence. That is correct: coverage is computed, not claimed. Mapping each test to the bullets it verifies is judgment that the Fidelity Review must check, and ESC-5.9-1 routes that work.
+Epic 5 retro item 7 (ESC-5.9-1 part 2) refined the converted Xaravel Tests' citations, in `conformance/tests/xaravel` and `packages/{assert,mockery}/tests/xaravel`, from bare FRs and ADs (`(FR-3, AD-15)`) to the bullets each test's assertions verify (`(FR-4.1, FR-4.2)`). A bare token stays where no bullet fits. Mapping a test to its bullets is judgment, and the Fidelity Review checks each mapping. `bun run xt:coverage conformance` still exits 1: consequences whose Stories are not built yet, such as the dashboard, `PORTING.md` and the Fidelity Review, stay uncovered. That is correct: coverage is computed, not claimed.
 
 ## `bun run story:check <story-id>`
 
