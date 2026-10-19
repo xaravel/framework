@@ -16,7 +16,10 @@
 //      PHPUnit 13.4.3's `runLifecycle` order instead: start the output buffer,
 //      `setUp`, the body (`runTest`: a throw that `shouldBeVerifiedFor` the
 //      exception expectation is verified against it, any other propagates; a
-//      body that returns runs `assertWasRaised`), then, when nothing failed and
+//      body that returns runs `assertWasRaised`), then the mock objects are
+//      verified (`verifyTest`, Story 4.7: one kind-less assertion per mock
+//      object with an invocation count rule; an over-count failure thrown
+//      from the body counts one too), then, when nothing failed and
 //      an output expectation exists, stop the buffer and assert the output,
 //      then `tearDown` (the first error wins), then stop the buffer if it still
 //      runs (unexpected output is written through);
@@ -32,7 +35,7 @@
 //      otherwise zero recorded assertions fail the test (FR-113). A
 //      `SkippedTest` (`markTestSkipped`) ends the test as skipped instead
 //      (Declarations.ts).
-import { testCaseState, type TestCaseState } from "../Framework/TestCase";
+import { type TestCase, testCaseState, type TestCaseState } from "../Framework/TestCase";
 import { registerTests } from "./Declarations";
 
 const SCOPE_RUN = Symbol.for("xaravel.scope.run");
@@ -144,7 +147,10 @@ async function runLifecycle(self: Lifecycle, state: TestCaseState, body: () => u
       if (!threw) {
         state.exception.assertWasRaised();
       }
+      // verifyTest: the mock objects (Story 4.7)
+      state.mockObjects.verify(self as TestCase);
     } catch (thrown) {
+      state.mockObjects.handleExceptionFromInvokedCountRule(self as TestCase, thrown);
       first = { value: thrown };
     }
     if (first === null && state.output.hasExpectation()) {

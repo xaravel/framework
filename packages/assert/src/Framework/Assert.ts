@@ -23,6 +23,9 @@
 // itself (`assertStringEqualsFile`'s `assertFileExists`,
 // `assertJsonStringEqualsJsonString`'s `assertJson`) records nothing, as the
 // Inventory's recorder skips it.
+//
+// Story 4.7 adds the `stringContains` factory, and `assertArraySubset`, which
+// is Laravel's and calls PHPUnit's `assertThat`, records `assertThat`.
 import { readFileSync } from "node:fs";
 import { isPhpArray } from "../comparison/PhpComparison";
 import { argumentError, floatParam, intParam, isArrayAccess, isCountable, isIterable, isPhpObject, stringParam } from "../comparison/PhpValues";
@@ -342,7 +345,10 @@ export class Assert {
 
   /** Laravel's `Illuminate\Testing\Assert::assertArraySubset`. */
   static assertArraySubset(subset: unknown, array: unknown, checkForIdentity: boolean = false, msg: string = ""): void {
-    recordAssertion("assertArraySubset");
+    // Laravel's method is not PHPUnit's: the Inventory's recorder sees only the `Assert::assertThat` it calls
+    // (`decisions/ESC-4.3-1.md` item 8). Recorded first, as every assertion here is, so that
+    // tools/assert-coverage's no-argument probe still counts it.
+    recordAssertion("assertThat");
     const strict = Boolean(checkForIdentity);
     const description = message("assertArraySubset", 4, msg);
     if (!isArrayLike(subset)) {
@@ -465,6 +471,11 @@ export class Assert {
       throw argumentError("assertThat", 2, "constraint", "PHPUnit\\Framework\\Constraint\\Constraint", constraint);
     }
     assertThat(value, constraint, message("assertThat", 3, message_));
+  }
+
+  /** `stringContains($string, $case = true)`: PHPUnit passes `$case` as StringContains' `ignoreCase` (Story 4.7). */
+  static stringContains(string: string, case_: boolean = true): Constraint {
+    return new StringContains(stringParam("stringContains", 1, "string", string), Boolean(case_));
   }
 
   /** `LogicalAnd::fromConstraints`: an operand that is not a Constraint is `IsEqual` to it. */
@@ -658,6 +669,7 @@ export interface Assert {
   greaterThanOrEqual(value: unknown): Constraint;
   lessThanOrEqual(value: unknown): Constraint;
   isInstanceOf(className: ClassOrInterface): Constraint;
+  stringContains(string: string, case_?: boolean): Constraint;
 }
 
 /**
@@ -742,7 +754,7 @@ export const ASSERTIONS_4_4: readonly string[] = Object.freeze([
 ]);
 
 /** The statics that are not assertions but are mirrored onto the prototype too (`$this->fail(…)`, `$this->logicalAnd(…)`). */
-const MIRRORED = ["fail", "markTestSkipped", "logicalAnd", "greaterThanOrEqual", "lessThanOrEqual", "isInstanceOf"];
+const MIRRORED = ["fail", "markTestSkipped", "logicalAnd", "greaterThanOrEqual", "lessThanOrEqual", "isInstanceOf", "stringContains"];
 
 // Every static assertion, this Story's and later ones', is mirrored onto the prototype.
 for (const name of [...Object.getOwnPropertyNames(Assert).filter((key) => key.startsWith("assert")), ...MIRRORED]) {

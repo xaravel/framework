@@ -4,7 +4,7 @@
 
 ## Goal
 
-Ported Tests assert with PHPUnit's exact semantics and mock with Mockery's API, so a passing test in TypeScript means what it meant in PHP. This epic builds the grader. `@xaravel/assert` provides PHP `==` / `===` implemented inside the grader, the `portedTest` / `xaravelTest` declarations with assertion counting, and every PHPUnit assertion used Upstream. `@xaravel/mockery` provides every Mockery API used Upstream. Both are isolated from the packages they grade, so framework code under test cannot tamper with them. Every later Ported Test depends on these packages, and 226 Upstream files use Mockery.
+Ported Tests assert with PHPUnit's exact semantics and mock with Mockery's API, so a passing test in TypeScript means what it meant in PHP. This epic builds the grader. `@xaravel/assert` provides PHP comparison implemented inside the grader, the `portedTest` / `xaravelTest` declarations with assertion counting, every PHPUnit assertion used Upstream, and PHPUnit's own test doubles. `@xaravel/mockery` provides every Mockery API used Upstream plus a port of `JMac\Testing\Double`. Both are isolated from the packages they grade, so framework code under test cannot tamper with them. Every later Ported Test depends on these packages, and 226 Upstream files use Mockery.
 
 ## Stories
 
@@ -14,71 +14,30 @@ Ported Tests assert with PHPUnit's exact semantics and mock with Mockery's API, 
 - Story 4.4: Exception, output, file and JSON assertions, and the coverage report
 - Story 4.5: Mockery core
 - Story 4.6: Mockery advanced and API coverage
+- Story 4.7: PHPUnit test doubles
+- Story 4.8: `jasonmccreary/double` port
 
 ## Requirements & Constraints
 
-- **Kind.** These are Xaravel Components (`component: assert` / `component: mockery`).
-  - Every AC is verified by the `XT-assert-<n>` or `XT-mockery-<n>` test already allocated in `stories/4.*.md`, one per AC in order: `XT-assert-1..14` (4.1: 1–3, 4.2: 4–7, 4.3: 8–10, 4.4: 11–14) and `XT-mockery-1..6` (4.5: 1–3, 4.6: 4–6). Do not renumber them.
-  - Each Xaravel Test declares the FR consequence it verifies.
-- **Equality semantics.**
-  - `assertSame` follows PHP `===`, including key order and types. `assertEquals` follows PHP `==`.
-  - The PHP 8.5 truth table comes only from signed Oracle fixtures requested in `conformance/oracle-requests/<story-id>.jsonl`. It is never written by hand.
-  - Fixture verification (`oracle:verify-fixtures`) is a required merge check, so an unsigned or forged fixture cannot merge.
-- **Coverage.** Every assertion in `conformance/scans/phpunit-assertions.jsonl` (82 names) and every API in `conformance/scans/mockery-api.jsonl` (45 names) must be implemented. A CI coverage report lists anything missing and fails. Excluding a PHP-only Mockery API (for example `overload:` class aliasing) needs an approved Escalation.
-- **PHPUnit behaviour.**
-  - Failure messages name the expected and actual values.
-  - `expectException` ends the test at the throw, and the test fails if nothing throws.
-  - `createMock` delegates to `@xaravel/mockery`.
-  - `assertMatchesRegularExpression` takes a JS `RegExp`. PCRE patterns are converted by the mechanical rule in `PORTING.md` (DIV-10).
-- **Assertion counting.**
-  - A Ported Test with zero assertions fails with "zero assertions".
-  - Every test reports the multiset of assertion kinds it ran to the harness reporter API. The assertion floor compares that multiset against the Inventory.
-  - An unmet Mockery expectation fails the test when it finishes, with Mockery's message, and counts as an assertion.
-  - A call that matches no expectation throws `BadMethodCallException`.
-- **Declarations.**
-  - `portedTest('<Test ID>', { case?, dataset? }, async function () {…})` binds `this` to an instance of `case`. Each dataset becomes one test labelled with its full Test ID.
-  - `xaravelTest('XT-<c>-<n>', '<FR consequence>', fn)` throws when declared if the consequence is empty.
-  - Ported Tests use only `@xaravel/assert`, never `expect` from `bun:test`.
-- **Protection.** `packages/assert` and `packages/mockery` are Protected Paths, so changes to them land only through Maintainer review.
+- **Kind.** Xaravel Components (`component: assert` for 4.1–4.4 and 4.7; `component: mockery` for 4.5, 4.6 and 4.8). Every AC is verified by the `XT-` test allocated in `stories/4.*.md`, one per AC in order: `XT-assert-1..16` (4.7 owns 15–16) and `XT-mockery-1..7` (4.8 owns 7). Do not renumber. Each Xaravel Test declares the FR consequence it verifies.
+- **Equality.** `assertSame` follows PHP `===`, including key order and types. `assertEquals` follows PHPUnit's comparator, which differs from PHP `==`. PHP truth tables come only from signed Oracle fixtures requested in `conformance/oracle-requests/<story-id>.jsonl`, never written by hand; fixture verification is a required merge check.
+- **Coverage.** Every name in `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl` must be implemented or owner-mapped. Names declared by Laravel/Testbench traits are listed `pending <owner>` until the owner's file exists; `assert`-owned names must all exist. CI's `check` job runs the reports and is a required check. After 4.8, `bun run mockery:coverage` lists none of `returns`, `throws`, `resolves` as pending.
+- **PHPUnit test doubles (4.7).** `createMock`, `createStub` and `getMockBuilder(...)->getMock()` return PHPUnit `MockObject`s driven by `expects()`, `method()`, `with()`, `willReturn*`, `willThrowException` and the invocation matchers (`once`, `never`, `any`, `exactly`, `atLeastOnce`), counting and failing with PHPUnit 13's messages. `createMock` no longer delegates to Mockery (this supersedes the earlier `xaravel.mockery.mock` global hook); Mockery stays reachable through `Mockery.mock()`. 4.7 also adds `addToAssertionCount`, `stringContains`, and makes `assertArraySubset` record the kind `assertThat`.
+- **Double port (4.8).** `returns`, `throws` and `resolves` behave as the PHP library does for the ai, mcp and boost suites' uses.
+- **Counting.** Zero assertions fails with "zero assertions". Each test reports its multiset of assertion kinds to the harness reporter API. An unmet Mockery expectation fails at test finish with Mockery's message and counts (`mockeryExpectation` kind). An unmatched call throws `BadMethodCallException` or `NoMatchingExpectationException`, as Mockery does.
+- **Declarations.** `portedTest('<Test ID>', { case?, dataset? }, async function () {…})` binds `this` to a `case` instance; each dataset becomes one test labelled with its full Test ID. `xaravelTest` throws at declaration on an empty consequence and opens no scope frame. Ported Tests never use `expect` from `bun:test`.
+- **Protection.** `packages/assert` and `packages/mockery` are Protected Paths. Reporter, scope and case contract shapes, and the grader globals, change only via a follow-up `assert` Story or a Maintainer-approved Infrastructure Story.
 
 ## Technical Decisions
 
-- **Grader isolation.**
-  - `@xaravel/assert` and `@xaravel/mockery` import no graded package, not even `@xaravel/runtime`.
-  - Contract tokens are branded `Symbol.for('<Upstream FQCN>')`, so the grader can detect them without importing contracts.
-  - `@xaravel/assert` freezes its exports and prototypes on load, so assigning to one throws.
-  - The graph check must show no edge to any graded package. Only two runtime edges are allowed: `@xaravel/testing` → `@xaravel/mockery`, and `@xaravel/support`'s optional peer dependency on mockery. Every other graded package takes the grader only as a devDependency.
-- **PHP value model.**
-  - `null` is the only absent value.
-  - A PHP list is a JS `Array`. A map whose keys are all non-integer-like strings is a plain object. Any other PHP array is a branded `PhpArray` (an ordered map). Comparisons handle all three forms.
-  - int and float are both JS `number`.
-- **Grader-side protocols (built in 4.1, open in ESC-4.1-1).** Reuse the comparison core. Do not reimplement these protocols.
-  - A `PhpArray` is detected by `Symbol.for('xaravel.php.array')` and read only through its iterator of normalised `[key, value]` pairs.
-  - An object's properties come from `[Symbol.for('xaravel.php.props')]()`. Without that method, they come from its own enumerable keys.
-  - JS built-ins (`Date`, `Map` and the like) are `==` only to themselves.
-  - Until the Escalation is resolved, `===` treats int and float as one type (DIV-9).
-- **Frames.**
-  - If `globalThis[Symbol.for('xaravel.scope.run')]` exists, `portedTest` opens a `test` frame through it and runs the body inside that frame. The grader never imports the scope module.
-  - The harness opens the test frame first. The TestCase's `createApplication` then runs inside it.
-- **Mockery and Eloquent.** On a mocked model (its instances carry the `MODEL_STATE` symbol), define members through the `MODEL_STATE` escape, never through the model Proxy's `defineProperty` trap.
-- **Conventions.**
-  - Keep the PHPUnit and Mockery method names and messages.
-  - Use named exports only, one public class per file.
-  - Run `bun test` under the Protected root `bunfig.toml`. A package-level `bunfig.toml` is forbidden.
-  - The stack is Bun 1.4.3, TS 7.0.2 `--strict` and oxlint 1.88.0.
+- **Grader isolation.** The grader imports no graded package, not even `@xaravel/runtime`. A grader package may depend on other grader packages only (`@xaravel/mockery` → `@xaravel/assert` is allowed). `@xaravel/assert` freezes its exports and prototypes on load. One `@xaravel/assert` copy per process. Grader globals are non-writable and non-configurable.
+- **Protocols, read by brand, never reimplemented.** `PhpArray`: `Symbol.for('xaravel.php.array')`, read only through its iterator of normalised `[key, value]` pairs. Object props: `[Symbol.for('xaravel.php.props')]()`, else own enumerable keys. JS built-ins are `==` only to themselves. Until Story 9.5's float marker lands, `===` treats int and float as one type. Contract tokens are `Symbol.for('<Upstream FQCN>')`, with methods at `Symbol.for('xaravel.contract.methods')`. Test finish for Mockery uses `Symbol.for('xaravel.mockery.run')`. Class-name strings resolve through `globalThis[Symbol.for('xaravel.class.lookup')]` (Story 9.4); `andThrow('<FQCN>')` resolves only the grader's own exception classes.
+- **Frames.** If `globalThis[Symbol.for('xaravel.scope.run')]` exists, `portedTest` runs the body in a `test` frame opened through it; the grader keeps its own storage otherwise.
+- **Mockery specifics.** The mock Proxy leaves symbol keys alone, and `then` unless it has an expectation. With `shouldIgnoreMissing` and no default, a missing call returns null; with `recursive`, a new ignore-missing mock. With several class targets only the first is in the prototype chain. `Mockery.capture` writes `ref.value`. On a mocked Eloquent model (instances carry `MODEL_STATE`), define members through the `MODEL_STATE` escape, never the Proxy's `defineProperty` trap.
+- **PHP-only gaps (DIV-6, recorded by Story 8.1).** Mockery `alias:`/`overload:` and run-time method visibility guards. Closure equality, JS `Error` through `ExceptionComparator`, and message-only differences are also Story 8.1 DIV clauses.
+- **Conventions.** Keep PHPUnit, Mockery and Double method names and messages. Named exports, one public class per file. `bun test` under the Protected root `bunfig.toml`; no package-level `bunfig.toml`. `assertMatchesRegularExpression` takes a JS `RegExp` (DIV-10).
 
 ## Cross-Story Dependencies
 
-- **Within the epic.**
-  - 4.3's equality assertions use 4.1's comparison core.
-  - 4.2 supplies the counting that 4.3–4.6 report into.
-  - 4.4's `createMock` needs 4.5.
-  - 4.6 extends 4.5.
-- **From Epic 3.**
-  - Epic 4 uses the usage scans (`phpunit-assertions.jsonl`, `mockery-api.jsonl`) and the per-Story Oracle requests.
-  - The `xaravel-oracle` App is set up. `oracle.yml#story` has signed 4.1's fixtures on its PR, so later Stories that need Oracle facts follow the same path.
-- **Later epics.**
-  - Epic 5's harness consumes the reporter API and the assertion-kind multisets (FR-113 floor).
-  - Epic 6 lint enforces the ban on `expect` under `tests/ported`.
-  - Epic 8's `PORTING.md` holds the PCRE→`RegExp` rule (DIV-10).
-  - `@xaravel/runtime` (Epic 9; `PhpArray` and the float marker are in Story 9.5) installs the scope protocol and `PhpArray`. The grader must work without them, and ESC-4.1-1 asks that 9.5 match the grader's protocols.
+- **Within the epic.** 4.3 uses 4.1's comparison core. 4.2's counting underlies 4.3–4.8. 4.5 was built before 4.4. 4.6 extends 4.5. 4.7 replaces 4.4's `createMock` delegation and amends 4.3's `assertArraySubset` kind. 4.8 extends `@xaravel/mockery` and its coverage report.
+- **Other epics.** Epic 3 supplies the usage scans and the Oracle signing path. Story 5.3's harness consumes the reporter API, the kind multisets, `skipped` and risky flags. Story 6.2 lints `expect` and `recordAssertion` under `tests/ported`. Story 8.1 holds the DIV records and 8.2 the PCRE rule. Stories 9.4 (class registry), 9.5 (`PhpArray`, `Ref<T>`, float marker), 9.10 (SPL and `\Error`/`\Exception` classes) and 9.11 (grader reads them; failure-message rewrite) build to the grader's protocols. Epic 10 supplies contract tokens. Story 36.1 binds `MODEL_STATE`. Epic 57 owns the testing TestCase traits and `partialMock()`; Epic 59 the Testbench traits.

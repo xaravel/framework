@@ -1,4 +1,4 @@
-// @xaravel/assert: the grader's public surface (Stories 4.1-4.4).
+// @xaravel/assert: the grader's public surface (Stories 4.1-4.4 and 4.7).
 //
 // Every export and its prototype is frozen on load, so code under test cannot
 // replace or patch the grader (AD-15): assigning to one throws a TypeError.
@@ -31,6 +31,7 @@ import { Constraint } from "./Framework/Constraint";
 import { Exception } from "./Framework/Exception/Exception";
 import { SkippedWithMessageException } from "./Framework/Exception/SkippedWithMessageException";
 import { ExpectationFailedException } from "./Framework/ExpectationFailedException";
+import { MockBuilder } from "./Framework/MockObject/MockBuilder";
 import { TestCase } from "./Framework/TestCase";
 import { objectHandle as phpObjectHandle } from "./exporter/Exporter";
 import { varExport as phpVarExport } from "./exporter/VarExport";
@@ -42,6 +43,7 @@ for (const exported of [
   Constraint,
   Exception,
   ExpectationFailedException,
+  MockBuilder,
   SkippedWithMessageException,
   TestCase,
   phpArrayEntries,
@@ -74,6 +76,7 @@ export {
   Constraint,
   Exception,
   ExpectationFailedException,
+  MockBuilder,
   phpArrayEntries,
   phpClassNameOf,
   phpIsArray,
@@ -93,6 +96,10 @@ export {
   xaravelTest,
 };
 export type { ClassOrInterface } from "./Framework/Assert";
+export type { InvocationMocker } from "./Framework/MockObject/Runtime/Interface/InvocationMocker";
+export type { InvocationStubber } from "./Framework/MockObject/Runtime/Interface/InvocationStubber";
+export type { MockObject } from "./Framework/MockObject/Runtime/Interface/MockObject";
+export type { Stub } from "./Framework/MockObject/Runtime/Interface/Stub";
 export type { Dataset, PortedTestOptions } from "./declarations/portedTest";
 export type { TestReport } from "./declarations/Declarations";
 export type { Key as PhpKey } from "./comparison/PhpComparison";

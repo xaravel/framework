@@ -616,8 +616,12 @@ function detectedEncoding(value: unknown): string {
   return /^[\x00-\x7f]*$/.test(value) ? "ASCII" : "UTF-8";
 }
 
+/** `assertStringContainsString`'s constraint and `stringContains($string, $case)`'s (Story 4.7 adds `ignoreCase`). */
 export class StringContains extends Constraint {
-  constructor(private readonly needle: string) {
+  constructor(
+    private readonly needle: string,
+    private readonly ignoreCase = false,
+  ) {
     super();
   }
   toString(): string {
@@ -636,14 +640,25 @@ export class StringContains extends Constraint {
     if (this.needle === "") {
       return true;
     }
-    return typeof other === "string" && other.includes(this.needle);
+    if (typeof other !== "string") {
+      return false;
+    }
+    if (this.ignoreCase) {
+      // mb_stripos(): a multibyte-safe, case-insensitive search.
+      return other.toLowerCase().includes(this.needle.toLowerCase());
+    }
+    return other.includes(this.needle);
   }
   private needleAsString(): string {
-    return `"${this.needle}" [${detectedEncoding(this.needle)}](length: ${Buffer.byteLength(this.needle, "utf8")})`;
+    const needle = this.ignoreCase ? this.needle.toLowerCase() : this.needle;
+    return `"${needle}" [${this.detectedEncoding(needle)}](length: ${Buffer.byteLength(needle, "utf8")})`;
   }
   private haystackAsString(other: unknown): string {
     const length = typeof other === "string" ? Buffer.byteLength(other, "utf8") : 0;
-    return `${phpunitExport(other)} [${detectedEncoding(other)}](length: ${length}) `;
+    return `${phpunitExport(other)} [${this.detectedEncoding(other)}](length: ${length}) `;
+  }
+  private detectedEncoding(other: unknown): string {
+    return this.ignoreCase ? "Encoding ignored" : detectedEncoding(other);
   }
 }
 
