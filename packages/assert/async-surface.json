@@ -1,0 +1,4 @@
+[
+{"method":"runCounted","file":"src/declarations/AssertionCounter.ts","root":"callback"},
+{"method":"runWithMockery","file":"src/declarations/portedTest.ts","root":"callback"}
+]

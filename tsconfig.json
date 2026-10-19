@@ -28,7 +28,8 @@
     "tools/xt-coverage/**/*.ts",
     "tools/story-check/**/*.ts",
     "tools/devcontainer/**/*.ts",
-    "tools/lint-rules/**/*.ts"
+    "tools/lint-rules/**/*.ts",
+    "tools/async-surface/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

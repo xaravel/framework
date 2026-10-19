@@ -11,7 +11,11 @@
 # (decisions/MAINT-2026-10-18-epic-3-items.md, Epic 3 retro S2): a forged
 # fixture cannot merge. `check` runs the other repository gates: `bun test`,
 # the typecheck, the lint, `scaffold:check` and `graph:check` (Epic 1 retro
-# R1), plus the assert and Mockery coverage reports. `check` is a required
+# R1), plus the assert and Mockery coverage reports. After the typecheck it
+# runs `async-surface --all --check` (Story 6.4, AD-6, AD-28): an async public
+# method without an `@asyncRoot` tag, or a committed async-surface.json that
+# differs from the regenerated one, fails; in the merge queue this catches two
+# PRs that are each green but disagree about a seam's async-ness. `check` is a required
 # check on main (decisions/ESC-4.4-2.md item 4). `upstream` fetches the Upstream snapshot at the
 # Baseline Pin and verifies every tree hash (Story 2.1, FR-1, AD-15), then
 # checks that the committed Upstream scans (conformance/scans/facades.jsonl,
@@ -126,6 +130,8 @@ jobs:
         run: bun run expectations:reasons
       - name: Typecheck
         run: bun run typecheck
+      - name: Check the async surface
+        run: bun run async-surface --all --check
       - name: Lint
         run: bun run lint
       - name: Check the scaffold

@@ -6,7 +6,7 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 
 | Check | Workflow and job | What it runs |
 | --- | --- | --- |
-| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `typecheck`, `lint`, `scaffold:check`, `graph:check`, the coverage reports |
+| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `graph:check`, the coverage reports |
 | `bun audit` | `ci.yml#audit` (required) | `bun install --frozen-lockfile --ignore-scripts`, then `bun audit --audit-level=high` |
 | fixture signatures | `ci.yml#fixtures` (required) | `oracle:verify-fixtures` ([oracle.md](oracle.md)) |
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
@@ -23,7 +23,7 @@ The Ratchet's PR run grades the AD-2 reverse-dependency closure of the packages 
 
 The queue is required on `main` (`merge_queue` in `.github/rulesets/main.json`: squash, `ALLGREEN`, at most 5 entries). Every required check also runs on `merge_group`, or the queue would stall. The Ratchet's queue run is the full Ratchet on every alpha Variant, for the queued PR's head ref ([ratchet.md](ratchet.md#ci-githubworkflowsratchetyml)).
 
-Regenerating `async-surface.json` and the API-surface diff in the queue are Stories 6.4 and 6.5.
+`ci.yml#check` regenerates every package's `async-surface.json` and fails on any difference from the committed file, printing the diff (`bun run async-surface --all --check`, Story 6.4, AD-6; [async-surface.md](async-surface.md)). It runs on PRs too, which is cheap and catches drift before queueing; the queue run is what catches two PRs that are each green but disagree about a seam's async-ness. That queue path is verified by the workflow's text (XT-conformance-136) until a real queued merge exercises it. The API-surface diff in the queue is Story 6.5.
 
 ## Nightly (`nightly.yml`)
 
