@@ -1,0 +1,100 @@
+# The Ratchet (Story 5.6; FR-3, AD-15, AD-16, AD-28).
+#
+# `ratchet` runs the full conformance harness and fails on every unexpected
+# failure, and on every unexpected pass that the run's own Story owns
+# (`bun tools/ratchet/ratchet.ts run`, docs/ops/ratchet.md). Other unexpected
+# passes are warnings.
+#
+# It runs under `pull_request_target`, so this workflow and the tool come
+# from the base. The base is checked out at `.` and the PR head at `pr/`;
+# `overlay` then restores every Protected Path (the harness, tools/, the
+# grader packages, stories/, the root bunfig.toml, package.json and bun.lock)
+# and the sprint status from the base into `pr/`. So the check's workflow, tool
+# and Protected Paths are the base's at the start of the run. Code a PR's
+# tests run in-process is not contained, as with any test runner; the
+# Ratchet's outcome comparison and review guard that. The job's safety rests
+# on `contents: read`, no secrets, `persist-credentials: false`, and the
+# overlay. On push to main it grades main itself.
+#
+# Every alpha Variant runs (`CI=true`: an unreachable one is a failure), with
+# the Postgres 18 and Redis 8.10.2 services. Story 5.7 makes it a required
+# check and adds the merge-queue run.
+name: ratchet
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8.10.2
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request_target'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Restore the grader from the base
+        if: github.event_name == 'pull_request_target'
+        run: bun tools/ratchet/ratchet.ts overlay --base . --head pr
+      - name: Install the PR from the base lockfile
+        if: github.event_name == 'pull_request_target'
+        working-directory: pr
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Ratchet the PR
+        if: github.event_name == 'pull_request_target'
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF"
+      - name: Install from the lockfile
+        if: github.event_name == 'push'
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Ratchet main
+        if: github.event_name == 'push'
+        run: bun tools/ratchet/ratchet.ts run --root . --ref main

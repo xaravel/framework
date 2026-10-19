@@ -51,8 +51,8 @@
 //   a line in a shard not under `<component>/` of its id's Inventory Component;
 //   a file under the directory that is not `.jsonl`.
 //
-// Skip Reason rules and status values are Story 5.2's; line ownership and the
-// Ratchet are Story 5.6's.
+// Skip Reason rules and status values are Story 5.2's; line ownership is
+// tools/ownership's and the Ratchet tools/ratchet's (Story 5.6).
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";

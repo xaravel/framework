@@ -2,9 +2,10 @@
 title: 'Story 5.6: Ratchet and Expectations line ownership'
 type: 'feature'
 created: '2026-10-19'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: '3192b6c52c58e6d761ddc1ade6be54706cf72add'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-5-context.md'
   - '{project-root}/AGENTS.md'
@@ -102,6 +103,37 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-19 — Review pass
+- verdicts: 27 findings — high 0, medium 5, low 19, false 3, maybe-false 0
+- findings:
+  - (verification-gap 1) `[medium]` `[patch]` a harness `ERROR` that never reached `HarnessResult.differences` would let the Ratchet pass, untested end to end — `runRatchet` now fails closed on harness code 1 with no counted difference, and XT-115 drives a real ERROR run through `runRatchet`. Grouped with verification-gap other and blind 11.
+  - (verification-gap 2) `[low]` `[patch]` `extract()`'s per-Story filter never runs in a test — XT-187 now runs `extract` on a root with a committed per-Story request.
+  - (verification-gap 3) `[low]` `[patch]` `generateFixtures` never takes the owned-request branch — XT-187 now runs it and checks the per-Story fixture is byte-identical.
+  - (verification-gap other) `[medium]` `[patch]` the Ratchet ignores the harness code — grouped with verification-gap 1.
+  - (blind 1) `[low]` `[patch]` the docs claim a PR cannot change its own grader, but PR test code runs with write access to `pr/` after the one-time overlay — in-process code is uncontainable by any test runner; the claim is reworded to what holds (workflow, tool and Protected Paths come from base at start). Grouped with edge 7.
+  - (blind 2) `[low]` `[patch]` the overlay skips nested `node_modules` — it now skips only the top-level one.
+  - (blind 3) `[low]` `[reject]` Pin bumps that reset a `pass` line need an Escalation — that is the AC's rule, which names no exception, and no `pass` line exists yet; an exemption would be a Maintainer change to the AC.
+  - (blind 4) `[low]` `[reject]` any approved Escalation listing the id licenses a later demotion — this is what the AC says ("an approved Escalation covering that Test ID"); tying the line's `escalation` field to it is a stricter rule for the Maintainer to decide.
+  - (blind 5) `[low]` `[reject]` a row `X#k` grants block `X` — no manifest splits one test's dataset rows across Stories (617 row parents, 0 shared), so it is unreachable today; now documented (intent patch).
+  - (blind 6) `[low]` `[reject]` code outside `portedTest` blocks is not compared — the AC names lines and blocks; any outcome change it causes in another Story's test is an unexpected failure the Ratchet fails; the docs now say so. Grouped with edge 3.
+  - (blind 7) `[low]` `[reject]` deleting and re-adding a file moves it later in merge order — the spec's chosen rule; a Story re-landing its own request file is rare, and changing the rule needs a spec change.
+  - (blind 8) `[false]` `[reject]` `--first-parent` needs git 2.31+ to diff merges — `main` is squash-merged with linear history (no merge commits on first-parent), and CI and the M1 run git ≥ 2.39.
+  - (blind 9) `[low]` `[patch]` an XT-187 comment names 3.4.jsonl where the code re-adds 10.1.jsonl — comment corrected.
+  - (blind 10) `[low]` `[reject]` unbounded concurrent contents reads on huge PRs — needs a PR changing thousands of shards; a limiter adds machinery for no everyday case.
+  - (blind 11) `[medium]` `[patch]` the Ratchet ignores the harness exit code — grouped with verification-gap 1.
+  - (blind 12) `[false]` `[reject]` `ratchet.yml` checkouts are shallow — nothing the Ratchet runs calls `mergeOrder`; there is no bad outcome today.
+  - (blind 13) `[low]` `[reject]` no `concurrency` group — redundant runs cost minutes only; Story 5.7 restructures the CI pipeline.
+  - (edge 1) `[medium]` `[patch]` two merged Story files of different Components holding one sha: the shadowed Story's fixture fails verify and leaves the kept set — shadowed shas are kept under their holder's Component and verify accepts any holder's Component. Grouped with edge 8.
+  - (edge 2) `[false]` `[reject]` a Story branch that merged main ranks main's files at its merge commit — CI reads per-Story files on base checkouts or `refs/pull/<n>/merge`, whose first parent is `main`; only a local branch view differs.
+  - (edge 3) `[low]` `[reject]` code outside blocks — grouped with blind 6.
+  - (edge 4) `[low]` `[reject]` a row grants the block — grouped with blind 5.
+  - (edge 5) `[low]` `[reject]` a regex literal after `)` lexes as division — rare in test files, mostly fails closed; a parenthesis-context tracker adds complexity for no everyday case.
+  - (edge 6) `[low]` `[reject]` the overlay does not recreate symlinks — the repository tracks no symlinks (`git ls-files -s` mode 120000: 0).
+  - (edge 7) `[low]` `[patch]` claim: a PR cannot change its own grader — grouped with blind 1.
+  - (edge 8) `[medium]` `[patch]` claim: R5 is not closed for different Components — grouped with edge 1.
+  - (edge 9) `[low]` `[patch]` claim: `conformance/README.md` implies ownership covers all Ported Test code — reworded to say only lines and block texts are compared.
+  - (intent) `[low]` `[patch]` descriptive: foreign or unowned passes warn on PRs too (in Design Notes); a row grants its block and `bot/*` is exempt from demotion only in code comments — both now documented in `docs/ops/ratchet.md` and `conformance/README.md`.
+
 ## Design Notes
 
 Unowned or foreign unexpected passes are warnings on PR runs too, not only on `main`. The ownership rule forbids a Story from editing lines outside its `test_ids`, so failing it on such a pass would leave the PR no legal fix. The owner's next run fails, and Story 5.8's promotion bot handles unowned passes.
@@ -114,3 +146,84 @@ The workflow runs PR code under `pull_request_target`, as AD-28 requires, so tha
 - `bun test conformance/tests/xaravel/ratchet.test.ts conformance/tests/xaravel/ownership-lines.test.ts conformance/tests/xaravel/oracle-merge-order.test.ts conformance/tests/xaravel/ownership.test.ts conformance/tests/xaravel/oracle-story.test.ts conformance/tests/xaravel/oracle-verify.test.ts` -- all pass.
 - `bun run ratchet run --ref main` -- `RATCHET ref=main failures=0 passes=0 warnings=0`, exit 0 (locally, not-run Variants are not failures).
 - `bun run test`, `bun run typecheck`, `bun run lint`, `bun run workflows:check`, `bun run expectations:check`, `bun run escalations:check`, `bun run oracle:verify-fixtures`, `bun run ownership:check`, `bun run protected-paths:codeowners`, `bun run harness` -- all pass, with no CODEOWNERS drift.
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** Story 5.6 adds three things. First, the `ratchet` check: `tools/ratchet/ratchet.ts` and `.github/workflows/ratchet.yml`. Second, line-level ownership in `tools/ownership`. Third, merge-order ownership of per-Story Oracle requests (Epic 3 retro R5).
+
+- **Ratchet.** It runs the full harness and prints `UNEXPECTED-FAILURE` for every non-pass difference, including `ERROR`, CI `NOT-RUN`, and a harness exit 1 with nothing counted.
+  - An `UNEXPECTED-PASS` fails the run only when the run's own `story/<id>` owns it.
+  - Every other unexpected pass is a `WARNING` (and `::warning::` under GitHub Actions). The run ends with a `RATCHET ref=… failures=… passes=… warnings=…` line.
+  - The workflow runs on `pull_request_target`. It checks out the base at `.` and the PR head at `pr/`. `overlay` restores every Protected Path and the sprint status from the base. The job has Postgres 18 and Redis 8.10.2 services, `CI=true`, `contents: read` and no secrets. It also runs on push to main.
+- **Ownership.** On `story/*` PRs, Expectations lines (keyed by `(id, variant)` across all changed shards, at the merge base versus the head) and `portedTest` blocks outside the manifest's `test_ids` are violations.
+  - Blocks are found by the new `tools/ownership/ported-blocks.ts` scanner. An id it cannot resolve, or a file it cannot parse, fails closed.
+  - A `pass` changed to another status, or removed, needs an approved, sha-bound Escalation listing the id. That Escalation may be on the base or in the PR head; the new `decisionStatus()` in `tools/escalations` checks it.
+  - `bot/*` and `planning/*` are exempt from that rule.
+- **Oracle R5.** The new `tools/oracle/merge-order.ts` orders per-Story files by their add commit in first-parent history, and throws on a shallow clone.
+  - Merged files are judged without the batch. A later holder is shadowed, not rejected, and the earlier-merged Story owns the request.
+  - Extraction skips held requests, and fixture generation never re-signs them.
+  - `verify` accepts a fixture under any holder's Component.
+  - `oracle:story` still rejects a candidate that duplicates the batch or a committed file.
+  - `fetch-depth: 0` is set on the `ci.yml` and `oracle.yml` checkouts that read those files.
+
+**Files changed.**
+- `tools/ratchet/ratchet.ts` (new): the `run` and `overlay` commands.
+- `.github/workflows/ratchet.yml` (new): the `ratchet` job.
+- `conformance/harness/compare.ts` and `harness.ts`: a difference `kind`, and `HarnessResult.differences`. Printed output is unchanged.
+- `tools/ownership/ownership.ts` and `tools/ownership/ported-blocks.ts` (new): the line rules, the demotion rule and the block scanner.
+- `tools/escalations/escalations.ts`: the pure `decisionStatus()`.
+- `tools/oracle/merge-order.ts` (new), plus `story-requests.ts`, `verify.ts`, `fixtures.ts`, `extract.ts` and `story.ts`: R5.
+- `.github/workflows/ci.yml` and `oracle.yml`: `fetch-depth: 0`.
+- New tests:
+  - `ratchet.test.ts`: XT-115 and XT-118;
+  - `ownership-lines.test.ts`: XT-116 and XT-117;
+  - `oracle-merge-order.test.ts`: XT-187.
+- Existing tests, changed only where AC5 reverses them, or for fixture content: `oracle-story`, `oracle`, `repository-policy` and `ownership`.
+- `package.json`: the `ratchet` script.
+- `stories/5.6.md`: XT-187 and its AC row.
+- Docs: `docs/ops/ratchet.md` (new), `harness.md`, `expectations.md`, `oracle.md`, `conformance/README.md`, and the stale "later" comments.
+- `_bmad-output/implementation-artifacts/story-manifests.md`: the next free ID is now XT-conformance-188.
+
+**Review.** 27 findings: 5 medium, 19 low and 3 false.
+- **Patched: 9 entries**, 2 medium and 7 low.
+  - The two medium:
+    - the Ratchet now fails closed on a harness exit 1 with no counted difference, and a real `ERROR` run is tested through it;
+    - a shadowed holder in another Component keeps its fixture valid.
+  - The low ones:
+    - the extract test;
+    - the `generateFixtures` test;
+    - the comment fix;
+    - the overlay skips only the top-level `node_modules`;
+    - the grader-protection wording;
+    - the line-rule scope docs;
+    - documenting the row-to-block rule and the bot exemption.
+- **Deferred:** none.
+- **Rejected:** each with its reason in the triage log.
+  - The false ones: git older than 2.31; the shallow `ratchet.yml` checkout; a Story branch that merged main.
+  - The low ones:
+    - the Pin-bump demotion (it is the AC's rule);
+    - reusing an old approved Escalation (the AC's wording);
+    - a row granting its block (no shared rows exist);
+    - code outside blocks (the Ratchet catches the outcomes it changes);
+    - delete-and-re-add order;
+    - unbounded contents reads;
+    - no `concurrency` group;
+    - regex lexing after `)`;
+    - symlinks (none are tracked).
+
+**Follow-up review recommended: true.** Patched entries by verdict: high 0, medium 2, low 7. The named risk: the medium patches (the harness exit-code fail-closed rule, and multi-Component verify and kept sets) changed the verdict logic and have been reviewed only once.
+
+**Verification.**
+- `bun run test`: 213 pass, 0 fail.
+- `bun run ratchet run --ref main`: `RATCHET ref=main failures=0 passes=0 warnings=0`.
+- `bun run harness`: `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`.
+- `typecheck`, `lint`, `workflows:check`, `expectations:check`, `escalations:check`, `oracle:verify-fixtures` and `ownership:check` pass. `protected-paths:codeowners` causes no drift.
+- The XT-187 extraction case ran against local PHP 8.5.11.
+
+**Residual risks.**
+- **`ratchet.yml` has never run.** `pull_request_target` uses the base's copy, so its first live run is the push to main after merge. With `CI=true`, an unreachable alpha Variant fails it. The Postgres and Redis service wiring is unverified until then.
+- **The ownership line rules have not run live either.** They read content through the compare and contents APIs, which only a fake GitHub server has exercised.
+- **In-process tampering.** PR test code runs in-process with write access to `pr/`. The overlay protects the grader only at the start of the run.
+- **Neither check is required yet.** `ratchet` becomes a required check, with a merge-queue run, in Story 5.7. The orchestrator merges with `--admin`, so neither check is identity-verified.

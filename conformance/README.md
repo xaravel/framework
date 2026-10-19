@@ -44,3 +44,11 @@ When more than one Skip Reason could apply, the line records exactly one, chosen
 When in doubt, pick the reason that counts against conformance.
 
 The check does not enforce this order: whether a reason is the right one is a review question. The Epic 8 reviewers' checklist is meant to cite this section ([ESC-5.2-1](escalations/ESC-5.2-1.md)).
+
+## Ratchet
+
+Conformance only moves honestly (FR-3, AD-16, Story 5.6). Operator docs are in [`docs/ops/ratchet.md`](../docs/ops/ratchet.md).
+
+- **The `ratchet` check** (`bun run ratchet run --ref <ref>`, `.github/workflows/ratchet.yml`) runs the full harness. Every unexpected failure fails it on every ref. An unexpected pass fails it only on the branch of the open Story that owns the Test ID; any other unexpected pass is a warning, and the owner's next run fails.
+- **Line ownership** (`bun tools/ownership/ownership.ts pr`): a `story/<id>` PR may change only Expectations lines and `portedTest` blocks of its own `test_ids`. The rules compare only Expectations lines and the text of `portedTest` blocks; code outside a block (helpers, imports, setup) is not compared, and the Ratchet catches the outcome changes it causes. A Story listing any row `X#k` may change the block of `X`: no manifest splits one test's rows across Stories.
+- **Pass demotion:** moving a line from `pass` to any other status, or removing it, needs an approved Escalation listing its Test ID. `bot/*` branches are exempt (Story 5.8 owns the bot rules), and so are `planning/*` branches, which may not change Expectations at all.

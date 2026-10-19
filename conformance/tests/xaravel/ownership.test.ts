@@ -102,6 +102,9 @@ interface FakePr {
   head?: Record<string, string>;
 }
 
+/** An Expectations line of Story 9.1's own Test ID (`story("9.1")` lists `T-9.1`). */
+const OWN_LINE = '{"id":"T-9.1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}\n';
+
 const file = (filename: string, previous?: string): PrFile =>
   previous === undefined ? { filename, status: "added" } : { filename, previous_filename: previous, status: "renamed" };
 
@@ -329,6 +332,8 @@ test("XT-conformance-24: a Story PR changing files outside its four allowed path
           file("conformance/oracle-requests/9.1.jsonl"),
           file("conformance/escalations/ESC-9.1-1.md"),
         ],
+        // Story 5.6: the line rules read a changed shard's lines; this one changes only the Story's own Test ID.
+        head: { "conformance/expectations/support/x.jsonl": OWN_LINE },
       },
       base!,
     );
@@ -588,7 +593,8 @@ test("XT-conformance-181: a bot/* PR may change only conformance/expectations/**
     for (const ref of ["feature/x", "main", "planningx/y", "botx/y"]) {
       expect(evaluatePr(base!, { headRef: ref, files: [file("packages/support/A.ts")], changedFiles: 1 })).toEqual({ storyId: null, outOfScope: [], violations: [] });
     }
-    expect(await runPr({ ref: "feature/x", files: [file("packages/support/A.ts"), file("conformance/expectations/support/x.jsonl")] }, base!)).toMatchObject({
+    // Story 5.6: the pass-demotion rule reads a changed shard on every branch but bot/*; this added line demotes nothing.
+    expect(await runPr({ ref: "feature/x", files: [file("packages/support/A.ts"), file("conformance/expectations/support/x.jsonl")], head: { "conformance/expectations/support/x.jsonl": OWN_LINE } }, base!)).toMatchObject({
       code: 0,
       stdout: "Ownership OK: PR #7: feature/x is not a Story branch.\n",
     });

@@ -125,7 +125,9 @@ export function runStory(options: StoryOptions, signingKeyPem: string | null = n
   const judged = judgeStoryRequests(text, file, manifest, schema, batch, listed);
   // A request another committed per-Story file already holds gets no second fixture (verify-fixtures rejects it).
   const others = new Map<string, string>();
-  for (const other of readStoryRequestFiles(root, schema, batch, listed, file)) {
+  // The candidate is still rejected for a batch request (above) or a committed duplicate (here); only merged files are
+  // judged without the batch (Story 5.6 AC5).
+  for (const other of readStoryRequestFiles(root, schema, listed, file)) {
     other.accepted.forEach(({ request, line }) => others.set(request.sha256, `${other.file}:${line}`));
   }
   judged.accepted = judged.accepted.filter((item) => {

@@ -276,9 +276,16 @@ The App's commit triggers the PR's checks again. `oracle:verify-fixtures` ([Veri
 
 ### Verification and the batch
 
-`bun run oracle:verify-fixtures` also reads every `conformance/oracle-requests/*.jsonl` with its manifest (`stories/<story-id>.md` on the checked-out commit). Each rejection above, except the two-evaluation comparison, is a violation `<path>:<line>: …`, and so is a file without a valid manifest, a name other than `<story-id>.jsonl`, or a request already accepted in another per-Story file. An accepted request is a valid source for a fixture in its manifest's Component directory, and only there.
+`bun run oracle:verify-fixtures` also reads every `conformance/oracle-requests/*.jsonl` with its manifest (`stories/<story-id>.md` on the checked-out commit). Each rejection above, except the two-evaluation comparison and the batch-request rule, is a violation `<path>:<line>: …`, and so is a file without a valid manifest or a name other than `<story-id>.jsonl`. An accepted request is a valid source for a fixture in its owner's Component directory, and only there.
 
-The batch (`bun run oracle:fixtures`) never deletes the fixture of an accepted per-Story request in its Component directory, and never re-signs it. Re-signing per-Story fixtures after a Pin bump, and a staleness check against the Pin, are deferred.
+Once merged, a per-Story file stays valid (Story 5.6 AC5, Epic 3 retro R5). `oracle:story` still rejects a candidate's batch request and a request a committed per-Story file holds, but merged files are judged without the batch and in merge order (`tools/oracle/merge-order.ts`):
+
+- **Merge order** is the first-parent history of `HEAD`: the commit that most recently added each file under `conformance/oracle-requests/` (`git log --first-parent --diff-filter=A`). Older commits come first; within one commit, files sort by name (`compareUnits`). Files with no add commit (uncommitted, or not a git tree) come after every committed file, by name.
+- **Two Stories' files.** The earlier-merged Story owns a request both hold, not the one whose file name sorts first. The later file's line is shadowed, not rejected: its fixture belongs to the owner's Component.
+- **The batch.** `oracle:extract` leaves out every request an accepted merged per-Story file holds, and a batch file that still carries one is no violation: the per-Story owner is its source. The batch (`bun run oracle:fixtures`) never deletes the fixture of an accepted per-Story request in its Component directory, never re-signs it, and signs no batch fixture for a request a per-Story file owns.
+- **Full history.** A shallow clone cannot tell merge order, so these tools fail closed with `oracle request merge order needs full git history (fetch-depth: 0)`. Every CI checkout that reads per-Story files (`ci.yml`'s `check` and `fixtures`, and `oracle.yml`'s `build`, `oracle`, `determinism` and `story`) sets `fetch-depth: 0`.
+
+Re-signing per-Story fixtures after a Pin bump, and a staleness check against the Pin, are deferred.
 
 ### Maintainer-run steps for per-Story requests
 

@@ -36,7 +36,8 @@
 //
 // The FR-3 precedence order is documentation for agents and reviewers, not a
 // mechanical rule here. Shape and coverage are `expectations:check`'s (Story
-// 5.1); `adapted`, line ownership and the Ratchet are later Stories'.
+// 5.1); `adapted` is a later Story's; line ownership (tools/ownership) and the
+// Ratchet (tools/ratchet) are Story 5.6's.
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 import { existsSync, readFileSync } from "node:fs";

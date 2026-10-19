@@ -39,8 +39,10 @@
 # because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
 # until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
-# on a required check. The conformance harness, Ratchet and service matrix
-# arrive in Epic 5.
+# on a required check. The Ratchet runs in ratchet.yml (Story 5.6); the
+# rest of the harness CI and the service matrix arrive with Story 5.7.
+# `check` and `fixtures` check out full history (`fetch-depth: 0`): the
+# per-Story Oracle request files are read in merge order (Story 5.6 AC5).
 name: ci
 
 on:
@@ -88,6 +90,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Per-Story Oracle request ownership follows merge order, which needs full history (Story 5.6 AC5).
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -101,6 +105,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Per-Story Oracle request ownership follows merge order, which needs full history (Story 5.6 AC5).
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version

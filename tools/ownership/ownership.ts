@@ -40,6 +40,46 @@
 //                        segment
 //   truncated file list: the API returned fewer files than the PR's
 //                        `changed_files`; the check fails closed
+//   unowned expectation: a `story/<id>` PR changes an Expectations line whose
+//                        Test ID its base manifest's `test_ids` do not list
+//                        (Story 5.6)
+//   unowned ported test: a `story/<id>` PR changes a `portedTest` block whose
+//                        Test ID its `test_ids` do not list (Story 5.6)
+//   unresolved ported test id: a changed Ported Test file has a `portedTest`
+//                        whose id cannot be resolved statically; fails closed
+//   pass demoted:        a PR (any branch but `bot/*`) moves an Expectations
+//                        entry from `pass` to another status, or removes it,
+//                        with no approved Escalation listing that Test ID
+//   unreadable content:  a changed file could not be read at the merge base or
+//                        the head commit; fails closed
+//   unparsable expectation: a changed shard has a line that is not an
+//                        Expectations line; fails closed
+//   unparsable ported test file: a changed Ported Test file does not lex or
+//                        its brackets do not balance; fails closed
+//
+// Line rules (Story 5.6, AD-16). They diff the PR head against its merge base
+// (the compare API's `merge_base_commit`), over the changed files and, for a
+// rename, its previous name:
+//   - Expectations lines of `conformance/expectations/**/*.jsonl`, keyed by
+//     `(id, variant)` across all changed shards combined, so a line moved
+//     between shards unchanged is not a change. A key whose lines differ,
+//     appear or disappear is changed. On `story/<id>` branches each changed
+//     key's id must be owned: `test_ids` lists it, or lists `X` for a dataset
+//     row `X#<key>`.
+//   - `portedTest` blocks of `packages/*/tests/ported/**/*.test.ts`
+//     (./ported-blocks.ts), keyed by id across all changed files combined. On
+//     `story/<id>` branches each changed block's id `X` must be owned:
+//     `test_ids` lists `X` or a row `X#<key>`. Any `portedTest` whose id is
+//     not a string literal or a template of top-level string constants fails.
+//   - Pass demotion, on every branch except `bot/*` (Story 5.8 owns the bot
+//     rules; `planning/*` rejects every Expectations change already): a key whose base lines include `pass` and whose head lines do
+//     not (another status, or removed) needs an approved Escalation listing
+//     its id (or `X` for a row `X#<key>`): an
+//     `conformance/escalations/ESC-<id>.md` on base, or in the PR head when
+//     the PR changes it, whose `decisions/ESC-<id>.md` on base is `approved`
+//     and bound to that exact text (`escalation_sha256`).
+// Content is read only for those files; anything unreadable, unparsable or
+// unbalanced is a violation, never a pass.
 //
 // Allowed paths for `story/<id>` with `component: <c>`: `packages/<c>/**`,
 // `conformance/expectations/<c>/**`, `conformance/oracle-requests/<id>.jsonl`
@@ -65,7 +105,9 @@
 // truncated file list.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { decisionStatus, DECISIONS_DIR, ESCALATIONS_DIR, parseEscalation } from "../escalations/escalations";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
+import { scanPortedBlocks } from "./ported-blocks";
 
 export const STORIES_DIR = "stories";
 
@@ -99,12 +141,24 @@ export interface ManifestsResult {
   violations: string[];
 }
 
+/** Which commit a file's content is read at: the PR's merge base or its head. */
+export type ContentSide = "base" | "head";
+
 export interface OwnershipPrInput {
   /** The PR's `head.ref`. */
   headRef: string;
   files: readonly PrFile[];
   /** The PR's `changed_files` count. */
   changedFiles: number;
+  /**
+   * A file's content at the merge base or the head commit, or null when the file does not exist there; throws when
+   * it cannot be read. Without it, every read the line rules need is unreadable (fail closed).
+   */
+  content?: (path: string, side: ContentSide) => string | null;
+  /** The merge base's sha, for messages. */
+  mergeBase?: string | null;
+  /** The head commit's sha, for messages. */
+  headSha?: string | null;
 }
 
 export interface OwnershipPrResult {
@@ -414,6 +468,309 @@ function truncated(pr: OwnershipPrInput): string[] {
     : [];
 }
 
+// ---------------------------------------------------------------------------
+// Line rules (Story 5.6)
+
+const EXPECTATIONS_FILE = /^conformance\/expectations\/.+\.jsonl$/;
+const PORTED_FILE = /^packages\/[^/]+\/tests\/ported\/.+\.test\.ts$/;
+const ESCALATION_FILE = /^conformance\/escalations\/(ESC-(?:[1-9]\d*\.[1-9]\d*|bot)-[1-9]\d*)\.md$/;
+
+/** One side of a changed file: the path to read and where. */
+export interface ContentRead {
+  path: string;
+  side: ContentSide;
+}
+
+/** The base and head paths of a PR file: a rename's base is its previous name; an added or copied file has no base, a removed one no head. */
+function sidesOf(prFile: PrFile): { base: string | null; head: string | null } {
+  const status = prFile.status ?? "modified";
+  const base = status === "added" || status === "copied" ? null : status === "renamed" ? (prFile.previous_filename ?? null) : prFile.filename;
+  const head = status === "removed" ? null : prFile.filename;
+  return { base, head };
+}
+
+/** The reads `evaluatePr`'s line rules need for `headRef` and `files`, in a stable order (the `pr` command prefetches them). */
+export function contentReads(headRef: string, files: readonly PrFile[]): ContentRead[] {
+  if (headRef.startsWith(BOT_BRANCH) || headRef.startsWith(PLANNING_BRANCH)) {
+    return [];
+  }
+  const story = headRef.startsWith(STORY_BRANCH);
+  const reads = new Map<string, ContentRead>();
+  const add = (path: string | null, side: ContentSide): void => {
+    if (path !== null && (EXPECTATIONS_FILE.test(path) || (story && PORTED_FILE.test(path)))) {
+      reads.set(`${side}\0${path}`, { path, side });
+    }
+  };
+  let expectations = false;
+  for (const prFile of files) {
+    const { base, head } = sidesOf(prFile);
+    add(base, "base");
+    add(head, "head");
+    expectations ||= [base, head].some((path) => path !== null && EXPECTATIONS_FILE.test(path));
+  }
+  // An Escalation the PR adds or changes can approve a demotion; its head text decides.
+  if (expectations) {
+    for (const prFile of files) {
+      const { head } = sidesOf(prFile);
+      if (head !== null && ESCALATION_FILE.test(head)) {
+        reads.set(`head\0${head}`, { path: head, side: "head" });
+      }
+    }
+  }
+  return [...reads.values()];
+}
+
+/** Whether `ids` (a Test ID list) covers `id`: it lists `id`, or `X` where `id` is a row `X#<key>` (Story 5.6). */
+export function covers(ids: ReadonlySet<string>, id: string): boolean {
+  if (ids.has(id)) {
+    return true;
+  }
+  for (let i = id.indexOf("#"); i !== -1; i = id.indexOf("#", i + 1)) {
+    if (ids.has(id.slice(0, i))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Whether `ids` covers the `portedTest` block `id`: it lists `id` or one of its rows `id#<key>`. */
+function coversBlock(ids: ReadonlySet<string>, id: string): boolean {
+  if (covers(ids, id)) {
+    return true;
+  }
+  for (const listed of ids) {
+    if (listed.startsWith(`${id}#`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+interface KeyedLine {
+  text: string;
+  status: string;
+  path: string;
+}
+
+interface LineContext {
+  read: (path: string, side: ContentSide) => string | null;
+  violations: string[];
+}
+
+class Unreadable extends Error {}
+
+/** Reads every changed file the rules need, recording `unreadable content` for what fails; returns the readable texts. */
+function reader(pr: OwnershipPrInput, violations: string[]): (path: string, side: ContentSide) => string | null {
+  const reported = new Set<string>();
+  return (path, side) => {
+    const sha = (side === "base" ? pr.mergeBase : pr.headSha) ?? `the ${side === "base" ? "merge base" : "head commit"}`;
+    const fail = (): never => {
+      const line = `unreadable content: ${path} at ${sha} could not be read; failing closed (AD-16)`;
+      if (!reported.has(line)) {
+        reported.add(line);
+        violations.push(line);
+      }
+      throw new Unreadable(line);
+    };
+    if (pr.content === undefined) {
+      return fail();
+    }
+    let text: string | null;
+    try {
+      text = pr.content(path, side);
+    } catch {
+      return fail();
+    }
+    // A side the file list says exists must be there.
+    if (text === null) {
+      return fail();
+    }
+    return text;
+  };
+}
+
+/** The Expectations lines of the changed shards on one side, by `id [variant]`, or null when a shard was unreadable or unparsable. */
+function expectationLines(paths: readonly string[], side: ContentSide, context: LineContext, sha: string): Map<string, KeyedLine[]> | null {
+  const keyed = new Map<string, KeyedLine[]>();
+  let ok = true;
+  for (const path of paths) {
+    let text: string;
+    try {
+      text = context.read(path, side)!;
+    } catch {
+      ok = false;
+      continue;
+    }
+    const lines = text.split("\n");
+    if (lines.at(-1) === "") {
+      lines.pop();
+    }
+    lines.forEach((raw, index) => {
+      const line = raw.replace(/\r$/, "");
+      let value: unknown;
+      try {
+        value = JSON.parse(line);
+      } catch {
+        value = null;
+      }
+      const record = value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+      const id = record?.["id"];
+      const variant = record?.["variant"];
+      const status = record?.["status"];
+      if (record === null || typeof id !== "string" || typeof variant !== "string" || typeof status !== "string") {
+        context.violations.push(`unparsable expectation: ${path}:${index + 1} at ${sha} is not an Expectations line with a string id, variant and status; failing closed (AD-16)`);
+        ok = false;
+        return;
+      }
+      const key = `${id} [${variant}]`;
+      const list = keyed.get(key) ?? [];
+      list.push({ text: line, status, path });
+      keyed.set(key, list);
+    });
+  }
+  return ok ? keyed : null;
+}
+
+/** The `portedTest` blocks of the changed Ported Test files on one side, by id, or null when a file was unreadable or unbalanced. */
+function portedBlocks(paths: readonly string[], side: ContentSide, context: LineContext, sha: string): Map<string, { text: string; at: string }[]> | null {
+  const keyed = new Map<string, { text: string; at: string }[]>();
+  let ok = true;
+  for (const path of paths) {
+    let text: string;
+    try {
+      text = context.read(path, side)!;
+    } catch {
+      ok = false;
+      continue;
+    }
+    const scanned = scanPortedBlocks(text);
+    if (scanned.blocks === null) {
+      context.violations.push(`unparsable ported test file: ${path} at ${sha}: ${scanned.error}; failing closed (AD-16)`);
+      ok = false;
+      continue;
+    }
+    for (const block of scanned.blocks) {
+      if (block.id === null) {
+        const line = `unresolved ported test id: ${path}:${block.line} has a portedTest whose id is not a string literal or a template of top-level string constants; failing closed (AD-16)`;
+        if (!context.violations.includes(line)) {
+          context.violations.push(line);
+        }
+        ok = false;
+        continue;
+      }
+      const list = keyed.get(block.id) ?? [];
+      list.push({ text: block.text, at: `${path}:${block.line}` });
+      keyed.set(block.id, list);
+    }
+  }
+  return ok ? keyed : null;
+}
+
+function sameTexts(a: readonly { text: string }[] | undefined, b: readonly { text: string }[] | undefined): boolean {
+  const left = (a ?? []).map((item) => item.text).sort(compare);
+  const right = (b ?? []).map((item) => item.text).sort(compare);
+  return left.length === right.length && left.every((text, index) => text === right[index]);
+}
+
+/** The Test IDs each approved Escalation lists: on base (`root`), or in the PR head when the PR changes it; decisions from base. */
+function approvedTestIds(root: string, files: readonly PrFile[], read: (path: string, side: ContentSide) => string | null): { ids: Set<string>; complete: boolean } {
+  const texts = new Map<string, string>();
+  const dir = join(root, ESCALATIONS_DIR);
+  if (existsSync(dir)) {
+    for (const name of readdirSync(dir).sort(compare)) {
+      const match = ESCALATION_FILE.exec(`${ESCALATIONS_DIR}/${name}`);
+      if (match !== null) {
+        texts.set(match[1]!, readFileSync(join(dir, name), "utf8"));
+      }
+    }
+  }
+  let complete = true;
+  for (const prFile of files) {
+    const { base, head } = sidesOf(prFile);
+    // A PR that removes or renames away an Escalation takes it out of play.
+    const removed = base === null ? null : ESCALATION_FILE.exec(base);
+    if (removed !== null) {
+      texts.delete(removed[1]!);
+    }
+    const changed = head === null ? null : ESCALATION_FILE.exec(head);
+    if (changed !== null) {
+      try {
+        texts.set(changed[1]!, read(head!, "head")!);
+      } catch {
+        complete = false;
+      }
+    }
+  }
+  const ids = new Set<string>();
+  for (const [id, text] of texts) {
+    const parsed = parseEscalation(`${ESCALATIONS_DIR}/${id}.md`, text);
+    if (parsed.escalation === null) {
+      continue;
+    }
+    const decisionPath = join(root, DECISIONS_DIR, `${id}.md`);
+    const decision = existsSync(decisionPath) ? readFileSync(decisionPath, "utf8") : null;
+    if (decisionStatus(id, text, decision) === "approved") {
+      parsed.escalation.testIds.forEach((testId) => ids.add(testId));
+    }
+  }
+  return { ids, complete };
+}
+
+/** The line-rule violations of a PR (see the header); `owned` is the Story's `test_ids`, or null off `story/*` branches. */
+function lineRules(root: string, pr: OwnershipPrInput, storyId: string | null, owned: ReadonlySet<string> | null): string[] {
+  const violations: string[] = [];
+  const read = reader(pr, violations);
+  const context: LineContext = { read, violations };
+  const baseSha = pr.mergeBase ?? "the merge base";
+  const headSha = pr.headSha ?? "the head commit";
+  const reads = contentReads(pr.headRef, pr.files);
+  const pathsOf = (pattern: RegExp, side: ContentSide): string[] => reads.filter((entry) => entry.side === side && pattern.test(entry.path)).map((entry) => entry.path);
+
+  const shardsBase = pathsOf(EXPECTATIONS_FILE, "base");
+  const shardsHead = pathsOf(EXPECTATIONS_FILE, "head");
+  if (shardsBase.length > 0 || shardsHead.length > 0) {
+    const before = expectationLines(shardsBase, "base", context, baseSha);
+    const after = expectationLines(shardsHead, "head", context, headSha);
+    if (before !== null && after !== null) {
+      const keys = [...new Set([...before.keys(), ...after.keys()])].sort(compare);
+      const changed = keys.filter((key) => !sameTexts(before.get(key), after.get(key)));
+      const demoted = changed.filter((key) => (before.get(key) ?? []).some((line) => line.status === "pass") && !(after.get(key) ?? []).some((line) => line.status === "pass"));
+      const approved = demoted.length > 0 ? approvedTestIds(root, pr.files, read) : { ids: new Set<string>(), complete: true };
+      for (const key of changed) {
+        const lines = [...(after.get(key) ?? []), ...(before.get(key) ?? [])];
+        const shards = [...new Set(lines.map((line) => line.path))].join(", ");
+        const id = key.slice(0, key.lastIndexOf(" ["));
+        if (owned !== null && !covers(owned, id)) {
+          violations.push(`unowned expectation: ${key} changes in ${shards}, but Story ${storyId}'s test_ids do not list it (AD-16)`);
+        }
+        if (demoted.includes(key) && approved.complete && !covers(approved.ids, id)) {
+          const next = after.get(key)?.[0]?.status ?? "removed";
+          violations.push(`pass demoted: ${key} changes from pass to ${next} in ${shards} with no approved Escalation listing it (AD-16)`);
+        }
+      }
+    }
+  }
+
+  if (owned !== null) {
+    const portedBase = pathsOf(PORTED_FILE, "base");
+    const portedHead = pathsOf(PORTED_FILE, "head");
+    if (portedBase.length > 0 || portedHead.length > 0) {
+      const before = portedBlocks(portedBase, "base", context, baseSha);
+      const after = portedBlocks(portedHead, "head", context, headSha);
+      if (before !== null && after !== null) {
+        const ids = [...new Set([...before.keys(), ...after.keys()])].sort(compare);
+        for (const id of ids) {
+          if (!sameTexts(before.get(id), after.get(id)) && !coversBlock(owned, id)) {
+            const at = (after.get(id) ?? before.get(id) ?? [])[0]!.at;
+            violations.push(`unowned ported test: ${id} at ${at} changes, but Story ${storyId}'s test_ids do not list it (AD-16)`);
+          }
+        }
+      }
+    }
+  }
+  return violations;
+}
+
 /** Decides a PR from its head branch and files, given the base checkout at `root`. */
 export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResult {
   if (pr.headRef.startsWith(PLANNING_BRANCH)) {
@@ -425,6 +782,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
           `planning scope: ${path} may not change on a planning/* branch; packages/** and conformance/expectations/** change only through story/* branches (AD-16)`,
       ),
     ];
+    // No line rules: the planning rule already rejects every Expectations change, so a demotion cannot pass here.
     return { storyId: null, outOfScope, violations };
   }
   if (pr.headRef.startsWith(BOT_BRANCH)) {
@@ -439,7 +797,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
     return { storyId: null, outOfScope, violations };
   }
   if (!pr.headRef.startsWith(STORY_BRANCH)) {
-    return { storyId: null, outOfScope: [], violations: [] };
+    return { storyId: null, outOfScope: [], violations: lineRules(root, pr, null, null) };
   }
   const storyId = pr.headRef.slice(STORY_BRANCH.length);
   const violations: string[] = truncated(pr);
@@ -463,6 +821,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
   for (const candidate of outOfScope) {
     violations.push(`out of scope: ${candidate} is outside Story ${storyId}'s allowed paths (component ${manifest.component}) (AD-16)`);
   }
+  violations.push(...lineRules(root, pr, storyId, new Set(manifest.testIds)));
   return { storyId, outOfScope, violations };
 }
 
@@ -530,13 +889,52 @@ async function pr(options: Options): Promise<number> {
   const token = process.env["GH_TOKEN"] || null;
   const github = new GitHub(api, options.repo, token);
 
-  const pull = await github.json<{ head: { ref: string }; changed_files: number }>(`/pulls/${options.pr}`);
+  const pull = await github.json<{ head: { ref: string; sha?: unknown }; base?: { sha?: unknown } | null; changed_files: number }>(`/pulls/${options.pr}`);
   const headRef = pull.head.ref;
   if (typeof headRef !== "string" || typeof pull.changed_files !== "number") {
     throw new Error(`GET /pulls/${options.pr}: missing head.ref or changed_files`);
   }
   const files = await github.paged<PrFile>(`/pulls/${options.pr}/files`);
-  const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files });
+  // The line rules (Story 5.6) read only the files they judge, at the merge base and the head commit.
+  const reads = contentReads(headRef, files);
+  const headSha = typeof pull.head.sha === "string" ? pull.head.sha : null;
+  let mergeBase: string | null = null;
+  const fetched = new Map<string, string | null | Error>();
+  if (reads.length > 0) {
+    if (headSha === null) {
+      throw new Error(`GET /pulls/${options.pr}: missing head.sha`);
+    }
+    if (reads.some((entry) => entry.side === "base")) {
+      const baseSha = pull.base?.sha;
+      if (typeof baseSha !== "string") {
+        throw new Error(`GET /pulls/${options.pr}: missing base.sha`);
+      }
+      const compared = await github.json<{ merge_base_commit?: { sha?: unknown } | null }>(`/compare/${baseSha}...${headSha}`);
+      const sha = compared.merge_base_commit?.sha;
+      if (typeof sha !== "string") {
+        throw new Error(`GET /compare/${baseSha}...${headSha}: missing merge_base_commit.sha`);
+      }
+      mergeBase = sha;
+    }
+    await Promise.all(
+      reads.map(async ({ path, side }) => {
+        const ref = side === "base" ? mergeBase! : headSha;
+        try {
+          fetched.set(`${side}\0${path}`, await github.contents(path, ref));
+        } catch (error) {
+          fetched.set(`${side}\0${path}`, error instanceof Error ? error : new Error(String(error)));
+        }
+      }),
+    );
+  }
+  const content = (path: string, side: ContentSide): string | null => {
+    const value = fetched.get(`${side}\0${path}`);
+    if (value === undefined || value instanceof Error) {
+      throw value ?? new Error(`${path} was not fetched`);
+    }
+    return value;
+  };
+  const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha });
 
   if (result.violations.length > 0) {
     report(result.violations);

@@ -14,9 +14,18 @@
 //     `xaravel_test_ids` (`id <id> is not owned by Story <id>`);
 //   - its `sha256` repeats an earlier line of the file;
 //   - its `sha256` is a batch request (`conformance/oracle/requests/`): the
-//     batch already evaluates and signs it;
+//     batch already evaluates and signs it (a candidate only, below);
 //   - it is listed in `conformance/oracle/nondeterminism.jsonl`: a listed
 //     request gets no fixture.
+//
+// Candidate and committed state (Story 5.6 AC5, Epic 3 retro R5). A candidate
+// (`judgeStoryRequests` with the batch, as `oracle:story` judges a Story's file
+// before it merges) is rejected for a batch request or a request another
+// committed per-Story file holds. Once merged, the file stays valid:
+// `readStoryRequestFiles` judges committed files with no batch, in merge order
+// (./merge-order.ts), and a request an earlier-merged file holds is shadowed in
+// a later file, not rejected. The earlier-merged Story owns it, and the batch
+// extraction skips every request a merged per-Story file holds.
 //
 // A file that does not end with LF has one more, file-level problem; its last
 // line is judged as it is. The manifest is `stories/<story-id>.md`, read by
@@ -30,8 +39,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { mergeOrder } from "./merge-order";
 import { ORACLE_DIR } from "./oracle";
-import { compareUnits, renderRequest, validateRequest, type JsonObject, type OracleRequest } from "./request";
+import { renderRequest, validateRequest, type JsonObject, type OracleRequest } from "./request";
 
 export const STORY_REQUESTS_DIR = "conformance/oracle-requests";
 const LISTING_FILE = `${ORACLE_DIR}/nondeterminism.jsonl`;
@@ -155,8 +165,16 @@ export interface StoryRequestFile {
   storyId: string | null;
   /** The manifest's Component, or null when there is no valid manifest. */
   component: string | null;
+  /** The requests this file owns: accepted, and held by no earlier-merged file. */
   accepted: AcceptedRequest[];
+  /** Accepted requests an earlier-merged file already owns (Story 5.6 AC5): valid, but not this file's. */
+  shadowed: ShadowedRequest[];
   rejections: Rejection[];
+}
+
+export interface ShadowedRequest extends AcceptedRequest {
+  /** The owner's `<file>:<line>`. */
+  owner: string;
 }
 
 /** The repo-relative manifest path of a Story. */
@@ -185,12 +203,14 @@ export function readStoryManifest(root: string, storyId: string): Manifest {
 }
 
 /**
- * Reads and judges every committed `conformance/oracle-requests/*` entry under `root`, sorted by name. A name other
- * than `<story-id>.jsonl`, or a Story without a valid manifest, is a file-level rejection with nothing accepted. A
- * request accepted in an earlier file is rejected in a later one, so each accepted `sha256` has one source. `skip`
- * (a repo-relative path) is left out.
+ * Reads and judges every committed `conformance/oracle-requests/*` entry under `root`, in merge order
+ * (./merge-order.ts; throws on a shallow repository). A name other than `<story-id>.jsonl`, or a Story without a valid
+ * manifest, is a file-level rejection with nothing accepted. Committed files are judged with no batch: a merged file
+ * stays valid when the batch later produces one of its requests. A request accepted in an earlier-merged file is
+ * shadowed in a later one, so each accepted `sha256` has one source, its owner. `skip` (a repo-relative path) is left
+ * out.
  */
-export function readStoryRequestFiles(root: string, schema: JsonObject, batch: ReadonlyMap<string, string>, listed: ReadonlyMap<string, number>, skip: string | null = null): StoryRequestFile[] {
+export function readStoryRequestFiles(root: string, schema: JsonObject, listed: ReadonlyMap<string, number>, skip: string | null = null): StoryRequestFile[] {
   const dir = join(root, STORY_REQUESTS_DIR);
   if (!existsSync(dir)) {
     return [];
@@ -200,12 +220,15 @@ export function readStoryRequestFiles(root: string, schema: JsonObject, batch: R
   }
   const out: StoryRequestFile[] = [];
   const owners = new Map<string, string>();
-  for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareUnits(a.name, b.name))) {
+  const entries = new Map(readdirSync(dir, { withFileTypes: true }).map((entry) => [entry.name, entry] as const));
+  const noBatch = new Map<string, string>();
+  for (const entryName of mergeOrder(root, [...entries.keys()])) {
+    const entry = entries.get(entryName)!;
     const file = `${STORY_REQUESTS_DIR}/${entry.name}`;
     if (file === skip) {
       continue;
     }
-    const fileProblem = (reason: string, storyId: string | null = null): StoryRequestFile => ({ file, storyId, component: null, accepted: [], rejections: [{ line: null, id: null, sha256: null, reasons: [reason] }] });
+    const fileProblem = (reason: string, storyId: string | null = null): StoryRequestFile => ({ file, storyId, component: null, accepted: [], shadowed: [], rejections: [{ line: null, id: null, sha256: null, reasons: [reason] }] });
     const name = STORY_FILE.exec(entry.name);
     if (!entry.isFile() || name === null) {
       out.push(fileProblem(`not a per-Story request file; ${STORY_REQUESTS_DIR}/ holds only <story-id>.jsonl files`));
@@ -219,19 +242,19 @@ export function readStoryRequestFiles(root: string, schema: JsonObject, batch: R
       out.push(fileProblem(`no valid manifest: ${error instanceof Error ? error.message : String(error)}`, storyId));
       continue;
     }
-    const judged = judgeStoryRequests(readFileSync(join(dir, entry.name), "utf8"), file, manifest, schema, batch, listed);
+    const judged = judgeStoryRequests(readFileSync(join(dir, entry.name), "utf8"), file, manifest, schema, noBatch, listed);
     const accepted: AcceptedRequest[] = [];
+    const shadowed: ShadowedRequest[] = [];
     for (const item of judged.accepted) {
-      const other = owners.get(item.request.sha256);
-      if (other !== undefined) {
-        judged.rejections.push({ line: item.line, id: item.request.id, sha256: item.request.sha256, reasons: [`request ${item.request.sha256} is also in ${other}`] });
+      const owner = owners.get(item.request.sha256);
+      if (owner !== undefined) {
+        shadowed.push({ ...item, owner });
         continue;
       }
       owners.set(item.request.sha256, `${file}:${item.line}`);
       accepted.push(item);
     }
-    judged.rejections.sort((a, b) => (a.line ?? Number.MAX_SAFE_INTEGER) - (b.line ?? Number.MAX_SAFE_INTEGER));
-    out.push({ file, storyId, component: manifest.component, accepted, rejections: judged.rejections });
+    out.push({ file, storyId, component: manifest.component, accepted, shadowed, rejections: judged.rejections });
   }
   return out;
 }
