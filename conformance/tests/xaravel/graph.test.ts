@@ -1,11 +1,12 @@
 // Xaravel Tests for Story 1.3 (dependency-graph check).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { checkGraph } from "../../../tools/graph/graph";
 import { readTable } from "../../../tools/scaffold/table";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 
@@ -80,7 +81,7 @@ async function withFixtures(fixtures: Record<string, FixturePackage>[], body: (d
   }
 }
 
-test("XT-conformance-11: a dependency cycle between packages fails the graph check and is printed once, starting at its smallest name; self-dependencies are cycles and peers are not edges (AD-2)", async () => {
+xaravelTest("XT-conformance-11", "a dependency cycle between packages fails the graph check and is printed once, starting at its smallest name; self-dependencies are cycles and peers are not edges (AD-2)", async () => {
   await withFixtures(
     [
       { a: { npm: "@x/a", manifest: { dependencies: workspace("@x/b") } }, b: { npm: "@x/b", manifest: { dependencies: workspace("@x/a") } } },
@@ -117,7 +118,7 @@ test("XT-conformance-11: a dependency cycle between packages fails the graph che
   );
 });
 
-test("XT-conformance-12: a static import of a package not in the importer's dependencies fails, naming the file, the import and the missing dependency; peers pass only through a guarded import() (AD-2)", async () => {
+xaravelTest("XT-conformance-12", "a static import of a package not in the importer's dependencies fails, naming the file, the import and the missing dependency; peers pass only through a guarded import() (AD-2)", async () => {
   await withFixtures(
     [
       {
@@ -204,7 +205,7 @@ test("XT-conformance-12: a static import of a package not in the importer's depe
   );
 });
 
-test("XT-conformance-13: Foundation depending on a later-Phase package fails the graph check under AD-2; same-or-earlier Phases and later-Phase optional peers pass; runtime depends on nothing and contracts only on runtime (AD-2)", async () => {
+xaravelTest("XT-conformance-13", "Foundation depending on a later-Phase package fails the graph check under AD-2; same-or-earlier Phases and later-Phase optional peers pass; runtime depends on nothing and contracts only on runtime (AD-2)", async () => {
   const base = {
     routing: { phase: 6 },
     database: { phase: 4 },
@@ -258,7 +259,7 @@ test("XT-conformance-13: Foundation depending on a later-Phase package fails the
   );
 });
 
-test("XT-conformance-14: a graded package with a runtime edge to a grader package fails; only testing -> mockery (dependency) and support -> mockery (optional peer) pass, and devDependencies on the grader always pass; a grader package depends on nothing graded (AD-2)", async () => {
+xaravelTest("XT-conformance-14", "a graded package with a runtime edge to a grader package fails; only testing -> mockery (dependency) and support -> mockery (optional peer) pass, and devDependencies on the grader always pass; a grader package depends on nothing graded (AD-2)", async () => {
   const graders = { assert: { phase: 0, kind: "grader" }, mockery: { phase: 0, kind: "grader" } };
   const optionalMockery = { peerDependencies: workspace("@xaravel/mockery"), peerDependenciesMeta: { "@xaravel/mockery": { optional: true } } };
   await withFixtures(
@@ -310,7 +311,7 @@ test("XT-conformance-14: a graded package with a runtime edge to a grader packag
   );
 });
 
-test("XT-conformance-15: a dev-only edge from test files to an earlier-Phase package is left out of the cycle check and passes; a later-Phase devDependency fails (AD-2 Tests)", async () => {
+xaravelTest("XT-conformance-15", "a dev-only edge from test files to an earlier-Phase package is left out of the cycle check and passes; a later-Phase devDependency fails (AD-2 Tests)", async () => {
   await withFixtures(
     [
       {
@@ -363,7 +364,7 @@ test("XT-conformance-15: a dev-only edge from test files to an earlier-Phase pac
   );
 });
 
-test("XT-conformance-16: a dependency declared but never imported passes the graph check, and the committed repo passes; a missing package.json and an unparseable source are violations (AD-2)", async () => {
+xaravelTest("XT-conformance-16", "a dependency declared but never imported passes the graph check, and the committed repo passes; a missing package.json and an unparseable source are violations (AD-2)", async () => {
   await withFixtures(
     [
       { collections: {}, support: { phase: 2, manifest: { dependencies: workspace("@xaravel/collections") }, files: { "src/index.ts": "export {};\n" } } },

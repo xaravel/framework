@@ -1,7 +1,7 @@
 // Xaravel Tests for Story 2.1 (Upstream snapshot and Pin record, FR-1, AD-15).
 // These run under plain `bun test` until the harness lands in Epic 5. Every
 // remote is a hermetic `file://` fixture; nothing here touches the network.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import {
   chmodSync,
   existsSync,
@@ -27,6 +27,7 @@ import {
   UPSTREAM_REPOS,
   upstreamPath,
 } from "../../../tools/upstream/upstream";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "upstream", "upstream.ts");
@@ -148,7 +149,7 @@ const checkCli = (fx: Fixture, env: Record<string, string> = {}) =>
 
 const snapshot = (fx: Fixture, name: string): string => join(fx.repo, "conformance", "upstream", name);
 
-test("XT-conformance-39: bun run upstream:sync checks out each of the four repos at its pinned tag into conformance/upstream/{framework,ai,mcp,boost}/ (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-39", "bun run upstream:sync checks out each of the four repos at its pinned tag into conformance/upstream/{framework,ai,mcp,boost}/ (FR-1, AD-15)", async () => {
   // The repository's pin: exactly four entries, at the recorded tags, with full SHAs.
   const pin = readPin(root);
   expect(pin.map((entry) => [entry.repo, entry.tag])).toEqual([
@@ -301,7 +302,7 @@ test("XT-conformance-39: bun run upstream:sync checks out each of the four repos
   });
 });
 
-test("XT-conformance-40: each snapshot directory's tree hash matches the pin, and any local modification fails the snapshot check (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-40", "each snapshot directory's tree hash matches the pin, and any local modification fails the snapshot check (FR-1, AD-15)", async () => {
   // treeHash is git's own: nested dirs, `a.b` before `a/`, the exec bit, a symlink, CRLF bytes.
   const dir = mkdtempSync(join(tmpdir(), "xaravel-tree-"));
   try {
@@ -374,7 +375,7 @@ test("XT-conformance-40: each snapshot directory's tree hash matches the pin, an
   });
 });
 
-test("XT-conformance-41: with no network, tools read Upstream source only from conformance/upstream/ and never fetch; the check and the reader never run git (FR-1, AD-15)", async () => {
+xaravelTest("XT-conformance-41", "with no network, tools read Upstream source only from conformance/upstream/ and never fetch; the check and the reader never run git (FR-1, AD-15)", async () => {
   await withFixture(async (fx) => {
     expect((await syncCli(fx)).code).toBe(0);
 

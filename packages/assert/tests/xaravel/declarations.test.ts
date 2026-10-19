@@ -5,7 +5,7 @@
 // with the junit reporter, then read the junit names and failures, the report
 // file (the harness reporter protocol) and the declaration probes. Like 4.1's
 // tests these are plain bun:test: `xaravelTest` is not used to test itself.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -184,7 +184,7 @@ const PHASES: [string, string[]][] = [
   [`${POINT}::testBodyAndTearDownThrow`, FULL],
 ];
 
-test("XT-assert-4: portedTest labels each dataset row with its full Test ID, binds this to the case instance through setUp, body and tearDown, and runs inside the scope protocol's test frame when one is installed", () => {
+xaravelTest("XT-assert-4", "portedTest labels each dataset row with its full Test ID, binds this to the case instance through setUp, body and tearDown, and runs inside the scope protocol's test frame when one is installed", () => {
   for (const mode of ["scope", "noScope"] as const) {
     const withScope = mode === "scope";
     const run = runFixture(mode);
@@ -210,7 +210,7 @@ test("XT-assert-4: portedTest labels each dataset row with its full Test ID, bin
   }
 }, CHILD_TIMEOUT);
 
-test("XT-assert-5: a Ported Test that executes zero assertions fails with 'zero assertions'; a throwing body fails with its own error; an assertion-free Xaravel Test passes", () => {
+xaravelTest("XT-assert-5", "a Ported Test that executes zero assertions fails with 'zero assertions'; a throwing body fails with its own error; an assertion-free Xaravel Test passes", () => {
   for (const mode of ["scope", "noScope"] as const) {
     const { results, exitCode } = runFixture(mode);
     expect(results.get(`${POINT}::testNothing`)).toBe(`${POINT}::testNothing: Ported Test executed zero assertions (FR-113)`);
@@ -231,7 +231,7 @@ test("XT-assert-5: a Ported Test that executes zero assertions fails with 'zero 
   }
 }, CHILD_TIMEOUT);
 
-test("XT-assert-6: every finished test, passing or failing, reports its type, full Test ID, consequence and assertion-kind multiset (keys sorted) to the harness reporter", () => {
+xaravelTest("XT-assert-6", "every finished test, passing or failing, reports its type, full Test ID, consequence and assertion-kind multiset (keys sorted) to the harness reporter", () => {
   const keyed = { assertSame: 2, assertTrue: 1 };
   const ported = (id: string, assertions: Record<string, number>): Record<string, unknown> => ({ type: "ported", id: `${POINT}::${id}`, consequence: null, assertions });
   const expected = [
@@ -283,10 +283,14 @@ test("XT-assert-6: every finished test, passing or failing, reports its type, fu
   expect([...without]).toEqual(expectedWithout);
 }, CHILD_TIMEOUT);
 
-test("XT-assert-7: xaravelTest throws TypeError at declaration when the FR consequence is empty, and bad ids, datasets, kinds and duplicate Test IDs throw before any test is registered", () => {
+xaravelTest("XT-assert-7", "xaravelTest throws TypeError at declaration when the FR consequence is empty, and bad ids, datasets, kinds and duplicate Test IDs throw before any test is registered", () => {
   const fn = (): void => {};
   expect(() => xaravelTest("XT-assert-99", "", fn)).toThrow(TypeError);
   expect(() => xaravelTest("XT-assert-99", "   ", fn)).toThrow(TypeError);
+  // The optional timeout (Story 5.9) must be a positive number of milliseconds.
+  for (const timeout of [0, -1, Number.NaN]) {
+    expect(() => xaravelTest("XT-assert-99", "a consequence", fn, timeout)).toThrow(TypeError);
+  }
   for (const id of ["assert-4", "XT-assert-0", "XT-assert-01", "XT-Assert-4", "XT--4", "XT-assert", ""]) {
     expect(() => xaravelTest(id, "a consequence", fn)).toThrow(TypeError);
   }

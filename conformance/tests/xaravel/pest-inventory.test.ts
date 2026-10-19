@@ -5,7 +5,7 @@
 // lines, so no test needs PHP, a container runtime or vendor files. The
 // committed Inventory files are checked directly, and against the Upstream
 // snapshots when they are present.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -30,6 +30,7 @@ import {
   type PestSuite,
   type RawTest,
 } from "../../../tools/inventory/inventory";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "inventory", "inventory.ts");
@@ -214,7 +215,7 @@ function ids(text: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-53
 
-test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
+xaravelTest("XT-conformance-53", "bun run inventory gives every Pest test in the ai, mcp and boost snapshots an entry {id, component, kind, backends, source, hash, assertions, oracle} with id <suite>/<file>::<describe> > … > <test name>#<dataset> (FR-1)", async () => {
   await withFixture(async (fx) => {
     // Valid files, since generating all reads each suite's files for carry-over (a file that does not parse stops it).
     const stays = (id: string, component: string, source: string): string => `{"id":${JSON.stringify(id)},"component":"${component}","kind":"unit","backends":["none"],"source":"${source}","hash":"${"0".repeat(64)}","assertions":null,"oracle":{}}\n`;
@@ -432,7 +433,7 @@ test("XT-conformance-53: bun run inventory gives every Pest test in the ai, mcp 
 // ---------------------------------------------------------------------------
 // XT-conformance-54
 
-test("XT-conformance-54: each Pest with() dataset is its own entry carrying Pest's dataset label (FR-1)", async () => {
+xaravelTest("XT-conformance-54", "each Pest with() dataset is its own entry carrying Pest's dataset label (FR-1)", async () => {
   await withFixture((fx) => {
     generate(fx.dir, { suite: "mcp", local: fx.local("mcp"), php: fx.php });
     const entries = parseInventory(fx.inventory()["mcp.jsonl"]!, "mcp.jsonl", "mcp").filter((entry) => entry.id.includes("it takes a dataset"));
@@ -472,7 +473,7 @@ test("XT-conformance-54: each Pest with() dataset is its own entry carrying Pest
 // ---------------------------------------------------------------------------
 // XT-conformance-55
 
-test("XT-conformance-55: every laravel/ai entry is Component ai in ai.jsonl, mcp and boost entries are mcp and boost, and a Pest file mapped to another Component fails (FR-1)", async () => {
+xaravelTest("XT-conformance-55", "every laravel/ai entry is Component ai in ai.jsonl, mcp and boost entries are mcp and boost, and a Pest file mapped to another Component fails (FR-1)", async () => {
   for (const suite of PEST_SUITES) {
     const entries = committed(suite);
     expect([suite, entries.every((entry) => entry.component === suite)]).toEqual([suite, true]);

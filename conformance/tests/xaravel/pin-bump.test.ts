@@ -5,11 +5,12 @@
 // `conformance/inventory/*.jsonl`, fixture AD-15 Expectations shards, a fixture
 // sprint status and, for move mode, local `file://` remotes. Nothing here
 // touches the network.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "pin-bump", "pin-bump.ts");
@@ -210,7 +211,7 @@ function moveFixture(sprint = SPRINT_DONE): Fixture & { base: string; pin: strin
 // ---------------------------------------------------------------------------
 // XT-conformance-62
 
-test("XT-conformance-62: given two Pins, bun run pin:bump <tag> moves the framework line, then in diff mode prints the added, changed (same ID, different hash) and removed Test IDs and writes the bump record (FR-7)", async () => {
+xaravelTest("XT-conformance-62", "given two Pins, bun run pin:bump <tag> moves the framework line, then in diff mode prints the added, changed (same ID, different hash) and removed Test IDs and writes the bump record (FR-7)", async () => {
   // Move mode: the framework line names another tag.
   const mv = moveFixture();
   await withFixture(mv, async () => {
@@ -386,7 +387,7 @@ test("XT-conformance-62: given two Pins, bun run pin:bump <tag> moves the framew
 // ---------------------------------------------------------------------------
 // XT-conformance-63
 
-test("XT-conformance-63: --apply resets a changed Test ID's Expectations lines to skip / not-ported-yet / null / null in their original shard, and the record keeps the prior status (FR-7)", async () => {
+xaravelTest("XT-conformance-63", "--apply resets a changed Test ID's Expectations lines to skip / not-ported-yet / null / null in their original shard, and the record keeps the prior status (FR-7)", async () => {
   const before = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1"), entry(`${SUPPORT}::testB`, "support", "2")]) };
   const after = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1"), entry(`${SUPPORT}::testB`, "support", "5")]) };
   const shard = [
@@ -439,7 +440,7 @@ test("XT-conformance-63: --apply resets a changed Test ID's Expectations lines t
 // ---------------------------------------------------------------------------
 // XT-conformance-64
 
-test("XT-conformance-64: --apply rewrites a renamed Test ID's lines (same hash and component) to the new ID keeping status, reason, adapted and escalation, and the record keeps both IDs and the prior expectations (FR-7)", async () => {
+xaravelTest("XT-conformance-64", "--apply rewrites a renamed Test ID's lines (same hash and component) to the new ID keeping status, reason, adapted and escalation, and the record keeps both IDs and the prior expectations (FR-7)", async () => {
   const before = {
     "support.jsonl": inventory([entry(`${SUPPORT}::testOld`, "support", "8"), entry(`${SUPPORT}::testTwinA`, "support", "9"), entry(`${SUPPORT}::testTwinB`, "support", "9")]),
     "bus.jsonl": inventory([entry(`${BUS}::testMoved`, "bus", "a")]),
@@ -482,7 +483,7 @@ test("XT-conformance-64: --apply rewrites a renamed Test ID's lines (same hash a
 // ---------------------------------------------------------------------------
 // XT-conformance-65
 
-test("XT-conformance-65: --apply deletes a removed Test ID's Expectations lines (and a shard left empty), and the record keeps the ID, shard, variant and last status (FR-7)", async () => {
+xaravelTest("XT-conformance-65", "--apply deletes a removed Test ID's Expectations lines (and a shard left empty), and the record keeps the ID, shard, variant and last status (FR-7)", async () => {
   const before = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1"), entry(`${SUPPORT}::testC`, "support", "3")]) };
   const after = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1")]) };
   const fx = diffFixture(before, after, {
@@ -514,7 +515,7 @@ test("XT-conformance-65: --apply deletes a removed Test ID's Expectations lines 
 // ---------------------------------------------------------------------------
 // XT-conformance-66
 
-test("XT-conformance-66: given added and changed Test IDs in two Components, --apply writes one backlog stub per Component listing them (FR-7)", async () => {
+xaravelTest("XT-conformance-66", "given added and changed Test IDs in two Components, --apply writes one backlog stub per Component listing them (FR-7)", async () => {
   const before = {
     "support.jsonl": inventory([entry(`${SUPPORT}::testB`, "support", "2"), entry(`${SUPPORT}::testOld`, "support", "8")]),
     "bus.jsonl": inventory([entry(`${BUS}::testB`, "bus", "2")]),
@@ -568,7 +569,7 @@ test("XT-conformance-66: given added and changed Test IDs in two Components, --a
 // ---------------------------------------------------------------------------
 // XT-conformance-67
 
-test("XT-conformance-67: while any epic-<N> is in-progress in sprint status, pin:bump exits 1, lists the in-flight Epics and changes no file, in both move and diff mode (FR-7)", async () => {
+xaravelTest("XT-conformance-67", "while any epic-<N> is in-progress in sprint status, pin:bump exits 1, lists the in-flight Epics and changes no file, in both move and diff mode (FR-7)", async () => {
   const expected = "  epic-3\n  epic-5\n  epic-10\n";
   const mv = moveFixture(SPRINT_IN_FLIGHT);
   await withFixture(mv, async () => {

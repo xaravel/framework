@@ -1,10 +1,15 @@
-// The conformance harness runner (Stories 5.3, 5.4 and 5.5; FR-3, FR-9,
-// FR-113, AD-15, AD-17).
+// The conformance harness runner (Stories 5.3, 5.4, 5.5 and 5.9; FR-3, FR-9,
+// FR-113, FR-115, AD-15, AD-17).
 //
 //   bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast]
 //       [--seed <s>] [--component <c>]… [--id <glob>]… [--story <story-id>]
 //       (`bun run harness`) runs the Ported Tests once per Variant and
-//       compares the results with the Expectations File
+//       compares the results with the Expectations File; a full run (no
+//       filter, no `--fast`) then also runs the Xaravel Tests (below)
+//   bun --no-env-file conformance/harness/harness.ts [--root <dir>] --xaravel
+//       [--id <glob>]…
+//       runs only the Xaravel Tests; `--id` globs then select XT ids, and
+//       `--component`, `--story`, `--fast` and `--seed` are usage errors
 //
 // Selection (Story 5.4, ./select.ts). With no filter and no `--fast`, every
 // Expectations line is checked. Otherwise the universe is the Expectations
@@ -103,6 +108,24 @@
 // tail of the run's stderr goes to the diagnostics. The child env drops
 // `BUN_OPTIONS` and `NODE_OPTIONS`, which could add a preload or flags.
 //
+// The Xaravel run (Story 5.9, ./xaravel.ts). After every Variant run, the
+// harness stops the Redis it started and releases its lock (Xaravel Tests use
+// no backend, and some start harness runs of their own, on the real root
+// too), then spawns one more `bun test` as above, with `XARAVEL_VARIANT=none`,
+// over every `conformance/tests/xaravel/**/*.test.ts` and
+// `packages/*/tests/xaravel/**/*.test.ts` (with `-t` when `--id` globs are
+// given), and reads the preload's `type: "xaravel"` reports. Its report lines
+// (`<id> [xaravel] FAIL|MISSING|LATE`, `- [xaravel] UNDECLARED <name>`, and
+// `ERROR [xaravel] bun test exited <n> with no failing testcase`) follow the
+// Variant lines, each one difference, and
+//   XARAVEL tests=<n> passed=<p> failed=<f> skipped=<s>
+// comes right before SUMMARY, whose format does not change. `runHarness` runs
+// no Xaravel Tests unless `options.xaravel` asks for them, so the Ratchet and
+// other callers are unaffected. With `--xaravel` no Variant runs and no
+// Expectations data is read: SUMMARY reads `variants=0 run=0 not-run=0
+// checked=0 differ=<d>`. A root with no Xaravel Test file spawns nothing for
+// the Xaravel run and prints only its MISSING lines.
+//
 // Assertion-floor waiver (ESC-5.3-2): a below-floor pass is waived when the
 // line's `adapted` is `DIV-<n>.<clause>`, `decisions/DIV-<n>.md` exists, and its
 // YAML frontmatter `fewer_assertions` list contains `<clause>`.
@@ -122,6 +145,7 @@ import { compare, type Difference, type HarnessLine, type HarnessReport, type Re
 import { parseJunit } from "./junit";
 import { IsolationError, acquireLock, creationId, isolationEnv, postgresAdmin, preparePostgres, prepareSqlite, startRedis, worktreeKey, worktreeOf, type Lock, type PgAdmin, type RedisServer } from "./isolation";
 import { FAST_SAMPLE, SEED, namePattern, sampleIds, selectIds } from "./select";
+import { judgeXaravel, xaravelNamePattern, xaravelTestFiles, type XaravelOptions, type XaravelReport, type XaravelResult } from "./xaravel";
 
 /** The preload every run gets: this directory's, whatever the root. */
 export const PRELOAD = join(import.meta.dir, "preload.ts");
@@ -153,6 +177,8 @@ export interface HarnessOptions {
   readonly postgres?: (env: Env) => PgAdmin;
   /** Receives, while the run lasts, the cleanup that stops its Redis and releases its lock, then null (internal: the CLI's signal handlers). */
   readonly onCleanup?: (cleanup: (() => Promise<void>) | null) => void;
+  /** Also (or, with `only`, just) run the Xaravel Tests (Story 5.9); absent or null runs none. */
+  readonly xaravel?: XaravelOptions | null;
 }
 
 /** The worktree the harness ran in and its key (Story 5.5). */
@@ -185,6 +211,8 @@ export interface HarnessResult {
   readonly sample: HarnessSample | null;
   /** The worktree and its key once known, null before that. */
   readonly worktree: HarnessWorktree | null;
+  /** The Xaravel run's result when one ran, else null (Story 5.9). */
+  readonly xaravel: XaravelResult | null;
 }
 
 /** Whether `summaryLine` is the SUMMARY line of a full (not fast) run; Story 5.9's done check must use it. */
@@ -269,13 +297,14 @@ export function waiverFor(root: string): (line: HarnessLine) => boolean {
   };
 }
 
-/** Reads the preload's JSONL output into the run's reports and late ids. */
-function readHarnessOut(path: string): { reports: Map<string, HarnessReport>; late: Set<string>; duplicates: Set<string> } {
+/** Reads the preload's JSONL output into the run's Ported Test reports, Xaravel Test reports and late ids. */
+function readHarnessOut(path: string): { reports: Map<string, HarnessReport>; late: Set<string>; duplicates: Set<string>; xaravel: XaravelReport[] } {
   const reports = new Map<string, HarnessReport>();
   const late = new Set<string>();
   const duplicates = new Set<string>();
+  const xaravel: XaravelReport[] = [];
   if (!existsSync(path)) {
-    return { reports, late, duplicates };
+    return { reports, late, duplicates, xaravel };
   }
   for (const text of readFileSync(path, "utf8").split("\n")) {
     if (text === "") {
@@ -297,12 +326,15 @@ function readHarnessOut(path: string): { reports: Map<string, HarnessReport>; la
       }
       reports.set(report["id"], report as unknown as HarnessReport);
     }
+    if (isRecord(report) && report["type"] === "xaravel" && typeof report["id"] === "string" && typeof report["consequence"] === "string" && isRecord(report["assertions"])) {
+      xaravel.push(report as unknown as XaravelReport);
+    }
     const lateRecord = record["late"];
     if (isRecord(lateRecord) && typeof lateRecord["id"] === "string") {
       late.add(lateRecord["id"]);
     }
   }
-  return { reports, late, duplicates };
+  return { reports, late, duplicates, xaravel };
 }
 
 /** The last `n` non-empty lines of `text`. */
@@ -314,8 +346,13 @@ function tail(text: string, n: number): string[] {
     .slice(-n);
 }
 
-/** Spawns one `bun test` run for `variant`; `error` is the ERROR line when bun exited non-zero with no failing testcase. */
-async function runVariant(root: string, variant: string, files: readonly string[], pattern: string | null, env: Env, isolated: Readonly<Record<string, string>>, bunArgs: readonly string[], err: string[]): Promise<VariantRun & { error: string | null }> {
+type SpawnedRun = VariantRun & { xaravel: XaravelReport[]; error: string | null };
+
+/**
+ * Spawns one `bun test` run for `variant`, labelled `label` in the report and diagnostics (the Variant, or `xaravel`
+ * for the Xaravel run); `error` is the ERROR line when bun exited non-zero with no failing testcase.
+ */
+async function runVariant(root: string, variant: string, files: readonly string[], pattern: string | null, env: Env, isolated: Readonly<Record<string, string>>, bunArgs: readonly string[], err: string[], label: string = variant): Promise<SpawnedRun> {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-harness-"));
   try {
     const junitPath = join(dir, "junit.xml");
@@ -350,18 +387,18 @@ async function runVariant(root: string, variant: string, files: readonly string[
     const child = Bun.spawn(args, { cwd: root, env: childEnv, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
     const [, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
     if (pattern !== null && exitCode !== 0 && stderr.includes("matched 0 tests")) {
-      err.push(`harness: [${variant}] bun test matched none of the selected tests over ${files.length} file(s)`);
+      err.push(`harness: [${label}] bun test matched none of the selected tests over ${files.length} file(s)`);
       return emptyRun();
     }
     if (!existsSync(junitPath)) {
-      throw new PreconditionError(`[${variant}] bun test wrote no junit report (exit ${String(exitCode)}): ${stderr.trim()}`);
+      throw new PreconditionError(`[${label}] bun test wrote no junit report (exit ${String(exitCode)}): ${stderr.trim()}`);
     }
-    err.push(`harness: [${variant}] bun test exited ${String(exitCode)} over ${files.length} file(s)`);
+    err.push(`harness: [${label}] bun test exited ${String(exitCode)} over ${files.length} file(s)`);
     const junit = parseJunit(readFileSync(junitPath, "utf8"));
     let error: string | null = null;
     if (exitCode !== 0 && ![...junit.values()].some((testcase) => testcase.outcome === "failed")) {
-      error = `ERROR [${variant}] bun test exited ${String(exitCode)} with no failing testcase`;
-      err.push(...tail(stderr, 20).map((line) => `harness: [${variant}] ${line}`));
+      error = `ERROR [${label}] bun test exited ${String(exitCode)} with no failing testcase`;
+      err.push(...tail(stderr, 20).map((line) => `harness: [${label}] ${line}`));
     }
     return { junit, ...readHarnessOut(outPath), error };
   } finally {
@@ -369,8 +406,8 @@ async function runVariant(root: string, variant: string, files: readonly string[
   }
 }
 
-function emptyRun(): VariantRun & { error: string | null } {
-  return { junit: new Map(), reports: new Map(), late: new Set<string>(), duplicates: new Set<string>(), error: null };
+function emptyRun(): SpawnedRun {
+  return { junit: new Map(), reports: new Map(), late: new Set<string>(), duplicates: new Set<string>(), xaravel: [], error: null };
 }
 
 /** The filters as given on the command line, for the empty-selection message. */
@@ -449,141 +486,169 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
     worktree = { path: tree.path, key };
     lock = acquireLock(root, process.argv.join(" "));
     const isolated = isolationEnv(root, key);
-    const vocabulary = readVariants(root);
-    if (vocabulary.violations.length > 0) {
-      throw new PreconditionError(vocabulary.violations.join("; "));
-    }
-    let shards;
-    let inventoryEntries;
-    try {
-      shards = readExpectations(root);
-      inventoryEntries = readWorkingInventory(root);
-    } catch (error) {
-      throw new PreconditionError(message(error));
-    }
-    const inventory = new Map(inventoryEntries.map((entry) => [entry.id, entry.assertions] as const));
-    const byVariant = new Map<string, HarnessLine[]>();
-    const knownIds = new Set<string>();
-    /** Each Test ID's Component: the first path segment of its shard under conformance/expectations/. */
-    const universe = new Map<string, string>();
-    const vocabularySet = new Set(vocabulary.variants);
-    for (const shard of shards) {
-      const component = shard.path.split("/")[2] ?? "";
-      shard.lines.forEach((raw, index) => {
-        const variant = raw["variant"];
-        const status = raw["status"];
-        if (typeof variant !== "string" || !vocabularySet.has(variant)) {
-          throw new PreconditionError(`${shard.path}:${index + 1}: Variant ${JSON.stringify(variant)} is not in conformance/variants`);
-        }
-        const line: HarnessLine = { id: raw["id"] as string, variant, status: typeof status === "string" ? status : String(status), reason: stringOrNull(raw["reason"]), adapted: stringOrNull(raw["adapted"]) };
-        knownIds.add(line.id);
-        if (!universe.has(line.id)) {
-          universe.set(line.id, component);
-        }
-        const list = byVariant.get(variant) ?? [];
-        list.push(line);
-        byVariant.set(variant, list);
-      });
-    }
-    const components = options.components ?? [];
-    const globs = options.ids ?? [];
-    const story = options.story ?? null;
-    const fast = options.fast === true || seedOption !== null;
-    let selected: Set<string> | null = null;
-    if (fast || components.length > 0 || globs.length > 0 || story !== null) {
-      const chosen = selectIds(universe, { components, ids: globs, story: story === null ? null : storyIds(root, story, universe, err) });
-      if (chosen.length === 0) {
-        throw new PreconditionError(`no Test ID matches ${describeFilters(options)}`);
-      }
-      if (fast) {
-        const seed = seedOption ?? randomBytes(4).toString("hex");
-        const picked = sampleIds(chosen, seed, FAST_SAMPLE);
-        sample = { seed, size: picked.length, of: chosen.length };
-        out.push(`FAST seed=${seed} sample=${picked.length}/${chosen.length}`);
-        selected = new Set(picked);
-      } else {
-        selected = new Set(chosen);
-      }
-    }
-    const linesOf = (variant: string): HarnessLine[] => {
-      const all = byVariant.get(variant) ?? [];
-      return selected === null ? all : all.filter((line) => selected.has(line.id));
-    };
-    const variants = vocabulary.variants.filter((variant) => linesOf(variant).length > 0);
-    const allFiles = portedTestFiles(root);
-    const ci = env["CI"] === "true";
-    const waived = waiverFor(root);
+    const xaravelOptions = options.xaravel ?? null;
+    const xaravelOnly = xaravelOptions?.only === true;
     const differences: Difference[] = [];
     const errors: string[] = [];
     const reportLines: string[] = [];
+    let variants: string[] = [];
     let run = 0;
     let notRun = 0;
     let checked = 0;
     let ciDifferences = 0;
-    // Backend preparation: once per backend, the first time a run Variant needs it.
-    const prepared = new Map<string, Promise<ProbeResult>>();
-    const prepare = async (backend: string): Promise<ProbeResult> => {
-      if (backend === "sqlite") {
-        prepareSqlite(root, fast);
-        return { reachable: true };
+    if (!xaravelOnly) {
+      const vocabulary = readVariants(root);
+      if (vocabulary.violations.length > 0) {
+        throw new PreconditionError(vocabulary.violations.join("; "));
       }
-      if (backend === "pgsql") {
-        return preparePostgres(env, key, fast, options.postgres ?? postgresAdmin);
+      let shards;
+      let inventoryEntries;
+      try {
+        shards = readExpectations(root);
+        inventoryEntries = readWorkingInventory(root);
+      } catch (error) {
+        throw new PreconditionError(message(error));
       }
-      if (backend === "redis") {
-        const started = await startRedis(root, env);
-        if (!started.reachable) {
-          return started;
+      const inventory = new Map(inventoryEntries.map((entry) => [entry.id, entry.assertions] as const));
+      const byVariant = new Map<string, HarnessLine[]>();
+      const knownIds = new Set<string>();
+      /** Each Test ID's Component: the first path segment of its shard under conformance/expectations/. */
+      const universe = new Map<string, string>();
+      const vocabularySet = new Set(vocabulary.variants);
+      for (const shard of shards) {
+        const component = shard.path.split("/")[2] ?? "";
+        shard.lines.forEach((raw, index) => {
+          const variant = raw["variant"];
+          const status = raw["status"];
+          if (typeof variant !== "string" || !vocabularySet.has(variant)) {
+            throw new PreconditionError(`${shard.path}:${index + 1}: Variant ${JSON.stringify(variant)} is not in conformance/variants`);
+          }
+          const line: HarnessLine = { id: raw["id"] as string, variant, status: typeof status === "string" ? status : String(status), reason: stringOrNull(raw["reason"]), adapted: stringOrNull(raw["adapted"]) };
+          knownIds.add(line.id);
+          if (!universe.has(line.id)) {
+            universe.set(line.id, component);
+          }
+          const list = byVariant.get(variant) ?? [];
+          list.push(line);
+          byVariant.set(variant, list);
+        });
+      }
+      const components = options.components ?? [];
+      const globs = options.ids ?? [];
+      const story = options.story ?? null;
+      const fast = options.fast === true || seedOption !== null;
+      let selected: Set<string> | null = null;
+      if (fast || components.length > 0 || globs.length > 0 || story !== null) {
+        const chosen = selectIds(universe, { components, ids: globs, story: story === null ? null : storyIds(root, story, universe, err) });
+        if (chosen.length === 0) {
+          throw new PreconditionError(`no Test ID matches ${describeFilters(options)}`);
         }
-        services.redis = started.server;
-        return { reachable: true };
-      }
-      return probe(backend, env);
-    };
-    for (const variant of variants) {
-      const lines = linesOf(variant);
-      const backend = backendFor(variant);
-      const pending = prepared.get(backend) ?? prepare(backend);
-      prepared.set(backend, pending);
-      const status = await pending;
-      if (!status.reachable) {
-        notRun++;
-        const counts = ci && ALPHA_VARIANTS.includes(variant);
-        if (counts) {
-          ciDifferences++;
-        }
-        const notRunLine = `NOT-RUN [${variant}] ${lines.length} line(s): ${status.why}${counts ? "; CI runs every alpha variant (FR-9)" : ""}`;
-        out.push(notRunLine);
-        if (counts) {
-          counted.push({ id: "-", variant, kind: "unexpected-failure", text: notRunLine, detail: null });
-        }
-        continue;
-      }
-      run++;
-      checked += lines.length;
-      let files = allFiles;
-      let pattern: string | null = null;
-      if (selected !== null) {
-        const selectedComponents = new Set(lines.map((line) => universe.get(line.id) ?? ""));
-        files = allFiles.filter((file) => selectedComponents.has(file.split("/")[1] ?? ""));
-        const ofComponents = byVariant.get(variant)!.filter((line) => selectedComponents.has(universe.get(line.id) ?? "")).length;
-        const candidate = namePattern(lines.map((line) => line.id));
-        if (ofComponents !== lines.length && candidate.length <= MAX_PATTERN) {
-          pattern = candidate;
+        if (fast) {
+          const seed = seedOption ?? randomBytes(4).toString("hex");
+          const picked = sampleIds(chosen, seed, FAST_SAMPLE);
+          sample = { seed, size: picked.length, of: chosen.length };
+          out.push(`FAST seed=${seed} sample=${picked.length}/${chosen.length}`);
+          selected = new Set(picked);
+        } else {
+          selected = new Set(chosen);
         }
       }
-      const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, backend === "redis" && services.redis !== null ? { ...isolated, XARAVEL_REDIS_SOCKET: services.redis.socket } : isolated, options.bunArgs ?? [], err);
-      const compared = compare({ variant, lines, knownIds, run: variantRun, inventory, waived });
-      results.push(...compared.results);
-      if (variantRun.error !== null) {
-        errors.push(variantRun.error);
-        reportLines.push(variantRun.error);
-        counted.push({ id: "-", variant, kind: "unexpected-failure", text: variantRun.error, detail: null });
+      const linesOf = (variant: string): HarnessLine[] => {
+        const all = byVariant.get(variant) ?? [];
+        return selected === null ? all : all.filter((line) => selected.has(line.id));
+      };
+      variants = vocabulary.variants.filter((variant) => linesOf(variant).length > 0);
+      const allFiles = portedTestFiles(root);
+      const ci = env["CI"] === "true";
+      const waived = waiverFor(root);
+      // Backend preparation: once per backend, the first time a run Variant needs it.
+      const prepared = new Map<string, Promise<ProbeResult>>();
+      const prepare = async (backend: string): Promise<ProbeResult> => {
+        if (backend === "sqlite") {
+          prepareSqlite(root, fast);
+          return { reachable: true };
+        }
+        if (backend === "pgsql") {
+          return preparePostgres(env, key, fast, options.postgres ?? postgresAdmin);
+        }
+        if (backend === "redis") {
+          const started = await startRedis(root, env);
+          if (!started.reachable) {
+            return started;
+          }
+          services.redis = started.server;
+          return { reachable: true };
+        }
+        return probe(backend, env);
+      };
+      for (const variant of variants) {
+        const lines = linesOf(variant);
+        const backend = backendFor(variant);
+        const pending = prepared.get(backend) ?? prepare(backend);
+        prepared.set(backend, pending);
+        const status = await pending;
+        if (!status.reachable) {
+          notRun++;
+          const counts = ci && ALPHA_VARIANTS.includes(variant);
+          if (counts) {
+            ciDifferences++;
+          }
+          const notRunLine = `NOT-RUN [${variant}] ${lines.length} line(s): ${status.why}${counts ? "; CI runs every alpha variant (FR-9)" : ""}`;
+          out.push(notRunLine);
+          if (counts) {
+            counted.push({ id: "-", variant, kind: "unexpected-failure", text: notRunLine, detail: null });
+          }
+          continue;
+        }
+        run++;
+        checked += lines.length;
+        let files = allFiles;
+        let pattern: string | null = null;
+        if (selected !== null) {
+          const selectedComponents = new Set(lines.map((line) => universe.get(line.id) ?? ""));
+          files = allFiles.filter((file) => selectedComponents.has(file.split("/")[1] ?? ""));
+          const ofComponents = byVariant.get(variant)!.filter((line) => selectedComponents.has(universe.get(line.id) ?? "")).length;
+          const candidate = namePattern(lines.map((line) => line.id));
+          if (ofComponents !== lines.length && candidate.length <= MAX_PATTERN) {
+            pattern = candidate;
+          }
+        }
+        const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, backend === "redis" && services.redis !== null ? { ...isolated, XARAVEL_REDIS_SOCKET: services.redis.socket } : isolated, options.bunArgs ?? [], err);
+        const compared = compare({ variant, lines, knownIds, run: variantRun, inventory, waived });
+        results.push(...compared.results);
+        if (variantRun.error !== null) {
+          errors.push(variantRun.error);
+          reportLines.push(variantRun.error);
+          counted.push({ id: "-", variant, kind: "unexpected-failure", text: variantRun.error, detail: null });
+        }
+        const sorted = compared.differences.sort((a, b) => compareUnits(a.id, b.id));
+        differences.push(...sorted);
+        counted.push(...sorted);
+        reportLines.push(...sorted.map((difference) => difference.text));
       }
-      const sorted = compared.differences.sort((a, b) => compareUnits(a.id, b.id));
-      differences.push(...sorted);
-      counted.push(...sorted);
-      reportLines.push(...sorted.map((difference) => difference.text));
+    }
+    let xaravel: XaravelResult | null = null;
+    /** Whether the Xaravel run had files to run, and so prints its lines. */
+    let xaravelRan = false;
+    if (xaravelOptions !== null) {
+      // The Xaravel run uses no backend, and its tests start harness runs of their own: free the Redis and the lock first.
+      await cleanup();
+      const globs = xaravelOptions.ids ?? [];
+      const files = xaravelTestFiles(root);
+      const pattern = xaravelNamePattern(globs);
+      xaravelRan = files.length > 0;
+      const spawned = files.length === 0 ? emptyRun() : await runVariant(root, "none", files, pattern, env, isolated, options.bunArgs ?? [], err, "xaravel");
+      xaravel = judgeXaravel({ junit: spawned.junit, reports: spawned.xaravel, late: spawned.late, ids: globs, pattern, error: spawned.error });
+      for (const line of xaravel.lines) {
+        const id = /^(XT-\S+) \[xaravel\] /.exec(line)?.[1] ?? "-";
+        counted.push({ id, variant: "xaravel", kind: "unexpected-failure", text: line, detail: null });
+      }
+      for (const result of xaravel.results) {
+        const junit = result.consequence === null ? undefined : spawned.junit.get(`${result.id}: ${result.consequence}`);
+        if (result.outcome === "fail" && junit !== undefined && junit.outcome === "failed") {
+          err.push(`harness: ${result.id} [xaravel]: ${junit.type ?? "(no type)"}: ${(junit.message ?? "").split("\n")[0]}`);
+        }
+      }
     }
     // One diagnostic line per difference with a reason (see the header).
     for (const difference of differences) {
@@ -592,17 +657,20 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
       }
     }
     out.push(...reportLines);
-    const differ = differences.length + errors.length + ciDifferences;
+    if (xaravel !== null && (xaravelRan || xaravel.lines.length > 0)) {
+      out.push(...xaravel.lines, xaravel.summary);
+    }
+    const differ = differences.length + errors.length + ciDifferences + (xaravel?.differ ?? 0);
     const mode = sample === null ? "" : ` mode=fast seed=${sample.seed}`;
     out.push(`SUMMARY variants=${variants.length} run=${run} not-run=${notRun} checked=${checked} differ=${differ}${mode}`);
-    return { code: differ === 0 ? 0 : 1, out, err, results, differences: counted, sample, worktree };
+    return { code: differ === 0 ? 0 : 1, out, err, results, differences: counted, sample, worktree, xaravel };
   } catch (error) {
     if (error instanceof PreconditionError || error instanceof IsolationError) {
       err.push(`harness: ${error.message}`);
-      return { code: 1, out, err, results, differences: counted, sample, worktree };
+      return { code: 1, out, err, results, differences: counted, sample, worktree, xaravel: null };
     }
     err.push(`harness failed: ${message(error)}`);
-    return { code: 1, out, err, results, differences: counted, sample, worktree };
+    return { code: 1, out, err, results, differences: counted, sample, worktree, xaravel: null };
   } finally {
     try {
       await cleanup();
@@ -612,12 +680,16 @@ export async function runHarness(rootArg: string, options: HarnessOptions = {}):
   }
 }
 
-const USAGE = "Usage: bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]";
+const USAGE = [
+  "Usage: bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]",
+  "       bun --no-env-file conformance/harness/harness.ts [--root <dir>] --xaravel [--id <glob>]...",
+].join("\n");
 
 /** The CLI's root and options; throws `UsageError` (exit 2). */
 export function parseArgs(argv: readonly string[]): { root: string; options: HarnessOptions } {
   let root = resolve(import.meta.dir, "..", "..");
   let fast = false;
+  let xaravel = false;
   let seed: string | null = null;
   let story: string | null = null;
   const components: string[] = [];
@@ -626,6 +698,10 @@ export function parseArgs(argv: readonly string[]): { root: string; options: Har
     const arg = argv[i]!;
     if (arg === "--fast") {
       fast = true;
+      continue;
+    }
+    if (arg === "--xaravel") {
+      xaravel = true;
       continue;
     }
     if (!["--root", "--seed", "--component", "--id", "--story"].includes(arg)) {
@@ -659,7 +735,14 @@ export function parseArgs(argv: readonly string[]): { root: string; options: Har
       ids.push(value);
     }
   }
-  return { root, options: { fast: fast || seed !== null, seed, components, ids, story } };
+  if (xaravel) {
+    if (fast || seed !== null || story !== null || components.length > 0) {
+      throw new UsageError("--xaravel takes only --root and --id");
+    }
+    return { root, options: { xaravel: { only: true, ids } } };
+  }
+  const full = !fast && seed === null && story === null && components.length === 0 && ids.length === 0;
+  return { root, options: { fast: fast || seed !== null, seed, components, ids, story, xaravel: full ? { only: false } : null } };
 }
 
 export async function main(argv: readonly string[]): Promise<number> {

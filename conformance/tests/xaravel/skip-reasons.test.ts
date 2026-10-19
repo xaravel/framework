@@ -3,12 +3,13 @@
 // 5.9. Fixture roots are hermetic temp directories holding the package table,
 // an Inventory, the two lists, Escalations, decisions and one Expectations
 // shard; the real repository is only read, never written.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { escalationDigest, escalationStatus, parseEscalation } from "../../../tools/escalations/escalations";
 import { checkReasons, DEFERRED_ITEMS_FILE, NON_GOALS_FILE, readList, STATUSES } from "../../../tools/expectations/reasons";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "expectations", "reasons.ts");
@@ -134,7 +135,7 @@ function cli(dir: string): { exitCode: number; stdout: string; stderr: string } 
 // ---------------------------------------------------------------------------
 // XT-conformance-92: blocked-by
 
-test("XT-conformance-92: blocked-by:<c> fails unless <c> is in a later Phase than the test's Component per the package table", () => {
+xaravelTest("XT-conformance-92", "blocked-by:<c> fails unless <c> is in a later Phase than the test's Component per the package table", () => {
   expectCase({ reason: "blocked-by:database" }, null);
   expectCase({ reason: "blocked-by:runtime" }, "blocked-by:");
   expectCase({ reason: "blocked-by:support" }, "blocked-by:");
@@ -146,7 +147,7 @@ test("XT-conformance-92: blocked-by:<c> fails unless <c> is in a later Phase tha
   expect(violations([{ reason: "blocked-by:nope" }])[0]).toContain("nope is not a Component in tools/scaffold/packages.jsonl");
 });
 
-test("XT-conformance-92: bun run expectations:reasons exits 0 on valid lines, 1 on a violation, 2 on a usage error", () => {
+xaravelTest("XT-conformance-250", "bun run expectations:reasons exits 0 on valid lines, 1 on a violation, 2 on a usage error", () => {
   const ok = cli(fixture([{ reason: "blocked-by:database" }]));
   expect(ok).toEqual({ exitCode: 0, stdout: "Skip Reasons OK: 1 line(s) checked.\n", stderr: "" });
   const bad = cli(fixture([{ reason: "blocked-by:runtime" }]));
@@ -163,7 +164,7 @@ test("XT-conformance-92: bun run expectations:reasons exits 0 on valid lines, 1 
 // ---------------------------------------------------------------------------
 // XT-conformance-93: intentional-divergence
 
-test("XT-conformance-93: intentional-divergence:DIV-<n> fails unless decisions/DIV-<n>.md exists", () => {
+xaravelTest("XT-conformance-93", "intentional-divergence:DIV-<n> fails unless decisions/DIV-<n>.md exists", () => {
   expectCase({ reason: "intentional-divergence:DIV-3" }, null);
   expectCase({ reason: "intentional-divergence:DIV-3" }, "intentional-divergence:", { "decisions/DIV-3.md": null });
   expectCase({ reason: "intentional-divergence:DIV-03" }, "intentional-divergence:", { "decisions/DIV-03.md": "# DIV-03\n" });
@@ -173,7 +174,7 @@ test("XT-conformance-93: intentional-divergence:DIV-<n> fails unless decisions/D
 // ---------------------------------------------------------------------------
 // XT-conformance-94: php-only
 
-test("XT-conformance-94: php-only fails unless its escalation is an approved php-only Escalation listing the Test ID", () => {
+xaravelTest("XT-conformance-94", "php-only fails unless its escalation is an approved php-only Escalation listing the Test ID", () => {
   expectCase({ reason: "php-only", escalation: APPROVED }, null);
   expectCase({ reason: "php-only", escalation: OPEN }, "php-only:");
   expectCase({ reason: "php-only", escalation: APPROVED_OTHER }, "php-only:");
@@ -189,7 +190,7 @@ test("XT-conformance-94: php-only fails unless its escalation is an approved php
 // ---------------------------------------------------------------------------
 // XT-conformance-95: upstream-skip
 
-test("XT-conformance-95: upstream-skip fails unless the Inventory oracle for that Variant is skip or fail", () => {
+xaravelTest("XT-conformance-95", "upstream-skip fails unless the Inventory oracle for that Variant is skip or fail", () => {
   expectCase({ id: U1, variant: "sqlite", reason: "upstream-skip" }, null);
   expectCase({ id: U2, variant: "sqlite", reason: "upstream-skip" }, null);
   expectCase({ id: U1, variant: "pgsql", reason: "upstream-skip" }, "upstream-skip:");
@@ -201,7 +202,7 @@ test("XT-conformance-95: upstream-skip fails unless the Inventory oracle for tha
 // ---------------------------------------------------------------------------
 // XT-conformance-96: deferred
 
-test("XT-conformance-96: deferred:<item> fails unless <item> is in conformance/deferred-items", () => {
+xaravelTest("XT-conformance-96", "deferred:<item> fails unless <item> is in conformance/deferred-items", () => {
   expectCase({ reason: "deferred:ai-sdk" }, null);
   expectCase({ reason: "deferred:memcached" }, "deferred:");
   expectCase({ reason: "deferred:" }, "unknown reason:");
@@ -210,7 +211,7 @@ test("XT-conformance-96: deferred:<item> fails unless <item> is in conformance/d
 // ---------------------------------------------------------------------------
 // XT-conformance-97: out-of-scope
 
-test("XT-conformance-97: out-of-scope:<NG-N> fails unless <NG-N> is in conformance/non-goals", () => {
+xaravelTest("XT-conformance-97", "out-of-scope:<NG-N> fails unless <NG-N> is in conformance/non-goals", () => {
   expectCase({ reason: "out-of-scope:NG-1" }, null);
   expectCase({ reason: "out-of-scope:NG-99" }, "out-of-scope:");
   expectCase({ reason: "out-of-scope:" }, "unknown reason:");
@@ -219,7 +220,7 @@ test("XT-conformance-97: out-of-scope:<NG-N> fails unless <NG-N> is in conforman
 // ---------------------------------------------------------------------------
 // XT-conformance-98: unknown reason, unknown status, bad lists, the real repository
 
-test("XT-conformance-98: a skip with no reason or an unknown reason fails, one violation each", () => {
+xaravelTest("XT-conformance-98", "a skip with no reason or an unknown reason fails, one violation each", () => {
   expectCase({ reason: null }, "unknown reason:");
   expectCase({ reason: "" }, "unknown reason:");
   expectCase({ reason: "bogus" }, "unknown reason:");
@@ -241,7 +242,7 @@ test("XT-conformance-98: a skip with no reason or an unknown reason fails, one v
   expect(violations([{ reason: "bogus" }, { id: B, reason: null }, { status: "flaky" }]).length).toBe(3);
 });
 
-test("XT-conformance-98: an unsorted, duplicated or malformed list member is a violation naming file:line", () => {
+xaravelTest("XT-conformance-251", "an unsorted, duplicated or malformed list member is a violation naming file:line", () => {
   const cases: [string, string, string][] = [
     [DEFERRED_ITEMS_FILE, "mysql-driver\nai-sdk\n", `${DEFERRED_ITEMS_FILE}:2:`],
     [DEFERRED_ITEMS_FILE, "ai-sdk\nai-sdk\n", `${DEFERRED_ITEMS_FILE}:2:`],
@@ -267,7 +268,7 @@ test("XT-conformance-98: an unsorted, duplicated or malformed list member is a v
   expect(run.stderr).toContain(`${NON_GOALS_FILE}:1:`);
 });
 
-test("XT-conformance-98: the committed lists hold exactly PRD §7.1 and §7.2's members, and the real repository passes", () => {
+xaravelTest("XT-conformance-252", "the committed lists hold exactly PRD §7.1 and §7.2's members, and the real repository passes", () => {
   const deferred = readList(root, DEFERRED_ITEMS_FILE, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   expect(deferred.violations).toEqual([]);
   expect(deferred.members).toEqual([
@@ -301,7 +302,7 @@ test("XT-conformance-98: the committed lists hold exactly PRD §7.1 and §7.2's 
   expect(report.lines).toBeGreaterThan(0);
 });
 
-test("XT-conformance-98: a malformed shard line or an unreadable Inventory is a violation, not a crash", () => {
+xaravelTest("XT-conformance-253", "a malformed shard line or an unreadable Inventory is a violation, not a crash", () => {
   const malformed = violations([], { [SHARD]: "{not json\n" });
   expect(malformed.length).toBe(1);
   expect(malformed[0]!.startsWith(`${SHARD}:1: malformed JSON`)).toBe(true);
@@ -316,7 +317,7 @@ test("XT-conformance-98: a malformed shard line or an unreadable Inventory is a 
 // ---------------------------------------------------------------------------
 // XT-conformance-99: quarantined
 
-test("XT-conformance-99: quarantined fails unless its escalation is open and lists the Test ID", () => {
+xaravelTest("XT-conformance-99", "quarantined fails unless its escalation is open and lists the Test ID", () => {
   expectCase({ status: "quarantined", reason: null, escalation: OPEN }, null);
   expectCase({ status: "quarantined", reason: null, escalation: APPROVED }, "quarantined:");
   expectCase({ status: "quarantined", reason: null, escalation: null }, "quarantined:");
@@ -327,7 +328,7 @@ test("XT-conformance-99: quarantined fails unless its escalation is open and lis
 // ---------------------------------------------------------------------------
 // XT-conformance-100: precedence documentation
 
-test("XT-conformance-100: conformance/README.md lists the FR-3 precedence order and names every Skip Reason; the checklist reference waits on ESC-5.2-1", () => {
+xaravelTest("XT-conformance-100", "conformance/README.md lists the FR-3 precedence order and names every Skip Reason; the checklist reference waits on ESC-5.2-1", () => {
   const readme = readFileSync(join(root, "conformance", "README.md"), "utf8");
   for (const reason of ["not-ported-yet", "blocked-by:<c>", "intentional-divergence:DIV-<n>", "php-only", "upstream-skip", "deferred:<item>", "out-of-scope:<NG-N>"]) {
     expect(readme).toContain(`\`${reason}\``);

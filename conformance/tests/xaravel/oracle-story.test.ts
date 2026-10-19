@@ -11,7 +11,7 @@
 // the reason, and with XARAVEL_PHP_FIXTURES=require it fails instead. The
 // live workflow (the App, its secret, a real PR run) is Maintainer-run; this
 // file checks the job's shape. Nothing here runs a container.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { generateKeyPairSync, type KeyObject } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,6 +23,7 @@ import { main, renderReport } from "../../../tools/oracle/story";
 import { STORY_REQUESTS_DIR } from "../../../tools/oracle/story-requests";
 import { verifyFixtures } from "../../../tools/oracle/verify";
 import { allowedPath } from "../../../tools/ownership/ownership";
+import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "oracle", "story.ts");
@@ -212,8 +213,8 @@ function storyJob(): { workflow: Workflow; job: Workflow["jobs"][string]; step: 
 // ---------------------------------------------------------------------------
 // XT-conformance-77
 
-test(
-  "XT-conformance-77: generate evaluates a Story's owned requests (a PHPUnit Test ID and an Xaravel Test ID) twice in the image and writes signed fixtures under the manifest's Component that verify with oracle.pub (FR-6, AD-15)",
+xaravelTest(
+  "XT-conformance-77", "generate evaluates a Story's owned requests (a PHPUnit Test ID and an Xaravel Test ID) twice in the image and writes signed fixtures under the manifest's Component that verify with oracle.pub (FR-6, AD-15)",
   withRoot(lines(LOWER, XT), (fx) => {
     const stand = standIn();
     const report = join(fx.dir, "report.md");
@@ -273,8 +274,8 @@ test(
   }),
 );
 
-test(
-  "XT-conformance-77: the key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; no key, a wrong key, no oracle.pub or no valid manifest exits 1 naming the cause and writes nothing (FR-6, AD-15, AD-16)",
+xaravelTest(
+  "XT-conformance-231", "the key comes only from ORACLE_SIGNING_KEY and must match oracle.pub; no key, a wrong key, no oracle.pub or no valid manifest exits 1 naming the cause and writes nothing (FR-6, AD-15, AD-16)",
   withRoot(lines(LOWER, XT), async (fx) => {
     const out = join(fx.dir, FIXTURES_DIR);
     const args = ["generate", "9.1", "--root", fx.dir, "--image", "xaravel-oracle:test"];
@@ -340,8 +341,8 @@ test(
   TIMEOUT,
 );
 
-test(
-  "XT-conformance-77: a request whose two evaluations differ gets no fixture and is rejected; the others are still written (FR-6, AD-15)",
+xaravelTest(
+  "XT-conformance-232", "a request whose two evaluations differ gets no fixture and is rejected; the others are still written (FR-6, AD-15)",
   withRoot(lines(LOWER, XT), (fx) => {
     const stand = standIn((sha256, pass) => sha256 === XT.sha256 && pass === 2);
     const report = join(fx.dir, "report.md");
@@ -370,21 +371,28 @@ function phpUnmet(): string | null {
   return null;
 }
 
-function phpTest(name: string, body: () => void): void {
+function phpTest(id: string, consequence: string, body: () => void): void {
   const reason = phpUnmet() ?? (existsSync(join(LOCAL_INSTALL, "vendor", "autoload.php")) ? null : `${LOCAL_INSTALL} is not a locked local install`);
-  if (reason === null) {
-    test(name, body, TIMEOUT);
-  } else if (REQUIRE) {
-    test(name, () => {
-      throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
-    });
-  } else {
+  if (reason !== null && !REQUIRE) {
     console.warn(`oracle-story.test.ts: skipping the evaluator run: ${reason}`);
-    test.skip(`${name} [skipped: ${reason}]`, body);
   }
+  xaravelTest(
+    id,
+    consequence,
+    () => {
+      if (reason !== null) {
+        if (REQUIRE) {
+          throw new Error(`XARAVEL_PHP_FIXTURES=require: ${reason}`);
+        }
+        Assert.markTestSkipped(reason);
+      }
+      body();
+    },
+    TIMEOUT,
+  );
 }
 
-phpTest("XT-conformance-77: evaluate.php runs an Xaravel Test ID request bound to a bare PHPUnit TestCase in the global namespace, and a blade-render one in the bare Testbench case, in real PHP (FR-6, AD-15)", () => {
+phpTest("XT-conformance-233", "evaluate.php runs an Xaravel Test ID request bound to a bare PHPUnit TestCase in the global namespace, and a blade-render one in the bare Testbench case, in real PHP (FR-6, AD-15)", () => {
   const php = makeRequest("XT-support-1", "php-expr", { bindings: { value: "'Hello World'" }, setup: [], exprs: ["\\Illuminate\\Support\\Str::slug($value)", "__NAMESPACE__", "get_class($this)", "$this instanceof \\PHPUnit\\Framework\\TestCase"] });
   const blade = makeRequest("XT-view-1", "blade-render", { template: "{{ $a }}!", data: { a: "<b>" } });
   const dir = mkdtempSync(join(tmpdir(), "xaravel-evaluate-xt-"));
@@ -408,7 +416,7 @@ phpTest("XT-conformance-77: evaluate.php runs an Xaravel Test ID request bound t
   }
 });
 
-phpTest("XT-conformance-77: generate --local runs the Story's XT request through evaluate.php for real and signs the result (FR-6, AD-15)", () => {
+phpTest("XT-conformance-234", "generate --local runs the Story's XT request through evaluate.php for real and signs the result (FR-6, AD-15)", () => {
   const fx = fixtureRoot(lines(XT));
   try {
     // The fixture root's snapshot is the repository's own, so the local install is checked against it.
@@ -424,7 +432,7 @@ phpTest("XT-conformance-77: generate --local runs the Story's XT request through
   }
 });
 
-test("XT-conformance-77: oracle.yml#story runs on a Story PR's request file under pull_request_target, from main's code only, with a read-only token, the oracle environment and the xaravel-oracle App (FR-6, AD-15, AD-16)", () => {
+xaravelTest("XT-conformance-235", "oracle.yml#story runs on a Story PR's request file under pull_request_target, from main's code only, with a read-only token, the oracle environment and the xaravel-oracle App (FR-6, AD-15, AD-16)", () => {
   const { workflow, job, step } = storyJob();
   // Trigger: a PR into main that touches conformance/oracle-requests/**.
   expect(workflow.on["pull_request_target"]).toEqual({ branches: ["main"], types: ["opened", "synchronize", "reopened"], paths: ["conformance/oracle-requests/**"] });
@@ -507,8 +515,8 @@ test("XT-conformance-77: oracle.yml#story runs on a Story PR's request file unde
 
 const BAD_HASH = { ...XT, sha256: "f".repeat(64) };
 
-test(
-  "XT-conformance-78: unowned, malformed, wrongly hashed, non-canonical, batch-duplicate, repeated and listed lines are rejected with reasons on stderr and in the report; the owned ones are still written; exit 1 (FR-6, AD-15, AD-16)",
+xaravelTest(
+  "XT-conformance-78", "unowned, malformed, wrongly hashed, non-canonical, batch-duplicate, repeated and listed lines are rejected with reasons on stderr and in the report; the owned ones are still written; exit 1 (FR-6, AD-15, AD-16)",
   withRoot(
     [
       renderRequest(LOWER),
@@ -566,8 +574,8 @@ test(
   ),
 );
 
-test(
-  "XT-conformance-78: check gives the same judgement without evaluating or writing; a file without a final LF has its last line judged plus one file-level problem (FR-6, AD-16)",
+xaravelTest(
+  "XT-conformance-236", "check gives the same judgement without evaluating or writing; a file without a final LF has its last line judged plus one file-level problem (FR-6, AD-16)",
   withRoot(lines(LOWER, UNOWNED, XT), async (fx) => {
     const file = `${STORY_REQUESTS_DIR}/9.1.jsonl`;
     const stand = standIn();
@@ -603,7 +611,7 @@ test(
   }),
 );
 
-test("XT-conformance-78: the story job comments the report on the PR with the App token when a request was rejected or a commit was made (FR-6, AD-16)", () => {
+xaravelTest("XT-conformance-237", "the story job comments the report on the PR with the App token when a request was rejected or a commit was made (FR-6, AD-16)", () => {
   const { job, step } = storyJob();
   const comment = job.steps.find((entry) => entry.name === "Comment the report on the PR")!;
   expect(comment.if).toBe("steps.read.outputs.present == 'true' && always() && steps.generate.outputs.status != '' && steps.app.outputs.token != '' && (steps.generate.outputs.status != '0' || steps.commit.outputs.committed == 'true')");
@@ -624,8 +632,8 @@ test("XT-conformance-78: the story job comments the report on the PR with the Ap
 // ---------------------------------------------------------------------------
 // XT-conformance-79
 
-test(
-  "XT-conformance-79: fixtures the story job generated verify under Story 3.3's check on a root with the committed request file; an unowned committed request, a missing manifest and a fixture in another Component's directory are violations; a request in two Story files is not (Story 5.6 AC5) (FR-6, AD-15)",
+xaravelTest(
+  "XT-conformance-79", "fixtures the story job generated verify under Story 3.3's check on a root with the committed request file; an unowned committed request, a missing manifest and a fixture in another Component's directory are violations; a request in two Story files is not (Story 5.6 AC5) (FR-6, AD-15)",
   withRoot(lines(LOWER, XT), async (fx) => {
     const run = (): number => cliInProcess(["generate", "9.1", "--root", fx.dir, "--image", "xaravel-oracle:test"], { ORACLE_SIGNING_KEY: fx.pem }, standIn().runner).code;
     expect(run()).toBe(0);
@@ -676,8 +684,8 @@ test(
   }),
 );
 
-test(
-  "XT-conformance-79: a Story whose Component has no batch request file gets its fixtures verified there, and the batch rerun keeps every per-Story fixture while still deleting strays (FR-6, AD-15)",
+xaravelTest(
+  "XT-conformance-238", "a Story whose Component has no batch request file gets its fixtures verified there, and the batch rerun keeps every per-Story fixture while still deleting strays (FR-6, AD-15)",
   withRoot(lines(LOWER, XT), (fx) => {
     // Story 9.3 (component testing, no batch file) owns another XT request.
     const other = makeRequest("XT-testing-1", "php-expr", { bindings: {}, setup: [], exprs: ["1 + 1"] });
@@ -708,7 +716,7 @@ test(
   }),
 );
 
-test("XT-conformance-79: a Story may commit signed fixtures only under its own Component's directory, and the committed repository still verifies (AD-16)", async () => {
+xaravelTest("XT-conformance-239", "a Story may commit signed fixtures only under its own Component's directory, and the committed repository still verifies (AD-16)", async () => {
   const support = { storyId: "9.1", component: "support" };
   for (const path of [`${FIXTURES_DIR}/support/${"a".repeat(64)}.json`, `${FIXTURES_DIR}/support/${"0123456789abcdef".repeat(4)}.json`]) {
     expect([path, allowedPath(support, path)]).toEqual([path, true]);

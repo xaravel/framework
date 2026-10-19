@@ -8,12 +8,12 @@
 // exprs are rebuilt from operands.ts and must equal the committed line, so the
 // TS twins are the operands the Oracle saw. A missing, unsigned or errored
 // fixture fails the test; it is never skipped.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { ASSERTIONS } from "../../src/Framework/Assert";
-import { Assert, ExpectationFailedException } from "../../src/index";
+import { Assert, ExpectationFailedException, xaravelTest } from "../../src/index";
 import { requestMismatches } from "./assertion-cells";
 import { REGEX_PATTERNS, REGEX_V, REQUESTS, type RequestSpec, requestExprs } from "./operands";
 import { readRequests, readSignedFixture } from "./oracle-values";
@@ -73,7 +73,7 @@ function jsonLines(text: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-test("XT-assert-8: each core assertion passes, fails with PHPUnit's message and compared values, or throws, exactly as the signed PHPUnit 13.4.3 Oracle does over its operand matrix, and counts its own kind", () => {
+xaravelTest("XT-assert-8", "each core assertion passes, fails with PHPUnit's message and compared values, or throws, exactly as the signed PHPUnit 13.4.3 Oracle does over its operand matrix, and counts its own kind", () => {
   // The Story's enumerated assertions, each on Assert and on its prototype. The spec's list names 51 of the 82
   // scan names (it says "50"; the other 31 are Story 4.4's).
   expect(ASSERTIONS).toHaveLength(51);
@@ -134,14 +134,14 @@ test("XT-assert-8: each core assertion passes, fails with PHPUnit's message and 
   expect([...ran].sort()).toEqual([...ASSERTIONS].sort());
 }, CHILD_TIMEOUT);
 
-test("XT-assert-9: assertSame fails and assertEquals passes on an array and the same entries in another key order (list, plain object and branded forms), with the Oracle's messages", () => {
+xaravelTest("XT-assert-9", "assertSame fails and assertEquals passes on an array and the same entries in another key order (list, plain object and branded forms), with the Oracle's messages", () => {
   const { problems, cells, ran } = runRequests("XT-assert-9");
   expect(problems).toEqual([]);
   expect(cells).toBeGreaterThan(0);
   expect([...ran].sort()).toEqual(["assertEquals", "assertSame"]);
 });
 
-test("XT-assert-10: assertMatchesRegularExpression and assertDoesNotMatchRegularExpression take Upstream patterns as RegExp and match the Oracle; a string pattern is a TypeError (DIV-10)", () => {
+xaravelTest("XT-assert-10", "assertMatchesRegularExpression and assertDoesNotMatchRegularExpression take Upstream patterns as RegExp and match the Oracle; a string pattern is a TypeError (DIV-10)", () => {
   const { problems, cells, ran } = runRequests("XT-assert-10");
   expect(problems).toEqual([]);
   expect(cells).toBe(2 * REGEX_PATTERNS.length * REGEX_V.length);

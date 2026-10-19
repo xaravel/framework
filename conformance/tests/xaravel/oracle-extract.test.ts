@@ -12,7 +12,7 @@
 // requests are checked directly. This file never imports tools/oracle/oracle.ts
 // directly or names its image runner (XT-conformance-44); tools/oracle/extract.ts
 // does import it, so image mode here runs only through a stand-in runner.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { createHash } from "node:crypto";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -39,6 +39,7 @@ import {
   type OracleRequest,
   type RequestKind,
 } from "../../../tools/oracle/request";
+import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "oracle", "extract.ts");
@@ -51,21 +52,26 @@ const IMAGE_FRAMEWORK = "/oracle/upstream/framework";
 let warned = false;
 
 /** A test that runs the real PHP tokenizer: skipped with the reason when `php` is absent, failed under XARAVEL_PHP_FIXTURES=require. */
-function phpTest(name: string, body: () => Promise<void> | void): void {
-  if (PHP !== null) {
-    test(name, body, TIMEOUT);
-  } else if (REQUIRE) {
-    test(name, () => {
-      throw new Error("XARAVEL_PHP_FIXTURES=require: php not on PATH");
-    });
-  } else {
-    // bun test does not print skipped test names, so the reason also goes to stderr once.
-    if (!warned) {
-      warned = true;
-      console.warn("oracle-extract.test.ts: skipping the extraction runs: php not on PATH");
-    }
-    test.skip(`${name} [skipped: php not on PATH]`, body);
+function phpTest(id: string, consequence: string, body: () => Promise<void> | void): void {
+  // bun test does not print skipped test names, so the reason also goes to stderr once.
+  if (PHP === null && !REQUIRE && !warned) {
+    warned = true;
+    console.warn("oracle-extract.test.ts: skipping the extraction runs: php not on PATH");
   }
+  xaravelTest(
+    id,
+    consequence,
+    () => {
+      if (PHP === null) {
+        if (REQUIRE) {
+          throw new Error("XARAVEL_PHP_FIXTURES=require: php not on PATH");
+        }
+        Assert.markTestSkipped("php not on PATH");
+      }
+      return body();
+    },
+    TIMEOUT,
+  );
 }
 
 const sha256 = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex");
@@ -83,7 +89,7 @@ const SAMPLES: { [K in RequestKind]: InputByKind[K] } = {
 };
 
 // Verifies: FR-6, AD-15 (the request schema: four keys in order, Test ID or XT ID, five kinds with typed inputs, sha256 of the canonical request)
-test("XT-conformance-68: conformance/oracle/schema.json requires id (Test ID or XT ID), kind (the five), a typed input and the sha256 of the canonical request, and a wrong hash fails (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-68", "conformance/oracle/schema.json requires id (Test ID or XT ID), kind (the five), a typed input and the sha256 of the canonical request, and a wrong hash fails (FR-6, AD-15)", () => {
   expect(existsSync(join(root, SCHEMA_FILE))).toBe(true);
   // Each kind validates, keys in order, with exactly the kind's input keys.
   const ids = ["Illuminate\\Tests\\Support\\SupportStrTest::testUpper", "Illuminate\\Tests\\Support\\SupportStrTest::testPairs#data set \"one\"", "ai/tests/Feature/AgentTest.php::agents > it runs#dataset \"x\"", "XT-support-12"];
@@ -784,7 +790,7 @@ async function cli(args: string[]): Promise<{ code: number; stdout: string; stde
 // XT-conformance-69
 
 // Verifies: FR-6, AD-15 (the five family modules read the closed Differential set mechanically into sorted per-Component request files)
-phpTest("XT-conformance-69: bun run oracle:extract runs the five family modules over the Differential files and writes conformance/oracle/requests/<component>.jsonl, sorted, one request per readable Test ID x dataset (x segment, grammar or template), and none for an unreadable body (FR-6, AD-15)", async () => {
+phpTest("XT-conformance-69", "bun run oracle:extract runs the five family modules over the Differential files and writes conformance/oracle/requests/<component>.jsonl, sorted, one request per readable Test ID x dataset (x segment, grammar or template), and none for an unreadable body (FR-6, AD-15)", async () => {
   await withFixture(async (fx) => {
     writeFiles(join(fx.dir, REQUESTS_DIR), { "routing.jsonl": "stale\n" });
     const run = await cli(["--root", fx.dir, "--local", fx.local, "--php", fx.php]);
@@ -817,7 +823,7 @@ phpTest("XT-conformance-69: bun run oracle:extract runs the five family modules 
 });
 
 // Verifies: FR-6 (the committed requests are valid, sorted, de-duplicated and name Inventory Test IDs of their own Component)
-test("XT-conformance-69: every committed conformance/oracle/requests/<component>.jsonl line validates against the schema with its hash, is sorted by id then sha256, and names an Inventory Test ID of that Component (FR-6)", () => {
+xaravelTest("XT-conformance-214", "every committed conformance/oracle/requests/<component>.jsonl line validates against the schema with its hash, is sorted by id then sha256, and names an Inventory Test ID of that Component (FR-6)", () => {
   const dir = join(root, REQUESTS_DIR);
   const names = readdirSync(dir).sort();
   expect(names.length).toBeGreaterThan(0);
@@ -839,7 +845,7 @@ test("XT-conformance-69: every committed conformance/oracle/requests/<component>
 });
 
 // Verifies: AD-15 (literal decoding and dataset rows: what is a literal, and what is not)
-test("XT-conformance-69: PHP literals decode as PHP evaluates them, and dataset exports split into literal sources, refusing objects, closures, hex, resources, recursion and {root} rewrites (AD-15)", () => {
+xaravelTest("XT-conformance-215", "PHP literals decode as PHP evaluates them, and dataset exports split into literal sources, refusing objects, closures, hex, resources, recursion and {root} rewrites (AD-15)", () => {
   const tokens = (source: string, list: [string, string][]): ReturnType<typeof parseTokenLines> => parseTokenLines(`${JSON.stringify({ file: source, tokens: list.map(([name, text]) => [name, text, 1]) })}\n`);
   const code = (list: [string, string][]) => tokens("x", list).get("x")!;
   expect(decodeLiteral(code([["T_CONSTANT_ENCAPSED_STRING", "'a\\'b\\\\c\\n'"], [".", "."], ["T_CONSTANT_ENCAPSED_STRING", '"\\t\\x41\\u{1F600}\\$"']]))).toBe("a'b\\c\\n\tA😀$");
@@ -867,7 +873,7 @@ test("XT-conformance-69: PHP literals decode as PHP evaluates them, and dataset 
 });
 
 // Verifies: AD-15 (the closed set moves with the snapshot, never silently)
-test("XT-conformance-69: the run fails naming each listed Differential file that is missing from the snapshot or has no listed tests, and each tests/View/Blade/*Test.php file the Blade list lacks (AD-15)", () => {
+xaravelTest("XT-conformance-216", "the run fails naming each listed Differential file that is missing from the snapshot or has no listed tests, and each tests/View/Blade/*Test.php file the Blade list lacks (AD-15)", () => {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-oracle-closed-"));
   try {
     const listed = ["tests/Support/SupportStrTest.php", "tests/Support/SupportCarbonTest.php", "tests/View/Blade/BladeEchoTest.php", BLADE_BASE];
@@ -907,7 +913,7 @@ function tokenize(source: string): Token[] {
 }
 
 // Verifies: AD-15 (catch types are resolved; an unreadable setUp clock or a missing date.timezone fails the run)
-phpTest("XT-conformance-69: class names in catch clauses resolve like other class names, and the date family fails on an unreadable setUp() setTestNow or a missing date.timezone instead of guessing (AD-15)", () => {
+phpTest("XT-conformance-217", "class names in catch clauses resolve like other class names, and the date family fails on an unreadable setUp() setTestNow or a missing date.timezone instead of guessing (AD-15)", () => {
   const file = parseFile("x.php", tokenize("<?php\nnamespace App;\nuse Some\\Thing;\nclass T {\n  public function testA() {\n    $f = function () { try { x(); } catch (Thing | \\Other\\E $e) { } catch (Local) { } };\n  }\n}\n"));
   const body = file.classes[0]!.methods.get("testa")!.body!;
   expect(renderSource(file.classes[0]!.scope, body)).toBe("$f = function () { try { x(); } catch (\\Some\\Thing | \\Other\\E $e) { } catch (\\App\\Local) { } };");
@@ -928,7 +934,7 @@ phpTest("XT-conformance-69: class names in catch clauses resolve like other clas
 // XT-conformance-70
 
 // Verifies: FR-6 (extraction is byte-stable on the same snapshot, and --check fails closed on drift)
-phpTest("XT-conformance-70: two extractions of the same snapshot give identical bytes, image mode gives the same bytes through read-only mounts, and --check passes, then reports each drifted file without writing (FR-6)", async () => {
+phpTest("XT-conformance-70", "two extractions of the same snapshot give identical bytes, image mode gives the same bytes through read-only mounts, and --check passes, then reports each drifted file without writing (FR-6)", async () => {
   await withFixture(async (fx) => {
     const args = ["--root", fx.dir, "--local", fx.local, "--php", fx.php];
     expect((await cli(args)).code).toBe(0);
@@ -996,7 +1002,7 @@ phpTest("XT-conformance-70: two extractions of the same snapshot give identical 
 });
 
 // Verifies: FR-6 (the CLI shape: strict flags, usage errors exit 2)
-test("XT-conformance-70: oracle:extract rejects unknown, repeated or valueless flags, --php without --local and --image with --local with exit 2 and the usage (FR-6)", async () => {
+xaravelTest("XT-conformance-218", "oracle:extract rejects unknown, repeated or valueless flags, --php without --local and --image with --local with exit 2 and the usage (FR-6)", async () => {
   for (const args of [["generate"], ["--check", "--check"], ["--root"], ["--local", "--check"], ["--php", "php"], ["--image", "x", "--local", "y"], ["--suite", "framework"]]) {
     const result = await cli(args);
     expect([args, result.code, result.stdout]).toEqual([args, 2, ""]);

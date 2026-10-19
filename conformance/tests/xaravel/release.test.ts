@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 1.8 (Lockstep release workflow with provenance).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -22,6 +22,7 @@ import {
   workspaces,
 } from "../../../tools/release/release";
 import { frameworkTag } from "../../../tools/upstream/upstream";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "release", "release.ts");
@@ -201,7 +202,7 @@ function workflow(name: string): { text: string; data: Workflow } {
 
 const PINNED = /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/;
 
-test("XT-conformance-34: `bun run release:stamp` copies the root version into every package, and `release:check` fails CI when any package differs (AD-18, FR-13)", async () => {
+xaravelTest("XT-conformance-34", "`bun run release:stamp` copies the root version into every package, and `release:check` fails CI when any package differs (AD-18, FR-13)", async () => {
   await withRoot(fixtureFiles(), async (dir) => {
     expect(workspaces(dir).map((workspace) => [workspace.dir, workspace.private])).toEqual([
       ["packages/alpha", false],
@@ -299,7 +300,7 @@ test("XT-conformance-34: `bun run release:stamp` copies the root version into ev
   expect(checks.jobs["versions"]!.steps.map((step) => step.run).filter(Boolean)).toEqual(["bun tools/release/release.ts check"]);
 });
 
-test("XT-conformance-35: a v0.<n>.<p> tag equal to the root version publishes, in the protected release environment, each public package packed with `bun pm pack` and published with `npm publish <tgz> --provenance`, with no `workspace:` in a packed manifest (AD-18, FR-13, NFR-11)", async () => {
+xaravelTest("XT-conformance-35", "a v0.<n>.<p> tag equal to the root version publishes, in the protected release environment, each public package packed with `bun pm pack` and published with `npm publish <tgz> --provenance`, with no `workspace:` in a packed manifest (AD-18, FR-13, NFR-11)", async () => {
   // Decisions.
   for (const [tag, version] of [["v0.1.0", "0.1.0"], ["v0.0.0", "0.0.0"], ["v0.12.34", "0.12.34"]] as const) {
     expect(PUBLISH_TAG.test(tag)).toBe(true);
@@ -461,7 +462,7 @@ test("XT-conformance-35: a v0.<n>.<p> tag equal to the root version publishes, i
   expect(decide.env).toEqual({ GH_TOKEN: "${{ github.token }}", TAG: "${{ github.ref_name }}", REPO: "${{ github.repository }}", SHA: "${{ github.sha }}" });
 });
 
-test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal the root version, exits without publishing and says why (AD-18, FR-13)", async () => {
+xaravelTest("XT-conformance-36", "a tag that does not match v0.<n>.<p>, or does not equal the root version, exits without publishing and says why (AD-18, FR-13)", async () => {
   for (const tag of ["v1.0.0", "v0.1", "v0.01.0", "v0.1.0-rc.1", "foo", "0.1.0", "v0.1.00"]) {
     const decision = tagDecision(tag, "0.1.0");
     expect(decision.publish).toBe(false);
@@ -610,7 +611,7 @@ test("XT-conformance-36: a tag that does not match v0.<n>.<p>, or does not equal
   expect(data.on).toEqual({ push: { tags: ["**"] } });
 });
 
-test("XT-conformance-37: the release notes state the Baseline Pin read from conformance/baseline-pin (AD-18, FR-13)", async () => {
+xaravelTest("XT-conformance-37", "the release notes state the Baseline Pin read from conformance/baseline-pin (AD-18, FR-13)", async () => {
   expect(releaseNotes({ version: "0.1.0", pin: "v13.37.0", packages: ["@xaravel/a", "create-xaravel"] })).toBe(
     "# Xaravel v0.1.0\n\nBaseline Pin: laravel/framework v13.37.0\n\nEvery package below is published at 0.1.0, with npm provenance.\n\n## Packages\n\n- `@xaravel/a@0.1.0`\n- `create-xaravel@0.1.0`\n",
   );
@@ -665,7 +666,7 @@ const job = (id: string, body: string): string => `  ${id}:\n    runs-on: ubuntu
 const steps = (...runs: string[]): string => `    steps:\n${runs.map((run) => `      - run: ${run}\n`).join("")}`;
 const wf = (top: string, ...jobs: string[]): string => `name: x\non: push\n${top}jobs:\n${jobs.join("")}`;
 
-test("XT-conformance-38: no workflow but the release job has `id-token: write` or runs `npm publish`, the release-authority check fails if one does, and docs/ops/release.md documents the bootstrap publish (AD-18, NFR-11)", async () => {
+xaravelTest("XT-conformance-38", "no workflow but the release job has `id-token: write` or runs `npm publish`, the release-authority check fails if one does, and docs/ops/release.md documents the bootstrap publish (AD-18, NFR-11)", async () => {
   const RELEASE = ".github/workflows/release.yml";
   const OTHER = ".github/workflows/other.yml";
   const ONLY = "only job release of .github/workflows/release.yml may (AD-18)";

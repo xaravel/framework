@@ -5,7 +5,7 @@
 // `--list-tests` text when called as `php -d …`) or a stand-in image runner, so
 // no test needs PHP, a container runtime or vendor files. The workflow, the
 // Protected Path list and CODEOWNERS are checked as committed.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -14,6 +14,7 @@ import { compareListing, crossCheck, IMAGE_LIST_SCRIPT, parseRunnerListing } fro
 import { generate, INVENTORY_DIR, LISTER, NONDETERMINISM_FILE, oracleImage, PHP_VERSION, type PestRawTest, type RawTest } from "../../../tools/inventory/inventory";
 import { activePhases, checkMirror, CODEOWNERS_PATH, evaluatePr, isProtected, LIST_PATH, MAINTAINER, parseList } from "../../../tools/protected-paths/protected-paths";
 import { checkWorkflow } from "../../../tools/workflow-permissions/workflow-permissions";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const INVENTORY_CLI = join(root, "tools", "inventory", "inventory.ts");
@@ -165,7 +166,7 @@ const WORKFLOW = join(root, ".github", "workflows", "inventory.yml");
 // ---------------------------------------------------------------------------
 // XT-conformance-59
 
-test("XT-conformance-59: bun run inventory --check regenerates the Inventory in memory and fails, naming the file, on any byte difference from the committed files; it never writes (FR-1)", async () => {
+xaravelTest("XT-conformance-59", "bun run inventory --check regenerates the Inventory in memory and fails, naming the file, on any byte difference from the committed files; it never writes (FR-1)", async () => {
   await withFixture(async (fx) => {
     const inv = join(fx.dir, INVENTORY_DIR);
     // Generate the framework, then baseline one file (carry-over keeps it), and add files --check never compares.
@@ -263,7 +264,7 @@ test("XT-conformance-59: bun run inventory --check regenerates the Inventory in 
 // ---------------------------------------------------------------------------
 // XT-conformance-60
 
-test("XT-conformance-60: bun run inventory:cross-check compares each suite's phpunit or pest --list-tests in the Oracle with the Inventory and lists the missing and extra Test IDs (FR-1)", async () => {
+xaravelTest("XT-conformance-60", "bun run inventory:cross-check compares each suite's phpunit or pest --list-tests in the Oracle with the Inventory and lists the missing and extra Test IDs (FR-1)", async () => {
   // Parsing: headers, blank lines, int and named datasets, Pest's INFO header and trailing dot.
   expect(parseRunnerListing(PHPUNIT_LISTING, "phpunit")).toEqual(RAWS.map((entry) => entry.id));
   expect(parseRunnerListing(' - C::m"uses string"\n - C::m#0\n', "phpunit")).toEqual(["C::m#uses string", "C::m#0"]);
@@ -401,7 +402,7 @@ test("XT-conformance-60: bun run inventory:cross-check compares each suite's php
 // ---------------------------------------------------------------------------
 // XT-conformance-61
 
-test("XT-conformance-61: a PR that edits conformance/inventory/ fails protected-paths unless the Maintainer approved the head commit, because the Inventory is Protected (FR-1)", () => {
+xaravelTest("XT-conformance-61", "a PR that edits conformance/inventory/ fails protected-paths unless the Maintainer approved the head commit, because the Inventory is Protected (FR-1)", () => {
   const listText = readFileSync(join(root, LIST_PATH), "utf8");
   const entries = parseList(listText);
   const phases = activePhases(root);

@@ -6,7 +6,7 @@
 // fixture php-fixtures/api-surface/ (PHP code a tool runs needs a test that
 // executes it); they are skipped with the reason when `php` is absent, and
 // fail instead under XARAVEL_PHP_FIXTURES=require.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -26,6 +26,7 @@ import {
 } from "../../../tools/oracle/api-surface";
 import { compareUnits, renderJson, type Json, type JsonObject } from "../../../tools/oracle/request";
 import { activePhases, isProtected, LIST_PATH, parseList } from "../../../tools/protected-paths/protected-paths";
+import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const FIXTURE = join(import.meta.dir, "php-fixtures", "api-surface");
@@ -40,20 +41,25 @@ const IMAGE = "xaravel-oracle:test";
 let warned = false;
 
 /** A test that runs the real PHP: skipped with the reason when `php` is absent, failed under XARAVEL_PHP_FIXTURES=require. */
-function phpTest(name: string, body: () => void): void {
-  if (PHP !== null) {
-    test(name, body, TIMEOUT);
-  } else if (REQUIRE) {
-    test(name, () => {
-      throw new Error("XARAVEL_PHP_FIXTURES=require: php not on PATH");
-    });
-  } else {
-    if (!warned) {
-      warned = true;
-      console.warn("api-surface.test.ts: skipping the real-PHP runs: php not on PATH");
-    }
-    test.skip(`${name} [skipped: php not on PATH]`, body);
+function phpTest(id: string, consequence: string, body: () => void): void {
+  if (PHP === null && !REQUIRE && !warned) {
+    warned = true;
+    console.warn("api-surface.test.ts: skipping the real-PHP runs: php not on PATH");
   }
+  xaravelTest(
+    id,
+    consequence,
+    () => {
+      if (PHP === null) {
+        if (REQUIRE) {
+          throw new Error("XARAVEL_PHP_FIXTURES=require: php not on PATH");
+        }
+        Assert.markTestSkipped("php not on PATH");
+      }
+      body();
+    },
+    TIMEOUT,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +243,7 @@ const FIXTURE_LINES = [
 // ---------------------------------------------------------------------------
 // XT-conformance-80
 
-test("XT-conformance-80: the export writes conformance/api-surface/<component>.jsonl, one schema-valid, sorted line per public declaration and member, from a stand-in image runner (FR-6, AD-15)", () => {
+xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<component>.jsonl, one schema-valid, sorted line per public declaration and member, from a stand-in image runner (FR-6, AD-15)", () => {
   withRoot((fx) => {
     // A stray Component file goes; the citation files stay.
     writeFileSync(join(fx.dir, API_SURFACE_DIR, "stale.jsonl"), "{}\n");
@@ -362,7 +368,7 @@ test("XT-conformance-80: the export writes conformance/api-surface/<component>.j
   expect(run(["--bogus"], () => "").code).toBe(2);
 });
 
-phpTest("XT-conformance-80: api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface (FR-6)", () => {
+phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared members only, static, nullable, defaulted, new, constant-default, variadic and by-ref parameters, enum cases, functions and a stubbed missing interface (FR-6)", () => {
   const result = runFixture(FIXTURE_CLASSES);
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
@@ -409,7 +415,7 @@ phpTest("XT-conformance-80: api-surface.php reflects the fixture: declared membe
   });
 });
 
-test("XT-conformance-80: the committed conformance/api-surface/<component>.jsonl files are schema-valid, canonical, sorted and LF-terminated (AD-15)", () => {
+xaravelTest("XT-conformance-199", "the committed conformance/api-surface/<component>.jsonl files are schema-valid, canonical, sorted and LF-terminated (AD-15)", () => {
   const dir = join(root, API_SURFACE_DIR);
   const names = existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".jsonl") && name !== "additions.jsonl" && name !== "exceptions.jsonl") : [];
   // The export is committed (bun run oracle:api-surface --local …), so at least one Component file exists.
@@ -440,7 +446,7 @@ test("XT-conformance-80: the committed conformance/api-surface/<component>.jsonl
 // ---------------------------------------------------------------------------
 // XT-conformance-81
 
-test("XT-conformance-81: two exports of one snapshot give identical bytes, and a second pass that differs fails the run and writes nothing (FR-6)", () => {
+xaravelTest("XT-conformance-81", "two exports of one snapshot give identical bytes, and a second pass that differs fails the run and writes nothing (FR-6)", () => {
   withRoot((fx) => {
     expect(run(["--root", fx.dir], standIn(fx)).code).toBe(0);
     const first = surfaceFiles(fx.dir);
@@ -459,7 +465,7 @@ test("XT-conformance-81: two exports of one snapshot give identical bytes, and a
   });
 });
 
-phpTest("XT-conformance-81: the real api-surface.php run twice on the fixture gives identical output (FR-6)", () => {
+phpTest("XT-conformance-200", "the real api-surface.php run twice on the fixture gives identical output (FR-6)", () => {
   const first = runFixture(FIXTURE_CLASSES);
   const second = runFixture(FIXTURE_CLASSES);
   expect(first.code).toBe(0);
@@ -469,7 +475,7 @@ phpTest("XT-conformance-81: the real api-surface.php run twice on the fixture gi
 // ---------------------------------------------------------------------------
 // XT-conformance-82
 
-test("XT-conformance-82: additions.jsonl and exceptions.jsonl exist empty and Protected, and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15, AD-16)", () => {
+xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist empty and Protected, and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15, AD-16)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   for (const name of ["additions.jsonl", "exceptions.jsonl", "schema.json", "support.jsonl"]) {

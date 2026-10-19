@@ -5,7 +5,7 @@
 // shards, `conformance/variants` and Ported Test files that import
 // `portedTest` from the real `packages/assert` by absolute path; the harness
 // runs them with its real preload. The real repository is only read.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:net";
@@ -16,6 +16,7 @@ import { compare, type HarnessLine, type VariantRun } from "../../harness/compar
 import { runHarness } from "../../harness/harness";
 import { parseJunit } from "../../harness/junit";
 import { escalationStatus, parseEscalation } from "../../../tools/escalations/escalations";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const ASSERT = join(root, "packages", "assert", "src", "index.ts");
@@ -146,7 +147,7 @@ async function env(extra: Record<string, string> = {}): Promise<Record<string, s
 // ---------------------------------------------------------------------------
 // XT-conformance-101
 
-test("XT-conformance-101: bun run harness runs bun test with the root bunfig.toml once per variant, setting XARAVEL_VARIANT, and fails first on a package-level bunfig.toml (FR-9, AD-15)", async () => {
+xaravelTest("XT-conformance-101", "bun run harness runs bun test with the root bunfig.toml once per variant, setting XARAVEL_VARIANT, and fails first on a package-level bunfig.toml (FR-9, AD-15)", async () => {
   const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["harness"];
   expect(script).toBe("bun --no-env-file conformance/harness/harness.ts");
 
@@ -235,7 +236,7 @@ test("XT-conformance-101: bun run harness runs bun test with the root bunfig.tom
 // ---------------------------------------------------------------------------
 // XT-conformance-102
 
-test("XT-conformance-102: results that differ from the Expectations print one greppable line per differing Test ID × variant, sorted, then a summary line (FR-3, FR-9)", async () => {
+xaravelTest("XT-conformance-102", "results that differ from the Expectations print one greppable line per differing Test ID × variant, sorted, then a summary line (FR-3, FR-9)", async () => {
   const F = `${CLASS}::testF`;
   const G = `${CLASS}::testG`;
   const H = `${CLASS}::testH`;
@@ -343,7 +344,7 @@ test("XT-conformance-102: results that differ from the Expectations print one gr
 // ---------------------------------------------------------------------------
 // XT-conformance-103
 
-test("XT-conformance-103: a pass whose assertion kinds fall below the Inventory's is a FLOOR failure unless its DIV clause allows fewer (ESC-5.3-2) (FR-113)", async () => {
+xaravelTest("XT-conformance-103", "a pass whose assertion kinds fall below the Inventory's is a FLOOR failure unless its DIV clause allows fewer (ESC-5.3-2) (FR-113)", async () => {
   const body = ported(
     [
       `portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertSame(1, 1); });`,
@@ -392,7 +393,7 @@ test("XT-conformance-103: a pass whose assertion kinds fall below the Inventory'
 // ---------------------------------------------------------------------------
 // XT-conformance-104
 
-test("XT-conformance-104: skip:blocked-by:<c> matches only a BlockedByComponentError(<c>) failure; any other failure is a mismatch (ESC-5.3-1) (FR-3, AD-15)", async () => {
+xaravelTest("XT-conformance-104", "skip:blocked-by:<c> matches only a BlockedByComponentError(<c>) failure; any other failure is a mismatch (ESC-5.3-1) (FR-3, AD-15)", async () => {
   const body = ported(
     [
       `class BlockedByComponentError extends Error { constructor(component: string) { super("BlockedByComponentError(" + component + "): Illuminate\\\\Database\\\\Capsule is not installed"); this.name = "BlockedByComponentError"; } }`,
@@ -429,7 +430,7 @@ test("XT-conformance-104: skip:blocked-by:<c> matches only a BlockedByComponentE
 // ---------------------------------------------------------------------------
 // XT-conformance-105
 
-test("XT-conformance-105: a variant whose backend is not running locally is NOT-RUN, never a failure and never written; in CI an alpha variant must run (FR-9)", async () => {
+xaravelTest("XT-conformance-105", "a variant whose backend is not running locally is NOT-RUN, never a failure and never written; in CI an alpha variant must run (FR-9)", async () => {
   const body = ported(`portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });\nportedTest(${JSON.stringify(B)}, {}, () => { Assert.assertTrue(true); });`);
   const entries = [{ id: A }, { id: B, backends: ["mysql", "pgsql", "redis"] }];
   const lines: Line[] = [
@@ -502,7 +503,7 @@ test("XT-conformance-105: a variant whose backend is not running locally is NOT-
 // ---------------------------------------------------------------------------
 // XT-conformance-185
 
-test("XT-conformance-185: under the harness, concurrent tests never mix counts, a late assertion fails its test, and the intrinsics are frozen before any Ported Test loads (AD-15, FR-113)", async () => {
+xaravelTest("XT-conformance-185", "under the harness, concurrent tests never mix counts, a late assertion fails its test, and the intrinsics are frozen before any Ported Test loads (AD-15, FR-113)", async () => {
   // Concurrent: A and B interleave (B checks that A is mid-run); each report holds only its own counts.
   const concurrent = ported(
     [
@@ -576,52 +577,73 @@ test("XT-conformance-185: under the harness, concurrent tests never mix counts, 
   expect(frozenRun.out).toEqual(["SUMMARY variants=1 run=1 not-run=0 checked=1 differ=0"]);
 
   // The late hook itself: a frozen { id, kind }, kind null for the kind-less count; a throwing hook never throws.
-  const { runCounted, recordAssertion, addToAssertionCount } = (await import(COUNTER)) as typeof import("../../../packages/assert/src/declarations/AssertionCounter");
-  const LATE = Symbol.for("xaravel.harness.late");
-  const seen: unknown[] = [];
-  const global = globalThis as Record<symbol, unknown>;
-  let resume: () => void = () => undefined;
-  const leftover = new Promise<void>((done) => {
-    resume = done;
-  });
-  let tail: Promise<void> = Promise.resolve();
-  try {
-    global[LATE] = (late: unknown) => {
-      seen.push(late);
-    };
-    const counted = await runCounted(() => {
-      recordAssertion("assertTrue");
-      tail = leftover.then(() => {
-        recordAssertion("assertSame");
-        addToAssertionCount(0);
-        addToAssertionCount(2);
-      });
-    }, "X::y");
-    resume();
-    await tail;
-    expect(counted.assertions).toEqual({ assertTrue: 1 });
-    expect(seen).toEqual([
-      { id: "X::y", kind: "assertSame" },
-      { id: "X::y", kind: null },
-    ]);
-    expect(seen.every((item) => Object.isFrozen(item))).toBe(true);
-
-    global[LATE] = () => {
-      throw new Error("hook");
-    };
-    let again: () => void = () => undefined;
-    const second = new Promise<void>((done) => {
-      again = done;
-    });
-    let after: Promise<void> = Promise.resolve();
-    await runCounted(() => {
-      after = second.then(() => {
-        recordAssertion("assertTrue");
-      });
-    }, "X::z");
-    again();
-    await after;
-  } finally {
-    delete global[LATE];
+  // Under the harness preload the hook is installed non-writable and non-configurable, so this part runs in a
+  // child bun without the preload, which prints what it saw as one JSON line (Story 5.9).
+  const hookDir = mkdtempSync(join(tmpdir(), "xt-harness-late-"));
+  roots.push(hookDir);
+  const hookScript = join(hookDir, "late-hook.ts");
+  writeFileSync(
+    hookScript,
+    [
+      `import { runCounted, recordAssertion, addToAssertionCount } from ${JSON.stringify(COUNTER)};`,
+      `const LATE = Symbol.for("xaravel.harness.late");`,
+      `const seen: unknown[] = [];`,
+      `const global = globalThis as Record<symbol, unknown>;`,
+      `let resume: () => void = () => undefined;`,
+      `const leftover = new Promise<void>((done) => {`,
+      `  resume = done;`,
+      `});`,
+      `let tail: Promise<void> = Promise.resolve();`,
+      `let counted: unknown = null;`,
+      `try {`,
+      `  global[LATE] = (late: unknown) => {`,
+      `    seen.push(late);`,
+      `  };`,
+      `  counted = await runCounted(() => {`,
+      `    recordAssertion("assertTrue");`,
+      `    tail = leftover.then(() => {`,
+      `      recordAssertion("assertSame");`,
+      `      addToAssertionCount(0);`,
+      `      addToAssertionCount(2);`,
+      `    });`,
+      `  }, "X::y");`,
+      `  resume();`,
+      `  await tail;`,
+      `  const frozen = seen.every((item) => Object.isFrozen(item));`,
+      `  global[LATE] = () => {`,
+      `    throw new Error("hook");`,
+      `  };`,
+      `  let again: () => void = () => undefined;`,
+      `  const second = new Promise<void>((done) => {`,
+      `    again = done;`,
+      `  });`,
+      `  let after: Promise<void> = Promise.resolve();`,
+      `  await runCounted(() => {`,
+      `    after = second.then(() => {`,
+      `      recordAssertion("assertTrue");`,
+      `    });`,
+      `  }, "X::z");`,
+      `  again();`,
+      `  await after;`,
+      `  console.log(JSON.stringify({ assertions: (counted as { assertions: unknown }).assertions, seen, frozen }));`,
+      `} finally {`,
+      `  delete global[LATE];`,
+      `}`,
+    ].join("\n"),
+  );
+  const hookEnv: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value !== undefined && name !== "BUN_OPTIONS" && name !== "NODE_OPTIONS") {
+      hookEnv[name] = value;
+    }
   }
+  const hookRun = Bun.spawnSync([process.execPath, "--no-env-file", hookScript], { cwd: hookDir, env: hookEnv, stdout: "pipe", stderr: "pipe" });
+  expect([hookRun.exitCode, hookRun.stderr.toString()]).toEqual([0, ""]);
+  const hook = JSON.parse(hookRun.stdout.toString()) as { assertions: unknown; seen: unknown[]; frozen: boolean };
+  expect(hook.assertions).toEqual({ assertTrue: 1 });
+  expect(hook.seen).toEqual([
+    { id: "X::y", kind: "assertSame" },
+    { id: "X::y", kind: null },
+  ]);
+  expect(hook.frozen).toBe(true);
 }, 60_000);

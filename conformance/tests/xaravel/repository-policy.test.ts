@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 1.7 (repository ruleset, workflow permissions and dependency audit).
 // These run under plain `bun test` until the harness lands in Epic 5.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -17,6 +17,7 @@ import {
   type Json,
 } from "../../../tools/ruleset/ruleset";
 import { ALLOWED_WRITE_JOBS, checkWorkflow, checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const RULESET_CLI = join(root, "tools", "ruleset", "ruleset.ts");
@@ -227,7 +228,7 @@ async function withRulesets(files: Record<string, unknown>, body: (dir: string) 
   }
 }
 
-test("XT-conformance-30: .github/rulesets/main.json matches the live ruleset and requires protected-paths and ownership, linear history, the merge queue and only the Maintainer as bypass; any difference exits 1 naming it (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-30", ".github/rulesets/main.json matches the live ruleset and requires protected-paths and ownership, linear history, the merge queue and only the Maintainer as bypass; any difference exits 1 naming it (AD-16, AD-28)", async () => {
   // The committed main ruleset carries every invariant.
   expect(MAIN["name"]).toBe("Protect main");
   expect(MAIN["target"]).toBe("branch");
@@ -525,7 +526,7 @@ function workflow(top: string, jobs = "  build:\n    runs-on: ubuntu-latest\n   
 
 const READ = "permissions:\n  contents: read\n";
 
-test("XT-conformance-31: every workflow's top-level permissions are contents: read, and write scopes appear only in the oracle, dashboard and release jobs (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-31", "every workflow's top-level permissions are contents: read, and write scopes appear only in the oracle, dashboard and release jobs (AD-16, AD-28)", async () => {
   expect([...ALLOWED_WRITE_JOBS]).toEqual(["oracle.yml#oracle", "dashboard.yml#dashboard", "release.yml#release"]);
   const check = (text: string) => checkWorkflow(".github/workflows/x.yml", text);
 
@@ -646,7 +647,7 @@ const OK_RULES: Record<string, ActiveRule[]> = {
   "story/probe": [],
 };
 
-test("XT-conformance-32: the agent push identity is limited to story/* by live rules, `bun run ruleset:identity` verifies it, and docs/ops/identities.md documents the setup (AD-16, AD-28)", async () => {
+xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* by live rules, `bun run ruleset:identity` verifies it, and docs/ops/identities.md documents the setup (AD-16, AD-28)", async () => {
   const tags = liveOf(TAGS, 102);
   expect(identityViolations(OK_RULES, tags)).toEqual([]);
   expect(identityViolations(OK_RULES, tags, { login: "bot", roleName: "write", orgAdmin: false })).toEqual([]);
@@ -757,7 +758,7 @@ const FRAMEWORK_INSTALL = [
   "",
 ].join("\n");
 
-test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` and fails on high or critical advisories (AD-16, NFR-5)", () => {
+xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun audit` and fails on high or critical advisories (AD-16, NFR-5)", () => {
   const text = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
   const ci = Bun.YAML.parse(text) as {
     on: Record<string, unknown>;
@@ -798,6 +799,8 @@ test("XT-conformance-33: on any PR the required `audit` check runs `bun audit` a
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
     "bun run test",
+    // Story 5.9: every Xaravel Test under the harness; UNDECLARED, LATE and FAIL results gate the merge (FR-115, AD-15).
+    "bun run harness --xaravel",
     // Story 5.1: the Expectations File check (FR-3, AD-15, XT-conformance-91).
     "bun run expectations:check",
     // Story 5.2: the Skip Reason rule checks (FR-3, SM-C1, XT-conformance-92..99).

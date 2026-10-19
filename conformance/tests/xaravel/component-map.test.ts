@@ -3,7 +3,7 @@
 // fixture roots are hermetic; the parts that read the real Upstream snapshot
 // run only when it is present (`bun run upstream:sync`), as in the
 // `component-map` workflow. Nothing here fetches.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -21,6 +21,7 @@ import {
 } from "../../../tools/component-map/component-map";
 import { CODEOWNERS_PATH, activePhases, isProtected, LIST_PATH, MAINTAINER, matches, parseList, renderCodeowners } from "../../../tools/protected-paths/protected-paths";
 import { UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "component-map", "component-map.ts");
@@ -143,7 +144,7 @@ function replaced(component: string, line: string): string[] {
 // ---------------------------------------------------------------------------
 // XT-conformance-45
 
-test("XT-conformance-45: component-map:check maps every selected Upstream test file to exactly one Component and fails on an unmapped, doubly mapped, stale or redundant entry (FR-1)", async () => {
+xaravelTest("XT-conformance-45", "component-map:check maps every selected Upstream test file to exactly one Component and fails on an unmapped, doubly mapped, stale or redundant entry (FR-1)", async () => {
   await withFixture(async (fx) => {
     // The fixture map is current: counts per repository, exit 0.
     const ok = await cli(["check", "--root", fx.dir]);
@@ -230,7 +231,7 @@ test("XT-conformance-45: component-map:check maps every selected Upstream test f
 // ---------------------------------------------------------------------------
 // XT-conformance-46
 
-test("XT-conformance-46: each hand remap resolves to its Component, Foundation Cloud is tagged deferred:foundation-cloud, and every ai, mcp and boost test is its own Component (FR-1)", () => {
+xaravelTest("XT-conformance-46", "each hand remap resolves to its Component, Foundation Cloud is tagged deferred:foundation-cloud, and every ai, mcp and boost test is its own Component (FR-1)", () => {
   const owner = (path: string): string | null => componentForTest(realMap, path)?.component ?? null;
   const remaps: [string, string][] = [
     ["framework/tests/Support/SupportArrTest.php", "collections"],
@@ -286,7 +287,7 @@ test("XT-conformance-46: each hand remap resolves to its Component, Foundation C
 // ---------------------------------------------------------------------------
 // XT-conformance-47
 
-test("XT-conformance-47: every Component records its namespaces, classes and aliases, the lookups resolve, and the FQCN and alias derivations match the map (FR-1)", async () => {
+xaravelTest("XT-conformance-47", "every Component records its namespaces, classes and aliases, the lookups resolve, and the FQCN and alias derivations match the map (FR-1)", async () => {
   for (const [fqcn, component] of [
     ["Illuminate\\Support\\Collection", "collections"],
     ["\\Illuminate\\Support\\Collection", "collections"],
@@ -400,7 +401,7 @@ test("XT-conformance-47: every Component records its namespaces, classes and ali
   }
 });
 
-test("XT-conformance-47: a bad record fails with its line number, and a missing snapshot fails with the sync hint and no fetch (FR-1)", async () => {
+xaravelTest("XT-conformance-203", "a bad record fails with its line number, and a missing snapshot fails with the sync hint and no fetch (FR-1)", async () => {
   const at = (line: number): string => `${COMPONENT_MAP_FILE}:${line}: `;
   const names = ["ai", "auth", "support"];
   const ok = '{"component":"ai","tests":[],"namespaces":[],"classes":[],"aliases":[]}';
@@ -454,7 +455,7 @@ test("XT-conformance-47: a bad record fails with its line number, and a missing 
 // ---------------------------------------------------------------------------
 // XT-conformance-48
 
-test("XT-conformance-48: conformance/component-map is a Protected Path whose CODEOWNERS owner is the Maintainer, and the check runs in its own read-only workflow (FR-1, AD-16)", () => {
+xaravelTest("XT-conformance-48", "conformance/component-map is a Protected Path whose CODEOWNERS owner is the Maintainer, and the check runs in its own read-only workflow (FR-1, AD-16)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   expect(isProtected(entries, phases, COMPONENT_MAP_FILE)).toBe(true);

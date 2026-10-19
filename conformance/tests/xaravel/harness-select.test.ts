@@ -5,7 +5,7 @@
 // `conformance/variants` and Ported Test files that import `portedTest` from
 // the real `packages/assert` by absolute path; the harness runs them with its
 // real preload. The real repository is only read.
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { MAX_PATTERN, PRELOAD, isFullRun, parseArgs, runHarness, type HarnessOptions } from "../../harness/harness";
 import { FAST_SAMPLE, globToRegExp, namePattern, sampleIds, selectIds } from "../../harness/select";
 import { signatureLookup } from "../../harness/signatures";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const HARNESS = join(root, "conformance", "harness", "harness.ts");
@@ -125,7 +126,7 @@ const pad = (i: number): string => String(i).padStart(3, "0");
 // ---------------------------------------------------------------------------
 // XT-conformance-106
 
-test("XT-conformance-106: bun run harness --fast prints the seed it used and samples deterministically from it (FR-9)", async () => {
+xaravelTest("XT-conformance-106", "bun run harness --fast prints the seed it used and samples deterministically from it (FR-9)", async () => {
   // 150 Test IDs, none ported: nothing is spawned, every sampled line is missing, and skip lines match it.
   const ids = range(150, (i) => s(`test${pad(i)}`));
   const dir = makeRoot(ids.map((id) => ({ id, status: "skip" })));
@@ -176,7 +177,7 @@ test("XT-conformance-106: bun run harness --fast prints the seed it used and sam
 // ---------------------------------------------------------------------------
 // XT-conformance-107
 
-test("XT-conformance-107: --seed <s> run twice on the same tree runs the same sample, and malformed options are usage errors (FR-9)", async () => {
+xaravelTest("XT-conformance-107", "--seed <s> run twice on the same tree runs the same sample, and malformed options are usage errors (FR-9)", async () => {
   const ids = range(150, (i) => s(`test${pad(i)}`));
   const passing = new Set(ids.filter((_, i) => i % 3 === 0));
   // Tests that pass where the line says skip make differences, so the output depends on which IDs were sampled.
@@ -216,7 +217,7 @@ test("XT-conformance-107: --seed <s> run twice on the same tree runs the same sa
 // ---------------------------------------------------------------------------
 // XT-conformance-108
 
-test("XT-conformance-108: --component, --id and --story run only the matching Test IDs, and --story reads the manifest's test_ids (FR-9)", async () => {
+xaravelTest("XT-conformance-108", "--component, --id and --story run only the matching Test IDs, and --story reads the manifest's test_ids (FR-9)", async () => {
   const seenDir = mkdtempSync(join(tmpdir(), "xt-select-seen-"));
   roots.push(seenDir);
   const seen = join(seenDir, "seen");
@@ -365,7 +366,7 @@ test("XT-conformance-108: --component, --id and --story run only the matching Te
 // ---------------------------------------------------------------------------
 // XT-conformance-109
 
-test("XT-conformance-109: a fast run says in its report that it is a sample, and its SUMMARY never counts as a full run for the done check (FR-9)", async () => {
+xaravelTest("XT-conformance-109", "a fast run says in its report that it is a sample, and its SUMMARY never counts as a full run for the done check (FR-9)", async () => {
   const dir = makeRoot([s("testA"), s("testB"), c("testA")].map((id, i) => ({ id, status: "skip", component: i === 2 ? "collections" : "support" })));
   const fast = await harness(dir, { seed: "s1", components: ["support"] });
   expect(fast.out).toEqual(["FAST seed=s1 sample=2/2", "SUMMARY variants=1 run=1 not-run=0 checked=2 differ=0 mode=fast seed=s1"]);
@@ -393,7 +394,7 @@ test("XT-conformance-109: a fast run says in its report that it is a sample, and
 // ---------------------------------------------------------------------------
 // XT-conformance-186
 
-test("XT-conformance-186: under the harness, a Ported Test sees globalThis[Symbol.for('xaravel.api.signature')] return the committed api-surface row, or null (ESC-4.8-1 item 1)", async () => {
+xaravelTest("XT-conformance-186", "under the harness, a Ported Test sees globalThis[Symbol.for('xaravel.api.signature')] return the committed api-surface row, or null (ESC-4.8-1 item 1)", async () => {
   const row = { fqcn: "A\\B", kind: "method", member: "m", static: false, parameters: [{ name: "x", type: "int", nullable: false, default: null, optional: false, variadic: false, byRef: false }], returns: "?string", nullable: true };
   const surface = [
     JSON.stringify({ fqcn: "A\\B", kind: "class", member: null, stubbed: [] }),

@@ -52,6 +52,8 @@ export interface PlannedTest {
   readonly label: string;
   readonly id: string;
   readonly run: () => unknown;
+  /** Bun's per-test timeout in milliseconds, or null (or absent) for bun's default. */
+  readonly timeout?: number | null;
 }
 
 /**
@@ -75,8 +77,8 @@ export function registerTests(
   for (const id of ids) {
     declared.add(id);
   }
-  for (const { label, id, run } of planned) {
-    test(label, async () => {
+  for (const { label, id, run, timeout } of planned) {
+    const body = async (): Promise<void> => {
       const result: CountedRun = await runCounted(run, id);
       const skip = result.error !== null && isSkippedTest(result.error.value) ? result.error.value.getMessage() : null;
       let reportError: { value: unknown } | null = null;
@@ -103,7 +105,12 @@ export function registerTests(
       if (zeroAssertionsFail && result.total === 0) {
         throw new Error(`${label}: Ported Test executed zero assertions (FR-113)`);
       }
-    });
+    };
+    if (timeout === undefined || timeout === null) {
+      test(label, body);
+    } else {
+      test(label, body, timeout);
+    }
   }
 }
 

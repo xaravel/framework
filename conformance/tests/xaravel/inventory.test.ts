@@ -4,7 +4,7 @@
 // `--php` (or, for image mode, a stand-in runner) that prints raw lister
 // lines, so no test needs PHP, a container runtime or vendor files. The committed Inventory is checked
 // directly, and against the Upstream snapshot when it is present.
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -29,6 +29,7 @@ import {
   type InventoryEntry,
   type RawTest,
 } from "../../../tools/inventory/inventory";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "inventory", "inventory.ts");
@@ -177,7 +178,7 @@ function committed(): Map<string, InventoryEntry[]> {
 // ---------------------------------------------------------------------------
 // XT-conformance-49
 
-test("XT-conformance-49: bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
+xaravelTest("XT-conformance-49", "bun run inventory writes conformance/inventory/<component>.jsonl with one {id, component, kind, backends, source, hash, assertions, oracle} line per runner-listed test, and fails closed (FR-1)", async () => {
   await withFixture(async (fx) => {
     // Foreign files and the Oracle non-determinism findings (Story 2.6) are never touched (or read); a framework
     // Component no longer generated is read for carry-over, then deleted.
@@ -368,7 +369,7 @@ test("XT-conformance-49: bun run inventory writes conformance/inventory/<compone
 // ---------------------------------------------------------------------------
 // XT-conformance-50
 
-test("XT-conformance-50: each #[DataProvider] or #[TestWith] dataset, runtime-computed ones included, is its own entry, an unnamed dataset using its numeric index (FR-1)", async () => {
+xaravelTest("XT-conformance-50", "each #[DataProvider] or #[TestWith] dataset, runtime-computed ones included, is its own entry, an unnamed dataset using its numeric index (FR-1)", async () => {
   await withFixture((fx) => {
     generate(fx.dir, { local: fx.local, php: fx.php });
     const bus = parseInventory(fx.inventory()["bus.jsonl"]!, "bus.jsonl");
@@ -401,7 +402,7 @@ test("XT-conformance-50: each #[DataProvider] or #[TestWith] dataset, runtime-co
 // ---------------------------------------------------------------------------
 // XT-conformance-51
 
-test("XT-conformance-51: backends come from #[RequiresDatabase], the Integration/Database/<Engine> directories, InteractsWithRedis and the Integration/Queue suite, otherwise [\"none\"] (FR-1)", async () => {
+xaravelTest("XT-conformance-51", "backends come from #[RequiresDatabase], the Integration/Database/<Engine> directories, InteractsWithRedis and the Integration/Queue suite, otherwise [\"none\"] (FR-1)", async () => {
   const b = (fields: Partial<Pick<RawTest, "file" | "requiresDatabase" | "redis">>): string[] => backendsFor({ id: "T::t", file: "tests/Support/XTest.php", requiresDatabase: null, redis: false, ...fields });
   expect(b({})).toEqual(["none"]);
   expect(b({ requiresDatabase: ["sqlite", "mysql", "sqlite"] })).toEqual(["mysql", "sqlite"]);
@@ -478,7 +479,7 @@ test("XT-conformance-51: backends come from #[RequiresDatabase], the Integration
 // ---------------------------------------------------------------------------
 // XT-conformance-52
 
-test("XT-conformance-52: hash covers the method's code tokens and the dataset export; whitespace and comments leave it, code and data change it; generation is byte-identical (FR-7)", async () => {
+xaravelTest("XT-conformance-52", "hash covers the method's code tokens and the dataset export; whitespace and comments leave it, code and data change it; generation is byte-identical (FR-7)", async () => {
   const base = testHash(TOKENS, "[0=>'a']");
   expect(base).toMatch(/^[0-9a-f]{64}$/);
   expect(normaliseTokens(TOKENS)).toEqual(["function", "testIt", "(", ")", "{", "$this", "->", "assertTrue", "(", "true", ")", ";", "}"]);

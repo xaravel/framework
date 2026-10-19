@@ -16,7 +16,11 @@
 //   - its `sha256` is a batch request (`conformance/oracle/requests/`): the
 //     batch already evaluates and signs it (a candidate only, below);
 //   - it is listed in `conformance/oracle/nondeterminism.jsonl`: a listed
-//     request gets no fixture.
+//     request gets no fixture;
+//   - its `id` is a Pest Test ID (`<suite>/tests/<file>::<description>`, a
+//     suite of tools/inventory's `PEST_SUITES`): evaluate.php binds a request to a PHPUnit
+//     TestCase, so a Pest ID would only ever become a signed `fatal` fixture
+//     (Story 5.9, Epic 3 retro R6). The fixture generators refuse one too.
 //
 // Candidate and committed state (Story 5.6 AC5, Epic 3 retro R5). A candidate
 // (`judgeStoryRequests` with the batch, as `oracle:story` judges a Story's file
@@ -38,6 +42,7 @@
 // fixtures.ts (which imports it).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { PEST_SUITES } from "../inventory/inventory";
 import { parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { mergeOrder } from "./merge-order";
 import { ORACLE_DIR } from "./oracle";
@@ -47,6 +52,18 @@ export const STORY_REQUESTS_DIR = "conformance/oracle-requests";
 const LISTING_FILE = `${ORACLE_DIR}/nondeterminism.jsonl`;
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
 const STORY_FILE = /^([1-9]\d*\.[1-9]\d*)\.jsonl$/;
+/** A Pest Test ID: `<suite>/tests/<file>.php::<description>[#<dataset>]` of a Pest suite (tools/inventory's `pestTestId`). */
+const PEST_ID = new RegExp(`^(?:${PEST_SUITES.join("|")})/tests/[^\\n]*?\\.php::`);
+
+/** Whether `id` is a Pest Test ID, which the Oracle cannot evaluate (Epic 3 retro R6). */
+export function isPestTestId(id: string): boolean {
+  return PEST_ID.test(id);
+}
+
+/** The rejection reason of a Pest Test ID request. */
+export function pestReason(id: string): string {
+  return `id ${id} is a Pest Test ID; the Oracle evaluates requests bound to a PHPUnit TestCase, so a Pest request can only fail with a fatal error and is never evaluated or signed`;
+}
 
 /** What the judge needs of a Story manifest. */
 export type StoryManifest = Pick<Manifest, "storyId" | "component" | "testIds" | "xaravelTestIds">;
@@ -129,6 +146,9 @@ export function judgeStoryRequests(
       return;
     }
     const reasons: string[] = [];
+    if (isPestTestId(request.id)) {
+      reasons.push(pestReason(request.id));
+    }
     if (!owned.has(request.id)) {
       reasons.push(`id ${request.id} is not owned by Story ${manifest.storyId}; it is in neither test_ids nor xaravel_test_ids of ${STORIES_DIR}/${manifest.storyId}.md`);
     }

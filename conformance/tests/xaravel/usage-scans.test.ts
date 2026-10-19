@@ -3,7 +3,7 @@
 // harness lands in Epic 5. Each scan runs against a mini snapshot written into
 // a temporary root; the parts that read the real snapshot run only when
 // `conformance/upstream/` has been synced (it is gitignored).
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -13,6 +13,7 @@ import { ALLOWED_IDENTIFIERS_COMMENT, ALLOWED_IDENTIFIERS_FILE, buildClosures, m
 import { buildDiv12, classifier, DIV12_FILE, main as div12Main } from "../../../tools/scans/div12";
 import { buildIndex } from "../../../tools/scans/php";
 import { ASSERTIONS_FILE, buildTestApi, inventoryExecutions, main as testApiMain, MOCKERY_FILE } from "../../../tools/scans/test-api";
+import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const REAL = existsSync(join(root, "conformance", "upstream", "framework", "src"));
@@ -126,7 +127,7 @@ const CLOSURE_SNAPSHOT: Record<string, string> = {
   "framework/src/Illuminate/Support/functions.php": php("Illuminate\\Support", "function bar()\n{\n}"),
 };
 
-test("XT-conformance-86: scan:closures writes allowed-identifiers.json with every facade short name and global helper name", () => {
+xaravelTest("XT-conformance-86", "scan:closures writes allowed-identifiers.json with every facade short name and global helper name", () => {
   withSnapshot(CLOSURE_SNAPSHOT, (dir) => {
     const expected = ["{", `  "comment": ${JSON.stringify(ALLOWED_IDENTIFIERS_COMMENT)},`, '  "facades": [', '    "Ai",', '    "Cache"', "  ],", '  "helpers": [', '    "collect",', '    "str"', "  ]", "}", ""].join("\n");
     expect(buildClosures(dir).text).toBe(expected);
@@ -250,7 +251,7 @@ const side = (declaredIn: string, isStatic: boolean): { declaredIn: string; stat
 const pairLine = (cls: string, name: string, classification: string, property: { declaredIn: string; static: boolean }, method: { declaredIn: string; static: boolean }): string =>
   renderJson({ class: cls, name, classification, property, method });
 
-test("XT-conformance-87: scan:div12 writes div12-pairs.jsonl with every property/method name pair, classified", () => {
+xaravelTest("XT-conformance-87", "scan:div12 writes div12-pairs.jsonl with every property/method name pair, classified", () => {
   withSnapshot(DIV12_SNAPSHOT, (dir) => {
     const D = "Illuminate\\Demo\\";
     const MODEL = "Illuminate\\Database\\Eloquent\\Model";
@@ -398,7 +399,7 @@ const INVENTORY = {
   "conformance/inventory/oracle-nondeterminism.jsonl": `${renderJson({ id: "A::testOne", assertions: { assertIgnored: 5 } })}\n`,
 };
 
-test("XT-conformance-88: scan:test-api writes the PHPUnit assertion and Mockery method usage of the Upstream suites", () => {
+xaravelTest("XT-conformance-88", "scan:test-api writes the PHPUnit assertion and Mockery method usage of the Upstream suites", () => {
   withSnapshot(
     TEST_API_SNAPSHOT,
     (dir) => {

@@ -12,13 +12,13 @@
 // line. A missing, unsigned or errored fixture fails the test; it is never
 // skipped. The TestCase cells run as declared tests in a child `bun test`
 // (fixtures/expectations.fixture.ts).
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { ASSERTIONS_4_4 } from "../../src/Framework/Assert";
 import { ExceptionMessageMatchesRegularExpression } from "../../src/Framework/Constraint/Exception/ExceptionMessageMatchesRegularExpression";
-import { Assert, AssertionFailedError, Exception, ExpectationFailedException, TestCase } from "../../src/index";
+import { Assert, AssertionFailedError, Exception, ExpectationFailedException, TestCase, xaravelTest } from "../../src/index";
 import { type DirectCell, EXCEPTION_CELLS, EXPECTATION_CELLS, FILE_CELLS, FILES, JSON_CELLS, JSON_MATRIX_EXPRS, JSON_V, JSON_W, type LifecycleCell, OUTPUT_MARKER, type Pair, REQUESTS, type RequestSpec, THAT_CELLS } from "./expectation-cells";
 import { runCase47 } from "./double-cells";
 import { decode, type Output, readRequests, readSignedFixture } from "./oracle-values";
@@ -279,7 +279,7 @@ const report = (run: FixtureRun, label: string): Record<string, unknown> | undef
 
 // ---------------------------------------------------------------------------
 
-test("XT-assert-11: expectException(X) ends the test at the throw and passes for X or a subclass; nothing thrown, another class or a propagating assertion failure fails with PHPUnit 13.4.3's messages", () => {
+xaravelTest("XT-assert-11", "expectException(X) ends the test at the throw and passes for X or a subclass; nothing thrown, another class or a propagating assertion failure fails with PHPUnit 13.4.3's messages", () => {
   const run = runFixture();
   // No statement after the throw runs.
   expect(run.probes).toMatchObject({ beforeThrow: true });
@@ -299,7 +299,7 @@ test("XT-assert-11: expectException(X) ends the test at the throw and passes for
   }
 }, CHILD_TIMEOUT);
 
-test("XT-assert-12: the other expectations, the output buffer, fail, markTestSkipped, assertThat and the file, directory and JSON assertions match the Oracle's outcomes, messages and comparison failures (getDiff, toString)", () => {
+xaravelTest("XT-assert-12", "the other expectations, the output buffer, fail, markTestSkipped, assertThat and the file, directory and JSON assertions match the Oracle's outcomes, messages and comparison failures (getDiff, toString)", () => {
   // The Story's 16 PHPUnit names, on Assert (and its prototype) or on TestCase.
   expect(ASSERTIONS_4_4).toHaveLength(16);
   for (const name of ASSERTIONS_4_4) {
@@ -449,7 +449,7 @@ class XtService {
   }
 }
 
-test("XT-assert-13: this.createMock(X) returns a PHPUnit mock object of X, with and without @xaravel/mockery loaded (decisions/ESC-4.4-2.md item 6): it is an X, has no shouldReceive, and an unmet expects(once()) fails the test with PHPUnit's message", () => {
+xaravelTest("XT-assert-13", "this.createMock(X) returns a PHPUnit mock object of X, with and without @xaravel/mockery loaded (decisions/ESC-4.4-2.md item 6): it is an X, has no shouldReceive, and an unmet expects(once()) fails the test with PHPUnit's message", () => {
   const [, , unmetMessage] = runCase47(function () {
     this.createMock(XtService).expects(this.once()).method("run");
   });
@@ -498,7 +498,7 @@ const PENDING = [
   "pending testbench: assertMigrationFileExists (Orchestra\\Testbench\\Concerns\\InteractsWithPublishedFiles)",
 ];
 
-test("XT-assert-14: bun run assert:coverage lists no missing assert name and the 15 non-PHPUnit names as pending testing or testbench, and fails naming each name a scan adds or an owner file lacks", () => {
+xaravelTest("XT-assert-14", "bun run assert:coverage lists no missing assert name and the 15 non-PHPUnit names as pending testing or testbench, and fails naming each name a scan adds or an owner file lacks", () => {
   const scanText = readFileSync(join(root, "conformance/scans/phpunit-assertions.jsonl"), "utf8");
   const scanNames = scanText
     .split("\n")
