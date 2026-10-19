@@ -67,7 +67,9 @@ So the harness, `tools/`, `@xaravel/assert` and `@xaravel/mockery`, `stories/`, 
 
 Job `ratchet` runs on `pull_request_target` into `main` (opened, synchronize, reopened, ready_for_review), in the merge queue (`merge_group`) and on push to `main`, with `contents: read` and `pull-requests: read`, no secrets, and `persist-credentials: false` on every checkout. [CI pipeline](ci.md) maps it into the whole AD-28 pipeline.
 
-On a PR:
+Only a same-repository PR's code runs. The PR checkout and every PR step below require `github.event.pull_request.head.repo.full_name == github.repository`, as `oracle.yml` does; without that guard a fork PR would skip first-time-contributor approval and run its own code in the base branch's cache scope. A fork PR fails closed: `ratchet` is a required check and a skipped required check counts as passing, so instead of skipping, the step "Refuse a fork PR" runs right after the base checkout, prints an `::error::` naming the fork (read through env only) and exits 1, before any PR code is fetched. Push the branch to this repository and open a new PR from it.
+
+On a same-repository PR:
 
 1. It checks out the base commit at `.` and the PR head at `pr/`.
 2. `bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"`, before anything changes `pr/`.
@@ -81,7 +83,7 @@ In the merge queue GitHub runs the workflow from the merge group commit, so the 
 
 `CI=true` makes every alpha Variant run: the job has `postgres:18` and `redis:8.10.2` services, and sets `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `REDIS_HOST` and `REDIS_PORT` as the harness reads them. An unreachable alpha Variant is an unexpected failure. No step passes `--fast`.
 
-The PR run executes PR code from a workflow and tool the PR cannot change (AD-28). Its safety rests on four things: `contents: read`, no secrets, `persist-credentials: false`, and the overlay. Because `pull_request_target` uses the base's copy of the workflow, a PR that changes this workflow is graded by the old copy: Story 5.7's scope and story steps first run on the PR after it merged.
+The PR run executes PR code from a workflow and tool the PR cannot change (AD-28). Its safety rests on five things: the same-repository guard, `contents: read`, no secrets, `persist-credentials: false`, and the overlay. Because `pull_request_target` uses the base's copy of the workflow, a PR that changes this workflow is graded by the old copy: Story 5.7's scope and story steps first run on the PR after it merged.
 
 ## Line ownership
 

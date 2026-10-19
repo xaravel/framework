@@ -20,8 +20,16 @@
 # (skipped for a non-Story branch or a manifest with no `test_ids`). Code a
 # PR's tests run in-process is not contained, as with any test runner; the
 # Ratchet's outcome comparison and review guard that. The job's safety rests
-# on `contents: read`, no secrets, `persist-credentials: false`, and the
-# overlay.
+# on the same-repository guard (below), `contents: read`, no secrets,
+# `persist-credentials: false`, and the overlay.
+#
+# Only a same-repository PR runs: the PR checkout and every step that runs PR
+# code require `head.repo.full_name == github.repository`, as oracle.yml does.
+# A fork PR would otherwise skip first-time-contributor approval and run its
+# own code in the base branch's cache scope. Because `ratchet` is a required
+# check and a skipped required check counts as passing, a fork PR fails
+# closed: "Refuse a fork PR" exits 1 with an `::error::` naming the fork
+# (read through env only) before any PR code is fetched.
 #
 # In the merge queue (`merge_group`) GitHub runs this workflow from the merge
 # group commit, so the PR's own copy runs; its trust rests on the
@@ -90,8 +98,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
           persist-credentials: false
+      - name: Refuse a fork PR
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          echo "::error::the Ratchet does not run a fork PR's code under pull_request_target; push the branch to this repository and open a new PR from it (head repository: ${HEAD_REPO:-<deleted fork>})"
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -101,22 +116,22 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: Scope the PR
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         run: bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"
       - name: Restore the grader from the base
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         run: bun tools/ratchet/ratchet.ts overlay --base . --head pr
       - name: Install the PR from the base lockfile
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         working-directory: pr
         run: bun install --frozen-lockfile --ignore-scripts
       - name: Ratchet the PR over its scope
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"
       - name: Run the Story's tests in full
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: bun tools/ratchet/ratchet.ts story --root pr --ref "$HEAD_REF"
