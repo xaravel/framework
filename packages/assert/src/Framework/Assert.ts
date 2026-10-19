@@ -73,13 +73,13 @@ function message(method: string, position: number, value: unknown): string {
 
 function iterable(method: string, position: number, name: string, value: unknown): void {
   if (!isIterable(value)) {
-    throw argumentError(method, position, name, "iterable", value);
+    throw argumentError(method, position, name, "Traversable|array", value);
   }
 }
 
 function countableOrIterable(method: string, position: number, name: string, value: unknown): void {
   if (!isCountable(value) && !isIterable(value)) {
-    throw argumentError(method, position, name, "Countable|iterable", value);
+    throw argumentError(method, position, name, "Countable|Traversable|array", value);
   }
 }
 

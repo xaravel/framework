@@ -57,10 +57,14 @@ function sameCell(oracle: Cell, got: Cell): boolean {
     return false;
   }
   if (oracle.kind === "throws" && got.kind === "throws") {
-    // PHP's engine TypeError names PHP call sites, so only its class is compared; the port's must still be an
-    // argument error, never a grader crash ("undefined is not an object").
+    // PHP's engine TypeError ends with the PHP call site (", called in <file> on line <n>"), so that tail is dropped;
+    // the method, argument, parameter, type and given type before it must be equal. The `xt_contains_only` shim
+    // (ESC-4.3-1 item 7) takes the test case first, so its argument #n is assertContainsOnly's #n-1.
     if (oracle.name === "TypeError") {
-      return got.name === "TypeError" && got.message.includes("Argument #");
+      const message = oracle.message
+        .replace(/, called in [\s\S]*$/, "")
+        .replace(/^xt_contains_only\(\): Argument #(\d+)/, (_, n: string) => `PHPUnit\\Framework\\Assert::assertContainsOnly(): Argument #${Number(n) - 1}`);
+      return got.name === "TypeError" && message === got.message;
     }
     return oracle.name === got.name && oracle.message === got.message;
   }

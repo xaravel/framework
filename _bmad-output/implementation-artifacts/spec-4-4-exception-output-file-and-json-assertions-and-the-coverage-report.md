@@ -5,7 +5,7 @@ created: '2026-10-18'
 status: 'done'
 baseline_revision: '88778696ce542c31cd7e88944027815be70d875b'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
   - '{project-root}/_bmad-output/implementation-artifacts/spec-4-3-core-phpunit-assertions.md'
@@ -35,6 +35,27 @@ deferred:
     location: >-
       packages/assert/package.json
     severity: medium (unverified)
+  - summary: >-
+      A TestCase test's tearDown errors and skips do not take precedence the way PHPUnit 13.4.3's `tearDownTest` gives them.
+    evidence: |-
+      Follow-up pass (2026-10-18). `runLifecycle` keeps the first error (`first ??=`, portedTest.ts), and Declarations.ts ends any test whose final error is a `SkippedTest` as skipped. PHPUnit's `tearDownTest` (TestCase.php:1402-1436) returns a tearDown `AssertionFailedError` over any earlier error, and `SkippedWithMessageException` is one. It returns any other tearDown throwable when nothing failed before it or the earlier error was a skip, and `TestStatus::failure` is set for an assertion failure from tearDown. So four cases differ. (a) A skip from tearDown after a passing body: PHPUnit fails the test, and the port skips it. (b) A body failure, then a tearDown assertion failure or skip: PHPUnit reports tearDown's, and the port reports the body's. (c) A body skip, then a tearDown error: PHPUnit reports the error, and the port skips. (d) A body failure, then a tearDown error that is not an assertion failure: the two agree, and XT-assert-12 now pins it. ESC-4.4-2 item 1 proposes the port's rule as the contract ("or from tearDown when nothing failed before it"), and the Story's Design Notes call it "first error wins". Changing the code would contradict the open Escalation, so the Maintainer's ruling on item 1 must take PHPUnit's rule into account. Target: ESC-4.4-2 item 1 (retro epic-4 item 7).
+    location: >-
+      packages/assert/src/declarations/portedTest.ts (runLifecycle), packages/assert/src/declarations/Declarations.ts
+    severity: medium
+  - summary: >-
+      The wrong-class message's JS trace keeps grader and bun frames, and a message line that starts with "    at " is read as a frame.
+    evidence: |-
+      Follow-up pass (2026-10-18). `stackTraceOf` (Throwable.ts:35-45) keeps every `    at` line of `error.stack`. Those lines include the message's own lines, and it filters no frames, where PHPUnit's `Filter::stackTraceFromThrowableAsString` drops its own frames. The Xaravel Tests compare the message only up to `" at\n"`. ESC-4.4-2 item 3 proposes the whole trace as a message-only difference. Target: ESC-4.4-2 item 3 (retro epic-4 item 7).
+    location: >-
+      packages/assert/src/Framework/Throwable.ts:35
+    severity: low
+  - summary: >-
+      `TestReport.skipped` is an optional key, which is an absent-value form that AD-9 does not name (null is the only absent value).
+    evidence: |-
+      Follow-up pass (2026-10-18). Declarations.ts declares `readonly skipped?: string` and leaves the key out of every report that is not a skip, so that XT-assert-6's four-key shape holds. ESC-4.4-2 item 1 proposes the fifth key but does not mention AD-9. `skipped: null` on every report would break XT-assert-6 (Story 4.2's contract), so the shape needs a ruling, not an agent patch. Target: ESC-4.4-2 item 1 (retro epic-4 item 7). Story 5.3 reads the key.
+    location: >-
+      packages/assert/src/declarations/Declarations.ts:37
+    severity: low
 ---
 
 <intent-contract>
@@ -173,6 +194,57 @@ deferred:
   - `[low]` `[reject]` (edge) OutputBuffer string chunk written with a non-utf8 encoding argument — not used by ported code.
   - `[low]` `[reject]` (blind) `declaresMember` builds an unescaped regex — names are identifiers.
 
+### 2026-10-18 — Follow-up review pass
+This pass covers the Story's squash commit (`328471d`, without `_bmad-output/` and `conformance/fixtures/`). It ran because `followup_review_recommended` was `true` (retro epic-4 item 6, finding S5). Findings were checked against `main` at `9cced98` plus the local 4.1/4.3 follow-up commit `e8a9382`. That tree includes retro items 1–5 (#126, #134, #135, #136, #132). The four layers ran as parallel subagents. PHPUnit source was read at `/tmp/xaravel-inv/framework/vendor/phpunit/phpunit`.
+- verdicts: 42 findings — high 0, medium 3, low 20, false 16, maybe-false 3
+- findings:
+  - Blind Hunter
+    - `[false]` `[reject]` The coverage report checks only that names exist. — Retro item 5 (#132) fixed this. `coverage.ts` now calls each `Assert`/`TestCase.prototype` method inside `runCounted` and requires a recorded assertion. It runs outcome probes in a child `bun test` for the six names that record nothing. The `declaresMember` half is carried (the two `declaresMember` rows): the names come from a fixed table of identifiers.
+    - `[medium]` `[patch]` `createMock` sends PHPUnit's MockObject API to Mockery. — carried (first-pass createMock row): recorded as ESC-4.4-2 item 6 with a proposed owner. Not patched again.
+    - `[low]` `[reject]` `OutputBuffer.stop()` restores the write saved at module load, so it removes a wrapper installed later. — True. But restoring the write found at `start()` would let an abandoned capture (a timeout) stay in place for the rest of the process, which is what the first-pass patch removed. No code in the repo wraps `process.stdout.write` around a TestCase test (the conformance tests that wrap it run no TestCase). The trade-off is now written in the comment.
+    - `[low]` `[patch]` A timed-out TestCase test leaves its capture in place until another TestCase test stops a buffer, and the comment says otherwise. — Verified: bun abandons the lifecycle, so `finally` never runs. Output from non-TestCase tests in between is lost, though the timed-out test has already failed. Patched the `OutputBuffer.ts` comment to state the real window. A behavior fix needs a guard on every test.
+    - `[low]` `[patch]` Skip and lifecycle paths are untested (skip from tearDown, failure then tearDown, skip with an unmet Mockery expectation, skip with an output expectation). — Grouped with the Verification Gap row. The Mockery part is false: on a rejection, `run` (Mockery.ts:187-193) calls `mockery_close`, which tears down without verifying, so a skip stays a skip. A skip with an output expectation follows PHPUnit (`$e === null` guard). The tearDown skip cases differ from PHPUnit; see the Edge Case Hunter claim row.
+    - `[false]` `[reject]` JSON canonicalization edge cases (`{"0":"a","1":"b"}` against `["a","b"]`, mixed key order) are not checked by the Oracle. — A probe shows `canonicalize` keeps `{"0":"a","1":"b"}` an object and `["a","b"]` a list. It sorts `{"10":1,"2":2,"1":3}` as `{"1":3,"10":1,"2":2}` (SORT_STRING). Both match `Util/Json.php::recursiveSort`, which casts back to an object. The request already covers numeric-string keys and reordered keys.
+    - `[low]` `[reject]` `assertStringEqualsFile` reads the file as UTF-8. — carried (first-pass UTF-8 row). Reading from a directory is an existing cell.
+    - `[low]` `[patch]` File cells use fixed shared temp names, so concurrent runs race. — Verified: the parent writes `tmpdir()/xt-assert-12-<n>.txt` in `beforeAll` and deletes it in `afterAll`. A second checkout running `bun test` at the same time (the orchestrator runs concurrent agents) can delete another run's files. Patched `expectation-cells.ts` so the TS paths carry `process.pid`. No path reaches a message, so the PHP setup and the signed request are unchanged.
+    - `[low]` `[defer]` The wrong-class trace keeps grader and bun frames, and parses `error.stack`, so a message line that starts with `    at ` becomes a frame. — Verified in `Throwable.ts:35-45`. This is the trace ESC-4.4-2 item 3 proposes as a message-only difference. Recorded in `deferred` (ESC-4.4-2 item 3, retro epic-4 item 7).
+    - `[low]` `[defer]` `TestReport.skipped?: string` is an absent-value form that AD-9 does not name. — Verified at Declarations.ts:37. `skipped: null` on every report would break XT-assert-6's four keys. The key's shape is ESC-4.4-2 item 1. Recorded in `deferred` (ESC-4.4-2 item 1, retro epic-4 item 7).
+    - `[false]` `[reject]` `stories/4.4.md` is done with `test_ids: []`. — `test_ids` holds Upstream Test IDs, of which this Story has none. `xaravel_test_ids` lists XT-assert-11..14.
+    - `[low]` `[reject]` A non-Error thrown value is reported as nothing thrown. — carried (first-pass non-Error row).
+    - `[false]` `[reject]` The TypeError of `expectExceptionObject` says Throwable, but PHPUnit 13 declares `\Exception`. — `TestCase.php:969` declares `expectExceptionObject(Throwable $exception)`.
+    - `[false]` `[reject]` `getDiff()` checks `=== ""` where comparator uses PHP falsiness. — carried (first-pass `getDiff` row). The vendored `ComparisonFailure.php:93` uses `=== ''`.
+    - `[false]` `[reject]` `ASSERTIONS_4_4` leaves out `expectExceptionCode`, `createMock` and the factories. — By the Tasks, the list is the intent's 16 scan names. `expectExceptionCode` (5 cells), the four factories (THAT_CELLS) and `createMock` (XT-assert-13) are each tested.
+    - `[low]` `[reject]` A non-integer number code (1.5, NaN) is appended as a string code. — carried (first-pass non-integral code row).
+  - Edge Case Hunter
+    - `[false]` `[reject]` `'0'` and `'-0.0'` are equal under PHP's `==`. — `JsonMatches::matches` compares the re-encoded strings with `===`. PHP encodes them as `0` and `-0`, and the port's `canonicalize` gives `"0"` and `"-0"`, so both fail.
+    - `[false]` `[reject]` For equal non-empty strings, `getDiff()` returns `''` where PHP returns the header. — `StrictUnifiedDiffOutputBuilder::getDiff` returns `''` when nothing changed. A probe of the port with `"a\nb"`/`"a\nb"` gives `""`.
+    - `[false]` `[reject]` `'0'` should be empty in `getDiff()`. — carried (first-pass `getDiff` row).
+    - `[low]` `[reject]` An object with integer-like keys reorders in `getExpected()`/`getActual()`. — Only the decoded values that `toPhpValue` builds are affected. The prettified strings, which reach messages and diffs, keep PHP's order (probe above). A JS plain object cannot keep integer-like keys in insertion order (the AD-9 form), so a fix needs a new object representation.
+    - `[low]` `[reject]` A decoded `1.0` is reported as int `1`. — This is the interim DIV-9 `1 === 1.0` state (`decisions/ESC-4.1-1.md`). Retro finding S4 is its owner, and item 8 takes it.
+    - `[low]` `[patch]` A sticky (`y`) RegExp is anchored at 0 by `search()`, so a later match is missed, and the comment says `y` is ignored. — Verified: `"a boom".search(/boom/y)` is `-1`. Story 4.3's `Constraint\RegularExpression` strips `g`/`y`, so the two layers disagreed. Patched `ExceptionMessageMatchesRegularExpression.ts` to test a fresh RegExp without `g`/`y`, as 4.3 does. Added an XT-assert-12 check with `/boom/y` and a `g` pattern whose `lastIndex` is past the match.
+    - `[false]` `[reject]` `ExceptionCode` rejects a null or non-integral code that PHP's string cast would match. — `ExceptionCode::matches` has the same `!is_int && !is_string` pre-check.
+    - `[low]` `[patch]` After a bun timeout, later non-TestCase output is captured and lost. — Grouped with the Blind Hunter timeout row (comment patched).
+    - `[low]` `[reject]` `write(chunk, 'hex')` captures the encoded text. — carried (first-pass encoding-argument row).
+    - `[low]` `[reject]` A non-UTF-8 file is decoded lossily. — carried (first-pass UTF-8 row).
+    - `[low]` `[reject]` `expectExceptionCode(NaN)`/`Infinity` is a TypeError where PHP's coercive `int|string` takes a string. — No test passes a NaN code, and accepting it needs a coercion branch.
+    - `[low]` `[reject]` A subclass with a `code = 5` field throws, because `code` is non-configurable. — Upstream tests do not subclass `PHPUnit\Framework\Exception` with a code field. Making `code` configurable would let `code` and `getCode()` disagree.
+    - `[false]` `[reject]` A thrown object with the shared skip brand but no `getMessage` gives a TypeError. — Every copy of `SkippedWithMessageException` inherits `getMessage()` from `Exception`. Only a hand-made object has the brand without it.
+    - `[false]` `[reject]` (claim) json_encode writes an integral float as `1.0`. — carried (first-pass `1.0` row): PHP prints `1`.
+    - `[medium]` `[defer]` (claim) A skip from tearDown after an earlier failure is dropped, and a body skip passes under `expectException(AssertionFailedError)`. — The second half matches PHPUnit: `shouldExceptionExpectationsBeVerified` is true when the expected class is a `PHPUnit\Framework\Exception` subclass. The first half is real and wider than claimed. PHPUnit's `tearDownTest` (TestCase.php:1402-1436) lets a tearDown `AssertionFailedError` (a skip is one) replace any earlier error and marks it a failure. It lets a tearDown error replace an earlier skip. The port keeps the first error and ends a tearDown skip as skipped. ESC-4.4-2 item 1 proposes the port's rule as the contract, so a code change would contradict the open Escalation. Recorded in `deferred` (ESC-4.4-2 item 1, retro epic-4 item 7). The cases where the two agree are now pinned (Verification Gap row).
+    - `[false]` `[reject]` (claim) The diff builder diverges when there is no hunk. — The port returns `''` for no entries and for no change, as `StrictUnifiedDiffOutputBuilder::getDiff` does (probes above).
+  - Verification Gap
+    - `[low]` `[patch]` On the TestCase path, `runLifecycle`'s tearDown handling has no test: a `first =` mutation and a dropped tearDown call pass. — Added `ProbeTearDown` and `ThrowInTearDown` TestCase fixtures (testTearDownRuns, testTearDownRunsAfterFailure, testTearDownThrows, testBodyFailsThenTearDownThrows). XT-assert-12 asserts their probes, junit results and final errors. These cover only the cases where PHPUnit's `tearDownTest` agrees with the port: tearDown runs after a pass and after a failure, its error fails a passing test, and a body assertion failure beats a tearDown `Error`. The tearDown skip cases differ from PHPUnit and are deferred, not pinned. The `first =` mutation now fails XT-assert-12; checked, then reverted.
+  - Intent Alignment
+    - `[medium]` `[defer]` The Oracle tests ExceptionExpectation pieces, not `TestCase`'s lifecycle, so `expectExceptionObject`'s mapping, setUp-before-body, output-before-tearDown, tearDown precedence and setUp skips have no Oracle witness. — The intent itself accepts that the evaluator does not run `runBare`. Reading `runLifecycle`/`tearDownTest` against the port shows the tearDown precedence is wrong. That is grouped with the tearDown claim row, in the same `deferred` item. The `expectExceptionObject` mapping is `TestCase.php:969-974`, carried (first-pass `expectExceptionObject` row).
+    - `[low]` `[reject]` Assertion counts are hand-written literals. — carried (first-pass counts row).
+    - `[low]` `[patch]` Messages are compared loosely: the wrong-class message only up to `" at\n"`, and TypeErrors by class and `"Argument #"`. — The TypeError half is verified: Story 4.3's comparison was tightened in `e8a9382`, but `expectations.test.ts` still had the loose rule. Patched `sameCell` to drop PHP's `", called in …"` tail and compare the rest exactly. The signed 4.4 fixtures' two TypeError cells (`assertJson(null)`, …) still match. The wrong-class half is ESC-4.4-2 item 3, in the trace `deferred` item.
+    - `[maybe-false]` `[defer]` The risky warning text and the skip report shape do not come from the Oracle. — carried (first-pass risky row, and the skip-outcome row). Not deferred again.
+    - `[maybe-false]` `[defer]` The `expectNotToPerformAssertions` cell witnesses only that it does not throw; risky is tested against hand-written stderr. — carried (first-pass risky row).
+    - `[maybe-false]` `[defer]` The Story builds on the unapproved ESC-4.4-2. — carried (first-pass ESC-4.4-2 row): the existing `deferred` item, waiting on the Maintainer (retro epic-4 item 7).
+    - `[false]` `[reject]` The coverage report checks presence. — Fixed by retro item 5 (#132), as in the first Blind Hunter row.
+    - `[false]` `[reject]` The diff edits files outside `packages/assert/**`. — Story 4.4 is a Phase 0 Story. `decisions/MAINT-2026-10-16-unattended-orchestrator.md` amendment 2 approves its out-of-scope paths.
+    - `[false]` `[reject]` It adds more than the 16 names. — The intent's Approach asks for `expectExceptionCode`, the ESC-4.3-1 item 12 exception API and `createMock`. The Code Map names the four factories (`Support/DateFacadeTest.php:24`), and the Tasks name `ASSERTIONS_4_4`.
+
 ## Design Notes
 
 **Lifecycle** (PHPUnit 13.4.3 `runLifecycle`, for a body whose `this` is a `TestCase`): start the output buffer → `setUp` → body (`runTest`: on a throw, `shouldBeVerifiedFor` — false for any `PHPUnit\Framework\Exception`, so assertion failures and skips propagate unless the expected class is one — then `verify`; else `assertWasRaised`) → if no error and an output expectation exists, stop the buffer and `assertSame(expected, output)` per expected string → `tearDown` (first error wins) → stop the buffer if still running. Mockery's run protocol (ESC-4.5-1) still wraps all of it. A non-`TestCase` `this` keeps 4.2's path unchanged.
@@ -255,3 +327,29 @@ Blocking condition: ESC-4.4-1, raised during planning, before any code was built
 - (2) 15 of the 31 remaining scan names are Laravel's Foundation testing helpers (Epic 57) or Testbench's (Epic 59), not PHPUnit's. All have `executions: 0`, and ESC-3.7-1's ruling allows excluding such a name from the coverage report only through an approved Escalation. Proposed: owner-mapped coverage.
 
 Resume: after the ruling, set this spec back to `draft`. Then rebuild from the Intent and Code Map above, amended by the ruling.
+
+### Follow-up review (2026-10-18)
+
+This pass ran for retro epic-4 item 6 (finding S5). It covered `328471d` and was checked against `main` at `9cced98` plus `e8a9382`. There were 42 findings: 3 medium, 20 low, 16 false and 3 maybe-false.
+- **Patched (5 entries, all low).** No change to the requests, the fixtures or any expected value:
+  - `packages/assert/src/Framework/Constraint/Exception/ExceptionMessageMatchesRegularExpression.ts`: it matches with a fresh RegExp without `g`/`y`, as Story 4.3's `RegularExpression` does. Before, a sticky pattern was anchored at 0. XT-assert-12 has a new check for it.
+  - `packages/assert/src/Framework/TestCase/OutputBuffer.ts`: the comment now gives the real window in which a timed-out test's capture stays installed, and says that a later wrapper is replaced (comment only).
+  - `packages/assert/tests/xaravel/expectations.test.ts`: `sameCell` compares a TypeError's message exactly, without PHP's `", called in …"` tail, as 4.3's follow-up does.
+  - `packages/assert/tests/xaravel/fixtures/expectations.fixture.ts` and `expectations.test.ts`: four TestCase tearDown tests, for the cases where PHPUnit's `tearDownTest` agrees with the port.
+  - `packages/assert/tests/xaravel/expectation-cells.ts`: the file cells' TS temp paths carry the process id, so concurrent runs do not delete each other's files.
+- **Deferred (3 new entries, in `deferred`).** Each needs a Maintainer ruling on ESC-4.4-2 (retro epic-4 item 7):
+  - The tearDown precedence differs from PHPUnit's `tearDownTest` (medium). A skip from tearDown fails in PHPUnit. A tearDown assertion failure or skip replaces an earlier error, and a tearDown error replaces an earlier skip. ESC-4.4-2 item 1 proposes the port's rule, so the ruling needs this evidence. Target: ESC-4.4-2 item 1.
+  - The wrong-class trace is unfiltered, and message lines can be read as frames (low). Target: ESC-4.4-2 item 3.
+  - The optional `skipped` report key is an absent-value form that AD-9 does not name (low). Target: ESC-4.4-2 item 1.
+- **Carried.** The first pass's rows keep their routes: createMock is ESC-4.4-2 item 6, and the risky text and ESC-4.4-2 are deferred.
+- **Rejected.** The rest, with reasons in the Review Triage Log. Retro item 5 (#132) closed the presence-only coverage finding. The other false rows were refuted from PHPUnit 13.4.3's and sebastian's source, or by probes.
+- **Follow-up review recommendation: false.** No high was patched (patched: high 0, medium 0, low 5), so the work has converged.
+- **Verification.**
+  - `bun test packages/assert`: 14 pass, 0 fail.
+  - `bun test` (whole repo): 154 pass, 0 fail.
+  - `bun run typecheck` and `bun run lint` exit 0.
+  - `bun run assert:coverage` exits 0 (82 scan names: 67 implemented, 15 pending, 0 missing).
+  - A `first =` mutation in `runLifecycle`'s tearDown catch failed XT-assert-12; it was checked, then reverted.
+- **Residual risks.**
+  - Until ESC-4.4-2 item 1 is ruled, a TestCase test that skips or fails in tearDown can get a different outcome than in PHPUnit.
+  - After a bun timeout of a TestCase test, output written through `process.stdout.write` by later non-TestCase tests is lost until the next TestCase test ends.
