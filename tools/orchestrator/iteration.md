@@ -23,7 +23,7 @@ Every comment you post on ISSUE starts with `🤖 `. Comments without that prefi
 
 A. **Open orchestrator PR.** If an open PR exists from a `story/*` or `planning/*` branch that this orchestrator opened (its body ends with `Opened by the Xaravel orchestrator.`), finish it before you start anything new:
    - Check out its branch.
-   - If checks are still running, wait for them as section 4 step 3 says.
+   - If it conflicts with `main`, merge `main` into it first, as section 4 step 3 says. If checks are still running, wait for them as that step says.
    - A `protected-paths` or `ownership` failure that section 4 step 3 calls expected is not a failure here.
    - If checks fail, read the failing logs, fix the cause on the branch, commit, push and wait again. If a branch has failed three iterations in a row (count the earlier `[orchestrator fix]` commits on it), stop retrying: mark the Story `blocked` in sprint status and comment on ISSUE.
    - If it is green and mergeable, merge it (see section 4). Outcome `progress`.
@@ -101,7 +101,9 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 
 1. Before the first push, commit everything the PR will carry: the code, the Story's `done` status in sprint status and its manifest, retro or action-item records, and any other bookkeeping. Then `git push -u origin <branch>`. Every push re-runs CI, including the roughly 20-minute baseline on Oracle and Inventory PRs, so never push again after checks are green unless a check failed and you are fixing it. Bookkeeping you forgot goes in a later `planning/` PR, not in another push to a green branch.
 2. `gh pr create --title "<story-id>: <title>" --body "<what changed, how it was verified, the Story spec path>\n\nOpened by the Xaravel orchestrator."`
-3. Wait for checks by polling. Do not use `gh pr checks --watch`: it waits for every check, including the long ones, after a real failure has already shown, and `--fail-fast` stops on the expected `protected-paths` failure below. Do not use `timeout`: macOS has none. Run this as one Bash command; it returns within about 9 minutes, under the tool's 10-minute limit:
+3. First check that the PR merges cleanly: `gh pr view <n> --json mergeable,mergeStateStatus`. While a PR conflicts with `main` (`CONFLICTING` / `DIRTY`), GitHub runs only its `pull_request_target` checks, and `ci`, `oracle` and `inventory` never start, so polling would wait for checks that cannot appear. Merge `origin/main` into the branch instead (`git fetch origin` then `git merge origin/main`; PRs are squash-merged, so no rebase or force-push is needed). Resolve each conflict in place. For `sprint-status.yaml` and `retro-gates.yaml`, keep `main`'s lines and re-apply this PR's own entries: with SPS for action items, and by editing in place for Story status and GATES. Run the verification again, commit the merge, push, and only then poll. `UNKNOWN` means GitHub is still computing; ask again after a few seconds.
+
+   Then wait for checks by polling. Do not use `gh pr checks --watch`: it waits for every check, including the long ones, after a real failure has already shown, and `--fail-fast` stops on the expected `protected-paths` failure below. Do not use `timeout`: macOS has none. Run this as one Bash command; it returns within about 9 minutes, under the tool's 10-minute limit:
 
    ```bash
    for i in $(seq 1 18); do s=$(gh pr checks <n> --json name,bucket); bad=$(jq '[.[] | select(.bucket=="fail" and .name!="protected-paths" and .name!="ownership")] | length' <<<"$s"); pending=$(jq '[.[] | select(.bucket=="pending")] | length' <<<"$s"); if [ "$bad" -gt 0 ]; then echo failed; break; fi; if [ "$pending" -eq 0 ]; then echo done; break; fi; sleep 30; done; [ "$bad" -gt 0 ] || [ "$pending" -eq 0 ] || echo pending
