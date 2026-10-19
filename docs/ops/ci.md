@@ -13,6 +13,8 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 | edit ownership | `ownership.yml` (required, `pull_request_target`) | path and line ownership ([ratchet.md](ratchet.md#line-ownership)) |
 | Ratchet | `ratchet.yml#ratchet` (required, `pull_request_target`) | `scope`, `overlay`, `run --scope`, `story`, same-repository PRs only; a fork PR fails ([ratchet.md](ratchet.md)) |
 
+`lint` is `bun --bun oxlint --type-aware && bun run lint:disables`: the type-aware async-safety rules, and a check that no comment or config switches a spine rule off (AD-16.4; [lint.md](lint.md)).
+
 `ci.yml` also runs `workflow-permissions`, `upstream` and `php-fixtures`, which are advisory.
 
 The Ratchet's PR run grades the AD-2 reverse-dependency closure of the packages the PR changed (all of it when a non-package path such as `tools/` changed, nothing for a docs-only PR), then runs the Story's own `test_ids` in full on every Variant. Both run with `CI=true`, so every alpha Variant must run: SQLite in `.cache/`, and the `postgres:18` and `redis:8.10.2` services. `protected-paths` and `ratchet` run from `pull_request_target` workflows, so a PR is judged by the base branch's copy of the check and cannot change it. The Ratchet checks out and runs a PR's code only when the PR's head repository is this repository (`head.repo.full_name == github.repository`). A fork PR fails closed: since a skipped required check counts as passing, the job does not skip but fails with an `::error::` before fetching any PR code.
