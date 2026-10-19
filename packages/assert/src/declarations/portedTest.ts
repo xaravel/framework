@@ -193,6 +193,8 @@ async function runLifecycle(self: Lifecycle, state: TestCaseState, body: () => u
 /**
  * Runs `fn` through Mockery's test-finish protocol when @xaravel/mockery is loaded (ESC-4.5-1 item 1), else directly.
  * Shared with `xaravelTest`.
+ *
+ * @asyncRoot callback
  */
 export async function runWithMockery(fn: () => unknown): Promise<void> {
   const mockeryRun: unknown = (globalThis as Record<symbol, unknown>)[MOCKERY_RUN];

@@ -33,6 +33,8 @@ xaravelTest(
     expect((manifest.engines as Record<string, unknown>).bun).toBe(">=1.4");
     expect(manifest.devDependencies).toEqual({
       "@types/bun": "1.4.3",
+      // Story 6.4: the async-surface tool's declaration parser (AD-6).
+      "oxc-parser": "0.155.0",
       oxlint: "1.88.0",
       "oxlint-tsgolint": "7.0.2004",
       typescript: "7.0.2",

@@ -103,6 +103,8 @@ export function addToAssertionCount(count: number): void {
 /**
  * Runs `fn` in a fresh counting context for the test `id` (null when there is none); never rejects (the body's
  * error is returned). The counts end when `fn` settles; later assertions are late (see the header). Internal.
+ *
+ * @asyncRoot callback
  */
 export async function runCounted(fn: () => unknown, id: string | null = null): Promise<CountedRun> {
   const counts: Counts = { kinds: new Map<string, number>(), kindless: 0, id, ended: false };

@@ -19,7 +19,8 @@ Catch the mistakes agents make most often before review, and do it mechanically:
 
 - **Kind.** This is a Conformance System Epic. Its tooling lives under `tools/`, which is Protected, along with `.oxlintrc.json`, the root `package.json` and `.github/`. Changes there go through Maintainer Code Owner review.
 - **Verification shape.** Every acceptance criterion is verified by an `XT-conformance-<n>` Xaravel Test (`xaravelTest(...)`). Each test runs the rule over a failing fixture, which must fail and name the rule, and over a passing fixture, which must pass.
-- **Async-safety lint.** The type-aware rules `no-floating-promises` (with `checkThenables: true`), `await-thenable` and `no-misused-promises` (with `checksVoidReturn: true`) are errors. They run over `packages/*/src`, `packages/*/tests`, `skeleton/` and the compiled-view snapshots. Every Story's CI includes this lint.
+- **Async-safety lint.** The type-aware rules `no-floating-promises` (with `checkThenables: true`), `await-thenable` and `no-misused-promises` (with both `checksVoidReturn: true` and `checksConditionals: true`) are errors. They run over `packages/*/src`, `packages/*/tests`, `skeleton/` and the compiled-view snapshots. Every Story's CI includes this lint.
+- **Pinned options.** `lint:disables` must fail on any config that turns off `checksConditionals` (or any other pinned option), and a fixture that uses a Promise as a condition must fail lint. Story 6.6 carries this follow-up from an Escalation raised in Story 6.1.
 - **No disabling.** An `oxlint-disable` comment for any rule the architecture names fails CI and reports the comment's location.
 - **Custom rules (`tools/lint-rules`).** Each rule fails on its fixture and reports the rule's name:
   - `constructor.name` used for identity;
@@ -81,6 +82,7 @@ Catch the mistakes agents make most often before review, and do it mechanically:
   - Stories 6.2 and 6.3 share the `tools/lint-rules` infrastructure.
   - Story 6.3 consumes `singletons.json` and `boot-only-state` from Epic 3, and its fix to the boot-only-state scan touches Epic 3's scan tooling.
   - Story 6.5 adds the get_declared_classes cross-check to the Epic 3 export.
+  - Story 6.6 also extends Story 6.1's lint config and its `lint:disables` check (the `checksConditionals` pin).
 - **Downstream consumers.**
   - Every Component Epic commits `async-surface.json` and closes on `api-surface:gate`.
   - Story 10.5 (Contracts) later supplies the thenable list in `@xaravel/contracts/async`, which the Story 6.4 tool must prefer when that package is installed.
