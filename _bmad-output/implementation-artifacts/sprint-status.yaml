@@ -83,7 +83,7 @@ development_status:
   5-2-skip-reason-rule-checks: done
   5-3-harness-runner-and-greppable-report: done
   5-4-fast-mode-seeds-and-filters: done
-  5-5-backend-isolation-per-worktree: backlog
+  5-5-backend-isolation-per-worktree: done
   5-6-ratchet-and-expectations-line-ownership: backlog
   5-7-ci-pipeline-pr-checks-merge-queue-and-nightly-matrix: backlog
   5-8-promotion-and-quarantine-bots: backlog

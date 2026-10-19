@@ -94,14 +94,19 @@ function makeRoot(entries: readonly Entry[], lines: readonly Line[], files: Reco
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   }
+  // The harness runs only at the top level of a git worktree (AD-17).
+  Bun.spawnSync(["git", "init", "-q", dir]);
   return dir;
 }
 
-/** A hash of every file path and content under `dir`. */
+/** A hash of every file path and content under `dir`, outside `.cache` and `.git`. */
 function treeDigest(dir: string): string {
   const hash = createHash("sha256");
   const walk = (current: string): void => {
     for (const name of readdirSync(current).sort()) {
+      if (name === ".cache" || name === ".git") {
+        continue;
+      }
       const path = join(current, name);
       if (statSync(path).isDirectory()) {
         walk(path);
@@ -129,10 +134,13 @@ async function listening(): Promise<{ server: Server; port: number }> {
   return { server, port: (server.address() as { port: number }).port };
 }
 
-/** The env for a fixture run: no CI, and Postgres and Redis pointed at a closed port unless overridden. */
+/** A `redis-server` path that does not exist, so a local run never starts one. */
+const NO_REDIS_SERVER = join(tmpdir(), "xt-harness-no-redis-server", "redis-server");
+
+/** The env for a fixture run: no CI, Postgres and Redis pointed at a closed port, and no local redis-server, unless overridden. */
 async function env(extra: Record<string, string> = {}): Promise<Record<string, string | undefined>> {
   const port = String(await closedPort());
-  return { ...process.env, CI: undefined, PGHOST: "127.0.0.1", PGPORT: port, REDIS_HOST: "127.0.0.1", REDIS_PORT: port, ...extra };
+  return { ...process.env, CI: undefined, PGHOST: "127.0.0.1", PGPORT: port, REDIS_HOST: "127.0.0.1", REDIS_PORT: port, XARAVEL_REDIS_SERVER: NO_REDIS_SERVER, ...extra };
 }
 
 // ---------------------------------------------------------------------------
@@ -437,7 +445,7 @@ test("XT-conformance-105: a variant whose backend is not running locally is NOT-
   expect(local.out).toEqual([
     "NOT-RUN [mysql] 1 line(s): no local probe for backend mysql",
     `NOT-RUN [pgsql] 1 line(s): Postgres at 127.0.0.1:${port} is not reachable (ECONNREFUSED)`,
-    `NOT-RUN [redis] 1 line(s): Redis at 127.0.0.1:${port} is not reachable (ECONNREFUSED)`,
+    `NOT-RUN [redis] 1 line(s): redis-server not found at ${NO_REDIS_SERVER} (AD-17)`,
     "SUMMARY variants=4 run=1 not-run=3 checked=1 differ=0",
   ]);
   expect(local.code).toBe(0);
@@ -457,10 +465,11 @@ test("XT-conformance-105: a variant whose backend is not running locally is NOT-
   // A reachable backend runs: Postgres "listening" on a port, Redis still down.
   const { server, port: open } = await listening();
   try {
-    const reachable = await runHarness(dir, { env: await env({ PGPORT: String(open), REDIS_PORT: String(port) }) });
+    const noopAdmin = { list: async () => [], drop: async () => undefined, create: async () => undefined, close: async () => undefined };
+    const reachable = await runHarness(dir, { env: await env({ PGPORT: String(open), REDIS_PORT: String(port) }), postgres: () => noopAdmin });
     expect(reachable.out).toEqual([
       "NOT-RUN [mysql] 1 line(s): no local probe for backend mysql",
-      `NOT-RUN [redis] 1 line(s): Redis at 127.0.0.1:${port} is not reachable (ECONNREFUSED)`,
+      `NOT-RUN [redis] 1 line(s): redis-server not found at ${NO_REDIS_SERVER} (AD-17)`,
       "SUMMARY variants=4 run=2 not-run=2 checked=2 differ=0",
     ]);
   } finally {

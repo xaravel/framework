@@ -96,16 +96,18 @@ function makeRoot(lines: readonly Line[], files: Record<string, string> = {}): s
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   }
+  // The harness runs only at the top level of a git worktree (AD-17).
+  Bun.spawnSync(["git", "init", "-q", dir]);
   return dir;
 }
 
-/** The env for a fixture run: no CI, and Postgres and Redis pointed at a closed port. */
+/** The env for a fixture run: no CI, Postgres and Redis pointed at a closed port, and no local redis-server. */
 async function env(): Promise<Record<string, string | undefined>> {
   const server = createServer();
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const port = String((server.address() as { port: number }).port);
   await new Promise<void>((done) => server.close(() => done()));
-  return { ...process.env, CI: undefined, PGHOST: "127.0.0.1", PGPORT: port, REDIS_HOST: "127.0.0.1", REDIS_PORT: port, XARAVEL_API_SURFACE: undefined };
+  return { ...process.env, CI: undefined, PGHOST: "127.0.0.1", PGPORT: port, REDIS_HOST: "127.0.0.1", REDIS_PORT: port, XARAVEL_REDIS_SERVER: join(tmpdir(), "xt-select-no-redis-server", "redis-server"), XARAVEL_API_SURFACE: undefined };
 }
 
 async function harness(dir: string, options: HarnessOptions = {}): Promise<Awaited<ReturnType<typeof runHarness>>> {
