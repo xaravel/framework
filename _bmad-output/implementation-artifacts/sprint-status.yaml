@@ -1033,3 +1033,27 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
+  - id: "epic-5-retro-item-13-oracle-frozen-clock"
+    epic: 5
+    action: "Freeze Carbon's clock in tools/oracle/evaluate.php to one instant recorded
+      in conformance/oracle/ (input.now still overrides), and regenerate the 4
+      DatabaseQueryBuilderTest::testWhereBetweens fixtures (ruling ESC-5.7-1)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-5.7-1.md"
+  - id: "epic-5-retro-item-14-variant-membership"
+    epic: 5
+    action: "portedTest declares a test only on its Inventory backends' Variants, the
+      harness runs only files with a Test ID for the Variant, and .cache/sqlite/ is
+      reset before every sqlite-backend Variant (ruling ESC-5.3-4)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-5.3-4.md"
+  - id: "epic-5-retro-item-15-full-run-clause"
+    epic: 5
+    action: "story:check's full-run clause reads the ratchet story step's SUMMARY and
+      passes on the Ratchet's verdict (job success, failures=0, no unwarned unexpected
+      pass) instead of differ=0 (ruling ESC-5.9-2)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-5.9-2.md"

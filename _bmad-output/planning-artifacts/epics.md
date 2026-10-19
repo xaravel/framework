@@ -2645,6 +2645,10 @@ So that two packages never own the same foreign or framework symbol (AD-10, AD-2
 **When** the scan runs
 **Then** it fails.
 
+**Given** the type-aware lint config
+**When** `lint:disables` runs and a fixture uses a Promise as a condition
+**Then** `no-misused-promises` is pinned with `checksConditionals: true` beside `checksVoidReturn: true`, a config that turns it off fails `lint:disables`, and the fixture fails lint (ESC-6.1-1).
+
 ## Epic 7: Conformance dashboard & Boost framework mode
 
 The Maintainer reviews any Epic from evidence on one page (UJ-5). Framework Agents query their Test IDs, statuses, DIVs and Escalations through MCP (UJ-4).
@@ -3347,7 +3351,8 @@ So that View, Testing and the async tooling agree on them before they are built 
 **Given** `@xaravel/contracts/async`
 **When** it is imported
 **Then** it exports the thenable type list (Builders, Relations, `PendingRequest`, `PendingDispatch`, `PendingChain`, `PendingBatch`, `PendingBroadcast`, `PendingCommand`, `PendingTestResponse`) and the `NotPromise<T>` type
-**And** the `async-surface` tool (Story 6.4) now reads its thenable list from here.
+**And** the `async-surface` tool (Story 6.4) now reads its thenable list from here
+**And** every framework class with a `then` method declares `implements PromiseLike<…>`, and a check fails on one that does not, so `checkThenables` sees it (ESC-6.1-1).
 
 **Given** `@xaravel/contracts/view`
 **When** it is imported
