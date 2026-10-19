@@ -51,6 +51,23 @@ log="$STATE/logs/$(date +%Y%m%d-%H%M%S).log"
 ln -sf "$log" "$STATE/latest.log"
 rm -f "$STATE/outcome"
 
+# An iteration that died mid-Story (usage limit, crash, kill) leaves its work
+# uncommitted on a story/* or planning/* branch. Commit it there, locally and
+# unpushed, before the reset below discards it; the next iteration resumes
+# from that branch (iteration.md, sections 2D and 2F).
+wip_save() {
+  local br
+  br="$(git -C "$REPO" symbolic-ref --short -q HEAD)" || return 0
+  case "$br" in story/*|planning/*) ;; *) return 0 ;; esac
+  [ -n "$(git -C "$REPO" status --porcelain)" ] || return 0
+  if git -C "$REPO" add -A && git -C "$REPO" commit -q -m "[orchestrator wip] $br: uncommitted work saved by run.sh before reset"; then
+    say "saved uncommitted work on $br as $(git -C "$REPO" rev-parse --short HEAD) [orchestrator wip]"
+  else
+    say "could not save uncommitted work on $br; see git status"
+  fi
+}
+wip_save >>"$log" 2>&1
+
 if ! (cd "$REPO" && git fetch -q --prune origin && git checkout -q -f main \
       && git reset -q --hard origin/main && git clean -fdq) >>"$log" 2>&1; then
   say "git sync failed; see $log"; sleep 900; exec /bin/bash "$REPO/tools/orchestrator/run.sh"
