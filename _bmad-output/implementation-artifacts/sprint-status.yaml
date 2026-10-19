@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 07:55
+last_updated: 10-19-2026 08:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -964,7 +964,7 @@ action_items:
       set stories/5.7-5.10.md to status done, and add a check that fails when a done
       sprint-status Story has a manifest not done (findings C3, S1)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md"
   - id: "epic-5-retro-item-4-bots-empty-plan"
     epic: 5

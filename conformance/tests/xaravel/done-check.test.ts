@@ -246,7 +246,7 @@ interface FakeGitHub {
   pulls: { number: number; updated_at: string; user: { login: string }; head: { sha: string; ref: string } }[];
   reviews: Record<number, { user: { login: string }; state: string; commit_id: string }[]>;
   runs: Record<string, { id: number; name: string; created_at: string }[]>;
-  jobs: Record<number, { id: number; name: string }[]>;
+  jobs: Record<number, { id: number; name: string; conclusion?: string | null }[]>;
   logs: Record<number, string>;
 }
 
@@ -334,7 +334,7 @@ function fakeGitHub(overrides: Partial<FakeGitHub> = {}): FakeGitHub {
         { id: 13, name: "ci", created_at: "2026-10-19T11:00:00Z" },
       ],
     },
-    jobs: { 11: [{ id: 91, name: "ratchet" }], 12: [{ id: 98, name: "other" }, { id: 99, name: "ratchet" }] },
+    jobs: { 11: [{ id: 91, name: "ratchet", conclusion: "success" }], 12: [{ id: 98, name: "other", conclusion: "success" }, { id: 99, name: "ratchet", conclusion: "success" }] },
     logs: { 91: LOG_FAST, 99: LOG_FULL },
     ...overrides,
   };
@@ -375,7 +375,7 @@ xaravelTest(
       "conformance/escalations/ESC-9.1-1.md": ESCALATION,
     });
     const reviews = { 7: [{ user: { login: "alice" }, state: "APPROVED", commit_id: SHA }, { user: { login: "agent" }, state: "APPROVED", commit_id: SHA }, { user: { login: "bob" }, state: "CHANGES_REQUESTED", commit_id: SHA }] };
-    const failing = await withGitHub(fakeGitHub({ reviews, jobs: { 12: [{ id: 91, name: "ratchet" }] } }), (api) =>
+    const failing = await withGitHub(fakeGitHub({ reviews, jobs: { 12: [{ id: 91, name: "ratchet", conclusion: "success" }] } }), (api) =>
       runStoryCheck(["9.1", "--root", bad, "--pr", "7"], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }),
     );
     expect(failing.out).toEqual([
@@ -467,6 +467,24 @@ xaravelTest(
     const apiDown = await withGitHub(fakeGitHub(), (api) => runStoryCheck(["9.1", "--root", empty], { env: env({ GH_TOKEN: "wrong", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
     expect(apiDown.out.filter((line) => line.includes("approvals:") || line.includes("full-run:")).every((line) => line.startsWith("FAIL ") && line.includes("HTTP 401"))).toBe(true);
 
+    // A ratchet job that concluded failure fails full-run even when its log ends in a full differ=0 SUMMARY.
+    const failedJob = await withGitHub(fakeGitHub({ jobs: { 12: [{ id: 99, name: "ratchet", conclusion: "failure" }] } }), (api) =>
+      runStoryCheck(["9.1", "--root", good], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }),
+    );
+    expect(failedJob.out).toContain("FAIL full-run: PR #7 ratchet run 12: the ratchet job concluded failure, not success");
+    expect(failedJob.out.at(-1)).toBe("STORY-CHECK 9.1 fail");
+    expect(failedJob.code).toBe(1);
+    // A ratchet job that has not finished (conclusion null or absent) fails full-run without its log being fetched.
+    for (const job of [{ id: 99, name: "ratchet", conclusion: null }, { id: 99, name: "ratchet" }]) {
+      const [unfinished, requested] = await withGitHub(fakeGitHub({ jobs: { 12: [job] } }), async (api, paths) => [
+        await runStoryCheck(["9.1", "--root", good], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }),
+        paths,
+      ] as const);
+      expect(unfinished.out).toContain("FAIL full-run: PR #7 ratchet run 12: the ratchet job has not finished");
+      expect(unfinished.code).toBe(1);
+      expect(requested.filter((path) => path.includes("/actions/jobs/99/logs"))).toEqual([]);
+    }
+
     // The pure pieces.
     expect(approvalsClause(7, "agent", SHA, [{ user: { login: "x" }, state: "APPROVED", commit_id: SHA }, { user: { login: "x" }, state: "APPROVED", commit_id: SHA }]).pass).toBe(false);
     // A review given on a commit older than the PR head is stale: it does not count.
@@ -480,7 +498,7 @@ xaravelTest(
       `  bob: APPROVED on ${"b".repeat(40)}, not the head ${SHA}`,
     ]);
     // A full run that differed fails, as does a fast one.
-    expect(fullRunClause("w", "SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2")).toEqual({ clause: "full-run", pass: false, detail: "w: SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2 differed", items: [] });
+    expect(fullRunClause("w", "success", "SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2")).toEqual({ clause: "full-run", pass: false, detail: "w: SUMMARY variants=1 run=1 not-run=0 checked=3 differ=2 differed", items: [] });
     // A run-level ERROR line fails tests and xaravel-tests even when every line came out right.
     const crashed: HarnessResult = {
       code: 1,
@@ -498,7 +516,13 @@ xaravelTest(
     ]);
     expect(renderClause(xaravelClause(["XT-demo-1"], crashed))).toEqual(["FAIL xaravel-tests: the Xaravel run crashed", "  ERROR [xaravel] bun test exited 1 with no failing testcase"]);
     expect(lastSummary("2026-10-19T10:01:00Z SUMMARY a\nSUMMARY b\n2026-10-19T10:01:00.5Z not SUMMARY c")).toBe("SUMMARY b");
-    expect(fullRunClause("w", "no summary here").detail).toBe("w: the log has no SUMMARY line");
+    expect(fullRunClause("w", "success", "no summary here").detail).toBe("w: the log has no SUMMARY line");
+    // The job's conclusion is checked before the SUMMARY: only a finished, successful job can pass.
+    const fullLog = "SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0";
+    expect(fullRunClause("w", "success", fullLog)).toEqual({ clause: "full-run", pass: true, detail: `w: ${fullLog}`, items: [] });
+    expect(fullRunClause("w", "failure", fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job concluded failure, not success", items: [] });
+    expect(fullRunClause("w", "cancelled", fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job concluded cancelled, not success", items: [] });
+    expect(fullRunClause("w", null, fullLog)).toEqual({ clause: "full-run", pass: false, detail: "w: the ratchet job has not finished", items: [] });
     expect(repoFromRemote("git@github.com:acme/xaravel.git")).toBe("acme/xaravel");
     expect(repoFromRemote("https://github.com/acme/xaravel")).toBe("acme/xaravel");
     expect(repoFromRemote("https://example.com/acme/xaravel")).toBeNull();

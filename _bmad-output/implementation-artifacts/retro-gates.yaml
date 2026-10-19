@@ -36,4 +36,5 @@ epic-5:
   doc: _bmad-output/implementation-artifacts/epic-5-retro-2026-10-19.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-5-retro-item-3-full-run-conclusion-and-manifest-sync

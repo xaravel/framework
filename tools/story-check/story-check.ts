@@ -40,8 +40,10 @@
 //   escalations    no `conformance/escalations/ESC-<id>-<n>.md` is `open`
 //                  (`escalationStatus`);
 //   full-run       the latest workflow run named `ratchet` for the PR head
-//                  (`/actions/runs?head_sha=`), its job `ratchet`, that job's
-//                  log (`/actions/jobs/<id>/logs`): its last `SUMMARY ` line,
+//                  (`/actions/runs?head_sha=`), its job `ratchet`
+//                  (`/actions/runs/<id>/jobs`): that job's `conclusion` is
+//                  `success`; only then is its log read
+//                  (`/actions/jobs/<id>/logs`), and its last `SUMMARY ` line,
 //                  timestamp removed, satisfies the harness's `isFullRun` and
 //                  reads `differ=0`.
 // `tests` and `xaravel-tests` also fail on a run-level ERROR line, and the
@@ -328,8 +330,14 @@ export function lastSummary(log: string): string | null {
   return found;
 }
 
-/** `full-run`: the ratchet job's last SUMMARY line is a full run's. */
-export function fullRunClause(where: string, log: string): ClauseResult {
+/** `full-run`: the ratchet job concluded `success` and its last SUMMARY line is a full run's with `differ=0`. */
+export function fullRunClause(where: string, conclusion: string | null, log: string): ClauseResult {
+  if (conclusion === null) {
+    return fail("full-run", `${where}: the ratchet job has not finished`);
+  }
+  if (conclusion !== "success") {
+    return fail("full-run", `${where}: the ratchet job concluded ${conclusion}, not success`);
+  }
   const summary = lastSummary(log);
   if (summary === null) {
     return fail("full-run", `${where}: the log has no SUMMARY line`);
@@ -360,6 +368,8 @@ interface WorkflowRun {
 interface Job {
   readonly id: number;
   readonly name: string;
+  /** null (or absent) while the job has not finished. */
+  readonly conclusion?: string | null;
 }
 
 /** `owner/name` of a GitHub remote URL, or null. */
@@ -431,7 +441,7 @@ async function githubClauses(storyId: string, prNumber: number | null, root: str
     } else {
       const jobs = (await github.json<{ jobs: Job[] }>(`/actions/runs/${ratchet.id}/jobs?per_page=100`)).jobs;
       const job = jobs.find((entry) => entry.name === "ratchet");
-      fullRun = job === undefined ? fail("full-run", `PR #${pr.number}: ratchet run ${ratchet.id} has no ratchet job`) : fullRunClause(`PR #${pr.number} ratchet run ${ratchet.id}`, await github.text(`/actions/jobs/${job.id}/logs`));
+      fullRun = job === undefined ? fail("full-run", `PR #${pr.number}: ratchet run ${ratchet.id} has no ratchet job`) : fullRunClause(`PR #${pr.number} ratchet run ${ratchet.id}`, job.conclusion ?? null, job.conclusion === "success" ? await github.text(`/actions/jobs/${job.id}/logs`) : "");
     }
   } catch (error) {
     fullRun = fail("full-run", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
