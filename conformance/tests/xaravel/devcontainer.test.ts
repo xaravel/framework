@@ -382,7 +382,18 @@ xaravelTest("XT-conformance-192", "the pin check fails closed, naming the file a
 xaravelTest("XT-conformance-193", "one linux-x64 devcontainer job builds the image and runs the harness inside it on .devcontainer/** PRs and nightly, read-only, without duplicating the nightly matrix (AD-17.6, AD-28.3)", () => {
   const data = workflow("devcontainer.yml");
   expect(Object.keys(data.on)).toEqual(["pull_request", "schedule", "workflow_dispatch"]);
-  expect(data.on["pull_request"]).toEqual({ paths: [".devcontainer/**", ".github/workflows/devcontainer.yml", "tools/devcontainer/**"] });
+  // Retro 5 item 18 (decisions/MAINT-2026-10-19-epic-5-items.md, item 10): the harness and the root pins too.
+  expect(data.on["pull_request"]).toEqual({
+    paths: [
+      ".bun-version",
+      ".devcontainer/**",
+      ".github/workflows/devcontainer.yml",
+      "bun.lock",
+      "conformance/harness/**",
+      "package.json",
+      "tools/devcontainer/**",
+    ],
+  });
   expect(data.on["schedule"]).toEqual([{ cron: expect.stringMatching(/^\d+ \d+ \* \* \*$/) as unknown as string }]);
   expect(data.on["workflow_dispatch"]).toBeNull();
   expect(data.permissions).toEqual({ contents: "read" });
