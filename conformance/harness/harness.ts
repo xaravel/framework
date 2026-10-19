@@ -1,5 +1,5 @@
-// The conformance harness runner (Stories 5.3 and 5.4; FR-3, FR-9, FR-113,
-// AD-15).
+// The conformance harness runner (Stories 5.3, 5.4 and 5.5; FR-3, FR-9,
+// FR-113, AD-15, AD-17).
 //
 //   bun --no-env-file conformance/harness/harness.ts [--root <dir>] [--fast]
 //       [--seed <s>] [--component <c>]… [--id <glob>]… [--story <story-id>]
@@ -42,13 +42,27 @@
 //   - `<root>/bunfig.toml` exists, and no other `bunfig.toml` exists under the
 //     root (the scan skips `node_modules`, `.git`, `.cache` and
 //     `conformance/upstream`); the message names each one (AD-15);
+//   - the root is the top level of a git worktree, whose key is derived from
+//     its path and creation id, and `.cache/harness.lock` is free, or stale
+//     and taken over (./isolation.ts; AD-17). The lock is taken right after
+//     the bunfig checks and released when the harness ends; the CLI also
+//     stops its Redis and releases the lock on SIGINT (exit 130) or SIGTERM
+//     (exit 143);
 //   - `conformance/variants`, the Expectations shards and the Inventory read
 //     cleanly (`readVariants`, `readExpectations`, `readWorkingInventory`),
 //     and every line's Variant is in the vocabulary.
 //
 // The Variants run are those that appear in the Expectations lines, in
-// `conformance/variants` order. Each Variant whose backend is reachable
-// (./backends.ts) gets one
+// `conformance/variants` order. Each backend is prepared once, the first time
+// a Variant needs it (./isolation.ts): `sqlite` gets a fresh `.cache/sqlite/`
+// (only created on a fast run); `pgsql` is probed, then the worktree's
+// `xaravel_test_<key>[_<name>]` databases are dropped and `xaravel_test_<key>`
+// created (on a fast run only created when missing; a failure is NOT-RUN with
+// `Postgres database reset failed: <message>`); `redis` is, with `CI=true`,
+// probed at `REDIS_HOST`/`REDIS_PORT`, and locally a `redis-server` the
+// harness starts on `.cache/redis.sock` and stops when it ends; any other
+// backend is probed (./backends.ts). Each Variant whose backend is reachable
+// gets one
 //
 //   <bun> --no-env-file test --preload <this directory>/preload.ts \
 //     --reporter=junit --reporter-outfile=<tmp> <every packages/*/tests/ported/**/*.test.ts>
@@ -57,10 +71,14 @@
 // plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>`, to
 // which the preload appends the reports and late assertions, and
 // `XARAVEL_API_SURFACE=<root>/conformance/api-surface`, which the preload's
-// API signature lookup reads (ESC-4.8-1 item 1). With no Ported
-// Test file nothing is spawned and every result is `missing`. A run that
-// leaves no junit file fails the harness (exit 1), quoting its stderr. Temp
-// files live in the OS temp directory; nothing is written under the root.
+// API signature lookup reads (ESC-4.8-1 item 1), and the isolation env
+// `XARAVEL_WORKTREE_KEY`, `XARAVEL_CACHE_DIR`, `XARAVEL_SQLITE_DIR`,
+// `XARAVEL_PG_DATABASE` and, on a Variant whose Redis the harness started,
+// `XARAVEL_REDIS_SOCKET`. With no Ported Test file nothing is spawned and
+// every result is `missing`. A run that leaves no junit file fails the harness
+// (exit 1), quoting its stderr. Temp files live in the OS temp directory; the
+// harness writes under the root only in `.cache/`, and outside it only the
+// worktree's creation id file in its git dir.
 //
 // A Variant whose backend is unreachable is not spawned and prints
 //   NOT-RUN [<variant>] <n> line(s): <why>
@@ -102,6 +120,7 @@ import { readExpectations, readWorkingInventory } from "../../tools/pin-bump/pin
 import { backendFor, probe, type ProbeResult } from "./backends";
 import { compare, type Difference, type HarnessLine, type HarnessReport, type Result, type VariantRun } from "./compare";
 import { parseJunit } from "./junit";
+import { IsolationError, acquireLock, creationId, isolationEnv, postgresAdmin, preparePostgres, prepareSqlite, startRedis, worktreeKey, worktreeOf, type Lock, type PgAdmin, type RedisServer } from "./isolation";
 import { FAST_SAMPLE, SEED, namePattern, sampleIds, selectIds } from "./select";
 
 /** The preload every run gets: this directory's, whatever the root. */
@@ -130,6 +149,16 @@ export interface HarnessOptions {
   readonly ids?: readonly string[];
   /** `--story` Story ID. */
   readonly story?: string | null;
+  /** The Postgres admin factory (internal: tests pass an in-memory admin); default `postgresAdmin`. */
+  readonly postgres?: (env: Env) => PgAdmin;
+  /** Receives, while the run lasts, the cleanup that stops its Redis and releases its lock, then null (internal: the CLI's signal handlers). */
+  readonly onCleanup?: (cleanup: (() => Promise<void>) | null) => void;
+}
+
+/** The worktree the harness ran in and its key (Story 5.5). */
+export interface HarnessWorktree {
+  readonly path: string;
+  readonly key: string;
 }
 
 /** A fast run's sample: its seed, its size and the selection it was drawn from. */
@@ -148,6 +177,8 @@ export interface HarnessResult {
   readonly results: Result[];
   /** The sample in fast mode, null otherwise. */
   readonly sample: HarnessSample | null;
+  /** The worktree and its key once known, null before that. */
+  readonly worktree: HarnessWorktree | null;
 }
 
 /** Whether `summaryLine` is the SUMMARY line of a full (not fast) run; Story 5.9's done check must use it. */
@@ -278,7 +309,7 @@ function tail(text: string, n: number): string[] {
 }
 
 /** Spawns one `bun test` run for `variant`; `error` is the ERROR line when bun exited non-zero with no failing testcase. */
-async function runVariant(root: string, variant: string, files: readonly string[], pattern: string | null, env: Env, bunArgs: readonly string[], err: string[]): Promise<VariantRun & { error: string | null }> {
+async function runVariant(root: string, variant: string, files: readonly string[], pattern: string | null, env: Env, isolated: Readonly<Record<string, string>>, bunArgs: readonly string[], err: string[]): Promise<VariantRun & { error: string | null }> {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-harness-"));
   try {
     const junitPath = join(dir, "junit.xml");
@@ -292,6 +323,9 @@ async function runVariant(root: string, variant: string, files: readonly string[
     // Neither may add a preload or flags around the root bunfig.toml.
     delete childEnv["BUN_OPTIONS"];
     delete childEnv["NODE_OPTIONS"];
+    // Only a Redis the harness started may be named; never an inherited one.
+    delete childEnv["XARAVEL_REDIS_SOCKET"];
+    Object.assign(childEnv, isolated);
     childEnv["XARAVEL_VARIANT"] = variant;
     childEnv["XARAVEL_HARNESS_OUT"] = outPath;
     childEnv["XARAVEL_API_SURFACE"] = join(root, "conformance", "api-surface");
@@ -365,12 +399,31 @@ function storyIds(root: string, story: string, universe: ReadonlyMap<string, str
 }
 
 /** Runs the harness over `root` (see the header). */
-export async function runHarness(root: string, options: HarnessOptions = {}): Promise<HarnessResult> {
+export async function runHarness(rootArg: string, options: HarnessOptions = {}): Promise<HarnessResult> {
+  const root = resolve(rootArg);
   const env = options.env ?? process.env;
   const out: string[] = [];
   const err: string[] = [];
   const results: Result[] = [];
   let sample: HarnessSample | null = null;
+  let worktree: HarnessWorktree | null = null;
+  let lock: Lock | null = null;
+  /** The Redis server this run started, stopped in `finally`. */
+  const services: { redis: RedisServer | null } = { redis: null };
+  /** Stops the Redis this run started and releases its lock; safe to call twice. */
+  const cleanup = async (): Promise<void> => {
+    const server = services.redis;
+    services.redis = null;
+    try {
+      if (server !== null) {
+        await server.stop();
+      }
+    } finally {
+      lock?.release();
+      lock = null;
+    }
+  };
+  options.onCleanup?.(cleanup);
   try {
     const seedOption = options.seed ?? null;
     if (seedOption !== null && !SEED.test(seedOption)) {
@@ -383,6 +436,11 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     if (stray.length > 0) {
       throw new PreconditionError(`package-level bunfig.toml found; only the root bunfig.toml may exist (AD-15): ${stray.join(", ")}`);
     }
+    const tree = worktreeOf(root, env);
+    const key = worktreeKey(tree.path, creationId(tree.gitDir));
+    worktree = { path: tree.path, key };
+    lock = acquireLock(root, process.argv.join(" "));
+    const isolated = isolationEnv(root, key);
     const vocabulary = readVariants(root);
     if (vocabulary.violations.length > 0) {
       throw new PreconditionError(vocabulary.violations.join("; "));
@@ -454,12 +512,31 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     let notRun = 0;
     let checked = 0;
     let ciDifferences = 0;
-    const probes = new Map<string, Promise<ProbeResult>>();
+    // Backend preparation: once per backend, the first time a run Variant needs it.
+    const prepared = new Map<string, Promise<ProbeResult>>();
+    const prepare = async (backend: string): Promise<ProbeResult> => {
+      if (backend === "sqlite") {
+        prepareSqlite(root, fast);
+        return { reachable: true };
+      }
+      if (backend === "pgsql") {
+        return preparePostgres(env, key, fast, options.postgres ?? postgresAdmin);
+      }
+      if (backend === "redis") {
+        const started = await startRedis(root, env);
+        if (!started.reachable) {
+          return started;
+        }
+        services.redis = started.server;
+        return { reachable: true };
+      }
+      return probe(backend, env);
+    };
     for (const variant of variants) {
       const lines = linesOf(variant);
       const backend = backendFor(variant);
-      const pending = probes.get(backend) ?? probe(backend, env);
-      probes.set(backend, pending);
+      const pending = prepared.get(backend) ?? prepare(backend);
+      prepared.set(backend, pending);
       const status = await pending;
       if (!status.reachable) {
         notRun++;
@@ -483,7 +560,7 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
           pattern = candidate;
         }
       }
-      const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, options.bunArgs ?? [], err);
+      const variantRun = files.length === 0 ? emptyRun() : await runVariant(root, variant, files, pattern, env, backend === "redis" && services.redis !== null ? { ...isolated, XARAVEL_REDIS_SOCKET: services.redis.socket } : isolated, options.bunArgs ?? [], err);
       const compared = compare({ variant, lines, knownIds, run: variantRun, inventory, waived });
       results.push(...compared.results);
       if (variantRun.error !== null) {
@@ -504,14 +581,20 @@ export async function runHarness(root: string, options: HarnessOptions = {}): Pr
     const differ = differences.length + errors.length + ciDifferences;
     const mode = sample === null ? "" : ` mode=fast seed=${sample.seed}`;
     out.push(`SUMMARY variants=${variants.length} run=${run} not-run=${notRun} checked=${checked} differ=${differ}${mode}`);
-    return { code: differ === 0 ? 0 : 1, out, err, results, sample };
+    return { code: differ === 0 ? 0 : 1, out, err, results, sample, worktree };
   } catch (error) {
-    if (error instanceof PreconditionError) {
+    if (error instanceof PreconditionError || error instanceof IsolationError) {
       err.push(`harness: ${error.message}`);
-      return { code: 1, out, err, results, sample };
+      return { code: 1, out, err, results, sample, worktree };
     }
     err.push(`harness failed: ${message(error)}`);
-    return { code: 1, out, err, results, sample };
+    return { code: 1, out, err, results, sample, worktree };
+  } finally {
+    try {
+      await cleanup();
+    } finally {
+      options.onCleanup?.(null);
+    }
   }
 }
 
@@ -577,7 +660,34 @@ export async function main(argv: readonly string[]): Promise<number> {
     }
     throw error;
   }
-  const result = await runHarness(root, options);
+  // Ctrl-C or SIGTERM: stop the Redis the run started and release the lock, then exit 130 or 143.
+  let cleanup: (() => Promise<void>) | null = null;
+  const handler = (code: number) => (): void => {
+    const pending = cleanup;
+    void (async (): Promise<void> => {
+      try {
+        await pending?.();
+      } finally {
+        process.exit(code);
+      }
+    })();
+  };
+  const onInt = handler(130);
+  const onTerm = handler(143);
+  process.on("SIGINT", onInt);
+  process.on("SIGTERM", onTerm);
+  let result: HarnessResult;
+  try {
+    result = await runHarness(root, {
+      ...options,
+      onCleanup: (next) => {
+        cleanup = next;
+      },
+    });
+  } finally {
+    process.off("SIGINT", onInt);
+    process.off("SIGTERM", onTerm);
+  }
   if (result.err.length > 0) {
     process.stderr.write(result.err.map((line) => `${line}\n`).join(""));
   }

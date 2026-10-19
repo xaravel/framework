@@ -29,19 +29,19 @@ export function backendFor(variant: string): string {
   return at === -1 ? variant : variant.slice(at + 1);
 }
 
-function setting(env: Env, name: string, fallback: string): string {
+export function setting(env: Env, name: string, fallback: string): string {
   const value = env[name];
   return value === undefined || value === "" ? fallback : value;
 }
 
-function parsePort(text: string): number | null {
+export function parsePort(text: string): number | null {
   return /^[1-9][0-9]{0,4}$/.test(text) && Number(text) <= 65535 ? Number(text) : null;
 }
 
-type Target = { readonly host: string; readonly port: number; readonly label: string } | { readonly path: string; readonly label: string };
+export type Target = { readonly host: string; readonly port: number; readonly label: string } | { readonly path: string; readonly label: string };
 
 /** Connects to `target`; resolves with null on success or the reason it failed. */
-function tryConnect(target: Target): Promise<string | null> {
+export function tryConnect(target: Target): Promise<string | null> {
   return new Promise((resolvePromise) => {
     let settled = false;
     const socket = "path" in target ? connect({ path: target.path }) : connect({ host: target.host, port: target.port });

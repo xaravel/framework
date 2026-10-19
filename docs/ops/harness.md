@@ -1,6 +1,6 @@
 # The conformance harness
 
-The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Stories 5.3 and 5.4; FR-3, FR-9, FR-113, AD-15). Its code is in `conformance/harness/`.
+The harness runs every Ported Test once per Backend Variant and compares the results with the [Expectations File](expectations.md) (Stories 5.3, 5.4 and 5.5; FR-3, FR-9, FR-113, AD-15, AD-17). Its code is in `conformance/harness/`.
 
 ```sh
 bun run harness [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id <glob>]... [--story <story-id>]
@@ -8,19 +8,19 @@ bun run harness [--root <dir>] [--fast] [--seed <s>] [--component <c>]... [--id 
 
 The script is `bun --no-env-file conformance/harness/harness.ts`. Report lines go to stdout and diagnostics go to stderr. Exit codes: 0 when no line differs, 1 on any difference or a failed precondition, 2 on a usage error. The usage errors are an unknown flag, a missing value, a second `--seed` or `--story`, a `--story` value not of the form `<epic>.<story>`, and a seed that doesn't match `^[A-Za-z0-9._-]{1,64}$`.
 
-Per-worktree backends (Story 5.5), the Ratchet (Story 5.6) and CI wiring (Story 5.7) come later.
+The Ratchet (Story 5.6) and CI wiring (Story 5.7) come later.
 
 ## What it runs
 
-1. **Preconditions.** `<root>/bunfig.toml` must exist, and no other `bunfig.toml` may exist under the root. The scan skips `node_modules`, `.git`, `.cache` and `conformance/upstream`, and the message names every stray file. The vocabulary, the Expectations shards and the Inventory must read cleanly. Nothing runs when a precondition fails.
-2. **Variants.** These are the Variants that appear in the Expectations lines, in `conformance/variants` order.
+1. **Preconditions.** `<root>/bunfig.toml` must exist, and no other `bunfig.toml` may exist under the root. The scan skips `node_modules`, `.git`, `.cache` and `conformance/upstream`, and the message names every stray file. The root must be the top level of a git worktree, and `.cache/harness.lock` must be free (see [Backend isolation](#backend-isolation)). The vocabulary, the Expectations shards and the Inventory must read cleanly. Nothing runs when a precondition fails.
+2. **Variants.** These are the Variants that appear in the Expectations lines, in `conformance/variants` order. Each backend is prepared once, the first time a Variant needs it (see [Backend isolation](#backend-isolation)).
 3. **One `bun test` per reachable Variant.** The command is:
 
    ```
    bun --no-env-file test --preload conformance/harness/preload.ts --reporter=junit --reporter-outfile=<tmp> <every packages/*/tests/ported/**/*.test.ts>
    ```
 
-   It runs with the root as cwd, so the root `bunfig.toml` applies. The env is the parent's, without `BUN_OPTIONS` and `NODE_OPTIONS` (they could add a preload or flags), plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>` and `XARAVEL_API_SURFACE=<root>/conformance/api-surface`. With no Ported Test file, nothing is spawned and every result is `missing`. A run that leaves no junit file fails the harness and quotes its stderr. Temp files go in the OS temp directory; the harness never writes under the root.
+   It runs with the root as cwd, so the root `bunfig.toml` applies. The env is the parent's, without `BUN_OPTIONS` and `NODE_OPTIONS` (they could add a preload or flags), plus `XARAVEL_VARIANT=<variant>`, `XARAVEL_HARNESS_OUT=<tmp jsonl>`, `XARAVEL_API_SURFACE=<root>/conformance/api-surface` and the isolation variables listed under [Backend isolation](#backend-isolation). With no Ported Test file, nothing is spawned and every result is `missing`. A run that leaves no junit file fails the harness and quotes its stderr. Temp files go in the OS temp directory. Under the root, the harness writes only in `.cache/`; outside it, only the worktree's creation id file in its git dir.
 
 ## Filters and fast mode
 
@@ -46,14 +46,53 @@ and the SUMMARY line ends ` mode=fast seed=<s>`. Rerun a fast run with `--seed <
 
 **Running a selection.** Only the Variants with selected lines are listed and probed, and each checks only its selected lines; `checked` counts those. Each Variant's run gets only the Ported Test files under `packages/<c>/tests/ported/` of its selected Components, plus `-t ^(?:<escaped ids>)$`, so bun runs only the selected tests. The `-t` is left out when every Expectations line of those Components on that Variant is selected, or when the pattern would be longer than 65,536 characters; the comparison is restricted either way. When a run with `-t` exits with bun's `matched 0 tests` error, the run counts as empty and every selected line is `missing`. The `UNKNOWN` check still knows every Expectations Test ID.
 
+## Backend isolation
+
+Parallel agents on one machine each run the harness in their own git worktree, and never share a database or a Redis server (Story 5.5, AD-17). The code is in `conformance/harness/isolation.ts`.
+
+**Worktree key.** The root must be the top level of a git worktree (`git rev-parse --show-toplevel` equals the root's realpath); otherwise the harness exits 1 with `<root> is not the top level of a git worktree (AD-17)`, followed by `: <git's last stderr line>` when git printed one. Git records no creation id, so the harness keeps one: 32 lowercase hex characters in `<git-dir>/xaravel-worktree-id`, created from 16 random bytes on the first run. The key is the first 8 hex characters of SHA-256 over `<realpath of the top level>\n<creation id>`. Deleting `.cache/` keeps the key. `git worktree remove` deletes the worktree's git dir, so a new worktree at the same path gets a new key and never inherits stale databases. `runHarness` returns `worktree: {path, key}` once the key is known.
+
+**Lock.** Right after the bunfig checks, the harness creates `.cache/harness.lock` exclusively. It holds one JSON line, `{pid, host, started, command}`, and is removed when the harness ends, including on Ctrl-C (SIGINT, exit 130) or SIGTERM (exit 143), when the CLI first stops the Redis server it started. While it exists, a second harness in the same worktree exits 1 with
+
+```
+harness: .cache/harness.lock is held by pid <pid> on <host> since <started>: <command>
+```
+
+A lock naming a pid on this host that is no longer alive is stale: the harness removes it and takes the lock. A lock from another host is always held, and an unreadable one is held with `unknown` for each field. Delete a lock by hand only when you know its holder is gone.
+
+**Child env.** Every `bun test` run also gets:
+
+| Variable | Value |
+| --- | --- |
+| `XARAVEL_WORKTREE_KEY` | the key |
+| `XARAVEL_CACHE_DIR` | `<root>/.cache` |
+| `XARAVEL_SQLITE_DIR` | `<root>/.cache/sqlite`; SQLite database files go here |
+| `XARAVEL_PG_DATABASE` | `xaravel_test_<key>` |
+| `XARAVEL_REDIS_SOCKET` | the socket of the `redis-server` the harness started, on Redis Variants only. A value inherited from the parent env is always dropped. In CI no server is started, so Redis Variants get no socket and tests use `REDIS_HOST`/`REDIS_PORT` (the job's service) |
+
+**SQLite.** A full run removes and recreates `.cache/sqlite/`. A fast run only creates it.
+
+**Postgres.** After a successful probe, the harness connects (`Bun.SQL`) to the maintenance database `PGDATABASE` (default `postgres`) with `PGHOST` (a `/` path is a socket directory), `PGPORT`, `PGUSER` (default `USER`, else `postgres`) and `PGPASSWORD`. The worktree owns `xaravel_test_<key>` and every `xaravel_test_<key>_<suffix>` whose suffix matches `^[a-z0-9_]+$`. A full run drops all of them in sorted order with `DROP DATABASE … WITH (FORCE)`, which needs Postgres 13 or later (AD-28's CI runs 18), and creates `xaravel_test_<key>`. A fast run only creates `xaravel_test_<key>` when it is missing. No other database is ever dropped: the admin refuses to quote any name that isn't an `xaravel_test_<key>` name. Tests that create more databases must name them `xaravel_test_<key>_<suffix>`, and drop only names of that form. A failure makes the Variant NOT-RUN with `Postgres database reset failed: <message>`.
+
+**Redis.** Locally, the harness starts its own server:
+
+```
+redis-server --port 0 --unixsocket <root>/.cache/redis.sock --unixsocketperm 700 --save "" --appendonly no --dir <root>/.cache/redis
+```
+
+The binary is `XARAVEL_REDIS_SERVER` if set, else `redis-server` on `PATH`. The server listens on no TCP port and persists nothing. Tests may `FLUSHDB` it, and no key prefix is injected. The harness removes a leftover socket first (safe, because it holds the lock), waits up to 5 s for the socket to accept a connection, and stops the server with SIGTERM when it ends, or when the harness itself gets SIGINT or SIGTERM. Only a SIGKILLed harness leaves the server running and its socket and lock behind; the next run removes the socket and takes over the stale lock (stop the orphaned `redis-server` by hand). With `CI=true`, nothing is started: each CI job's Redis service is its server, probed at `REDIS_HOST`:`REDIS_PORT`.
+
 ## Backends and NOT-RUN
 
 | Backend | Reachable when |
 | --- | --- |
 | `none`, `sqlite` | always |
-| `pgsql` | a connect to `PGHOST`:`PGPORT` (default `127.0.0.1:5432`) succeeds within 1 s; a `PGHOST` starting with `/` is probed as the unix socket `<PGHOST>/.s.PGSQL.<port>` |
-| `redis` | a connect to `REDIS_HOST`:`REDIS_PORT` (default `127.0.0.1:6379`) succeeds within 1 s |
+| `pgsql` | a connect to `PGHOST`:`PGPORT` (default `127.0.0.1:5432`) succeeds within 1 s, and the worktree's databases were reset; a `PGHOST` starting with `/` is probed as the unix socket `<PGHOST>/.s.PGSQL.<port>` |
+| `redis`, locally | the harness's own `redis-server` listens on `.cache/redis.sock` within 5 s |
+| `redis`, with `CI=true` | a connect to `REDIS_HOST`:`REDIS_PORT` (default `127.0.0.1:6379`) succeeds within 1 s |
 | anything else (`mysql`, `mariadb`, `sqlsrv`, `beanstalkd`) | never: there is no local probe |
+
+A local Redis Variant is NOT-RUN with one of: `redis-server not found on PATH (AD-17)`, `redis-server not found at <path> (AD-17)`, `redis-server exited <code>: <its last stderr or stdout line>`, `redis-server did not listen on <socket> within 5000 ms`, or `socket path <socket> is longer than 103 bytes` (move the worktree to a shorter path).
 
 A `<driver>@<backend>` Variant needs what its backend needs. An unreachable Variant is not spawned and prints:
 
