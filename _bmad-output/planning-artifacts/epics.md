@@ -2473,14 +2473,15 @@ So that "done" is computed, not claimed (FR-115, PRD §3, NFR-10).
 
 As a Framework Agent or a contributor on any machine,
 I want one container definition that brings up the decided toolchain and the alpha backends,
-So that the harness runs every alpha Variant the same way everywhere, with nothing installed on the host but Docker (AD-17, AD-28, NFR-7).
+So that the harness can run every alpha Variant the same way everywhere, with nothing installed on the host but Docker, while running natively stays fully supported (AD-17, AD-28, NFR-1, NFR-7).
 
 **Acceptance Criteria:**
 
 **Given** `.devcontainer/` (`devcontainer.json`, a Compose file and the workspace image's Dockerfile)
 **When** it is started with the devcontainer CLI, or with plain `docker compose` and no Node on the host
 **Then** the workspace container runs as a non-root user on linux/arm64 and linux/amd64, with Bun at `.bun-version`, the repo's locked dependencies installed by `bun install --frozen-lockfile`, and `redis-server` at the Redis version CI uses on `PATH`
-**And** Postgres runs as a sidecar from the same image CI uses, reachable from the workspace through the `PG*` variables the harness reads.
+**And** Postgres runs as a sidecar from the same image CI uses, reachable from the workspace through the `PG*` variables the harness reads
+**And** the workspace, or at least its `.cache/`, is on a container volume rather than a host bind mount, and the container has no Docker socket (AD-17).
 
 **Given** `bun run harness` inside the container
 **When** it runs
@@ -2492,11 +2493,15 @@ So that the harness runs every alpha Variant the same way everywhere, with nothi
 
 **Given** a PR that changes `.devcontainer/**`, and the nightly run
 **When** CI runs
-**Then** it builds the image and runs `bun run harness` inside it.
+**Then** one linux-x64 job builds the image and runs `bun run harness` inside it; the nightly matrix of Story 5.7 is not duplicated.
 
 **Given** `docs/ops/devcontainer.md`
 **When** a contributor or an agent reads it
-**Then** it explains starting the container, running the harness and an agent session inside it headless, and that no secret or `APP_KEY` is baked into the image; Bun's `.env` autoload stays off.
+**Then** it explains starting the container, running the harness and an agent session inside it headless, that a worktree used both inside and outside the container has two AD-17 keys, that the Oracle and Inventory tools run on the host or in CI, and that no secret or `APP_KEY` is baked into the image; Bun's `.env` autoload stays off.
+
+**Given** a machine without Docker
+**When** any harness command, tool or `story:check` runs natively on macOS or Linux
+**Then** nothing requires the container: a backend that isn't running is `NOT-RUN`, as before (PRD OQ-9, Story 2.2, NFR-1).
 
 ## Epic 6: Static guardrails: lint rules, async surface & API-surface diff
 
