@@ -58,6 +58,7 @@
     "pin:bump": "bun tools/pin-bump/pin-bump.ts",
     "expectations:init": "bun tools/expectations/expectations.ts init",
     "expectations:check": "bun tools/expectations/expectations.ts check",
+    "expectations:reasons": "bun tools/expectations/reasons.ts check",
     "php-fixtures:install": "composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/phpunit && composer install --no-interaction --no-progress --no-plugins --no-scripts --working-dir=conformance/tests/xaravel/php-fixtures/pest"
   },
   "devDependencies": {

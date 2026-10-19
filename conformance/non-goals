@@ -1,0 +1,28 @@
+# The Non-Goal IDs an `out-of-scope:<NG-N>` Skip Reason may name (Story 5.2,
+# FR-3), transcribed from PRD §7.1 Non-Goals. This file is Protected (AD-16):
+# changing it is a Maintainer-approved change. `bun run expectations:reasons`
+# fails an `out-of-scope:<NG-N>` whose ID is not listed here.
+#
+# Format: UTF-8, LF, one ID per line, sorted by UTF-16 code units and unique.
+# Lines starting with `#` and blank lines are ignored. An ID matches
+# `^NG-[1-9][0-9]*$`.
+
+# MongoDB support.
+NG-1
+# Front ends other than htmx: no Inertia, React, Vue, Svelte, Livewire or Alpine
+# starter kits.
+NG-2
+# Node.js or Deno support.
+NG-3
+# Running PHP code, or being a PHP compatibility layer.
+NG-4
+# Laravel's first-party products beyond the framework, AI SDK, MCP and Boost:
+# Sanctum, Passport, Cashier, Horizon, Telescope, Pulse, Reverb, Scout,
+# Socialite, Dusk, Sail, Forge/Vapor/Cloud integrations. These are candidates
+# for later (OQ-6).
+NG-5
+# Cutting scope to a minimal v1. Scope is the full framework, delivered in
+# Phases.
+NG-6
+# Performance work before the public alpha (NFR-6).
+NG-7

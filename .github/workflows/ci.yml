@@ -110,6 +110,8 @@ jobs:
         run: bun run test
       - name: Check the Expectations File
         run: bun run expectations:check
+      - name: Check the Skip Reasons
+        run: bun run expectations:reasons
       - name: Typecheck
         run: bun run typecheck
       - name: Lint
