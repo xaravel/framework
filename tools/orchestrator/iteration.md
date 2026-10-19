@@ -125,7 +125,7 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
    - **Every check green:** `gh pr merge <n> --squash` adds the PR to the queue. Then wait in separate commands, polling `gh pr view <n> --json state` every 30 seconds for up to 30 minutes, until it is `MERGED`. If the queue drops it, read why from the merge-group check runs, and treat that like a failed check in step A.
    - **Only the expected failures from step 3:** the queue would re-run `protected-paths` and `ownership` and fail them for the same reasons, so do not queue it. Merge directly with `gh pr merge <n> --squash --admin`, which the MAINT ruling allows. If one was already queued, wait for the queue to drop it first. Never use `--admin` on a PR that touches `AGENTS.md`.
    - If a merge is refused, by GitHub or by the permission check, do not try another way. Leave the PR open and comment on ISSUE: `🤖 Waiting on Maintainer: #<n> <reason, quoting the refusal>`.
-5. Comment on ISSUE in one line: `🤖 Merged #<n>: <story-id> <title>`. For a blocked Story, write `🤖 Blocked <story-id>: <reason>`.
+5. Comment on ISSUE: `🤖 Merged #<n>: <story-id> <title>`, then, on the next line, the output of `tools/orchestrator/progress.sh` (Stories done out of all, and a loose finish estimate). For a blocked Story, write `🤖 Blocked <story-id>: <reason>`.
 
 ## 5. Finish
 
