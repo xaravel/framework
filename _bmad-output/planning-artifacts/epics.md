@@ -2294,10 +2294,6 @@ So that I see exactly which Test IDs differ (FR-9, FR-113).
 **When** the harness runs
 **Then** counts never mix between tests, a late assertion fails its test instead of going uncounted, and the intrinsics are frozen before any Ported Test loads (Epic 4 retro S4; spec-4-1 and spec-4-2 deferrals).
 
-**Given** the committed `conformance/api-surface/*.jsonl`
-**When** a Ported Test loads
-**Then** `globalThis[Symbol.for('xaravel.api.signature')]` is installed: `(fqcn, member)` returns that member's surface row (`returns`, `nullable` and `parameters`), or null when there is none (ESC-4.8-1 item 1).
-
 ### Story 5.4: Fast mode, seeds and filters
 
 As a Framework Agent,
@@ -2321,6 +2317,10 @@ So that I can iterate in seconds and reproduce any sample (FR-9, NFR-7).
 **Given** a run in fast mode
 **When** its results are compared with expectations
 **Then** the report notes that it is a sample, and fast mode never satisfies the Story done check.
+
+**Given** the committed `conformance/api-surface/*.jsonl`
+**When** a Ported Test loads
+**Then** `globalThis[Symbol.for('xaravel.api.signature')]` is installed: `(fqcn, member)` returns that member's surface row (`returns`, `nullable` and `parameters`), or null when there is none (ESC-4.8-1 item 1; moved from Story 5.3, whose spec predates the ruling).
 
 ### Story 5.5: Backend isolation per worktree
 
@@ -3193,7 +3193,7 @@ So that equality, exception and instanceof assertions match PHP once those value
 **When** Laravel's `TestResponseAssert` appends to its message
 **Then** a supported grader API rewrites the message (ESC-4.3-1 item 11).
 
-**Given** Story 5.3's signature lookup and a PHPUnit test double whose target has a surface row for the called method
+**Given** Story 5.4's signature lookup and a PHPUnit test double whose target has a surface row for the called method
 **When** the method is called without a configured return, or with omitted arguments
 **Then** it returns PHPUnit's generated value for the declared return type, pads omitted arguments and `willReturnMap` rows with the declared defaults, names parameters as declared and gives `Invocation::toString` its `: <type>` suffix; a target with no row keeps the null default (ESC-4.7-1 item 2).
 
