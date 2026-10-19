@@ -56,7 +56,7 @@ C. **Retrospective due.** Take the lowest-numbered epic `N` that is `done` in ST
 
 D. **Retrospective action items.** Take the first action item in STATUS whose status is `open` or `in-progress` and whose id is not in any epic's `waiting_on_maintainer`. Decide whether you may do it:
    - If it requires changing `AGENTS.md` or any `CLAUDE.md`, weakening the grader, adding a divergence outside DIV-1..12, or editing the PRD, architecture spine, SPEC or `epics.md`: add its id to that epic's `waiting_on_maintainer` in GATES, commit that on `planning/retro-<N>-waiting`, open and merge the PR, and comment on ISSUE: `🤖 Waiting on Maintainer: retro action <id>: <action>`. Outcome `progress`.
-   - Otherwise, do it on branch `planning/retro-<N>-<short-slug>`. If it changes code or tests, run `bmad-build-auto` with the action item, its `ref` finding, and this instruction as intent. If it is a docs, process or LESSONS change, make the change directly. Then set the item `done` with SPS. Commit, open a PR, merge it, and comment on ISSUE: `🤖 Done retro action <id> in #<n>`. If it can't be done, set it `in-progress`, record why under its finding in the retrospective document, and treat it as waiting on the Maintainer as above.
+   - Otherwise, do it on branch `planning/retro-<N>-<short-slug>`. If a local `planning/retro-<N>-*` branch for this item already has `[orchestrator wip]` commits, `run.sh` saved an interrupted attempt there: check it out, merge `origin/main` into it, and resume instead of starting over. If it changes code or tests, run `bmad-build-auto` with the action item, its `ref` finding, and this instruction as intent. If it is a docs, process or LESSONS change, make the change directly. Then set the item `done` with SPS. Commit, open a PR, merge it, and comment on ISSUE: `🤖 Done retro action <id> in #<n>`. If it can't be done, set it `in-progress`, record why under its finding in the retrospective document, and treat it as waiting on the Maintainer as above.
 
    Outcome `progress`.
 
@@ -75,7 +75,8 @@ F. **Next Story.** Read STATUS. Pick the first Story in file order whose status 
    - epic N is a CHECKPOINT EPIC without `checkpoint_approved: true`.
 
    Then:
-   - Create branch `story/<story-id>` from `main`.
+   - If a local branch `story/<story-id>` already has commits not on `origin/main` whose message starts with `[orchestrator wip]`, an earlier iteration died mid-Story and `run.sh` saved its work there. Check that branch out instead of creating it, merge `origin/main` into it, and resume `bmad-build-auto` from the spec's current status. Do not start over.
+   - Otherwise, create branch `story/<story-id>` from `main`.
    - Set the Story `in-progress` in sprint status.
    - Invoke the `bmad-build-auto` skill with the Story as intent, for example `Story 1.1 from epics.md: Root workspace and repository baseline`. Follow it to its HALT.
    - On `done`: set the Story to `done` in sprint status. When it was the last Story of its epic, set the epic to `done` too. Run whatever verification the repo has at this point (`bun install`, `bun test`, `tsc`, oxlint and the harness, once they exist). Commit everything, open a PR and merge it (section 4). Outcome `progress`.
