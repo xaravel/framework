@@ -8,6 +8,10 @@ Between iterations `run.sh` waits 1 minute after `progress`, 30 minutes after `i
 
 Before it resets the clone, `run.sh` commits any uncommitted work on a `story/*` or `planning/*` branch as a local, unpushed `[orchestrator wip]` commit and records it in `history`. That work comes from an iteration that died mid-Story, for example on the usage limit. The next iteration checks that branch out and resumes from it instead of starting over. The WIP commits disappear when the PR is squash-merged.
 
+## Watching it
+
+`tools/orchestrator/status.sh [lines]` prints the host's time, the last iterations, the clone's branch, a STOP file, a usage-limit hit and the newest narration. Run it on the host, or from another machine with `XARAVEL_ORCH_HOST=<ssh destination>` set. From a Claude Code session in this repository, `/orchestrator-monitor [minutes]` (`.claude/skills/orchestrator-monitor/`) briefs you and then reports every few minutes. Put `XARAVEL_ORCH_HOST` in your git-ignored `.claude/settings.local.json` under `"env"`, never in a committed file.
+
 ## Setup (once, on the host)
 
 ```sh
