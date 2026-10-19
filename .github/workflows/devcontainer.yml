@@ -3,15 +3,25 @@
 # One linux-x64 job builds `.devcontainer/`'s image, starts the workspace and
 # its `postgres` sidecar with `docker compose up --wait`, then inside the
 # workspace runs the pin checks (`bun run devcontainer:pins`, then its
-# `runtime` form: non-root, Bun and `redis-server` versions) and a full
-# `bun run harness` (no `--fast`). The container sets no `CI`, so the harness
-# starts the worktree's own `redis-server` on `.cache/redis.sock` as it does
-# locally, and a NOT-RUN Variant would not fail it: this job fails unless the
-# harness exits 0 and `bun run devcontainer:alpha` finds no alpha Variant
-# NOT-RUN in its report (non-alpha backends have no sidecar until Phase 9, so
-# their NOT-RUN is expected; epics.md 5.10 AC2). It runs on PRs that
-# change the devcontainer, nightly and on dispatch. It does not duplicate the
-# nightly matrix (nightly.yml); arm64 is not built here.
+# `runtime` form: non-root, Bun and `redis-server` versions) and the Ratchet
+# over a full harness run, `bun run ratchet run --ref "$REF"` (no `--fast`,
+# `--seed` or `--scope`; `REF` is the PR's head branch, `github.head_ref`, on
+# a PR, else `github.ref_name`, `main` on the schedule as in nightly.yml; it is
+# used only for Story ownership, while the tree graded is the checkout). The
+# Ratchet, not the raw harness exit, judges the run: an unexpected pass it only
+# warns about (owned by no open Story, or by a Story other than this ref's)
+# does not fail the job, and `-e GITHUB_ACTIONS=true` on that `exec` makes it a
+# `::warning::` annotation too; every other difference does fail it (retro 5
+# item 11). The container sets
+# no `CI`, so the harness starts the worktree's own `redis-server` on
+# `.cache/redis.sock` as it does locally, and a NOT-RUN Variant would not fail
+# the Ratchet: this job fails unless the Ratchet exits 0 and
+# `bun run devcontainer:alpha` finds no alpha Variant NOT-RUN in the merged
+# output (the Ratchet writes the harness report to stderr; non-alpha backends
+# have no sidecar until Phase 9, so their NOT-RUN is expected; epics.md 5.10
+# AC2). It runs on PRs that change the devcontainer, nightly and on dispatch.
+# It does not duplicate the nightly matrix (nightly.yml); arm64 is not built
+# here.
 #
 # The checkout has full history (`fetch-depth: 0`), as ci.yml's `check` job
 # does: the full harness's Xaravel run verifies the Oracle fixtures, which
@@ -63,11 +73,13 @@ jobs:
           docker compose exec -T workspace bun run devcontainer:pins
           docker compose exec -T workspace bun run devcontainer:pins runtime
       - name: Run the harness inside the container
+        env:
+          REF: ${{ github.head_ref || github.ref_name }}
         run: |
           set -uo pipefail
           status=0
-          docker compose exec -T workspace bun run harness 2>&1 | tee "$RUNNER_TEMP/harness.txt" || status=$?
-          echo "harness exit ${status}"
+          docker compose exec -T -e GITHUB_ACTIONS=true workspace bun run ratchet run --ref "$REF" 2>&1 | tee "$RUNNER_TEMP/harness.txt" || status=$?
+          echo "ratchet exit ${status}"
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi

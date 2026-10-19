@@ -16,10 +16,11 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { runHarness } from "../../harness/harness";
+import { runHarness, type HarnessResult } from "../../harness/harness";
 import { MAX_SOCKET_BYTES } from "../../harness/isolation";
 import { ALPHA_VARIANTS } from "../../../tools/inventory/inventory";
 import { alphaNotRun } from "../../../tools/devcontainer/alpha";
+import { runRatchet } from "../../../tools/ratchet/ratchet";
 import { checkPins, runtimeBun, runtimeRedis, runtimeUser, SPINE_FILE } from "../../../tools/devcontainer/pins";
 import { checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -56,7 +57,7 @@ function read(path: string): string {
 
 type Service = { image?: string; init?: boolean; build?: { context: string; args?: Record<string, string> }; volumes?: string[]; environment?: Record<string, string>; depends_on?: unknown; healthcheck?: { test: unknown }; tmpfs?: string[]; platform?: string; env_file?: unknown };
 type Compose = { services: Record<string, Service>; volumes?: Record<string, unknown> };
-type Step = { name?: string; uses?: string; if?: string; with?: Record<string, unknown>; run?: string };
+type Step = { name?: string; uses?: string; if?: string; with?: Record<string, unknown>; env?: Record<string, string>; run?: string };
 type Job = { "runs-on": string; strategy?: unknown; services?: Record<string, { image: string }>; permissions?: unknown; steps: Step[] };
 type Workflow = { on: Record<string, unknown>; permissions: Record<string, string>; jobs: Record<string, Job> };
 
@@ -167,7 +168,7 @@ xaravelTest("XT-conformance-190", "the devcontainer is a non-root workspace with
 // ---------------------------------------------------------------------------
 // XT-conformance-191
 
-xaravelTest("XT-conformance-191", "inside the container the harness runs every alpha Variant: the PG* env reaches the sidecar, no CI or REDIS_* is set so the worktree's own redis-server starts on .cache/redis.sock, the runtime is non-root with the pinned Bun and redis-server, and CI fails when an alpha Variant is NOT-RUN in a full run (AD-17.4, AD-17.6)", () => {
+xaravelTest("XT-conformance-191", "inside the container the harness runs every alpha Variant: the PG* env reaches the sidecar, no CI or REDIS_* is set so the worktree's own redis-server starts on .cache/redis.sock, the runtime is non-root with the pinned Bun and redis-server, and CI fails when an alpha Variant is NOT-RUN in a full run (AD-17.4, AD-17.6)", async () => {
   const data = compose();
   const postgres = data.services["postgres"]!.environment!;
   const env = data.services["workspace"]!.environment!;
@@ -181,20 +182,27 @@ xaravelTest("XT-conformance-191", "inside the container the harness runs every a
   expect(Buffer.byteLength(`${WORKSPACE}/.cache/redis.sock`)).toBeLessThanOrEqual(MAX_SOCKET_BYTES);
   expect(MAX_SOCKET_BYTES).toBe(103);
 
-  // The workflow: both pin checks, then a full harness run whose report goes to devcontainer:alpha.
+  // The workflow: both pin checks, then the Ratchet over a full harness run (no --scope), judged by its verdict, whose
+  // merged report goes to devcontainer:alpha (retro 5 item 11).
   const job = workflow("devcontainer.yml").jobs["devcontainer"]!;
-  expect(job.steps.map((step) => step.run ?? "").join("\n")).not.toMatch(/--fast|--seed/);
+  expect(job.steps.map((step) => step.run ?? "").join("\n")).not.toMatch(/--fast|--seed|--scope/);
   const pins = stepNamed(job, "Check the pins inside the container").run!;
   expect(pins).toMatch(/^set -euo pipefail$/m);
   expect(pins).toMatch(composeCommand("exec -T workspace bun run devcontainer:pins"));
   expect(pins).toMatch(composeCommand("exec -T workspace bun run devcontainer:pins runtime"));
-  const harness = stepNamed(job, "Run the harness inside the container").run!;
-  expect(harness).toMatch(composeCommand('exec -T workspace bun run harness 2>&1 | tee "$RUNNER_TEMP/harness.txt" || status=$?'));
+  const harnessStep = stepNamed(job, "Run the harness inside the container");
+  expect(harnessStep.env).toEqual({ REF: "${{ github.head_ref || github.ref_name }}" });
+  const harness = harnessStep.run!;
+  expect(harness).not.toMatch(/\$\{\{/);
+  expect(harness).toMatch(/^set -uo pipefail$/m);
+  expect(harness).toMatch(composeCommand('exec -T -e GITHUB_ACTIONS=true workspace bun run ratchet run --ref "$REF" 2>&1 | tee "$RUNNER_TEMP/harness.txt" || status=$?'));
+  expect(harness).not.toMatch(/\bbun run harness\b/);
   expect(harness).toMatch(/^if \[ "\$status" -ne 0 \]; then\n {2}exit "\$status"\nfi$/m);
   expect(harness).toMatch(composeCommand('exec -T workspace bun run devcontainer:alpha < "$RUNNER_TEMP/harness.txt"'));
   expect(harness.trimEnd().split("\n").at(-1)).toMatch(/ bun run devcontainer:alpha < /);
   const scripts = (JSON.parse(read("package.json")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["devcontainer:alpha"]).toBe("bun --no-env-file tools/devcontainer/alpha.ts");
+  expect(scripts["ratchet"]).toBe("bun tools/ratchet/ratchet.ts");
 
   // The alpha gate: non-alpha NOT-RUN passes; an alpha NOT-RUN, or no SUMMARY, fails naming it.
   expect(ALPHA_VARIANTS).toContain("redis");
@@ -219,6 +227,36 @@ xaravelTest("XT-conformance-191", "inside the container the harness runs every a
   const failing = cli(`NOT-RUN [redis] 1 line(s): redis-server not found on PATH (AD-17)\n${passing}`);
   expect([failing.code, failing.err]).toEqual([1, "devcontainer alpha: redis is NOT-RUN: NOT-RUN [redis] 1 line(s): redis-server not found on PATH (AD-17)\n"]);
   expect(cli("no summary here\n").code).toBe(1);
+
+  // End to end, as the step runs it: the Ratchet over a run whose only difference is an unexpected pass owned by no
+  // open Story, with every alpha Variant run, warns and exits 0, and its merged output (stderr's harness report, then
+  // stdout's verdict, as `2>&1` gives) passes the alpha gate; the same output with an alpha NOT-RUN fails it. The
+  // failure and no-SUMMARY rows are covered by XT-conformance-115 in ratchet.test.ts.
+  const ratchetRoot = tempDir("xt-dc-ratchet-");
+  mkdirSync(join(ratchetRoot, "stories"));
+  const passId = "Illuminate\\Tests\\Support\\SupportDevcontainerTest::testA";
+  const passLine = `UNEXPECTED-PASS ${passId} [sqlite] expected=fail-known actual=pass asserts=1/1`;
+  const report = (notRun: readonly string[]): HarnessResult => ({
+    code: 1,
+    out: [passLine, ...notRun, `SUMMARY variants=10 run=${10 - notRun.length} not-run=${notRun.length} checked=10 differ=1`],
+    err: [],
+    results: [],
+    differences: [{ id: passId, variant: "sqlite", kind: "unexpected-pass", text: passLine, detail: null }],
+    sample: null,
+    worktree: null,
+    xaravel: null,
+  });
+  const merged = (run: { out: string[]; err: string[] }): string => [...run.err, ...run.out].join("\n");
+  const warned = await runRatchet(ratchetRoot, "main", { env: {}, harness: () => Promise.resolve(report(nonAlpha)) });
+  expect(warned.code).toBe(0);
+  expect(warned.out).toEqual([`WARNING ${passLine} (owned by no open Story)`, "RATCHET ref=main scope=full failures=0 passes=0 warnings=1"]);
+  expect(warned.err).toContain(report(nonAlpha).out.at(-1)!);
+  expect(alphaNotRun(merged(warned))).toEqual([]);
+  const pgsqlDown = "NOT-RUN [pgsql] 1 line(s): backend down";
+  const down = await runRatchet(ratchetRoot, "main", { env: {}, harness: () => Promise.resolve(report([...nonAlpha, pgsqlDown])) });
+  expect(down.code).toBe(0);
+  expect(down.out.filter((line) => line.startsWith("UNEXPECTED-FAILURE"))).toEqual([]);
+  expect(alphaNotRun(merged(down))).toEqual([`devcontainer alpha: pgsql is NOT-RUN: ${pgsqlDown}`]);
 
   // The runtime helpers the in-container `devcontainer:pins runtime` uses.
   expect(runtimeUser(1000)).toBeNull();
