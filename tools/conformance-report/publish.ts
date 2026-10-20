@@ -1,7 +1,7 @@
 // The dashboard publish (Story 7.2; FR-5.5).
 //
 //   bun --no-env-file tools/conformance-report/publish.ts [--root <dir>] [--dir <dir>]
-//       [--remote <remote>] [--branch <branch>]
+//       [--remote <remote>] [--branch <branch>] [--main-branch <branch>]
 //       (`bun run conformance:publish`, run by `.github/workflows/dashboard.yml`
 //       after `conformance:site`) commits the built site in `--dir` (default
 //       `<root>/.cache/conformance/site`) to `--branch` (default `gh-pages`)
@@ -19,14 +19,26 @@
 // fast-forward, never forced; a non-fast-forward rejection (`REJECTED`)
 // refetches and rebuilds, up to `PUSH_RETRIES` retries.
 //
+// The source commit is the caller's full `HEAD` (none is refused). Each commit
+// records it as a `Source-Commit: <40-hex>` trailer after the
+// `conformance site: <12-hex>` subject. On every attempt, after the fetch and
+// before the tree compare, the source guard (history.ts `checkSource`) reads
+// the tip's source (the trailer, or for an older tip the commit its subject
+// names) and refuses (`refusing <source>: …`, exit 1, nothing pushed) unless
+// HEAD is that commit, a descendant of it, or the current tip of
+// `--main-branch` (default `main`) on the remote; a tip with no readable source
+// accepts only that `main` tip, and a missing branch accepts any HEAD. So a
+// re-run of an older dashboard run never replaces a newer site.
+//
 // It prints `conformance:publish: <created|updated|unchanged> <remote> <branch> at <tip>`.
 //
-// Exit codes: 0 ok, 1 data or git error, 2 usage error.
+// Exit codes: 0 ok, 1 data or git error or a refused source commit, 2 usage
+// error.
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { compareUnits } from "../inventory/inventory";
-import { BOT, fetchTip, git, gitOk, HistoryError, PUSH_RETRIES, REJECTED } from "./history";
+import { BOT, checkSource, DEFAULT_MAIN_BRANCH, fetchTip, git, gitOk, HistoryError, PUSH_RETRIES, REJECTED } from "./history";
 import { DEFAULT_SITE_OUT } from "./site";
 
 export const DEFAULT_PAGES_REMOTE = "origin";
@@ -80,9 +92,30 @@ function treeOf(root: string, dir: string): string {
   }
 }
 
+/**
+ * The source commit `tip` was published from: its `Source-Commit: <40-hex>`
+ * trailer or, for a tip made before the trailer, the commit its
+ * `conformance site: <12-hex>` subject names; null when neither resolves.
+ */
+export function publishedSource(root: string, tip: string): string | null {
+  const message = gitOk(root, ["cat-file", "commit", tip]);
+  const body = message.slice(message.indexOf("\n\n") + 2);
+  const trailer = /^Source-Commit: ([0-9a-f]{40})$/m.exec(body);
+  if (trailer !== null) {
+    return trailer[1]!;
+  }
+  const subject = /^conformance site: ([0-9a-f]{12})$/.exec(body.split("\n")[0]!);
+  if (subject === null) {
+    return null;
+  }
+  const resolved = git(root, ["rev-parse", "--verify", "--quiet", `${subject[1]!}^{commit}`]);
+  return resolved.exitCode === 0 ? resolved.stdout.trim() : null;
+}
+
 /** Commits the files of `dir` to `branch` of `remote` and pushes it. */
-export function publishSite(options: { root: string; remote: string; branch: string; dir: string }): PublishResult {
+export function publishSite(options: { root: string; remote: string; branch: string; dir: string; mainBranch?: string }): PublishResult {
   const { root, remote, branch, dir } = options;
+  const mainBranch = options.mainBranch ?? DEFAULT_MAIN_BRANCH;
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
     throw new HistoryError(`${dir} is not a directory (run bun run conformance:site first)`);
   }
@@ -91,16 +124,22 @@ export function publishSite(options: { root: string; remote: string; branch: str
     throw new HistoryError(`${dir} has no index.html (run bun run conformance:site first); refusing to publish it`);
   }
   const head = git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]);
-  const source = head.exitCode === 0 ? head.stdout.trim().slice(0, 12) : "no commit";
+  if (head.exitCode !== 0) {
+    throw new HistoryError(`${root} has no HEAD commit; refusing to publish without a source commit`);
+  }
+  const source = head.stdout.trim();
   for (let attempt = 1; attempt <= PUSH_RETRIES + 1; attempt++) {
     const tip = fetchTip(root, remote, branch);
+    if (tip !== null) {
+      checkSource(root, remote, mainBranch, source, publishedSource(root, tip));
+    }
     const tree = treeOf(root, dir);
     if (tip !== null && gitOk(root, ["rev-parse", `${tip}^{tree}`]).trim() === tree) {
       return { outcome: "unchanged", tip, attempts: attempt - 1 };
     }
     const identity = { GIT_AUTHOR_NAME: BOT.name, GIT_AUTHOR_EMAIL: BOT.email, GIT_COMMITTER_NAME: BOT.name, GIT_COMMITTER_EMAIL: BOT.email };
     const parents = tip === null ? [] : ["-p", tip];
-    const commit = gitOk(root, ["commit-tree", tree, ...parents, "-m", `conformance site: ${source}`], { env: identity }).trim();
+    const commit = gitOk(root, ["commit-tree", tree, ...parents, "-m", `conformance site: ${source.slice(0, 12)}`, "-m", `Source-Commit: ${source}`], { env: identity }).trim();
     const push = git(root, ["push", "--quiet", "--no-verify", remote, `${commit}:refs/heads/${branch}`]);
     if (push.exitCode === 0) {
       return { outcome: tip === null ? "created" : "updated", tip: commit, attempts: attempt };
@@ -117,18 +156,19 @@ export function publishSite(options: { root: string; remote: string; branch: str
 
 class UsageError extends Error {}
 
-const USAGE = "Usage: bun --no-env-file tools/conformance-report/publish.ts [--root <dir>] [--dir <dir>] [--remote <remote>] [--branch <branch>]";
-const FLAGS = ["--root", "--dir", "--remote", "--branch"] as const;
+const USAGE = "Usage: bun --no-env-file tools/conformance-report/publish.ts [--root <dir>] [--dir <dir>] [--remote <remote>] [--branch <branch>] [--main-branch <branch>]";
+const FLAGS = ["--root", "--dir", "--remote", "--branch", "--main-branch"] as const;
 
 interface Args {
   root: string;
   dir: string | null;
   remote: string;
   branch: string;
+  mainBranch: string;
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const args: Args = { root: resolve(import.meta.dir, "..", ".."), dir: null, remote: DEFAULT_PAGES_REMOTE, branch: DEFAULT_PAGES_BRANCH };
+  const args: Args = { root: resolve(import.meta.dir, "..", ".."), dir: null, remote: DEFAULT_PAGES_REMOTE, branch: DEFAULT_PAGES_BRANCH, mainBranch: DEFAULT_MAIN_BRANCH };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (!(FLAGS as readonly string[]).includes(arg)) {
@@ -146,9 +186,13 @@ function parseArgs(argv: readonly string[]): Args {
       args.remote = value;
     } else {
       if (git(args.root, ["check-ref-format", `refs/heads/${value}`]).exitCode !== 0) {
-        throw new UsageError(`--branch ${JSON.stringify(value)} is not a valid branch name`);
+        throw new UsageError(`${arg} ${JSON.stringify(value)} is not a valid branch name`);
       }
-      args.branch = value;
+      if (arg === "--main-branch") {
+        args.mainBranch = value;
+      } else {
+        args.branch = value;
+      }
     }
   }
   return args;
@@ -157,7 +201,7 @@ function parseArgs(argv: readonly string[]): Args {
 export function main(argv: readonly string[]): number {
   try {
     const args = parseArgs(argv);
-    const result = publishSite({ root: args.root, remote: args.remote, branch: args.branch, dir: args.dir ?? join(args.root, DEFAULT_SITE_OUT) });
+    const result = publishSite({ root: args.root, remote: args.remote, branch: args.branch, dir: args.dir ?? join(args.root, DEFAULT_SITE_OUT), mainBranch: args.mainBranch });
     process.stdout.write(`conformance:publish: ${result.outcome} ${args.remote} ${args.branch} at ${result.tip}\n`);
     return 0;
   } catch (error) {

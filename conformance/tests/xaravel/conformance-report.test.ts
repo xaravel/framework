@@ -322,7 +322,7 @@ interface Workflow {
   on: Record<string, unknown>;
   permissions: unknown;
   concurrency: unknown;
-  jobs: Record<string, { permissions?: unknown; steps: { uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string> }[] }>;
+  jobs: Record<string, { permissions?: unknown; if?: string; "continue-on-error"?: unknown; steps: { name?: string; if?: string; "continue-on-error"?: unknown; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string> }[] }>;
 }
 
 xaravelTest("XT-conformance-145", "each push to main appends one history record keyed by commit and Baseline Pin to the dashboard-data branch, created as an orphan when missing, idempotent per key and new at a Pin change, without touching the caller's HEAD, index or working tree (FR-5.4, FR-5.5)", () => {
@@ -426,6 +426,69 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(cli(HISTORY, ["--root", caller, "--report", join(reports, "missing.json")]).exitCode).toBe(1);
   const nope = cli(HISTORY, ["--nope"]);
   expect([nope.exitCode, nope.stderr.split("\n")[0]]).toEqual([2, "Unknown argument: --nope"]);
+  expect(cli(HISTORY, ["--root", caller, "--report", reportPath, "--main-branch", "bad..name"]).exitCode).toBe(2);
+
+  // The source guard. A second caller commit descending from the first appends.
+  const second = git(caller, ["commit-tree", `${head}^{tree}`, "-p", head, "-m", "second"]).trim();
+  const secondReport: Report = { ...report, commit: second };
+  const secondPath = join(reports, "second.json");
+  writeFileSync(secondPath, serialiseReport(secondReport));
+  const descended = cli(HISTORY, ["--root", caller, "--report", secondPath]);
+  expect(descended.stderr).toBe("");
+  expect(descended.exitCode).toBe(0);
+  expect(descended.stdout).toStartWith(`conformance:history: appended to origin dashboard-data with ${second} `);
+  const afterSecond = history();
+  expect(afterSecond.endsWith(serialiseRecord(historyRecord(secondReport)))).toBe(true);
+  const secondTip = tip();
+  // A re-run of the first commit after it (a key already present, or a new Pin) is refused, and the branch is unchanged.
+  for (const path of [reportPath, join(reports, "rerun.json")]) {
+    if (path !== reportPath) {
+      writeFileSync(path, serialiseReport({ ...report, pin: { tag: "v13.41.0", commit: "6".repeat(40) } }));
+    }
+    const rerun = cli(HISTORY, ["--root", caller, "--report", path]);
+    expect(rerun).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:history: refusing ${head}: it is not a descendant of the last recorded or published source ${second}, nor the origin main tip missing (a re-run of an older run?)\n` });
+    expect(tip()).toBe(secondTip);
+    expect(history()).toBe(afterSecond);
+  }
+  // The same with the remote main at the first commit is accepted; --main-branch names the branch whose tip counts.
+  git(caller, ["push", "-q", remote, `${head}:refs/heads/main`]);
+  const rerunPath = join(reports, "rerun.json");
+  const viaTrunk = cli(HISTORY, ["--root", caller, "--report", rerunPath, "--main-branch", "trunk"]);
+  expect([viaTrunk.exitCode, viaTrunk.stderr]).toEqual([1, `conformance:history: refusing ${head}: it is not a descendant of the last recorded or published source ${second}, nor the origin trunk tip missing (a re-run of an older run?)\n`]);
+  expect(tip()).toBe(secondTip);
+  const onMain = cli(HISTORY, ["--root", caller, "--report", rerunPath]);
+  expect(onMain.stderr).toBe("");
+  expect(onMain.exitCode).toBe(0);
+  expect(onMain.stdout).toStartWith(`conformance:history: appended to origin dashboard-data with ${head} (v13.41.0 `);
+  // With the remote trunk at the refused commit, --main-branch trunk accepts it.
+  const secondPinPath = join(reports, "second-pin.json");
+  writeFileSync(secondPinPath, serialiseReport({ ...secondReport, pin: { tag: "v13.43.0", commit: "4".repeat(40) } }));
+  expect(cli(HISTORY, ["--root", caller, "--report", secondPinPath]).exitCode).toBe(0);
+  const trunkPath = join(reports, "trunk.json");
+  writeFileSync(trunkPath, serialiseReport({ ...report, pin: { tag: "v13.42.0", commit: "3".repeat(40) } }));
+  const beforeTrunk = tip();
+  expect(cli(HISTORY, ["--root", caller, "--report", trunkPath, "--main-branch", "trunk"]).exitCode).toBe(1);
+  expect(tip()).toBe(beforeTrunk);
+  git(caller, ["push", "-q", remote, `${head}:refs/heads/trunk`]);
+  const onTrunk = cli(HISTORY, ["--root", caller, "--report", trunkPath, "--main-branch", "trunk"]);
+  expect(onTrunk.stderr).toBe("");
+  expect(onTrunk.exitCode).toBe(0);
+  expect(onTrunk.stdout).toStartWith(`conformance:history: appended to origin dashboard-data with ${head} (v13.42.0 `);
+  // A last commit unknown to the local object store is not an ancestor: refused unless the source is the main tip.
+  const unknown = "5".repeat(40);
+  const third = join(tempDir("conformance-third"), "clone");
+  git(remote, ["clone", "-q", "--branch", "dashboard-data", remote, third]);
+  writeFileSync(join(third, "history.jsonl"), history() + serialiseRecord(historyRecord({ ...report, commit: unknown })));
+  git(third, ["commit", "-q", "-am", "unknown"]);
+  git(third, ["push", "-q", "origin", "dashboard-data"]);
+  const unknownTip = tip();
+  const notDescendant = cli(HISTORY, ["--root", caller, "--report", secondPath]);
+  expect(notDescendant).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:history: refusing ${second}: it is not a descendant of the last recorded or published source ${unknown}, nor the origin main tip ${head} (a re-run of an older run?)\n` });
+  expect(tip()).toBe(unknownTip);
+  expect(cli(HISTORY, ["--root", caller, "--report", rerunPath]).stdout).toContain("already recorded");
+  expect(tip()).toBe(unknownTip);
+  expect(git(caller, ["rev-parse", "HEAD"]).trim()).toBe(head);
+  expect(git(caller, ["status", "--porcelain=v1", "--branch"])).toBe(status);
 
   // The workflow: push to main, read-only top level, write only in job dashboard, which runs both scripts.
   const text = readFileSync(join(root, ".github", "workflows", "dashboard.yml"), "utf8");
@@ -449,9 +512,18 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(job.steps[0]!.uses).toStartWith("actions/checkout@");
   expect(job.steps[0]!.with).toEqual({ "fetch-depth": 0, "persist-credentials": false });
   const runs = job.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
-  expect(runs.slice(0, 2)).toEqual(["bun install --frozen-lockfile --ignore-scripts", "bun run conformance:report"]);
-  expect(runs.length).toBe(5);
-  const historyStep = job.steps.find((step) => step.run === runs[2])!;
+  // The Expectations File is checked after the install and before the report, so a failing check stops the job first.
+  expect(runs.slice(0, 3)).toEqual(["bun install --frozen-lockfile --ignore-scripts", "bun run expectations:check", "bun run conformance:report"]);
+  expect(runs.length).toBe(6);
+  const checkStep = job.steps.find((step) => step.run === runs[1])!;
+  expect(checkStep.name).toBe("Check the Expectations File");
+  // Nothing lets a failing check pass: no condition on the job or the check step, no continue-on-error anywhere.
+  expect(job.if).toBeUndefined();
+  expect(checkStep.if).toBeUndefined();
+  for (const node of [job, ...job.steps]) {
+    expect(node["continue-on-error"]).toBeUndefined();
+  }
+  const historyStep = job.steps.find((step) => step.run === runs[3])!;
   expect(historyStep.run!.trimEnd().split("\n").at(-1)).toBe("bun run conformance:history --history-out .cache/conformance/history.jsonl");
   expect(historyStep.env).toEqual({ GH_TOKEN: "${{ github.token }}" });
   const tokenSteps = job.steps.filter((step) => JSON.stringify(step).includes("github.token"));
@@ -462,4 +534,5 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(checkWorkflows(root).violations).toEqual([]);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["conformance:history"]).toBe("bun --no-env-file tools/conformance-report/history.ts");
+  expect(scripts["expectations:check"]).toBe("bun tools/expectations/expectations.ts check");
 }, 60_000);

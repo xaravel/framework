@@ -3,6 +3,10 @@
 #
 # `dashboard` runs on every push to main. It installs from the frozen
 # lockfile without lifecycle scripts, then:
+# - `bun run expectations:check` fails the job, before anything is computed
+#   or pushed, when the Expectations File does not cover the Inventory
+#   exactly (an Inventory ID with no line would otherwise silently leave the
+#   report's denominator);
 # - `bun run conformance:report` (tools/conformance-report/report.ts) writes
 #   the gitignored .cache/conformance/report.json;
 # - `bun run conformance:history` appends one record keyed by (commit,
@@ -28,7 +32,14 @@
 # pending one: with 3+ pushes during one run, the middle commits get no
 # record. That is rare, since merges reach main one at a time through the
 # merge queue. The history and publish tools refetch and retry on a
-# non-fast-forward rejection.
+# non-fast-forward rejection, and refuse (exit 1, nothing pushed) a commit
+# that is neither the last recorded or published source commit, a
+# descendant of it, nor the current main tip, so a run whose commit is older
+# than the last record (a re-run of an older run) never appends a stale
+# record or replaces the site with stale figures, unless its commit is still
+# the main tip. The ancestry test needs the last recorded commit locally,
+# a second reason for `fetch-depth: 0`. The expectations:check step backs up
+# ci.yml's, since an admin merge can bypass the merge queue.
 name: dashboard
 
 on:
@@ -58,6 +69,8 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check the Expectations File
+        run: bun run expectations:check
       - name: Compute the conformance report
         run: bun run conformance:report
       - name: Append the history record to dashboard-data
