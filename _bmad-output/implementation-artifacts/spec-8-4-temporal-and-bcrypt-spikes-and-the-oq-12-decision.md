@@ -2,10 +2,10 @@
 title: 'Story 8.4: Temporal and bcrypt spikes, and the OQ-12 decision'
 type: 'feature'
 created: '2026-10-20'
-status: 'in-progress'
+status: 'done'
 baseline_revision: 'f6f0a76f3d0ab7c953d30bd976d51a60785f52c3'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-8-context.md'
 warnings: ['oversized']
@@ -153,6 +153,49 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-20 — Review pass
+- verdicts: 39 findings — high 0, medium 5, low 29, false 5, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (intent) `decisions/OQ-4.md` and `OQ-12.md` are absent, and XT-157/159 accept an open Escalation in their place. A ruling is the Maintainer's (AGENTS.md: raise an Escalation, never decide locally). The AC is recorded as conditional on ESC-8.4-1 and ESC-8.4-2 (LESSONS, epic 4), and the open rulings are reported under Auto Run Result.
+  - `[low]` `[reject]` (intent) The hashes come from `crypt()`, not `Hash::make`. It is the same `$2y$` bcrypt at Laravel's cost. A random salt cannot get a fixture, because the Oracle rejects differing evaluations.
+  - `[low]` `[reject]` (intent) There is no multibyte case at 71 bytes. The AC's lengths are all covered, and multibyte is covered at 72, 73 (split character) and 200.
+  - `[false]` `[reject]` (intent) The fixtures are not in the diff. They are in commit a13159a, which the CI `story` job signed; the review diff left them out on purpose, as machine-signed data.
+  - `[false]` `[reject]` (intent) The XTs use `expect` from `bun:test`. AGENTS.md forbids that only in Ported Tests; 50 Xaravel Test files under `conformance/tests/xaravel/` do the same.
+  - `[medium]` `[patch]` (edge, with its claim row) `check` passes on a failed bcrypt case: Bun's truncated verify false, the control wrong, or a bad Oracle `password_verify`/`strlen`. Fix: added id-named violations to `checkSpikes`.
+  - `[low]` `[patch]` (edge) A `crypt()` failure string as the hash would be verified as a mismatch. Fix: a hash without `SALT_PREFIX` is a violation. Grouped with the bcrypt-violation entry.
+  - `[medium]` `[patch]` (edge, and blind's three-way-verdict finding) `verifyCase` swallows a throw as `false`, so a rejected hash looks like a mismatch. Fix: removed the catch, so a throw fails loudly.
+  - `[low]` `[patch]` (edge) Oracle `password_verify`/`strlen` are not checked by the CLI. Fix: grouped with the bcrypt-violation patch.
+  - `[low]` `[reject]` (edge) A `{throws: null}` result raises a TypeError. That needs a malformed signed fixture, which the Oracle never writes, and it still fails loudly.
+  - `[low]` `[reject]` (edge) An `error` that is not an object prints `null` fields. Same class: the evaluator always writes an object, and it still fails.
+  - `[low]` `[reject]` (edge) An undecodable fixture shows `(no fixture)` in the report. The violation is still reported and the check exits 1.
+  - `[low]` `[reject]` (edge) `U.u` parsing has no format guard. The inputs are registry constants, not user input.
+  - `[low]` `[patch]` (edge) `Math.round` versus PHP's round half away from zero in `getTimestampMs`. Fix: rounds as PHP does.
+  - `[low]` `[reject]` (edge) `--root` given twice: the last one wins. This is unlikely, and a guard is new surface.
+  - `[low]` `[reject]` (edge) A gap reason containing ` | ` would split the report cell. No reason contains one, and escaping is new surface.
+  - `[low]` `[reject]` (edge) The untruncated control at ≤72 bytes is asserted only through OQ-8.md. The REPORT drift check also pins it, and the new `checkSpikes` violation covers it.
+  - `[medium]` `[patch]` (edge claim) Same root as the first bcrypt finding: `check` is not fail-closed on OQ-8. Shares that fix.
+  - `[low]` `[patch]` (edge claim, and blind's matching finding) XT-159's ruled-branch regex passes any text containing "may". Fix: it now requires frontmatter `decision: allowed | not-allowed`, and ESC-8.4-2 says so.
+  - `[low]` `[reject]` (edge claim) `checkSpikes` reads files, so it is not pure. As with `checkProbes`, "pure" here means it runs nothing and writes nothing; its doc comment says exactly that.
+  - `[medium]` `[patch]` (verification-gap) No test covers a running Bun other than the pin, for `check` or `generate`. Fix: added both cases to `cliMatrix`.
+  - `[low]` `[patch]` (verification-gap) The `requests` write path is never run. Fix: added a stale-file case to `cliMatrix`.
+  - `[low]` `[reject]` (blind) The spec's Verification `--id` glob matches nothing. The fix edits this build's spec; the Change Log already records the working command.
+  - `[false]` `[reject]` (blind) No permission is recorded for the Protected Paths. MAINT-2026-10-16 treats every Epic 1–8 Story as a Maintainer-approved Infrastructure Story.
+  - `[false]` `[reject]` (blind) OQ-8.md's `decided_by: orchestrator` is unverifiable. `decisions/MAINT-2026-10-16-unattended-orchestrator.md` is on `main`, and PRD:1434 records "Maintainer: accepted"; OQ-8.md cites the PRD.
+  - `[medium]` `[patch]` (blind) ESC-8.4-1's proposed table source, ICU zoneinfo64, has no tzdata abbreviations. Fix: the source is now the IANA tzdata release matching `process.versions.tz`, or PHP's timelib through the Oracle.
+  - `[low]` `[patch]` (blind) `format.p` relies on the Intl abbreviation that the Escalation rejects. Fix: ESC-8.4-1 now says `p` reads the same table.
+  - `[low]` `[patch]` (blind) No sample tests extreme years or most ordinal suffixes. Fix: ESC-8.4-1 now lists them under "Not covered by the spike". New samples would need another Oracle round trip for plain arithmetic.
+  - `[low]` `[patch]` (blind) The Europe/Dublin argument was never measured. Fix: ESC-8.4-1 now marks it as reasoning.
+  - `[low]` `[patch]` (blind) The `(int)` casts hide Carbon 3's float diffs, and other Carbon areas are absent. Fix: listed under "Not covered by the spike" in ESC-8.4-1.
+  - `[low]` `[reject]` (blind) Bun-hash → PHP-verify is not measured. The AC asks only for PHP → Bun, and OQ-8.md labels the reverse as inferred.
+  - `[low]` `[reject]` (blind) Covered by the verifyCase entry above (same root).
+  - `[low]` `[reject]` (blind) The error-output and wrong-type violations are untested. Testing them needs signed malformed fixtures under a throwaway key; the paths only fail closed.
+  - `[low]` `[patch]` (blind) Covered by the XT-159 regex entry above (same root).
+  - `[low]` `[reject]` (blind) The Carbon, ICU and tz versions are not recorded in REPORT. The Pin and `.bun-version` fix them, and drift fails on any change.
+  - `[low]` `[patch]` (blind) `FIXTURE_DIR`/`PUBLIC_KEY_FILE` are copied from `tools/oracle/fixtures.ts`. Fix: they are now imported.
+  - `[low]` `[reject]` (blind) The fixtures are verified twice per run. That is 72 Ed25519 verifies, which takes negligible time.
+  - `[low]` `[reject]` (blind) The CLI matrix runs inside XT-157. The repository uses one XT id per file, and a CLI failure still fails a named test.
+  - `[false]` `[reject]` (blind) The committed spec is stale (`in-review`, empty log). The workflow updates the status and the log in this step, and they are committed at finalize.
+
 ## Design Notes
 
 **Why the Oracle supplies every expected value.** Carbon's real behaviour is the specification, and hand-written values would encode guesses: for example, whether Carbon 3's `addHours` across the DST gap is wall-clock or real time, or what `X` prints. A mapping that disagrees with the fixture is either fixed, when the mapping was simply wrong, or reported as a `gap`, when Temporal cannot express the need. The Spec Change Log records which it was.
@@ -174,3 +217,58 @@ Until step 3, `spikes:check` and XT-157/158 fail on missing fixtures. That is ex
 - `bun run harness --xaravel --id 'XT-conformance-15[789]'`: expected to pass.
 - `bun run test`, `bun run typecheck`, `bun run lint`, `bun run escalations:check`, `bun run harness --xaravel`: expected exit 0.
 - CI: the `oracle` `story` job commits the fixtures, and every other check is green.
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** Story 8.4 adds the spike tool `conformance/spikes/spikes.ts`. It has two registries:
+- 65 Carbon needs in five groups: `tz`, `month`, `bounds`, `instant`, and `format` (every PHP `date()` token). Signed Oracle fixtures supply the expected values. Each need's Temporal mapping runs live on Bun 1.4.3.
+- 7 bcrypt cases. Each hash is PHP's own `$2y$12$`. Bun verifies it live on the input truncated to 72 UTF-8 bytes.
+
+The 72 Oracle requests (`conformance/oracle-requests/8.4.jsonl`) went through Story 3.4's flow. The `oracle.yml` `story` job signed the fixtures and committed them as a13159a. `conformance/spikes/REPORT.md` is generated, and `bun run spikes:check` fails closed.
+
+**Results**
+- **OQ-4:** 63 covered and 2 gaps, `format.I` (no DST flag in Temporal) and `format.T` (Intl gives `GMT+5:30` for IST). The ruling is raised as ESC-8.4-1, which recommends building the port on Temporal with a generated tzdata table for the zone metadata.
+- **OQ-8:** confirmed. All 7 cases verify after truncation, including the 72-byte cut inside a character. The untruncated control fails for every case over 72 bytes. `decisions/OQ-8.md` records this.
+- **OQ-12:** raised as ESC-8.4-2, which recommends allowing an out-of-cycle pin bump for security-relevant releases, with a Maintainer-only override.
+
+**Conditional ACs.** The AC1 ruling and AC3 are conditional on the Maintainer. `decisions/OQ-4.md` and `decisions/OQ-12.md` are the Maintainer's to write, and ESC-8.4-1 and ESC-8.4-2 wait on the Maintainer. XT-157 and XT-159 accept either the ruling (`decided_by: Maintainer`, and for OQ-12 `decision: allowed | not-allowed`) or the open Escalation, so they pass now and stay strict once the ruling lands.
+
+**Files changed**
+- `conformance/spikes/spikes.ts` (new): the registries, the mappings, `checkSpikes`, `renderReport` and the `requests|check|generate` CLI.
+- `conformance/spikes/REPORT.md` (new): the generated report.
+- `conformance/oracle-requests/8.4.jsonl` (new): the requests.
+- `conformance/fixtures/conformance/*.json` (new, 72): signed by CI.
+- `conformance/tests/xaravel/spikes.test.ts` (new): XT-conformance-157, 158 and 159, plus the CLI matrix.
+- `decisions/OQ-8.md` (new): the bcrypt result.
+- `conformance/escalations/ESC-8.4-1.md` and `ESC-8.4-2.md` (new): open, for the Maintainer.
+- `package.json`: the `spikes:*` scripts. `docs/ops/spikes.md` (new) and `docs/ops/probes.md`: the docs.
+- `stories/8.4.md`, `sprint-status.yaml`: the Story is `done`.
+
+**Review findings.** There were 39 findings: 4 medium and 9 low entries patched, nothing deferred, and the rest rejected with the reasons in the Review Triage Log.
+- **Patched:**
+  - fail-closed bcrypt violations in `check`;
+  - no swallowed `verifySync` throw;
+  - pin-mismatch and request-write tests;
+  - ESC-8.4-1's table source corrected (ICU has no tzdata abbreviations), with its unmeasured claims and its scope limits marked;
+  - XT-159 requires an explicit `decision:` value;
+  - PHP-style rounding in `getTimestampMs`;
+  - the shared constants are imported, not copied.
+- **Rejected:** 5 false and 21 low; each reason is in the log.
+
+**Follow-up review recommended: true.** Four medium entries were patched. The specific unverified risks:
+- The Oracle-side bcrypt violations (hash prefix, `password_verify`, `strlen`) have no test, because testing them needs a signed malformed fixture.
+- ESC-8.4-1's tzdata-table proposal is reasoning, not measured.
+
+**Verification**
+- `bun tools/oracle/story.ts check 8.4`: 72 accepted.
+- `spikes:requests --check`: exit 0.
+- `spikes:check`: `SPIKES OK: 63 covered, 2 gaps (of 65 needs); 7/7 bcrypt cases verify.`
+- `typecheck`, `lint` and `escalations:check`: exit 0.
+- `bun run test`: 276 pass, 0 fail.
+- `bun run harness --xaravel`: 276/276, `differ=0`.
+
+**Residual risks**
+- REPORT.md records live Intl and Temporal output, so a Bun bump that changes them shows up as drift and needs a regenerate.
+- ESC-8.4-1 and ESC-8.4-2 wait on the Maintainer.
