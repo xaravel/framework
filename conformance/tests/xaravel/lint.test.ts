@@ -1,4 +1,4 @@
-// Xaravel Tests for Story 6.1 (the type-aware async-safety lint:
+// Xaravel Tests for Story 6.1 and 6.6 (the type-aware async-safety lint:
 // `.oxlintrc.json` and `tools/lint-rules/disables.ts`; NFR-3, AD-6, AD-16,
 // AD-28).
 //
@@ -12,7 +12,7 @@ import { afterAll, expect } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { checkConfig, comments, findDisables, formatViolation, ignoreMatches, IGNORE_PROBES, parseDirective, scanSource, SPINE_RULES } from "../../../tools/lint-rules/disables";
+import { checkConfig, comments, findDisables, formatViolation, ignoreMatches, IGNORE_PROBES, parseDirective, scanSource, SPINE_RULE_OPTIONS, SPINE_RULES } from "../../../tools/lint-rules/disables";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -98,7 +98,7 @@ function runDisables(dir: string): { exitCode: number; stdout: string; stderr: s
 
 // XT-conformance-129
 
-xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-promises (checkThenables), await-thenable and no-misused-promises (checksVoidReturn) as errors for packages/*/src, packages/*/tests, skeleton/ and compiled-view snapshots (NFR-3, AD-6, AD-28.1)", () => {
+xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-promises (checkThenables), await-thenable and no-misused-promises (checksVoidReturn, checksConditionals) as errors for packages/*/src, packages/*/tests, skeleton/ and compiled-view snapshots (NFR-3, AD-6, AD-28.1)", () => {
   // The pinned toolchain.
   const pkg = readJson(join(root, "package.json")) as { devDependencies: Record<string, string> };
   expect(pkg.devDependencies["oxlint"]).toBe("1.88.0");
@@ -108,7 +108,7 @@ xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-pro
   const config = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; ignorePatterns: string[]; overrides?: unknown; jsPlugins: string[] };
   expect(config.rules["typescript/no-floating-promises"]).toEqual(["error", { checkThenables: true }]);
   expect(config.rules["typescript/await-thenable"]).toBe("error");
-  expect(config.rules["typescript/no-misused-promises"]).toEqual(["error", { checksVoidReturn: true }]);
+  expect(config.rules["typescript/no-misused-promises"]).toEqual(["error", { checksVoidReturn: true, checksConditionals: true }]);
   expect(config.rules["unicorn/no-thenable"]).toBe("off");
   expect(config.overrides).toBeUndefined();
   expect(config.ignorePatterns).toContain("tools/lint-rules/fixtures/**");
@@ -210,6 +210,42 @@ xaravelTest("XT-conformance-131", "an oxlint-disable of a spine rule, a blanket 
   directiveCases();
   configCases();
 }, 120_000);
+
+// XT-conformance-254
+
+xaravelTest("XT-conformance-254", "no-misused-promises is pinned with checksConditionals: true beside checksVoidReturn: true; a Promise used as a condition fails lint naming no-misused-promises; a config that sets checksConditionals: false fails lint:disables (ESC-6.1-1, NFR-3, AD-6, AD-16.4)", () => {
+  // The real config pins both options, and lint:disables requires both.
+  const config = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; jsPlugins: string[] };
+  expect(config.rules["typescript/no-misused-promises"]).toEqual(["error", { checksVoidReturn: true, checksConditionals: true }]);
+  expect(SPINE_RULE_OPTIONS["no-misused-promises"]).toEqual({ checksVoidReturn: true, checksConditionals: true });
+
+  // The fixture fails with exactly no-misused-promises.
+  const dir = tempDir("xaravel-lint-254-");
+  placeFixtures(dir, ["misused-conditional.ts"]);
+  const run = oxlint(CONFIG, [join(dir, "misused-conditional.ts")]);
+  expect(run.exitCode).toBe(1);
+  expect(run.diagnostics).toEqual([[join(dir, "misused-conditional.ts"), "no-misused-promises"]]);
+
+  // checksConditionals: false lets the fixture pass oxlint, and fails lint:disables naming the option.
+  const weakRules = { ...config.rules, "typescript/no-misused-promises": ["error", { checksVoidReturn: true, checksConditionals: false }] };
+  const weak = tempDir("xaravel-lint-254-weak-");
+  writeFileSync(join(weak, CONFIG), JSON.stringify({ ...config, jsPlugins: config.jsPlugins.map((plugin) => join(root, plugin)), rules: weakRules }));
+  placeFixtures(join(weak, "src"), ["misused-conditional.ts"]);
+  const weakRun = oxlint(join(weak, CONFIG), [join(weak, "src")]);
+  expect(weakRun.diagnostics).toEqual([]);
+  expect(weakRun.exitCode).toBe(0);
+  const weakened = gitRoot("xaravel-lint-254-disables-");
+  write(weakened, { [CONFIG]: JSON.stringify({ ...config, rules: weakRules }, null, 2), "src/a.ts": "export const a = 1;\n" });
+  const disables = runDisables(weakened);
+  expect(disables.exitCode).toBe(1);
+  expect(disables.stderr).toMatch(/^\.oxlintrc\.json:\d+:\d+: sets no-misused-promises without checksConditionals: true \(AD-16\)\n$/);
+
+  // The real repository passes bun run lint:disables.
+  const real = Bun.spawnSync([process.execPath, "run", "lint:disables"], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  expect(real.stderr.toString()).not.toContain("AD-16");
+  expect(real.exitCode).toBe(0);
+  expect(real.stdout.toString()).toMatch(/lint disables: ok \(\d+ files\)\n$/);
+}, 60_000);
 
 /** Disable directives: spellings, rule-name forms, blanket disables and descriptions; directives in strings, templates and regexes do not count. */
 function directiveCases(): void {

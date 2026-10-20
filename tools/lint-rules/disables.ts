@@ -70,7 +70,7 @@ export const SPINE_RULES: readonly string[] = [
 /** The options a spine rule must carry, each with the value it must have. */
 export const SPINE_RULE_OPTIONS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
   "no-floating-promises": { checkThenables: true },
-  "no-misused-promises": { checksVoidReturn: true },
+  "no-misused-promises": { checksVoidReturn: true, checksConditionals: true },
 };
 
 /** The file extensions oxlint lints. */

@@ -14,12 +14,12 @@ oxlint 1.88.0 with oxlint-tsgolint 7.0.2004 (root `devDependencies`), run type-a
 | --- | --- | --- |
 | `typescript/no-floating-promises` | `["error", {"checkThenables": true}]` | an unawaited Promise, or an unawaited thenable Builder, Relation or `PendingRequest` (AD-6) whose terminal never runs |
 | `typescript/await-thenable` | `"error"` | `await` on a value that is not a Promise or thenable |
-| `typescript/no-misused-promises` | `["error", {"checksVoidReturn": true}]` | an async callback passed where a `void` return is expected, whose rejection nobody sees |
+| `typescript/no-misused-promises` | `["error", {"checksVoidReturn": true, "checksConditionals": true}]` | an async callback passed where a `void` return is expected, whose rejection nobody sees; a Promise used as a condition, which is always truthy (`checksConditionals`: ESC-6.1-1, Story 6.6) |
 | `unicorn/no-thenable` | `"off"` | AD-6 makes Builders, Relations and `PendingRequest` thenable by design |
 
 `checkThenables` fires only for a `then` typed as `PromiseLike`. The config has no `overrides`, and no `ignorePatterns` entry may match `packages/` or `skeleton/` files. `.oxlintrc.json` is plain JSON (no comments): tests read it with `JSON.parse`, so the rationale lives here.
 
-The committed fixtures in `tools/lint-rules/fixtures/async-safety/` prove the rules: `floating-thenable.ts`, `await-plain.ts` and `misused-void-callback.ts` each fail one rule, and `passing.ts` holds the same three patterns done right. The root config ignores the fixtures directory so `bun run lint` stays green; XT-conformance-129 and XT-conformance-130 copy the fixtures into temp roots and lint them with the real config, from the repository root (oxlint finds tsgolint from the cwd), with `--format unix`.
+The committed fixtures in `tools/lint-rules/fixtures/async-safety/` prove the rules: `floating-thenable.ts`, `await-plain.ts`, `misused-void-callback.ts` and `misused-conditional.ts` (a Promise as an `if` condition, Story 6.6; it carries a `@ts-expect-error` for TS2801, which tsc also reports, so the fixtures typecheck) each fail one rule, and `passing.ts` holds all four patterns done right (an awaited Promise as the condition). The root config ignores the fixtures directory so `bun run lint` stays green; XT-conformance-129 and XT-conformance-130 copy the first three fixtures into temp roots and lint them with the real config, from the repository root (oxlint finds tsgolint from the cwd), with `--format unix`. XT-conformance-254 lints `misused-conditional.ts` the same way (exactly `no-misused-promises`), shows that `checksConditionals: false` lets it pass, and that `lint:disables` then fails with `sets no-misused-promises without checksConditionals: true`.
 
 ## The `xaravel` plugin (`tools/lint-rules/plugin.ts`)
 

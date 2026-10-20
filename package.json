@@ -24,6 +24,7 @@
     "api-surface:gate": "bun --no-env-file tools/api-surface/api-surface.ts --gate",
     "scaffold": "bun tools/scaffold/scaffold.ts",
     "scaffold:check": "bun tools/scaffold/scaffold.ts --check",
+    "registration:check": "bun --no-env-file tools/registration/registration.ts",
     "scaffold:table": "bun tools/scaffold/table.ts",
     "graph:check": "bun tools/graph/graph.ts",
     "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners",

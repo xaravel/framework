@@ -6,7 +6,7 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 
 | Check | Workflow and job | What it runs |
 | --- | --- | --- |
-| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `graph:check`, the coverage reports |
+| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `registration:check`, `graph:check`, the coverage reports |
 | `bun audit` | `ci.yml#audit` (required) | `bun install --frozen-lockfile --ignore-scripts`, then `bun audit --audit-level=high` |
 | fixture signatures | `ci.yml#fixtures` (required) | `oracle:verify-fixtures` ([oracle.md](oracle.md)) |
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
@@ -15,6 +15,8 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 | API-surface report | `api-surface.yml#report` (not required; never fails) | `api-surface --all --markdown`, the per-Component table in the job summary ([api-surface.md](api-surface.md)) |
 
 `lint` is `bun --bun oxlint --type-aware && bun run lint:disables`: the type-aware async-safety rules, and a check that no comment or config switches a spine rule off (AD-16.4; [lint.md](lint.md)).
+
+`registration:check` is the duplicate-FQCN and registration scan: each FQCN registered once, every framework class file ending with `registerClass('<FQCN>', X)`, and no package `package.json` setting `"sideEffects": false` (Story 6.6, AD-10, AD-22; [registration.md](registration.md)).
 
 `ci.yml` also runs `workflow-permissions`, `upstream` and `php-fixtures`, which are advisory.
 
