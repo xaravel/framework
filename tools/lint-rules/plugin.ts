@@ -169,8 +169,16 @@ export function scopePath(filename: string, cwd: string = process.cwd()): string
   return file.startsWith(`${base}/`) ? file.slice(base.length + 1) : file;
 }
 
-/** The grader's locations, exempt from the identity rule: the grader cannot call fqcn() (AD-15; decisions/ESC-6.2-1.md). */
-const GRADER_LOCATIONS = /^(packages\/(assert|mockery)|conformance|tools)\//;
+/** `text` with every regular-expression metacharacter escaped, for interpolation into a `RegExp` source. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+}
+
+/**
+ * The grader's locations, exempt from the identity rule: the grader cannot call fqcn() (AD-15; decisions/ESC-6.2-1.md).
+ * Built from `GRADER_PACKAGES`, so the package list lives in one place (retro 6 item 5).
+ */
+const GRADER_LOCATIONS = new RegExp(`^(packages/(${GRADER_PACKAGES.map(escapeRegExp).join("|")})|conformance|tools)/`);
 /** The repository's root-level directories, which locate the repository root inside an absolute path. */
 const ROOT_MARKER = /\/(packages\/[^/]+|conformance|tools|skeleton|installer)\//;
 
