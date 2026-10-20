@@ -44,4 +44,5 @@ epic-6:
   doc: _bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-6-retro-item-6-thenable-return-call-results
