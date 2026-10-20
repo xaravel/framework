@@ -10,14 +10,15 @@
 // root unfiltered, since that run would include these tests.
 import { afterAll, expect } from "bun:test";
 import { createHash, generateKeyPairSync, type KeyObject } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs, runHarness, type HarnessResult } from "../../harness/harness";
 import { judgeXaravel, xaravelTestFiles } from "../../harness/xaravel";
 import { coverage, runCoverage } from "../../../tools/xt-coverage/coverage";
 import { CONSEQUENCE_SOURCES, consequencesFor, declaredConsequences, expectedFiles, PRD_FILE, readConsequences, SPINE_FILE } from "../../../tools/xt-coverage/consequences";
-import { approvalsClause, CLAUSES, fixturesClause, fullRunClause, lastSummary, MAX_ITEMS, renderClause, repoFromRemote, runStoryCheck, testsClause, xaravelClause, type FixturesInput } from "../../../tools/story-check/story-check";
+import { apiSurfaceClause, approvalsClause, CLAUSES, fixturesClause, fullRunClause, lastSummary, MAX_ITEMS, renderClause, repoFromRemote, runApiSurfaceGate, runStoryCheck, testsClause, xaravelClause, type FixturesInput, type GateRun } from "../../../tools/story-check/story-check";
+import { EPICS, parseManifest } from "../../../tools/ownership/ownership";
 import { renderFixture, signFixture } from "../../../tools/oracle/fixtures";
 import { makeRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json } from "../../../tools/oracle/request";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -224,6 +225,9 @@ function keyPair(): { pub: KeyObject; priv: KeyObject } {
   return { pub: pair.publicKey, priv: pair.privateKey };
 }
 
+/** The Story root's `epics.md`: Story 9.1 has no `api-surface:gate` acceptance criterion. */
+const STORY_EPICS = "# Epics\n\n### Story 9.1: Done\n\n**Then** it is done.\n";
+
 /** A Story root: Story 9.1 owns A (pass), B (upstream-skip) and XT-demo-1, and the Oracle files the fixtures clause reads. */
 function storyRoot(files: Record<string, string> = {}): string {
   const { pub } = keyPair();
@@ -236,6 +240,7 @@ function storyRoot(files: Record<string, string> = {}): string {
     [PORTED]: [`import { Assert, portedTest } from ${JSON.stringify(ASSERT)};`, `portedTest(${JSON.stringify(A)}, {}, () => { Assert.assertTrue(true); });`, `portedTest(${JSON.stringify(D)}, {}, () => { Assert.assertTrue(false); });`].join("\n"),
     [XT_FILE]: xtFile([`xaravelTest("XT-demo-1", "passes (FR-115.1)", () => { Assert.assertTrue(true); });`, `xaravelTest("XT-demo-2", "fails (FR-115.1)", () => { Assert.assertTrue(false); });`].join("\n")),
     [SCHEMA_FILE]: readFileSync(join(root, SCHEMA_FILE), "utf8"),
+    [EPICS]: STORY_EPICS,
     [`${REQUESTS_DIR}/support.jsonl`]: renderRequests([{ component: "support", request: other }]).get("support")!,
     "conformance/oracle/oracle.pub": pub.export({ type: "spki", format: "pem" }).toString(),
     ...files,
@@ -362,11 +367,11 @@ const ESCALATION = "---\ntest_ids:\n  - XT-demo-1\ntrigger: open-question\npropo
 
 xaravelTest(
   "XT-conformance-127",
-  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals count by distinct reviewer identity (AD-15.8, FR-111.1, AD-16.5, AD-16.9; FR-114, FR-115, AD-28)",
+  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, api-surface, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals count by distinct reviewer identity (AD-15.8, FR-111.1, AD-16.5, AD-16.9; FR-114, FR-115, AD-28)",
   async () => {
     const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["story:check"];
     expect(script).toBe("bun --no-env-file tools/story-check/story-check.ts");
-    expect([...CLAUSES]).toEqual(["manifest", "tests", "xaravel-tests", "fixtures", "approvals", "escalations", "full-run"]);
+    expect([...CLAUSES]).toEqual(["manifest", "tests", "xaravel-tests", "fixtures", "api-surface", "approvals", "escalations", "full-run"]);
 
     // Every clause passes: the Story's own lines are done, its Xaravel Test passes, two distinct non-author approvals
     // (each reviewer's latest counted review), no open Escalation, and the latest ratchet run's story step passed a full run (a warned difference allowed).
@@ -377,6 +382,7 @@ xaravelTest(
       "PASS tests: 2 Test ID × Variant line(s) done",
       "PASS xaravel-tests: 1 Xaravel Test(s) pass",
       "PASS fixtures: no assigned Differential Test ID",
+      "PASS api-surface: no api-surface:gate acceptance criterion",
       "PASS approvals: PR #7: 2 approvals (alice, bob)",
       "PASS escalations: no Escalations",
       "PASS full-run: PR #7 ratchet run 12: SUMMARY variants=11 run=7 not-run=4 checked=2 differ=1; STORY ref=story/9.1 failures=0 passes=0 warnings=1",
@@ -403,6 +409,7 @@ xaravelTest(
       "  XT-demo-2: fail",
       "  XT-demo-9: missing",
       "PASS fixtures: no assigned Differential Test ID",
+      "PASS api-surface: no api-surface:gate acceptance criterion",
       "FAIL approvals: PR #7: 1 approval(s) from distinct reviewers other than agent; 2 needed",
       "  alice: APPROVED",
       "  bob: CHANGES_REQUESTED",
@@ -444,6 +451,7 @@ xaravelTest(
       "FAIL tests: cannot check: stories/9.1.md is missing or invalid",
       "FAIL xaravel-tests: cannot check: stories/9.1.md is missing or invalid",
       "FAIL fixtures: cannot check: stories/9.1.md is missing or invalid",
+      "FAIL api-surface: cannot check: stories/9.1.md is missing or invalid",
       "FAIL approvals: cannot check: GH_TOKEN is not set",
       "PASS escalations: no Escalations",
       "FAIL full-run: cannot check: GH_TOKEN is not set",
@@ -512,6 +520,104 @@ xaravelTest(
       expect(unfinished.code).toBe(1);
       expect(requested.filter((path) => path.includes("/actions/jobs/99/logs"))).toEqual([]);
     }
+
+    // api-surface (Epic 6 retro S4, Maintainer ruling on item 8): a manifest whose Story's acceptance criteria say
+    // "`api-surface:gate <c>` passes" carries api_surface_gate: <c>, and story:check runs the gate for <c> from the root,
+    // with no GitHub token in its env.
+    const gateEpics = `${STORY_EPICS}\n**And** \`api-surface:gate contracts\` passes and the docs are written.\n`;
+    const gateLine = gateEpics.split("\n").length - 1;
+    const gated = (gate: string | null): string => manifest("9.1", [], ["XT-demo-1"]).replace("component: support\n", gate === null ? "component: support\n" : `component: support\napi_surface_gate: ${gate}\n`);
+    const gateRoot = storyRoot({ "stories/9.1.md": gated("contracts"), [EPICS]: gateEpics });
+    const gateCalls: unknown[] = [];
+    const gatePassed = await runStoryCheck(["9.1", "--root", gateRoot], {
+      env: env({ GH_TOKEN: "secret" }),
+      apiSurfaceGate: (at, component, gateEnv) => {
+        gateCalls.push([at, component, gateEnv["GH_TOKEN"], gateEnv["GITHUB_TOKEN"]]);
+        return { code: 0, stdout: "api-surface:gate contracts: 0 unexplained (AD-15)\n", stderr: "" };
+      },
+    });
+    const apiSurfaceLine = (out: readonly string[]) => out.find((line) => / api-surface: /.test(line) && /^(PASS|FAIL) /.test(line));
+    expect(apiSurfaceLine(gatePassed.out)).toBe("PASS api-surface: api-surface:gate contracts: 0 unexplained");
+    expect(gateCalls).toEqual([[gateRoot, "contracts", undefined, undefined]]);
+    // epics.md missing fails closed.
+    rmSync(join(gateRoot, EPICS));
+    const noEpics = await runStoryCheck(["9.1", "--root", gateRoot], { env: env(), apiSurfaceGate: () => ({ error: "never asked" }) });
+    expect(apiSurfaceLine(noEpics.out)).toBe(`FAIL api-surface: cannot check: ${EPICS} does not exist`);
+    expect(noEpics.code).toBe(1);
+
+    // The pure clause, over each gate outcome; the gate is asked only when the manifest agrees with epics.md.
+    const criteria = [{ storyId: "9.1", component: "contracts", line: gateLine }];
+    const parsedGated = (gate: string | null) => parseManifest("stories/9.1.md", gated(gate)).manifest!;
+    const gateAsked: string[] = [];
+    const clause = (gate: string | null, run: GateRun, against = criteria) =>
+      renderClause(
+        apiSurfaceClause(parsedGated(gate), against, (component) => {
+          gateAsked.push(component);
+          return run;
+        }),
+      );
+    const unexplained = [
+      "contracts: missing class Illuminate\\Contracts\\Auth\\Guard",
+      "api-surface:gate contracts: 1 unexplained (AD-15)",
+      "api-surface:gate citation problem: conformance/api-surface/exceptions.jsonl:3: lines are not sorted",
+      "api-surface:gate citations: 1 problem(s) (AD-15)",
+      "",
+    ].join("\n");
+    expect(clause("contracts", { code: 1, stdout: unexplained, stderr: "" })).toEqual([
+      "FAIL api-surface: api-surface:gate contracts: 1 unexplained; api-surface:gate citations: 1 problem(s)",
+      "  contracts: missing class Illuminate\\Contracts\\Auth\\Guard",
+      "  api-surface:gate citation problem: conformance/api-surface/exceptions.jsonl:3: lines are not sorted",
+    ]);
+    // A tool failure (exit 1 with no count line), a usage error (exit 2), a signal or a spawn error: cannot check.
+    expect(clause("contracts", { code: 1, stdout: "", stderr: "api-surface: tsc -b failed\n" })).toEqual(["FAIL api-surface: cannot check: api-surface:gate contracts exited 1", "  api-surface: tsc -b failed"]);
+    expect(clause("contracts", { code: 2, stdout: "", stderr: "api-surface: unknown component contracts\n" })).toEqual([
+      "FAIL api-surface: cannot check: api-surface:gate contracts exited 2",
+      "  api-surface: unknown component contracts",
+    ]);
+    expect(clause("contracts", { code: null, stdout: "", stderr: "" })).toEqual(["FAIL api-surface: cannot check: api-surface:gate contracts exited on a signal"]);
+    expect(clause("contracts", { code: 0, stdout: "", stderr: "" })).toEqual(["FAIL api-surface: cannot check: api-surface:gate contracts exited 0"]);
+    expect(clause("contracts", { error: "spawn ENOENT" })).toEqual(["FAIL api-surface: cannot check: api-surface:gate contracts: spawn ENOENT"]);
+    // Exit 1 after a zero count with no citations line is a tool failure (checkCitations threw): cannot check.
+    expect(clause("contracts", { code: 1, stdout: "api-surface:gate contracts: 0 unexplained (AD-15)\n", stderr: "api-surface: schema.json: ENOENT\n" })).toEqual([
+      "FAIL api-surface: cannot check: api-surface:gate contracts exited 1",
+      "  api-surface: schema.json: ENOENT",
+    ]);
+    // A verdict with only citation problems fails on them, and stderr lines follow the items.
+    expect(clause("contracts", { code: 1, stdout: "api-surface:gate contracts: 0 unexplained (AD-15)\napi-surface:gate citation problem: p\napi-surface:gate citations: 1 problem(s) (AD-15)\n", stderr: "warning: w\n" })).toEqual([
+      "FAIL api-surface: api-surface:gate contracts: 0 unexplained; api-surface:gate citations: 1 problem(s)",
+      "  api-surface:gate citation problem: p",
+      "  warning: w",
+    ]);
+    expect(gateAsked).toEqual(["contracts", "contracts", "contracts", "contracts", "contracts", "contracts", "contracts", "contracts"]);
+    // The default runner runs the real gate subprocess with --gate and --root: against the api-surface demo fixture it
+    // reports the fixture's 7 unexplained items.
+    const demo = mkdtempSync(join(tmpdir(), "xt-done-check-api-surface-"));
+    roots.push(demo);
+    const fixtures = join(root, "tools", "api-surface", "fixtures");
+    cpSync(join(fixtures, "demo"), join(demo, "packages", "demo"), { recursive: true });
+    mkdirSync(join(demo, "conformance", "api-surface"), { recursive: true });
+    mkdirSync(join(demo, "conformance", "scans"), { recursive: true });
+    for (const name of ["demo.jsonl", "additions.jsonl", "exceptions.jsonl"]) {
+      cpSync(join(fixtures, name), join(demo, "conformance", "api-surface", name));
+    }
+    cpSync(join(root, "conformance", "api-surface", "schema.json"), join(demo, "conformance", "api-surface", "schema.json"));
+    cpSync(join(fixtures, "div12-pairs.jsonl"), join(demo, "conformance", "scans", "div12-pairs.jsonl"));
+    const demoManifest = parseManifest("stories/9.1.md", manifest("9.1", [], ["XT-demo-1"]).replace("component: support\n", "component: support\napi_surface_gate: demo\n")).manifest!;
+    const real = renderClause(apiSurfaceClause(demoManifest, [{ storyId: "9.1", component: "demo", line: 1 }], (component) => runApiSurfaceGate(demo, component, env())));
+    expect(real[0]).toBe("FAIL api-surface: api-surface:gate demo: 7 unexplained");
+    expect(real).toHaveLength(8);
+    // The field missing or different, a field with no criterion, two components: the cross-check's item, no gate run.
+    const never: GateRun = { error: "never asked" };
+    expect(clause(null, never)).toEqual([
+      "FAIL api-surface: stories/9.1.md does not match its api-surface:gate acceptance criteria",
+      `  api-surface gate: stories/9.1.md must carry api_surface_gate: contracts (epics.md:${gateLine} says \`api-surface:gate contracts\` passes), got no api_surface_gate (AD-15)`,
+    ]);
+    expect(clause("config", never)[1]).toBe(`  api-surface gate: stories/9.1.md must carry api_surface_gate: contracts (epics.md:${gateLine} says \`api-surface:gate contracts\` passes), got api_surface_gate: config (AD-15)`);
+    expect(clause("config", never, [])[1]).toBe("  api-surface gate: stories/9.1.md carries api_surface_gate: config but epics.md has no `api-surface:gate config` passes acceptance criterion for Story 9.1 (AD-15)");
+    expect(clause("contracts", never, [...criteria, { storyId: "9.1", component: "config", line: gateLine + 1 }])[1]).toContain("api-surface gate: Story 9.1 has api-surface:gate acceptance criteria for 2 components");
+    // Another Story's criterion is not this Story's; no criterion and no field passes without a gate run.
+    expect(clause(null, never, [{ storyId: "9.2", component: "config", line: 1 }])).toEqual(["PASS api-surface: no api-surface:gate acceptance criterion"]);
+    expect(gateAsked).toHaveLength(8);
 
     // The pure pieces.
     expect(approvalsClause(7, "agent", SHA, [{ user: { login: "x" }, state: "APPROVED", commit_id: SHA }, { user: { login: "x" }, state: "APPROVED", commit_id: SHA }]).pass).toBe(false);

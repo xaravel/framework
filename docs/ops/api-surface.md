@@ -13,7 +13,7 @@ bun --no-env-file tools/api-surface/api-surface.ts --root <dir> …   # a temp r
 
 A component is a `conformance/api-surface/<name>.jsonl` other than `additions.jsonl` and `exceptions.jsonl`; its package is `packages/<name>`. An unknown component, or neither a component nor `--all`, exits 2 naming it. A tool failure (tsc fails, a jsonl file is unreadable or invalid, a citation line names a component with no `conformance/api-surface/<component>.jsonl`, a declaration or source does not parse) exits 1 with the reason, in report and gate mode alike: `api-surface: conformance/api-surface/exceptions.jsonl:<n>: unknown component nope (no conformance/api-surface/nope.jsonl)`. A component is known when its file exists under `--root`, whichever components were selected.
 
-A Component's last Epic is accepted against `bun run api-surface:gate <component>` (AD-15): zero unexplained members, zero citation problems and no tool failure.
+A Component's last Epic is accepted against `bun run api-surface:gate <component>` (AD-15): zero unexplained members, zero citation problems and no tool failure. `story:check` enforces it: the Story's manifest carries `api_surface_gate: <component>`, and its `api-surface` clause runs the gate ([done-check.md](done-check.md#the-api_surface_gate-field)).
 
 ## How it works
 

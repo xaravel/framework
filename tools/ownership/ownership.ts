@@ -7,6 +7,14 @@
 //       authority for whether a Story is open: a manifest with a `sprint_key`
 //       takes its status from `development_status[<sprint_key>]`. Without that
 //       file, or without a `sprint_key`, the manifest's own `status` is used.
+//       It also cross-checks the optional `api_surface_gate: <c>` field
+//       against `_bmad-output/planning-artifacts/epics.md` (Epic 6 retro S4,
+//       Maintainer ruling on item 8; `checkApiSurfaceGates`): a Story whose
+//       acceptance criteria under its `### Story X.Y:` heading say
+//       "`api-surface:gate <c>` passes" carries the field naming `<c>`, and
+//       no other Story carries it. Such a criterion whose Story has no
+//       manifest yet prints a `note:` line on stderr and is not a violation.
+//       `story:check` reuses the parser and runs the gate.
 //
 //   bun tools/ownership/ownership.ts pr --repo <owner/name> --pr <n> [--root <dir>]
 //       reads the PR's head branch and files from the GitHub API
@@ -21,6 +29,12 @@
 //                        file and field
 //   duplicate test id:   a Test ID listed by two or more open Stories (naming
 //                        each), or twice inside one manifest
+//   api-surface gate:    a manifest lacks the `api_surface_gate` its Story's
+//                        `api-surface:gate <c>` passes criterion needs, names
+//                        another component, or carries one with no such
+//                        criterion; a Story has criteria for two components;
+//                        a criterion is under no Story heading; or epics.md
+//                        is missing or unreadable (fail closed)
 //   unknown sprint key:  a manifest's `sprint_key` is not in sprint status's
 //                        `development_status`
 //   invalid sprint status: sprint status is unreadable, not YAML, not a
@@ -131,6 +145,9 @@ export const STORIES_DIR = "stories";
 /** Repo-relative path of sprint status, the authority for whether a Story is open. */
 export const SPRINT_STATUS = "_bmad-output/implementation-artifacts/sprint-status.yaml";
 
+/** Repo-relative path of the epics file, whose acceptance criteria say which Stories pass `api-surface:gate <c>`. */
+export const EPICS = "_bmad-output/planning-artifacts/epics.md";
+
 export const STATUSES = ["backlog", "ready-for-dev", "in-progress", "review", "done", "blocked"] as const;
 export type Status = (typeof STATUSES)[number];
 
@@ -140,6 +157,11 @@ export interface Manifest {
   storyId: string;
   epic: number;
   component: string;
+  /**
+   * The manifest's `api_surface_gate`: the Component whose `api-surface:gate` the Story's acceptance criteria say
+   * passes (Epic 6 retro S4, Maintainer ruling on item 8), or null when absent.
+   */
+  apiSurfaceGate: string | null;
   status: Status;
   /** The manifest's `sprint_key` (its entry in sprint status), or null when absent. */
   sprintKey: string | null;
@@ -257,6 +279,11 @@ export function parseManifest(file: string, text: string): ManifestResult {
     violations.push(bad("component", `must be a kebab-case string, ${describe(component)}`));
   }
 
+  const apiSurfaceGate = fields["api_surface_gate"];
+  if (apiSurfaceGate !== undefined && (typeof apiSurfaceGate !== "string" || !COMPONENT.test(apiSurfaceGate))) {
+    violations.push(bad("api_surface_gate", `must be a kebab-case component name when present, ${describe(apiSurfaceGate)}`));
+  }
+
   const status = fields["status"];
   if (typeof status !== "string" || !(STATUSES as readonly string[]).includes(status)) {
     violations.push(bad("status", `must be one of ${STATUSES.join(", ")}, ${describe(status)}`));
@@ -293,6 +320,7 @@ export function parseManifest(file: string, text: string): ManifestResult {
       storyId: storyId as string,
       epic: epic as number,
       component: component as string,
+      apiSurfaceGate: apiSurfaceGate === undefined ? null : (apiSurfaceGate as string),
       status: status as Status,
       sprintKey: sprintKey === undefined ? null : (sprintKey as string),
       testIds: testIds!,
@@ -407,6 +435,118 @@ export function checkDuplicates(manifests: readonly Manifest[]): string[] {
     }
   }
   return violations;
+}
+
+/** One "`api-surface:gate <c>` passes" acceptance criterion of `epics.md`. */
+export interface GateCriterion {
+  /** The Story whose `### Story X.Y:` heading the criterion is under, or null when it is under no Story heading. */
+  readonly storyId: string | null;
+  readonly component: string;
+  /** 1-based line in `epics.md`. */
+  readonly line: number;
+}
+
+const STORY_HEADING = /^### Story ([1-9]\d*\.[1-9]\d*):/;
+/** Any other heading of level 1 to 3 ends a Story's section. */
+const SECTION_HEADING = /^#{1,3}\s/;
+/** The exact phrase, with a kebab-case component; placeholders such as `<c>` are not criteria. */
+const GATE_CRITERION = /`api-surface:gate ([a-z][a-z0-9-]*)` passes/g;
+
+/**
+ * Every "`api-surface:gate <c>` passes" acceptance criterion in `text` (`epics.md`), in file order, each with the
+ * Story whose `### Story X.Y:` heading it is under (Epic 6 retro S4, Maintainer ruling on item 8).
+ */
+export function gateCriteria(text: string): GateCriterion[] {
+  const out: GateCriterion[] = [];
+  let storyId: string | null = null;
+  text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .forEach((line, index) => {
+      const heading = STORY_HEADING.exec(line);
+      if (heading !== null) {
+        storyId = heading[1]!;
+      } else if (SECTION_HEADING.test(line)) {
+        storyId = null;
+      }
+      for (const match of line.matchAll(GATE_CRITERION)) {
+        out.push({ storyId, component: match[1]!, line: index + 1 });
+      }
+    });
+  return out;
+}
+
+/** The gate criteria of `epics.md` under `root`; throws when the file does not exist or cannot be read (fail closed). */
+export function readGateCriteria(root: string): GateCriterion[] {
+  const path = join(root, EPICS);
+  if (!existsSync(path)) {
+    throw new Error(`${EPICS} does not exist`);
+  }
+  let text: string;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch (error) {
+    throw new Error(`${EPICS} is unreadable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return gateCriteria(text);
+}
+
+export interface GateCheckResult {
+  violations: string[];
+  /** A gate criterion whose Story has no manifest yet: not a violation (see `checkApiSurfaceGates`). */
+  notes: string[];
+}
+
+/**
+ * Cross-checks each manifest's `api_surface_gate` against the gate criteria of `epics.md`: a Story with such a
+ * criterion carries the field naming its component, a Story without one carries no field, and a Story has gate
+ * criteria for one component at most. A criterion under no Story heading is a violation. A criterion whose Story has
+ * no manifest is a note: that Story cannot be worked or accepted until it has one (ownership's `missing manifest`,
+ * story:check's `manifest` clause), and then the field is required.
+ */
+export function checkApiSurfaceGates(manifests: readonly Manifest[], criteria: readonly GateCriterion[]): GateCheckResult {
+  const violations: string[] = [];
+  const notes: string[] = [];
+  const byStory = new Map<string, GateCriterion[]>();
+  for (const criterion of criteria) {
+    if (criterion.storyId === null) {
+      violations.push(`api-surface gate: ${EPICS}:${criterion.line} says \`api-surface:gate ${criterion.component}\` passes under no ### Story heading (AD-15)`);
+      continue;
+    }
+    const list = byStory.get(criterion.storyId) ?? [];
+    list.push(criterion);
+    byStory.set(criterion.storyId, list);
+  }
+  const at = (list: readonly GateCriterion[]): string => list.map((criterion) => `epics.md:${criterion.line}`).join(", ");
+  const withManifest = new Set(manifests.map((manifest) => manifest.storyId));
+  for (const [storyId, list] of [...byStory].sort(([a], [b]) => compareStoryIds(a, b))) {
+    const components = [...new Set(list.map((criterion) => criterion.component))];
+    if (components.length > 1) {
+      const each = components.map((component) => `\`api-surface:gate ${component}\` (${at(list.filter((criterion) => criterion.component === component))})`);
+      violations.push(`api-surface gate: Story ${storyId} has api-surface:gate acceptance criteria for ${components.length} components, ${each.join(" and ")}; api_surface_gate holds one component (AD-15)`);
+    } else if (!withManifest.has(storyId)) {
+      notes.push(`note: Story ${storyId} has an \`api-surface:gate ${components[0]!}\` passes acceptance criterion (${at(list)}) but no ${STORIES_DIR}/${storyId}.md; its manifest must carry api_surface_gate: ${components[0]!}`);
+    }
+  }
+  for (const manifest of manifests) {
+    const list = byStory.get(manifest.storyId) ?? [];
+    const components = [...new Set(list.map((criterion) => criterion.component))];
+    if (components.length > 1) {
+      continue;
+    }
+    const expected = components[0] ?? null;
+    if (expected === null) {
+      if (manifest.apiSurfaceGate !== null) {
+        violations.push(
+          `api-surface gate: ${manifest.file} carries api_surface_gate: ${manifest.apiSurfaceGate} but epics.md has no \`api-surface:gate ${manifest.apiSurfaceGate}\` passes acceptance criterion for Story ${manifest.storyId} (AD-15)`,
+        );
+      }
+    } else if (manifest.apiSurfaceGate !== expected) {
+      const got = manifest.apiSurfaceGate === null ? "got no api_surface_gate" : `got api_surface_gate: ${manifest.apiSurfaceGate}`;
+      violations.push(`api-surface gate: ${manifest.file} must carry api_surface_gate: ${expected} (${at(list)} says \`api-surface:gate ${expected}\` passes), ${got} (AD-15)`);
+    }
+  }
+  return { violations, notes };
 }
 
 function compareStoryIds(a: string, b: string): number {
@@ -1090,6 +1230,17 @@ function manifests(options: Options): number {
   const read = readManifests(options.root);
   const result = applySprintStatus(options.root, read.manifests);
   const violations = [...read.violations, ...result.violations, ...checkDuplicates(result.manifests)];
+  // The api-surface gate cross-check (Epic 6 retro S4) reads epics.md, and fails closed when it cannot.
+  let gates: GateCheckResult;
+  try {
+    gates = checkApiSurfaceGates(read.manifests, readGateCriteria(options.root));
+  } catch (error) {
+    gates = { violations: [`api-surface gate: cannot check: ${error instanceof Error ? error.message : String(error)} (AD-15)`], notes: [] };
+  }
+  violations.push(...gates.violations);
+  if (gates.notes.length > 0) {
+    process.stderr.write(gates.notes.map((note) => `${note}\n`).join(""));
+  }
   if (violations.length > 0) {
     report(violations);
     return 1;

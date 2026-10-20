@@ -80,6 +80,20 @@ for i, l in enumerate(epics, 1):
     m = re.match(r"### Story (\d+\.\d+): (.*)", l)
     if m:
         heading[m.group(1)] = (i, m.group(2).strip())
+# "`api-surface:gate <c>` passes" criteria by Story, as tools/ownership/ownership.ts `gateCriteria` finds them
+# (Epic 6 retro S4): the exact phrase with a kebab-case name, under the `### Story X.Y:` heading it follows; any other
+# heading of level 1 to 3 ends the section.
+gate = {}
+current = None
+for l in epics:
+    m = re.match(r"### Story ([1-9]\d*\.[1-9]\d*):", l)
+    if m:
+        current = m.group(1)
+    elif re.match(r"#{1,3}\s", l):
+        current = None
+    for c in re.findall(r"`api-surface:gate ([a-z][a-z0-9-]*)` passes", l):
+        if current is not None:
+            gate.setdefault(current, c)
 status_text = open(os.path.join(repo, "_bmad-output/implementation-artifacts/sprint-status.yaml")).read()
 sprint_keys = re.findall(r"^  (\d+-\d+-[a-z0-9-]+):", status_text, re.M)
 
@@ -200,8 +214,10 @@ def given(text):
 
 if write:
     for m in out:
-        lines = ["---", f"story_id: {q(m['story'])}", f"epic: {m['epic']}", f"component: {m['component']}", "status: backlog",
-                 f"title: {q(m['title'])}"]
+        lines = ["---", f"story_id: {q(m['story'])}", f"epic: {m['epic']}", f"component: {m['component']}"]
+        if m["story"] in gate:
+            lines.append(f"api_surface_gate: {gate[m['story']]}")
+        lines += ["status: backlog", f"title: {q(m['title'])}"]
         if m["sprint_key"]:
             lines.append(f"sprint_key: {m['sprint_key']}")
         lines.append("test_ids:" + ("" if m["ids"] else " []"))

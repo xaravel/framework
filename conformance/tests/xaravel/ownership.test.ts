@@ -9,8 +9,11 @@ import {
   applySprintStatus,
   BOT_LOGIN,
   botAllowedPath,
+  checkApiSurfaceGates,
   checkDuplicates,
+  EPICS,
   evaluatePr,
+  gateCriteria,
   parseManifest,
   planningAllowedPath,
   readManifests,
@@ -28,6 +31,7 @@ interface ManifestFields {
   story_id?: unknown;
   epic?: unknown;
   component?: unknown;
+  api_surface_gate?: unknown;
   status?: unknown;
   sprint_key?: unknown;
   test_ids?: unknown;
@@ -46,10 +50,20 @@ function story(id: string, overrides: ManifestFields = {}): ManifestFields {
   return { story_id: id, epic: Number(id.split(".")[0]), component: "support", status: "backlog", test_ids: [`T-${id}`], ...overrides };
 }
 
-/** A hermetic root holding `stories/<id>.md` for each manifest, plus sprint status when `sprintStatus` is given. */
-function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null): string {
+/** A minimal `epics.md`: Stories 9.1 and 9.2, with no `api-surface:gate` acceptance criterion. */
+const EPICS_TEXT = "# Epics\n\n### Story 9.1: One\n\n**Then** it works.\n\n### Story 9.2: Two\n\n**Then** it works too.\n";
+
+/**
+ * A hermetic root holding `stories/<id>.md` for each manifest, plus sprint status when `sprintStatus` is given, and
+ * `epics.md` (`EPICS_TEXT` unless `epics` is given; none when it is null).
+ */
+function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null, epics: string | null = EPICS_TEXT): string {
   const tmp = mkdtempSync(join(tmpdir(), "xaravel-ownership-"));
   mkdirSync(join(tmp, STORIES_DIR), { recursive: true });
+  if (epics !== null) {
+    mkdirSync(dirname(join(tmp, EPICS)), { recursive: true });
+    writeFileSync(join(tmp, EPICS), epics);
+  }
   for (const [id, fields] of Object.entries(stories)) {
     writeFileSync(join(tmp, STORIES_DIR, `${id}.md`), typeof fields === "string" ? fields : manifestText(fields));
   }
@@ -184,13 +198,14 @@ const manifest = (id: string, ids: string[], status: Manifest["status"] = "backl
   storyId: id,
   epic: Number(id.split(".")[0]),
   component: "support",
+  apiSurfaceGate: null,
   status,
   sprintKey,
   testIds: ids,
   xaravelTestIds: xt,
 });
 
-xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, component and status, plus a non-empty test_ids or xaravel_test_ids; one without fails (AD-16.5, AD-21)", async () => {
+xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, component and status, plus a non-empty test_ids or xaravel_test_ids; one without fails; a Story whose epics.md criteria say `api-surface:gate <c>` passes carries api_surface_gate: <c>, cross-checked by manifests (Epic 6 retro S4 ruling) (AD-16.5, AD-21)", async () => {
   // Every committed manifest validates, and `manifests` passes on the repo root.
   const committed = readManifests(root);
   expect(committed.violations).toEqual([]);
@@ -209,6 +224,22 @@ xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, 
   const live = await runCli(["manifests"]);
   expect(live.code).toBe(0);
   expect(live.stdout).toBe(`Ownership OK: ${resolved.manifests.length} manifest(s) valid, ${openCount} open, no duplicate Test IDs.\n`);
+
+  // api_surface_gate (Epic 6 retro S4, Maintainer ruling on item 8): the 36 "`api-surface:gate <c>` passes" criteria
+  // of epics.md, each under a Story heading and one component per Story; every manifest agrees with them, and each
+  // gate Story with no manifest yet is a stderr note, not a violation.
+  const criteria = gateCriteria(readFileSync(join(root, EPICS), "utf8"));
+  expect(criteria).toHaveLength(36);
+  expect(criteria.every((criterion) => criterion.storyId !== null)).toBe(true);
+  expect(new Set(criteria.map((criterion) => criterion.storyId)).size).toBe(36);
+  expect(criteria.find((criterion) => criterion.storyId === "10.6")).toMatchObject({ component: "contracts" });
+  const gates = checkApiSurfaceGates(committed.manifests, criteria);
+  expect(gates.violations).toEqual([]);
+  const gated = committed.manifests.filter((m) => m.apiSurfaceGate !== null);
+  expect(gated.map((m) => m.storyId)).toEqual(["10.6", "11.1", "12.1", "13.1", "14.8", "15.3", "16.2", "17.4", "24.1", "25.2", "26.1", "27.4", "29.3", "30.2", "39.3", "41.3", "42.5", "44.1", "48.5", "56.5", "57.6", "63.1", "67.2"]);
+  expect(gates.notes).toHaveLength(36 - gated.length);
+  expect(live.stderr).toBe(gates.notes.map((note) => `${note}\n`).join(""));
+  expect(live.stderr).toContain("note: Story 68.3 has an `api-surface:gate mcp` passes acceptance criterion (epics.md:");
 
   const check = (fields: ManifestFields | string, name = "stories/9.1.md") =>
     parseManifest(name, typeof fields === "string" ? fields : manifestText(fields)).violations;
@@ -253,6 +284,86 @@ xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, 
     ]);
   }
   expect(check("---\n: [\n---\n")[0]).toContain("frontmatter is not valid YAML");
+  // api_surface_gate is optional; when present it must be a kebab-case component name.
+  expect(parseManifest("stories/9.1.md", manifestText(story("9.1", { api_surface_gate: "json-schema" }))).manifest!.apiSurfaceGate).toBe("json-schema");
+  expect(parseManifest("stories/9.1.md", manifestText(story("9.1"))).manifest!.apiSurfaceGate).toBeNull();
+  for (const gate of [7, "Contracts", "", null, ["contracts"]]) {
+    expect(check(story("9.1", { api_surface_gate: gate }))).toEqual([
+      `invalid manifest: stories/9.1.md: api_surface_gate must be a kebab-case component name when present, got ${JSON.stringify(gate)} (AD-16)`,
+    ]);
+  }
+
+  // gateCriteria: only the exact phrase with a kebab-case name, under the `### Story X.Y:` heading it follows; any
+  // other heading of level 1 to 3 ends the Story's section.
+  const epicsText = [
+    "# Epics", // 1
+    "A `api-surface:gate <component>` fails; a manifest whose criteria say \"`api-surface:gate <c>` passes\" carries the field.", // 2
+    "### Story 9.1: One", // 3
+    "**Then** `api-surface:gate contracts` passes, and `api-surface:gate Config` passes, and `api-surface:gate x`", // 4
+    "#### A sub-heading keeps the Story", // 5
+    "- `api-surface:gate json-schema` passes;", // 6
+    "## Epic 10", // 7
+    "`api-surface:gate loose` passes", // 8
+  ].join("\r\n");
+  expect(gateCriteria(epicsText)).toEqual([
+    { storyId: "9.1", component: "contracts", line: 4 },
+    { storyId: "9.1", component: "json-schema", line: 6 },
+    { storyId: null, component: "loose", line: 8 },
+  ]);
+  const m91 = { ...manifest("9.1", ["T1"]), apiSurfaceGate: "contracts" };
+  expect(checkApiSurfaceGates([m91], [{ storyId: "9.1", component: "contracts", line: 4 }, { storyId: "9.1", component: "contracts", line: 9 }])).toEqual({ violations: [], notes: [] });
+  expect(checkApiSurfaceGates([m91], gateCriteria(epicsText)).violations).toEqual([
+    `api-surface gate: ${EPICS}:8 says \`api-surface:gate loose\` passes under no ### Story heading (AD-15)`,
+    "api-surface gate: Story 9.1 has api-surface:gate acceptance criteria for 2 components, `api-surface:gate contracts` (epics.md:4) and `api-surface:gate json-schema` (epics.md:6); api_surface_gate holds one component (AD-15)",
+  ]);
+
+  // The cross-check, through the CLI: each row of the matrix.
+  const gateEpics = (component: string): string => `${EPICS_TEXT}\n### Story 9.3: Gate\n\n**Then** \`api-surface:gate ${component}\` passes and the docs are written.\n`;
+  await withRoots(
+    [
+      fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3", { api_surface_gate: "contracts" }) }, null, gateEpics("contracts")),
+      fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3") }, null, gateEpics("contracts")),
+      fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3", { api_surface_gate: "config" }) }, null, gateEpics("contracts")),
+      fixtureRoot({ "9.1": story("9.1", { api_surface_gate: "x" }) }),
+      fixtureRoot({ "9.1": story("9.1") }, null, gateEpics("mcp")),
+      fixtureRoot({ "9.3": story("9.3", { api_surface_gate: "contracts" }) }, null, `${gateEpics("contracts")}- \`api-surface:gate config\` passes;\n`),
+      fixtureRoot({ "9.1": story("9.1", { api_surface_gate: 7 }) }),
+      fixtureRoot({ "9.1": story("9.1") }, null, null),
+    ],
+    async ([matches, missing, different, noCriterion, noManifest, twoComponents, badField, noEpics]) => {
+      const ok = "Ownership OK: 2 manifest(s) valid, 2 open, no duplicate Test IDs.\n";
+      expect(await runCli(["manifests", "--root", matches!])).toEqual({ code: 0, stdout: ok, stderr: "" });
+      const line = EPICS_TEXT.split("\n").length + 3;
+      const lacking = await runCli(["manifests", "--root", missing!]);
+      expect(lacking).toEqual({
+        code: 1,
+        stdout: "",
+        stderr: `Ownership violations (AD-16):\n  api-surface gate: stories/9.3.md must carry api_surface_gate: contracts (epics.md:${line} says \`api-surface:gate contracts\` passes), got no api_surface_gate (AD-15)\n`,
+      });
+      expect((await runCli(["manifests", "--root", different!])).stderr).toContain(
+        `api-surface gate: stories/9.3.md must carry api_surface_gate: contracts (epics.md:${line} says \`api-surface:gate contracts\` passes), got api_surface_gate: config (AD-15)`,
+      );
+      const extra = await runCli(["manifests", "--root", noCriterion!]);
+      expect(extra.code).toBe(1);
+      expect(extra.stderr).toContain("api-surface gate: stories/9.1.md carries api_surface_gate: x but epics.md has no `api-surface:gate x` passes acceptance criterion for Story 9.1 (AD-15)");
+      expect(await runCli(["manifests", "--root", noManifest!])).toEqual({
+        code: 0,
+        stdout: "Ownership OK: 1 manifest(s) valid, 1 open, no duplicate Test IDs.\n",
+        stderr: `note: Story 9.3 has an \`api-surface:gate mcp\` passes acceptance criterion (epics.md:${line}) but no stories/9.3.md; its manifest must carry api_surface_gate: mcp\n`,
+      });
+      const two = await runCli(["manifests", "--root", twoComponents!]);
+      expect(two.code).toBe(1);
+      expect(two.stderr).toContain(`api-surface gate: Story 9.3 has api-surface:gate acceptance criteria for 2 components, \`api-surface:gate contracts\` (epics.md:${line}) and \`api-surface:gate config\` (epics.md:${line + 1}); api_surface_gate holds one component (AD-15)`);
+      const bad = await runCli(["manifests", "--root", badField!]);
+      expect(bad.code).toBe(1);
+      expect(bad.stderr).toContain("invalid manifest: stories/9.1.md: api_surface_gate must be a kebab-case component name when present, got 7 (AD-16)");
+      expect(await runCli(["manifests", "--root", noEpics!])).toEqual({
+        code: 1,
+        stdout: "",
+        stderr: `Ownership violations (AD-16):\n  api-surface gate: cannot check: ${EPICS} does not exist (AD-15)\n`,
+      });
+    },
+  );
 
   // The CLI fails, one stderr line per violation.
   await withRoots(

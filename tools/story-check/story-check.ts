@@ -35,6 +35,17 @@
 //                  `output.error` is not null (an evaluation error at any
 //                  stage) fails too, unless the id's Inventory `oracle` map is
 //                  non-empty and every outcome in it is `fail`;
+//   api-surface    (Epic 6 retro S4, Maintainer ruling on item 8) the
+//                  manifest's `api_surface_gate` agrees with the Story's
+//                  "`api-surface:gate <c>` passes" acceptance criteria in
+//                  `_bmad-output/planning-artifacts/epics.md` (ownership's
+//                  `gateCriteria` and `checkApiSurfaceGates`); with no
+//                  criterion and no field it passes; otherwise the gate runs
+//                  (`bun --no-env-file tools/api-surface/api-surface.ts
+//                  --gate --root <root> <c>`) and passes on exit 0. Exit 1
+//                  fails on the unexplained items and citation problems the
+//                  gate printed; any other exit, or a missing epics.md, fails
+//                  as `cannot check`;
 //   approvals      the PR (`--pr`, else the most recently updated PR whose head
 //                  is `story/<id>`, in any state): each reviewer's latest
 //                  `APPROVED`, `CHANGES_REQUESTED` or `DISMISSED` review, the
@@ -74,11 +85,11 @@ import { checkLine, contextFor, type Context } from "../expectations/reasons";
 import { compareUnits } from "../inventory/inventory";
 import { FIXTURES_DIR, readNondeterminism, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
-import { coveringIds, covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { checkApiSurfaceGates, coveringIds, covers, parseManifest, readGateCriteria, STORIES_DIR, type GateCriterion, type Manifest } from "../ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../pin-bump/pin-bump";
 import { GitHub } from "../protected-paths/protected-paths";
 
-export const CLAUSES = ["manifest", "tests", "xaravel-tests", "fixtures", "approvals", "escalations", "full-run"] as const;
+export const CLAUSES = ["manifest", "tests", "xaravel-tests", "fixtures", "api-surface", "approvals", "escalations", "full-run"] as const;
 export type Clause = (typeof CLAUSES)[number];
 
 /** The most failing items a clause prints. */
@@ -291,6 +302,75 @@ export function fixturesClause(input: FixturesInput): ClauseResult {
   }
   return items.length === 0 ? pass("fixtures", `${due.length} fixture(s) verified`) : fail("fixtures", `${items.length} of ${due.length} assigned request(s) lack a verified fixture`, items);
 }
+
+/** How one `api-surface:gate <c>` subprocess ended: its exit code and output, or the error that kept it from running. */
+export type GateRun = { readonly code: number | null; readonly stdout: string; readonly stderr: string } | { readonly error: string };
+
+/** Runs `api-surface:gate <component>` against `root`. */
+export type ApiSurfaceGate = (root: string, component: string, env: Readonly<Record<string, string | undefined>>) => GateRun;
+
+const GATE_COUNT = /^api-surface:gate (?:[a-z][a-z0-9-]*: \d+ unexplained|citations: \d+ problem\(s\)) \(AD-15\)$/;
+
+function lines(text: string): string[] {
+  return text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((line) => line.trim() !== "");
+}
+
+/**
+ * `api-surface` (Epic 6 retro S4, Maintainer ruling on item 8): the manifest's `api_surface_gate` agrees with the
+ * Story's "`api-surface:gate <c>` passes" acceptance criteria in `epics.md` (`criteria`, every criterion of the file),
+ * and, when there is one, `gate` (asked only then) passes for `<c>`. Exit 1 with the gate's count line fails on the
+ * unexplained items and citation problems it printed; any other exit, or no count line, fails as `cannot check`.
+ */
+export function apiSurfaceClause(manifest: Manifest, criteria: readonly GateCriterion[], gate: (component: string) => GateRun): ClauseResult {
+  const own = criteria.filter((criterion) => criterion.storyId === manifest.storyId);
+  const { violations } = checkApiSurfaceGates([manifest], own);
+  if (violations.length > 0) {
+    return fail("api-surface", `${manifest.file} does not match its api-surface:gate acceptance criteria`, violations);
+  }
+  const component = manifest.apiSurfaceGate;
+  if (component === null) {
+    return pass("api-surface", "no api-surface:gate acceptance criterion");
+  }
+  const run = gate(component);
+  if ("error" in run) {
+    return fail("api-surface", `cannot check: api-surface:gate ${component}: ${run.error}`);
+  }
+  const out = lines(run.stdout);
+  const countLine = out.find((line) => line.startsWith(`api-surface:gate ${component}: `) && GATE_COUNT.test(line));
+  const detail = (line: string): string => line.replace(/ \(AD-15\)$/, "");
+  if (run.code === 0 && countLine !== undefined) {
+    return pass("api-surface", detail(countLine));
+  }
+  // Exit 1 is a verdict only when the gate counted something: a non-zero count or a citations line. Otherwise the
+  // tool failed after printing its counts (e.g. `checkCitations` threw), so it cannot check.
+  const verdict = countLine !== undefined && (!countLine.startsWith(`api-surface:gate ${component}: 0 unexplained`) || out.some((line) => line.startsWith("api-surface:gate citations: ") && GATE_COUNT.test(line)));
+  if (run.code === 1 && verdict) {
+    const counts = out.filter((line) => GATE_COUNT.test(line)).map(detail);
+    return fail("api-surface", counts.join("; "), [...out.filter((line) => !GATE_COUNT.test(line)), ...lines(run.stderr)]);
+  }
+  return fail("api-surface", `cannot check: api-surface:gate ${component} exited ${run.code ?? "on a signal"}`, lines(run.stderr));
+}
+
+/** The API-surface tool beside this one. */
+const API_SURFACE_TOOL = resolve(import.meta.dir, "..", "api-surface", "api-surface.ts");
+
+/** The default gate: `bun --no-env-file tools/api-surface/api-surface.ts --gate --root <root> <component>`, from `root`. */
+export const runApiSurfaceGate: ApiSurfaceGate = (root, component, env) => {
+  try {
+    const proc = Bun.spawnSync([process.execPath, "--no-env-file", API_SURFACE_TOOL, "--gate", "--root", root, component], {
+      cwd: root,
+      env: { ...env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    return { code: proc.exitCode, stdout: proc.stdout.toString(), stderr: proc.stderr.toString() };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+};
 
 /** One review, as the GitHub API returns it (chronological). */
 export interface Review {
@@ -509,6 +589,8 @@ export interface StoryCheckOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** The harness (tests may wrap it); default `runHarness`. */
   readonly harness?: Harness;
+  /** The `api-surface:gate` runner (tests may replace it); default `runApiSurfaceGate`. */
+  readonly apiSurfaceGate?: ApiSurfaceGate;
 }
 
 export interface StoryCheckResult {
@@ -650,7 +732,7 @@ export async function runStoryCheck(argv: readonly string[], options: StoryCheck
   const noManifest = (clause: Clause): ClauseResult => fail(clause, `cannot check: ${file} is missing or invalid`);
 
   if (manifest === null) {
-    clauses.push(noManifest("tests"), noManifest("xaravel-tests"), noManifest("fixtures"));
+    clauses.push(noManifest("tests"), noManifest("xaravel-tests"), noManifest("fixtures"), noManifest("api-surface"));
   } else {
     let storyRun: HarnessResult | null = null;
     if (manifest.testIds.length > 0) {
@@ -671,6 +753,8 @@ export async function runStoryCheck(argv: readonly string[], options: StoryCheck
     }
     clauses.push(xaravelClause(manifest.xaravelTestIds, xaravelRun));
     clauses.push(guard("fixtures", () => fixturesClause(fixturesInput(root, [...manifest.testIds, ...manifest.xaravelTestIds]))));
+    const gate = options.apiSurfaceGate ?? runApiSurfaceGate;
+    clauses.push(guard("api-surface", () => apiSurfaceClause(manifest, readGateCriteria(root), (component) => gate(root, component, harnessEnv))));
   }
   const [approvals, fullRun] = await githubClauses(storyId, args.pr, root, env);
   clauses.push(approvals);
