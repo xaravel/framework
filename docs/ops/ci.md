@@ -6,7 +6,7 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 
 | Check | Workflow and job | What it runs |
 | --- | --- | --- |
-| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `divergence:check` ([divergence.md](divergence.md)), `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `registration:check`, `graph:check`, the coverage reports |
+| lint, typecheck, dependency graph | `ci.yml#check` (required) | `bun run test`, `expectations:check`, `expectations:reasons`, `divergence:check` ([divergence.md](divergence.md)), `porting:check` ([porting.md](porting.md)), `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `registration:check`, `graph:check`, the coverage reports |
 | `bun audit` | `ci.yml#audit` (required) | `bun install --frozen-lockfile --ignore-scripts`, then `bun audit --audit-level=high` |
 | fixture signatures | `ci.yml#fixtures` (required) | `oracle:verify-fixtures` ([oracle.md](oracle.md)) |
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
