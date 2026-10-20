@@ -65,11 +65,21 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 
 **`undefined` → `null`** (AD-9). `null` is the only absent value. `undefined` is normalised at boundaries and never returned; an expected `null` is never adapted to `undefined` (DIV-9.1).
 
+**Casts of objects.** `(string) $object`, and a concatenation operand that is an object, become `toPhpString(x)`, which calls the object's `toString()` (its `__toString` port) as PHP does; a port never calls `toString()` itself for a cast. As in § Mechanical expression rule's `a . b` row, only a string-literal operand is left unwrapped: any other operand is wrapped, even a call that already returns a string (`'ba' . strtoupper($m[1])` becomes `'ba' + toPhpString(strtoupper(m[1]))`), as the rule is syntax-directed.
+
+**Magic reads that forward to a method.** A read of a property that `conformance/scans/div12-pairs.jsonl` classifies `method-plus-state`, made through a `__get` that forwards to the same-named method (`$stringable->value` on `Illuminate\Support\Stringable`, whose `value` row in § DIV-12 pair list reads "method keeps the name; state behind Upstream's getters"), becomes that method call, `stringable.value()`, marked `// adapted:DIV-12.2`: it is DIV-12.2's read of the state property through Upstream's getter.
+
 ## Test-adaptation rules
 
-- **Shape.** A Ported Test is declared only through `portedTest('<Test ID>', { case?, dataset? }, async function () { ... })` and asserts only through `@xaravel/assert`; importing `expect` from `bun:test` under `tests/ported` is a lint error (AD-15). `this` is the `case` TestCase (AD-25).
+- **Shape.** A Ported Test is declared only through `portedTest('<Test ID>', { case?, dataset? }, async function () { ... })` and asserts only through `@xaravel/assert`; importing `expect` from `bun:test` under `tests/ported` is a lint error (AD-15). `this` is the `case` TestCase (AD-25). The body is an `async function` even when it awaits nothing, so every Ported Test has the one shape.
+- **Test case.** A test class that extends `PHPUnit\Framework\TestCase` directly is ported with `case: TestCase` from `@xaravel/assert`, or, when it declares helpers, properties, providers or traits, with a local `class <UpstreamClass> extends TestCase` in the test file whose helpers are public, because the body runs outside the class; assertions are called as `this.assertX(...)`, as Upstream calls `$this->assertX(...)`, and a PHP return type on the test method (`: void`) is dropped.
+- **Data providers.** A `#[DataProvider('p')]` test is one `portedTest` whose `dataset` holds provider `p`'s rows, built when the test is declared (a module constant when several tests share the provider); PHPUnit's row keys become the Test ID suffixes (`#0`, `#1`, … for a list, `#<key>` for a string key), each row is spread into the body's parameters, typed from Upstream's hints or `unknown`, a defaulted parameter keeps its default, and a row of class names (`[Collection::class]`) holds the constructors, so `new $collection(...)` becomes `new collection(...)`.
+- **Mockery.** `Mockery::mock(X::class)` becomes `Mockery.mock(X)` from `@xaravel/mockery`, where `X` is the class, the contract token of an `Illuminate\Contracts` interface (`Arrayable` from `@xaravel/contracts/support`), or the class `@xaravel/runtime/php` exports for a PHP interface (`JsonSerializable`); the expectation chain keeps Upstream's methods and arguments (`$m->expects('toArray')->andReturn('x')` becomes `m.expects('toArray').andReturn('x')`), and `portedTest` verifies and closes the Mockery container after the body, so a test never calls `Mockery.close()` itself.
+- **Array literals.** An array literal takes the form DIV-9.2 gives its keys, not its spelling: keys, implicit or explicit, that normalise to `0..n-1` in order make a list and so a JS `Array` (`[0 => 'a', 1 => 'b']` becomes `['a', 'b']`), and other integer or mixed keys a `PhpArray` written with Upstream's keys as written (`null` and `''` included; the runtime normalises them), with explicit type arguments (a union of its key types, and `unknown` values) when its entries differ in type; these conversions are the syntax of the port, so they carry no `adapted` marker.
+- **Reading a PHP array.** A read of an array whose JS form depends on its run-time keys (an `all()` or `toArray()` result) goes through `phpArrayEntries(a)` from `@xaravel/assert`, which yields the `[key, value]` pairs of a list, a plain object or a `PhpArray` alike: `isset($a[k])` becomes `phpArrayEntries(a).some(([key, v]) => key === nk && v !== null)`, where `nk` is `k` normalised as a PHP key (§ Idiom table, `PhpArray`): an integer-like string such as `'1'` is the integer `1`, so `isset($a['1'])` finds the key `1`.
+- **Non-integral floats.** A non-integral float literal such as `1.5` is a float by its value, so it carries no float marker; the marker (DIV-9.4) is for an integral float such as `1.0` whose assertion depends on int/float.
 - **Adapt versus skip** (PRD §5.1). A test is **adapted** when its Upstream intent can still be verified under a DIV's numbered adaptation clause, for example awaiting an IO call (DIV-1.1, DIV-8.1) or `await m.related('rel')` in place of lazy access (DIV-2.2). A test is **skipped** as `intentional-divergence:DIV-<n>` only when the behaviour it tests does not exist in Xaravel (for example a PCRE-only pattern, DIV-10.1).
-- **Markers.** Each changed assertion line carries `// adapted:DIV-<n>.<k>`, and the test's Expectations line carries the same clause in its `adapted` field (`DIV-<n>.<k>`). Only a `pass` line may carry `adapted`. `bun run divergence:check` fails a marker that names no existing clause (`docs/ops/divergence.md`).
+- **Markers.** Each changed assertion line carries `// adapted:DIV-<n>.<k>` (and any line holding a converted pattern carries `// adapted:DIV-10.1`, § PCRE conversion / Markers), and the test's Expectations line carries the same clause in its `adapted` field (`DIV-<n>.<k>`). Only a `pass` line may carry `adapted`. `bun run divergence:check` fails a marker that names no existing clause (`docs/ops/divergence.md`).
 - **Grader.** Never weaken an expected value, remove an assertion or add a skip without a DIV clause or an approved Escalation. The assertion floor (FR-113) still applies; only clauses listed in a record's `fewer_assertions` waive it (ESC-5.3-2).
 - **Order of rewrites.** First apply § Mechanical expression rule, which is syntax-directed and uses no type information. Then apply the type-dependent rewrites, each an adaptation that cites its clause:
   - an IO call or thenable terminal is awaited: DIV-1.1 (with DIV-8.1 for the async body, DIV-8.2 for predicate assertions);
@@ -101,7 +111,7 @@ bun run porting:translate --blade '<blade template>'
 | `->`, `?->`, `::` (calls, properties, constants, `C::$p`) | `.`, `?.`, `.` |
 | `f(...)`, `$o->m(...)` (first-class callable) | `f`, `o.m.bind(o)` |
 | named arguments `f(1, b: 2, c: 3)` | `f(1, { b: 2, c: 3 })` (trailing named arguments become one object, AD-26) |
-| bare function or constant name | kept verbatim (helpers come from `@xaravel/support`, PHP builtins and constants from `@xaravel/runtime/php`) |
+| bare function or constant name | kept verbatim (the import comes from the package § Imports below names: a helper from the Component whose api-surface declares it, PHP builtins and constants from `@xaravel/runtime/php`) |
 | `true`/`FALSE`/`Null` | lower case |
 | numbers; `017`/`0o17` | as written; `0o17` |
 | integral float literal `1.0` | `float(1)` (DIV-9 float marker) |
@@ -109,7 +119,7 @@ bun run porting:translate --blade '<blade template>'
 | `a . b` | `toPhpString(a) + toPhpString(b)`; a string-literal operand is not wrapped |
 | list `[1, 2]`, `array(1, 2)`, spread `...$a` | `[1, 2]`, `...a` |
 | every key a non-integer-like string literal | `{ a: 1, 'b-c': 2 }` |
-| any other keyed array | `new PhpArray([[k, v], …])`; an implicit key gets the next literal integer index, and a non-literal key before an implicit one is untranslatable |
+| any other keyed array | `new PhpArray([[k, v], …])`; an implicit key gets the next literal integer index, and a non-literal key before an implicit one is untranslatable. Explicit (or mixed implicit and explicit) keys that normalise to `0..n-1` in order are a list, ported as a JS `Array` per § Test-adaptation rules / Array literals (DIV-9.2); `porting:translate` does not yet apply this. |
 | `$a[k]` | `a[k]` (ArrayAccess receivers adapt to `.get(k)` under DIV-12) |
 | `==`, `!=`/`<>`, `<=>` | `looseEquals(a, b)`, `!looseEquals(a, b)`, `spaceship(a, b)` |
 | `===`, `!==`, `< > <= >=`, arithmetic, bitwise, `??`, `instanceof` | unchanged; the left operand of `??` has its property and index links optional-chained, as in `isset` (`$a->b->c ?? 1` → `a?.b?.c ?? 1`) |
@@ -121,7 +131,19 @@ bun run porting:translate --blade '<blade template>'
 | `new C(args)`, `$a = e` | `new C(args)`, `a = e` |
 | `__DIR__` | `import.meta.dir` |
 
-The rule keeps these operators syntactically. Where an operand may be a non-number (a numeric string, an array union with `+`, a mixed-type `<`/`>` comparison, `%` or `/` on strings), PHP's semantics differ from JavaScript's: the port uses the PHP-semantics helpers of § Idiom table by hand, or raises an Escalation (FR-114).
+The rule keeps these operators syntactically. Where an operand may be a non-number (a numeric string, an array union with `+`, a mixed-type `<`/`>` comparison, `%` or `/` on strings), PHP's semantics differ from JavaScript's: the port uses the PHP-semantics helpers of § Idiom table by hand, or raises an Escalation (FR-114). Arithmetic on a numeric-string operand converts it first, as PHP does: `toInt` only when the operand can hold only an integer string (`$m[1] * 2` on a `(\d+)` capture becomes `toInt(m[1]) * 2`), `toFloat` only when it can hold only a non-integer numeric string, and an Escalation (FR-114) when it could be either.
+
+**Imports.** Imports are written by hand from the Upstream `use` lines: an Upstream class or helper comes from `@xaravel/<component>`, the Component whose `conformance/api-surface/<component>.jsonl` declares it (`Collection`, `LazyCollection`, `Arr` and `collect` from `@xaravel/collections`, `Str` and `Stringable` from `@xaravel/support`, `Illuminate\Database\Eloquent\Model` from `@xaravel/database`), an `Illuminate\Contracts\<Ns>` interface from `@xaravel/contracts/<ns>`, PHP's exception classes from `@xaravel/runtime` (§ Exceptions), `PhpArray`, `Ref` and the PHP-semantics helpers of § Idiom table from `@xaravel/runtime`, and PHP's other classes, functions and constants (`stdClass`, `ArrayObject`, `JsonSerializable`, `strrev`, `PHP_EOL`) and the AD-23 codecs from `@xaravel/runtime/php`; a test imports only the class its `use` line names, never a same-named export of another package (PHP's `Exception`, not `@xaravel/assert`'s).
+
+**By hand.** A construct the rule refuses is ported by these forms:
+
+- A closure with a statement body, a `throw` or a `$this` is an arrow function, which keeps the test case as `this` as PHP binds `$this`, with its statements in order (`fn () => throw new E('m')` becomes `() => { throw new E('m'); }`). A closure that Upstream rebinds (a macro passed to `Collection::macro` or another `Macroable`, or a closure given to `Closure::bind`, `bindTo` or `call`) is a `function` expression instead, because an arrow function cannot be rebound.
+- Every closure parameter, including those of closures the rule translates, is annotated with Upstream's type hint, or else the narrowest type its call site gives, or `unknown`, because `tsc --strict` rejects an implicit `any`.
+- A PHP local is declared `let` when the test assigns it again and `const` otherwise; list destructuring `[$a, $b] = e` becomes `[a, b] = e`, declared `let [a, b] = e` on first use.
+- `new C` without parentheses becomes `new C()`, and an anonymous class `new class extends Model {}` becomes `new (class extends Model {})()`.
+- `(object) ['a' => 1]` becomes `Object.assign(new stdClass(), { a: 1 })`, and a dynamic property on a `stdClass` is a plain property write (`$o->text = 'f'` becomes `o.text = 'f'`), since `stdClass` has no `__set`.
+- A PHP callable string (`'strrev'`) stays a string literal, as Upstream passes it.
+- An empty callback passed to a framework API stays empty (`() => {}`): the API normalises its `undefined` result to `null` at the boundary (AD-9, DIV-9.1). A callback the test calls itself and whose result it asserts returns `null` explicitly (`() => null`).
 
 **Examples.** `\Illuminate\Support\Str::words("\t\t\t")` → `Str.words('\t\t\t')`. `$c->where(fn ($value) => $value['v'] == 3)` → `c.where((value) => looseEquals(value['v'], 3))`. `[1 => 'foo', 2 => 'bar']` → `new PhpArray([[1, 'foo'], [2, 'bar']])`. Blade: `Hello {{ $user->name }}` → `Hello {{ $user.name }}`.
 
@@ -133,13 +155,14 @@ The rule keeps these operators syntactically. Where an operand may be a non-numb
 
 ## By-reference parameters
 
-A PHP by-reference parameter (`function f(&$x)`) takes a `Ref<T>` box from `@xaravel/runtime` (AD-9, Story 9.5). The callee writes through the box, and the caller reads the new value back from it. In a Ported Test, a by-reference argument becomes a `Ref<T>` read back through its `value` (DIV-9.2). The mechanical rule does not apply `Ref<T>` itself: a by-reference parameter or reference assignment is untranslatable, and the port applies this rule by hand.
+A PHP by-reference parameter (`function f(&$x)`) takes a `Ref<T>` box from `@xaravel/runtime` (AD-9, Story 9.5). The callee writes through the box, and the caller reads the new value back from it. In a Ported Test, a by-reference argument becomes a `Ref<T>` read back through its `value` (DIV-9.2). The mechanical rule does not apply `Ref<T>` itself: a by-reference parameter or reference assignment is untranslatable, and the port applies this rule by hand. A by-reference closure capture `use (&$a)` needs no `Ref<T>`, because a JS closure captures the variable itself: the port captures a `let` (or the list it appends to), and `$a[] = v` on a list becomes `a.push(v)`.
 
 ## Exceptions
 
 - **Classes.** Each PHP exception class is a JS `Error` subclass of the same name, registered under its Upstream FQCN with `registerClass('<FQCN>', X)` (spine Consistency Conventions, AD-10). Messages match Upstream exactly.
 - **PHP's own classes** come from `@xaravel/runtime` (AD-19, Story 9.10), exported and registered under their PHP names with PHP's parent chain: `Exception`, `ErrorException`, `Error`, `TypeError`, `ValueError`, `ArgumentCountError`, `ArithmeticError`, `DivisionByZeroError`, `JsonException`; and the SPL classes `RuntimeException`, `LogicException`, `InvalidArgumentException`, `DomainException`, `LengthException`, `OutOfRangeException`, `OutOfBoundsException`, `RangeException`, `OverflowException`, `UnderflowException`, `UnexpectedValueException`, `BadFunctionCallException`, `BadMethodCallException`. `new InvalidArgumentException('m', 5, previous)` keeps `getMessage()`, `getCode()` and `getPrevious()`, and is `instanceof LogicException`, `Exception` and `Error`.
 - **Tests.** `$this->expectException(X::class)` → `this.expectException(X)`; `expectExceptionMessage` keeps Upstream's message.
+- **Other exception expectations.** `expectExceptionObject(new X(...))`, `expectExceptionCode` and `expectExceptionMessageMatches` keep Upstream's call (the pattern converted by § PCRE conversion), as do `$this->fail()` and the surrounding `try`/`finally`; a `catch (X)` without a variable becomes `catch (e) { if (!(e instanceof X)) throw e; … }`.
 - **The `\Error`/`\Exception` split** is published through a `Symbol.for` protocol for the grader (Story 9.10; ESC-4.3-1 items 10 and 14). Until then a JS `Error` through `ExceptionComparator` is compared as it is (DIV-9.8).
 
 ## Frame slots (AD-5)
@@ -190,6 +213,10 @@ Xaravel uses JavaScript `RegExp`, not PCRE (DIV-10). The conversion rule is owne
 - **Named groups.** `(?P<n>…)` → `(?<n>…)`.
 - **Start of subject.** `\A` → `^`, in a pattern with no `m` flag.
 - **End of subject.** `\z` → `$`.
+- **Other delimiters.** Any PCRE delimiter (`#…#`, `~…~`, `{…}`) is dropped as `/` is, and a `/` inside the pattern is escaped as `\/`.
+- **Markers.** A converted pattern is an adaptation under DIV-10.1: the line that holds it carries `// adapted:DIV-10.1`, whether or not it is an assertion line.
+- **Replacements and callbacks.** A pattern passed to a `preg_replace`-style API (`Str.replaceMatches`, `Stringable.replaceMatches`) is converted without adding a `g` flag, because the API keeps PHP's replace-all and limit semantics; its replacement string keeps PHP's `$1` and `\1` references verbatim, and its callback receives PHP's match array (`match[0]`, `match[1]`), as Upstream's does.
+- **Wildcards.** A `Str.is`-style wildcard (`whenIs('foo/*')`) is not a regular expression, so it stays a string.
 
 These PCRE-only features have no equivalent. An Upstream test that depends on one is skipped as `intentional-divergence:DIV-10` (DIV-10.1):
 
