@@ -18,6 +18,7 @@ import { xaravelTest } from "../../../packages/assert/src/index";
 const root = resolve(import.meta.dir, "..", "..", "..");
 export const REPORT_FILE = "docs/porting/pilot-report.md";
 const TEST_FILE = "conformance/tests/xaravel/porting-pilot.test.ts";
+export const SPEC_FILE = "_bmad-output/implementation-artifacts/spec-8-7-porting-md-pilot-on-support-and-collections.md";
 export const SEED = "pilot-8.7";
 export const MIN_SAMPLE = 60;
 export const PILOT_MARKER = "pilot/porting: Story 8.7 pilot translation, never merged";
@@ -137,8 +138,27 @@ export function reportedIds(report: string): string[] | null {
 const FLOOR = /^(?:met|approximate|adapted:DIV-[1-9]\d*\.[1-9]\d*)$/;
 const VERDICT = /^- Reviewer ([12]): (pass|reject), CLI `(claude|codex)`, model `([^`]+)`, loop CLI `(claude|codex)`, fallback (.+), tree `([0-9a-f]{40})`$/;
 
-/** XT-conformance-166's violations of `report` (null: missing) against the Inventory ids. */
-export function sampleViolations(report: string | null, inventory: readonly string[]): string[] {
+/** The `fidelity-verdict` JSON records of the Story spec `spec`. */
+export function specVerdicts(spec: string): { reviewer: number; verdict: string; cli: string; model: string; tree: string }[] {
+  const records: { reviewer: number; verdict: string; cli: string; model: string; tree: string }[] = [];
+  for (const line of spec.split("\n")) {
+    if (!line.startsWith("{") || !line.includes('"fidelity-verdict"')) {
+      continue;
+    }
+    try {
+      const value = JSON.parse(line) as { kind?: unknown; reviewer?: unknown; verdict?: unknown; cli?: unknown; model?: unknown; tree?: unknown };
+      if (value.kind === "fidelity-verdict") {
+        records.push({ reviewer: Number(value.reviewer), verdict: String(value.verdict), cli: String(value.cli), model: String(value.model), tree: String(value.tree) });
+      }
+    } catch {
+      // Not a record line.
+    }
+  }
+  return records;
+}
+
+/** XT-conformance-166's violations of `report` (null: missing) against the Inventory ids and the Story spec (null: missing). */
+export function sampleViolations(report: string | null, inventory: readonly string[], spec: string | null): string[] {
   if (report === null) {
     return [`pilot report missing: ${REPORT_FILE}`];
   }
@@ -179,6 +199,9 @@ export function sampleViolations(report: string | null, inventory: readonly stri
       violations.push(`unknown Test ID ${id}`);
     }
     const floor = row[2] ?? "";
+    if (id.includes("#") && floor === "met") {
+      violations.push(`data-provider row cannot have floor met: ${id}`);
+    }
     if (floor === "short") {
       violations.push(`floor short: ${id}`);
     } else if (!FLOOR.test(floor)) {
@@ -239,29 +262,41 @@ export function sampleViolations(report: string | null, inventory: readonly stri
   if (!passes.some((m) => m[3] !== m[5] || m[6] !== "none")) {
     violations.push("no pass verdict on a CLI other than the loop's, and no fallback recorded");
   }
+  if (spec === null) {
+    violations.push(`Story spec missing: ${SPEC_FILE}`);
+  } else {
+    const records = specVerdicts(spec);
+    for (const m of passes) {
+      if (!records.some((r) => r.reviewer === Number(m[1]) && r.verdict === m[2] && r.cli === m[3] && r.model === m[4] && r.tree === m[7])) {
+        violations.push(`Reviewer ${m[1]} pass line matches no fidelity-verdict record in the Story spec`);
+      }
+    }
+  }
   return violations;
 }
 
 /** The lines of tracked `files` (path, content) that carry the pilot marker as a comment, outside the report and this test. */
 export function markerViolations(files: ReadonlyArray<readonly [string, string]>): string[] {
   const marker = new RegExp(`^\\s*(?://|#|<!--)\\s*${PILOT_MARKER.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}`, "m");
-  return files.filter(([path, text]) => path !== REPORT_FILE && path !== TEST_FILE && marker.test(text)).map(([path]) => `pilot translation on main: ${path}`);
+  return files.filter(([path, text]) => path !== REPORT_FILE && path !== TEST_FILE && (path.startsWith("pilot/") || marker.test(text))).map(([path]) => `pilot translation on main: ${path}`);
 }
 
-/** The tracked files of the repository at `dir` that contain the marker text, read for `markerViolations`; a git failure is a violation. */
+/** The tracked files of the repository at `dir` that contain the marker text or sit under `pilot/`, read for `markerViolations`; a git failure is a violation. */
 export function trackedMarkerViolations(dir: string): string[] {
-  const proc = Bun.spawnSync(["git", "grep", "-l", "-z", "-F", PILOT_MARKER], { cwd: dir, stdout: "pipe", stderr: "pipe" });
-  if (proc.exitCode === 1 && proc.stderr.toString().trim() === "") {
-    return [];
+  const grep = Bun.spawnSync(["git", "grep", "-l", "-z", "-F", PILOT_MARKER], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+  if (grep.exitCode !== 0 && !(grep.exitCode === 1 && grep.stderr.toString().trim() === "")) {
+    return [`git grep failed with exit ${grep.exitCode}: ${grep.stderr.toString().trim()}`];
   }
-  if (proc.exitCode !== 0) {
-    return [`git grep failed with exit ${proc.exitCode}: ${proc.stderr.toString().trim()}`];
+  const listed = Bun.spawnSync(["git", "ls-files", "-z", "--", "pilot"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+  if (listed.exitCode !== 0) {
+    return [`git ls-files failed with exit ${listed.exitCode}: ${listed.stderr.toString().trim()}`];
   }
-  const paths = proc.stdout
-    .toString()
-    .split("\0")
-    .filter((path) => path !== "");
-  return markerViolations(paths.map((path) => [path, readFileSync(join(dir, path), "utf8")] as const));
+  const paths = new Set(
+    `${grep.exitCode === 0 ? grep.stdout.toString() : ""}\0${listed.stdout.toString()}`
+      .split("\0")
+      .filter((path) => path !== ""),
+  );
+  return markerViolations([...paths].map((path) => [path, readFileSync(join(dir, path), "utf8")] as const));
 }
 
 /** XT-conformance-167's violations of `report` (null: missing) against `porting` (PORTING.md) and the sampled ids. */
@@ -332,6 +367,7 @@ function mutate(text: string, from: string | RegExp, to: string): string {
 
 const REPORT = readOrNull(join(root, REPORT_FILE));
 const PORTING = readOrNull(join(root, "PORTING.md"));
+const SPEC = readOrNull(join(root, SPEC_FILE));
 
 // ---------------------------------------------------------------------------
 // XT-conformance-166 (AC1): the sample and the checks
@@ -342,62 +378,82 @@ xaravelTest(
   () => {
     const inventory = inventoryIds();
     expect(REPORT).not.toBeNull();
-    expect(sampleViolations(REPORT, inventory)).toEqual([]);
+    expect(sampleViolations(REPORT, inventory, SPEC)).toEqual([]);
     const real = REPORT!;
     const ids = reportedIds(real)!;
     expect(ids.length).toBeGreaterThanOrEqual(MIN_SAMPLE);
 
     // Missing report.
-    expect(sampleViolations(null, inventory)).toEqual([`pilot report missing: ${REPORT_FILE}`]);
+    expect(sampleViolations(null, inventory, SPEC)).toEqual([`pilot report missing: ${REPORT_FILE}`]);
 
     // An id swapped for another Inventory id of the same file.
     const drawn = ids[10]!;
     const other = inventory.find((id) => pilotFile(id) === "SupportCollectionTest" && id.includes("#") && !ids.includes(id))!;
-    const swapped = sampleViolations(mutate(real, `\`${drawn}\``, `\`${other}\``), inventory);
+    const swapped = sampleViolations(mutate(real, `\`${drawn}\``, `\`${other}\``), inventory, SPEC);
     expect(swapped.some((v) => v.startsWith("sample differs from seed"))).toBe(true);
 
     // A Mockery row dropped.
     const mockeryLine = real.split("\n").find((line) => line.startsWith(`| \`${MOCKERY_ROWS[0]}\``))!;
-    const dropped = sampleViolations(mutate(real, `${mockeryLine}\n`, ""), inventory);
+    const dropped = sampleViolations(mutate(real, `${mockeryLine}\n`, ""), inventory, SPEC);
     expect(dropped).toContain(`missing Mockery row ${MOCKERY_ROWS[0]}`);
 
     // Fewer than 60: drop the Arr rows.
     const arrLines = real.split("\n").filter((line) => line.startsWith(`| \`${NAMESPACE}SupportArrTest::`));
-    const fewer = sampleViolations(arrLines.reduce((text, line) => mutate(text, `${line}\n`, ""), real), inventory);
+    const fewer = sampleViolations(arrLines.reduce((text, line) => mutate(text, `${line}\n`, ""), real), inventory, SPEC);
     expect(fewer).toContain(`fewer than ${MIN_SAMPLE} Test IDs: ${ids.length - arrLines.length}`);
     expect(fewer).toContain("no SupportArrTest row (PHP-array semantics)");
 
     // An unknown id, and an Inventory id from another file.
-    expect(sampleViolations(mutate(real, `\`${drawn}\``, `\`${NAMESPACE}SupportCollectionTest::testNope\``), inventory)).toContain(`unknown Test ID ${NAMESPACE}SupportCollectionTest::testNope`);
+    expect(sampleViolations(mutate(real, `\`${drawn}\``, `\`${NAMESPACE}SupportCollectionTest::testNope\``), inventory, SPEC)).toContain(`unknown Test ID ${NAMESPACE}SupportCollectionTest::testNope`);
     const foreign = inventory.find((id) => pilotFile(id) === null)!;
-    expect(sampleViolations(mutate(real, `\`${drawn}\``, `\`${foreign}\``), inventory)).toContain(`unknown Test ID ${foreign}`);
+    expect(sampleViolations(mutate(real, `\`${drawn}\``, `\`${foreign}\``), inventory, SPEC)).toContain(`unknown Test ID ${foreign}`);
 
     // A floor `short`, or not one of the allowed values.
     const metLine = real.split("\n").find((line) => line.startsWith("| `") && line.endsWith("| met |"))!;
     const metId = cellIds(metLine)[0]!;
-    expect(sampleViolations(mutate(real, metLine, metLine.replace(/\| met \|$/, "| short |")), inventory)).toContain(`floor short: ${metId}`);
-    expect(sampleViolations(mutate(real, metLine, metLine.replace(/\| met \|$/, "| adapted:DIV-x |")), inventory)).toContain(`floor not met: ${metId} (adapted:DIV-x)`);
+    expect(sampleViolations(mutate(real, metLine, metLine.replace(/\| met \|$/, "| short |")), inventory, SPEC)).toContain(`floor short: ${metId}`);
+    expect(sampleViolations(mutate(real, metLine, metLine.replace(/\| met \|$/, "| adapted:DIV-x |")), inventory, SPEC)).toContain(`floor not met: ${metId} (adapted:DIV-x)`);
 
     // An approximate id not listed under ## Approximate counts.
     const approxLine = real.split("\n").find((line) => line.startsWith("| `") && line.endsWith("| approximate |"))!;
     const approxId = cellIds(approxLine)[0]!;
     const approxSection = real.slice(real.indexOf("## Approximate counts"));
     const unlisted = real.slice(0, real.indexOf("## Approximate counts")) + mutate(approxSection, `- \`${approxId}\``, "- (dropped)");
-    expect(sampleViolations(unlisted, inventory)).toContain(`approximate count not listed: ${approxId}`);
+    expect(sampleViolations(unlisted, inventory, SPEC)).toContain(`approximate count not listed: ${approxId}`);
 
     // Type-check not pass.
-    expect(sampleViolations(mutate(real, "- Type-check: pass", "- Type-check: fail"), inventory)).toContain("type-check not pass");
+    expect(sampleViolations(mutate(real, "- Type-check: pass", "- Type-check: fail"), inventory, SPEC)).toContain("type-check not pass");
 
     // A reject, and no cross-model reviewer and no fallback.
-    expect(sampleViolations(mutate(real, /- Reviewer 2: pass,/, "- Reviewer 2: reject,"), inventory)).toContain("fewer than 2 pass verdicts on one tree");
+    expect(sampleViolations(mutate(real, /- Reviewer 2: pass,/, "- Reviewer 2: reject,"), inventory, SPEC)).toContain("fewer than 2 pass verdicts on one tree");
     const sameCli = mutate(real, /- Reviewer 1: pass, CLI `codex`/, "- Reviewer 1: pass, CLI `claude`");
-    expect(sampleViolations(sameCli, inventory)).toContain("no pass verdict on a CLI other than the loop's, and no fallback recorded");
+    expect(sampleViolations(sameCli, inventory, SPEC)).toContain("no pass verdict on a CLI other than the loop's, and no fallback recorded");
     expect(/- Reviewer 1: [^\n]*fallback none,/.test(sameCli)).toBe(true);
     const fellBack = sameCli.replace(/(- Reviewer 1: [^\n]*?)fallback none,/, "$1fallback codex unavailable: not signed in,");
-    expect(sampleViolations(fellBack, inventory)).toEqual([]);
+    expect(sampleViolations(fellBack, inventory, SPEC)).not.toContain("no pass verdict on a CLI other than the loop's, and no fallback recorded");
+
+    // Reviewer 2's tree changed to another sha.
+    const treeLine = real.split("\n").find((line) => line.startsWith("- Reviewer 2: pass,"))!;
+    const otherTree = treeLine.replace(/tree `[0-9a-f]{40}`/, `tree \`${"0".repeat(40)}\``);
+    expect(sampleViolations(mutate(real, treeLine, otherTree), inventory, SPEC)).toContain("fewer than 2 pass verdicts on one tree");
+
+    // An id row duplicated.
+    const dupLine = real.split("\n").find((line) => line.startsWith(`| \`${drawn}\``))!;
+    expect(sampleViolations(mutate(real, dupLine, `${dupLine}\n${dupLine}`), inventory, SPEC)).toContain(`duplicate Test ID ${drawn}`);
+
+    // A data-provider row whose floor is met.
+    const providerLine = real.split("\n").find((line) => line.startsWith("| `") && line.includes("#") && line.endsWith("| approximate |"))!;
+    const providerId = cellIds(providerLine)[0]!;
+    expect(sampleViolations(mutate(real, providerLine, providerLine.replace(/\| approximate \|$/, "| met |")), inventory, SPEC)).toContain(`data-provider row cannot have floor met: ${providerId}`);
+
+    // A pass line that matches no record in the Story spec, and a missing spec.
+    const reviewer1 = real.split("\n").find((line) => line.startsWith("- Reviewer 1: pass,"))!;
+    const otherModel = reviewer1.replace(/model `[^`]+`/, "model `other-model`");
+    expect(sampleViolations(mutate(real, reviewer1, otherModel), inventory, SPEC)).toContain("Reviewer 1 pass line matches no fidelity-verdict record in the Story spec");
+    expect(sampleViolations(real, inventory, null)).toEqual([`Story spec missing: ${SPEC_FILE}`]);
 
     // The seed changed.
-    expect(sampleViolations(mutate(real, `Seed: \`${SEED}\``, "Seed: `other`"), inventory)).toContain(`seed is not \`${SEED}\``);
+    expect(sampleViolations(mutate(real, `Seed: \`${SEED}\``, "Seed: `other`"), inventory, SPEC)).toContain(`seed is not \`${SEED}\``);
   },
 );
 
@@ -437,13 +493,20 @@ xaravelTest(
     expect(revisionViolations(mutate(real, /\| Test-adaptation rules \/ Shape \| `/, "| Test-adaptation rules / Shape | `SupportArrTest::testNope`, `"), porting)).toContain(`unknown Test ID ${NAMESPACE}SupportArrTest::testNope`);
 
     // The branch sha missing.
-    expect(revisionViolations(mutate(real, /`pilot\/porting` at `[0-9a-f]{40}`/, "`pilot/porting` at `abc`"), porting)).toContain("the report does not name `pilot/porting` with its 40-hex commit sha");
+    expect(/`pilot\/porting` at `[0-9a-f]{40}`/.test(real)).toBe(true);
+    expect(revisionViolations(real.replaceAll(/`pilot\/porting` at `[0-9a-f]{40}`/g, "`pilot/porting` at `abc`"), porting)).toContain("the report does not name `pilot/porting` with its 40-hex commit sha");
 
     // A pilot translation leaked onto the branch; the report, this test and an inline mention are not leaks.
     const leaked = `// ${PILOT_MARKER}\nimport { portedTest } from "@xaravel/assert";\n`;
     expect(markerViolations([["packages/support/tests/ported/framework/tests/Support/SupportStrTest.test.ts", leaked]])).toEqual(["pilot translation on main: packages/support/tests/ported/framework/tests/Support/SupportStrTest.test.ts"]);
     expect(markerViolations([["pilot/types/runtime.d.ts", `<!-- ${PILOT_MARKER} -->\n`]])).toEqual(["pilot translation on main: pilot/types/runtime.d.ts"]);
     expect(markerViolations([[REPORT_FILE, leaked], [TEST_FILE, leaked], ["spec.md", `Each file starts with \`// ${PILOT_MARKER}\`.\n`]])).toEqual([]);
+    // Pilot tooling carries no marker, but any tracked path under pilot/ is a leak.
+    expect(markerViolations([["pilot/floor.ts", "// pilot/porting: Story 8.7 pilot tooling, never merged.\n"], ["pilot/logs/SupportArrTest.json", "[]\n"], ["pilot/evidence.md", "# Pilot evidence\n"], ["docs/pilot.md", "no marker\n"]])).toEqual([
+      "pilot translation on main: pilot/floor.ts",
+      "pilot translation on main: pilot/logs/SupportArrTest.json",
+      "pilot translation on main: pilot/evidence.md",
+    ]);
 
     // A git failure is a violation, never a pass.
     const notRepo = mkdtempSync(join(tmpdir(), "xt-pilot-"));
