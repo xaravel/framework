@@ -43,7 +43,7 @@ When more than one Skip Reason could apply, the line records exactly one, chosen
 
 When in doubt, pick the reason that counts against conformance.
 
-The check does not enforce this order: whether a reason is the right one is a review question. The Epic 8 reviewers' checklist is meant to cite this section ([ESC-5.2-1](escalations/ESC-5.2-1.md)).
+The check does not enforce this order: whether a reason is the right one is a review question. The Fidelity Review checklist, [`review/fidelity.md`](review/fidelity.md) item F-4, cites this section ([ESC-5.2-1](escalations/ESC-5.2-1.md)).
 
 ## Ratchet
 
@@ -61,4 +61,4 @@ Conformance only moves honestly (FR-3, AD-16, Story 5.6). Operator docs are in [
 - **Consequence files** (`xaravel-consequences/<component>.jsonl`, Protected) list a Xaravel Component's testable consequences as `FR-<n>.<k>` (the k-th bullet of FR-n's consequences in the PRD) and `AD-<n>.<k>` (the k-th bullet of AD-n's rule in the spine). `bun run xt:consequences` generates them, and `--check` fails on drift; nobody edits them by hand.
 - **Coverage** (`bun run xt:coverage <component>`): every consequence that no passing `xaravelTest` declares as a whole token in its consequence string is listed as `UNCOVERED`. A Xaravel Component's Epic is accepted only when none is.
 - **Every Xaravel Test runs under the harness.** A full `bun run harness` ends with the Xaravel run (`XARAVEL tests=… passed=… failed=… skipped=…`); every test in a `tests/xaravel/` file must be an `xaravelTest`, and a plain `test()` there is an `UNDECLARED` difference.
-- **The done check** (`bun run story:check <story-id>`) reports PASS or FAIL for `manifest`, `tests`, `xaravel-tests`, `fixtures`, `approvals`, `escalations` and `full-run`, and passes only when all seven do.
+- **The done check** (`bun run story:check <story-id>`) reports PASS or FAIL for `manifest`, `tests`, `xaravel-tests`, `fixtures`, `api-surface`, `approvals`, `escalations` and `full-run`, and passes only when all eight do. `approvals` counts the two Fidelity Reviews ([`review/fidelity.md`](review/fidelity.md), [`docs/ops/fidelity-review.md`](../docs/ops/fidelity-review.md)).
