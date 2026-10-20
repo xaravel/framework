@@ -259,6 +259,11 @@ xaravelTest("XT-conformance-169", "once the gate passes, no later Phase 1 Story 
   if (branches !== undefined) {
     expect(branches).toContain("main");
   }
+  // No filter that would skip the check on some PRs or queue groups.
+  for (const event of ["pull_request", "merge_group"]) {
+    const filters = Object.keys(ci.on[event] ?? {}).filter((key) => ["paths", "paths-ignore", "branches-ignore"].includes(key));
+    expect([event, filters]).toEqual([event, []]);
+  }
   const check = ci.jobs["check"]!;
   expect(check.if).toBeUndefined();
   expect(check["continue-on-error"]).toBeUndefined();
