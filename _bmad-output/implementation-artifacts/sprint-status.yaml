@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 18:10
+last_updated: 10-19-2026 18:13
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -98,7 +98,7 @@ development_status:
   6-4-async-surface-json-generator-and-drift-check: done
   6-5-api-surface-diff: done
   6-6-duplicate-fqcn-and-registration-scan: done
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
 
   epic-7: backlog
   7-1-conformance-aggregator: backlog
@@ -1082,3 +1082,79 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-19-epic-5-items.md"
+  - id: "epic-6-retro-item-1-registration-scan-coverage"
+    epic: 6
+    action: "Make the registration scan see every registerClass call (non-top-level
+      calls are a shape violation) and exported class expressions, list export= and
+      namespace classes in registration.md Limits, and share one registration recogniser
+      with tools/api-surface (R1, R2, R4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-2-api-surface-inputs"
+    epic: 6
+    action: "API-surface diff: accept Symbol.for only with an Illuminate/Laravel FQCN-shaped
+      argument; the gate validates citations and reports additions/exceptions lines
+      with an unknown component (A1, A2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-3-lint-gitignore-hole"
+    epic: 6
+    action: "lint:disables fails when a .gitignore entry excludes a tracked file under
+      a linted path; anchor the root dist/, build/ and coverage/ entries (L2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-4-ported-expect-bypass"
+    epic: 6
+    action: "no-ported-bun-expect also reports expect re-exported from bun:test under
+      a package tests/ and a bun-types/test-globals reference in a Ported Test (L3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-5-one-grader-list"
+    epic: 6
+    action: "Build GRADER_LOCATIONS from GRADER_PACKAGES in tools/lint-rules/plugin.ts
+      and test both against kind grader in tools/scaffold/packages.jsonl (R5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-6-thenable-return-call-results"
+    epic: 6
+    action: "Rule on how the thenable-return lint covers call results such as return
+      this.query() (e.g. type-aware typescript/return-await always, pinned in lint:disables)
+      (L1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-7-async-surface-thenable-returns"
+    epic: 6
+    action: "Rule on whether a sync method returning a thenable needs an @asyncRoot
+      tag (AD-6, 6.4 AC1), and match thenables by qualified name (S1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-8-api-surface-gate-enforcement"
+    epic: 6
+    action: "Decide how api-surface:gate is enforced for Component-closing Stories
+      (e.g. story:check runs it) before Epic 10 closes (S4)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-9-target-epic-6-deferrals"
+    epic: 6
+    action: "Name covering Stories in epics.md for Epic 6 deferred gaps: AD-26 overload
+      and DIV-12 rename mapping, compiled-view lint, container-held singleton state
+      and closure-built singletons, one class one FQCN, re-check mappings on first
+      real ports (S2, S5, L4, L5, R3, V1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
+  - id: "epic-6-retro-item-10-clear-followup-flags"
+    epic: 6
+    action: "Clear followup_review_recommended in spec-6-1..6-6, citing the Epic 6
+      retrospective as the follow-up review (P5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md"
