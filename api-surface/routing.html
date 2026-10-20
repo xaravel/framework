@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xaravel conformance: API-surface diff of routing</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:72rem;margin:2rem auto;padding:0 1rem;color:#1f2328;background:#fff}
+table{border-collapse:collapse;margin:.5rem 0 1rem}th,td{border:1px solid #d0d7de;padding:.25rem .5rem;text-align:left}
+td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px solid #cf222e;padding:.5rem 1rem;margin:1rem 0}
+.blocking h2{color:#cf222e}.figure{font-size:1.25rem}.chart .overall{stroke:#0969da}.chart .alpha{stroke:#bc4c00}
+.chart circle.overall{fill:#0969da}.chart circle.alpha{fill:#bc4c00}.chart .marker{stroke:#59636e;stroke-dasharray:4 3}.chart text{font-size:11px;fill:#59636e}
+</style>
+</head>
+<body>
+<p><a href="../index.html">Dashboard</a></p>
+<h1>API-surface diff: routing</h1>
+<p>upstream 597 · matched 0 · missing 64 · renamed 0 · extra 0 · unexplained 64</p>
+<table>
+<thead><tr><th>category</th><th>kind</th><th>fqcn</th><th>member</th><th>to</th><th>explained</th></tr></thead>
+<tbody>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\AbstractRouteCollection</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Attributes\Controllers\Authorize</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Attributes\Controllers\Middleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Attributes\Controllers\WithoutMiddleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\CallableDispatcher</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\CompiledRouteCollection</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Console\ControllerMakeCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Console\MiddlewareMakeCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Routing\Contracts\CallableDispatcher</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Routing\Contracts\ControllerDispatcher</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Controller</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ControllerDispatcher</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ControllerMiddlewareOptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Routing\Controllers\HasMiddleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Controllers\Middleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Routing\CreatesRegularExpressionRouteConstraints</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\EncodedParameter</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Events\PreparingResponse</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Events\ResponsePrepared</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Events\RouteMatched</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Events\Routing</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Exceptions\BackedEnumCaseNotFoundException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Exceptions\InvalidSignatureException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Exceptions\MissingRateLimiterException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Exceptions\StreamedResponseException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Exceptions\UrlGenerationException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Routing\FiltersControllerMiddleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ImplicitRouteBinding</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Matching\HostValidator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Matching\MethodValidator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Matching\SchemeValidator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Matching\UriValidator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Routing\Matching\ValidatorInterface</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\MiddlewareNameResolver</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Middleware\SubstituteBindings</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Middleware\ThrottleRequests</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Middleware\ThrottleRequestsWithRedis</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Middleware\ValidateSignature</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\PendingResourceRegistration</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\PendingSingletonResourceRegistration</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Pipeline</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RedirectController</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Redirector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Routing\ResolvesRouteDependencies</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ResourceRegistrar</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ResponseFactory</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Route</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteAction</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteBinding</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteCollection</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Routing\RouteCollectionInterface</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Routing\RouteDependencyResolverTrait</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteFileRegistrar</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteGroup</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteParameterBinder</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteRegistrar</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteSignatureParameters</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteUri</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RouteUrlGenerator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\Router</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\RoutingServiceProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\SortedMiddleware</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\UrlGenerator</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Routing\ViewController</td><td></td><td></td><td>unexplained</td></tr>
+</tbody>
+</table>
+<footer><p>Xaravel is a TypeScript port of Laravel.</p></footer>
+</body>
+</html>

@@ -1,0 +1,1137 @@
+{
+  "schema": 1,
+  "commit": "acae9ea99cf656489822e9d4cf1a9dce6cbaad81",
+  "pin": {
+    "tag": "v13.37.0",
+    "commit": "685f8d6c2ab4547287500bc80ccdf2ca12635109"
+  },
+  "overall": {
+    "pairs": 23291,
+    "passing": 0,
+    "rate": 0,
+    "statuses": {
+      "pass": 0,
+      "fail-known": 0,
+      "skip": 23291,
+      "quarantined": 0
+    },
+    "failKnown": 0,
+    "reasons": {
+      "not-ported-yet": 19910,
+      "blocked-by": 0,
+      "intentional-divergence": 0,
+      "php-only": 0,
+      "upstream-skip": 0,
+      "deferred": 3381,
+      "out-of-scope": 0
+    },
+    "reasonsDetail": {
+      "deferred:ai-sdk": 3381,
+      "not-ported-yet": 19910
+    },
+    "adapted": 0
+  },
+  "components": {
+    "ai": {
+      "pairs": 3381,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 3381,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 0,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 3381,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "deferred:ai-sdk": 3381
+      },
+      "adapted": 0
+    },
+    "auth": {
+      "pairs": 327,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 327,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 327,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 327
+      },
+      "adapted": 0
+    },
+    "boost": {
+      "pairs": 1138,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1138,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1138,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1138
+      },
+      "adapted": 0
+    },
+    "broadcasting": {
+      "pairs": 282,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 282,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 282,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 282
+      },
+      "adapted": 0
+    },
+    "bus": {
+      "pairs": 88,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 88,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 88,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 88
+      },
+      "adapted": 0
+    },
+    "cache": {
+      "pairs": 548,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 548,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 548,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 548
+      },
+      "adapted": 0
+    },
+    "collections": {
+      "pairs": 1029,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1029,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1029,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1029
+      },
+      "adapted": 0
+    },
+    "concurrency": {
+      "pairs": 20,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 20,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 20,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 20
+      },
+      "adapted": 0
+    },
+    "conditionable": {
+      "pairs": 8,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 8,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 8,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 8
+      },
+      "adapted": 0
+    },
+    "config": {
+      "pairs": 33,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 33,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 33,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 33
+      },
+      "adapted": 0
+    },
+    "console": {
+      "pairs": 630,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 630,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 630,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 630
+      },
+      "adapted": 0
+    },
+    "container": {
+      "pairs": 210,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 210,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 210,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 210
+      },
+      "adapted": 0
+    },
+    "cookie": {
+      "pairs": 32,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 32,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 32,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 32
+      },
+      "adapted": 0
+    },
+    "database": {
+      "pairs": 4212,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 4212,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 4212,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 4212
+      },
+      "adapted": 0
+    },
+    "encryption": {
+      "pairs": 36,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 36,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 36,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 36
+      },
+      "adapted": 0
+    },
+    "events": {
+      "pairs": 114,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 114,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 114,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 114
+      },
+      "adapted": 0
+    },
+    "filesystem": {
+      "pairs": 214,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 214,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 214,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 214
+      },
+      "adapted": 0
+    },
+    "foundation": {
+      "pairs": 1226,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1226,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1226,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1226
+      },
+      "adapted": 0
+    },
+    "hashing": {
+      "pairs": 13,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 13,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 13,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 13
+      },
+      "adapted": 0
+    },
+    "http": {
+      "pairs": 779,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 779,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 779,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 779
+      },
+      "adapted": 0
+    },
+    "image": {
+      "pairs": 291,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 291,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 291,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 291
+      },
+      "adapted": 0
+    },
+    "json-schema": {
+      "pairs": 280,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 280,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 280,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 280
+      },
+      "adapted": 0
+    },
+    "log": {
+      "pairs": 114,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 114,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 114,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 114
+      },
+      "adapted": 0
+    },
+    "macroable": {
+      "pairs": 16,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 16,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 16,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 16
+      },
+      "adapted": 0
+    },
+    "mail": {
+      "pairs": 273,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 273,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 273,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 273
+      },
+      "adapted": 0
+    },
+    "mcp": {
+      "pairs": 1284,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1284,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1284,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1284
+      },
+      "adapted": 0
+    },
+    "notifications": {
+      "pairs": 103,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 103,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 103,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 103
+      },
+      "adapted": 0
+    },
+    "pagination": {
+      "pairs": 50,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 50,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 50,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 50
+      },
+      "adapted": 0
+    },
+    "pipeline": {
+      "pairs": 27,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 27,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 27,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 27
+      },
+      "adapted": 0
+    },
+    "process": {
+      "pairs": 76,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 76,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 76,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 76
+      },
+      "adapted": 0
+    },
+    "queue": {
+      "pairs": 1873,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1873,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1873,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1873
+      },
+      "adapted": 0
+    },
+    "redis": {
+      "pairs": 152,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 152,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 152,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 152
+      },
+      "adapted": 0
+    },
+    "reflection": {
+      "pairs": 24,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 24,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 24,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 24
+      },
+      "adapted": 0
+    },
+    "routing": {
+      "pairs": 579,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 579,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 579,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 579
+      },
+      "adapted": 0
+    },
+    "session": {
+      "pairs": 109,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 109,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 109,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 109
+      },
+      "adapted": 0
+    },
+    "support": {
+      "pairs": 1260,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1260,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1260,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1260
+      },
+      "adapted": 0
+    },
+    "testing": {
+      "pairs": 443,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 443,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 443,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 443
+      },
+      "adapted": 0
+    },
+    "translation": {
+      "pairs": 127,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 127,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 127,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 127
+      },
+      "adapted": 0
+    },
+    "validation": {
+      "pairs": 1410,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 1410,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 1410,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 1410
+      },
+      "adapted": 0
+    },
+    "view": {
+      "pairs": 480,
+      "passing": 0,
+      "rate": 0,
+      "statuses": {
+        "pass": 0,
+        "fail-known": 0,
+        "skip": 480,
+        "quarantined": 0
+      },
+      "failKnown": 0,
+      "reasons": {
+        "not-ported-yet": 480,
+        "blocked-by": 0,
+        "intentional-divergence": 0,
+        "php-only": 0,
+        "upstream-skip": 0,
+        "deferred": 0,
+        "out-of-scope": 0
+      },
+      "reasonsDetail": {
+        "not-ported-yet": 480
+      },
+      "adapted": 0
+    }
+  },
+  "alpha": {
+    "applicable": 18395,
+    "passing": 0,
+    "rate": 0,
+    "target": 0.9,
+    "variants": [
+      "none",
+      "pgsql",
+      "queue-database@sqlite",
+      "queue-redis@redis",
+      "queue-sync@none",
+      "redis",
+      "sqlite"
+    ],
+    "components": [
+      "auth",
+      "boost",
+      "broadcasting",
+      "bus",
+      "cache",
+      "collections",
+      "concurrency",
+      "conditionable",
+      "config",
+      "console",
+      "container",
+      "contracts",
+      "cookie",
+      "create-xaravel",
+      "database",
+      "encryption",
+      "events",
+      "filesystem",
+      "finder",
+      "foundation",
+      "framework",
+      "hashing",
+      "htmx",
+      "http",
+      "http-foundation",
+      "image",
+      "json-schema",
+      "log",
+      "macroable",
+      "mail",
+      "mcp",
+      "mime",
+      "notifications",
+      "pagination",
+      "pipeline",
+      "process",
+      "queue",
+      "redis",
+      "reflection",
+      "routing",
+      "runtime",
+      "serializable-closure",
+      "session",
+      "support",
+      "testbench",
+      "testing",
+      "translation",
+      "validation",
+      "view"
+    ],
+    "perVariant": {
+      "none": {
+        "applicable": 17690,
+        "passing": 0
+      },
+      "pgsql": {
+        "applicable": 92,
+        "passing": 0
+      },
+      "queue-database@sqlite": {
+        "applicable": 325,
+        "passing": 0
+      },
+      "queue-redis@redis": {
+        "applicable": 325,
+        "passing": 0
+      },
+      "queue-sync@none": {
+        "applicable": 325,
+        "passing": 0
+      },
+      "redis": {
+        "applicable": 405,
+        "passing": 0
+      },
+      "sqlite": {
+        "applicable": 96,
+        "passing": 0
+      }
+    },
+    "remaining": {
+      "not-ported-yet": 19258,
+      "blocked-by": 0
+    },
+    "met": false
+  }
+}

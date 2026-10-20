@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xaravel conformance: API-surface diff of queue</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:72rem;margin:2rem auto;padding:0 1rem;color:#1f2328;background:#fff}
+table{border-collapse:collapse;margin:.5rem 0 1rem}th,td{border:1px solid #d0d7de;padding:.25rem .5rem;text-align:left}
+td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px solid #cf222e;padding:.5rem 1rem;margin:1rem 0}
+.blocking h2{color:#cf222e}.figure{font-size:1.25rem}.chart .overall{stroke:#0969da}.chart .alpha{stroke:#bc4c00}
+.chart circle.overall{fill:#0969da}.chart circle.alpha{fill:#bc4c00}.chart .marker{stroke:#59636e;stroke-dasharray:4 3}.chart text{font-size:11px;fill:#59636e}
+</style>
+</head>
+<body>
+<p><a href="../index.html">Dashboard</a></p>
+<h1>API-surface diff: queue</h1>
+<p>upstream 910 · matched 0 · missing 130 · renamed 0 · extra 0 · unexplained 130</p>
+<table>
+<thead><tr><th>category</th><th>kind</th><th>fqcn</th><th>member</th><th>to</th><th>explained</th></tr></thead>
+<tbody>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Backoff</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Connection</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\CountCrashesAsExceptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\DebounceFor</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Delay</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\DeleteWhenMissingModels</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\FailOnTimeout</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\MaxExceptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Queue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Queue\Attributes\ReadsQueueAttributes</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Timeout</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\Tries</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\UniqueFor</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Attributes\WithoutRelations</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\AwsCredentialCache</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\BackgroundQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\BeanstalkdQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\CallQueuedClosure</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\CallQueuedHandler</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Capsule\Manager</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\BackgroundConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\BeanstalkdConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Queue\Connectors\ConnectorInterface</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\DatabaseConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\DeferredConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\FailoverConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\NullConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\RedisConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\SqsConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Connectors\SyncConnector</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\BatchesTableCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\ClearCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Queue\Console\Concerns\ParsesQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\FailedTableCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\FlushFailedCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\ForgetFailedCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\ListFailedCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\ListenCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\MonitorCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\PauseCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\PruneBatchesCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\PruneFailedJobsCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\RestartCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\ResumeCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\RetryBatchCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\RetryCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\TableCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Console\WorkCommand</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\DatabaseQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\DeferredQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobAttempted</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobDebounced</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobExceptionOccurred</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobFailed</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobInterrupted</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobPopped</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobPopping</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobProcessed</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobProcessing</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobQueued</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobQueueing</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobReleased</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobReleasedAfterException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobRetryRequested</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\JobTimedOut</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\Looping</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueueBusy</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueueFailedOver</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueuePaused</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueueResumed</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueuesPaused</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\QueuesResumed</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\UniqueJobSkipped</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerIdle</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerInterrupted</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerPausing</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerQueuePaused</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerQueueResumed</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerResuming</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerStarting</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Events\WorkerStopping</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Queue\Failed\CountableFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Failed\DatabaseFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Failed\DatabaseUuidFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Failed\DynamoDbFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Queue\Failed\FailedJobProviderInterface</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Failed\FileFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Failed\NullFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>interface</td><td>Illuminate\Queue\Failed\PrunableFailedJobProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\FailoverQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Queue\InteractsWithQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\InvalidPayloadException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\BeanstalkdJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\DatabaseJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\DatabaseJobRecord</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\FakeJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\InspectedJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\Job</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\JobName</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\RedisJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\SqsJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Jobs\SyncJob</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Listener</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\ListenerOptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\LuaScripts</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\ManuallyFailedException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\MaxAttemptsExceededException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\FailOnException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\RateLimited</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\RateLimitedWithRedis</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\Release</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\Skip</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\SkipIfBatchCancelled</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\ThrottlesExceptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\ThrottlesExceptionsWithRedis</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Middleware\WithoutOverlapping</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\NullQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Queue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\QueueManager</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\QueueRoutes</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\QueueServiceProvider</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\RedisQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Queue\SerializesAndRestoresModelIdentifiers</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>trait</td><td>Illuminate\Queue\SerializesModels</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\SqsQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\SyncQueue</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\TimeoutExceededException</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\Worker</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>class</td><td>Illuminate\Queue\WorkerOptions</td><td></td><td></td><td>unexplained</td></tr>
+<tr><td>missing</td><td>enum</td><td>Illuminate\Queue\WorkerStopReason</td><td></td><td></td><td>unexplained</td></tr>
+</tbody>
+</table>
+<footer><p>Xaravel is a TypeScript port of Laravel.</p></footer>
+</body>
+</html>
