@@ -53,26 +53,37 @@ The tool reads everything from the working tree:
 - the checklist, `conformance/review/fidelity.md` (Protected). Each `### F-<n>: <title>` heading is one item. A checklist with no item, a duplicate id or a malformed `### F-` heading fails closed;
 - the manifest `stories/<id>.md`, and for each of its `test_ids` (with dataset rows `X#<key>`) the Inventory row and the Upstream lines its `source` names. When the snapshot or file is missing, the prompt says `Upstream source unavailable`, and the checklist tells the reviewer to fail F-1 if Ported Tests changed;
 - the spec: `--spec`, else the one `_bmad-output/implementation-artifacts/spec-<a>-<b>-*.md` for Story `<a>.<b>`. No match, or more than one, fails naming them;
-- **the diff**: `git diff-tree -p` between the base (`--base`, default the spec's `baseline_revision`, resolved to its commit sha, which is what the record holds) and the reviewed tree, both without `_bmad-output/`. Each file's hunks are shown; a change with no textual hunk (a mode change, an empty or binary file) appears as `(no textual change)`;
+- **the diff**: `git diff-tree -p` between the base (`--base`, default the spec's `baseline_revision`, resolved to its commit sha, which is what the record holds) and the working tree, both without `_bmad-output/`. A change under `stories/` is shown, though the binding tree leaves it out ([below](#the-reviewed-tree)). Each file's hunks are shown; a change with no textual hunk (a mode change, an empty or binary file) appears as `(no textual change)`;
 - the content of every changed `conformance/oracle-requests/*.jsonl`;
 - the evidence the items need:
   - **(a) DIV records** (F-3, F-5): every `decisions/DIV-<n>.md` that an `adapted:DIV-<n>.<k>` token, an Expectations `"adapted":"DIV-<n>.<k>"` field or an `intentional-divergence:DIV-<n>` reason on an added (`+`) line cites, in full, with its `fewer_assertions` frontmatter;
   - **(b) consequences** (F-7): for every `FR-<n>.<k>` or `AD-<n>.<k>` token on an added line, its line from `conformance/xaravel-consequences/*.jsonl`, or `unknown consequence id` when no file has it;
   - **(c) error fixtures** (F-6): for every committed Oracle request whose id the manifest assigns (the lookup `story:check` uses), the fixture's id and `output.error` when it is not null, after `verifyFixture` accepts it against `oracle.pub`; and every fixture the change adds or modifies under `conformance/fixtures/`, with its request id and `output.error` when that is not null;
-  - **(d) DIV-1** (F-9): `decisions/DIV-1.md`, when an added line contains `@asyncRoot`.
+  - **(d) DIV-1** (F-9): `decisions/DIV-1.md`, when an added line contains `@asyncRoot`;
+  - **(e) the Xaravel Tests the change touches** (F-2, F-7; [ESC-8.8-1](../../decisions/ESC-8.8-1.md)): the full body, `path:lines` and the reason it is included of every Xaravel Test whose lines the diff changes (`its lines change`), that uses a test helper or fixture the diff changes (``it uses the changed helper `baseRoot` (…)``, or ``it uses `wrap`, which depends on …`` when through another helper), that names a changed non-TypeScript file under `tests/` itself (``it names the changed file `sample.json` (…)``), or whose test file's top-level setup changes or uses a changed helper (`the file's top-level setup changes (…)`, ``the file's top-level setup (…) uses the changed helper `x` (…)``); with, for each `FR-<n>.<k>` or `AD-<n>.<k>` its consequence string cites, the consequence line (a bare `FR-<n>` takes every `FR-<n>.<k>` line), or `unknown consequence id`. When none is touched, the section says so. See [Finding the touched Xaravel Tests](#finding-the-touched-xaravel-tests).
 
   A missing evidence file is named in the prompt (`unavailable: <why>`), never dropped.
+
+### Finding the touched Xaravel Tests
+
+`xaravelTestEvidence` reads the working tree. A test file is a TypeScript file under a `tests/` path segment, or a `*.test.ts`. `testUnits` splits one into top-level units: a unit starts at a column-0 line that is not `}`, `)` or `]` and that starts outside any string, template, comment, regex literal or bracket, and a comment-only unit merges into the next. A unit is an import, a declaration (`function|const|let|var|class|interface|type|enum <name>`, optionally `export`/`async`), an XT unit (it holds an `"XT-…"` literal as a call's first argument, as `xaravelTest(…)` and wrappers such as `phpTest(…)` do, or a `xaravelTest(` call) or setup (anything else).
+
+- A changed line inside an XT unit includes it. A changed line is a non-blank added line, or, for a pure removal (a run of removed lines no non-blank added line follows), the line before it, unless that run holds only blank lines, or only blank and closing lines before a removed unit start (a whole unit removed changes no other).
+- A changed declaration in a test file is a changed helper. Every declaration in the same file that uses an affected name becomes affected too, to a fixed point, and so does every name another test file imports from that file by a relative path (`import { a as b } from "./x"`, `import * as ns`). Every XT unit that uses an affected name is included.
+- A changed setup unit, or a setup unit that uses an affected name (`beforeEach(() => baseRoot())`), includes every XT unit in its file.
+- A helper module `…/x/index.ts` is found by its importers' `./x` too.
+- A changed non-TypeScript file under `tests/` is matched by its basename: XT units and declarations whose text contains it are included or affected.
 
 The system text is the checklist, the `## Precedence` section of `conformance/README.md` (verbatim, so F-4 does not rely on a link) and the answering rules. The user text is the manifest, the Inventory rows with their Upstream lines, the Oracle requests, the patches and the evidence.
 
 ## The reviewed tree
 
-A verdict is bound to a git tree id, `reviewTree(root, mode)`: the repository with `_bmad-output/` removed, written through a temporary index (`GIT_INDEX_FILE`), so the real index is never touched.
+A verdict is bound to a git tree id, `reviewTree(root, mode)`: the repository with the bookkeeping directories `_bmad-output/` and `stories/` removed (`BOOKKEEPING`, [ESC-8.8-1](../../decisions/ESC-8.8-1.md)), written through a temporary index (`GIT_INDEX_FILE`), so the real index is never touched. `story:check` uses the same function.
 
-- Mode `worktree`: `HEAD` plus every tracked change and every untracked, non-ignored file. This is what the reviewers see, and what a verdict records.
+- Mode `worktree`: `HEAD` plus every tracked change and every untracked, non-ignored file. This is what the reviewers see, and what a verdict records. The temporary index starts as a copy of the real one with the real one's mtime (rounded down to the second), so git's racy-entry check still re-reads a file edited in the second the real index was written, and a same-size edit is never missed.
 - Mode `head`: the `HEAD` commit. `story:check` counts verdicts for this tree.
 
-The spec and sprint status live under `_bmad-output/`, so recording a verdict or finishing the Story never makes a verdict stale, and a reviewed working tree committed unchanged has the same id as its head. Any other change after the review gives a new tree, and the verdicts no longer count until the layer runs again.
+The spec, its verdict records and sprint status live under `_bmad-output/`, and a manifest's status under `stories/`, so recording a verdict, a status edit or finishing the Story never makes a verdict stale, and a reviewed working tree committed unchanged has the same id as its head. Any other change after the review gives a new tree, and the verdicts no longer count until the layer runs again.
 
 ## The verdict and its record
 
@@ -89,12 +100,14 @@ The model is read from Claude's `modelUsage` keys, or Codex's `model:` header li
 
 ## Counting
 
-`fidelityVerdicts(records, tree)` is shared by `fidelity:review status` and `story:check`. For each reviewer slot, 1 and 2, it takes the last record whose `tree` is `tree`. It passes when:
+`fidelityVerdicts(records, tree)` is shared by `fidelity:review status` and `story:check`. For each reviewer slot, 1 and 2, it takes the slot's standing reject on `tree` when it has one, else the last record whose `tree` is `tree`. It passes when:
 
 - both slots are `pass`, and
 - slot 1's `cli` differs from its `loop_cli`, or its `fallback` is non-empty.
 
-Two records from one slot are one verdict, never two. A malformed record (bad JSON, an unknown field value, or a `verdict` that disagrees with its items) fails the count, naming the record's line. Each counted record's items are also re-validated with `parseVerdict` against the root's checklist (every id once, a non-empty note, findings on every `fail`), and its `verdict` must be the one they decide; a record that fails is malformed.
+Two records from one slot are one verdict, never two.
+
+**A reject stands** ([ESC-8.8-1](../../decisions/ESC-8.8-1.md)). A slot's standing reject on a tree is its last `reject` record for that tree (`standingRejects`). It stands until its findings are fixed, which changes the reviewed tree, or the evidence it asks for is supplied: a later `pass` in the same slot on the same tree never overrides it, and the count adds an item `reviewer <n>: the later pass at tree <t> (record at line <l>) does not count: the reject at line <r> stands until the reviewed tree changes (ESC-8.8-1)`. `review` refuses to re-run on that tree (see below). There is no flag to override it. Evidence a reject asks for must be supplied outside the bookkeeping paths: a change to code, tests or this tool's prompt, all in the binding tree. Evidence written in the spec or a manifest changes no binding tree, so it does not lift a reject. A malformed record (bad JSON, an unknown field value, or a `verdict` that disagrees with its items) fails the count, naming the record's line. Each counted record's items are also re-validated with `parseVerdict` against the root's checklist (every id once, a non-empty note, findings on every `fail`), and its `verdict` must be the one they decide; a record that fails is malformed.
 
 ## Exits and output
 
@@ -103,6 +116,7 @@ Two records from one slot are one verdict, never two. A malformed record (bad JS
 | Situation | Result |
 | --- | --- |
 | Both reviewers recorded `pass` | exit 0 |
+| The spec has a standing reject for the reviewed tree | exit 1, nothing recorded, no reviewer run; stdout has `STANDING reviewer <n>: reject at tree <t>` and that reject's `F-<n> <path>: <detail>` findings, stderr says to fix them (a tree change) or supply the evidence they ask for (ESC-8.8-1) |
 | A `reject` was recorded, or a reviewer produced no verdict (its record is missing; the other reviewer's is still recorded) | exit 1 |
 | An empty diff, a prompt over 600,000 characters, a missing or invalid manifest, a missing or ambiguous spec, no base, a malformed checklist, a git error | exit 1, nothing recorded, no reviewer run |
 | No `--story`, a bad Story id or option, or no loop CLI | usage message, exit 2 |
@@ -111,7 +125,7 @@ Two records from one slot are one verdict, never two. A malformed record (bad JS
 
 ## In the review step
 
-The layer reports each `F-<n> <path>: <detail>` line and each `NO-VERDICT` line as a finding, which triage routes like any other: a `reject` returns the Story to its implementer within the same build.
+The layer reports each `F-<n> <path>: <detail>` line and each `NO-VERDICT` line as a finding, which triage routes like any other: a `reject` returns the Story to its implementer within the same build. A standing reject's findings are reported again the same way; it is answered by fixing them, which changes the reviewed tree, never by re-running the review on the same tree.
 
 The layer names a Finalize re-check, `bun run fidelity:review status --story <id> --spec <spec>`. `step-04-review.md` runs it before writing `status: done`. When it does not print `current` (for example because a patch changed the tree after the layer ran), the layer runs again and its findings are triaged as a new review pass. Each such re-run counts as a review loop iteration; past 5 the build halts `blocked`.
 
@@ -125,5 +139,8 @@ Each run is two reviewer calls, each with up to 600,000 characters of prompt (ro
 - **No live run yet.** The tests use fake CLIs. Story 8.7's pilot is the first supervised run ([ESC-8.7-1](../../decisions/ESC-8.7-1.md)); it is also where the 600,000-character cap meets the real models' context windows.
 - **The patterns are a guess at the CLIs' wording.** A sign-in or usage-limit message the patterns miss is an unclassified failure: the reviewer is retried once and then produces no verdict, which fails closed. Add the new wording to the pattern constants.
 - **The records are trusted as written.** They live in the Story's spec, which is not a Protected Path, and `story:check` counts what is there: an agent could append a forged record. The append-only history in the spec, under version control, is the audit trail.
-- **Re-runs are visible.** A `reject` is triaged like any other review finding. A re-run on an unchanged tree is recorded too and counts by its last record per slot, so the history shows every re-run, including one that turned a `reject` into a `pass` without a change.
-- **A model reviewer can be wrong.** A `fail` that a human judges wrong is answered by a change and a new review; the last record per slot for the tree counts.
+- **A reject is not re-rolled.** `review` refuses to run on a tree with a standing reject, and counting never lets a later `pass` on that tree override it ([ESC-8.8-1](../../decisions/ESC-8.8-1.md)). The binding tree leaves out only `_bmad-output/` and `stories/`, so any other change, even one unrelated to the findings, gives a new tree and a new review; the history in the spec shows it.
+- **All of `stories/` is bookkeeping.** Per ESC-8.8-1 the binding tree leaves out the whole directory, not only a manifest's `status`: a manifest edit to `test_ids`, `xaravel_test_ids` or `api_surface_gate` after a review keeps the verdicts current. The next review's diff shows such an edit, but nothing forces that review.
+- **Removals include no test.** Removing a whole test file, helper module or helper includes no Xaravel Test in (e): a removed file is not scanned, and a removed unit marks no other. The removal itself is in the diff.
+- **A model reviewer can be wrong.** A `fail` that a human judges wrong is answered by a change (for example the evidence the reviewer asked for) and a new review of the new tree.
+- **The touched-test scanner is a heuristic.** `testUnits` is a small lexer, not a TypeScript parser: a `/` after `)` is read as division, so a regex literal there can confuse it, and a top-level statement continued on a column-0 line splits into two units. Uses are matched by name in the unit's text (strings and comments included, a local that shadows a helper included), so (e) can include more tests than need it; a large shared helper can push the prompt over its cap, which stops the review. A changed import line affects nothing; re-exports, default imports and non-relative imports are not followed; a dynamic `xaravelTest(` loop is labelled with the XT literals it holds, or `(no literal XT id)`. A non-TypeScript fixture is matched by basename only.

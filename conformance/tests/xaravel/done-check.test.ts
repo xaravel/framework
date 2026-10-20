@@ -651,9 +651,15 @@ xaravelTest(
     expect(approvals([verdictRecord(1, vtree), verdictRecord(2, vtree)])).toEqual([passLine]);
     // A reject in either slot fails, naming it.
     expect(approvals([verdictRecord(1, vtree, { fail: "F-3" }), verdictRecord(2, vtree)])).toEqual([`FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`, `  reviewer 1: reject at tree ${vtree}`, `  reviewer 2: pass at tree ${vtree}`]);
-    // Per slot the last record for the tree counts: a later reject replaces a pass, a later pass replaces a reject.
+    // Per slot the last record for the tree counts, and a later reject replaces a pass; but a reject on the tree stands,
+    // so a later pass in its slot on the same tree never replaces it (ESC-8.8-1).
     expect(approvals([verdictRecord(1, vtree), verdictRecord(2, vtree), verdictRecord(2, vtree, { fail: "F-1" })])[0]).toBe(`FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`);
-    expect(approvals([verdictRecord(1, vtree, { fail: "F-1" }), verdictRecord(2, vtree), verdictRecord(1, vtree)])).toEqual([passLine]);
+    const reRolled = approvals([verdictRecord(1, vtree, { fail: "F-1" }), verdictRecord(2, vtree), verdictRecord(1, vtree)]);
+    expect(reRolled.slice(0, 3)).toEqual([`FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`, `  reviewer 1: reject at tree ${vtree}`, `  reviewer 2: pass at tree ${vtree}`]);
+    expect(reRolled[3]).toMatch(new RegExp(`^ {2}reviewer 1: the later pass at tree ${vtree} \\(record at line \\d+\\) does not count: the reject at line \\d+ stands until the reviewed tree changes \\(ESC-8\\.8-1\\)$`));
+    expect(reRolled).toHaveLength(4);
+    // A pass after a reject in the other slot still counts for its own slot.
+    expect(approvals([verdictRecord(2, vtree, { fail: "F-1" }), verdictRecord(1, vtree), verdictRecord(2, vtree)])[1]).toBe(`  reviewer 1: pass at tree ${vtree}`);
     // Two passes from the same slot are one verdict, never two.
     expect(approvals([verdictRecord(1, vtree), verdictRecord(1, vtree, { cli: "claude", model: "claude-test", fallback: "codex unavailable: usage limit: x" })])).toEqual([
       `FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`,

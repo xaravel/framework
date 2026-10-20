@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 15:09
+last_updated: 10-20-2026 16:25
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -115,7 +115,7 @@ development_status:
   8-5-fidelity-review-workflow: done  # ESC-8.5-1 (open-question: reviewer Apps, key and cost) waits on the Maintainer
   8-6-framework-agent-operating-instructions-and-stop-rules: done
   8-7-porting-md-pilot-on-support-and-collections: done  # ESC-8.7-1 approved (decisions/ESC-8.7-1.md); pilot on pilot/porting
-  8-8-phase-1-gate: blocked  # ESC-8.8-1 (open-question): Fidelity Review did not converge (codex asks for evidence the prompt lacks); implementation and checks complete
+  8-8-phase-1-gate: in-progress  # ESC-8.8-1 rejected: resumes on story/8.8 and re-runs its Fidelity Review on the head tree now that Epic 8 item 2 is done
   epic-8-retrospective: optional
 
   epic-9: backlog
@@ -1287,7 +1287,7 @@ action_items:
       and lets a reject on an unchanged reviewed tree stand until its findings are
       fixed or its evidence supplied (no re-rolling the same review)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-8.8-1.md"
   - id: "epic-8-item-3-pin-bump-security-override"
     epic: 8
