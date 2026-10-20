@@ -6,7 +6,9 @@
 //                    under `conformance/expectations/`) is `c`
 //   --id <glob>      IDs the glob matches as a whole: `*` matches any run of
 //                    characters, `?` matches one, everything else is literal
-//                    (including `\`)
+//                    (including `\`); matching takes time proportional to
+//                    |glob| × |ID|, with no exponential backtracking (see
+//                    `globSource`)
 //   --story <s>      the `test_ids` of `stories/<s>.md` (read by the caller),
 //                    matched as ownership's `covers` does: a listed `X` also
 //                    selects its dataset rows `X#<key>`
@@ -36,19 +38,53 @@ export interface Filters {
 
 const SYNTAX = /[\^$\\.*+?()[\]{}|/]/;
 
-/** A whole-string RegExp for `glob`: `*` any run, `?` one character, the rest literal. */
-export function globToRegExp(glob: string): RegExp {
+/** One `*`-free glob segment as RegExp source: `?` one character, the rest literal. */
+function segmentSource(segment: string): string {
   let source = "";
-  for (const char of glob) {
-    if (char === "*") {
-      source += "[\\s\\S]*";
-    } else if (char === "?") {
+  for (const char of segment) {
+    if (char === "?") {
       source += "[\\s\\S]";
     } else {
       source += SYNTAX.test(char) ? `\\${char}` : char;
     }
   }
-  return new RegExp(`^${source}$`, "u");
+  return source;
+}
+
+/**
+ * The unanchored RegExp source for `glob`, numbering its capture groups from
+ * `firstGroup`, and how many it uses. The caller anchors it at the start and
+ * puts what must follow the glob (`$`, or `: ` for a test name) after it.
+ *
+ * Matching takes time proportional to |glob| × |candidate|, with no exponential
+ * backtracking: every segment between two `*`s is an atomic lazy search,
+ * `(?=([\s\S]*?<seg>))\<n>`, that takes the segment's earliest occurrence
+ * and is never backtracked into. Earliest occurrence is exact for a glob, and
+ * only the last segment searches up to the tail, unlike the exponential
+ * backtracking of `[\s\S]*` per `*`.
+ */
+export function globSource(glob: string, firstGroup: number): { source: string; groups: number } {
+  const segments = glob.split("*");
+  let source = segmentSource(segments[0]!);
+  let groups = 0;
+  for (let index = 1; index < segments.length - 1; index++) {
+    const segment = segments[index]!;
+    if (segment === "") {
+      continue;
+    }
+    // (?:\n) keeps a following literal digit out of the backreference.
+    source += `(?=([\\s\\S]*?${segmentSource(segment)}))(?:\\${firstGroup + groups})`;
+    groups++;
+  }
+  if (segments.length > 1) {
+    source += `[\\s\\S]*${segmentSource(segments.at(-1)!)}`;
+  }
+  return { source, groups };
+}
+
+/** A whole-string RegExp for `glob`: `*` any run, `?` one character, the rest literal; matching takes time proportional to |glob| × |candidate|, with no exponential backtracking. */
+export function globToRegExp(glob: string): RegExp {
+  return new RegExp(`^${globSource(glob, 1).source}$`, "u");
 }
 
 /** The first `min(size, ids.length)` of `ids` ranked by SHA-256(`<seed>\n<id>`), sorted by `compareUnits`. */
