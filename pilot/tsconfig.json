@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "types": ["bun"],
+    "paths": {
+      "@xaravel/collections": ["./types/collections.d.ts"],
+      "@xaravel/support": ["./types/support.d.ts"],
+      "@xaravel/support/facades": ["./types/support-facades.d.ts"],
+      "@xaravel/contracts/*": ["./types/contracts/*.d.ts"],
+      "@xaravel/database": ["./types/database.d.ts"],
+      "@xaravel/runtime": ["./types/runtime.d.ts"],
+      "@xaravel/runtime/php": ["./types/runtime.d.ts"],
+      "@xaravel/assert": ["../packages/assert/src/index.ts"],
+      "@xaravel/mockery": ["../packages/mockery/src/index.ts"]
+    }
+  },
+  "include": [
+    "types/**/*.d.ts",
+    "../packages/collections/tests/ported/**/*.ts",
+    "../packages/support/tests/ported/**/*.ts"
+  ]
+}

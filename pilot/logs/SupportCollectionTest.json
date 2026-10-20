@@ -1,0 +1,1047 @@
+[
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`Mockery::mock(Arrayable::class)` and `Mockery::mock(JsonSerializable::class)` mock interfaces. PORTING.md does not say whether an interface is passed as the contract token const (`@xaravel/contracts/support`'s `Arrayable`) or as something else, or where PHP's own `JsonSerializable` interface comes from.",
+        "choice": "`Mockery.mock(Arrayable)` with the contracts token, and `Mockery.mock(JsonSerializable)` with `JsonSerializable` from `@xaravel/runtime/php`; `->expects('m')->andReturn(v)` kept as `.expects('m').andReturn(v)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`Mockery::mock(Arrayable::class)` and `Mockery::mock(JsonSerializable::class)` mock interfaces. PORTING.md does not say whether an interface is passed as the contract token const (`@xaravel/contracts/support`'s `Arrayable`) or as something else, or where PHP's own `JsonSerializable` interface comes from.",
+        "choice": "`Mockery.mock(Arrayable)` with the contracts token, and `Mockery.mock(JsonSerializable)` with `JsonSerializable` from `@xaravel/runtime/php`; `->expects('m')->andReturn(v)` kept as `.expects('m').andReturn(v)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`Mockery::mock(Arrayable::class)` and `Mockery::mock(JsonSerializable::class)` mock interfaces. PORTING.md does not say whether an interface is passed as the contract token const (`@xaravel/contracts/support`'s `Arrayable`) or as something else, or where PHP's own `JsonSerializable` interface comes from.",
+        "choice": "`Mockery.mock(Arrayable)` with the contracts token, and `Mockery.mock(JsonSerializable)` with `JsonSerializable` from `@xaravel/runtime/php`; `->expects('m')->andReturn(v)` kept as `.expects('m').andReturn(v)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`Mockery::mock(Arrayable::class)` and `Mockery::mock(JsonSerializable::class)` mock interfaces. PORTING.md does not say whether an interface is passed as the contract token const (`@xaravel/contracts/support`'s `Arrayable`) or as something else, or where PHP's own `JsonSerializable` interface comes from.",
+        "choice": "`Mockery.mock(Arrayable)` with the contracts token, and `Mockery.mock(JsonSerializable)` with `JsonSerializable` from `@xaravel/runtime/php`; `->expects('m')->andReturn(v)` kept as `.expects('m').andReturn(v)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testCollectionFromTraversable#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testEachSpread#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / Untranslatable"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`function (...) use (&$result) { $result[] = [...]; }`: the mechanical rule refuses `use (&$x)`, and § By-reference parameters covers by-reference parameters (`Ref<T>`), not by-reference closure captures. The append form `$a[] = v` has no row either.",
+        "choice": "No `Ref<T>`: a plain `let result: unknown[]` captured by the arrow (a JS closure already sees the outer binding), reassigned `result = []` between blocks, and `$result[] = x` → `result.push(x)`."
+      },
+      {
+        "point": "The mechanical rule drops closure parameter types (`fn (T $a) => e` → `(a) => e`), but under `tsc --strict` an untyped arrow passed to a parameter declared `any` is an implicit-any error (TS7006). PORTING.md does not say what annotation a ported closure parameter gets.",
+        "choice": "Hand-written narrow annotations from the Upstream data (`(x: string)`, `(value: { v: unknown })`, `(number: number, character: string, key: number)`, `(data: Collection | LazyCollection)`), never `any`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testEvenMedianCollection#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / Untranslatable"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`(object) [...]` is untranslatable (`(array)`/`(object)`/`(unset)`) and no rule or DIV says how to port it by hand. A plain JS object is not a faithful candidate, since DIV-9.2 makes an all-string-keyed plain object a PHP array, not a `stdClass`.",
+        "choice": "A local helper `toObject(props)` = `Object.assign(new stdClass(), props)`, with `stdClass` from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`assertSame(1.5, $data->median('foo'))` depends on the result being a PHP float. The mechanical rule gives only integral float literals the float marker (`1.0` → `float(1)`), and DIV-9.4 asks for the marker when the assertion depends on int/float. It is not said whether a non-integral literal such as `1.5` also needs `float(1.5)` (assertSame against a marked float).",
+        "choice": "Plain `1.5`, with no marker and no `adapted` comment, since a non-integral number cannot be an int."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testFlattenIgnoresKeys#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Idiom table / A PHP array that is neither a list nor an all-string-keyed map"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testImplodeModels#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / Untranslatable"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`testImplodeModels` builds `new class extends Model {}` with `Illuminate\\Database\\Eloquent\\Model`. No import specifier in this pilot declares `Model`, PORTING.md names no package for it, `new class` is untranslatable with no hand rule for anonymous classes, and PORTING.md has no `blocked-by:<component>` route for a test that needs another Component.",
+        "choice": "Translator first loaded `Model` by a dynamic `await import()` that escaped the type-check; the coordinator replaced it with a static `import { Model } from '@xaravel/database'` against a declaration-only `Model` generated from conformance/api-surface/database.jsonl, and kept `new (class extends Model {})()` with `setAttribute(...)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testMergeCollection#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / every key a non-integer-like string literal"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testRejectWithoutAnArgumentRemovesTruthyValues#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Idiom table / A PHP array that is neither a list nor an all-string-keyed map"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`new Collection` / `new $collection` without an argument list: the `new C(args)` row shows only the parenthesised form.",
+        "choice": "`new Collection()` / `new collection()`."
+      },
+      {
+        "point": "An expected non-list keyed array (`[0 => false, 3 => 0]`, `[1 => 'dayle', 0 => 'taylor']`) becomes a `PhpArray`. PORTING.md does not say whether the grader compares a `PhpArray` against whatever `all()` returns (a `PhpArray`, or something else) by PHP key/value semantics under `assertSame`/`assertEquals`.",
+        "choice": "`new PhpArray([[k, v], ...])` per the mechanical rule, with the assertion unchanged."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testSliceNegativeOffsetAndNegativeLength#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testSortByAlwaysReturnsAssoc#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Idiom table / A PHP array that is neither a list nor an all-string-keyed map",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "An expected non-list keyed array (`[0 => false, 3 => 0]`, `[1 => 'dayle', 0 => 'taylor']`) becomes a `PhpArray`. PORTING.md does not say whether the grader compares a `PhpArray` against whatever `all()` returns (a `PhpArray`, or something else) by PHP key/value semantics under `assertSame`/`assertEquals`.",
+        "choice": "`new PhpArray([[k, v], ...])` per the mechanical rule, with the assertion unchanged."
+      },
+      {
+        "point": "The mechanical rule drops closure parameter types (`fn (T $a) => e` → `(a) => e`), but under `tsc --strict` an untyped arrow passed to a parameter declared `any` is an implicit-any error (TS7006). PORTING.md does not say what annotation a ported closure parameter gets.",
+        "choice": "Hand-written narrow annotations from the Upstream data (`(x: string)`, `(value: { v: unknown })`, `(number: number, character: string, key: number)`, `(data: Collection | LazyCollection)`), never `any`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testSplitInThrowsExceptionForInvalidNumberOfGroups#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Exceptions / Tests",
+      "Exceptions / PHP's own classes"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "§ Exceptions / Tests maps `expectException` and `expectExceptionMessage` only; `expectExceptionObject(new X('m'))` is not mentioned.",
+        "choice": "`this.expectExceptionObject(new InvalidArgumentException('Number of groups must be at least 1.'))` with `InvalidArgumentException` from `@xaravel/runtime/php`; `(new $collection([1, 2, 3]))->splitIn(0)` → `new collection([1, 2, 3]).splitIn(0)`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testTakeUntilUsingValue#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testUnionCollection#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / every key a non-integer-like string literal"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testUnless#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "The mechanical rule drops closure parameter types (`fn (T $a) => e` → `(a) => e`), but under `tsc --strict` an untyped arrow passed to a parameter declared `any` is an implicit-any error (TS7006). PORTING.md does not say what annotation a ported closure parameter gets.",
+        "choice": "Hand-written narrow annotations from the Upstream data (`(x: string)`, `(value: { v: unknown })`, `(number: number, character: string, key: number)`, `(data: Collection | LazyCollection)`), never `any`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testValueWithNegativeValue#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Idiom table / undefined → null"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testWhere#1",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / ==, !=/<>, <=>",
+      "Mechanical expression rule / ===, !==, < > <= >=, arithmetic, bitwise, ??, instanceof",
+      "Mechanical expression rule / $a[k]",
+      "Idiom table / ==",
+      "Mechanical expression rule / Untranslatable"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`(object) [...]` is untranslatable (`(array)`/`(object)`/`(unset)`) and no rule or DIV says how to port it by hand. A plain JS object is not a faithful candidate, since DIV-9.2 makes an all-string-keyed plain object a PHP array, not a `stdClass`.",
+        "choice": "A local helper `toObject(props)` = `Object.assign(new stdClass(), props)`, with `stdClass` from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`$c->where(fn ($value) => $value['v'] == 3)`: PORTING's own example gives `c.where((value) => looseEquals(value['v'], 3))`, and `===` stays `===`; the item is a plain object, so `value['v']` stays index syntax. This was decided; the only open point is the parameter annotation (see the closure-types ambiguity).",
+        "choice": "`(value: { v: unknown }) => looseEquals(value['v'], 3)` and `(value: { v: unknown }) => value['v'] === 3`."
+      },
+      {
+        "point": "The mechanical rule drops closure parameter types (`fn (T $a) => e` → `(a) => e`), but under `tsc --strict` an untyped arrow passed to a parameter declared `any` is an implicit-any error (TS7006). PORTING.md does not say what annotation a ported closure parameter gets.",
+        "choice": "Hand-written narrow annotations from the Upstream data (`(x: string)`, `(value: { v: unknown })`, `(number: number, character: string, key: number)`, `(data: Collection | LazyCollection)`), never `any`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testWhereInStrict#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / C::class",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "`collectionClassProvider` yields class names (`[Collection::class]`, `[LazyCollection::class]`) and the body does `new $collection(...)`. The mechanical rule refuses `new` on a dynamic class expression (example `new $a->b`) but does not say whether `new $variable` counts; nor does PORTING.md say how a provider of class names is written as a `dataset` (constructors, FQCN strings resolved through the Class Registry, or `fqcn()`).",
+        "choice": "One shared constant `collectionClassProvider = [[Collection], [LazyCollection]]` of constructors, each row spread as the `collection` parameter (typed `typeof Collection | typeof LazyCollection`), and `new $collection(x)` → `new collection(x)`."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testArrayAccessOffsetGet",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Construct mapping (AD-26) / ArrayAccess"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testForgetArrayOfKeys",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / isset(e1, e2), empty(e)",
+      "Mechanical expression rule / $a[k]"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`isset($c[0])` where `$c = $collection->forget([0, 2])->all()`: the mechanical rule gives `(c?.[0] ?? null) !== null`, but the runtime value is a PHP array whose JS form depends on its keys (here `[1 => 'bar']`, a `PhpArray`). PORTING.md says `$a[k]` stays `a[k]` except on ArrayAccess receivers, and never says whether `PhpArray` is such a receiver (`.get(k)`) or supports index syntax.",
+        "choice": "Kept the mechanical form `(c?.[k] ?? null) !== null` for both halves, and the variable reuse (`c` goes from Collection to the `all()` result) as Upstream has it."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testGetOrPut",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testPushWithOneItem",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Idiom table / A PHP array that is neither a list nor an all-string-keyed map"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "An array written with explicit, sequential integer keys starting at 0 (`[0 => 4, 1 => 5, ..., 5 => 'Jonny from Laroe']`) is a list semantically, so DIV-9.2 makes it a JS `Array`. Syntactically it is a keyed array, so the syntax-directed mechanical rule makes it `new PhpArray([[0, 4], ...])`. The two readings conflict, and it is not stated whether `assertSame` treats a list-shaped `PhpArray` and a JS `Array` as identical.",
+        "choice": "Followed the mechanical rule: `new PhpArray<number, unknown>([[0, 4], [1, 5], ...])`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testPutAddsItemToCollection",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`new Collection` / `new $collection` without an argument list: the `new C(args)` row shows only the parenthesised form.",
+        "choice": "`new Collection()` / `new collection()`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testShiftManyReturnsEmptyCollectionOnEmptyCollection",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / numbers; 017/0o17"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`new Collection` / `new $collection` without an argument list: the `new C(args)` row shows only the parenthesised form.",
+        "choice": "`new Collection()` / `new collection()`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testShiftReturnsNullOnEmptyCollection",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / bare function or constant name",
+      "Idiom table / undefined → null"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "`new Collection` / `new $collection` without an argument list: the `new C(args)` row shows only the parenthesised form.",
+        "choice": "`new Collection()` / `new collection()`."
+      },
+      {
+        "point": "`$itemFoo->text = 'f'` writes a dynamic property on a `stdClass`. The construct mapping says `__get`/`__set` outside `Model` has no form (DIV-12), but a `stdClass` property is not magic; PORTING.md does not say how `stdClass` and its dynamic properties are ported.",
+        "choice": "`const itemFoo = new stdClass(); itemFoo.text = 'f';` (`stdClass` from `@xaravel/runtime/php`), read back with `foo?.text`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportCollectionTest::testTransform",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / a . b",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Which `case` a Ported Test passes when the Upstream class extends `PHPUnit\\Framework\\TestCase` directly: § Test-adaptation rules / Shape makes `case` optional and says `this` is the case TestCase, but never names the class to use for a plain PHPUnit test.",
+        "choice": "`case: TestCase` (the `PHPUnit\\Framework\\TestCase` port exported by `@xaravel/assert`), so `this.assertX(...)` and `this.expectExceptionObject(...)` work."
+      },
+      {
+        "point": "Imports are outside the mechanical rule, and PORTING.md does not say which specifier exports `Illuminate\\Support\\Collection`, `LazyCollection` and the `collect()` helper. The bare-function row says helpers come from `@xaravel/support`, but the pilot declarations export `collect` (and the collection classes) only from `@xaravel/collections`.",
+        "choice": "`Collection`, `LazyCollection` and `collect` from `@xaravel/collections`; `HtmlString` from `@xaravel/support`; contracts from `@xaravel/contracts/support`; PHP builtins (`ArrayObject`, `stdClass`, `JsonSerializable`, `InvalidArgumentException`, `strrev`) and the PHP-semantics helpers from `@xaravel/runtime/php`."
+      },
+      {
+        "point": "The mechanical rule drops closure parameter types (`fn (T $a) => e` → `(a) => e`), but under `tsc --strict` an untyped arrow passed to a parameter declared `any` is an implicit-any error (TS7006). PORTING.md does not say what annotation a ported closure parameter gets.",
+        "choice": "Hand-written narrow annotations from the Upstream data (`(x: string)`, `(value: { v: unknown })`, `(number: number, character: string, key: number)`, `(data: Collection | LazyCollection)`), never `any`."
+      },
+      {
+        "point": "Shape requires an `async function` body even for a test that does no IO (DIV-8.1 speaks only of IO bodies).",
+        "choice": "Every body is `async function`, with nothing awaited except the dynamic import in testImplodeModels."
+      }
+    ]
+  }
+]

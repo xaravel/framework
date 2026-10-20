@@ -1,0 +1,453 @@
+[
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testDivide",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / Untranslatable",
+      "Idiom table / undefined → null"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "An explicitly keyed but sequential integer array (`[0 => 'first', 1 => 'second']`, `[0 => 1, 1 => '1', 2 => 2, 3 => '2', 4 => 3]`): the Mechanical expression rule (syntactic: 'any other keyed array' → PhpArray) and DIV-9.2 (semantic: 'a list' → JS Array) give different forms.",
+        "choice": "Followed the Mechanical expression rule (applied first per Order of rewrites): `new PhpArray([[0, ...], [1, ...]])`."
+      },
+      {
+        "point": "The declared `PhpArray<K, V>` constructor infers K and V from the first entry, so a mixed-key or mixed-value literal (`['a' => 1, 2 => 'b']`, `[1 => 'hAz', 2 => [...]]`) as the rule writes it fails `tsc --strict`; PORTING.md does not say how to type a PhpArray literal.",
+        "choice": "Wrote explicit type arguments `new PhpArray<string | number | null, unknown>(...)` on the failing literals; homogeneous ones are left bare."
+      },
+      {
+        "point": "`[$keys, $values] = Arr::divide(...)` is list destructuring, listed as Untranslatable; PORTING.md gives no hand-port form for destructuring re-assignment.",
+        "choice": "Ported by hand as `let [keys, values] = Arr.divide([])` for the first, then `[keys, values] = Arr.divide(...)`."
+      },
+      {
+        "point": "A `null` (and `''`) array key in a literal (`[null => 'Null', 1 => 'one']`): the rule says PhpArray normalises `null` → `\"\"`, but not whether the port writes the key as Upstream wrote it or pre-normalised.",
+        "choice": "Kept the key as written: `[null, 'Null']` and `['', ...]` entries; expected `[null, 1]` keys kept unchanged."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testEvery",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "The Mechanical expression rule drops parameter types (`fn ($value) => ...` → `(value) => ...`), but against `any`-typed callback parameters this is TS7006 (implicit any) under `tsc --strict`; PORTING.md does not say what type to write.",
+        "choice": "Annotated closure parameters: the Upstream type hint where present (`string`), otherwise `unknown`."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testExcept",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "The declared `PhpArray<K, V>` constructor infers K and V from the first entry, so a mixed-key or mixed-value literal (`['a' => 1, 2 => 'b']`, `[1 => 'hAz', 2 => [...]]`) as the rule writes it fails `tsc --strict`; PORTING.md does not say how to type a PhpArray literal.",
+        "choice": "Wrote explicit type arguments `new PhpArray<string | number | null, unknown>(...)` on the failing literals; homogeneous ones are left bare."
+      },
+      {
+        "point": "`$array = e` maps to `array = e` with no declaration keyword; PORTING.md does not say how the first assignment of a PHP local is declared (`let`/`const`) or typed when it is later reassigned to differently shaped values (object, PhpArray, list, ArrayObject).",
+        "choice": "Declared `let array: unknown` on first assignment (and `let` for other reassigned locals, `const` otherwise)."
+      },
+      {
+        "point": "`Arr::except($array, 2.5)` passes a non-integral float; the float marker rule covers only integral float literals (`1.0` → `float(1)`) and DIV-9.4 only where the assertion depends on int/float.",
+        "choice": "Kept `2.5` as written, unmarked."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testFirstWorksWithArrayObject",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / ===, !==, < > <= >=, arithmetic, bitwise, ??, instanceof",
+      "Exceptions / PHP's own classes"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "The Mechanical expression rule drops parameter types (`fn ($value) => ...` → `(value) => ...`), but against `any`-typed callback parameters this is TS7006 (implicit any) under `tsc --strict`; PORTING.md does not say what type to write.",
+        "choice": "Annotated closure parameters: the Upstream type hint where present (`string`), otherwise `unknown`."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testGet",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Idiom table / undefined → null",
+      "Exceptions / PHP's own classes"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "`$array = e` maps to `array = e` with no declaration keyword; PORTING.md does not say how the first assignment of a PHP local is declared (`let`/`const`) or typed when it is later reassigned to differently shaped values (object, PhpArray, list, ArrayObject).",
+        "choice": "Declared `let array: unknown` on first assignment (and `let` for other reassigned locals, `const` otherwise)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Exceptions / Tests",
+      "Exceptions / PHP's own classes",
+      "PCRE conversion (DIV-10) / Delimiters and flags"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "The regex `'#^Array value for key \\[string\\] must be a boolean, (.*) found.#'` uses `#` delimiters; PCRE conversion only shows the `/` delimiter example ('/x/i' → /x/i).",
+        "choice": "Dropped the `#` delimiters: `/^Array value for key \\[string\\] must be a boolean, (.*) found./` (no escapes changed, unescaped `.` kept)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testMapByReference",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / new C(args), $a = e"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "`Arr::map($data, 'strrev')` passes a PHP callable string; PORTING.md does not say whether a callable string stays a string or becomes the function reference (`strrev` from @xaravel/runtime/php).",
+        "choice": "Kept the string literal `'strrev'` (the Mechanical expression rule keeps string literals), leaving callable-string resolution to the implementation."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testOnlyValues",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "An explicitly keyed but sequential integer array (`[0 => 'first', 1 => 'second']`, `[0 => 1, 1 => '1', 2 => 2, 3 => '2', 4 => 3]`): the Mechanical expression rule (syntactic: 'any other keyed array' → PhpArray) and DIV-9.2 (semantic: 'a list' → JS Array) give different forms.",
+        "choice": "Followed the Mechanical expression rule (applied first per Order of rewrites): `new PhpArray([[0, ...], [1, ...]])`."
+      },
+      {
+        "point": "The declared `PhpArray<K, V>` constructor infers K and V from the first entry, so a mixed-key or mixed-value literal (`['a' => 1, 2 => 'b']`, `[1 => 'hAz', 2 => [...]]`) as the rule writes it fails `tsc --strict`; PORTING.md does not say how to type a PhpArray literal.",
+        "choice": "Wrote explicit type arguments `new PhpArray<string | number | null, unknown>(...)` on the failing literals; homogeneous ones are left bare."
+      },
+      {
+        "point": "`$array = e` maps to `array = e` with no declaration keyword; PORTING.md does not say how the first assignment of a PHP local is declared (`let`/`const`) or typed when it is later reassigned to differently shaped values (object, PhpArray, list, ArrayObject).",
+        "choice": "Declared `let array: unknown` on first assignment (and `let` for other reassigned locals, `const` otherwise)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testRandomThrowsAnErrorWhenRequestingMoreItemsThanAreAvailable",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / ===, !==, < > <= >=, arithmetic, bitwise, ??, instanceof",
+      "Mechanical expression rule / Untranslatable",
+      "Exceptions / PHP's own classes"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "`$array = e` maps to `array = e` with no declaration keyword; PORTING.md does not say how the first assignment of a PHP local is declared (`let`/`const`) or typed when it is later reassigned to differently shaped values (object, PhpArray, list, ArrayObject).",
+        "choice": "Declared `let array: unknown` on first assignment (and `let` for other reassigned locals, `const` otherwise)."
+      },
+      {
+        "point": "`try { ... } catch (InvalidArgumentException) { $exceptions++; }` is a statement (Untranslatable); PORTING.md has no hand-port form for a class-filtered catch without a variable.",
+        "choice": "`catch (e) { if (!(e instanceof InvalidArgumentException)) { throw e; } exceptions++; }`."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testSelect",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testSoleThrowsExceptionIfMoreThanOneItemExists",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Mechanical expression rule / ===, !==, < > <= >=, arithmetic, bitwise, ??, instanceof",
+      "Exceptions / Tests"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "The Mechanical expression rule drops parameter types (`fn ($value) => ...` → `(value) => ...`), but against `any`-typed callback parameters this is TS7006 (implicit any) under `tsc --strict`; PORTING.md does not say what type to write.",
+        "choice": "Annotated closure parameters: the Upstream type hint where present (`string`), otherwise `unknown`."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportArrTest::testSortRecursiveDesc",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Order of rewrites",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, ::",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / every key a non-integer-like string literal",
+      "Mechanical expression rule / any other keyed array",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / new C(args), $a = e"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class SupportArrTest extends PHPUnit TestCase and uses the trait Concerns\\CountsEnumerations; PORTING.md does not say whether the Ported Test declares a local case class mirroring it (with the trait as a mixin) or passes a framework TestCase as `case`.",
+        "choice": "Used `case: TestCase` from @xaravel/assert directly; the trait is not used by this Test ID, so it was not ported."
+      },
+      {
+        "point": "Imports are 'not part of the rule' (Mechanical expression rule): PORTING.md does not map Illuminate\\Support\\Arr / MultipleItemsFoundException to a package specifier, nor say whether PHP globals (ArrayObject, InvalidArgumentException, is_string) come from @xaravel/runtime or @xaravel/runtime/php.",
+        "choice": "Imported Arr and MultipleItemsFoundException from @xaravel/collections (where the declarations put them) and PHP globals/builtins from @xaravel/runtime/php (the Idiom table names that subpath for builtins)."
+      },
+      {
+        "point": "Array literals converted to plain objects / PhpArray: DIV-9.2 is a numbered adaptation clause, but the same conversion is also the syntax-only Mechanical expression rule; PORTING.md does not say whether such assertion lines are 'changed' and need `// adapted:DIV-9.2`.",
+        "choice": "No marker: treated the conversion as mechanical, not an adaptation."
+      },
+      {
+        "point": "The declared `PhpArray<K, V>` constructor infers K and V from the first entry, so a mixed-key or mixed-value literal (`['a' => 1, 2 => 'b']`, `[1 => 'hAz', 2 => [...]]`) as the rule writes it fails `tsc --strict`; PORTING.md does not say how to type a PhpArray literal.",
+        "choice": "Wrote explicit type arguments `new PhpArray<string | number | null, unknown>(...)` on the failing literals; homogeneous ones are left bare."
+      }
+    ]
+  }
+]

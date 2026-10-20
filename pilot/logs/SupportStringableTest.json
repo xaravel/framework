@@ -1,0 +1,285 @@
+[
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testBeforeLast",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / numbers; `017`/`0o17`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testChopEnd",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / list `[1, 2]`, `array(1, 2)`, spread `...$a`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      },
+      {
+        "point": "Upstream declares `testChopEnd(): void`; PORTING.md does not say whether a PHP return type on the test method carries over.",
+        "choice": "Dropped it; the body is the `async function` that `portedTest` takes."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testCounted",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / numbers; `017`/`0o17`",
+      "Mechanical expression rule / list `[1, 2]`, `array(1, 2)`, spread `...$a`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testReplaceMatches",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / numbers; `017`/`0o17`",
+      "Mechanical expression rule / `fn (T $a) => e`, `function ($a) use ($b) { return e; }`",
+      "Mechanical expression rule / bare function or constant name",
+      "Mechanical expression rule / `$a[k]`",
+      "Mechanical expression rule / `new C(args)`, `$a = e`",
+      "PCRE conversion (DIV-10) / Delimiters and flags",
+      "Construct mapping (AD-26) / `__get` / `__set` outside `Model`",
+      "Construct mapping (AD-26) / Property + method with one name (DIV-12)",
+      "Test-adaptation rules / Order of rewrites",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "PHP closure parameters are untyped; the mechanical rule drops types, but PORTING.md does not say whether to annotate TS callback parameters (needed or not under `tsc --strict`).",
+        "choice": "Annotated callback parameters with the declared type (`stringable: Stringable`, `match: string[]`) and turned `function (...) { return e; }` into arrow functions keeping the block body and `return`."
+      },
+      {
+        "point": "A PCRE pattern passed as a PHP string to a Stringable method (`whenTest('/bar/')`, `replaceMatches('/world/')`): the mechanical rule keeps it as the string `'/bar/'`; the PCRE conversion section turns it into a RegExp literal. PORTING.md does not say whether that conversion is an adaptation needing a `// adapted:` marker (it is not in the Order-of-rewrites list), nor which clause to cite (DIV-10.1 speaks of skipping and of 'ported, not skipped'), nor whether the marker belongs on a non-assertion line or on a line inside a multi-line assertion.",
+        "choice": "Converted to RegExp literals (`/bar/`, `/link/`, `/world/`, `/apple/`) and marked each changed line `// adapted:DIV-10.1`, including the non-assertion `replaceMatches` lines and the first line of each multi-line `assertSame`."
+      },
+      {
+        "point": "`$result->value`: Stringable has a protected `$value` property reached through `__get`, and a `value()` method. Two PORTING.md rows apply: `__get` outside Model ('None (DIV-12), use the explicit accessor', which cites no numbered clause for this case) and the DIV-12 pair list row for `Illuminate\\Support\\Stringable` `value` ('method keeps the name; state behind Upstream's getters', DIV-12.2).",
+        "choice": "Wrote `result.value()` and marked the assertion lines `// adapted:DIV-12.2`."
+      },
+      {
+        "point": "The `replaceMatches` callback receives PHP's `$match` array (from preg_replace_callback); with a JS RegExp PORTING.md does not say whether the callback gets an array of groups (parity) or JS's `(match, ...groups)` string arguments.",
+        "choice": "Kept Upstream's shape: `(match: string[]) => strtoupper(match[0])`, with `strtoupper` from @xaravel/runtime/php."
+      },
+      {
+        "point": "Upstream reassigns `$stringable` and `$result`; PORTING.md's `$a = e` row gives `a = e` but does not say whether the first assignment declares with `let` or `const`.",
+        "choice": "Declared both with `let` on first assignment and reassigned later."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testTransliterate",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenEmpty",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / `fn (T $a) => e`, `function ($a) use ($b) { return e; }`",
+      "Mechanical expression rule / Untranslatable",
+      "Mechanical expression rule / bare function or constant name",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      },
+      {
+        "point": "PHP closure parameters are untyped; the mechanical rule drops types, but PORTING.md does not say whether to annotate TS callback parameters (needed or not under `tsc --strict`).",
+        "choice": "Annotated callback parameters with the declared type (`stringable: Stringable`, `match: string[]`) and turned `function (...) { return e; }` into arrow functions keeping the block body and `return`."
+      },
+      {
+        "point": "`tap($this->stringable(), function ($stringable) { $this->assertSame(...); })`: a closure whose body is a statement, not one `return`, is untranslatable by the mechanical rule, and PORTING.md does not say how to port it by hand, in particular how to keep PHP's automatic `$this` binding in the closure (a JS `function` would lose `this`).",
+        "choice": "Ported by hand as an arrow function, which keeps the test case as `this`; `tap` imported from @xaravel/support."
+      },
+      {
+        "point": "`function () { // }` returns PHP null implicitly (so `whenEmpty` falls back to returning `$this`); the JS empty arrow returns `undefined`. PORTING.md (AD-9, DIV-9.1) says `undefined` is normalised at boundaries but does not say whether a Ported Test's void callback should return `null` explicitly.",
+        "choice": "Kept the empty body `() => { // }`, relying on boundary normalisation; no marker."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenIs",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / `fn (T $a) => e`, `function ($a) use ($b) { return e; }`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      },
+      {
+        "point": "PHP closure parameters are untyped; the mechanical rule drops types, but PORTING.md does not say whether to annotate TS callback parameters (needed or not under `tsc --strict`).",
+        "choice": "Annotated callback parameters with the declared type (`stringable: Stringable`, `match: string[]`) and turned `function (...) { return e; }` into arrow functions keeping the block body and `return`."
+      },
+      {
+        "point": "`whenIs('foo/*', ...)` takes a Str::is wildcard pattern, not a regex; PORTING.md does not say so explicitly, but the PCRE section applies only to regex patterns.",
+        "choice": "Kept the wildcard strings as plain strings, unmarked."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenTest",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Mechanical expression rule / `$x`, `$this`",
+      "Mechanical expression rule / `->`, `?->`, `::` (calls, properties, constants, `C::$p`)",
+      "Mechanical expression rule / `'s'`, `\"s\\t$v {$o->p}\"`",
+      "Mechanical expression rule / `fn (T $a) => e`, `function ($a) use ($b) { return e; }`",
+      "Mechanical expression rule / `(int)`/`(integer)`, `(float)`/`(double)`, `(string)`/`(binary)`, `(bool)`/`(boolean)`",
+      "Idiom table / `(int)`, `(float)`, `(string)`, `(bool)`",
+      "Construct mapping (AD-26) / `__toString`",
+      "PCRE conversion (DIV-10) / Delimiters and flags",
+      "Test-adaptation rules / Order of rewrites",
+      "Test-adaptation rules / Markers",
+      "Test-adaptation rules / Grader"
+    ],
+    "ambiguities": [
+      {
+        "point": "The helper `protected function stringable($string = '')` lives on the PHPUnit TestCase; PORTING.md does not say where a test-class helper goes, nor how a `protected` helper is reached from the `portedTest` body (which runs outside the class, so TS rejects a `protected` member access).",
+        "choice": "Ported it as a public method `stringable(string: string = '')` on a local `class SupportStringableTest extends TestCase` (from @xaravel/assert), passed as `case`; dropped `protected`. The unused typed property `protected Container $container` was not ported (no assigned test uses it), and the class is not `registerClass`-ed since no assigned test reads `static::class`."
+      },
+      {
+        "point": "`$this->assertSame(...)` inside a TestCase: PORTING.md's Shape rule says `this` is the case TestCase but does not say whether to call `this.assertSame` or `Assert.assertSame`.",
+        "choice": "Used `this.assertSame(...)` (the @xaravel/assert prototype mirror)."
+      },
+      {
+        "point": "`(string) $stringable` on a Stringable: the mechanical rule gives `toPhpString(x)`, but `__toString` maps to `toString()` plus `[Symbol.toPrimitive]`; PORTING.md does not say which form a test should use for a `(string)` cast of a framework object.",
+        "choice": "Used `toPhpString(...)` from @xaravel/runtime/php per the mechanical rule, unmarked (syntax-directed, not an adaptation)."
+      },
+      {
+        "point": "PHP closure parameters are untyped; the mechanical rule drops types, but PORTING.md does not say whether to annotate TS callback parameters (needed or not under `tsc --strict`).",
+        "choice": "Annotated callback parameters with the declared type (`stringable: Stringable`, `match: string[]`) and turned `function (...) { return e; }` into arrow functions keeping the block body and `return`."
+      },
+      {
+        "point": "A PCRE pattern passed as a PHP string to a Stringable method (`whenTest('/bar/')`, `replaceMatches('/world/')`): the mechanical rule keeps it as the string `'/bar/'`; the PCRE conversion section turns it into a RegExp literal. PORTING.md does not say whether that conversion is an adaptation needing a `// adapted:` marker (it is not in the Order-of-rewrites list), nor which clause to cite (DIV-10.1 speaks of skipping and of 'ported, not skipped'), nor whether the marker belongs on a non-assertion line or on a line inside a multi-line assertion.",
+        "choice": "Converted to RegExp literals (`/bar/`, `/link/`, `/world/`, `/apple/`) and marked each changed line `// adapted:DIV-10.1`, including the non-assertion `replaceMatches` lines and the first line of each multi-line `assertSame`."
+      }
+    ]
+  }
+]

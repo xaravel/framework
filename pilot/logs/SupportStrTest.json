@@ -1,0 +1,443 @@
+[
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUlid",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / (int)/(integer), (float)/(double), (string)/(binary), (bool)/(boolean)",
+      "Idiom table / (int), (float), (string), (bool)",
+      "Construct mapping (AD-26) / __toString",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testItCanFreezeUuidsInAClosure",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / $a[k]",
+      "Mechanical expression rule / (int)/(integer), (float)/(double), (string)/(binary), (bool)/(boolean)",
+      "Idiom table / (int), (float), (string), (bool)",
+      "Construct mapping (AD-26) / __toString",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / Untranslatable",
+      "By-reference parameters"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "`function ($uuid) use (&$uuids) { $uuids[] = ...; }`: a by-reference `use` capture and a multi-statement closure are untranslatable; § By-reference parameters covers by-reference parameters (Ref<T>) but not by-reference closure captures, and the `$a[] = v` append has no row in the mechanical table.",
+        "choice": "Hand-ported as an arrow function closing over a `const uuids: unknown[] = []` (JS closures capture the binding, so no Ref<T> box), with `uuids.push(v)` for each `$uuids[] = v`."
+      },
+      {
+        "point": "`(string) $uuid` on a UuidInterface object: the rule gives toPhpString, but whether toPhpString calls the object's `toString()`/`[Symbol.toPrimitive]` (the __toString mapping) is not stated.",
+        "choice": "Used `toPhpString(x)` per the cast rule, assuming it honours the __toString mapping."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testItCanSpecifyAFallbackForASequence",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / Untranslatable",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Exceptions / PHP's own classes",
+      "Exceptions / Tests"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "Upstream `use Exception;` (global PHP \\Exception). Both `@xaravel/runtime` (PHP's own class) and `@xaravel/assert` (PHPUnit\\Framework\\Exception) export a class named `Exception`; PORTING.md does not say which to import when names clash.",
+        "choice": "Imported `Exception` from `@xaravel/runtime` per Exceptions / PHP's own classes; did not import @xaravel/assert's."
+      },
+      {
+        "point": "`fn () => throw new Exception('Out of Uuids.')`: `throw` is untranslatable in the mechanical rule, with no hand-port form given for a throw expression in an arrow body.",
+        "choice": "`() => { throw new Exception('Out of Uuids.'); }`."
+      },
+      {
+        "point": "`$this->expectExceptionObject(...)` followed by `$this->fail()` inside try/finally: PORTING.md maps only expectException/expectExceptionMessage explicitly.",
+        "choice": "`this.expectExceptionObject(new Exception('Out of Uuids.'))` and `this.fail()` kept in place inside the same try/finally."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testItCreatesUuidsNormallyAfterFailureWithinFreezeMethod",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / Untranslatable",
+      "Mechanical expression rule / new C(args), $a = e",
+      "Exceptions / PHP's own classes"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "A non-arrow `function () { ... $this->assertSame(...); throw ...; }` closure uses the bound `$this` and a statement body (untranslatable). PORTING.md does not say whether to use a JS arrow (lexical this) or a bound function.",
+        "choice": "Hand-ported as an arrow function so `this` stays the test case."
+      },
+      {
+        "point": "`catch (\\Exception) { ... }`: a typed catch without a variable has no rule; JS catch catches everything.",
+        "choice": "`catch (e) { if (!(e instanceof Exception)) { throw e; } ... }` with `Exception` from `@xaravel/runtime`."
+      },
+      {
+        "point": "Upstream `use Exception;` (global PHP \\Exception). Both `@xaravel/runtime` (PHP's own class) and `@xaravel/assert` (PHPUnit\\Framework\\Exception) export a class named `Exception`; PORTING.md does not say which to import when names clash.",
+        "choice": "Imported `Exception` from `@xaravel/runtime` per Exceptions / PHP's own classes; did not import @xaravel/assert's."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testPasswordReturnsExactLengthWhenBelowPoolCount",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testReplaceMatches",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / fn (T $a) => e, function ($a) use ($b) { return e; }",
+      "Mechanical expression rule / Untranslatable",
+      "Mechanical expression rule / a . b",
+      "Mechanical expression rule / bare function or constant name",
+      "Mechanical expression rule / $a[k]",
+      "Mechanical expression rule / ===, !==, < > <= >=, arithmetic, bitwise, ??, instanceof",
+      "Idiom table / (int), (float), (string), (bool)",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "PCRE conversion (DIV-10) / Delimiters and flags"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "Str::replaceMatches patterns are PHP strings like `'/baz/'`. The PCRE conversion rule says `'/x/i'` → `/x/i` and DIV-10 says the patterns are JS RegExp, but not whether the string form stays accepted, or whether a `g` flag is added for preg_replace's replace-all semantics.",
+        "choice": "Converted each pattern (and each element of the pattern array) to a RegExp literal without adding `g`; replace-all and `limit` are left to the implementation."
+      },
+      {
+        "point": "The replacement string `'ba$1'` uses a preg_replace backreference; the PCRE conversion rule covers patterns only, not replacement strings (`$1`, `\\1`, `${1}`).",
+        "choice": "Kept `'ba$1'` verbatim (same meaning in JS String.replace)."
+      },
+      {
+        "point": "`$match[1] * 2` multiplies a numeric string. The mechanical rule keeps arithmetic unchanged but says a numeric-string operand needs the PHP-semantics helpers by hand, and no arithmetic helper exists; under tsc --strict `unknown * 2` does not compile.",
+        "choice": "`toInt(match[1]) * 2` (the capture is `\\d+`, so the int conversion is exact)."
+      },
+      {
+        "point": "Callback parameter typing: the mechanical rule drops PHP types, but tsc --strict needs a type for `$match` (and any is not allowed).",
+        "choice": "Typed the callback parameter `match: unknown[]` and wrapped string operands with toPhpString."
+      },
+      {
+        "point": "`strtoupper($match[1])` inside `'ba'.strtoupper(...)`: the concat rule wraps a non-literal operand in toPhpString even when the call already returns a string.",
+        "choice": "`'ba' + toPhpString(strtoupper(match[1]))`, with strtoupper imported from `@xaravel/runtime/php`."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testSnake",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\""
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testStringTrimmedOnlyWhereNecessary",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Mechanical expression rule / numbers; 017/0o17"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#0",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / a . b",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      },
+      {
+        "point": "invalidUuidList row 2 uses `'...'.PHP_EOL`. The mechanical rule says PHP constants come from `@xaravel/runtime/php`, but no `PHP_EOL` is declared there; also PORTING.md does not fix PHP_EOL's value.",
+        "choice": "Wrote `'145a1e72-d11d-11e8-a8d5-f2801f1b9fd1' + '\\n'` (PHP_EOL on Linux/macOS, the Oracle platforms), no toPhpString wrapper since both operands are string literals."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#3",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / a . b",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      },
+      {
+        "point": "invalidUuidList row 2 uses `'...'.PHP_EOL`. The mechanical rule says PHP constants come from `@xaravel/runtime/php`, but no `PHP_EOL` is declared there; also PORTING.md does not fix PHP_EOL's value.",
+        "choice": "Wrote `'145a1e72-d11d-11e8-a8d5-f2801f1b9fd1' + '\\n'` (PHP_EOL on Linux/macOS, the Oracle platforms), no toPhpString wrapper since both operands are string literals."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#5",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / a . b",
+      "Mechanical expression rule / bare function or constant name"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      },
+      {
+        "point": "invalidUuidList row 2 uses `'...'.PHP_EOL`. The mechanical rule says PHP constants come from `@xaravel/runtime/php`, but no `PHP_EOL` is declared there; also PORTING.md does not fix PHP_EOL's value.",
+        "choice": "Wrote `'145a1e72-d11d-11e8-a8d5-f2801f1b9fd1' + '\\n'` (PHP_EOL on Linux/macOS, the Oracle platforms), no toPhpString wrapper since both operands are string literals."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithValidUuid#4",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithVersion#35",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / true/FALSE/Null"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithVersion#40",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / numbers; 017/0o17",
+      "Mechanical expression rule / true/FALSE/Null"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testStrContains#6",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a",
+      "Mechanical expression rule / true/FALSE/Null",
+      "Mechanical expression rule / bare function or constant name",
+      "Idiom table / collect([1, 2, 3])->map(fn ($x) => $x * 2)"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      },
+      {
+        "point": "testStrContains has an optional parameter `$ignoreCase = false`, and some provider rows have 3 values instead of 4. PORTING.md does not say how a default-valued test parameter maps.",
+        "choice": "JS default parameter `ignoreCase: unknown = false`; short rows leave it to the default as PHPUnit does."
+      },
+      {
+        "point": "`collect([...])` inside the provider: the mechanical rule says helpers come from `@xaravel/support`, but the pilot declarations export `collect` only from `@xaravel/collections`.",
+        "choice": "Imported `collect` from `@xaravel/collections`; the Collection object is passed as `needles` unchanged."
+      }
+    ]
+  },
+  {
+    "id": "Illuminate\\Tests\\Support\\SupportStrTest::testTransliterate#7",
+    "rules": [
+      "Test-adaptation rules / Shape",
+      "Test-adaptation rules / Grader",
+      "Mechanical expression rule / $x, $this",
+      "Mechanical expression rule / \\A\\B\\C, C (class name)",
+      "Mechanical expression rule / ->, ?->, :: (calls, properties, constants, C::$p)",
+      "Mechanical expression rule / 's', \"s\\t$v {$o->p}\"",
+      "Construct mapping (AD-26) / PHP attributes (#[X])",
+      "Mechanical expression rule / list [1, 2], array(1, 2), spread ...$a"
+    ],
+    "ambiguities": [
+      {
+        "point": "Upstream's test class extends PHPUnit\\Framework\\TestCase. PORTING.md says `this` is the `case` TestCase but not whether `case` is @xaravel/assert's TestCase itself or a local subclass named after the Upstream class, nor where data providers live.",
+        "choice": "Declared a local `class SupportStrTest extends TestCase` (from @xaravel/assert), passed as `case`, and put the needed data providers on it as static methods, kept verbatim in Upstream's provider order."
+      },
+      {
+        "point": "#[DataProvider('x')] on a test method: the Construct mapping row for PHP attributes says decorator, but portedTest takes `dataset`; PORTING.md does not say how the provider is invoked (at declaration time vs lazily) or how body parameters are typed.",
+        "choice": "Called the static provider at declaration time as `dataset: SupportStrTest.x()` (list rows, so positional `#k` labels); body parameters declared in Upstream's order, typed `unknown` (PHP untyped) or with the PHP scalar type where Upstream declares one (`string`)."
+      }
+    ]
+  }
+]

@@ -1,0 +1,118 @@
+{
+  "seed": "pilot-8.7",
+  "strata": [
+    {
+      "name": "Mockery",
+      "pool": 4,
+      "taken": 4,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#1"
+      ]
+    },
+    {
+      "name": "Collection provider",
+      "pool": 740,
+      "taken": 16,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testCollectionFromTraversable#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testEachSpread#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testEvenMedianCollection#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testFlattenIgnoresKeys#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testImplodeModels#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testMergeCollection#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testRejectWithoutAnArgumentRemovesTruthyValues#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testSliceNegativeOffsetAndNegativeLength#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testSortByAlwaysReturnsAssoc#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testSplitInThrowsExceptionForInvalidNumberOfGroups#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testTakeUntilUsingValue#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testUnionCollection#0",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testUnless#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testValueWithNegativeValue#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testWhere#1",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testWhereInStrict#0"
+      ]
+    },
+    {
+      "name": "Collection plain",
+      "pool": 36,
+      "taken": 8,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testArrayAccessOffsetGet",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testForgetArrayOfKeys",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testGetOrPut",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testPushWithOneItem",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testPutAddsItemToCollection",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testShiftManyReturnsEmptyCollectionOnEmptyCollection",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testShiftReturnsNullOnEmptyCollection",
+        "Illuminate\\Tests\\Support\\SupportCollectionTest::testTransform"
+      ]
+    },
+    {
+      "name": "Arr",
+      "pool": 87,
+      "taken": 12,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportArrTest::testDivide",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testEvery",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testExcept",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testFirstWorksWithArrayObject",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testGet",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testMapByReference",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testOnlyValues",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testRandomThrowsAnErrorWhenRequestingMoreItemsThanAreAvailable",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testSelect",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testSoleThrowsExceptionIfMoreThanOneItemExists",
+        "Illuminate\\Tests\\Support\\SupportArrTest::testSortRecursiveDesc"
+      ]
+    },
+    {
+      "name": "Str plain",
+      "pool": 119,
+      "taken": 8,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUlid",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testItCanFreezeUuidsInAClosure",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testItCanSpecifyAFallbackForASequence",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testItCreatesUuidsNormallyAfterFailureWithinFreezeMethod",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testPasswordReturnsExactLengthWhenBelowPoolCount",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testReplaceMatches",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testSnake",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testStringTrimmedOnlyWhereNecessary"
+      ]
+    },
+    {
+      "name": "Str provider",
+      "pool": 149,
+      "taken": 8,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#0",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#3",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithInvalidUuid#5",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithValidUuid#4",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithVersion#35",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testIsUuidWithVersion#40",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testStrContains#6",
+        "Illuminate\\Tests\\Support\\SupportStrTest::testTransliterate#7"
+      ]
+    },
+    {
+      "name": "Stringable",
+      "pool": 140,
+      "taken": 8,
+      "ids": [
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testBeforeLast",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testChopEnd",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testCounted",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testReplaceMatches",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testTransliterate",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenEmpty",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenIs",
+        "Illuminate\\Tests\\Support\\SupportStringableTest::testWhenTest"
+      ]
+    }
+  ]
+}
