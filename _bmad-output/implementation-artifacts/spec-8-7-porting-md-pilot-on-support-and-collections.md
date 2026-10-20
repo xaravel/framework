@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: draft
 ---
 
 # Story 8.7: `PORTING.md` pilot on Support and Collections

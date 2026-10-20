@@ -4,7 +4,7 @@
 
 ## Goal
 
-Close Phase 0 by giving Framework Agents one written rulebook and a proven review loop before any framework porting starts. Epic 8 writes the twelve Divergence Records (DIV-1..DIV-12) with numbered adaptation clauses that every `adapted` marker must cite. It also writes `PORTING.md`, the PHP→TypeScript rulebook, and runs the Bun/Temporal/bcrypt spikes that settle the open questions. It sets up the two-reviewer Fidelity Review and the agent stop rules, then pilots the whole loop on real Support and Collections tests. A CI gate blocks Phase 1 Stories until all of this is on `main`.
+Close Phase 0 by giving Framework Agents one written rulebook and a proven review loop before any framework porting starts. Epic 8 writes the twelve Divergence Records (DIV-1..DIV-12) with numbered adaptation clauses that every `adapted` marker must cite. It also writes `PORTING.md`, the PHP→TypeScript rulebook, and runs the Bun/Temporal/bcrypt spikes that settle the open questions. It sets up the Fidelity Review, in which two reviewer agents work in the loop's review step and one runs on a different model, and the agent stop rules, then pilots the whole loop on real Support and Collections tests. A CI gate blocks Phase 1 Stories until all of this is on `main`.
 
 ## Stories
 
@@ -60,11 +60,16 @@ Close Phase 0 by giving Framework Agents one written rulebook and a proven revie
   - **OQ-12.** Whether security releases allow an out-of-cycle pin bump; the ruling goes in `decisions/OQ-12.md`.
 - **Fidelity Review.**
   - **Checklist.** The Protected `conformance/review/fidelity.md` covers the full checklist. It cites `conformance/README.md#precedence` for Skip Reason precedence (ESC-5.2-1). It requires that error fixtures match the error Upstream expects. It requires that Oracle requests' `setup` and `exprs` match Upstream inputs or carry a recorded reason.
-  - **Reviewers.** Two reviewer identities, neither the PR author, post PR reviews.
-  - **Counting.** `story:check` counts only approvals by distinct identity.
+  - **Reviewers, in the loop.** The review runs inside the Story's own review step, not in GitHub Actions. After the implementation passes verification, two reviewer agents apply the checklist to the Story's diff. Each runs in a fresh context holding only the diff, the checklist and the inputs the checklist names, and neither is the implementer. This sits alongside `bmad-build-auto`'s existing adversarial reviewers.
+  - **Cross-model reviewer.** At least one reviewer runs on the other agent CLI from the loop's: Codex (`codex exec`) when the loop runs `claude -p`, and `claude -p` when the loop runs Codex. It falls back to the loop's own CLI when the other is unavailable (not installed, not signed in, or refused for a usage limit). The verdict records which CLI and model reviewed, and why it fell back.
+  - **Verdicts and counting.** Each verdict (`pass` or `reject`, with findings) is recorded in the Story's spec, bound to the tree it reviewed. A `reject` returns the Story to its implementer within the same build. `story:check`'s `approvals` clause passes only with two `pass` verdicts for the head tree; it no longer counts GitHub PR reviews.
+  - **Retired.** `.github/workflows/fidelity.yml`, the App-token steps and the Messages API call in `tools/fidelity-review/`. No GitHub Apps, `fidelity` environment or model API key exist. The checklist itself is unchanged. This rebuild is done (Epic 8 action item 1).
 - **Stop rules.** The rules go in `AGENTS.md`, outside its `bmad:context` block; there must be no `CLAUDE.md`. They list every FR-114 trigger. An Escalation stops only its own Test IDs. A test that needs a later Component is marked `blocked-by:<component>` and is never stubbed.
 - **Pilot.**
-  - **Sample.** At least 60 seeded Test IDs from the Support Collection, Arr, Str and Stringable tests. The translations must type-check, meet the assertion floor and pass Fidelity Review.
+  - **Sample.** At least 60 Test IDs from the Support Collection, Arr, Str and Stringable tests, spanning data providers, Mockery and PHP-array semantics. Take all 4 Mockery rows, then `sampleIds` from `conformance/harness/select.ts` per file and data-provider stratum. The agent translates by following `PORTING.md` alone.
+  - **Type-check (Phase 0 reading).** Translations type-check against declaration-only `.d.ts` files for `Collection`, `LazyCollection`, `Arr`, `Str` and `Stringable`, generated from `conformance/api-surface/{collections,support}.jsonl`. They live only on `pilot/porting`. They declare types and implement nothing, no graded test runs against them, and none of it reaches `main`, so they are not stubs.
+  - **Static assertion floor.** For each sampled Test ID, every assertion kind the Inventory records appears at least as often among the translation's assertion call sites. Any shortfall carries an `adapted:DIV-<n>.<k>` marker. The report lists every case where loops or data-provider rows make the static count approximate. The executed floor is checked later, when Epics 14 and 18 port these tests.
+  - **Fidelity Review.** The translations pass the in-loop review: two reviewer agents, one cross-model when available. Both verdicts go in the pilot report and in the Story's spec. No review-only PR is needed. This is the first supervised run, and the Maintainer reads both verdicts before any Story relies on them.
   - **Report.** `docs/porting/pilot-report.md` lists every rule hit, every ambiguity and each revision it caused.
   - **Translations.** Kept on the `pilot/porting` branch and never merged.
 - **Phase 1 gate.** A manifest whose `epic` is in Phase 1 or later fails unless `main` has all of these:
@@ -89,7 +94,7 @@ Close Phase 0 by giving Framework Agents one written rulebook and a proven revie
 
 - **8.1 first.** 8.2, 8.5 (checking markers against clauses), 8.7 and 8.8 all depend on 8.1's records.
 - **8.2 before 8.7.** The pilot revises `PORTING.md`, and 8.8 requires that revision and the pilot report.
-- **8.5 before 8.7.** The pilot's translations must pass a Fidelity Review.
+- **8.5 and the in-loop rebuild before 8.7.** The pilot's translations must pass the rebuilt in-loop Fidelity Review. That rebuild (Epic 8 action item 1) is done, so 8.7 can resume.
 - **8.4 needs Story 3.4's Oracle request flow** and signed fixtures for the bcrypt cases.
-- **8.8 extends the Epic 1/5 checks** (ownership and manifests) and gates every Epic 9+ Story.
-- **Epic 8 checkpoint.** The Maintainer also decides here on the deferred agent identity: a non-admin agent account, `Agent pushes` re-enabled, and ESC-5.8-1's bot bypass. 8.5's distinct-identity approvals cannot be truly verified while the orchestrator merges as the Maintainer.
+- **8.8 needs 8.7's pilot report** and extends the Epic 1/5 checks (ownership and manifests). It gates every Epic 9+ Story.
+- **Epic 8 checkpoint.** The Maintainer may still decide on the deferred agent identity (a non-admin agent account, `Agent pushes` re-enabled, ESC-5.8-1's bot bypass). Fidelity approvals no longer depend on GitHub identities.
