@@ -422,6 +422,17 @@ xaravelTest(
       expect(String(missing["note"])).toContain("Story 8.1");
       expect(errorText(await client.call("divergence.get", { id: "DIV-x" }))).toContain("DIV-<n>");
 
+      // The real-record check: the fixture's DIV-3 is clean; misnamed records and unparsable clauses are reported.
+      expect(await divergenceRecordProblems(client, fix)).toEqual([]);
+      const bad = { "DIV-02.md": "- DIV-2.1 Misnamed.\n", "div-5.md": "- DIV-5.1 Lowercase.\n", "DIV-6.md": "# DIV-6\n\n- DIV 6.1 Not a clause start.\n" };
+      for (const [name, text] of Object.entries(bad)) {
+        writeFileSync(join(fix, "decisions", name), text);
+      }
+      expect(await divergenceRecordProblems(client, fix)).toEqual(["DIV-02.md: not a DIV-<n>.md name", "DIV-6: no clause the parser recognises", "div-5.md: not a DIV-<n>.md name"]);
+      for (const name of Object.keys(bad)) {
+        rmSync(join(fix, "decisions", name));
+      }
+
       // escalations.open: the open and the stale one, not the bound one.
       const open = await client.value("escalations.open");
       expect(open).toEqual({
@@ -459,6 +470,14 @@ xaravelTest(
       expect(JSON.stringify((await client.value("conformance.rate", { component: first }))["bucket"])).toBe(JSON.stringify(real.components[first]));
       expect(((await client.value("escalations.open"))["escalations"] as { id: string }[]).map((item) => item.id)).toEqual(openEscalations(root));
       expect((await client.value("story.tests", { story: "7.3" }))["xaravelTestIds"]).toEqual(["XT-boost-1", "XT-boost-2", "XT-boost-3"]);
+
+      // Every real Divergence Record is addressable and has at least one clause the parser recognises.
+      expect(existsSync(join(root, "decisions"))).toBe(true);
+      expect(await divergenceRecordProblems(client, root)).toEqual([]);
+      if (!readdirSync(join(root, "decisions")).some((name) => /^div/i.test(name))) {
+        // None yet (Story 8.1 writes them): the missing-record path is explicit, not silent.
+        expect(await client.value("divergence.get", { id: "DIV-1" })).toMatchObject({ id: "DIV-1", exists: false, clauses: [] });
+      }
     });
     const { manifests } = readManifests(root);
     expect(manifests.length).toBeGreaterThan(0);
@@ -1166,6 +1185,43 @@ xaravelTest(
 );
 
 // ---------------------------------------------------------------------------
+// The Divergence Records under a root, checked through divergence.get
+
+/** One message per problem with `<dataRoot>/decisions/div*`: a name that is not `DIV-<n>.md`, an error, a missing record, no clause, a clause id not `DIV-<n>.<k>`. */
+async function divergenceRecordProblems(client: StdioClient, dataRoot: string): Promise<string[]> {
+  const problems: string[] = [];
+  const names = readdirSync(join(dataRoot, "decisions")).filter((name) => /^div/i.test(name)).sort();
+  for (const file of names) {
+    const match = /^DIV-([1-9]\d*)\.md$/.exec(file);
+    if (match === null) {
+      problems.push(`${file}: not a DIV-<n>.md name`);
+      continue;
+    }
+    const id = `DIV-${match[1]!}`;
+    const record = await client.call("divergence.get", { id });
+    if (record.isError === true) {
+      problems.push(`${id}: error ${record.content[0]?.text ?? ""}`);
+      continue;
+    }
+    const value = record.structuredContent ?? {};
+    if (value["exists"] !== true) {
+      problems.push(`${id}: exists ${String(value["exists"])}`);
+      continue;
+    }
+    const clauses = Array.isArray(value["clauses"]) ? (value["clauses"] as { id: unknown }[]) : [];
+    if (clauses.length === 0) {
+      problems.push(`${id}: no clause the parser recognises`);
+    }
+    for (const clause of clauses) {
+      if (typeof clause.id !== "string" || !new RegExp(`^${id}\\.[1-9]\\d*$`).test(clause.id)) {
+        problems.push(`${id}: clause ${String(clause.id)} is not ${id}.<k>`);
+      }
+    }
+  }
+  return problems;
+}
+
+// ---------------------------------------------------------------------------
 // XT-boost-6: the worktree is unchanged
 
 /** Calls every tool with valid and invalid arguments (and the refused ones the fixture can raise). */
@@ -1195,12 +1251,20 @@ async function callEveryTool(client: StdioClient, ids: { story: string; id: stri
     calls.push(["story.tests", { story: "9.8" }], ["divergence.get", { id: "DIV-7" }]);
   }
   let errors = 0;
+  const successes = new Map<string, number>();
   for (const [name, args] of calls) {
     const result = await client.call(name, args);
     expect(result.content.length).toBeGreaterThan(0);
-    errors += result.isError === true ? 1 : 0;
+    const failed = result.isError === true;
+    errors += failed ? 1 : 0;
+    successes.set(name, (successes.get(name) ?? 0) + (failed ? 0 : 1));
   }
-  // Each tool was called successfully at least once, and some calls failed.
+  // Every tool was called, each one succeeded at least once, and some calls failed.
+  expect([...successes.keys()].sort()).toEqual([...TOOL_NAMES].sort());
+  for (const name of TOOL_NAMES) {
+    const count = successes.get(name) ?? 0;
+    expect(`${name}: ${count > 0 ? "succeeded" : "never succeeded"}`).toBe(`${name}: succeeded`);
+  }
   expect(errors).toBeGreaterThan(0);
   expect(errors).toBeLessThan(calls.length);
   return errors;
