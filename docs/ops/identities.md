@@ -38,10 +38,8 @@ CI holds only these secrets. Each lives in one GitHub environment, so only the j
 | `ORACLE_SIGNING_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#oracle`, `oracle.yml#story` | The Ed25519 private key (PKCS#8 PEM) that signs Oracle fixtures. Its public half is `conformance/oracle/oracle.pub`, and its fingerprint is in [oracle.md](oracle.md#fixture-format-and-signature). |
 | `XARAVEL_ORACLE_APP_KEY` | `oracle`, restricted to the `main` branch | `oracle.yml#story` | The private key of the `xaravel-oracle` GitHub App ([below](#the-xaravel-oracle-github-app)). Only the pinned `actions/create-github-app-token` step reads it, to mint a short-lived installation token. |
 | `XARAVEL_BOT_APP_KEY` | `bot`, restricted to the `main` branch | `bots.yml#open` | The private key of the `xaravel-bot` GitHub App ([below](#the-xaravel-bot-github-app), Story 5.8). Only the pinned `actions/create-github-app-token` step reads it. |
-| `XARAVEL_FIDELITY_1_APP_KEY`, `XARAVEL_FIDELITY_2_APP_KEY` | `fidelity`, restricted to the `main` branch | `fidelity.yml#reviewer-1`, `fidelity.yml#reviewer-2` (one each) | The private keys of the reviewer Apps `xaravel-fidelity-1` and `xaravel-fidelity-2` ([below](#the-fidelity-review-apps), Story 8.5). Only the pinned `actions/create-github-app-token` step reads each. |
-| `ANTHROPIC_API_KEY` | `fidelity`, restricted to the `main` branch | `fidelity.yml#reviewer-1`, `fidelity.yml#reviewer-2` | The Anthropic API key the Fidelity Review's model calls use. Only the review step reads it. |
 
-The Apps' IDs are the repository variables `XARAVEL_ORACLE_APP_ID` and `XARAVEL_BOT_APP_ID`, and the `fidelity` environment variables `XARAVEL_FIDELITY_1_APP_ID` and `XARAVEL_FIDELITY_2_APP_ID` (not secrets).
+The Apps' IDs are the repository variables `XARAVEL_ORACLE_APP_ID` and `XARAVEL_BOT_APP_ID` (not secrets).
 
 The Maintainer generates the Oracle key pair off the agent host, stores the private key only as this secret, and commits the public key ([oracle.md](oracle.md#maintainer-run-steps)). The agent account never sees it, and no tool writes it to disk.
 
@@ -76,28 +74,9 @@ One-time setup (Maintainer):
 4. Generate a private key on a Maintainer machine. Store it as the secret `XARAVEL_BOT_APP_KEY` of the environment `bot`, then delete the downloaded file. Store the App ID as the repository variable `XARAVEL_BOT_APP_ID`.
 5. Do not add it as a ruleset bypass actor yet. `agent-push.json` is disabled through Phase 0, so the App can create `bot/*` today; when it is re-enabled at the Epic 8 checkpoint it would block the App, which ESC-5.8-1 asks the Maintainer to rule on.
 
-## The Fidelity Review Apps
+## The Fidelity Review has no identity
 
-The Fidelity Review ([fidelity-review.md](fidelity-review.md), Story 8.5) posts two GitHub PR reviews on every same-repository Story PR, one from each of two GitHub Apps, `xaravel-fidelity-1` and `xaravel-fidelity-2`. Their bot users, `xaravel-fidelity-1[bot]` and `xaravel-fidelity-2[bot]`, are two distinct identities and never the PR author, so `story:check`'s `approvals` clause counts both ([done-check.md](done-check.md)). Only `fidelity.yml#reviewer-1` mints the first App's token and only `fidelity.yml#reviewer-2` the second's; both run main's code under `pull_request_target` and never check out the PR.
-
-| | |
-| --- | --- |
-| Repository permissions | *Pull requests: read and write*, *Contents: read*, *Metadata: read*; nothing else |
-| Environment | `fidelity`, deployment branches restricted to `main` |
-| Variables | `XARAVEL_FIDELITY_1_APP_ID`, `XARAVEL_FIDELITY_2_APP_ID`; optional `XARAVEL_FIDELITY_MODEL` (default `claude-opus-5-5`) |
-| Secrets | `XARAVEL_FIDELITY_1_APP_KEY`, `XARAVEL_FIDELITY_2_APP_KEY`, `ANTHROPIC_API_KEY` (environment `fidelity`) |
-| Ruleset bypass | none |
-
-One-time setup (Maintainer; [ESC-8.5-1](../../conformance/escalations/ESC-8.5-1.md)):
-
-1. Create two GitHub Apps owned by the organisation, named `xaravel-fidelity-1` and `xaravel-fidelity-2`, each with no webhook and the permissions above.
-2. Install each on `xaravel/framework` only.
-3. Create the environment `fidelity` (Settings → Environments) and restrict its deployment branches to `main`, as for `oracle` and `bot`.
-4. For each App, generate a private key on a Maintainer machine, store it as the secret `XARAVEL_FIDELITY_<n>_APP_KEY` of the environment `fidelity`, then delete the downloaded file. Store the App ID as the variable `XARAVEL_FIDELITY_<n>_APP_ID`.
-5. Store the Anthropic API key as the secret `ANTHROPIC_API_KEY` of the environment `fidelity`.
-6. Never add either App as a ruleset bypass actor.
-
-Until this is done, each reviewer job prints a `::warning::` naming what is missing and posts nothing.
+The Fidelity Review ([fidelity-review.md](fidelity-review.md), ESC-8.5-1) has no GitHub App, environment, secret or API key. Its two reviewers are local agent CLI subprocesses (`claude -p`, `codex exec`) that the review step runs on the agent host, under that host's own CLI sign-ins. They write nothing to GitHub: their verdicts are recorded in the Story's spec and counted by `story:check`'s `approvals` clause ([done-check.md](done-check.md)). No workflow calls a model.
 
 ## Bootstrapping
 

@@ -4,3 +4,24 @@
 
 # Cross-epic lessons from retrospectives, kept by the orchestrator.
 persistent_facts = ["file:_bmad-output/implementation-artifacts/lessons.md"]
+
+# The Fidelity Review (ESC-8.5-1, AD-15.8, FR-111; docs/ops/fidelity-review.md):
+# two fresh-context reviewer subprocesses, reviewer 1 on the other agent CLI,
+# whose verdicts are recorded in the Story's spec and counted by story:check.
+[[workflow.review_layers]]
+id = "fidelity-review"
+name = "Fidelity Review"
+when = "the work is a Story (`<epic>.<story>`) and `stories/<id>.md` exists for it. Skip it for planning, retrospective and other non-Story work."
+instruction = """
+Do not launch a subagent for this layer. Run this command from the project root:
+
+bun run fidelity:review review --story <id> --spec {spec_file} --loop-cli <cli>
+
+`<id>` is the Story id. `<cli>` is the agent CLI running this loop: `claude` when you are Claude Code, `codex` when you are Codex. When `<cli>` is `claude`, prefix the command with `XARAVEL_FIDELITY_CLAUDE_MODEL=<your own model id>` (for example `XARAVEL_FIDELITY_CLAUDE_MODEL=claude-opus-5-5 bun run fidelity:review review …`), so the Claude reviewers run on the loop's model rather than the CLI's weaker default. The command runs two fresh-context reviewer subprocesses over the Story's diff against `conformance/review/fidelity.md`, reviewer 1 on the other CLI when it is available, and appends both verdicts to `{spec_file}` under `## Fidelity Review`. Never edit those records.
+
+It can run for over an hour (two 15-minute attempts on the other CLI, then two on the fallback). Run it as one blocking command with a timeout of at least 75 minutes; if your shell tool caps a command below that, start it in the background and wait for it to exit before reading its output. Launch it alongside the other layers.
+
+Its findings: each stdout line of the form `F-<n> <path>: <detail>` is one finding of this layer, and so is each stdout line `NO-VERDICT reviewer <n>: <reason>` (a reviewer that produced no verdict). Exit 0 with no such line is zero findings. Any other exit with no such line (a refusal before the reviewers ran, or a usage error) is one finding: `Fidelity Review produced no verdict: <its stderr>`.
+
+Finalize re-check: `bun run fidelity:review status --story <id> --spec {spec_file}`. When it does not print a line starting with `current`, the reviewed tree changed after this layer ran or a verdict is missing: run this layer again and triage its findings as a new review pass.
+"""
