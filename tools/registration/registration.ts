@@ -152,6 +152,11 @@ export interface RecognisedCall {
   readonly registration: RecognisedRegistration | null;
 }
 
+/** Whether `value` is shaped as a PHP FQCN: identifier segments joined by single `\`, with an optional leading `\`. */
+export function isFqcn(value: string): boolean {
+  return FQCN.test(value);
+}
+
 /** A PHP FQCN without its optional leading `\` (`\A\Foo` → `A\Foo`); the case is kept. */
 export function normaliseFqcn(fqcn: string): string {
   return fqcn.startsWith("\\") ? fqcn.slice(1) : fqcn;
@@ -184,7 +189,7 @@ function conforming(call: Node): RecognisedRegistration | null {
     return null;
   }
   const [fqcn, cls] = args as [Node, Node];
-  if (fqcn.type !== "Literal" || typeof fqcn["value"] !== "string" || !FQCN.test(fqcn["value"]) || cls.type !== "Identifier" || typeof cls["name"] !== "string") {
+  if (fqcn.type !== "Literal" || typeof fqcn["value"] !== "string" || !isFqcn(fqcn["value"]) || cls.type !== "Identifier" || typeof cls["name"] !== "string") {
     return null;
   }
   return { fqcn: normaliseFqcn(fqcn["value"]), literal: fqcn["value"], name: cls["name"] };
