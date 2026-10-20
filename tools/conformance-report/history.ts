@@ -1,7 +1,8 @@
 // The conformance history (Story 7.1; FR-5.4, FR-5.5).
 //
 //   bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>]
-//       [--remote <remote>] [--branch <branch>] [--history-out <file>]
+//       [--remote <remote>] [--branch <branch>] [--main-branch <branch>]
+//       [--history-out <file>]
 //       (`bun run conformance:history`, run by `.github/workflows/dashboard.yml`
 //       after `conformance:report` on every push to main) appends one record
 //       built from `report.json` (default `<root>/.cache/conformance/report.json`)
@@ -21,17 +22,25 @@
 //   `refs/xaravel-history/<branch>` (FETCH_HEAD is not written); when the
 //   remote has no such branch, an orphan commit holding only `history.jsonl`
 //   creates it.
+// - The source guard (`checkSource`, shared with publish.ts) runs on every
+//   attempt, after the fetch and before any commit is built: the report's
+//   commit must be the `commit` of the last line of `history.jsonl`, a
+//   descendant of it (`git merge-base --is-ancestor`), or the current tip of
+//   `--main-branch` (default `main`) on the remote (`git ls-remote`, looked up
+//   only when the ancestry test fails). Otherwise, e.g. a re-run of an older
+//   dashboard run, it refuses (`refusing <source>: …`, exit 1) and pushes
+//   nothing. An empty or missing history accepts any commit.
 // - The new commit is built with git plumbing (`hash-object`, a temporary
 //   index file, `write-tree`, `commit-tree`), so the caller's HEAD, index and
 //   working tree are never touched. It is authored by github-actions[bot].
 // - The push is a fast-forward of the branch (never forced). A non-fast-forward
 //   rejection refetches and re-appends, up to 3 retries.
 //
-// `git`, `gitOk`, `fetchTip`, `BOT` and `readReport` are exported for the
+// `git`, `gitOk`, `fetchTip`, `checkSource`, `BOT` and `readReport` are exported for the
 // site publish (publish.ts) and the site build (site.ts), Story 7.2.
 //
 // Exit codes: 0 ok (appended, created or already recorded), 1 data or git
-// error, 2 usage error.
+// error or a refused source commit, 2 usage error.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -40,6 +49,7 @@ import { DEFAULT_OUT, type Report } from "./report";
 
 export const DEFAULT_REMOTE = "origin";
 export const DEFAULT_BRANCH = "dashboard-data";
+export const DEFAULT_MAIN_BRANCH = "main";
 export const HISTORY_FILE = "history.jsonl";
 /** Retries after a non-fast-forward rejection. */
 export const PUSH_RETRIES = 3;
@@ -138,15 +148,80 @@ export function fetchTip(root: string, remote: string, branch: string): string |
   return gitOk(root, ["rev-parse", "--verify", `refs/xaravel-history/${branch}^{commit}`]).trim();
 }
 
-/** Builds the commit appending `record` on `tip` (an orphan when null), with the resulting content; a null commit when the key is already recorded. */
-function buildCommit(root: string, tip: string | null, record: HistoryRecord): { commit: string | null; content: string } {
-  let content = "";
-  if (tip !== null) {
-    const has = git(root, ["cat-file", "-e", `${tip}:${HISTORY_FILE}`]);
-    if (has.exitCode === 0) {
-      content = gitOk(root, ["cat-file", "blob", `${tip}:${HISTORY_FILE}`]);
+/** The commit `refs/heads/<branch>` points at on `remote`, or null when the remote has no such branch. */
+export function remoteTip(root: string, remote: string, branch: string): string | null {
+  const ref = `refs/heads/${branch}`;
+  for (const line of gitOk(root, ["ls-remote", "--heads", remote, ref]).split("\n")) {
+    const [sha, name] = line.split("\t");
+    if (name !== undefined && name.trim() === ref && sha !== undefined) {
+      return sha.trim();
     }
   }
+  return null;
+}
+
+/** A full SHA-1 or SHA-256 commit id. */
+const COMMIT_ID = /^[0-9a-f]{40,64}$/;
+
+/**
+ * The source-commit guard shared by the history append and the site publish:
+ * `source` may be recorded only when it is `last` (the last recorded or
+ * published source commit), a descendant of it, or the current tip of
+ * `mainBranch` on `remote`. A null `last` (a branch tip whose source cannot be
+ * read, or one that is not a full commit id) accepts only the `main` tip; a `last` missing from the local object
+ * store is not an ancestor. Throws HistoryError (`refusing <source>: …`)
+ * otherwise. Callers skip it when there is nothing recorded yet.
+ */
+export function checkSource(root: string, remote: string, mainBranch: string, source: string, last: string | null): void {
+  if (!COMMIT_ID.test(source)) {
+    throw new HistoryError(`refusing ${source}: not a commit id`);
+  }
+  if (last !== null && !COMMIT_ID.test(last)) {
+    last = null;
+  }
+  if (last !== null && (last === source || git(root, ["merge-base", "--is-ancestor", "--end-of-options", last, source]).exitCode === 0)) {
+    return;
+  }
+  const mainTip = remoteTip(root, remote, mainBranch);
+  if (mainTip !== null && mainTip === source) {
+    return;
+  }
+  throw new HistoryError(
+    `refusing ${source}: it is not a descendant of the last recorded or published source ${last ?? "unknown"}, nor the ${remote} ${mainBranch} tip ${mainTip ?? "missing"} (a re-run of an older run?)`,
+  );
+}
+
+/** Whether `content` has a non-empty line and, if so, the `commit` of the last one (null when it holds no string commit). */
+function lastSource(content: string, at: string): { found: boolean; commit: string | null } {
+  const lines = content.split("\n");
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const line = lines[index]!;
+    if (line === "") {
+      continue;
+    }
+    let value: unknown;
+    try {
+      value = JSON.parse(line);
+    } catch (error) {
+      throw new HistoryError(`${at}:${index + 1}: malformed JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    const commit = value !== null && typeof value === "object" ? (value as { commit?: unknown }).commit : null;
+    return { found: true, commit: typeof commit === "string" && commit !== "" ? commit : null };
+  }
+  return { found: false, commit: null };
+}
+
+/** The `history.jsonl` of `tip` (empty when the tip is null or has none). */
+function historyAt(root: string, tip: string | null): string {
+  if (tip === null || git(root, ["cat-file", "-e", `${tip}:${HISTORY_FILE}`]).exitCode !== 0) {
+    return "";
+  }
+  return gitOk(root, ["cat-file", "blob", `${tip}:${HISTORY_FILE}`]);
+}
+
+/** Builds the commit appending `record` on `tip` (an orphan when null), with the resulting content; a null commit when the key is already recorded. */
+function buildCommit(root: string, tip: string | null, record: HistoryRecord): { commit: string | null; content: string } {
+  let content = historyAt(root, tip);
   if (content !== "" && !content.endsWith("\n")) {
     content += "\n";
   }
@@ -177,11 +252,16 @@ function buildCommit(root: string, tip: string | null, record: HistoryRecord): {
 export const REJECTED = /\[rejected\]|non-fast-forward|fetch first|\[remote rejected\].*(?:cannot lock ref|stale info|incorrect old value)/;
 
 /** Appends the record of `report` to `history.jsonl` on `branch` of `remote`, and pushes it. */
-export function appendHistory(options: { root: string; remote: string; branch: string; report: Report }): AppendResult {
+export function appendHistory(options: { root: string; remote: string; branch: string; report: Report; mainBranch?: string }): AppendResult {
   const { root, remote, branch } = options;
+  const mainBranch = options.mainBranch ?? DEFAULT_MAIN_BRANCH;
   const record = historyRecord(options.report);
   for (let attempt = 1; attempt <= PUSH_RETRIES + 1; attempt++) {
     const tip = fetchTip(root, remote, branch);
+    const last = lastSource(historyAt(root, tip), HISTORY_FILE);
+    if (last.found) {
+      checkSource(root, remote, mainBranch, record.commit, last.commit);
+    }
     const { commit, content } = buildCommit(root, tip, record);
     if (commit === null) {
       return { outcome: "already recorded", tip: tip!, attempts: attempt - 1, content };
@@ -202,19 +282,20 @@ export function appendHistory(options: { root: string; remote: string; branch: s
 
 class UsageError extends Error {}
 
-const USAGE = "Usage: bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>] [--remote <remote>] [--branch <branch>] [--history-out <file>]";
-const FLAGS = ["--root", "--report", "--remote", "--branch", "--history-out"] as const;
+const USAGE = "Usage: bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>] [--remote <remote>] [--branch <branch>] [--main-branch <branch>] [--history-out <file>]";
+const FLAGS = ["--root", "--report", "--remote", "--branch", "--main-branch", "--history-out"] as const;
 
 interface Args {
   root: string;
   report: string | null;
   remote: string;
   branch: string;
+  mainBranch: string;
   historyOut: string | null;
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const args: Args = { root: resolve(import.meta.dir, "..", ".."), report: null, remote: DEFAULT_REMOTE, branch: DEFAULT_BRANCH, historyOut: null };
+  const args: Args = { root: resolve(import.meta.dir, "..", ".."), report: null, remote: DEFAULT_REMOTE, branch: DEFAULT_BRANCH, mainBranch: DEFAULT_MAIN_BRANCH, historyOut: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (!(FLAGS as readonly string[]).includes(arg)) {
@@ -234,9 +315,13 @@ function parseArgs(argv: readonly string[]): Args {
       args.historyOut = resolve(value);
     } else {
       if (git(args.root, ["check-ref-format", `refs/heads/${value}`]).exitCode !== 0) {
-        throw new UsageError(`--branch ${JSON.stringify(value)} is not a valid branch name`);
+        throw new UsageError(`${arg} ${JSON.stringify(value)} is not a valid branch name`);
       }
-      args.branch = value;
+      if (arg === "--main-branch") {
+        args.mainBranch = value;
+      } else {
+        args.branch = value;
+      }
     }
   }
   return args;
@@ -264,7 +349,7 @@ export function main(argv: readonly string[]): number {
   try {
     const args = parseArgs(argv);
     const report = readReport(args.report ?? join(args.root, DEFAULT_OUT));
-    const result = appendHistory({ root: args.root, remote: args.remote, branch: args.branch, report });
+    const result = appendHistory({ root: args.root, remote: args.remote, branch: args.branch, report, mainBranch: args.mainBranch });
     if (args.historyOut !== null) {
       mkdirSync(dirname(args.historyOut), { recursive: true });
       writeFileSync(args.historyOut, result.content);

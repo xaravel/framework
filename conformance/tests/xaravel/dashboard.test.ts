@@ -349,6 +349,74 @@ xaravelTest("XT-conformance-146", "on every push to main the dashboard job publi
   expect(cli(PUBLISH, ["--root", caller, "--dir", emptyDir]).exitCode).toBe(1);
   expect(pagesTip()).toBe(updated.tip);
 
+  // Each publish commit names its full source commit in a Source-Commit trailer after the 12-hex subject.
+  const messageOf = (commit: string): string => git(remote, ["log", "-1", "--format=%B", commit]);
+  expect(messageOf(first)).toBe(`conformance site: ${head.slice(0, 12)}\n\nSource-Commit: ${head}\n\n`);
+  expect(messageOf(updated.tip)).toBe(`conformance site: ${head.slice(0, 12)}\n\nSource-Commit: ${head}\n\n`);
+  // A newer caller commit (HEAD moved by update-ref, so the index and working tree stay) publishes.
+  const newer = git(caller, ["commit-tree", `${head}^{tree}`, "-p", head, "-m", "newer"]).trim();
+  git(caller, ["update-ref", "refs/heads/work", newer]);
+  writeFileSync(join(out, "index.html"), "newer\n");
+  const newerRun = cli(PUBLISH, ["--root", caller, "--dir", out]);
+  expect(newerRun.stderr).toBe("");
+  expect(newerRun.stdout).toMatch(/^conformance:publish: updated origin gh-pages at [0-9a-f]{40}\n$/);
+  const newerTip = pagesTip();
+  expect(git(remote, ["rev-parse", "gh-pages^"]).trim()).toBe(updated.tip);
+  expect(messageOf(newerTip)).toContain(`\nSource-Commit: ${newer}\n`);
+  // Publishing from the older commit is refused with gh-pages unchanged, whether or not the tree differs.
+  git(caller, ["update-ref", "refs/heads/work", head]);
+  const staleRefusal = `conformance:publish: refusing ${head}: it is not a descendant of the last recorded or published source ${newer}, nor the origin main tip missing (a re-run of an older run?)\n`;
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out])).toEqual({ exitCode: 1, stdout: "", stderr: staleRefusal });
+  writeFileSync(join(out, "index.html"), "stale\n");
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out])).toEqual({ exitCode: 1, stdout: "", stderr: staleRefusal });
+  expect(() => publishSite({ root: caller, remote: "origin", branch: "gh-pages", dir: out, mainBranch: "main" })).toThrow(staleRefusal.slice("conformance:publish: ".length, -1));
+  expect(pagesTip()).toBe(newerTip);
+  expect(git(remote, ["show", "gh-pages:index.html"])).toBe("newer\n");
+  // An old-format tip (subject only, no trailer) resolves its source via the 12-hex subject.
+  const pushPages = (subject: string): string => {
+    const commit = git(caller, ["commit-tree", `${newerTip}^{tree}`, "-p", pagesTip(), "-m", subject]).trim();
+    git(caller, ["push", "-q", remote, `${commit}:refs/heads/gh-pages`]);
+    return commit;
+  };
+  const oldFormat = pushPages(`conformance site: ${newer.slice(0, 12)}`);
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out])).toEqual({ exitCode: 1, stdout: "", stderr: staleRefusal });
+  expect(pagesTip()).toBe(oldFormat);
+  // An old-format subject that does not resolve accepts only the main tip.
+  const unresolvable = pushPages(`conformance site: ${"0".repeat(12)}`);
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out])).toEqual({
+    exitCode: 1,
+    stdout: "",
+    stderr: `conformance:publish: refusing ${head}: it is not a descendant of the last recorded or published source unknown, nor the origin main tip missing (a re-run of an older run?)\n`,
+  });
+  expect(pagesTip()).toBe(unresolvable);
+  git(caller, ["push", "-q", remote, `${head}:refs/heads/main`]);
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out, "--main-branch", "trunk"]).exitCode).toBe(1);
+  expect(pagesTip()).toBe(unresolvable);
+  const onMain = cli(PUBLISH, ["--root", caller, "--dir", out]);
+  expect(onMain.stderr).toBe("");
+  expect(onMain.stdout).toMatch(/^conformance:publish: updated origin gh-pages at [0-9a-f]{40}\n$/);
+  expect(git(remote, ["rev-parse", "gh-pages^"]).trim()).toBe(unresolvable);
+  expect(messageOf(pagesTip())).toContain(`\nSource-Commit: ${head}\n`);
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out, "--main-branch", "bad..name"]).exitCode).toBe(2);
+  // A Source-Commit trailer naming a commit absent from the object store is not an ancestor: only the main tip publishes.
+  const absent = "9".repeat(40);
+  const absentTip = pushPages(`conformance site: ${absent.slice(0, 12)}\n\nSource-Commit: ${absent}`);
+  git(caller, ["update-ref", "refs/heads/work", newer]);
+  expect(cli(PUBLISH, ["--root", caller, "--dir", out])).toEqual({
+    exitCode: 1,
+    stdout: "",
+    stderr: `conformance:publish: refusing ${newer}: it is not a descendant of the last recorded or published source ${absent}, nor the origin main tip ${head} (a re-run of an older run?)\n`,
+  });
+  expect(pagesTip()).toBe(absentTip);
+  git(caller, ["update-ref", "refs/heads/work", head]);
+  // A caller with no commit has no source: refused, gh-pages unchanged.
+  const noHead = tempDir("dashboard-no-head");
+  git(noHead, ["init", "-q", "."]);
+  expect(cli(PUBLISH, ["--root", noHead, "--dir", out])).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:publish: ${noHead} has no HEAD commit; refusing to publish without a source commit\n` });
+  expect(pagesTip()).toBe(absentTip);
+  expect(git(caller, ["rev-parse", "HEAD"]).trim()).toBe(head);
+  expect(git(caller, ["status", "--porcelain=v1", "--branch"])).toBe(status);
+
   // The real repository, as CI builds it: no --api-surface (diffComponents runs), the real Story manifests, sprint
   // status, Escalations and git history.
   const realReport = join(tempDir("dashboard-real-report"), "report.json");
@@ -370,7 +438,7 @@ xaravelTest("XT-conformance-146", "on every push to main the dashboard job publi
     expect([component, realApi.includes(`<tr><td><a href="api-surface/${component}.html">${component}</a></td>`), existsSync(join(realOut, "api-surface", `${component}.html`))]).toEqual([component, true, true]);
   }
 
-  // The workflow: push to main; checkout with full history and no persisted credentials; install, report, history,
+  // The workflow: push to main; checkout with full history and no persisted credentials; install, the Expectations check, report, history,
   // site, publish in that order; the token only on the history and publish steps; contents: write and nothing else.
   const text = readFileSync(join(root, ".github", "workflows", "dashboard.yml"), "utf8");
   const flow = Bun.YAML.parse(text) as Workflow;
@@ -384,13 +452,14 @@ xaravelTest("XT-conformance-146", "on every push to main the dashboard job publi
   const lastLines = job.steps.filter((step) => step.run !== undefined).map((step) => step.run!.trimEnd().split("\n").at(-1));
   expect(lastLines).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
+    "bun run expectations:check",
     "bun run conformance:report",
     "bun run conformance:history --history-out .cache/conformance/history.jsonl",
     'bun run conformance:site --history .cache/conformance/history.jsonl --repo "$GITHUB_REPOSITORY"',
     "bun run conformance:publish --dir .cache/conformance/site",
   ]);
   const withToken = job.steps.filter((step) => JSON.stringify(step).includes("github.token")).map((step) => step.run!.trimEnd().split("\n").at(-1));
-  expect(withToken).toEqual([lastLines[2], lastLines[4]]);
+  expect(withToken).toEqual([lastLines[3], lastLines[5]]);
   for (const forbidden of ["id-token", "pages: write", "deploy-pages", "upload-pages-artifact"]) {
     expect([forbidden, text.split("\n").filter((line) => !line.trimStart().startsWith("#")).join("\n").includes(forbidden)]).toEqual([forbidden, false]);
   }
