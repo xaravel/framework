@@ -1,0 +1,53 @@
+{
+  "bun": "1.4.3",
+  "probes": {
+    "als.async-generator": {
+      "status": "unsupported",
+      "escalation": "ESC-8.3-1"
+    },
+    "als.await": {
+      "status": "supported",
+      "escalation": null
+    },
+    "als.direct-stream": {
+      "status": "unsupported",
+      "escalation": "ESC-8.3-1"
+    },
+    "als.serve-callbacks": {
+      "status": "unsupported",
+      "escalation": "ESC-8.3-2"
+    },
+    "als.stream-body": {
+      "status": "supported",
+      "escalation": null
+    },
+    "als.timers": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-image.laravel-api": {
+      "status": "unsupported",
+      "escalation": "ESC-8.3-3"
+    },
+    "bun-test.assertion-counts": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-test.failing": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-test.preload-afterEach": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-test.setSystemTime": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-test.skipIf": {
+      "status": "supported",
+      "escalation": null
+    }
+  }
+}

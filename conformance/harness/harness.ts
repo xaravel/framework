@@ -134,8 +134,9 @@
 // no backend, and some start harness runs of their own, on the real root
 // too), then spawns one more `bun test` as above, with `XARAVEL_VARIANT=none`
 // and without `XARAVEL_INVENTORY`,
-// over every `conformance/tests/xaravel/**/*.test.ts` and
-// `packages/*/tests/xaravel/**/*.test.ts` (with `-t` when `--id` globs are
+// over every `conformance/tests/xaravel/**/*.test.ts`,
+// `packages/*/tests/xaravel/**/*.test.ts` and `conformance/probes/**/*.test.ts`
+// (Story 8.3) (with `-t` when `--id` globs are
 // given), and reads the preload's `type: "xaravel"` reports. Its report lines
 // (`<id> [xaravel] FAIL|MISSING|LATE`, `- [xaravel] UNDECLARED <name>`, and
 // `ERROR [xaravel] bun test exited <n> with no failing testcase`) follow the

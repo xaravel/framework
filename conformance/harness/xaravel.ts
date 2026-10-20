@@ -36,7 +36,7 @@ import type { JunitCase } from "./junit";
 import { globSource, globToRegExp } from "./select";
 
 /** The Xaravel Test files, relative to the root. */
-export const XARAVEL_GLOBS = ["conformance/tests/xaravel/**/*.test.ts", "packages/*/tests/xaravel/**/*.test.ts"] as const;
+export const XARAVEL_GLOBS = ["conformance/tests/xaravel/**/*.test.ts", "packages/*/tests/xaravel/**/*.test.ts", "conformance/probes/**/*.test.ts"] as const;
 
 /** The `xaravelTest` id form (packages/assert's `xaravelTest`). */
 export const XT_ID = /^XT-[a-z0-9]+(-[a-z0-9]+)*-[1-9][0-9]*$/;
