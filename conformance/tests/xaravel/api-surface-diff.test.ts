@@ -42,7 +42,7 @@ function write(dir: string, files: Readonly<Record<string, string>>): void {
   }
 }
 
-/** A temp root holding the fixture: `packages/demo`, `conformance/api-surface/{demo,additions,exceptions}.jsonl` and the DIV-12 pairs. */
+/** A temp root holding the fixture: `packages/demo`, `conformance/api-surface/{demo,additions,exceptions}.jsonl`, the schema and the DIV-12 pairs. */
 function demoRoot(): string {
   const dir = tempDir("xaravel-api-surface-");
   cpSync(join(FIXTURES, "demo"), join(dir, "packages", "demo"), { recursive: true });
@@ -51,6 +51,8 @@ function demoRoot(): string {
   for (const name of ["demo.jsonl", "additions.jsonl", "exceptions.jsonl"]) {
     cpSync(join(FIXTURES, name), join(dir, "conformance", "api-surface", name));
   }
+  // The gate validates the citation files against the repository's schema (checkCitations).
+  cpSync(join(root, "conformance", "api-surface", "schema.json"), join(dir, "conformance", "api-surface", "schema.json"));
   cpSync(join(FIXTURES, "div12-pairs.jsonl"), join(dir, "conformance", "scans", "div12-pairs.jsonl"));
   return dir;
 }
@@ -290,18 +292,31 @@ function matrixEdgeCases(): void {
     sources: [{ file: "src/f.ts", text: "export const doIt = (a = 2): void => {\n  void a;\n};\n" }],
   });
   expect(consts.items.map((item) => renderItem("x", item))).toEqual(["x: mismatch function X\\do_it: parameter 1 default 2, Upstream 1"]);
-  // Contracts (AD-1): a top-level const holding Symbol.for('<FQCN>') registers the interface of that name; registerClass wins.
+  // Contracts (AD-1): a top-level const holding Symbol.for('<FQCN>') with an Illuminate\… or Laravel\… FQCN registers the
+  // interface of that name; contract('<FQCN>') takes any FQCN; registerClass wins.
+  const LOCK = "Illuminate\\Contracts\\Lock";
   const contracts = diffComponent({
     component: "x",
-    upstream: [{ fqcn: "X\\Lock", kind: "interface", member: null }, method("X\\Lock", "release"), { fqcn: "X\\Gate", kind: "interface", member: null }, method("X\\Gate", "allows")],
+    upstream: [{ fqcn: LOCK, kind: "interface", member: null }, method(LOCK, "release"), { fqcn: "X\\Gate", kind: "interface", member: null }, method("X\\Gate", "allows")],
     additions: [],
     exceptions: [],
     div12: [],
     declarations: [{ file: "src/L.ts", text: "export interface Lock {\n  release(): void;\n}\nexport declare const Lock: { readonly brand: symbol };\nexport interface Gate {\n  denies(): void;\n}\nexport declare class G {\n  allows(): void;\n}\n" }],
-    sources: [{ file: "src/L.ts", text: 'export const Lock = { brand: Symbol.for("X\\\\Lock") };\nconst Gate = contract("X\\\\Gate");\nexport class G {}\nregisterClass("X\\\\Gate", G);\n' }],
+    sources: [{ file: "src/L.ts", text: 'export const Lock = { brand: Symbol.for("Illuminate\\\\Contracts\\\\Lock") };\nconst Gate = contract("X\\\\Gate");\nexport class G {}\nregisterClass("X\\\\Gate", G);\n' }],
   });
   expect(contracts.items.map((item) => renderItem("x", item))).toEqual([]);
   expect(contracts.matched).toBe(4);
+  // Symbol.for registers only an Illuminate\… or Laravel\… FQCN (a leading `\` dropped): not a runtime brand, another
+  // namespace, a bare or run-on prefix; the first qualifying Symbol.for in the initializer counts.
+  const tokens = (text: string): string[] =>
+    diffComponent({ component: "x", upstream: [], additions: [], exceptions: [], div12: [], declarations: [], sources: [{ file: "src/T.ts", text }] }).items.map((item) => renderItem("x", item));
+  expect(tokens('const SLOT = { key: Symbol.for("xaravel.cache.slot") };\nexport const BRAND = Symbol.for("xaravel.class.fqcn");\n')).toEqual([]);
+  expect(tokens('const L = { brand: Symbol.for("X\\\\Lock") };\n')).toEqual([]);
+  expect(tokens('const A = Symbol.for("Illuminate");\nconst B = Symbol.for("IlluminateX\\\\A");\nconst C = Symbol.for("Laravel");\nconst D = Symbol.for("Illuminate\\\\");\nconst E = Symbol.for("Illuminate\\\\\\\\A");\n')).toEqual([]);
+  expect(tokens('const L = { brand: Symbol.for("Illuminate\\\\Contracts\\\\Lock") };\nconst T = { a: Symbol.for("xaravel.x"), b: Symbol.for("\\\\Laravel\\\\Mcp\\\\Tool") };\n')).toEqual([
+    "x: extra class Illuminate\\Contracts\\Lock",
+    "x: extra class Laravel\\Mcp\\Tool",
+  ]);
   // A declaration that does not parse fails, naming the file.
   expect(() => single([], "f(: void;")).toThrow("src/A.ts (declarations) does not parse");
 }
@@ -384,8 +399,9 @@ xaravelTest(
     expect(half.stdout).toContain(`demo: stale exception ${R}::getURL: DIV-12\n`);
 
     // Every remaining item explained: mismatches and the missing function by exceptions (a member line, a class-level
-    // null line, a function's null line), the renamed one by both files. Lines for another component are ignored.
+    // null line, a function's null line), the renamed one by both files. Lines for another (known) component are ignored.
     write(dir, {
+      "conformance/api-surface/other.jsonl": `${JSON.stringify({ fqcn: "Other\\Thing", kind: "class", member: null, stubbed: [] })}\n`,
       "conformance/api-surface/exceptions.jsonl":
         line("demo", "Demo\\Missing", null, "deferred:demo-missing") +
         line("demo", R, null, "DIV-3") +
@@ -421,7 +437,67 @@ xaravelTest(
     );
     const passed = cli(dir, ["--gate", "demo"]);
     expect(passed.stdout).toBe("api-surface:gate demo: 0 unexplained (AD-15)\n");
+    expect(passed.stderr).toBe("");
     expect(passed.exitCode).toBe(0);
+    const valid = { exceptions: readFileSync(join(dir, "conformance", "api-surface", "exceptions.jsonl"), "utf8"), additions: readFileSync(join(dir, "conformance", "api-surface", "additions.jsonl"), "utf8") };
+
+    // A citation line whose component has no component file is a tool failure, in report and gate mode alike.
+    write(dir, { "conformance/api-surface/exceptions.jsonl": valid.exceptions + line("nope", R, "touch", "DIV-1") });
+    for (const args of [["demo"], ["--gate", "demo"]]) {
+      const unknown = cli(dir, args);
+      expect(unknown.exitCode).toBe(1);
+      expect(unknown.stdout).toBe("");
+      expect(unknown.stderr).toBe("api-surface: conformance/api-surface/exceptions.jsonl:6: unknown component nope (no conformance/api-surface/nope.jsonl)\n");
+    }
+    write(dir, { "conformance/api-surface/exceptions.jsonl": valid.exceptions });
+
+    // The gate validates the citation files (checkCitations): an empty citation explains its item, but the gate fails,
+    // printing each problem after the component lines; report mode is unchanged.
+    write(dir, { "conformance/api-surface/additions.jsonl": valid.additions.replace('"citation":"FR-115"}', '"citation":""}') });
+    const empty = cli(dir, ["--gate", "demo"]);
+    expect(empty.exitCode).toBe(1);
+    expect(empty.stdout).toBe(
+      [
+        "api-surface:gate demo: 0 unexplained (AD-15)",
+        String.raw`api-surface:gate citation problem: conformance/api-surface/additions.jsonl:1: $.citation: "" does not match ^(?:FR-[1-9][0-9]*|DIV-(?:[1-9]|1[0-2])(?:\.[1-9][0-9]*)?)$`,
+        "api-surface:gate citations: 1 problem(s) (AD-15)",
+        "",
+      ].join("\n"),
+    );
+    const report = cli(dir, ["--details", "demo"]);
+    expect(report.exitCode).toBe(0);
+    expect(report.stdout).toContain(String.raw`demo: extra class Demo\Extra (explained: )` + "\n");
+    // Unsorted and non-canonical lines: one problem line each, in file order, then the count.
+    write(dir, {
+      "conformance/api-surface/additions.jsonl": valid.additions,
+      "conformance/api-surface/exceptions.jsonl":
+        line("demo", R, null, "DIV-3") +
+        line("demo", R, "getURL", "DIV-12") +
+        line("demo", "Demo\\Missing", null, "deferred:demo-missing") +
+        `${JSON.stringify({ fqcn: "Demo\\other_fn", component: "demo", member: null, citation: "deferred:helpers" })}\n`,
+    });
+    const unsorted = cli(dir, ["--gate", "demo"]);
+    expect(unsorted.exitCode).toBe(1);
+    expect(unsorted.stderr).toBe("");
+    expect(unsorted.stdout).toBe(
+      [
+        "api-surface:gate demo: 0 unexplained (AD-15)",
+        "api-surface:gate citation problem: conformance/api-surface/exceptions.jsonl:3: not sorted (by component, fqcn, member)",
+        String.raw`api-surface:gate citation problem: conformance/api-surface/exceptions.jsonl:4: the line is not in canonical form (compact JSON, keys component, fqcn, member, citation); expected {"component":"demo","fqcn":"Demo\\other_fn","member":null,"citation":"deferred:helpers"}`,
+        "api-surface:gate citations: 2 problem(s) (AD-15)",
+        "",
+      ].join("\n"),
+    );
+    expect(cli(dir, ["demo"]).exitCode).toBe(0);
+
+    // A checkCitations failure (no schema under the root) is a tool failure, not a pass.
+    const schemaPath = join(dir, "conformance", "api-surface", "schema.json");
+    const schemaText = readFileSync(schemaPath, "utf8");
+    rmSync(schemaPath);
+    const noSchema = cli(dir, ["--gate", "demo"]);
+    expect(noSchema.exitCode).toBe(1);
+    expect(noSchema.stderr).toBe("api-surface: conformance/api-surface/schema.json is missing\n");
+    writeFileSync(schemaPath, schemaText);
 
     // A class-level null addition explains every extra member of the class; an exact line is preferred.
     const extra = diffComponent({

@@ -3,22 +3,22 @@
 AD-15 holds each package's public TypeScript surface to Upstream's: every public Upstream class member must exist in the port under its mapped name, with the same parameter names, defaults and nullability, unless a cited line explains the gap. `bun run api-surface` diffs each package's emitted `.d.ts` against the Upstream export `conformance/api-surface/<component>.jsonl` ([oracle.md](oracle.md#api-surface-bun-run-oracleapi-surface)) and reports the findings; `bun run api-surface:gate` fails while any is unexplained (Story 6.5; AD-15, AD-9, AD-26, DIV-12).
 
 ```sh
-bun run api-surface <component>…                     # one summary line per component; always exits 0
+bun run api-surface <component>…                     # one summary line per component; exits 0 unless a tool failure (e.g. an unknown citation component)
 bun run api-surface --all                            # every component, sorted
 bun run api-surface --details <component>…           # one line per finding, then the summary
 bun run api-surface --all --markdown <file>          # also writes the per-Component table (CI's job summary)
-bun run api-surface:gate <component>…                # exits 1 while anything is unexplained
+bun run api-surface:gate <component>…                # exits 1 while anything is unexplained or a citation file has a problem
 bun --no-env-file tools/api-surface/api-surface.ts --root <dir> …   # a temp root (tests)
 ```
 
-A component is a `conformance/api-surface/<name>.jsonl` other than `additions.jsonl` and `exceptions.jsonl`; its package is `packages/<name>`. An unknown component, or neither a component nor `--all`, exits 2 naming it. A tool failure (tsc fails, a jsonl file is unreadable or invalid, a declaration or source does not parse) exits 1 with the reason.
+A component is a `conformance/api-surface/<name>.jsonl` other than `additions.jsonl` and `exceptions.jsonl`; its package is `packages/<name>`. An unknown component, or neither a component nor `--all`, exits 2 naming it. A tool failure (tsc fails, a jsonl file is unreadable or invalid, a citation line names a component with no `conformance/api-surface/<component>.jsonl`, a declaration or source does not parse) exits 1 with the reason, in report and gate mode alike: `api-surface: conformance/api-surface/exceptions.jsonl:<n>: unknown component nope (no conformance/api-surface/nope.jsonl)`. A component is known when its file exists under `--root`, whichever components were selected.
 
-A Component's last Epic is accepted against `bun run api-surface:gate <component>` (AD-15): zero unexplained members.
+A Component's last Epic is accepted against `bun run api-surface:gate <component>` (AD-15): zero unexplained members, zero citation problems and no tool failure.
 
 ## How it works
 
 1. **Build.** The packages with a `packages/<c>/package.json` are built with one `tsc -b`, Story 6.4's helper (`emitDeclarations` in `tools/async-surface/async-surface.ts`), and their `<tsconfig outDir>/src/**/*.d.ts` are read with its `packageDeclarations` (a deleted source's stale `.d.ts` is dropped). A component without a package has no declarations: everything is missing.
-2. **Registrations.** In each `packages/<c>/src/**/*.ts` (not `.d.ts`, parsed with `oxc-parser`, `lang: "ts"`), a top-level statement `registerClass('<FQCN>', X)` maps the FQCN to that file and local name `X` (AD-10). What counts as a registration is decided by Story 6.6's recogniser (`recogniseRegistration` in `tools/registration/registration.ts`, [registration.md](registration.md)), so only a call the scan accepts as conforming registers; the FQCN is keyed without its leading `\` (`registerClass('\\X\\A', A)` matches Upstream `X\A`) and with its case as written. The first registration of an FQCN wins; the duplicate scan is Story 6.6's. An interface is never `registerClass`ed: AD-1 ports it as an `interface X` plus a same-named runtime token, so a top-level `const X = …` (exported or not) whose initializer is a call `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or contains a `Symbol.for('<FQCN>')` call with a string literal, also registers that FQCN (likewise without a leading `\`) to `X`; its members come from the same-named interface or class in the file's `.d.ts`. A `registerClass` of the same FQCN wins over a token.
+2. **Registrations.** In each `packages/<c>/src/**/*.ts` (not `.d.ts`, parsed with `oxc-parser`, `lang: "ts"`), a top-level statement `registerClass('<FQCN>', X)` maps the FQCN to that file and local name `X` (AD-10). What counts as a registration is decided by Story 6.6's recogniser (`recogniseRegistration` in `tools/registration/registration.ts`, [registration.md](registration.md)), so only a call the scan accepts as conforming registers; the FQCN is keyed without its leading `\` (`registerClass('\\X\\A', A)` matches Upstream `X\A`) and with its case as written. The first registration of an FQCN wins; the duplicate scan is Story 6.6's. An interface is never `registerClass`ed: AD-1 ports it as an `interface X` plus a same-named runtime token, so a top-level `const X = …` (exported or not) whose initializer is a call `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or contains a `Symbol.for('<FQCN>')` call with a string literal that is an Upstream FQCN, also registers that FQCN (likewise without a leading `\`) to `X`. A `Symbol.for` argument counts only when it has Story 6.6's FQCN shape (`isFqcn` in `tools/registration/registration.ts`) and its first segment, after an optional leading `\`, is `Illuminate` or `Laravel` (`Illuminate\Contracts\Lock`, `\Laravel\Mcp\Tool`); runtime brands such as `Symbol.for("xaravel.class.fqcn")`, other namespaces (`X\Lock`) and a bare or run-on prefix (`Illuminate`, `IlluminateX\A`) register nothing, and the first qualifying `Symbol.for` in the initializer is used. `contract('<FQCN>')` takes any string literal; its members come from the same-named interface or class in the file's `.d.ts`. A `registerClass` of the same FQCN wins over a token.
 3. **Members.** A registered class's members are the public members of every `class` and `interface` named `X` in that file's `.d.ts`, merged; `private`, `protected`, `#private` and computed keys are skipped. A method (`constructor` counts as `__construct`), a getter or setter (a property), a field or accessor (a property; a function-typed one also counts as a method signature), an interface method or property signature. Overloads of one name are one member with several signatures. Functions are the exported `declare function`s of any `.d.ts` in the package, and its exported `declare const`s typed as a function (the `.d.ts` of `export const f = (…) => …`).
 4. **Defaults** are read from the source: the class (or function, or `const` holding an arrow or function expression) of the same name in the source `.ts`, from the implementation's parameter initializers, by position, skipping a `this` parameter. A member with one signature takes them; an overload takes them only when its parameter names equal the implementation's, and otherwise its defaults are not compared.
 
@@ -55,7 +55,7 @@ Returns: `undefined` at the top level of the TS return type (through parentheses
 
 ## Explained items
 
-`conformance/api-surface/exceptions.jsonl` and `additions.jsonl` are Protected, hand-written through Maintainer review, and validated by `bun run oracle:api-surface --check` ([oracle.md](oracle.md#citation-files)); this tool only reads them.
+`conformance/api-surface/exceptions.jsonl` and `additions.jsonl` are Protected, hand-written through Maintainer review, and validated by `bun run oracle:api-surface --check` ([oracle.md](oracle.md#citation-files)); this tool only reads them. Gate mode runs the same validation (`checkCitations` in `tools/oracle/api-surface.ts`) on every run, so an empty or mistyped citation, a non-canonical, unsorted or duplicate line fails the gate even where `oracle.yml` did not run. Every line's `component` must name a component file (see above). Both checks cover every line of both citation files, not only the selected components' lines, so a bad line for component B fails `api-surface:gate A` too.
 
 - A `missing` or `mismatch` item is explained by an `exceptions.jsonl` line with its component, FQCN and Upstream member name, or `member: null` for the whole declaration and its members.
 - An `extra` item is explained by an `additions.jsonl` line with the Xaravel member name, or `member: null` for the whole class.
@@ -71,7 +71,14 @@ Report mode, per component (with `--details`, its item lines first):
 api-surface <c>: <n> Upstream, <m> matched, <a> missing, <b> renamed, <e> extra, <x> mismatched, <d> div12; <u> unexplained (AD-15)
 ```
 
-`Upstream` counts the component file's lines; `matched` counts registered declarations and the members and functions that matched with no mismatch. `--markdown <file>` writes a table with the columns Component, Upstream, Matched, Missing, Renamed, Extra, Mismatched and Unexplained, and a Total row. Gate mode prints every unexplained item, then `api-surface:gate <c>: <u> unexplained (AD-15)` per component, and exits 1 if any count is not zero.
+`Upstream` counts the component file's lines; `matched` counts registered declarations and the members and functions that matched with no mismatch. `--markdown <file>` writes a table with the columns Component, Upstream, Matched, Missing, Renamed, Extra, Mismatched and Unexplained, and a Total row. Gate mode prints every unexplained item, then `api-surface:gate <c>: <u> unexplained (AD-15)` per component. After the component lines it prints each citation-file problem `checkCitations` reports, then a count line, both only when there is a problem:
+
+```
+api-surface:gate citation problem: <problem>
+api-surface:gate citations: <n> problem(s) (AD-15)
+```
+
+It exits 1 if any count is not zero or any citation problem is found.
 
 Every Component package is a scaffold today, so `--all` reports nearly everything missing. That is expected: only the gate, run at a Component's last Epic, enforces it.
 

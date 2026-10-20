@@ -13,7 +13,9 @@
 // missing), maps each top-level `registerClass('<FQCN>', X)` in
 // `packages/<c>/src/**/*.ts` that Story 6.6's `recogniseRegistration` accepts
 // (or, for a contract, a top-level `const X = contract('<FQCN>')` or one
-// holding `Symbol.for('<FQCN>')`, AD-1), keyed by the FQCN without its leading
+// holding `Symbol.for('<FQCN>')` whose argument is an `Illuminate\…` or
+// `Laravel\…` FQCN, so runtime brands such as `Symbol.for("xaravel.class.fqcn")`
+// register nothing, AD-1), keyed by the FQCN without its leading
 // `\` (`normaliseFqcn`; the case is kept), to the `class`/`interface` `X` of
 // that file's `.d.ts`, and compares its public members with the Upstream records, after
 // the parity mappings: camelCase (`camel`), `__construct` → `constructor`,
@@ -24,24 +26,30 @@
 // (Upstream members DIV-12 says are not expected; never counted). An item is
 // explained by a cited `exceptions.jsonl` (missing, mismatch) or
 // `additions.jsonl` (extra) line, `renamed` by both; citation lines that
-// explain nothing are listed as `stale`. docs/ops/api-surface.md has the rules.
+// explain nothing are listed as `stale`. A citation line whose `component` has
+// no `<component>.jsonl` is a tool failure. docs/ops/api-surface.md has the rules.
 //
 // Report mode prints one summary line per component (with `--details`, one
 // line per item before it), writes a markdown table with `--markdown`, and
 // exits 0 whatever it finds. `--gate` prints every unexplained item and a
-// gate line per component, and exits 1 if any is unexplained.
+// gate line per component, then validates the citation files with the oracle
+// tool's `checkCitations` (one `citation problem` line each and a count line),
+// and exits 1 if any item is unexplained or any citation problem is found.
 //
 // The walk is syntactic: inherited members, trait members supplied by a mixin,
 // aliases and unregistered exported classes are not seen.
 //
-// Exit codes: 0 ok (report mode always, gate mode when nothing is unexplained),
-// 1 unexplained items under --gate or a tool failure (tsc, unreadable or
-// invalid jsonl, a parse error), 2 usage error.
+// Exit codes: 0 ok (report mode unless a tool failure; gate mode only when
+// nothing is unexplained and the citation files pass `checkCitations`),
+// 1 unexplained items or citation problems under --gate, or a tool failure
+// (tsc, unreadable or invalid jsonl, a citation line naming an unknown
+// component, a parse error), 2 usage error.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { parseSync } from "oxc-parser";
 import { emitDeclarations, nameOf, node, nodes, packageDeclarations, typeNameTail, unwrapAnnotation, type DeclarationFile, type Node } from "../async-surface/async-surface";
-import { normaliseFqcn, recogniseRegistration } from "../registration/registration";
+import { checkCitations } from "../oracle/api-surface";
+import { isFqcn, normaliseFqcn, recogniseRegistration } from "../registration/registration";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 export const API_SURFACE_DIR = "conformance/api-surface";
@@ -409,7 +417,19 @@ function parse(file: string, text: string, lang: "ts" | "dts"): Node[] {
   return nodes((result.program as unknown as Node)["body"]);
 }
 
-/** The FQCN of a contract token initializer: `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or any `Symbol.for('<FQCN>')` inside it. */
+/**
+ * Whether a `Symbol.for` argument names an Upstream contract: shaped as a PHP FQCN (Story 6.6's `isFqcn`) whose first
+ * segment, after an optional leading `\`, is `Illuminate` or `Laravel`. Runtime brands (`xaravel.class.fqcn`) are not.
+ */
+function isLaravelFqcn(value: string): boolean {
+  const fqcn = normaliseFqcn(value);
+  return isFqcn(value) && (fqcn.startsWith("Illuminate\\") || fqcn.startsWith("Laravel\\"));
+}
+
+/**
+ * The FQCN of a contract token initializer: `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or the first
+ * `Symbol.for('<FQCN>')` inside it whose argument is an `Illuminate\…` or `Laravel\…` FQCN (`isLaravelFqcn`).
+ */
 function contractFqcn(init: Node | null): string | null {
   if (init === null) {
     return null;
@@ -424,7 +444,8 @@ function contractFqcn(init: Node | null): string | null {
       return literal(init["arguments"]);
     }
     if (callee?.type === "MemberExpression" && nameOf(callee["object"]) === "Symbol" && nameOf(callee["property"]) === "for" && callee["computed"] !== true) {
-      return literal(init["arguments"]);
+      const value = literal(init["arguments"]);
+      return value !== null && isLaravelFqcn(value) ? value : null;
     }
   }
   for (const [key, child] of Object.entries(init)) {
@@ -1203,12 +1224,16 @@ function readUpstream(root: string, component: string): UpstreamRecord[] {
   });
 }
 
-function readCitations(root: string, name: "additions" | "exceptions"): CitationLine[] {
+/** One citation file's lines; a line whose `component` is not in `known` (no `<component>.jsonl`) fails. */
+function readCitations(root: string, name: "additions" | "exceptions", known: readonly string[]): CitationLine[] {
   const path = `${API_SURFACE_DIR}/${name}.jsonl`;
   return readJsonl(root, path).map((value, index) => {
     const member = value["member"];
     if (typeof value["component"] !== "string" || typeof value["fqcn"] !== "string" || (member !== null && typeof member !== "string") || typeof value["citation"] !== "string") {
       throw new Error(`${path}:${index + 1}: not a {"component","fqcn","member","citation"} line`);
+    }
+    if (!known.includes(value["component"])) {
+      throw new Error(`${path}:${index + 1}: unknown component ${value["component"]} (no ${API_SURFACE_DIR}/${value["component"]}.jsonl)`);
     }
     return value as unknown as CitationLine;
   });
@@ -1267,8 +1292,9 @@ export function diffComponents(root: string, components: readonly string[]): Com
       throw new Error(failure);
     }
   }
-  const additions = readCitations(root, "additions");
-  const exceptions = readCitations(root, "exceptions");
+  const known = componentsOf(root);
+  const additions = readCitations(root, "additions", known);
+  const exceptions = readCitations(root, "exceptions", known);
   const div12 = readDiv12(root);
   return components.map((component) => {
     const has = withPackage.includes(component);
@@ -1370,7 +1396,21 @@ export function main(argv: readonly string[]): number {
       console.log(`api-surface:gate ${diff.component}: ${open.length} unexplained (AD-15)`);
       failed ||= open.length > 0;
     }
-    return failed ? 1 : 0;
+    // The citation files must also pass the oracle tool's validation (schema, canonical form, order; AD-15).
+    let problems: string[];
+    try {
+      problems = checkCitations(root);
+    } catch (error) {
+      console.error(`api-surface: ${(error as Error).message}`);
+      return 1;
+    }
+    for (const problem of problems) {
+      console.log(`api-surface:gate citation problem: ${problem}`);
+    }
+    if (problems.length > 0) {
+      console.log(`api-surface:gate citations: ${problems.length} problem(s) (AD-15)`);
+    }
+    return failed || problems.length > 0 ? 1 : 0;
   }
 
   for (const diff of diffs) {
