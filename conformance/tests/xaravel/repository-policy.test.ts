@@ -805,6 +805,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     "bun run expectations:check",
     // Story 5.2: the Skip Reason rule checks (FR-3, SM-C1, XT-conformance-92..99).
     "bun run expectations:reasons",
+    // Story 8.1: the Divergence Record and `adapted` marker check (FR-8, AD-15, XT-conformance-152).
+    "bun run divergence:check",
     "bun run typecheck",
     // Story 6.4: the async-surface drift check (AD-6, AD-28, XT-conformance-136).
     "bun run async-surface --all --check",

@@ -69,6 +69,7 @@
     "expectations:init": "bun tools/expectations/expectations.ts init",
     "expectations:check": "bun tools/expectations/expectations.ts check",
     "expectations:reasons": "bun tools/expectations/reasons.ts check",
+    "divergence:check": "bun --no-env-file tools/divergence/divergence.ts check",
     "harness": "bun --no-env-file conformance/harness/harness.ts",
     "ratchet": "bun tools/ratchet/ratchet.ts",
     "xt:consequences": "bun tools/xt-coverage/consequences.ts",

@@ -6,7 +6,7 @@ This directory holds the Conformance System's data: the Test Inventory (`invento
 
 Every Expectations line has exactly one `status` (PRD §3, FR-3):
 
-- `pass`: the test passes. It may carry `adapted: DIV-<n>.<clause>`.
+- `pass`: the test passes. It may carry `adapted: DIV-<n>.<clause>`, which must name an existing clause of `decisions/DIV-<n>.md`; `bun run divergence:check` checks it ([`docs/ops/divergence.md`](../docs/ops/divergence.md)).
 - `fail-known`: the test fails and is known to. It counts as not passing and blocks Epic acceptance.
 - `skip`: the test is not run. It needs a Skip Reason from the vocabulary below.
 - `quarantined`: the test is inconsistent across runs. It counts as not passing and needs an open Escalation.
