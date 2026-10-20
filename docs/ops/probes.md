@@ -62,3 +62,7 @@ Every unsupported probe names an Escalation `conformance/escalations/ESC-8.3-<n>
 3. With every backend available, run `bun run probes:record`; otherwise edit `results.json` by hand from the CI output. A backend row is recorded only from a run against that backend, never from documentation or memory.
 4. For a probe that became unsupported, raise an Escalation and set its `escalation`. For one that became supported, set `escalation` to `null`, and revisit its Escalation.
 5. Run `bun run probes:generate` and commit `results.json` and `REPORT.md`.
+
+## Related
+
+The Temporal and bcrypt spikes (OQ-4, OQ-8) use the same registry-and-report shape, with Oracle fixtures as their expected values: see [spikes.md](spikes.md).
