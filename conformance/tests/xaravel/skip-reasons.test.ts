@@ -280,6 +280,7 @@ xaravelTest("XT-conformance-252", "the committed lists hold exactly PRD §7.1 an
     "browser-tests",
     "email-spoof",
     "foundation-cloud",
+    "image-avif-heic-jxl",
     "laravel-14-resync",
     "mail-transports",
     "mariadb-driver",

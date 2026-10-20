@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 13:03
+last_updated: 10-20-2026 15:09
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1184,7 +1184,7 @@ action_items:
       runs the gate, and a check that fails when such an AC has no manifest with the
       field (S4; Maintainer ruling on item 8, Story 6.5)"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "decisions/MAINT-2026-10-19-epic-6-items.md"
   - id: "epic-6-retro-item-14-api-surface-div12-ad26-mapping"
     epic: 6
@@ -1249,7 +1249,7 @@ action_items:
     action: "Rule whether SM-1 no not-ported-yet or blocked-by remaining covers every
       Variant or only alpha Variants as report.ts:264-270 reads it (S1)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
   - id: "epic-7-retro-item-8-sm1-target-covering-story"
     epic: 7
@@ -1257,7 +1257,7 @@ action_items:
       a never-decreases check between Phase boundaries under one Pin, and the Test
       Inventory diff between Pin series (S3)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
   - id: "epic-7-retro-item-9-clear-followup-review-flags"
     epic: 7
@@ -1278,3 +1278,32 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-8.5-1.md"
+  - id: "epic-8-item-2-fidelity-review-evidence"
+    epic: 8
+    action: "Per decisions/ESC-8.8-1.md: tools/fidelity-review sends the full body
+      and consequence of every Xaravel Test whose lines the diff changes or that uses
+      a fixture or helper the diff changes; binds a verdict to the reviewed code,
+      ignoring stories/, sprint-status.yaml and the spec's fidelity-verdict records;
+      and lets a reject on an unchanged reviewed tree stand until its findings are
+      fixed or its evidence supplied (no re-rolling the same review)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-8.8-1.md"
+  - id: "epic-8-item-3-pin-bump-security-override"
+    epic: 8
+    action: "Per decisions/OQ-12.md: add a Maintainer-only override to pin:bump's
+      freeze-point refusal for a security-relevant Upstream release, naming the advisory
+      and recorded in the pin-bump PR; document it in docs/ops/upstream.md"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-8.8-1.md"
+  - id: "epic-7-retro-item-10-sm1-target"
+    epic: 7
+    action: "Per decisions/MAINT-2026-10-20-epic-6-7-items.md: record the Phase and
+      a Test Inventory hash in each conformance history line, add a check that fails
+      when the Conformance Rate decreases between Phase boundaries under the same
+      Baseline Pin, and show the Test Inventory diff between Pin series on the dashboard,
+      before Story 8.8's Phase 1 gate closes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-20-epic-6-7-items.md"
