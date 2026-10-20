@@ -167,11 +167,11 @@ Status: done
 - **Real paths.** `dataPath` checks containment on real paths (`inScope`, `src/scope.ts`), so symlinks cannot lead a read out of `conformance/`, `stories/` or `decisions/`.
 - **Process lockdown.** The `.mcp.json` entry point (`src/server.ts`) locks the process down before it loads the data layer (`src/lockdown.ts`):
   - every `fs` function except six scope-checked reads refuses, and so does a read carrying a write flag;
-  - every function in `child_process`, `worker_threads`, `bun:sqlite` and `bun:ffi` refuses;
-  - so do `Worker`, `fetch` and `WebSocket`, and every `Bun` member that writes, spawns or touches the network.
+  - every function in `child_process`, `worker_threads`, `bun:sqlite` and `bun:ffi` refuses (corrected by retro 7 item 1: `node:sqlite` was left open and now refuses too);
+  - so do `Worker`, `fetch` and `WebSocket`, and the `Bun` members `spawn`, `spawnSync`, `$`, `write`, `file`, `mmap`, `openInEditor`, `build`, `Glob`, `s3`, `S3Client`, `sql`, `SQL`, `connect`, `listen`, `serve` and `udpSocket`. (Corrected by retro 7 item 1: this listed fixed set left other `Bun` members, `node:sqlite` and data imports open; the lockdown now treats `Bun` as an allowlist, and docs/framework-mode.md § Limits lists what stays open, among them `Bun.fetch` reading `file:` URLs and text imports of extensionless files.)
 - **Tests.** XT-boost-4..6 prove the three ACs:
   - XT-boost-4: the tool list, plus a lexical guard with evasion probes;
-  - XT-boost-5: `dataPath` refusals, symlink refusals over stdio, a 54-case lockdown probe, and a preload recorder that sees both opens and refusals;
+  - XT-boost-5: `dataPath` refusals, symlink refusals over stdio, a 54-case lockdown probe (corrected by retro 7 item 1: now 78 cases), and a preload recorder that sees both opens and refusals;
   - XT-boost-6: a full snapshot of a git fixture, and a git-and-stat snapshot of the real repo.
 
 ESC-7.4-1 asks the Maintainer to make `.mcp.json` a Protected Path, which was Story 7.3's deferral that no Story owned.

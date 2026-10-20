@@ -865,6 +865,24 @@ const ops = {
   "bun:sqlite default": async () => new (await import("bun:sqlite")).default(fix + "/conformance/y.db"),
   "bun:ffi dlopen": async () => (await import("bun:ffi")).dlopen("libc.dylib", {}),
   "Bun.build": () => Bun.build({ entrypoints: [outside + "/worker.ts"], outdir: fix + "/conformance/built" }),
+  "Bun.Archive.write": () => Bun.Archive.write(fix + "/conformance/a.tar", { "a.txt": "x" }),
+  "new Bun.FileSystemRouter": () => new Bun.FileSystemRouter({ dir: fix + "/tools", style: "nextjs" }).routes,
+  "Bun.secrets.get": () => Bun.secrets.get({ service: "xaravel-boost-probe", name: "x" }),
+  "Bun.redis.get": () => Bun.redis.get("x"),
+  "new Bun.RedisClient": () => new Bun.RedisClient("redis://127.0.0.1:9"),
+  "new Bun.Terminal": () => new Bun.Terminal({}),
+  "Bun.s3.file": () => Bun.s3.file("x"),
+  "Bun.which": () => Bun.which("ls"),
+  "node:sqlite DatabaseSync": () => new (process.getBuiltinModule("node:sqlite").DatabaseSync)(fix + "/conformance/z.db"),
+  "import(node:sqlite) DatabaseSync": async () => new (await import("node:sqlite")).DatabaseSync(fix + "/conformance/z2.db"),
+  "text import AGENTS.md": async () => (await import(fix + "/AGENTS.md", { with: { type: "text" } })).default,
+  "require outside data.json": () => require(outside + "/data.json"),
+  "require root package.json": () => require(fix + "/package.json"),
+  "text import file:// AGENTS.md": async () => (await import("file://" + fix + "/AGENTS.md", { with: { type: "text" } })).default,
+  "text import relative note.md": async () => (await import("./note.md", { with: { type: "text" } })).default,
+  "text import AGENTS.md?x.ts": async () => (await import(fix + "/AGENTS.md?x.ts", { with: { type: "text" } })).default,
+  "text import .env": async () => (await import(fix + "/.env", { with: { type: "text" } })).default,
+  "Bun.plugin.clearAll": () => Bun.plugin.clearAll(),
 };
 const results = {};
 for (const [name, op] of Object.entries(ops)) {
@@ -877,6 +895,20 @@ for (const [name, op] of Object.entries(ops)) {
 }
 results["in-scope read"] = fs.readFileSync(fix + "/stories/9.9.md", "utf8").startsWith("---") ? "read" : "wrong";
 results["in-scope readdir"] = fs.readdirSync(fix + "/stories").includes("9.9.md") ? "read" : "wrong";
+results["in-scope text import"] = (await import(fix + "/stories/9.9.md", { with: { type: "text" } })).default.startsWith("---") ? "read" : "wrong";
+results["in-scope require data.json"] = require(fix + "/conformance/data.json").inScope === true ? "read" : "wrong";
+// What docs/framework-mode.md § Limits lists as open: "open" while it reads, so a later fix flips the case.
+const openWhenRead = async (read) => {
+  try {
+    return (await read()).length > 0 ? "open" : "wrong";
+  } catch (error) {
+    return error instanceof Error ? error.name : String(error);
+  }
+};
+results["open Bun.fetch file://"] = await openWhenRead(async () => (await Bun.fetch("file:///etc/hosts")).text());
+results["open text import /etc/hosts"] = await openWhenRead(async () => (await import("/etc/hosts", { with: { type: "text" } })).default);
+results["kept Bun.YAML.parse"] = Bun.YAML.parse("a: 1").a === 1 ? "kept" : "wrong";
+results["kept Bun.CryptoHasher"] = new Bun.CryptoHasher("sha256").update("x").digest("hex").length === 64 ? "kept" : "wrong";
 console.log(JSON.stringify(results));
 `;
 
@@ -1026,20 +1058,47 @@ xaravelTest(
     writeFileSync(join(scripts, "probe.ts"), PROBE);
     // A worker that would write if it ever ran (a fresh realm has an unpatched node:fs).
     writeFileSync(join(outside, "worker.ts"), `require("node:fs").writeFileSync(${JSON.stringify(join(outside, "from-worker.txt"))}, "x");\n`);
+    // A data file outside the scope, for the require probe.
+    writeFileSync(join(outside, "data.json"), '{"outside": true}\n');
+    // Out-of-scope files the resolve hook must refuse (the fixture root's package.json and .env, a note beside the
+    // probe script for a relative import) and an in-scope JSON file it lets through.
+    writeFileSync(join(fix, "package.json"), '{"name": "fixture"}\n');
+    writeFileSync(join(fix, ".env"), "SECRET=x\n");
+    writeFileSync(join(scripts, "note.md"), "outside the data scope\n");
+    writeFileSync(join(fix, "conformance", "data.json"), '{"inScope": true}\n');
     const run = Bun.spawnSync(["bun", "--no-env-file", join(scripts, "probe.ts"), fix, outside], { cwd: fix, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
     expect(`${run.exitCode} ${run.stderr.toString()}`).toBe("0 ");
     const results = JSON.parse(run.stdout.toString()) as Record<string, string>;
-    const refusedReads = ["read AGENTS.md", "read /etc/hosts", "read relative", "read fd 0", "read outside symlink", "readdir root", "exists outside", "realpath.native outside", "statSync outside", "lstatSync outside", "realpathSync outside"];
+    const refusedReads = ["read AGENTS.md", "read /etc/hosts", "read relative", "read fd 0", "read outside symlink", "readdir root", "exists outside", "realpath.native outside", "statSync outside", "lstatSync outside", "realpathSync outside", "text import AGENTS.md", "require outside data.json", "require root package.json", "text import file:// AGENTS.md", "text import relative note.md", "text import AGENTS.md?x.ts", "text import .env"];
     for (const [name, outcome] of Object.entries(results)) {
-      const expected = name.startsWith("in-scope") ? "read" : name === "lockdown twice" ? "Error" : refusedReads.includes(name) ? "DataScopeError" : "ReadOnlyError";
+      const expected = name.startsWith("in-scope") ? "read" : name.startsWith("kept") ? "kept" : name.startsWith("open") ? "open" : name === "lockdown twice" ? "Error" : refusedReads.includes(name) ? "DataScopeError" : "ReadOnlyError";
       expect(`${name}: ${outcome}`).toBe(`${name}: ${expected}`);
     }
-    expect(Object.keys(results).length).toBe(54);
+    expect(Object.keys(results).length).toBe(78);
     await Bun.sleep(200);
-    for (const path of [join(fix, "conformance", "w.txt"), join(outside, "w.txt"), join(fix, "conformance", "newdir"), join(fix, "stories", "9.9b.md"), join(outside, "from-worker.txt"), join(fix, "conformance", "built"), join(fix, "conformance", "x.db"), join(fix, "conformance", "y.db")]) {
+    for (const path of [join(fix, "conformance", "w.txt"), join(outside, "w.txt"), join(fix, "conformance", "newdir"), join(fix, "stories", "9.9b.md"), join(outside, "from-worker.txt"), join(fix, "conformance", "built"), join(fix, "conformance", "x.db"), join(fix, "conformance", "y.db"), join(fix, "conformance", "a.tar"), join(fix, "conformance", "z.db"), join(fix, "conformance", "z2.db")]) {
       expect(`${path}: ${existsSync(path)}`).toBe(`${path}: false`);
     }
     expect(readFileSync(join(fix, "stories", "9.9.md"), "utf8")).toBe(FILES["stories/9.9.md"]!);
+
+    // A Bun build that adds a non-writable member on neither of lockdown's lists: lockdown throws naming it, before
+    // it patches anything.
+    writeFileSync(
+      join(scripts, "unknown.ts"),
+      [
+        'Object.defineProperty(Bun, "probeOpen", { value: 1, writable: false, configurable: false, enumerable: true });',
+        `const { lockdown } = await import(${JSON.stringify(join(SRC, "lockdown.ts"))});`,
+        'const fs = process.getBuiltinModule("node:fs");',
+        "const writeFileSync = fs.writeFileSync;",
+        "const spawnSync = Bun.spawnSync;",
+        'try { lockdown(process.argv[2]); console.log("locked"); } catch (error) { console.log(error.name + ": " + error.message); }',
+        'console.log("fs.writeFileSync " + (fs.writeFileSync === writeFileSync ? "original" : "patched"));',
+        'console.log("Bun.spawnSync " + (Bun.spawnSync === spawnSync ? "original" : "patched"));',
+        "",
+      ].join("\n"),
+    );
+    const unknown = Bun.spawnSync(["bun", "--no-env-file", join(scripts, "unknown.ts"), fix], { cwd: fix, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+    expect(`${unknown.exitCode} ${unknown.stdout.toString()}${unknown.stderr.toString()}`).toBe("0 Error: lockdown: Bun.probeOpen cannot be replaced and is on neither the kept nor the known-open list\nfs.writeFileSync original\nBun.spawnSync original\n");
 
     // The recorder on a clean fixture: every call is one of the six reads, each open is inside the data scope.
     const clean = fixture();
