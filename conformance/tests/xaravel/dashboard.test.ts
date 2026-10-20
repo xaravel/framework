@@ -217,6 +217,13 @@ xaravelTest("XT-conformance-146", "on every push to main the dashboard job publi
   const rate = section(html, "rate");
   expect(rate).toContain(`<p class="figure" id="full-rate">Full rate: <strong>16.67%</strong> = 1 / 6 pairs</p>`);
   expect(rate).toContain(`= ${report.alpha.passing} / ${report.alpha.applicable} applicable Test IDs · target 90.00% · met: no`);
+  expect(rate).toContain(` · ${report.alpha.noAlphaLine} Test IDs with no alpha-Variant line, outside the denominator</p>`);
+  // A distinct noAlphaLine value is the one rendered.
+  const sevenPath = join(tempDir("dashboard-report-seven"), "report.json");
+  writeFileSync(sevenPath, serialiseReport({ ...report, alpha: { ...report.alpha, noAlphaLine: 7 } }));
+  const sevenOut = join(tempDir("dashboard-site-seven"), "site");
+  expect(cli(SITE, ["--root", dir, "--report", sevenPath, "--history", historyPath, "--out", sevenOut, "--api-surface", apiPath]).exitCode).toBe(0);
+  expect(section(readFileSync(join(sevenOut, "index.html"), "utf8"), "rate")).toContain(" · 7 Test IDs with no alpha-Variant line, outside the denominator</p>");
   expect(rate.indexOf('id="full-rate"')).toBeLessThan(rate.indexOf('id="alpha"'));
   expect(rate).toContain("<tr><td>support</td><td>6</td><td>1</td><td>16.67%</td><td>1</td><td>1</td><td>0</td></tr>");
   // All seven Skip Reason kinds, and the full reasons.

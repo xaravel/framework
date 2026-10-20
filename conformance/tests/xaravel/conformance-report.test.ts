@@ -244,7 +244,7 @@ xaravelTest("XT-conformance-143", "the report counts every Test ID × Backend Va
 
 xaravelTest("XT-conformance-144", "the alpha-gate figure is passing over applicable Test IDs of the Phase 1–8 Components on every alpha Variant; quarantined, fail-known and intentional-divergence count as not passing, php-only, upstream-skip, deferred and out-of-scope are not applicable (FR-5.2)", () => {
   const { alpha } = computeReport(fixture(MIXED));
-  expect(Object.keys(alpha)).toEqual(["applicable", "passing", "rate", "target", "variants", "components", "perVariant", "remaining", "met"]);
+  expect(Object.keys(alpha)).toEqual(["applicable", "passing", "rate", "target", "variants", "components", "perVariant", "remaining", "noAlphaLine", "met"]);
   // support: A pass; B fail-known, C quarantined, D not-ported-yet, E blocked-by, F intentional-divergence are applicable and not passing;
   // G..K are not applicable. database: A passes on sqlite but is fail-known on pgsql (not passing), B passes on both;
   // C runs only on mysql (not alpha). later is phase 9.
@@ -266,6 +266,8 @@ xaravelTest("XT-conformance-144", "the alpha-gate figure is passing over applica
     },
     // database testB's mysql not-ported-yet is not on an alpha variant.
     remaining: { "not-ported-yet": 1, "blocked-by": 1 },
+    // database testC has lines only on mysql: outside the denominator, counted here.
+    noAlphaLine: 1,
     met: false,
   });
 
@@ -297,11 +299,21 @@ xaravelTest("XT-conformance-144", "the alpha-gate figure is passing over applica
   // No applicable Test ID: rate null, not met.
   expect(only([[S("testA"), "none", "skip", "php-only"]])).toMatchObject({ rate: null, met: false });
 
+  // noAlphaLine: phase 1–8 Test IDs with lines but none on an alpha variant; it changes no other field.
+  expect(only([[D("testA"), "mysql", "fail-known"]])).toMatchObject({ applicable: 0, noAlphaLine: 1 });
+  expect(only([[D("testA"), "mysql", "pass"], [D("testA"), "mariadb", "pass"]])).toMatchObject({ applicable: 0, noAlphaLine: 1 });
+  expect(only([[S("testA"), "none", "skip", "php-only"]])).toMatchObject({ applicable: 0, noAlphaLine: 0 });
+  expect(only([[L("testA"), "mysql", "fail-known"]])).toMatchObject({ applicable: 0, noAlphaLine: 0 });
+  expect(only([[D("testA"), "mysql", "fail-known"], [D("testA"), "sqlite", "pass"]])).toMatchObject({ applicable: 1, passing: 1, noAlphaLine: 0 });
+  expect(only([[D("testA"), "mysql", "pass"], [D("testB"), "mysql", "skip", "not-ported-yet"], [D("testB"), "pgsql", "pass"]])).toMatchObject({ applicable: 1, passing: 1, remaining: { "not-ported-yet": 0, "blocked-by": 0 }, noAlphaLine: 1 });
+
   // The real repository: today nothing passes, so the gate is not met.
   const real = computeReport(root).alpha;
   expect(real.variants).toEqual(["none", "pgsql", "queue-database@sqlite", "queue-redis@redis", "queue-sync@none", "redis", "sqlite"]);
   expect(real.applicable).toBeGreaterThan(0);
   expect(real.met).toBe(false);
+  expect(Number.isInteger(real.noAlphaLine)).toBe(true);
+  expect(real.noAlphaLine).toBeGreaterThan(0);
 }, 60_000);
 
 // XT-conformance-145

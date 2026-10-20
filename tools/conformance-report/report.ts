@@ -7,10 +7,16 @@
 //       `<root>/.cache/conformance/report.json`, gitignored). It prints
 //       `conformance:report: wrote <path> (<p>/<n> pairs passing; alpha <a>/<b>)`.
 //
-// This is the only place the Conformance Rate and the SM-1 alpha-gate figure
-// are computed; the dashboard (Story 7.2) and Boost `conformance.rate`
-// (Story 7.3) read `report.json`. docs/ops/conformance-report.md documents the
-// schema and every definition:
+// This is the only place the SM-1 alpha-gate figure is computed, and the
+// reference computation of the Conformance Rate buckets. Boost
+// `conformance.rate` (Story 7.3, tools/boost-framework/src/tools.ts) does not
+// read `report.json`: it mirrors the bucket code, and XT-boost-1 holds its
+// buckets byte-equal to `computeReport`'s; it never computes the alpha gate.
+// The dashboard (Story 7.2, site.ts) reads `report.json` and the history
+// records, and derives two figures of its own: the history chart's ratios
+// (overall passing / pairs and alpha passing / applicable of each record) and
+// an Epic's fail-known (the sum of its Components' `failKnown`).
+// docs/ops/conformance-report.md documents the schema and every definition:
 //
 // - A pair is one Expectations line (`id` × `variant`); its Component is the
 //   Inventory entry's `component`. `rate = passing / pairs` over every pair
@@ -24,6 +30,11 @@
 //   is a `skip` whose kind is `php-only`, `upstream-skip`, `deferred` or
 //   `out-of-scope`. A Test ID is applicable when it has an applicable alpha
 //   line, and passes when every applicable alpha line is `pass`.
+//   `noAlphaLine` counts the Test IDs of those Components that have
+//   Expectations lines but none on an ALPHA_VARIANTS variant (MySQL-,
+//   MariaDB-, SQL Server- or Beanstalkd-only): they are outside the alpha
+//   denominator, and the field makes that exclusion visible. It changes no
+//   other alpha field.
 //
 // Exit codes: 0 ok, 1 data error (an unknown Test ID, status or reason kind, a
 // duplicate pair, an unreadable input), 2 usage error.
@@ -70,6 +81,8 @@ export interface AlphaGate {
   components: string[];
   perVariant: Record<string, { applicable: number; passing: number }>;
   remaining: { "not-ported-yet": number; "blocked-by": number };
+  /** Test IDs of a phase 1–8 Component with Expectations lines but none on an alpha variant; outside the denominator. */
+  noAlphaLine: number;
   met: boolean;
 }
 
@@ -261,8 +274,15 @@ export function computeReport(root: string): Report {
   const ids = new Map<string, boolean>();
   const perVariantIds = new Map<string, Map<string, boolean>>(variants.map((variant) => [variant, new Map()]));
   const remaining = { "not-ported-yet": 0, "blocked-by": 0 };
+  /** Test ID of an in-scope Component to whether it has a line on an alpha variant. */
+  const hasAlphaLine = new Map<string, boolean>();
   for (const line of lines) {
-    if (!inVariants.has(line.variant) || !inComponents.has(componentOf.get(line.id)!)) {
+    if (!inComponents.has(componentOf.get(line.id)!)) {
+      continue;
+    }
+    const onAlpha = inVariants.has(line.variant);
+    hasAlphaLine.set(line.id, (hasAlphaLine.get(line.id) ?? false) || onAlpha);
+    if (!onAlpha) {
       continue;
     }
     if (line.kind === "not-ported-yet" || line.kind === "blocked-by") {
@@ -292,6 +312,7 @@ export function computeReport(root: string): Report {
     components: alphaComponents,
     perVariant,
     remaining,
+    noAlphaLine: [...hasAlphaLine.values()].filter((has) => !has).length,
     met: alphaRate !== null && alphaRate >= ALPHA_TARGET && remaining["not-ported-yet"] === 0 && remaining["blocked-by"] === 0,
   };
 
