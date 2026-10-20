@@ -15,8 +15,9 @@ proposed: >-
 evidence: >-
   `bun run probes:run` on Bun 1.4.3 (conformance/probes/probes.ts):
   `als.serve-callbacks: unsupported: two concurrent requests see their own
-  frame after each await: /a [true,true,true], /b [true,true,true]; the
-  error callback sees undefined; an AsyncLocalStorage.snapshot() taken in the
+  frame after each await: /a [true,true,true], /b [true,true,true]; resume
+  order a0 b0 a1 b1 a2 b2 (interleaved: yes); the error callback sees
+  undefined; an AsyncLocalStorage.snapshot() taken in the
   frame and carried on the error restores the frame: yes`.
 ---
 

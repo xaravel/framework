@@ -2,12 +2,12 @@
 decision: approved
 decided_by: orchestrator (MAINT-2026-10-16)
 date: 2026-10-20
-escalation_sha256: "b2a6a7cd31325119def30f72f199416ecf8f8f24723c69a151c05a63b5fd4c59"
+escalation_sha256: "1bbdfb9797328e49b79b2823de0db5c1da128acc8df7e11b3e7274a9ee5324b5"
 ---
 
 # ESC-8.3-1: approved, the AD-5 bind/snapshot workaround
 
-`@xaravel/runtime/scope` wraps async-generator response bodies and `type: "direct"` stream bodies created inside a frame with `AsyncLocalStorage.snapshot()` / `AsyncLocalStorage.bind`. For an async generator the snapshot wraps each `next()` and `return()` of the iterator; for a direct stream, `pull` is bound. The probes `als.async-generator` and `als.direct-stream` stay recorded `unsupported`, so a Bun bump that fixes them fails `probes:check` and reopens the question.
+`@xaravel/runtime/scope` wraps async-generator response bodies and `type: "direct"` stream bodies created inside a frame with `AsyncLocalStorage.snapshot()` / `AsyncLocalStorage.bind`. For an async generator the snapshot wraps each `next()`, `return()` and `throw()` of the iterator; for a direct stream, `pull` is bound. The probes `als.async-generator` and `als.direct-stream` stay recorded `unsupported`, so a Bun bump that fixes them fails `probes:check` and reopens the question.
 
 Rationale:
 

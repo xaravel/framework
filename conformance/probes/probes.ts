@@ -4,11 +4,13 @@
 //   bun conformance/probes/probes.ts run [--json] [--root <dir>]
 //       (`bun run probes:run`) runs every probe in PROBES on this Bun and
 //       prints `<id>: <status>: <evidence>` per probe (or, with --json, one
-//       JSON object of `{ "<id>": { "status", "evidence" } }`). Exit 0.
+//       JSON object of `{ "<id>": { "status", "evidence" } }`). Exit 0, or 1
+//       when the running Bun is not the `.bun-version` pin.
 //   bun conformance/probes/probes.ts check [--require-backends] [--root <dir>]
 //       (`bun run probes:check`) re-runs the probes and compares them with
 //       the record conformance/probes/results.json and with REPORT.md. Prints
-//       one violation per line on stderr and exits 1, or prints
+//       one violation per line on stderr and exits 1, or prints one
+//       `<id>: <status>: <evidence>` line per probe and then
 //       `PROBES OK: <s> supported, <u> unsupported, <n> not run (of <t>).`
 //   bun conformance/probes/probes.ts record [--root <dir>]
 //       (`bun run probes:record`) runs the probes and rewrites results.json
@@ -40,6 +42,9 @@
 //     `test_ids` lack XT-conformance-156, or whose `proposed` names neither
 //     `deferred:` nor `workaround`;
 //   - `<id>: supported but names Escalation <ESC>`;
+//   - `running Bun <Bun.version>, .bun-version <pin>` (the Bun running the
+//     probes is not the pinned one; `run` reports it too and exits 1, and
+//     `record` refuses to write);
 //   - `conformance/probes/results.json: bun <x> differs from .bun-version <y>`;
 //   - `conformance/probes/REPORT.md: drift at line <n>; run bun run probes:generate`.
 // `check` never writes the record.
@@ -642,12 +647,15 @@ export const IMAGE_OPERATIONS: Readonly<Record<string, ImageCheck>> = {
     if (right.width !== 2 || right.height !== 4) {
       return `rotate(90) gives ${right.width}×${right.height}`;
     }
+    let diagonal: { width: number; height: number };
     try {
-      await new Bun.Image(source).rotate(45).bytes();
+      diagonal = await pngOf(new Bun.Image(source).rotate(45));
     } catch (error) {
       return `rotate(90) works; rotate(45) (Laravel takes any float angle) throws ${message(error)}`;
     }
-    return null;
+    // A 45° rotation of 4×2 has a bounding box of about 4.2×4.2: both sides beyond 2, and neither 4×2 nor 2×4.
+    const rotated = diagonal.width > 2 && diagonal.height > 2 && !(diagonal.width === 4 && diagonal.height === 2) && !(diagonal.width === 2 && diagonal.height === 4);
+    return rotated ? null : `rotate(45) gives ${diagonal.width}×${diagonal.height}, not a 45° rotation of 4×2`;
   },
   orient: async (source) => {
     const jpeg = withExifOrientation6(await new Bun.Image(source).jpeg({ quality: 100 }).bytes());
@@ -816,12 +824,13 @@ const ALS_ASYNC_GENERATOR: Scenario = (als, seen, wrap) => {
   if (!wrap) {
     return new Response(generator as unknown as ResponseBody);
   }
-  // The body runs inside next(), so each next() runs under a snapshot taken in the frame.
+  // The body runs inside next(), return() and throw(), so each runs under a snapshot taken in the frame.
   const snapshot = AsyncLocalStorage.snapshot();
   const wrapped: AsyncIterable<string> = {
     [Symbol.asyncIterator]: () => ({
       next: () => snapshot(() => generator.next()),
       return: (value?: unknown) => snapshot(() => generator.return(value)),
+      throw: (error?: unknown) => snapshot(() => generator.throw(error)),
     }),
   };
   return new Response(wrapped as unknown as ResponseBody);
@@ -844,6 +853,12 @@ async function probeServeCallbacks(): Promise<{ supported: boolean; evidence: st
   const run = async (wrap: boolean): Promise<{ concurrent: string; error: string; ok: boolean }> => {
     const als = new AsyncLocalStorage<Frame>();
     const frames = new Map<string, Frame>();
+    const order: string[] = [];
+    let started = 0;
+    let bothStarted: () => void = () => undefined;
+    const barrier = new Promise<void>((resolve) => {
+      bothStarted = resolve;
+    });
     let errorSeen: string = "nothing (the error callback never ran)";
     const server = Bun.serve({
       port: 0,
@@ -863,8 +878,13 @@ async function probeServeCallbacks(): Promise<{ supported: boolean; evidence: st
             throw error;
           }
           const seen: boolean[] = [];
+          if (++started === 2) {
+            bothStarted();
+          }
+          await Promise.race([barrier, Bun.sleep(1000)]);
           for (let i = 0; i < 3; i++) {
             await Bun.sleep(path === "/a" ? 2 : 3);
+            order.push(`${path.slice(1)}${i}`);
             seen.push(als.getStore() === frame);
           }
           return new Response(JSON.stringify(seen));
@@ -880,9 +900,15 @@ async function probeServeCallbacks(): Promise<{ supported: boolean; evidence: st
     try {
       const [a, b] = await Promise.all([fetch(new URL("/a", server.url)), fetch(new URL("/b", server.url))]);
       const concurrent = `/a ${await a.text()}, /b ${await b.text()}`;
+      // The awaits overlap when each request's first resume comes before the other's last.
+      const interleaved = order.indexOf("a0") !== -1 && order.indexOf("b0") !== -1 && order.indexOf("a0") < order.indexOf("b2") && order.indexOf("b0") < order.indexOf("a2");
       const failed = await fetch(new URL("/error", server.url));
       await failed.text();
-      return { concurrent, error: errorSeen, ok: concurrent === "/a [true,true,true], /b [true,true,true]" && errorSeen === "the frame" && failed.status === 500 };
+      return {
+        concurrent: `${concurrent}; resume order ${order.join(" ")} (interleaved: ${interleaved ? "yes" : "no"})`,
+        error: errorSeen,
+        ok: interleaved && concurrent === "/a [true,true,true], /b [true,true,true]" && errorSeen === "the frame" && failed.status === 500,
+      };
     } finally {
       void server.stop(true);
     }
@@ -931,7 +957,7 @@ export const PROBES: readonly Probe[] = [
   backendFree("als.await", ALS, "Inside `als.run(frame, …)` in a `Bun.serve` fetch, the store after `await Bun.sleep(1)`.", () => alsProbe("after `await Bun.sleep(1)`", "AsyncLocalStorage.snapshot()", ALS_AWAIT)),
   backendFree("als.timers", ALS, "The store in a `setTimeout` scheduled in the frame, firing after the handler returned.", () => alsProbe("in the setTimeout callback", "AsyncLocalStorage.bind on the callback", ALS_TIMERS)),
   backendFree("als.stream-body", ALS, "The store in a `ReadableStream` body's `pull`, after an `await`.", () => alsProbe("in the ReadableStream pull after an await", "AsyncLocalStorage.bind on pull", ALS_STREAM_BODY)),
-  backendFree("als.async-generator", ALS, "The store in an async generator response body, after an `await`.", () => alsProbe("in the async generator body after an await", "an AsyncLocalStorage.snapshot() taken in the frame around each next()", ALS_ASYNC_GENERATOR)),
+  backendFree("als.async-generator", ALS, "The store in an async generator response body, after an `await`.", () => alsProbe("in the async generator body after an await", "an AsyncLocalStorage.snapshot() taken in the frame around next(), return() and throw()", ALS_ASYNC_GENERATOR)),
   backendFree("als.direct-stream", ALS, 'The store in a `type: "direct"` body\'s `pull`.', () => alsProbe('in the type: "direct" pull', "AsyncLocalStorage.bind on pull", ALS_DIRECT_STREAM)),
   backendFree("als.serve-callbacks", ALS, "Two concurrent interleaved requests each see their own frame; the `error` callback sees the frame of the request that threw.", probeServeCallbacks),
 ];
@@ -1078,9 +1104,25 @@ function escalationProblems(root: string, id: string, escalation: string | null)
   return problems;
 }
 
-/** Compares live results with the root's record, Escalations and REPORT.md. Runs no probe and writes nothing. */
-export function checkProbes(root: string, live: ReadonlyMap<string, LiveResult>, options: { requireBackends: boolean }, registry: readonly Probe[] = PROBES): CheckReport {
+/** The root's `.bun-version` pin, or null when the file is missing. */
+function bunPin(root: string): string | null {
+  const path = join(root, BUN_VERSION_FILE);
+  return existsSync(path) ? readFileSync(path, "utf8").trim() : null;
+}
+
+/** `running Bun <v>, .bun-version <pin>` when the Bun running the probes (default `Bun.version`) is not the pinned one, else null. */
+export function runningBunViolation(root: string, running: string = Bun.version): string | null {
+  const pin = bunPin(root);
+  return running === pin ? null : `running Bun ${running}, ${BUN_VERSION_FILE} ${pin ?? "(missing)"}`;
+}
+
+/** Compares live results with the root's record, Escalations and REPORT.md. Runs no probe and writes nothing. `runningBun` (default `Bun.version`) is the Bun that produced `live`. */
+export function checkProbes(root: string, live: ReadonlyMap<string, LiveResult>, options: { requireBackends: boolean; runningBun?: string }, registry: readonly Probe[] = PROBES): CheckReport {
   const violations: string[] = [];
+  const running = runningBunViolation(root, options.runningBun);
+  if (running !== null) {
+    violations.push(running);
+  }
   const report: CheckReport = { violations, supported: 0, unsupported: 0, notRun: 0, total: registry.length };
   for (const result of live.values()) {
     if (result.status === "supported") {
@@ -1099,8 +1141,7 @@ export function checkProbes(root: string, live: ReadonlyMap<string, LiveResult>,
     return report;
   }
 
-  const bunVersionPath = join(root, BUN_VERSION_FILE);
-  const bunVersion = existsSync(bunVersionPath) ? readFileSync(bunVersionPath, "utf8").trim() : null;
+  const bunVersion = bunPin(root);
   if (record.bun !== bunVersion) {
     violations.push(`${RESULTS_FILE}: bun ${record.bun} differs from ${BUN_VERSION_FILE} ${bunVersion ?? "(missing)"}`);
   }
@@ -1191,6 +1232,11 @@ function parseArgs(argv: readonly string[]): { command: Command; root: string; j
   return { command, root, json, requireBackends };
 }
 
+/** One `<id>: <status>: <evidence>` line per live result. */
+function liveLines(live: ReadonlyMap<string, LiveResult>): string {
+  return [...live].map(([id, result]) => `${id}: ${result.status}: ${result.evidence}\n`).join("");
+}
+
 export async function main(argv: readonly string[]): Promise<number> {
   const subcommand = argv[0] ?? "check";
   try {
@@ -1211,11 +1257,20 @@ export async function main(argv: readonly string[]): Promise<number> {
       if (json) {
         process.stdout.write(`${JSON.stringify(Object.fromEntries(live), null, 2)}\n`);
       } else {
-        process.stdout.write([...live].map(([id, result]) => `${id}: ${result.status}: ${result.evidence}\n`).join(""));
+        process.stdout.write(liveLines(live));
+      }
+      const running = runningBunViolation(root);
+      if (running !== null) {
+        process.stderr.write(`${running}\n`);
+        return 1;
       }
       return 0;
     }
     if (command === "record") {
+      const running = runningBunViolation(root);
+      if (running !== null) {
+        throw new Error(`refusing to record: ${running}`);
+      }
       const path = join(root, RESULTS_FILE);
       const previous = existsSync(path) ? readRecord(root) : null;
       const bun = readFileSync(join(root, BUN_VERSION_FILE), "utf8").trim();
@@ -1228,6 +1283,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       process.stderr.write(report.violations.map((violation) => `${violation}\n`).join(""));
       return 1;
     }
+    process.stdout.write(liveLines(live));
     process.stdout.write(`PROBES OK: ${report.supported} supported, ${report.unsupported} unsupported, ${report.notRun} not run (of ${report.total}).\n`);
     return 0;
   } catch (error) {

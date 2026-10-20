@@ -11,6 +11,7 @@ import { parseEscalation } from "../../tools/escalations/escalations";
 import { xaravelTest } from "../../packages/assert/src/index";
 import {
   BUN_VERSION_FILE,
+  IMAGE_OPERATIONS,
   checkProbes,
   ESCALATIONS_DIR,
   GROUPS,
@@ -29,6 +30,8 @@ import {
 const root = resolve(import.meta.dir, "..", "..");
 const CLI = join(root, "conformance", "probes", "probes.ts");
 const TIMEOUT = 240_000;
+/** Each CLI run's budget, below TIMEOUT, so a hung probe fails the test instead of outliving it. */
+const CLI_TIMEOUT = 60_000;
 const roots: string[] = [];
 afterAll(() => {
   for (const dir of roots) {
@@ -71,12 +74,32 @@ function envWithoutBackends(): Record<string, string> {
   return env;
 }
 
+/** The supported operations the image probe names today (its `supported (<n>): ...` list). */
+const IMAGE_SUPPORTED = ["resize", "scale", "orient", "grayscale", "flipVertically", "flipHorizontally", "toWebp", "toJpeg", "toPng", "dimensions"];
+
+/** Whether an unsupported backend-free probe's evidence still shows every sub-check that passes today. */
+function unsupportedEvidenceHolds(id: string, evidence: string): boolean {
+  switch (id) {
+    case "als.async-generator":
+    case "als.direct-stream":
+      return evidence.endsWith("restores the frame: yes");
+    case "als.serve-callbacks":
+      return evidence.includes("/a [true,true,true], /b [true,true,true]") && evidence.includes("(interleaved: yes)") && evidence.endsWith("restores the frame: yes");
+    case "bun-image.laravel-api": {
+      const list = /; supported \((\d+)\): (.*)$/.exec(evidence);
+      return list !== null && list[2] === IMAGE_SUPPORTED.join(", ") && Number(list[1]) === IMAGE_SUPPORTED.length && IMAGE_SUPPORTED.every((operation) => operation in IMAGE_OPERATIONS);
+    }
+    default:
+      return false;
+  }
+}
+
 let liveOnce: Promise<Map<string, LiveResult>> | null = null;
 /** The live results with no backend variable, run once per file. */
 const live = (): Promise<Map<string, LiveResult>> => (liveOnce ??= runProbes({}));
 
 function run(args: string[]): { code: number; stdout: string; stderr: string } {
-  const result = Bun.spawnSync([process.execPath, "--no-env-file", CLI, ...args], { cwd: root, env: envWithoutBackends(), stdout: "pipe", stderr: "pipe" });
+  const result = Bun.spawnSync([process.execPath, "--no-env-file", CLI, ...args], { cwd: root, env: envWithoutBackends(), stdout: "pipe", stderr: "pipe", timeout: CLI_TIMEOUT });
   return { code: result.exitCode, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
 }
 
@@ -149,6 +172,10 @@ xaravelTest(
       if (probe.backend === null) {
         expect([probe.id, ["supported", "unsupported"].includes(result.status)]).toEqual([probe.id, true]);
         expect([probe.id, result.status, result.evidence !== ""]).toEqual([probe.id, recorded, true]);
+        if (result.status === "unsupported") {
+          // An unsupported record must not hide a sub-check that regressed: its evidence is pinned too.
+          expect([probe.id, unsupportedEvidenceHolds(probe.id, result.evidence)]).toEqual([probe.id, true]);
+        }
       } else {
         expect([probe.id, result.status, result.evidence]).toEqual([probe.id, "not-run", `${probe.backend} unset`]);
         expect([probe.id, ["supported", "unsupported"].includes(recorded)]).toEqual([probe.id, true]);
@@ -207,7 +234,10 @@ xaravelTest(
         counts[result.status]++;
       }
     }
-    expect(ok.stdout).toBe(`PROBES OK: ${counts.supported} supported, ${counts.unsupported} unsupported, 8 not run (of 20).\n`);
+    const okLines = ok.stdout.split("\n");
+    expect(okLines.slice(0, 20).map((line) => line.split(": ")[0])).toEqual(EXPECTED_IDS);
+    expect(okLines.slice(0, 20).map((line) => line.split(": ")[1])).toEqual(EXPECTED_IDS.map((id) => results.get(id)!.status));
+    expect(okLines.slice(20)).toEqual([`PROBES OK: ${counts.supported} supported, ${counts.unsupported} unsupported, 8 not run (of 20).`, ""]);
     expect(ok.code).toBe(0);
 
     // Drift: live unsupported, recorded supported.
@@ -239,11 +269,17 @@ xaravelTest(
     const before = readFileSync(join(partialRoot, RESULTS_FILE), "utf8");
     const pure = checkProbes(partialRoot, results, { requireBackends: false });
     expect(pure.violations).toEqual([
+      `running Bun ${Bun.version}, ${BUN_VERSION_FILE} 1.4.4`,
       `${RESULTS_FILE}: bun 1.4.3 differs from ${BUN_VERSION_FILE} 1.4.4`,
       "bun-test.gone: recorded but not in the registry",
       `als.await: missing from the record (live supported: ${results.get("als.await")!.evidence})`,
     ]);
     expect(readFileSync(join(partialRoot, RESULTS_FILE), "utf8")).toBe(before);
+
+    // The Bun that ran the probes must be the pinned one, whatever the record says.
+    const pinnedRoot = fixture();
+    expect(checkProbes(pinnedRoot, results, { requireBackends: false, runningBun: "1.4.4" }).violations).toEqual([`running Bun 1.4.4, ${BUN_VERSION_FILE} 1.4.3`]);
+    expect(checkProbes(pinnedRoot, results, { requireBackends: false, runningBun: "1.4.3" }).violations).toEqual([]);
 
     // record refuses while any probe is not-run, and writes nothing.
     const refuseRoot = fixture();

@@ -17,9 +17,9 @@ The fixtures are named `*.probe.ts`, never `*.test.ts`: some fail on purpose, an
 
 | Command | What it does |
 | --- | --- |
-| `bun run probes:run [--json]` | Runs every probe and prints `<id>: <status>: <evidence>` (or JSON). Writes nothing. |
-| `bun run probes:check [--require-backends]` | Re-runs the probes and compares them with the record, the Escalations and `REPORT.md`. Prints `PROBES OK: <s> supported, <u> unsupported, <n> not run (of <t>).` or one violation per line, exit 1. A backend probe without its variable is `not run`; with `--require-backends` that is a violation. |
-| `bun run probes:record` | Rewrites `results.json` from a live run, keeping each still-unsupported probe's Escalation. Refuses, writing nothing, when any probe is not run. |
+| `bun run probes:run [--json]` | Runs every probe and prints `<id>: <status>: <evidence>` (or JSON). Writes nothing. Exits 1 when the running Bun is not the `.bun-version` pin. |
+| `bun run probes:check [--require-backends]` | Re-runs the probes and compares them with the record, the Escalations and `REPORT.md`. On a pass it prints one `<id>: <status>: <evidence>` line per probe, so the CI log keeps the evidence behind every recorded row, then `PROBES OK: <s> supported, <u> unsupported, <n> not run (of <t>).` Otherwise it prints one violation per line and exits 1. A backend probe without its variable is `not run`; with `--require-backends` that is a violation. A running Bun other than the `.bun-version` pin is a violation (`running Bun <version>, .bun-version <pin>`). |
+| `bun run probes:record` | Rewrites `results.json` from a live run, keeping each still-unsupported probe's Escalation. Refuses, writing nothing, when any probe is not run or the running Bun is not the pin. |
 | `bun run probes:generate` | Rewrites `REPORT.md` from the registry and the record. |
 
 Each takes `--root <dir>`. Exit codes: 0 pass, 1 any violation or failure, 2 a usage error.
