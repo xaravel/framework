@@ -8,11 +8,12 @@
 // Maintainer's to write); each failing case mutates its own copy. The CLI runs
 // against a `Bun.serve` fake of the GitHub API.
 import { afterAll, expect } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { EPICS, STORIES_DIR } from "../../../tools/ownership/ownership";
 import { DIV_RECORDS, exitSignatureProblems, PHASE_0_EXIT, PHASE_0_LAST_EPIC, PILOT_REPORT, phase0Epics, phaseGateViolations, PORTING } from "../../../tools/ownership/phase-gate";
+import { FIXTURE_FILE } from "../../../tools/porting/porting";
 import { gateRoot, put, SIGNED_EXIT } from "./phase-gate-fixtures";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -122,6 +123,25 @@ xaravelTest("XT-conformance-168", "a Story manifest with an epic in Phase 1 or l
   const many = await gate((dir) => writeFileSync(join(dir, PORTING), "## A\n## B\n## C\n## D\n"));
   expect(many).toHaveLength(1);
   expect(many[0]!.split("; ")).toHaveLength(3);
+  expect(Number(/: (\d+) violation\(s\), first: /.exec(many[0]!)![1])).toBeGreaterThan(3);
+
+  // checkPorting throwing (the expression fixture is a directory, so reading it fails) fails closed.
+  const throwing = (dir: string): void => {
+    rmSync(join(dir, FIXTURE_FILE));
+    mkdirSync(join(dir, FIXTURE_FILE));
+  };
+  const thrown = await gate(throwing);
+  expect(thrown).toHaveLength(1);
+  expect(thrown[0]).toStartWith(`${LEAD} PORTING.md on main passing porting:check: cannot run it: `);
+  expect(thrown[0]).toEndWith(SUFFIX);
+  const thrownBase = base(true);
+  throwing(thrownBase);
+  const thrownRun = await runPr("story/9.1", [added("packages/support/src/A.ts")], thrownBase);
+  expect(thrownRun.code).toBe(1);
+  const thrownLines = gateLines(thrownRun.stderr);
+  expect(thrownLines).toHaveLength(1);
+  expect(thrownLines[0]).toStartWith(`${LEAD} PORTING.md on main passing porting:check: cannot run it: `);
+  expect(thrownLines[0]).toEndWith(SUFFIX);
 
   // A DIV record missing.
   expect(await gate((dir) => rmSync(join(dir, "decisions/DIV-7.md")))).toEqual([`${LEAD} DIV-1..12 on main: missing decisions/DIV-7.md ${SUFFIX}`]);
@@ -193,7 +213,7 @@ xaravelTest("XT-conformance-168", "a Story manifest with an epic in Phase 1 or l
   expect(steps[install + 1]!.name).toBe("Check edit ownership");
 });
 
-xaravelTest("XT-conformance-169", "once the gate passes, no later Phase 1 Story PR gets a phase gate: violation, whatever its head holds; Phase 0 Stories and non-Story branches are never gated, and CI keeps the inputs valid (FR-8)", async () => {
+xaravelTest("XT-conformance-169", "once the gate passes, no later Phase 1 Story PR gets a phase gate: violation, whatever its head holds; Phase 0 Stories and non-Story branches are never gated, and the required check job runs porting:check and divergence:check on every PR and in the queue (FR-8)", async () => {
   const open = base(true);
   for (const epic of [9, 14, 71]) {
     expect(await phaseGateViolations(open, `${epic}.1`, epic)).toEqual([]);
@@ -224,10 +244,28 @@ xaravelTest("XT-conformance-169", "once the gate passes, no later Phase 1 Story 
   const bot = await runPr("bot/x", [added("docs/x.md")], closed);
   expect(bot.code).toBe(1);
   expect(gateLines(bot.stderr)).toEqual([]);
+  const other = await runPr("feature/x", [added("docs/x.md")], closed);
+  expect(other.code).toBe(0);
+  expect(gateLines(other.stderr)).toEqual([]);
 
-  // The required check job keeps the inputs valid on every PR into main.
-  const ci = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")) as { jobs: Record<string, { steps: { run?: string }[] }> };
-  const runs = ci.jobs["check"]!.steps.map((step) => step.run);
-  expect(runs).toContain("bun run porting:check");
-  expect(runs).toContain("bun run divergence:check");
+  // The required check job runs porting:check and divergence:check unconditionally, on every PR into main and in the queue.
+  const ci = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")) as {
+    on: Record<string, { branches?: string[] } | null>;
+    jobs: Record<string, { if?: unknown; "continue-on-error"?: unknown; steps: { run?: string; if?: unknown; "continue-on-error"?: unknown }[] }>;
+  };
+  expect(Object.keys(ci.on)).toContain("pull_request");
+  expect(Object.keys(ci.on)).toContain("merge_group");
+  const branches = ci.on["pull_request"]?.branches;
+  if (branches !== undefined) {
+    expect(branches).toContain("main");
+  }
+  const check = ci.jobs["check"]!;
+  expect(check.if).toBeUndefined();
+  expect(check["continue-on-error"]).toBeUndefined();
+  for (const command of ["bun run porting:check", "bun run divergence:check"]) {
+    const step = check.steps.find((candidate) => candidate.run === command);
+    expect(step).toBeDefined();
+    expect(step!.if).toBeUndefined();
+    expect(step!["continue-on-error"]).toBeUndefined();
+  }
 });

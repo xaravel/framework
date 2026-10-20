@@ -66,7 +66,7 @@ FR-8 requires `PORTING.md`, DIV-1..12 and the pilot to be on `main` before any P
 
 Each unmet condition is one `phase gate:` line naming the Story, its epic, the input and its problem, ending `(FR-8, Story 8.8)`. A failing `PORTING.md` quotes its first 3 `porting:check` violations and their count. `planning/*` and `bot/*` PRs and Phase 0 Stories are never gated.
 
-The gate holds no state. It passes for every later Phase 1 PR while `main` keeps those files: they are Protected Paths, and the required `check` job's `porting:check` and `divergence:check` stop a merged PR from breaking them.
+The gate holds no state. It passes for every later Phase 1 PR while `main` keeps those files. `PORTING.md` and `decisions/` are Protected Paths, and the required `check` job's `porting:check` and `divergence:check` stop a merged PR from breaking them. `docs/porting/pilot-report.md` is not Protected: a PR that removes or blanks it re-closes the gate, with a `phase gate:` line, for every later Phase 1 PR.
 
 **Signing the Phase 0 exit.** Only the Maintainer writes `decisions/PHASE-0-EXIT.md`, at the Epic 8 checkpoint, through a `planning/*` PR. It takes the form of the `MAINT-*` rulings:
 

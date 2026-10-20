@@ -14,9 +14,10 @@
 //     non-blank body line that is not a heading (`exitSignatureProblems`).
 //
 // The gate holds no state: it passes for every later Phase 1 PR while `main`
-// keeps those files. They are Protected Paths, and the required `check` job's
-// `porting:check` and `divergence:check` keep them valid on every PR into
-// `main`. The check verifies the form of the signature, not who wrote it; only
+// keeps those files. `PORTING.md` and `decisions/` are Protected Paths, and
+// the required `check` job's `porting:check` and `divergence:check` keep them
+// valid on every PR into `main`. The pilot report is not Protected: removing
+// or blanking it re-closes the gate, loudly, for later Phase 1 PRs. The check verifies the form of the signature, not who wrote it; only
 // the Maintainer writes `PHASE-0-EXIT.md`.
 //
 // `checkPorting` imports `oxc-parser`, so it is loaded with a dynamic

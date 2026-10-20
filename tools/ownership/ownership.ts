@@ -89,8 +89,10 @@
 // `decisions/PHASE-0-EXIT.md` (`decision: approved`, `decided_by: Maintainer`,
 // `date: YYYY-MM-DD`, a body line that is not a heading). Every unmet
 // condition is one line. The gate has no state: it passes for every later PR
-// while `main` keeps those files, which are Protected, and the required
-// `check` job's `porting:check` and `divergence:check` keep them valid.
+// while `main` keeps those files. `PORTING.md` and `decisions/` are
+// Protected, and the required `check` job's `porting:check` and
+// `divergence:check` keep them valid; the pilot report is not Protected, so
+// removing or blanking it re-closes the gate for later Phase 1 PRs.
 // `planning/*`, `bot/*`, other branches and Phase 0 Stories are never gated.
 // `checkPorting` is loaded with a dynamic `import()` only then, so the tools
 // that import this file never need `oxc-parser`.
