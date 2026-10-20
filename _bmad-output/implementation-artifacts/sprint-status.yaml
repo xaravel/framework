@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 16:25
+last_updated: 10-20-2026 16:45
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1295,7 +1295,7 @@ action_items:
       freeze-point refusal for a security-relevant Upstream release, naming the advisory
       and recorded in the pin-bump PR; document it in docs/ops/upstream.md"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-8.8-1.md"
   - id: "epic-7-retro-item-10-sm1-target"
     epic: 7
