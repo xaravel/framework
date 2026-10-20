@@ -6,7 +6,7 @@
 {"fqcn":"Demo\\Model","kind":"property","member":"fillable","static":false,"type":"array","nullable":false}
 {"fqcn":"Demo\\Model","kind":"property","member":"middleware","static":false,"type":"array","nullable":false}
 {"fqcn":"Demo\\Model","kind":"property","member":"status","static":false,"type":"int","nullable":false}
-{"fqcn":"Demo\\Model","kind":"method","member":"fillable","static":false,"parameters":[],"returns":"array","nullable":false}
+{"fqcn":"Demo\\Model","kind":"method","member":"fillable","static":false,"parameters":[{"name":"fillable","type":"array","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Demo\\Model","kind":"method","member":"middleware","static":false,"parameters":[],"returns":"array","nullable":false}
 {"fqcn":"Demo\\Model","kind":"method","member":"status","static":false,"parameters":[],"returns":"int","nullable":false}
 {"fqcn":"Demo\\Repository","kind":"class","member":null,"stubbed":[]}

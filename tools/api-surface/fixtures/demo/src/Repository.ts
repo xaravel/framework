@@ -50,13 +50,19 @@ export class Repository {
     return name;
   }
 
-  /** Upstream `many(array $keys, int $ttl = 1, bool $strict = false)`: the options form, matched. */
-  many(keys: string[], options: { ttl?: number; strict?: boolean } = {}): string[] {
+  /** Upstream `many(array $keys, int $ttl = 1, bool $strict = false)`: the positional and the options form (AD-26), matched. */
+  many(keys: string[], ttl?: number, strict?: boolean): string[];
+  many(keys: string[], options?: { ttl?: number; strict?: boolean }): string[];
+  many(keys: string[], ttl: number | { ttl?: number; strict?: boolean } = 1, strict = false): string[] {
+    const options = typeof ttl === "number" ? { ttl, strict } : ttl;
     return options.strict === true ? keys.slice(0, options.ttl ?? 1) : keys;
   }
 
-  /** Upstream `pull(string $key, int $ttl = 1, bool $strict = false)`: the options form through a named interface in a union, matched. */
-  pull(key: string, options: PullOptions | null = null): string {
+  /** Upstream `pull(string $key, int $ttl = 1, bool $strict = false)`: positional, and the options form through a named interface in a union, matched. */
+  pull(key: string, ttl?: number, strict?: boolean): string;
+  pull(key: string, options?: PullOptions | null): string;
+  pull(key: string, ttl: number | PullOptions | null = 1, strict = false): string {
+    const options = typeof ttl === "number" ? { ttl, strict } : ttl;
     return options === null ? key : `${key}${options.ttl ?? 0}`;
   }
 
