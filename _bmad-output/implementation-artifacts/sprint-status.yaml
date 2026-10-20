@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 00:38
+last_updated: 10-20-2026 00:58
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1184,7 +1184,7 @@ action_items:
       runs the gate, and a check that fails when such an AC has no manifest with the
       field (S4; Maintainer ruling on item 8, Story 6.5)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/MAINT-2026-10-19-epic-6-items.md"
   - id: "epic-6-retro-item-14-api-surface-div12-ad26-mapping"
     epic: 6
