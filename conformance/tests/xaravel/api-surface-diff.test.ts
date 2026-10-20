@@ -13,7 +13,7 @@ import { afterAll, expect } from "bun:test";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { camel, componentsOf, diffComponent, memberName, renderItem, renderMarkdown, type CitationLine, type DiffInput, type UpstreamParameter, type UpstreamRecord } from "../../../tools/api-surface/api-surface";
+import { camel, componentsOf, DIV12_RENAMES, diffComponent, memberName, renderItem, renderMarkdown, type CitationLine, type DiffInput, type Div12Pair, type UpstreamParameter, type UpstreamRecord } from "../../../tools/api-surface/api-surface";
 import { citationProblems, defErrors, readSurfaceSchema } from "../../../tools/oracle/api-surface";
 import { checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -77,9 +77,7 @@ const DETAILS = [
   String.raw`demo: missing class Demo\Missing (explained: deferred:demo-missing)`,
   `demo: div12 property ${M}::middleware: option-pair`,
   `demo: div12 property ${M}::status: method-plus-state`,
-  `demo: div12 method ${M}::fillable: model-config`,
   `demo: div12 method ${M}::middleware: option-pair`,
-  `demo: extra method ${M}::setFillable (explained: DIV-12)`,
   `demo: div12 property ${R}::connection: method-plus-state`,
   `demo: mismatch property ${R}::label: is not nullable, Upstream ?string`,
   `demo: mismatch method ${R}::find: returns undefined (AD-9)`,
@@ -92,7 +90,7 @@ const DETAILS = [
   String.raw`demo: missing function Demo\other_fn`,
   `demo: stale exception ${R}::gone: DIV-1`,
 ];
-const SUMMARY = "api-surface demo: 35 Upstream, 20 matched, 3 missing, 1 renamed, 3 extra, 5 mismatched, 5 div12; 7 unexplained (AD-15)";
+const SUMMARY = "api-surface demo: 35 Upstream, 21 matched, 3 missing, 1 renamed, 2 extra, 5 mismatched, 4 div12; 7 unexplained (AD-15)";
 /** The unexplained ones, in order. */
 const UNEXPLAINED = DETAILS.filter((line) => !line.includes("(explained:") && !/: (div12|stale) /.test(line));
 
@@ -121,14 +119,14 @@ const method = (fqcn: string, member: string, parameters: UpstreamParameter[] = 
   ...extra,
 });
 
-/** One class `X\A` registered from `src/A.ts`, with `body` as its d.ts members and `source` (optional) as its source class body. */
+/** One class `X\A` registered from `src/A.ts`, with `body` as its d.ts members and `source` (optional) as its source class body; `extra.div12` gives DIV-12 pairs. */
 function single(upstream: UpstreamRecord[], body: string, source = "", extra: Partial<DiffInput> = {}): string[] {
   const diff = diffComponent({
     component: "x",
     upstream: [decl("X\\A"), ...upstream],
     additions: [],
     exceptions: [],
-    div12: [],
+    div12: extra.div12 ?? [],
     declarations: [{ file: "src/A.ts", text: `export declare class A {\n${body}\n}\n${extra.declarations?.[0]?.text ?? ""}` }],
     sources: [{ file: "src/A.ts", text: `export class A {\n${source}\n}\nregisterClass("X\\\\A", A);\n` }],
     ...(extra.additions === undefined ? {} : { additions: extra.additions }),
@@ -155,7 +153,7 @@ function matrixEdgeCases(): void {
   expect(single([method("X\\A", "get", [p("key", { type: "string", nullable: false }), p("default", { default: "null", optional: true })])], "get(key: string, fallback?: unknown): unknown;", "get(key: string, fallback: unknown = null) { return fallback ?? key; }")).toEqual([]);
   // Parameter name, default (number, string, negative, boolean; [] matches [] and {}), nullability.
   expect(single([method("X\\A", "put", [p("key"), p("seconds")])], "put(key: unknown, ttl: unknown): void;")).toEqual(["x: mismatch method X\\A::put: parameter 2 is ttl, Upstream seconds"]);
-  expect(single([method("X\\A", "f", [p("a", { default: "'x'", optional: true }), p("b", { default: "-1", optional: true })])], "f(a?: unknown, b?: unknown): void;", "f(a = 'y', b = -1) {}")).toEqual([
+  expect(single([method("X\\A", "f", [p("a", { default: "'x'", optional: true }), p("b", { default: "-1", optional: true })])], "f(a?: unknown, b?: unknown): void;\nf(options?: { a?: unknown; b?: unknown }): void;", "f(a = 'y', b = -1) {}")).toEqual([
     "x: mismatch method X\\A::f: parameter 1 default 'y', Upstream 'x'",
   ]);
   expect(single([method("X\\A", "f", [p("a", { default: "[]", optional: true })])], "f(a?: unknown): void;", "f(a = []) {}")).toEqual([]);
@@ -171,20 +169,48 @@ function matrixEdgeCases(): void {
   expect(single([method("X\\A", "f", [p("a", { optional: true, default: "1" })])], "f(a: unknown): void;")).toEqual(["x: mismatch method X\\A::f: parameter 1 is not optional"]);
   expect(single([method("X\\A", "f", [p("a", { optional: true, variadic: true })])], "f(a?: unknown): void;")).toEqual(["x: mismatch method X\\A::f: parameter 1 is not a rest parameter, Upstream variadic"]);
   expect(single([method("X\\A", "f", [p("a", { type: "?string", optional: true, variadic: true })])], "f(...a: (string | null)[]): void;")).toEqual([]);
-  // Options form: required positionally, then one type literal whose keys are exactly the optional parameters'.
+  // Options form (AD-26: the member "also accepts" it): with two or more optional parameters, a positional signature and an
+  // options-form signature (required positionally, then one type literal whose keys are exactly the optional parameters')
+  // are each required; each options-form failure is prefixed `options overload: `.
   const opts = [p("a"), p("b_c", { optional: true, default: "1" }), p("d", { optional: true, default: "2" })];
-  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: { bC?: number; d?: number }): void;")).toEqual([]);
-  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: Opts | null): void;", "", { declarations: [{ file: "src/A.ts", text: "export type Opts = { bC?: number; d?: number };\n" }] })).toEqual([]);
-  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: { bC?: number }): void;")).toEqual([
-    "x: mismatch method X\\A::f: parameter 2 is not an options object with keys bC, d",
+  const positional = "f(a: unknown, bC?: number, d?: number): void;\n";
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: { bC?: number; d?: number }): void;`)).toEqual([]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: Opts | null): void;`, "", { declarations: [{ file: "src/A.ts", text: "export type Opts = { bC?: number; d?: number };\n" }] })).toEqual([]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: { bC?: number }): void;`)).toEqual([
+    "x: mismatch method X\\A::f: options overload: parameter 2 is not an options object with keys bC, d",
   ]);
   // The options parameter and each of its keys must be optional; a trailing Upstream variadic needs a rest parameter after it.
-  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options: { bC?: number; d?: number }): void;")).toEqual(["x: mismatch method X\\A::f: parameter 2 is not optional"]);
-  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: { bC: number; d?: number }): void;")).toEqual(["x: mismatch method X\\A::f: parameter 2 key bC is not optional"]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options: { bC?: number; d?: number }): void;`)).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 is not optional"]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: { bC: number; d?: number }): void;`)).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 key bC is not optional"]);
   const withRest = [...opts, p("rest", { optional: true, variadic: true })];
-  expect(single([method("X\\A", "f", withRest)], "f(a: unknown, options?: { bC?: number; d?: number }, ...rest: unknown[]): void;")).toEqual([]);
-  expect(single([method("X\\A", "f", withRest)], "f(a: unknown, options?: { bC?: number; d?: number }): void;")).toEqual([
-    "x: mismatch method X\\A::f: parameter 3 (rest) is missing",
+  const positionalRest = "f(a: unknown, bC?: number, d?: number, ...rest: unknown[]): void;\n";
+  expect(single([method("X\\A", "f", withRest)], `${positionalRest}f(a: unknown, options?: { bC?: number; d?: number }, ...rest: unknown[]): void;`)).toEqual([]);
+  expect(single([method("X\\A", "f", withRest)], `${positionalRest}f(a: unknown, options?: { bC?: number; d?: number }): void;`)).toEqual([
+    "x: mismatch method X\\A::f: options overload: parameter 3 (rest) is missing",
+  ]);
+  // Options only: the positional failures. Positional only: the options failures, each prefixed. One optional: positional only.
+  const bc = [p("a"), p("b", { optional: true, default: "1" }), p("c", { optional: true, default: "2" })];
+  expect(single([method("X\\A", "f", bc)], "f(a: unknown, options?: { b?: number; c?: number }): void;")).toEqual([
+    "x: mismatch method X\\A::f: parameter 2 is options, Upstream b; parameter 3 (c) is missing",
+  ]);
+  expect(single([method("X\\A", "f", bc)], "f(a: unknown, b?: number, c?: number): void;")).toEqual([
+    "x: mismatch method X\\A::f: options overload: parameter 2 is not an options object with keys b, c; options overload: parameter 3 (c) is extra",
+  ]);
+  expect(single([method("X\\A", "f", [p("a"), p("b", { optional: true, default: "1" })])], "f(a: unknown, b?: number): void;")).toEqual([]);
+  // Functions get the same both-forms rule.
+  const fnDiff = (dts: string): string[] =>
+    diffComponent({
+      component: "x",
+      upstream: [{ fqcn: "X\\f", kind: "function", member: null, static: false, parameters: bc, returns: null, nullable: true }],
+      additions: [],
+      exceptions: [],
+      div12: [],
+      declarations: [{ file: "src/f.ts", text: dts }],
+      sources: [],
+    }).items.map((item) => renderItem("x", item));
+  expect(fnDiff("export declare function f(a: unknown, b?: number, c?: number): void;\nexport declare function f(a: unknown, options?: { b?: number; c?: number }): void;\n")).toEqual([]);
+  expect(fnDiff("export declare function f(a: unknown, options?: { b?: number; c?: number }): void;\n")).toEqual([
+    "x: mismatch function X\\f: parameter 2 is options, Upstream b; parameter 3 (c) is missing",
   ]);
   // Returns: undefined at the top level only (AD-9); nullability after unwrapping a Promise.
   expect(single([method("X\\A", "f")], "f(): (x?: string | undefined) => void;")).toEqual([]);
@@ -227,6 +253,68 @@ function matrixEdgeCases(): void {
   // constructor is extra only when Upstream has no __construct.
   expect(single([], "constructor(a: number);")).toEqual(["x: extra method X\\A::constructor"]);
   expect(single([method("X\\A", "__construct", [p("a")])], "constructor(a: number);")).toEqual([]);
+
+  // DIV-12 renames (DIV12_RENAMES): a `model-config` method with a decided rename is matched under its new name.
+  const pair = (name: string, classification: string): Div12Pair => ({ class: "X\\A", name, classification, property: { declaredIn: "X\\A" }, method: { declaredIn: "X\\A" } });
+  expect(DIV12_RENAMES).toEqual(new Map([["fillable", "setFillable"], ["touches", "isTouching"]]));
+  const fillable = method("X\\A", "fillable", [p("fillable", { type: "array", nullable: false })]);
+  const config = { div12: [pair("fillable", "model-config")] };
+  expect(single([fillable], "setFillable(fillable: string[]): this;", "", config)).toEqual([]);
+  expect(single([fillable], "", "", config)).toEqual(["x: missing method X\\A::fillable: expected as setFillable (DIV-12)"]);
+  expect(single([fillable], "", "", { ...config, exceptions: [{ component: "x", fqcn: "X\\A", member: "fillable", citation: "DIV-12" }] })).toEqual([
+    "x: missing method X\\A::fillable: expected as setFillable (DIV-12) (explained: DIV-12)",
+  ]);
+  expect(single([fillable], "setFillable(): this;", "", config)).toEqual(["x: mismatch method X\\A::fillable: parameter 1 (fillable) is missing"]);
+  // The rename table only: any other model-config method stays div12.
+  expect(single([method("X\\A", "booted", [], { static: true })], "", "", { div12: [pair("booted", "model-config")] })).toEqual(["x: div12 method X\\A::booted: model-config"]);
+  // Option pairs (AD-26): on a class, either form satisfies the pair and is not extra; neither form is one missing item.
+  const middleware = [{ fqcn: "X\\A", kind: "property", member: "middleware", static: false, type: "array", nullable: false } as const, method("X\\A", "middleware", [], { returns: "array", nullable: false })];
+  const option = { div12: [pair("middleware", "option-pair")] };
+  const both = ["x: div12 property X\\A::middleware: option-pair", "x: div12 method X\\A::middleware: option-pair"];
+  expect(single(middleware, "middleware: string[];", "", option)).toEqual(both);
+  expect(single(middleware, "middleware(): string[];", "", option)).toEqual(both);
+  expect(single(middleware, "", "", option)).toEqual(["x: missing property X\\A::middleware: option pair: neither form is declared (DIV-12, AD-26)", "x: div12 method X\\A::middleware: option-pair"]);
+  // On a trait, both are div12 (AD-26: base classes declare neither form).
+  const trait = diffComponent({
+    component: "x",
+    upstream: [{ fqcn: "X\\A", kind: "trait", member: null }, ...middleware],
+    additions: [],
+    exceptions: [],
+    div12: option.div12,
+    declarations: [{ file: "src/A.ts", text: "export declare class A {\n}\n" }],
+    sources: [{ file: "src/A.ts", text: 'export class A {}\nregisterClass("X\\\\A", A);\n' }],
+  });
+  expect(trait.items.map((item) => renderItem("x", item))).toEqual(both);
+  // A trait that declares a form gets it reported extra (AD-26: base classes declare neither).
+  const traitForm = diffComponent({
+    component: "x",
+    upstream: [{ fqcn: "X\\A", kind: "trait", member: null }, ...middleware],
+    additions: [],
+    exceptions: [],
+    div12: option.div12,
+    declarations: [{ file: "src/A.ts", text: "export declare class A {\n  middleware: string[];\n}\n" }],
+    sources: [{ file: "src/A.ts", text: 'export class A {}\nregisterClass("X\\\\A", A);\n' }],
+  });
+  expect(traitForm.items.map((item) => renderItem("x", item))).toEqual([...both, "x: extra property X\\A::middleware"]);
+  // A pair whose property is declared elsewhere: this class has only the method record, so neither form is one missing method.
+  const methodOnly: Div12Pair = { class: "X\\A", name: "middleware", classification: "option-pair", property: { declaredIn: "X\\P" }, method: { declaredIn: "X\\A" } };
+  expect(single([middleware[1]], "", "", { div12: [methodOnly] })).toEqual(["x: missing method X\\A::middleware: option pair: neither form is declared (DIV-12, AD-26)"]);
+  // Rename edges: a case-variant target is renamed; touches → isTouching; the rename applies on the method's declaring
+  // class (the real-data shape: a pair on Eloquent\Model, declared in Concerns\GuardsAttributes); the old name is not the new one.
+  expect(single([fillable], "setfillable(fillable: string[]): this;", "", config)).toEqual(["x: renamed method X\\A::fillable -> setfillable"]);
+  expect(single([method("X\\A", "touches", [p("relation")])], "isTouching(relation: unknown): boolean;", "", { div12: [pair("touches", "model-config")] })).toEqual([]);
+  const declaredIn: Div12Pair = { class: "X\\M", name: "fillable", classification: "model-config", property: { declaredIn: "X\\A" }, method: { declaredIn: "X\\A" } };
+  expect(single([fillable], "setFillable(fillable: string[]): this;", "", { div12: [declaredIn] })).toEqual([]);
+  expect(single([fillable], "", "", { div12: [declaredIn] })).toEqual(["x: missing method X\\A::fillable: expected as setFillable (DIV-12)"]);
+  expect(single([fillable], "fillable(fillable: string[]): this;", "", config)).toEqual([
+    "x: missing method X\\A::fillable: expected as setFillable (DIV-12)",
+    "x: extra method X\\A::fillable",
+  ]);
+  // Both forms: a failure every signature shares is reported once (static, and a return check).
+  const twoOptional = [p("a"), p("b", { optional: true, default: "1" }), p("c", { optional: true, default: "2" })];
+  const bothForms = "f(a: unknown, b?: number, c?: number): RET;\nf(a: unknown, options?: { b?: number; c?: number }): RET;";
+  expect(single([method("X\\A", "f", twoOptional, { static: true, returns: "void", nullable: false })], bothForms.replaceAll("RET", "void"))).toEqual(["x: mismatch method X\\A::f: is not static, Upstream static"]);
+  expect(single([method("X\\A", "f", twoOptional, { returns: "int", nullable: false })], bothForms.replaceAll("RET", "number | undefined"))).toEqual(["x: mismatch method X\\A::f: returns undefined (AD-9)"]);
 
   // Registration: top-level registerClass(<string>, <Identifier>) only; the first registration wins.
   const registrations = diffComponent({
@@ -418,9 +506,7 @@ xaravelTest(
         String.raw`demo: missing class Demo\Missing (explained: deferred:demo-missing)`,
         `demo: div12 property ${M}::middleware: option-pair`,
         `demo: div12 property ${M}::status: method-plus-state`,
-        `demo: div12 method ${M}::fillable: model-config`,
         `demo: div12 method ${M}::middleware: option-pair`,
-        `demo: extra method ${M}::setFillable (explained: DIV-12)`,
         `demo: div12 property ${R}::connection: method-plus-state`,
         `demo: mismatch property ${R}::label: is not nullable, Upstream ?string (explained: DIV-3)`,
         `demo: mismatch method ${R}::find: returns undefined (AD-9) (explained: DIV-3)`,
@@ -431,7 +517,7 @@ xaravelTest(
         `demo: renamed method ${R}::getURL -> getUrl (explained: DIV-12, FR-115)`,
         `demo: extra method ${R}::extraHelper (explained: DIV-12)`,
         String.raw`demo: missing function Demo\other_fn (explained: deferred:helpers)`,
-        "api-surface demo: 35 Upstream, 20 matched, 3 missing, 1 renamed, 3 extra, 5 mismatched, 5 div12; 0 unexplained (AD-15)",
+        "api-surface demo: 35 Upstream, 21 matched, 3 missing, 1 renamed, 2 extra, 5 mismatched, 4 div12; 0 unexplained (AD-15)",
         "",
       ].join("\n"),
     );
@@ -548,8 +634,8 @@ xaravelTest(
       [
         "| Component | Upstream | Matched | Missing | Renamed | Extra | Mismatched | Unexplained |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
-        "| demo | 35 | 20 | 3 | 1 | 3 | 5 | 7 |",
-        "| **Total** | 35 | 20 | 3 | 1 | 3 | 5 | 7 |",
+        "| demo | 35 | 21 | 3 | 1 | 2 | 5 | 7 |",
+        "| **Total** | 35 | 21 | 3 | 1 | 2 | 5 | 7 |",
         "",
       ].join("\n"),
     );

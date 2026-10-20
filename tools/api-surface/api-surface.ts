@@ -15,19 +15,29 @@
 // (or, for a contract, a top-level `const X = contract('<FQCN>')` or one
 // holding `Symbol.for('<FQCN>')` whose argument is an `Illuminate\…` or
 // `Laravel\…` FQCN, so runtime brands such as `Symbol.for("xaravel.class.fqcn")`
-// register nothing, AD-1), keyed by the FQCN without its leading
-// `\` (`normaliseFqcn`; the case is kept), to the `class`/`interface` `X` of
-// that file's `.d.ts`, and compares its public members with the Upstream records, after
-// the parity mappings: camelCase (`camel`), `__construct` → `constructor`,
-// `__toString` → `toString`, the AD-26 options object, and the DIV-12 pairs
-// (`conformance/scans/div12-pairs.jsonl`). Findings: `missing`, `extra`,
-// `renamed`, `mismatch` (parameter names, defaults, nullability, rest,
-// optional, static, returns; `undefined` in a return type, AD-9), and `div12`
-// (Upstream members DIV-12 says are not expected; never counted). An item is
-// explained by a cited `exceptions.jsonl` (missing, mismatch) or
-// `additions.jsonl` (extra) line, `renamed` by both; citation lines that
-// explain nothing are listed as `stale`. A citation line whose `component` has
-// no `<component>.jsonl` is a tool failure. docs/ops/api-surface.md has the rules.
+// register nothing, AD-1), keyed by the FQCN without its leading `\`
+// (`normaliseFqcn`; the case is kept), to the `class`/`interface` `X` of that
+// file's `.d.ts`, and compares its public members with the Upstream records,
+// after the parity mappings: camelCase (`camel`), `__construct` →
+// `constructor`, `__toString` → `toString`, the AD-26 options object, and the
+// DIV-12 pairs (`conformance/scans/div12-pairs.jsonl`).
+//
+// A `model-config` method with a decided DIV-12 rename (`DIV12_RENAMES`:
+// `fillable` → `setFillable`, `touches` → `isTouching`) is matched under its
+// new name. An `option-pair` on a non-trait declaration is satisfied by either
+// Xaravel form and is `missing` when neither is declared. A member with two or
+// more optional non-variadic Upstream parameters needs a positional and an
+// options-form signature (AD-26 "also accepts"; options failures are prefixed
+// `options overload: `).
+//
+// Findings: `missing`, `extra`, `renamed`, `mismatch` (parameter names,
+// defaults, nullability, rest, optional, static, returns; `undefined` in a
+// return type, AD-9), and `div12` (Upstream members DIV-12 says are not
+// expected; never counted). An item is explained by a cited `exceptions.jsonl`
+// (missing, mismatch) or `additions.jsonl` (extra) line, `renamed` by both;
+// citation lines that explain nothing are listed as `stale`. A citation line
+// whose `component` has no `<component>.jsonl` is a tool failure.
+// docs/ops/api-surface.md has the rules.
 //
 // Report mode prints one summary line per component (with `--details`, one
 // line per item before it), writes a markdown table with `--markdown`, and
@@ -54,6 +64,14 @@ import { isFqcn, normaliseFqcn, recogniseRegistration } from "../registration/re
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 export const API_SURFACE_DIR = "conformance/api-surface";
 export const DIV12_PAIRS = "conformance/scans/div12-pairs.jsonl";
+/**
+ * The decided DIV-12 renames of a `model-config` method (PRD §5.2 DIV-12, spine AD-7): Upstream name → Xaravel name.
+ * The pair list holds no target, and DIV-12 decides exactly these two; any other `model-config` method stays `div12`.
+ */
+export const DIV12_RENAMES: ReadonlyMap<string, string> = new Map([
+  ["fillable", "setFillable"],
+  ["touches", "isTouching"],
+]);
 const CITATION_NAMES = new Set(["additions", "exceptions"]);
 
 // ---------------------------------------------------------------------------
@@ -882,18 +900,26 @@ function optionsFailures(params: readonly UpstreamParameter[], sig: TsSignature,
   return out;
 }
 
-/** The failures of a method / function signature: the fewer of the positional and (when it applies) the options form. */
-function signatureFailures(up: UpstreamRecord, sig: TsSignature, tsStatic: boolean, ctx: CheckContext): string[] {
+/** The prefix of an options-form failure in a `mismatch` details string, keeping it apart from a positional one. */
+const OPTIONS_PREFIX = "options overload: ";
+
+/**
+ * The failures of a method / function over its signatures. The positional form must be met by some signature (the best
+ * one's failures otherwise). When Upstream has two or more optional non-variadic parameters, AD-26 says the member
+ * "also accepts" the options object, so an options-form signature is required as well, and its best signature's
+ * failures follow, each prefixed `options overload: `.
+ */
+function signatureFailures(up: UpstreamRecord, signatures: readonly TsSignature[], tsStatic: boolean, ctx: CheckContext): string[] {
   const params = up.parameters ?? [];
-  const head = [...(up.kind === "function" ? [] : staticFailures(up.static === true, tsStatic)), ...returnFailures(up, sig)];
-  const positional = positionalFailures(params, sig, ctx);
-  if (params.filter((p) => p.optional && !p.variadic).length >= 2) {
-    const options = optionsFailures(params, sig, ctx);
-    if (options.length < positional.length) {
-      return [...head, ...options];
-    }
+  const head = (sig: TsSignature): string[] => [...(up.kind === "function" ? [] : staticFailures(up.static === true, tsStatic)), ...returnFailures(up, sig)];
+  const positional = bestFailures(signatures.map((sig) => [...head(sig), ...positionalFailures(params, sig, ctx)]));
+  if (params.filter((p) => p.optional && !p.variadic).length < 2) {
+    return positional;
   }
-  return [...head, ...positional];
+  // `static` belongs to the member, so the positional form alone reports it.
+  const options = bestFailures(signatures.map((sig) => [...returnFailures(up, sig), ...optionsFailures(params, sig, ctx)]));
+  // A failure every signature shares (a return check) is reported once, in the positional failures.
+  return [...positional, ...options.filter((failure) => !positional.includes(failure)).map((failure) => `${OPTIONS_PREFIX}${failure}`)];
 }
 
 /** The failures of a property, constant or case against a TS property. */
@@ -969,13 +995,18 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     items.push({ category, kind, fqcn, member, to, details, explained: COUNTED.has(category) ? explain(category, fqcn, member, to) : null });
   };
 
-  // DIV-12: the Upstream members not expected, keyed `<fqcn>\0<kind>\0<name>`.
+  // DIV-12: the Upstream members not expected (`option-pair` records included: they are checked per declaration
+  // below), and the `model-config` methods with a decided rename (DIV12_RENAMES), keyed `<fqcn>\0<kind>\0<name>`.
   const notExpected = new Map<string, string>();
+  const renames = new Map<string, string>();
   for (const pair of input.div12) {
     // Each side's rule applies on the pair's class and on that side's declaring class.
-    const set = (kind: "property" | "method"): void => {
+    const owners = (kind: "property" | "method"): Set<string> => {
       const declaredIn = pair[kind]?.declaredIn;
-      for (const owner of new Set([pair.class, ...(typeof declaredIn === "string" ? [declaredIn] : [])])) {
+      return new Set([pair.class, ...(typeof declaredIn === "string" ? [declaredIn] : [])]);
+    };
+    const set = (kind: "property" | "method"): void => {
+      for (const owner of owners(kind)) {
         const at = `${owner}\0${kind}\0${pair.name}`;
         if (!notExpected.has(at)) {
           notExpected.set(at, pair.classification);
@@ -988,7 +1019,14 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     } else if (pair.classification === "method-plus-state") {
       set("property");
     } else if (pair.classification === "model-config") {
-      set("method");
+      const target = DIV12_RENAMES.get(pair.name);
+      if (target === undefined) {
+        set("method");
+      } else {
+        for (const owner of owners("method")) {
+          renames.set(`${owner}\0method\0${pair.name}`, target);
+        }
+      }
     }
   }
 
@@ -1019,14 +1057,32 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     const members = classMembers(pkg.declarations.get(registration.file) ?? [], registration.local);
     const defaults = classDefaults(pkg.sources.get(registration.file), registration.local);
     const unmatched: UpstreamRecord[] = [];
+    // Option pairs (AD-26) on a non-trait declaration whose neither form is declared: one `missing` is reported per name.
+    const neither = new Set<string>();
+    // The Xaravel name of an Upstream member: a decided DIV-12 rename, else the parity mapping.
+    const mappedName = (up: UpstreamRecord): string =>
+      up.kind === "method" ? (renames.get(`${fqcn}\0method\0${up.member}`) ?? memberName(up.member!)) : up.kind === "property" ? camel(up.member!) : up.member!;
     for (const up of upstreamMembers) {
       const role = up.kind === "method" ? "method" : "property";
       const classification = notExpected.get(`${fqcn}\0${role}\0${up.member}`);
+      if (classification === "option-pair" && decl.kind !== "trait") {
+        // Either Xaravel form (a property or a method of the mapped name) satisfies the pair, and is not extra; a
+        // trait is exempt, as AD-26's base classes declare neither form.
+        const forms = members.get(camel(up.member!)) ?? [];
+        for (const form of forms) {
+          form.matched = true;
+        }
+        if (forms.length === 0 && !neither.has(up.member!)) {
+          neither.add(up.member!);
+          add("missing", up.kind, fqcn, up.member, "option pair: neither form is declared (DIV-12, AD-26)");
+          continue;
+        }
+      }
       if (classification !== undefined) {
         add("div12", up.kind, fqcn, up.member, classification);
         continue;
       }
-      const name = role === "method" ? memberName(up.member!) : up.kind === "property" ? camel(up.member!) : up.member!;
+      const name = mappedName(up);
       const candidates = (members.get(name) ?? []).filter((m) => (role === "method" ? m.signatures.length > 0 : m.property !== null));
       const member = candidates.find((m) => m.static === (up.static === true)) ?? candidates[0];
       if (member === undefined) {
@@ -1044,7 +1100,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       let failures: string[];
       if (role === "method") {
         const ctx = { typeKeys: pkg.typeKeys, implementation: defaults.get(`${member.static ? "static " : ""}${member.name}`) ?? null, signatures: member.signatures.length };
-        failures = bestFailures(member.signatures.map((sig) => signatureFailures(up, sig, member.static, ctx)));
+        failures = signatureFailures(up, member.signatures, member.static, ctx);
       } else {
         failures = propertyFailures(up, member);
       }
@@ -1057,14 +1113,15 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     // Renamed: an unmatched Upstream member and an unmatched Xaravel member whose mapped names are equal case-insensitively.
     const extras = [...members.values()].flat().filter((m) => !m.matched);
     for (const up of unmatched) {
-      const mapped = (up.kind === "method" ? memberName(up.member!) : up.kind === "property" ? camel(up.member!) : up.member!).toLowerCase();
+      const target = up.kind === "method" ? (renames.get(`${fqcn}\0method\0${up.member}`) ?? null) : null;
+      const mapped = mappedName(up).toLowerCase();
       const at = extras.findIndex((m) => m.name.toLowerCase() === mapped);
       if (at >= 0) {
         const [other] = extras.splice(at, 1);
         other!.matched = true;
         add("renamed", up.kind, fqcn, up.member, null, other!.name);
       } else {
-        add("missing", up.kind, fqcn, up.member);
+        add("missing", up.kind, fqcn, up.member, target === null ? null : `expected as ${target} (DIV-12)`);
       }
     }
     for (const member of extras) {
@@ -1088,7 +1145,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       continue;
     }
     const ctx = { typeKeys: pkg.typeKeys, implementation: functionDefaults(pkg.sources.get(fn.file), name), signatures: fn.signatures.length };
-    const failures = bestFailures(fn.signatures.map((sig) => signatureFailures(up, sig, false, ctx)));
+    const failures = signatureFailures(up, fn.signatures, false, ctx);
     if (failures.length > 0) {
       add("mismatch", "function", up.fqcn, null, failures.join("; "));
     } else {
