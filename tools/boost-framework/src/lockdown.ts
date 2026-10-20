@@ -1,10 +1,10 @@
 // Locks the framework-mode server process down to reading its data scope
-// (Story 7.4; FR-109, spine l.106).
+// (Story 7.4, retro 7 item 1; FR-109, spine l.106).
 //
 // `lockdown(root)` replaces exports on the live `node:fs`, `node:fs/promises`,
-// `node:child_process`, `node:worker_threads`, `bun:sqlite` and `bun:ffi`
-// module objects (from
-// `process.getBuiltinModule`), on `Bun` and on `globalThis`:
+// `node:child_process`, `node:worker_threads`, `bun:sqlite`, `node:sqlite` and
+// `bun:ffi` module objects (from `process.getBuiltinModule`), on `Bun` and on
+// `globalThis`, and registers a resolve hook:
 // - `readFileSync`, `readdirSync`, `statSync`, `lstatSync`, `existsSync` and
 //   `realpathSync` (with `realpathSync.native`) on `node:fs` are wrapped: each
 //   throws `DataScopeError` unless `inScope(root, firstArg)` holds, then calls
@@ -16,11 +16,24 @@
 // - a scoped read whose options carry a `flag` other than `"r"` (such as
 //   `readFileSync(path, {flag: "w"})`, which would truncate) refuses;
 // - every function export of `node:child_process`, `node:worker_threads`,
-//   `bun:sqlite` (a Database creates its file) and `bun:ffi` refuses, and so do `globalThis.Worker`, `fetch` and `WebSocket` (a worker
+//   `bun:sqlite` and `node:sqlite` (a database creates its file) and `bun:ffi`
+//   refuses, and so do `globalThis.Worker`, `fetch` and `WebSocket` (a worker
 //   is a fresh realm with an unpatched `node:fs`; `fetch` reads `file:` URLs);
-// - `Bun.spawn`, `spawnSync`, `$`, `write`, `file`, `mmap`, `openInEditor`,
-//   `build`, `Glob`, `s3`, `S3Client`, `sql`, `SQL`, `connect`, `listen`,
-//   `serve` and `udpSocket` refuse.
+// - `Bun` is an allowlist: every writable member not in `BUN_KEPT` (pure
+//   parsers, hashers, pure helpers, the stdio file refs and plain values)
+//   refuses, a function by a refusing stand-in and anything else by a proxy
+//   whose every property access throws. Bun makes some members non-writable
+//   (`fetch`, `WebView`, `dns`, `plugin`, ...); they cannot be replaced and
+//   stay open (`BUN_OPEN`, listed in docs/framework-mode.md § Limits). A
+//   non-writable member on neither list makes `lockdown` throw, so a Bun
+//   upgrade that adds one fails loudly;
+// - a runtime `Bun.plugin` refuses, with `DataScopeError`, a module specifier
+//   with a non-code extension (`import(x, {with: {type: "text"}})`,
+//   `require(x.json)`, ...) whose path lies outside the data scope. Bun's hook
+//   does not see extensionless specifiers, so those stay open. A `?query` or
+//   `#fragment` is stripped first, a dotfile counts as having an extension,
+//   and a bare specifier Bun cannot resolve is refused. `Bun.plugin.clearAll`
+//   refuses, so the hook cannot be removed.
 //
 // The `node:fs` stream classes (`ReadStream`, `WriteStream`, ...) stay: they
 // open through `fs.open`, which refuses, so a stream only emits the error.
@@ -30,7 +43,7 @@
 // imports when a module graph links, so the patch reaches only modules
 // imported after it runs: src/server.ts calls it before `await
 // import("./mcp")`, which loads the data layer.
-import { DataScopeError, inScope } from "./scope";
+import { DataScopeError, inScope, modulePath } from "./scope";
 
 export { isDirectory } from "./scope";
 
@@ -45,8 +58,36 @@ export class ReadOnlyError extends Error {
 /** The `node:fs` functions that stay available, scope-checked on their first argument. */
 const READS = ["readFileSync", "readdirSync", "statSync", "lstatSync", "existsSync", "realpathSync"] as const;
 
-/** The `Bun` members that refuse. */
-const BUN_REFUSED = ["spawn", "spawnSync", "$", "write", "file", "mmap", "openInEditor", "build", "Glob", "s3", "S3Client", "sql", "SQL", "connect", "listen", "serve", "udpSocket"] as const;
+/**
+ * The writable `Bun` members that stay: pure parsers, hashers, pure helpers, the stdio file refs and plain values.
+ * Every other writable member refuses.
+ */
+const BUN_KEPT = [
+  // Parsers.
+  "YAML", "TOML", "JSON5", "JSONC", "XML", "markdown",
+  // Hashers.
+  "CryptoHasher", "MD4", "MD5", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA512_256", "hash", "sha", "password", "CSRF",
+  // Pure helpers.
+  "ArrayBufferSink", "allocUnsafe", "concatArrayBuffers", "color", "deepEquals", "deepMatch", "escapeHTML", "fileURLToPath", "pathToFileURL",
+  "indexOfLine", "inspect", "nanoseconds", "peek", "randomUUIDv5", "randomUUIDv7", "sleep", "sleepSync", "sliceAnsi", "stringWidth",
+  "stripANSI", "wrapAnsi", "readableStreamToArray", "readableStreamToArrayBuffer", "readableStreamToBlob", "readableStreamToBytes",
+  "readableStreamToFormData", "readableStreamToJSON", "readableStreamToText", "deflateSync", "inflateSync", "gzipSync", "gunzipSync",
+  "zstdCompress", "zstdCompressSync", "zstdDecompress", "zstdDecompressSync",
+  // The stdio file refs (fds 0, 1 and 2, already open) and plain values.
+  "stdin", "stdout", "stderr", "argv", "cwd", "enableANSIColors",
+] as const;
+
+/**
+ * The `Bun` members Bun makes non-writable and non-configurable (or a getter): they cannot be replaced and stay
+ * open (docs/framework-mode.md § Limits). A non-writable member on neither list makes `lockdown` throw.
+ */
+const BUN_OPEN = [
+  "fetch", "WebView", "dns", "plugin", "env", "Cookie", "CookieMap", "JSONL", "ModuleGraph", "semver", "main",
+  "isMainThread", "isStandaloneExecutable", "origin", "revision", "version", "version_with_sha",
+] as const;
+
+/** Module file extensions the resolve hook leaves to Bun; any other extension is data and is scope-checked. */
+const CODE_EXTENSIONS = [".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts", ".tsx"] as const;
 
 /** The globals that refuse. */
 const GLOBALS_REFUSED = ["Worker", "fetch", "WebSocket"] as const;
@@ -61,6 +102,99 @@ function refuse(name: string): AnyFunction {
   return function refused(): never {
     throw new ReadOnlyError(name);
   };
+}
+
+/**
+ * A stand-in for a refused `Bun` member: calling or constructing it (for a function) and every property access
+ * (so `Bun.Archive.write` and `Bun.redis.get` too) throw ReadOnlyError.
+ */
+function refuseMember(name: string, callable: boolean): object {
+  const fail = (): never => {
+    throw new ReadOnlyError(name);
+  };
+  const target: object = callable ? function refused(): void {} : (Object.create(null) as object);
+  return new Proxy(target, {
+    apply: fail,
+    construct: fail,
+    get: fail,
+    set: fail,
+    has: fail,
+    ownKeys: fail,
+    getOwnPropertyDescriptor: fail,
+    defineProperty: fail,
+    deleteProperty: fail,
+  });
+}
+
+/**
+ * The extension of the last segment of `path` (with its dot), or "" when it has none. A dotfile (`.env`) counts as
+ * having one, so it is scope-checked; `.` and `..` have none.
+ */
+function extensionOf(path: string): string {
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  if (base === "." || base === "..") {
+    return "";
+  }
+  const dot = base.lastIndexOf(".");
+  return dot >= 0 ? base.slice(dot) : "";
+}
+
+/**
+ * The writable `Bun` members not in `BUN_KEPT`, which lockdown replaces. Throws, before anything is patched, on a
+ * member Bun makes non-writable (or a getter) that is not in `BUN_OPEN`.
+ */
+function bunMembersToRefuse(bun: Exports): { name: string; callable: boolean }[] {
+  const refused: { name: string; callable: boolean }[] = [];
+  for (const name of Object.getOwnPropertyNames(bun)) {
+    if ((BUN_KEPT as readonly string[]).includes(name)) {
+      continue;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(bun, name);
+    if (descriptor === undefined) {
+      continue;
+    }
+    if (!("value" in descriptor) || descriptor.writable !== true) {
+      if (!(BUN_OPEN as readonly string[]).includes(name)) {
+        throw new Error(`lockdown: Bun.${name} cannot be replaced and is on neither the kept nor the known-open list`);
+      }
+      continue;
+    }
+    refused.push({ name, callable: typeof descriptor.value === "function" });
+  }
+  return refused;
+}
+
+/**
+ * Registers a runtime resolve hook that throws DataScopeError for a specifier with a non-code extension whose
+ * path lies outside the data scope. A bare (package) specifier is resolved with Bun's own resolver first.
+ */
+function lockModuleResolution(root: string, bun: Exports): void {
+  const resolveSync = (bun["resolveSync"] as (specifier: string, from: string) => string).bind(Bun);
+  Bun.plugin({
+    name: "boost-framework-lockdown",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        // A `?query` or `#fragment` suffix (`AGENTS.md?x.ts`) must not hide the file's own extension.
+        const specifier = args.path.replace(/[?#].*$/s, "");
+        const extension = extensionOf(specifier);
+        if (extension === "" || (CODE_EXTENSIONS as readonly string[]).includes(extension)) {
+          return undefined;
+        }
+        let path = modulePath(specifier, args.importer);
+        if (path === null && !specifier.includes(":")) {
+          try {
+            path = resolveSync(specifier, args.importer === "" ? process.cwd() : args.importer);
+          } catch {
+            throw new DataScopeError(args.path);
+          }
+        }
+        if (path === null || !inScope(root, path)) {
+          throw new DataScopeError(args.path);
+        }
+        return undefined;
+      });
+    },
+  });
 }
 
 /** Whether an options argument asks for anything but a plain read (`flag` other than "r"). */
@@ -94,6 +228,8 @@ export function lockdown(root: string): void {
   if (locked) {
     throw new Error("lockdown: already locked down");
   }
+  const bun = Bun as unknown as Exports;
+  const bunRefused = bunMembersToRefuse(bun);
   // Bun builds the stdio streams lazily, from `Bun.file(<fd>)`; once that refuses, a stream falls back to
   // `fs.write` on the module object, which refuses too. Building them now, on the originals, keeps the
   // JSON-RPC channel (fds 0, 1 and 2, already open) working. No new file can be opened afterwards.
@@ -105,6 +241,7 @@ export function lockdown(root: string): void {
   const childProcess = process.getBuiltinModule("node:child_process") as unknown as Exports;
   const workerThreads = process.getBuiltinModule("node:worker_threads") as unknown as Exports;
   const sqlite = process.getBuiltinModule("bun:sqlite") as unknown as Exports;
+  const nodeSqlite = process.getBuiltinModule("node:sqlite") as unknown as Exports;
   const ffi = process.getBuiltinModule("bun:ffi") as unknown as Exports;
 
   for (const name of READS) {
@@ -124,6 +261,7 @@ export function lockdown(root: string): void {
     [childProcess, "node:child_process"],
     [workerThreads, "node:worker_threads"],
     [sqlite, "bun:sqlite"],
+    [nodeSqlite, "node:sqlite"],
     [ffi, "bun:ffi"],
   ] as const) {
     for (const name of Object.keys(module)) {
@@ -132,9 +270,11 @@ export function lockdown(root: string): void {
       }
     }
   }
-  const bun = Bun as unknown as Exports;
-  for (const name of BUN_REFUSED) {
-    bun[name] = refuse(`Bun.${name}`);
+  lockModuleResolution(root, bun);
+  // `Bun.plugin` is non-writable, but its `clearAll` is not; refusing it keeps the resolve hook in place.
+  (Bun.plugin as unknown as Exports)["clearAll"] = refuse("Bun.plugin.clearAll");
+  for (const { name, callable } of bunRefused) {
+    bun[name] = refuseMember(`Bun.${name}`, callable);
   }
   const globals = globalThis as unknown as Exports;
   for (const name of GLOBALS_REFUSED) {

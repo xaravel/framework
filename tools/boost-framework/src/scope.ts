@@ -12,7 +12,12 @@
 // `lockdown` (src/lockdown.ts) replaces them, and it never ESM-imports
 // `node:fs`. So the check keeps working, through the originals, once the
 // process is locked down.
-import { isAbsolute, join, sep } from "node:path";
+//
+// `modulePath(specifier, importer)` turns a module specifier into the absolute
+// path it names, for lockdown's resolve hook: a relative one against the
+// importer's directory, an absolute one as is, a `file:` URL decoded. A bare
+// (package) specifier gives null.
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 const fs = process.getBuiltinModule("node:fs");
 const realpathSync = fs.realpathSync;
@@ -95,4 +100,26 @@ export function isDirectory(path: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The absolute path a module `specifier` names: `./x` and `../x` against `importer`'s directory, `/x` as is, a
+ * `file:` URL decoded. Null for a bare (package) specifier, another URL scheme, or a relative one with no
+ * absolute importer.
+ */
+export function modulePath(specifier: string, importer: string): string | null {
+  if (specifier.startsWith("file:")) {
+    try {
+      return resolve(decodeURIComponent(new URL(specifier).pathname));
+    } catch {
+      return null;
+    }
+  }
+  if (isAbsolute(specifier)) {
+    return resolve(specifier);
+  }
+  if (specifier === "." || specifier === ".." || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return isAbsolute(importer) ? resolve(dirname(importer), specifier) : null;
+  }
+  return null;
 }
