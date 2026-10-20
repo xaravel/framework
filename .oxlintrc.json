@@ -7,7 +7,7 @@
   "rules": {
     "typescript/no-floating-promises": ["error", { "checkThenables": true }],
     "typescript/await-thenable": "error",
-    "typescript/no-misused-promises": ["error", { "checksVoidReturn": true }],
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": true, "checksConditionals": true }],
     "unicorn/no-thenable": "off",
     "xaravel/no-identity-constructor-name": "error",
     "xaravel/no-framework-json-stringify": "error",

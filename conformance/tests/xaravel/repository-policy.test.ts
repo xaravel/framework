@@ -810,6 +810,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     "bun run async-surface --all --check",
     "bun run lint",
     "bun run scaffold:check",
+    // Story 6.6: the duplicate-FQCN and registration scan (AD-10, AD-22, XT-conformance-142).
+    "bun run registration:check",
     "bun run graph:check",
     // Story 4.4: the grader's assertion coverage report (FR-116, ESC-4.4-1, ESC-4.4-2 item 4).
     "bun run assert:coverage",

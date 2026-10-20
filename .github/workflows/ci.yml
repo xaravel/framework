@@ -136,6 +136,8 @@ jobs:
         run: bun run lint
       - name: Check the scaffold
         run: bun run scaffold:check
+      - name: Check class registration
+        run: bun run registration:check
       - name: Check the dependency graph
         run: bun run graph:check
       - name: Report assertion coverage
