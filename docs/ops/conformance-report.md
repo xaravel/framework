@@ -1,6 +1,6 @@
 # Conformance report, history and dashboard (`bun run conformance:report`, `conformance:history`, `conformance:site`, `conformance:publish`)
 
-The aggregator is the only place the Conformance Rate and the SM-1 alpha-gate figure are computed (Story 7.1; FR-5, SM-1). The dashboard (Story 7.2) and Boost framework mode's `conformance.rate` (Story 7.3) read its `report.json`; they never derive a number themselves. It reads conformance data only and imports no graded package.
+The aggregator is the only place the SM-1 alpha-gate figure is computed, and the reference computation of the Conformance Rate buckets (Story 7.1; FR-5, SM-1). Boost framework mode's `conformance.rate` (Story 7.3) does not read `report.json`: it mirrors the bucket code in `tools/boost-framework/src/tools.ts`, and XT-boost-1 holds its buckets byte-equal to `computeReport`'s; it never computes the alpha gate. The dashboard (Story 7.2) reads `report.json` and the history records, and derives two figures itself: the history chart divides each history record (overall `passing / pairs`, alpha `passing / applicable`), and the Epic review view sums `failKnown` across the Epic's Components. It reads conformance data only and imports no graded package.
 
 ```sh
 bun run conformance:report                                   # writes .cache/conformance/report.json
@@ -37,6 +37,7 @@ Keys are written in this order (two-space JSON, final LF); Components are sorted
     "variants": [<alpha variants>], "components": [<phase 1–8 Components>],
     "perVariant": { "<variant>": { "applicable": n, "passing": n }, … },
     "remaining": { "not-ported-yet": <lines>, "blocked-by": <lines> },
+    "noAlphaLine": <Test IDs>,
     "met": <boolean>
   }
 }
@@ -70,6 +71,7 @@ A bucket is:
   - `alpha.rate = passing / applicable`, `null` when nothing is applicable. `perVariant` gives the same count per alpha variant (a Test ID counted on each variant it is applicable on), so the dashboard can show either view.
   - `remaining` counts the in-scope `not-ported-yet` and `blocked-by` lines. `met` is `rate >= 0.9` and both `remaining` counts are 0.
   - `components` lists every package-table name with phase 1–8, whether or not it has Expectations yet.
+  - `noAlphaLine` counts the Test IDs of a phase 1–8 Component that have at least one Expectations line and none on an alpha variant (MySQL-, MariaDB-, SQL Server- or Beanstalkd-only tests). They are outside the alpha denominator, because SM-1 measures the alpha variants only; the field makes that exclusion visible instead of silent. It changes no other alpha field. The dashboard shows it in the alpha paragraph.
 
 ## History
 
@@ -93,7 +95,7 @@ The branch is separate from `main`, so `main` stays linear and free of bot commi
 
 ## Dashboard site (`conformance:site`)
 
-`tools/conformance-report/site.ts` renders a static site into `--out` (default `.cache/conformance/site`), replacing a previous site there; it refuses a non-empty directory without `.nojekyll`. It prints `conformance:site: wrote <n> pages to <dir>`. Every rate, count and alpha figure comes from `report.json`; the site never recomputes one, and every interpolated string is HTML-escaped.
+`tools/conformance-report/site.ts` renders a static site into `--out` (default `.cache/conformance/site`), replacing a previous site there; it refuses a non-empty directory without `.nojekyll`. It prints `conformance:site: wrote <n> pages to <dir>`. Every rate, count and alpha figure comes from `report.json`, except the history chart's ratios (each history record's overall `passing / pairs` and alpha `passing / applicable`) and the Epic review view's fail-known (the sum of `failKnown` across the Epic's Components), which the site derives itself. Every interpolated string is HTML-escaped.
 
 Flags: `--root`; `--report` (default `.cache/conformance/report.json`; a missing one exits 1 naming the path); `--history <file>` (absent means an empty history; a malformed line exits 1 naming its line number); `--out`; `--repo <owner/name>` (default `$GITHUB_REPOSITORY`; when neither is set, record names render as plain text, without links); `--api-surface <file>`, a precomputed `ComponentDiff[]` JSON. Without `--api-surface` the site calls `diffComponents(root, componentsOf(root))`, which runs `tsc -b`.
 
@@ -101,7 +103,7 @@ The output holds `index.html`, `epics/<N>.html` for every Epic with a Story mani
 
 `index.html` shows:
 
-- **Conformance Rate.** The full rate with its denominator (`<passing> / <pairs> pairs`) and, in the same section beside it, the alpha figure (`<passing> / <applicable> applicable Test IDs`, the target and `met`). A `null` rate is `n/a`. Then the overall bucket and a per-Component table: pairs, passing, rate, `fail-known`, quarantined, adapted.
+- **Conformance Rate.** The full rate with its denominator (`<passing> / <pairs> pairs`) and, in the same section beside it, the alpha figure (`<passing> / <applicable> applicable Test IDs`, the target, `met`, the `remaining` counts and the `noAlphaLine` Test IDs outside the denominator). A `null` rate is `n/a`. Then the overall bucket and a per-Component table: pairs, passing, rate, `fail-known`, quarantined, adapted.
 - **Skip Reasons.** All seven kinds, and the `reasonsDetail` table.
 - **Divergences.** A row for `DIV-1`..`DIV-12`, any other `DIV-<n>` a reason names and any other `decisions/DIV-<n>.md` record, with the pair count whose reason is `intentional-divergence:DIV-<n>`. The row links to `https://github.com/<repo>/blob/<commit>/decisions/DIV-<n>.md` when the record exists, or shows `no record yet` (Epic 8 writes the records).
 - **Open Escalations.** Every `conformance/escalations/ESC-*.md` whose `escalationStatus` is `open`, with its trigger, Test IDs and status. One whose status cannot be read (`escalationStatus` throws, e.g. a malformed name) is not decided, so it is listed too, with status `unknown`.

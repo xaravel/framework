@@ -11,7 +11,10 @@
 //
 // Inputs:
 // - `--report`: Story 7.1's `report.json` (default `<root>/.cache/conformance/report.json`).
-//   Every rate, count and alpha figure is read from it; nothing is recomputed.
+//   Every rate, count and alpha figure is read from it, except two the site
+//   derives itself: the history chart's ratios (each history record's overall
+//   passing / pairs and alpha passing / applicable) and the Epic review view's
+//   fail-known (the sum of `failKnown` across the Epic's Components).
 // - `--history`: the `history.jsonl` from `dashboard-data` (`conformance:history
 //   --history-out`); absent means an empty history.
 // - `--repo`: the GitHub `owner/name` that record links point at (default
@@ -518,7 +521,7 @@ function renderIndex(input: SiteInput): string {
   out.push(`<section id="rate">\n<h2>Conformance Rate</h2>`);
   out.push(`<p class="figure" id="full-rate">Full rate: <strong>${esc(formatRate(overall.rate))}</strong> = ${esc(overall.passing)} / ${esc(overall.pairs)} pairs</p>`);
   out.push(
-    `<p class="figure" id="alpha">Alpha gate (SM-1): <strong>${esc(formatRate(alpha.rate))}</strong> = ${esc(alpha.passing)} / ${esc(alpha.applicable)} applicable Test IDs · target ${esc(formatRate(alpha.target))} · met: ${alpha.met ? "yes" : "no"} · remaining not-ported-yet ${esc(alpha.remaining["not-ported-yet"])}, blocked-by ${esc(alpha.remaining["blocked-by"])}</p>`,
+    `<p class="figure" id="alpha">Alpha gate (SM-1): <strong>${esc(formatRate(alpha.rate))}</strong> = ${esc(alpha.passing)} / ${esc(alpha.applicable)} applicable Test IDs · target ${esc(formatRate(alpha.target))} · met: ${alpha.met ? "yes" : "no"} · remaining not-ported-yet ${esc(alpha.remaining["not-ported-yet"])}, blocked-by ${esc(alpha.remaining["blocked-by"])} · ${esc(alpha.noAlphaLine)} Test IDs with no alpha-Variant line, outside the denominator</p>`,
   );
   out.push(`<p>Overall bucket: pass ${esc(overall.statuses.pass)} · fail-known ${esc(overall.failKnown)} · skip ${esc(overall.statuses.skip)} · quarantined ${esc(overall.statuses.quarantined)} · adapted ${esc(overall.adapted)}</p>`);
   out.push(table(BUCKET_HEADERS, Object.entries(report.components).map(([name, bucket]) => bucketRow(name, bucket)), "no Components in the Inventory"));
