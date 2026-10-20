@@ -9,8 +9,10 @@
 // It emits the packages' declarations with one `tsc -b` (the repository's own
 // TypeScript, resolved from this file, never from `--root`), walks each
 // package's `<tsconfig outDir>/src/**/*.d.ts` with `oxc-parser`, and lists
-// every public method whose return type is a Promise, a PromiseLike or a
-// thenable (AD-6), with the root named by its `@asyncRoot` tag:
+// every public method whose return type is a Promise or a PromiseLike, with the
+// root named by its `@asyncRoot` tag, and every public method that returns a
+// thenable but no Promise, with the thenable's FQCN and no tag (AD-6;
+// MAINT-2026-10-19 item 7):
 //
 // - Public: a method or getter (not `private`, `protected` or `#private`), or
 //   a field typed as a function, of a class or interface the file exports
@@ -20,20 +22,30 @@
 //   typed as a function. Named `Class.method`, `Class.static method`, or the
 //   bare function name.
 // - Async: the return type, through parentheses, unions, intersections and
-//   `readonly`, references (or `import("…")`s) `Promise`, `PromiseLike` or a
-//   thenable short name. "Typed as a function" includes a union with a
-//   function member (`(() => Promise<void>) | null`). Thenables: `THENABLE_TYPES` from `@xaravel/contracts/async` when it
+//   `readonly`, references (or `import("…")`s) `Promise` or `PromiseLike`, by
+//   name (they are globals). "Typed as a function" includes a union with a
+//   function member (`(() => Promise<void>) | null`).
+// - Thenable: a type name there that resolves, through the `.d.ts`'s imports
+//   (named, renamed, `import type`, `import * as ns` + `ns.X`, `import("…").X`)
+//   or the source file itself, to the FQCN a source module registers with
+//   `registerClass` (`registeredFqcn` in `tools/lint-rules/thenables.ts`), when
+//   that FQCN is in the thenable list (compared without a leading `\`,
+//   case-insensitively; printed as the list spells it). Never by short name.
+//   The list: `THENABLE_TYPES` from `@xaravel/contracts/async` when it
 //   resolves from `<root>` and exports a non-empty `string[]` (Story 10.5),
 //   else `THENABLE_TYPES` from `tools/lint-rules/thenables.ts`.
 // - Tag: the nearest `/** … */` ending before the member with only whitespace
 //   between, carrying `@asyncRoot callback` or `@asyncRoot Name(\Name)*.method`.
-//   Overloads form one method: async if any signature is; the tag may sit on
-//   any signature; two different tags are an error.
+//   Overloads form one method: async if any signature returns a Promise (even
+//   if another returns a thenable), else a thenable method if any returns a
+//   thenable; the tag may sit on any signature; two different tags are an
+//   error. A thenable method carries no tag.
 //
 // The walk is syntactic: type aliases and inherited members are not resolved.
 //
 // Errors (an async method with no tag, a malformed tag, conflicting overload
-// tags, a tag on a non-async method, a declaration that does not parse) are all printed, naming
+// tags, a tag on a thenable method or on one that returns neither a Promise nor
+// a thenable, a declaration that does not parse) are all printed, naming
 // `packages/<pkg>/src/<path>.ts`, the method and `(AD-6)`; then it exits 1
 // and writes nothing. Otherwise it writes `packages/<pkg>/async-surface.json`
 // (`render`), except that an empty surface with no existing file writes
@@ -46,16 +58,35 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { parseSync } from "oxc-parser";
-import { THENABLE_TYPES } from "../lint-rules/thenables";
+import { importBindings, isThenableFqcn, registeredFqcn, THENABLE_TYPES, type ImportBinding } from "../lint-rules/thenables";
 
-/** One `async-surface.json` line. */
-export interface SurfaceEntry {
+/** An `async-surface.json` line for a Promise-returning method. */
+export interface AsyncEntry {
   readonly method: string;
   /** `src/<path>.ts`. */
   readonly file: string;
   /** The `@asyncRoot` value: `callback` or `Name(\Name)*.method`. */
   readonly root: string;
 }
+
+/** An `async-surface.json` line for a method that returns a thenable but no Promise (it carries no tag). */
+export interface ThenableEntry {
+  readonly method: string;
+  /** `src/<path>.ts`. */
+  readonly file: string;
+  /** The thenable FQCNs it returns, as the list spells them, distinct, sorted and joined by `|`. */
+  readonly thenable: string;
+}
+
+/** One `async-surface.json` line. */
+export type SurfaceEntry = AsyncEntry | ThenableEntry;
+
+/**
+ * Resolves a type name in a declaration file to its registered FQCN, or null: `file` is the source the declaration
+ * came from (`src/<path>.ts`), `specifier` the module it is imported from (null: `file`'s own binding), `name` the
+ * exported (or local) name.
+ */
+export type FqcnResolver = (file: string, specifier: string | null, name: string) => string | null;
 
 /** One AD-6 violation. */
 export interface SurfaceError {
@@ -123,28 +154,101 @@ export function typeNameTail(value: unknown): string | null {
   return null;
 }
 
-/** Whether a return type is a Promise, PromiseLike or thenable, through parentheses, unions, intersections and `readonly`; `import("…").X` counts as `X`. */
-function isAsyncType(value: unknown, thenables: ReadonlySet<string>): boolean {
+/** What a return type returns: whether a Promise / PromiseLike, and the thenable FQCNs (canonical spelling). */
+interface Returns {
+  promise: boolean;
+  readonly thenables: Set<string>;
+}
+
+/** How one declaration file resolves type names: its imports, the resolver and the thenable list. */
+interface TypeContext {
+  readonly file: string;
+  readonly imports: ReadonlyMap<string, ImportBinding>;
+  readonly resolve: FqcnResolver;
+  readonly thenables: readonly string[];
+}
+
+/** The FQCN a type name (`X`, `ns.X`) or an `import("…")` qualifier refers to, or null. */
+function typeFqcn(name: Node | null, importSource: string | null, context: TypeContext): string | null {
+  if (name === null) {
+    return null;
+  }
+  if (importSource !== null) {
+    return name.type === "Identifier" && typeof name["name"] === "string" ? context.resolve(context.file, importSource, name["name"]) : null;
+  }
+  if (name.type === "Identifier" && typeof name["name"] === "string") {
+    const binding = context.imports.get(name["name"]);
+    if (binding === undefined) {
+      return context.resolve(context.file, null, name["name"]);
+    }
+    return binding.imported === null ? null : context.resolve(context.file, binding.specifier, binding.imported);
+  }
+  if (name.type === "TSQualifiedName") {
+    const left = node(name["left"]);
+    const right = nameOf(name["right"]);
+    const binding = left?.type === "Identifier" && typeof left["name"] === "string" ? context.imports.get(left["name"]) : undefined;
+    return binding !== undefined && binding.imported === null && right !== null ? context.resolve(context.file, binding.specifier, right) : null;
+  }
+  return null;
+}
+
+/** The `import("…")` type's module specifier. */
+function importSourceOf(n: Node): string | null {
+  const source = node(n["source"]) ?? node(n["argument"]);
+  if (source === null) {
+    return null;
+  }
+  const literal = source.type === "TSLiteralType" ? node(source["literal"]) : source;
+  return literal !== null && typeof literal["value"] === "string" ? literal["value"] : null;
+}
+
+/** Collects what a return type returns into `out`, through parentheses, unions, intersections and `readonly`. */
+function collectReturns(value: unknown, context: TypeContext, out: Returns): void {
   const n = unwrapAnnotation(value);
   if (n === null) {
-    return false;
+    return;
   }
   switch (n.type) {
     case "TSTypeReference":
     case "TSImportType": {
-      const tail = typeNameTail(n.type === "TSTypeReference" ? n["typeName"] : n["qualifier"]);
-      return tail !== null && (tail === "Promise" || tail === "PromiseLike" || thenables.has(tail));
+      const name = node(n.type === "TSTypeReference" ? n["typeName"] : n["qualifier"]);
+      const tail = typeNameTail(name);
+      if (tail === "Promise" || tail === "PromiseLike") {
+        out.promise = true;
+        return;
+      }
+      const thenable = isThenableFqcn(typeFqcn(name, n.type === "TSImportType" ? importSourceOf(n) : null, context), context.thenables);
+      if (thenable !== null) {
+        out.thenables.add(thenable);
+      }
+      return;
     }
     case "TSUnionType":
     case "TSIntersectionType":
-      return nodes(n["types"]).some((t) => isAsyncType(t, thenables));
+      for (const t of nodes(n["types"])) {
+        collectReturns(t, context, out);
+      }
+      return;
     case "TSParenthesizedType":
-      return isAsyncType(n["typeAnnotation"], thenables);
+      collectReturns(n["typeAnnotation"], context, out);
+      return;
     case "TSTypeOperator":
-      return n["operator"] === "readonly" && isAsyncType(n["typeAnnotation"], thenables);
+      if (n["operator"] === "readonly") {
+        collectReturns(n["typeAnnotation"], context, out);
+      }
+      return;
     default:
-      return false;
+      return;
   }
+}
+
+/** What the return types of `types` (return-type annotations) return together. */
+function returnsOf(types: readonly unknown[], context: TypeContext): Returns {
+  const out: Returns = { promise: false, thenables: new Set() };
+  for (const type of types) {
+    collectReturns(type, context, out);
+  }
+  return out;
 }
 
 /** The function types of an annotation: itself, or the members of a union (`(() => Promise<void>) | null`), through parentheses. */
@@ -162,14 +266,12 @@ function functionTypes(value: unknown): Node[] {
   return n.type === "TSUnionType" ? nodes(n["types"]).flatMap(functionTypes) : [];
 }
 
-/** Whether any of `fns` returns a Promise or thenable. */
-function anyAsync(fns: readonly Node[], thenables: ReadonlySet<string>): boolean {
-  return fns.some((fn) => isAsyncType(fn["returnType"], thenables));
-}
-
 interface Signature {
   readonly name: string;
-  readonly async: boolean;
+  /** Whether it returns a Promise or PromiseLike. */
+  readonly promise: boolean;
+  /** The thenable FQCNs it returns (canonical spelling). */
+  readonly thenables: readonly string[];
   /** Each `@asyncRoot` value in the member's doc comment (`""` for a tag with no value). */
   readonly tags: readonly string[];
 }
@@ -192,8 +294,14 @@ function tagsBefore(text: string, comments: readonly Comment[], start: number): 
   return tags;
 }
 
+/** A signature's `promise` and `thenables`. */
+function signatureReturns(types: readonly unknown[], context: TypeContext): { promise: boolean; thenables: string[] } {
+  const returns = returnsOf(types, context);
+  return { promise: returns.promise, thenables: [...returns.thenables] };
+}
+
 /** The public signatures of a class or interface body. */
-function memberSignatures(owner: string, decl: Node, text: string, comments: readonly Comment[], thenables: ReadonlySet<string>): Signature[] {
+function memberSignatures(owner: string, decl: Node, text: string, comments: readonly Comment[], context: TypeContext): Signature[] {
   const body = node(decl["body"]);
   const out: Signature[] = [];
   for (const member of nodes(body?.["body"])) {
@@ -218,7 +326,7 @@ function memberSignatures(owner: string, decl: Node, text: string, comments: rea
           continue;
         }
         const fn = node(member["value"]);
-        out.push({ name: qualified, async: isAsyncType(fn?.["returnType"], thenables), tags: tags() });
+        out.push({ name: qualified, ...signatureReturns([fn?.["returnType"]], context), tags: tags() });
         break;
       }
       case "PropertyDefinition":
@@ -226,7 +334,7 @@ function memberSignatures(owner: string, decl: Node, text: string, comments: rea
       case "TSPropertySignature": {
         const fns = functionTypes(member["typeAnnotation"]);
         if (fns.length > 0) {
-          out.push({ name: qualified, async: anyAsync(fns, thenables), tags: tags() });
+          out.push({ name: qualified, ...signatureReturns(fns.map((f) => f["returnType"]), context), tags: tags() });
         }
         break;
       }
@@ -234,7 +342,7 @@ function memberSignatures(owner: string, decl: Node, text: string, comments: rea
         if (member["kind"] !== "method" && member["kind"] !== "get") {
           continue;
         }
-        out.push({ name: qualified, async: isAsyncType(member["returnType"], thenables), tags: tags() });
+        out.push({ name: qualified, ...signatureReturns([member["returnType"]], context), tags: tags() });
         break;
       }
       default:
@@ -245,7 +353,7 @@ function memberSignatures(owner: string, decl: Node, text: string, comments: rea
 }
 
 /** The public signatures of one `.d.ts` text, in order, or the parser's error messages when it does not parse cleanly. */
-function fileSignatures(file: string, text: string, thenables: ReadonlySet<string>): Signature[] | { readonly parseErrors: string[] } {
+function fileSignatures(file: string, text: string, thenables: readonly string[], resolve: FqcnResolver): Signature[] | { readonly parseErrors: string[] } {
   const result = parseSync(file.replace(/\.ts$/, ".d.ts"), text, { lang: "dts" });
   if (result.errors.length > 0) {
     return { parseErrors: result.errors.map((error) => error.message) };
@@ -253,6 +361,7 @@ function fileSignatures(file: string, text: string, thenables: ReadonlySet<strin
   const comments = result.comments as unknown as Comment[];
   const program = result.program as unknown as Node;
   const statements = nodes(program["body"]);
+  const context: TypeContext = { file, imports: importBindings(statements), resolve, thenables };
 
   // Local declarations by name, with the start their doc comment sits before.
   const locals = new Map<string, { decl: Node; start: number }[]>();
@@ -316,16 +425,16 @@ function fileSignatures(file: string, text: string, thenables: ReadonlySet<strin
       switch (decl.type) {
         case "ClassDeclaration":
         case "TSInterfaceDeclaration":
-          out.push(...memberSignatures(name, decl, text, comments, thenables));
+          out.push(...memberSignatures(name, decl, text, comments, context));
           break;
         case "TSDeclareFunction":
         case "FunctionDeclaration":
-          out.push({ name, async: isAsyncType(decl["returnType"], thenables), tags: tagsBefore(text, comments, start) });
+          out.push({ name, ...signatureReturns([decl["returnType"]], context), tags: tagsBefore(text, comments, start) });
           break;
         case "ConstDeclarator": {
           const fns = decl["kind"] === "const" ? functionTypes(node(decl["id"])?.["typeAnnotation"]) : [];
           if (fns.length > 0) {
-            out.push({ name, async: anyAsync(fns, thenables), tags: tagsBefore(text, comments, start) });
+            out.push({ name, ...signatureReturns(fns.map((f) => f["returnType"]), context), tags: tagsBefore(text, comments, start) });
           }
           break;
         }
@@ -337,17 +446,20 @@ function fileSignatures(file: string, text: string, thenables: ReadonlySet<strin
   return out;
 }
 
+const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 /**
- * The async surface of a package's emitted declarations (pure). `files` are the `.d.ts` texts, each named by the
- * source file it came from (`src/<path>.ts`); `thenableNames` are short class names.
+ * The async surface of a package's emitted declarations. `files` are the `.d.ts` texts, each named by the source file
+ * it came from (`src/<path>.ts`); `thenables` are FQCNs; `resolve` maps a type name to its registered FQCN (the
+ * default resolves nothing, so only Promises count).
  */
-export function surfaceOf(files: readonly DeclarationFile[], thenableNames: ReadonlySet<string>): { entries: SurfaceEntry[]; errors: SurfaceError[] } {
+export function surfaceOf(files: readonly DeclarationFile[], thenables: readonly string[], resolve: FqcnResolver = () => null): { entries: SurfaceEntry[]; errors: SurfaceError[] } {
   const entries: SurfaceEntry[] = [];
   const errors: SurfaceError[] = [];
   for (const { file, text } of files) {
     // Group overloads by name, in first-seen order.
     const groups = new Map<string, Signature[]>();
-    const signatures = fileSignatures(file, text, thenableNames);
+    const signatures = fileSignatures(file, text, thenables, resolve);
     if (!Array.isArray(signatures)) {
       // A partial AST would silently drop methods: fail instead.
       errors.push({ file, method: "", message: `does not parse: ${signatures.parseErrors.join("; ")} (AD-6)` });
@@ -359,19 +471,26 @@ export function surfaceOf(files: readonly DeclarationFile[], thenableNames: Read
       groups.set(signature.name, list);
     }
     for (const [method, signatures] of groups) {
-      const async = signatures.some((s) => s.async);
+      const promise = signatures.some((s) => s.promise);
+      const returned = [...new Set(signatures.flatMap((s) => s.thenables))].sort(compare);
       const tags = signatures.flatMap((s) => s.tags);
       const error = (message: string): void => {
         errors.push({ file, method, message: `${method} ${message} (AD-6)` });
       };
-      if (!async) {
-        if (tags.length > 0) {
+      if (!promise) {
+        if (returned.length > 0) {
+          if (tags.length > 0) {
+            error("returns a thenable but no Promise, so it carries no @asyncRoot tag");
+            continue;
+          }
+          entries.push({ method, file, thenable: returned.join("|") });
+        } else if (tags.length > 0) {
           error("has an @asyncRoot tag but returns neither a Promise nor a thenable");
         }
         continue;
       }
       if (tags.length === 0) {
-        error("returns a Promise or thenable but has no @asyncRoot tag (`@asyncRoot <Contract.method>` or `@asyncRoot callback`)");
+        error("returns a Promise but has no @asyncRoot tag (`@asyncRoot <Contract.method>` or `@asyncRoot callback`)");
         continue;
       }
       const malformed = tags.filter((tag) => !TAG_VALUE.test(tag));
@@ -387,7 +506,6 @@ export function surfaceOf(files: readonly DeclarationFile[], thenableNames: Read
       entries.push({ method, file, root: distinct[0]! });
     }
   }
-  const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
   entries.sort((a, b) => compare(a.file, b.file) || compare(a.method, b.method));
   return { entries, errors };
 }
@@ -398,7 +516,7 @@ export function render(entries: readonly SurfaceEntry[]): string {
     return "[]\n";
   }
   // Tool data, not a framework value, so AD-23 does not apply.
-  const lines = entries.map((entry) => JSON.stringify({ method: entry.method, file: entry.file, root: entry.root }));
+  const lines = entries.map((entry) => JSON.stringify("root" in entry ? { method: entry.method, file: entry.file, root: entry.root } : { method: entry.method, file: entry.file, thenable: entry.thenable }));
   return `[\n${lines.join(",\n")}\n]\n`;
 }
 
@@ -446,11 +564,6 @@ export async function thenableTypes(root: string): Promise<readonly string[]> {
     // An unloadable module is not the contract: fall back.
   }
   return THENABLE_TYPES;
-}
-
-/** The short names (last `\` segment) of thenable FQCNs. */
-export function shortNames(fqcns: readonly string[]): ReadonlySet<string> {
-  return new Set(fqcns.map((fqcn) => fqcn.slice(fqcn.lastIndexOf("\\") + 1)));
 }
 
 /** `<dir>/**\/*.d.ts`, sorted, as paths relative to `dir` with `/` separators. */
@@ -575,7 +688,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 1;
   }
 
-  const thenables = shortNames(await thenableTypes(root));
+  const thenables = await thenableTypes(root);
   const results: { pkg: string; text: string }[] = [];
   let failed = false;
   for (const pkg of pkgs) {
@@ -587,7 +700,8 @@ export async function main(argv: readonly string[]): Promise<number> {
       failed = true;
       continue;
     }
-    const { entries, errors } = surfaceOf(files, thenables);
+    // A type name resolves from the source file its declaration came from (`packages/<pkg>/src/<path>.ts`).
+    const { entries, errors } = surfaceOf(files, thenables, (file, specifier, name) => registeredFqcn(join(packagesDir, pkg, file), specifier, name));
     for (const error of errors) {
       console.error(`async-surface: packages/${pkg}/${error.file}: ${error.message}`);
     }

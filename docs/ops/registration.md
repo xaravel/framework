@@ -35,7 +35,7 @@ Tests, `tools/` and anything outside `packages/*/src` are never scanned. Each so
 
 Shape, nested and alias violations apply to every package, graders included.
 
-The scan's recogniser, `recogniseRegistration` in `tools/registration/registration.ts`, is also the API-surface diff's ([api-surface.md](api-surface.md)): it returns a conforming registration's FQCN without its leading `\` (`normaliseFqcn`, case kept), the literal as written, and the class identifier.
+The scan's recogniser, `recogniseRegistration` in `tools/registration/recognise.ts` (re-exported by `registration.ts`), is also the API-surface diff's ([api-surface.md](api-surface.md)) and the thenable resolver's ([async-surface.md](async-surface.md#how-it-works)): it returns a conforming registration's FQCN without its leading `\` (`normaliseFqcn`, case kept), the literal as written, and the class identifier.
 
 **Duplicate FQCNs (AD-22).** Over every package, graders included, an FQCN registered at more than one site fails. FQCNs are compared as PHP compares class names: case-insensitively and without a leading `\` (`\A\Foo`, `a\foo` and `A\Foo` are one class); the message names each site's literal FQCN. The first site is the lowest by path, then line; each later site gets `<fqcn> is already registered in <first path>:<line> (package <p1>); registered again here (package <p2>)`. Two registrations in one package, or one file, count too.
 

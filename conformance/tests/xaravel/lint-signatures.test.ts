@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { checkConfig, findDisables, scanSource, SPINE_RULES } from "../../../tools/lint-rules/disables";
 import plugin, { RULE_NAMES, singletonsPath } from "../../../tools/lint-rules/plugin";
-import { THENABLE_NAMES, THENABLE_TYPES } from "../../../tools/lint-rules/thenables";
+import { THENABLE_TYPES } from "../../../tools/lint-rules/thenables";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -139,7 +139,7 @@ xaravelTest(
     // The thenable list (Story 6.4's fixture list) and the committed boot-only writers the fixtures rely on.
     expect(THENABLE_TYPES).toContain("Illuminate\\Database\\Eloquent\\Builder");
     expect(THENABLE_TYPES).toContain("Illuminate\\Http\\Client\\PendingRequest");
-    expect([...THENABLE_NAMES].sort()).toEqual(
+    expect([...new Set(THENABLE_TYPES.map((fqcn) => fqcn.slice(fqcn.lastIndexOf("\\") + 1)))].sort()).toEqual(
       [
         "BelongsTo", "BelongsToMany", "Builder", "HasMany", "HasManyThrough", "HasOne", "HasOneOrMany", "HasOneOrManyThrough", "HasOneThrough", "MorphMany", "MorphOne", "MorphOneOrMany", "MorphTo", "MorphToMany",
         "PendingBatch", "PendingBroadcast", "PendingChain", "PendingClosureDispatch", "PendingCommand", "PendingDispatch", "PendingRequest", "PendingTestResponse", "Relation",
@@ -253,9 +253,21 @@ function edgeCases(): void {
     "packages/demo/src/maybe/ExportLater.ts": ["function load(): number | Promise<number> {\n  return 1;\n}\n\nconst read = (): number | Promise<number> => 1;\n\nexport { load, read as reader };\n", x(MAYBE, 2)],
     // no-async-thenable-return: an arrow body, `as`, a `const` annotated and a `let` initialised, a declared
     // Promise<thenable>, a qualified name, a same-file class with `then` or `implements Thenable`; an awaited thenable,
-    // a non-async function and a nested function pass.
+    // a non-async function and a nested function pass. A thenable is matched by the FQCN its import (renamed,
+    // `import type`, a namespace, an `export {} from` or `export *` chain) or its same-file registration resolves to,
+    // never by short name: a local unregistered `PendingRequest` or `Builder`, or a `Builder` registered as the Schema
+    // Builder, passes (Retro 6 item 12).
     "packages/demo/src/then/Arrow.ts": ['import { Builder } from "../support";\n\nexport const find = async (): Promise<unknown> => new Builder();\n', x(THEN)],
-    "packages/demo/src/then/As.ts": ["export async function find(value: unknown): Promise<unknown> {\n  return value as PendingRequest;\n}\n\ninterface PendingRequest {\n  readonly url: string;\n}\n", x(THEN)],
+    "packages/demo/src/then/As.ts": ["export async function find(value: unknown): Promise<unknown> {\n  return value as PendingRequest;\n}\n\ninterface PendingRequest {\n  readonly url: string;\n}\n", []],
+    "packages/demo/src/then/AsResolved.ts": ['import type { Builder as QB } from "../support";\n\nexport async function find(value: unknown): Promise<unknown> {\n  return value as QB;\n}\n', x(THEN)],
+    "packages/demo/src/then/reexport.ts": ['export { Builder as QB } from "../support";\n', []],
+    "packages/demo/src/then/barrel.ts": ['export * from "./reexport.js";\n', []],
+    "packages/demo/src/then/Reexported.ts": ['import { QB } from "./reexport";\n\nexport async function find(): Promise<unknown> {\n  return new QB();\n}\n', x(THEN)],
+    "packages/demo/src/then/Star.ts": ['import * as all from "./barrel";\n\nexport const find = async (): Promise<unknown> => new all.QB();\n', x(THEN)],
+    "packages/demo/src/then/schema.ts": ['import { registerClass } from "../support";\n\nexport class Builder {\n  readonly table = "t";\n}\n\nregisterClass("Illuminate\\\\Database\\\\Schema\\\\Builder", Builder);\n', []],
+    "packages/demo/src/then/OtherFqcn.ts": ['import { Builder } from "./schema";\n\nexport async function find(): Promise<Builder> {\n  return new Builder();\n}\n', []],
+    "packages/demo/src/then/LocalBuilder.ts": ["class Builder {\n  readonly table = \"t\";\n}\n\nexport async function find(): Promise<Builder> {\n  return new Builder();\n}\n", []],
+    "packages/demo/src/then/SameFile.ts": ['import { registerClass } from "../support";\n\nexport class Pending {\n  readonly url = "u";\n}\n\nexport async function find(): Promise<unknown> {\n  return new Pending();\n}\n\nregisterClass("\\\\illuminate\\\\http\\\\client\\\\pendingrequest", Pending);\n', x(THEN)],
     "packages/demo/src/then/Const.ts": ['import { Builder } from "../support";\n\nexport async function find(): Promise<unknown> {\n  const query: Builder = new Builder();\n  return query;\n}\n', x(THEN)],
     "packages/demo/src/then/Let.ts": ["class Lazy {\n  then(): void {}\n}\n\nexport async function find(): Promise<unknown> {\n  let lazy = new Lazy();\n  lazy = new Lazy();\n  return lazy;\n}\n", x(THEN)],
     "packages/demo/src/then/Declared.ts": ['import type { Builder } from "../support";\n\nexport async function find(): Promise<Builder | null> {\n  return null;\n}\n', x(THEN)],
@@ -358,6 +370,19 @@ function edgeCases(): void {
   expect(actual).toEqual(Object.fromEntries(Object.entries(cases).map(([path, [, rules]]) => [path, [...rules]])));
   expect(Object.keys(found).filter((path) => !(path in cases))).toEqual([]);
   expect(run.diagnostics.filter(([, rule]) => !rule.startsWith("xaravel(")).map(([file, rule]) => `${file.slice(dir.length + 1)}: ${rule}`)).toEqual([]);
+
+  // no-async-thenable-return names a resolved thenable by the list's FQCN spelling, and a structural one by its class name.
+  const thenMessage = (path: string): string | null => {
+    const line = run.output.split("\n").find((text) => text.startsWith(`${dir}/${path}:`) && text.endsWith(`[Error/xaravel(${THEN})]`));
+    return line === undefined ? null : line.replace(/^.+?:\d+:\d+: /, "").replace(/ \[Error\/xaravel\([\w-]+\)\]$/, "");
+  };
+  for (const [path, name] of [
+    ["packages/demo/src/then/AsResolved.ts", "Illuminate\\Database\\Query\\Builder"],
+    ["packages/demo/src/then/SameFile.ts", "Illuminate\\Http\\Client\\PendingRequest"],
+    ["packages/demo/src/then/Let.ts", "Lazy"],
+  ] as const) {
+    expect(thenMessage(path)).toBe(`an async function returns the thenable \`${name}\` unawaited, so the Promise resolves to its terminal's result; await it or drop \`async\` (AD-6)`);
+  }
 }
 
 /** A temp root's own `tools/lint-rules/singletons.json` replaces the committed one for the files under it. */

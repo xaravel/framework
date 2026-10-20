@@ -1,4 +1,6 @@
-// Story 6.3 fixture support: stand-ins for a thenable `Builder`, `registerClass`,
+// Story 6.3 fixture support: stand-ins for a thenable `Builder` (registered as
+// `Illuminate\Database\Query\Builder`, so `no-async-thenable-return` resolves
+// an import of it to a thenable FQCN), `registerClass`,
 // `inject`, contract tokens, `Model`, and Pest-style `uses` / `test`, so the
 // fixtures beside it typecheck and lint without the framework packages. Lints
 // clean at every placement.
@@ -78,3 +80,5 @@ export function test(name: string, body: (this: TestCase) => unknown): void {
     body.call(testCase);
   }
 }
+
+registerClass("Illuminate\\Database\\Query\\Builder", Builder);
