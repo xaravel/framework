@@ -33,7 +33,7 @@
 // where `failed` counts FAIL, LATE and MISSING, and `n` is their sum.
 import { compareUnits } from "../../tools/inventory/inventory";
 import type { JunitCase } from "./junit";
-import { globToRegExp } from "./select";
+import { globSource, globToRegExp } from "./select";
 
 /** The Xaravel Test files, relative to the root. */
 export const XARAVEL_GLOBS = ["conformance/tests/xaravel/**/*.test.ts", "packages/*/tests/xaravel/**/*.test.ts"] as const;
@@ -94,7 +94,14 @@ export function xaravelNamePattern(globs: readonly string[]): string | null {
   if (globs.length === 0) {
     return null;
   }
-  return `^(?:${globs.map((glob) => globToRegExp(glob).source.slice(1, -1)).join("|")}): `;
+  // Each alternative's backreferences point to its own groups: number them on from the previous alternative's.
+  let group = 1;
+  const alternatives = globs.map((glob) => {
+    const { source, groups } = globSource(glob, group);
+    group += groups;
+    return source;
+  });
+  return `^(?:${alternatives.join("|")}): `;
 }
 
 export interface JudgeInput {

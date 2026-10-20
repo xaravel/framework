@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { MAX_PATTERN, PRELOAD, isFullRun, parseArgs, runHarness, type HarnessOptions } from "../../harness/harness";
 import { FAST_SAMPLE, globToRegExp, namePattern, sampleIds, selectIds } from "../../harness/select";
 import { signatureLookup } from "../../harness/signatures";
+import { xaravelNamePattern } from "../../harness/xaravel";
 import { coveringIds } from "../../../tools/ownership/ownership";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -292,6 +293,69 @@ xaravelTest("XT-conformance-108", "--component, --id and --story run only the ma
   expect(globToRegExp("a.b").test("axb")).toBe(false);
   expect(globToRegExp("t#(1)[x]").test("t#(1)[x]")).toBe(true);
   expect(globToRegExp("testA").test("testAB")).toBe(false);
+  // Matching is linear (epic 7 retro L2): globs that backtrack exponentially as [\s\S]* per * finish quickly.
+  for (const [glob, candidate] of [
+    ["*t".repeat(14) + "!", `Illuminate\\Tests\\${"t".repeat(60)}::test${"t".repeat(10)}`],
+    ["*a".repeat(200) + "b", "a".repeat(2000)],
+  ] as const) {
+    const compiled = globToRegExp(glob);
+    const started = performance.now();
+    const matched = compiled.test(candidate);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(matched).toBe(false);
+    expect(selectIds(new Map([[candidate, "support"]]), { components: [], ids: [glob], story: null })).toEqual([]);
+  }
+  expect(globToRegExp("*a".repeat(200)).test("a".repeat(2000))).toBe(true);
+  expect(globToRegExp("*a".repeat(200)).test("a".repeat(199))).toBe(false);
+  // A literal digit after a middle segment is not read as part of its backreference.
+  expect(globToRegExp("*a*1*").test("xa1")).toBe(true);
+  expect(globToRegExp("*a*0").test("ba0")).toBe(true);
+  expect(globToRegExp("*a*0").test("ba")).toBe(false);
+  // The same answers as a reference DP matcher, over seeded random globs on {a,b,1,.,\,*,?} and strings on {a,b,1,.,\}.
+  const reference = (glob: string, candidate: string): boolean => {
+    // row[j]: glob[0..i) matches candidate[0..j)
+    let row = Array.from({ length: candidate.length + 1 }, (_, j) => j === 0);
+    for (const char of glob) {
+      const next = Array.from({ length: candidate.length + 1 }, () => false);
+      for (let j = 0; j <= candidate.length; j++) {
+        next[j] = char === "*" ? row[j]! || (j > 0 && next[j - 1]!) : j > 0 && row[j - 1]! && (char === "?" || char === candidate[j - 1]);
+      }
+      row = next;
+    }
+    return row[candidate.length]!;
+  };
+  let state = 0x5eed;
+  const random = (n: number): number => {
+    state = (Math.imul(state, 1103515245) + 12345) >>> 0;
+    return (state >>> 16) % n;
+  };
+  const pick = (alphabet: string, length: number): string => Array.from({ length }, () => alphabet[random(alphabet.length)]!).join("");
+  for (let round = 0; round < 3000; round++) {
+    const glob = pick("ab1.\\*?", random(9));
+    const candidate = pick("ab1.\\", random(11));
+    expect(`${glob} ~ ${candidate}: ${globToRegExp(glob).test(candidate)}`).toBe(`${glob} ~ ${candidate}: ${reference(glob, candidate)}`);
+  }
+  // The Xaravel -t pattern: one valid regex over two starred globs, each alternative's backreferences its own groups.
+  const xaravel = new RegExp(xaravelNamePattern(["*a*b*c", "X*1*2"])!);
+  expect(xaravel.test("zazbzc: a consequence")).toBe(true);
+  expect(xaravel.test("X01x2: a consequence")).toBe(true);
+  expect(xaravel.test("X2x1: a consequence")).toBe(false);
+  expect(xaravel.test("zczbza: a consequence")).toBe(false);
+  expect(xaravel.test("X12")).toBe(false);
+  // Without the per-alternative group offset, X*1*1's backreference would point to *a*b*c's unset group and match empty.
+  const offset = new RegExp(xaravelNamePattern(["*a*b*c", "X*1*1"])!);
+  expect(offset.test("X1: c")).toBe(false);
+  expect(offset.test("X1x1: c")).toBe(true);
+  // Three alternatives, a zero-group middle one, and two-digit backreferences in the last (groups 10..13).
+  const three = new RegExp(xaravelNamePattern(["*a".repeat(10) + "z", "XT-x", "*b*c*d*e*f"])!);
+  expect(three.test("XT-x: c")).toBe(true);
+  expect(three.test("_b_c_d_e_f: c")).toBe(true);
+  expect(three.test("_b_d_c_e_f: c")).toBe(false);
+  const stalled = new RegExp(xaravelNamePattern(["*t".repeat(14) + "!", "*b*"])!);
+  const stalledStarted = performance.now();
+  const stalledMatched = stalled.test(`${"t".repeat(90)}: c`);
+  expect(performance.now() - stalledStarted).toBeLessThan(1000);
+  expect(stalledMatched).toBe(false);
   const universe = new Map([
     ["X\\T::testA", "support"],
     ["X\\Tz::testA", "support"],

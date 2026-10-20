@@ -24,8 +24,8 @@ import { escalationDigest, escalationStatus } from "../../../tools/escalations/e
 import { readManifests } from "../../../tools/ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../../../tools/pin-bump/pin-bump";
 import { globToRegExp as harnessGlob } from "../../harness/select";
-import { callTool, computeBuckets, DataScopeError, dataPath, globToRegExp, inScope, parseSource, ReadOnlyError, storyTests, type ToolDefinition } from "../../../tools/boost-framework/src/index";
-import { readExpectationShards } from "../../../tools/boost-framework/src/data";
+import { callTool, computeBuckets, DataScopeError, dataPath, globToRegExp, inScope, inventoryGet, parseSource, ReadOnlyError, storyTests, type ToolDefinition } from "../../../tools/boost-framework/src/index";
+import { readExpectationShards, readInventory } from "../../../tools/boost-framework/src/data";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -469,11 +469,32 @@ xaravelTest(
 
     // The mirrored Expectations walk and glob semantics.
     expect(readExpectationShards(root).map((shard) => [shard.path, shard.lines.length])).toEqual(readExpectations(root).map((shard) => [shard.path, shard.lines.length]));
-    for (const glob of ["*", "?", "a*b", "*SupportStrTest::*", "X\\Y::t?st*", "a.b(c)[d]{e}|f^g$h+i/j", "*#*"]) {
-      for (const candidate of ["", "a", "ab", "aXb", "X\\Y::test1", "a.b(c)[d]{e}|f^g$h+i/j", "a#b", "Illuminate\\Tests\\Support\\SupportStrTest::testX"]) {
+    const pathological = "*t".repeat(14) + "!";
+    const longId = `Illuminate\\Tests\\${"t".repeat(60)}::test${"t".repeat(10)}`;
+    for (const glob of ["*", "?", "a*b", "*SupportStrTest::*", "X\\Y::t?st*", "a.b(c)[d]{e}|f^g$h+i/j", "*#*", "*a*1*", pathological]) {
+      for (const candidate of ["", "a", "ab", "aXb", "X\\Y::test1", "a.b(c)[d]{e}|f^g$h+i/j", "a#b", "Illuminate\\Tests\\Support\\SupportStrTest::testX", "xa1", longId, `${longId}!`]) {
         expect(`${glob} ~ ${candidate}: ${globToRegExp(glob).test(candidate)}`).toBe(`${glob} ~ ${candidate}: ${harnessGlob(glob).test(candidate)}`);
       }
     }
+    // The mirror compiles the same source as the harness, on the list above and on seeded random globs.
+    let state = 0x5eed;
+    const random = (n: number): number => {
+      state = (Math.imul(state, 1103515245) + 12345) >>> 0;
+      return (state >>> 16) % n;
+    };
+    const randomGlobs = Array.from({ length: 300 }, () => Array.from({ length: random(10) }, () => "ab1.\\*?"[random(7)]!).join(""));
+    for (const glob of ["*", "?", "a*b", "*SupportStrTest::*", "X\\Y::t?st*", "a.b(c)[d]{e}|f^g$h+i/j", "*#*", "*a*1*", pathological, ...randomGlobs]) {
+      expect(`${glob}: ${globToRegExp(glob).source}`).toBe(`${glob}: ${harnessGlob(glob).source}`);
+    }
+    // A glob that backtracked exponentially as [\s\S]* per * (epic 7 retro L2) matches every real Inventory ID quickly.
+    expect(inventoryGet(root, { glob: pathological })).toMatchObject({ entries: [] });
+    const ids = readInventory(root).map(({ raw }) => raw["id"] as string);
+    expect(ids.length).toBeGreaterThan(0);
+    const compiled = globToRegExp(pathological);
+    const started = performance.now();
+    const hits = ids.filter((id) => compiled.test(id));
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(hits).toEqual([]);
 
     // A bad flag: usage on stderr, exit 2, nothing on stdout.
     const bad = Bun.spawnSync(["bun", "--no-env-file", SERVER, "--nope"], { cwd: root, stdin: "ignore", stdout: "pipe", stderr: "pipe" });

@@ -67,17 +67,40 @@ export const INVENTORY_LIMIT = { min: 1, max: 1000, default: 100 } as const;
 
 const GLOB_SYNTAX = /[\^$\\.*+?()[\]{}|/]/;
 
-/** A whole-string RegExp for `glob`: `*` any run, `?` one character, the rest literal (the harness's `--id`). */
-export function globToRegExp(glob: string): RegExp {
+/** One `*`-free glob segment as RegExp source: `?` one character, the rest literal. */
+function globSegmentSource(segment: string): string {
   let source = "";
-  for (const char of glob) {
-    if (char === "*") {
-      source += "[\\s\\S]*";
-    } else if (char === "?") {
+  for (const char of segment) {
+    if (char === "?") {
       source += "[\\s\\S]";
     } else {
       source += GLOB_SYNTAX.test(char) ? `\\${char}` : char;
     }
+  }
+  return source;
+}
+
+/**
+ * A whole-string RegExp for `glob`: `*` any run, `?` one character, the rest literal (the harness's `--id`). It
+ * mirrors `globSource` of conformance/harness/select.ts: every segment between two `*`s is an atomic lazy search,
+ * `(?=([\s\S]*?<seg>))\<n>`, so a match takes time proportional to |glob| × |candidate|, with no exponential
+ * backtracking.
+ */
+export function globToRegExp(glob: string): RegExp {
+  const segments = glob.split("*");
+  let source = globSegmentSource(segments[0]!);
+  let group = 1;
+  for (let index = 1; index < segments.length - 1; index++) {
+    const segment = segments[index]!;
+    if (segment === "") {
+      continue;
+    }
+    // (?:\n) keeps a following literal digit out of the backreference.
+    source += `(?=([\\s\\S]*?${globSegmentSource(segment)}))(?:\\${group})`;
+    group++;
+  }
+  if (segments.length > 1) {
+    source += `[\\s\\S]*${globSegmentSource(segments.at(-1)!)}`;
   }
   return new RegExp(`^${source}$`, "u");
 }
