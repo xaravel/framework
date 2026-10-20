@@ -12,17 +12,20 @@
 //       prints `current` when two `pass` verdicts are recorded for the working
 //       tree, else `stale` or `missing` with the reason.
 //
-// The reviewed tree. `reviewTree(root, mode)` is the git tree id of the
-// repository with `_bmad-output/` removed, written through a temporary index
+// The reviewed tree. `reviewTree(root, mode)` is the git tree id a verdict is
+// bound to: the repository with the bookkeeping directories `_bmad-output/`
+// and `stories/` removed (ESC-8.8-1), written through a temporary index
 // (`GIT_INDEX_FILE`), so the real index is never touched. Mode `worktree` is
 // HEAD plus every tracked change and every untracked, non-ignored file; mode
-// `head` is the HEAD commit. The spec and sprint status live under
-// `_bmad-output/`, so recording a verdict or finishing the Story never makes a
+// `head` is the HEAD commit. The spec, its verdict records and sprint status
+// live under `_bmad-output/`, and a manifest's status under `stories/`, so
+// recording a verdict, a status edit or finishing the Story never makes a
 // verdict stale, and a reviewed working tree committed unchanged has the same
 // id as its head.
 //
-// The diff is `git diff-tree -p` between the `_bmad-output/`-less tree of
-// `--base` (default: the spec's `baseline_revision`) and the reviewed tree.
+// The diff is `git diff-tree -p` between the `_bmad-output/`-less trees of
+// `--base` (default: the spec's `baseline_revision`) and the working tree; it
+// still shows `stories/`.
 //
 // The prompt. The system text holds the checklist, the `## Precedence`
 // section of `conformance/README.md` and the answering rules. The user text
@@ -33,8 +36,17 @@
 // `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line; (c) every assigned
 // committed Oracle request's fixture whose `output.error` is not null, and
 // every changed fixture whose output is an error; (d) DIV-1 when an added line
-// has `@asyncRoot`. Everything is read from the working tree. A missing
-// evidence file is named ("unavailable: <why>"), never dropped.
+// has `@asyncRoot`; (e) the full body and cited consequences of every Xaravel
+// Test whose lines the diff changes, that uses a test helper or fixture the
+// diff changes, or whose test file's top-level setup changes (a heuristic
+// top-level-unit scanner, `testUnits`). Everything is read from the working
+// tree. A missing evidence file is named ("unavailable: <why>"), never dropped.
+//
+// A standing reject (ESC-8.8-1). A `reject` recorded for the reviewed tree
+// stands until the tree changes: `review` refuses to run on that tree (exit 1,
+// no reviewer, nothing recorded, the reject's findings printed), and
+// `fidelityVerdicts` counts it even when a later `pass` for the same slot and
+// tree follows.
 //
 // The reviewers. The loop's CLI is `--loop-cli`, else `XARAVEL_LOOP_CLI`,
 // else `claude` when `CLAUDECODE` is set. Reviewer 1 runs on the other CLI
@@ -52,8 +64,8 @@
 //
 // Exit codes: `review` 0 when both reviewers recorded `pass`, 1 when a
 // `reject` was recorded or a reviewer produced no verdict (or the review could
-// not run), 2 on a usage error. `status` 0 when `current`, else 1.
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+// not run, a standing reject included), 2 on a usage error. `status` 0 when `current`, else 1.
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { compareUnits, type InventoryEntry } from "../inventory/inventory";
@@ -65,8 +77,13 @@ import { readUpstream } from "../upstream/upstream";
 
 export const CHECKLIST_FILE = "conformance/review/fidelity.md";
 export const ORACLE_REQUESTS_DIR = "conformance/oracle-requests";
-/** The directory left out of every reviewed tree: specs and sprint status are bookkeeping, not the reviewed work. */
+/** The directory left out of every tree, the diff's included: specs and sprint status are bookkeeping, not the reviewed work. */
 export const EXCLUDED_DIR = "_bmad-output";
+/**
+ * The directories left out of the binding tree a verdict is recorded for (ESC-8.8-1): `_bmad-output/` (the spec, its
+ * verdict records, sprint status) and `stories/` (the manifests' status edits). The diff still shows `stories/`.
+ */
+export const BOOKKEEPING = [EXCLUDED_DIR, "stories"] as const;
 /** Where Story specs live (`spec-<a>-<b>-*.md`). */
 export const SPECS_DIR = "_bmad-output/implementation-artifacts";
 /** The heading of the spec section that holds the verdict records. */
@@ -174,9 +191,11 @@ export interface Evidence {
   readonly headErrorFixtures: readonly EvidenceEntry[];
   /** (d) `decisions/DIV-1.md` when an added line has `@asyncRoot`, else null (F-9). */
   readonly asyncRoot: EvidenceEntry | null;
+  /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
+  readonly xaravelTests: readonly XaravelTestEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: null };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: null, xaravelTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -279,6 +298,27 @@ export function buildPrompt(input: PromptInput): Prompt {
   } else {
     const entry = evidence.asyncRoot;
     sections.push("", `#### ${entry.label}`, "", entry.text === null ? `unavailable: ${entry.unavailable ?? "not read"}` : fence(entry.text, "markdown"));
+  }
+  sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
+  if (evidence.xaravelTests.length === 0) {
+    sections.push("", "No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
+  }
+  for (const entry of evidence.xaravelTests) {
+    if (entry.body === null) {
+      sections.push("", `#### unavailable (${entry.path})`, "", `unavailable: ${entry.unavailable ?? "not read"}`);
+      continue;
+    }
+    sections.push("", `#### ${entry.ids.length === 0 ? "(no literal XT id)" : entry.ids.join(", ")} (${entry.path}:${entry.from}-${entry.to})`, "");
+    sections.push(`Included because: ${entry.reasons.join("; ")}.`, "", fence(entry.body, "ts"), "");
+    const source = entry.citesFrom === "consequence" ? "its consequence string" : "its text (it has no literal consequence string)";
+    if (entry.consequences.length === 0) {
+      sections.push(`${source[0]!.toUpperCase()}${source.slice(1)} cites no \`FR-<n>.<k>\` or \`AD-<n>.<k>\` id.`);
+      continue;
+    }
+    sections.push(`The consequences ${source} cites:`);
+    for (const consequence of entry.consequences) {
+      sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, "jsonl"));
+    }
   }
   const user = sections.join("\n") + "\n";
   return { system, user, length: system.length + user.length };
@@ -432,7 +472,7 @@ export function headErrorFixtures(fixtures: readonly { readonly path: string; re
   return out;
 }
 
-/** The evidence (a)-(d) for the patches' added lines and the manifest's assigned ids, read from `root`. */
+/** The evidence (a)-(d) for the patches' added lines and the manifest's assigned ids, read from `root`; (e) is `xaravelTestEvidence`. */
 export function gatherEvidence(root: string, files: readonly ChangedFile[], manifest: Pick<Manifest, "testIds" | "xaravelTestIds">): Evidence {
   const added = addedLines(files);
   const divs = new Set<number>();
@@ -466,6 +506,7 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     errorFixtures: errorFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]),
     headErrorFixtures: [],
     asyncRoot: asyncRoot ? readEvidenceFile(root, "decisions/DIV-1.md") : null,
+    xaravelTests: [],
   };
 }
 
@@ -503,6 +544,534 @@ export function inventoryContext(root: string, testIds: readonly string[]): Inve
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Evidence (e): the Xaravel Tests the change touches (ESC-8.8-1)
+
+const REGEX_AFTER_WORDS = new Set(["return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await"]);
+const REGEX_AFTER_PUNCTUATION = "(,=:[!&|?{};+-*%<>~^";
+
+/**
+ * For each line of a TypeScript source, whether it starts outside every string, template, comment, regex literal and
+ * bracket. A heuristic lexer: a `/` starts a regex literal after an operator, an opening bracket, `}` or a keyword such
+ * as `return`, and divides after a value.
+ */
+export function lineStartsAtTopLevel(text: string): boolean[] {
+  type Mode = "code" | "line" | "block" | "sq" | "dq" | "template" | "regex";
+  const out: boolean[] = [true];
+  let mode: Mode = "code";
+  const stack: string[] = [];
+  let last = "";
+  let inClass = false;
+  const newline = (): void => {
+    out.push(mode === "code" && stack.length === 0);
+  };
+  // Skips the escaped character after a backslash; an escaped newline continues the string or template.
+  const escape = (i: number): number => {
+    if (text[i + 1] === "\n") {
+      newline();
+    }
+    return i + 1;
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!;
+    const next = text[i + 1];
+    if (c === "\n") {
+      if (mode === "line" || mode === "sq" || mode === "dq" || mode === "regex") {
+        mode = "code";
+      }
+      newline();
+      continue;
+    }
+    switch (mode) {
+      case "line":
+        continue;
+      case "block":
+        if (c === "*" && next === "/") {
+          mode = "code";
+          i++;
+        }
+        continue;
+      case "sq":
+      case "dq":
+        if (c === "\\") {
+          i = escape(i);
+        } else if (c === (mode === "sq" ? "'" : '"')) {
+          mode = "code";
+          last = "w";
+        }
+        continue;
+      case "template":
+        if (c === "\\") {
+          i = escape(i);
+        } else if (c === "`") {
+          mode = "code";
+          last = "w";
+        } else if (c === "$" && next === "{") {
+          stack.push("${");
+          mode = "code";
+          last = "{";
+          i++;
+        }
+        continue;
+      case "regex":
+        if (c === "\\") {
+          i = escape(i);
+        } else if (c === "[") {
+          inClass = true;
+        } else if (c === "]") {
+          inClass = false;
+        } else if (c === "/" && !inClass) {
+          mode = "code";
+          last = "w";
+          while (i + 1 < text.length && /[\w$]/.test(text[i + 1]!)) {
+            i++;
+          }
+        }
+        continue;
+      case "code":
+        break;
+    }
+    if (c === "/" && next === "/") {
+      mode = "line";
+      i++;
+    } else if (c === "/" && next === "*") {
+      mode = "block";
+      i++;
+    } else if (c === "/") {
+      if (last === "" || (last.length === 1 && REGEX_AFTER_PUNCTUATION.includes(last)) || REGEX_AFTER_WORDS.has(last)) {
+        mode = "regex";
+        inClass = false;
+      } else {
+        last = "/";
+      }
+    } else if (c === "'") {
+      mode = "sq";
+    } else if (c === '"') {
+      mode = "dq";
+    } else if (c === "`") {
+      mode = "template";
+    } else if (c === "{" || c === "(" || c === "[") {
+      stack.push(c);
+      last = c;
+    } else if (c === "}") {
+      if (stack.at(-1) === "${") {
+        stack.pop();
+        mode = "template";
+      } else {
+        stack.pop();
+        last = "}";
+      }
+    } else if (c === ")" || c === "]") {
+      stack.pop();
+      last = "w";
+    } else if (/[\w$]/.test(c)) {
+      let end = i;
+      while (end + 1 < text.length && /[\w$]/.test(text[end + 1]!)) {
+        end++;
+      }
+      const word = text.slice(i, end + 1);
+      last = REGEX_AFTER_WORDS.has(word) ? word : "w";
+      i = end;
+    } else if (!/\s/.test(c)) {
+      last = c;
+    }
+  }
+  return out;
+}
+
+/** One top-level unit of a TypeScript test file (see `testUnits`). */
+export interface TestUnit {
+  readonly kind: "import" | "declaration" | "xt" | "setup";
+  /** A declaration's name, else null. */
+  readonly name: string | null;
+  /** The unit's first and last line, 1-based (its leading comments included, its trailing blank lines not). */
+  readonly from: number;
+  readonly to: number;
+  readonly text: string;
+  /** An XT unit's ids: the `"XT-…"` literal a call takes as its first argument (or, for a unit with none, every XT literal in it). */
+  readonly ids: readonly string[];
+  /** An XT unit's consequence string (the literal after its id), or null when the unit has none. */
+  readonly consequence: string | null;
+}
+
+const XT_LITERAL = String.raw`XT-[a-z0-9]+(?:-[a-z0-9]+)*-[1-9][0-9]*`;
+const DECLARATION = /^(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\s*\*?|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/;
+
+/** The text with its leading comments and whitespace removed. */
+function stripLeadingComments(text: string): string {
+  let rest = text;
+  for (;;) {
+    const next = rest.replace(/^\s+/, "").replace(/^\/\/[^\n]*/, "").replace(/^\/\*[\s\S]*?\*\//, "");
+    if (next === rest) {
+      return rest;
+    }
+    rest = next;
+  }
+}
+
+/** The string literal starting at `at` (a quote or backtick), without its quotes, or null. */
+function stringLiteralAt(text: string, at: number): string | null {
+  const quote = text[at];
+  if (quote !== '"' && quote !== "'" && quote !== "`") {
+    return null;
+  }
+  for (let i = at + 1; i < text.length; i++) {
+    if (text[i] === "\\") {
+      i++;
+    } else if (text[i] === quote) {
+      return text.slice(at + 1, i);
+    }
+  }
+  return null;
+}
+
+/**
+ * The top-level units of a TypeScript test file. A unit starts at a column-0 line that is not `}`, `)` or `]` and that
+ * starts outside any string, template, comment or bracket (`lineStartsAtTopLevel`); a comment-only unit merges into the
+ * next. A unit is an import, a declaration (`function|const|let|var|class|interface|type|enum <name>`, optionally
+ * `export`/`async`), an XT unit (it holds an `"XT-…"` literal as a call's first argument, or a `xaravelTest(` call) or
+ * setup (anything else). A heuristic: docs/ops/fidelity-review.md lists its limits.
+ */
+export function testUnits(text: string): TestUnit[] {
+  const lines = text.split("\n");
+  const top = lineStartsAtTopLevel(text);
+  const starts = lines.flatMap((line, index) => (top[index] === true && /^[^\s})\]]/.test(line) ? [index] : []));
+  const out: TestUnit[] = [];
+  let pending: number | null = null;
+  for (const [k, start] of starts.entries()) {
+    const end = (starts[k + 1] ?? lines.length) - 1;
+    const own = lines.slice(start, end + 1).join("\n");
+    const code = stripLeadingComments(own);
+    if (code === "") {
+      pending ??= start;
+      continue;
+    }
+    const from = pending ?? start;
+    pending = null;
+    let to = end;
+    while (to > from && lines[to]!.trim() === "") {
+      to--;
+    }
+    const unitText = lines.slice(from, to + 1).join("\n");
+    const unit = { from: from + 1, to: to + 1, text: unitText };
+    if (/^import\b/.test(code) || /^export\s+(?:type\s+)?(?:\*|\{)[\s\S]*?\bfrom\s*["']/.test(code)) {
+      out.push({ ...unit, kind: "import", name: null, ids: [], consequence: null });
+      continue;
+    }
+    const declaration = DECLARATION.exec(code);
+    if (declaration !== null) {
+      out.push({ ...unit, kind: "declaration", name: declaration[1]!, ids: [], consequence: null });
+      continue;
+    }
+    const anchored = new RegExp(String.raw`^[A-Za-z_$][\w$.]*\s*\(\s*(["'\x60])(${XT_LITERAL})\1\s*,\s*`).exec(code);
+    if (anchored !== null) {
+      out.push({ ...unit, kind: "xt", name: null, ids: [anchored[2]!], consequence: stringLiteralAt(code, anchored[0].length) });
+      continue;
+    }
+    const called = [...code.matchAll(new RegExp(String.raw`[A-Za-z_$][\w$]*\s*\(\s*(["'\x60])(${XT_LITERAL})\1`, "g"))].map((match) => match[2]!);
+    if (called.length > 0 || /\bxaravelTest\s*\(/.test(code)) {
+      const ids = called.length > 0 ? called : [...code.matchAll(new RegExp(String.raw`(["'\x60])(${XT_LITERAL})\1`, "g"))].map((match) => match[2]!);
+      out.push({ ...unit, kind: "xt", name: null, ids: [...new Set(ids)], consequence: null });
+      continue;
+    }
+    out.push({ ...unit, kind: "setup", name: null, ids: [], consequence: null });
+  }
+  return out;
+}
+
+/**
+ * The new-file lines a patch changes: every non-blank added line, and for each run of removed lines that no non-blank
+ * added line follows (a pure removal) the line before it, unless the run holds nothing but blank lines, or only blank and closing lines (`});`) before a removed line that starts
+ * a top-level unit (a whole unit removed changes no unit that remains).
+ */
+export function changedLines(patch: string): Set<number> {
+  const out = new Set<number>();
+  let line = 0;
+  let removed: string[] = [];
+  // `replaced`: the removed run is followed by added lines, which mark the change themselves.
+  const flush = (replaced = false): void => {
+    if (replaced) {
+      removed = [];
+      return;
+    }
+    const start = removed.findIndex((text) => /^[^\s})\]]/.test(text));
+    const prefix = start === -1 ? removed : removed.slice(0, start);
+    if (prefix.some((text) => text.trim() !== "" && !(start !== -1 && /^[})\]][\s;,)\]}]*$/.test(text)))) {
+      out.add(Math.max(1, line - 1));
+    }
+    removed = [];
+  };
+  for (const raw of patch.split("\n")) {
+    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
+    if (hunk !== null) {
+      flush();
+      line = Number(hunk[1]);
+      // A hunk that only removes lines starts at the line before them (`+c,0`); the next kept line is c + 1.
+      if (/^@@ -\d+(?:,\d+)? \+\d+,0 @@/.test(raw)) {
+        line++;
+      }
+      continue;
+    }
+    if (raw.startsWith("-")) {
+      removed.push(raw.slice(1));
+      continue;
+    }
+    flush(raw.startsWith("+") && raw.slice(1).trim() !== "");
+    if (raw.startsWith("+")) {
+      if (raw.slice(1).trim() !== "") {
+        out.add(line);
+      }
+      line++;
+    } else if (raw.startsWith(" ")) {
+      line++;
+    }
+  }
+  flush();
+  return out;
+}
+
+/** One Xaravel Test (or one top-level unit declaring several) the change touches, with why, its body and its consequences. */
+export interface XaravelTestEntry {
+  /** Its XT ids; empty when the unit declares its ids dynamically, or when `unavailable` is set. */
+  readonly ids: readonly string[];
+  readonly path: string;
+  readonly from: number;
+  readonly to: number;
+  /** Why it is included: `its lines change`, the changed helper or file it uses, or the setup change. */
+  readonly reasons: readonly string[];
+  /** The unit's full text, or null with `unavailable` set. */
+  readonly body: string | null;
+  readonly unavailable: string | null;
+  /** Each FR/AD id its consequence string cites (or, with no literal consequence string, its text), with its consequence line(s). */
+  readonly consequences: readonly EvidenceEntry[];
+  /** Where `consequences` were read from: the literal consequence string, or the unit's whole text when it has none. */
+  readonly citesFrom: "consequence" | "text";
+}
+
+const TS_FILE = /\.[cm]?tsx?$/;
+
+/** Whether `path` is a test file or test support module: under a `tests/` path segment, or a `*.test.ts`. */
+function isTestPath(path: string): boolean {
+  return /(?:^|\/)tests\//.test(path) || /\.test\.[cm]?tsx?$/.test(path);
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function usesName(text: string, name: string): boolean {
+  return new RegExp(`(?<![\\w$.])${escapeRegExp(name)}(?![\\w$])`).test(text);
+}
+
+/** The consequence lines for each FR/AD token: `FR-<n>.<k>` exactly, a bare `FR-<n>` as every `FR-<n>.<k>` line. */
+function consequenceEntries(tokens: readonly string[], lines: () => Map<string, string[]> | string): EvidenceEntry[] {
+  return tokens.map((token) => {
+    const all = lines();
+    if (typeof all === "string") {
+      return { label: token, text: null, unavailable: all };
+    }
+    const found = all.get(token) ?? (token.includes(".") ? undefined : [...all.entries()].filter(([id]) => id.startsWith(`${token}.`)).flatMap(([, text]) => text));
+    return found === undefined || found.length === 0 ? { label: token, text: null, unavailable: `unknown consequence id ${token}: no line in ${CONSEQUENCES_DIR}/*.jsonl has it` } : { label: token, text: found.join("\n"), unavailable: null };
+  });
+}
+
+/** An import unit's bindings: [imported name, local name] (`*` for a namespace import), and its module specifier. */
+function importBindings(code: string): { names: [string, string][]; from: string } | null {
+  const match = /^import\s+(?:type\s+)?([\s\S]*?)\s*\bfrom\s*["']([^"']+)["']/.exec(code);
+  if (match === null) {
+    return null;
+  }
+  const names: [string, string][] = [];
+  const clause = match[1]!;
+  const namespace = /\*\s*as\s+([A-Za-z_$][\w$]*)/.exec(clause);
+  if (namespace !== null) {
+    names.push(["*", namespace[1]!]);
+  }
+  const braces = /\{([\s\S]*)\}/.exec(clause);
+  for (const part of (braces?.[1] ?? "").split(",")) {
+    const binding = /^\s*(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?\s*$/.exec(part);
+    if (binding !== null) {
+      names.push([binding[1]!, binding[2] ?? binding[1]!]);
+    }
+  }
+  return { names, from: match[2]! };
+}
+
+/** The repository paths a relative `specifier` imported from `importer` may name. */
+function resolveCandidates(importer: string, specifier: string): string[] {
+  if (!specifier.startsWith(".")) {
+    return [];
+  }
+  const base = join(importer, "..", specifier).replace(/\\/g, "/");
+  const stem = base.replace(/\.[cm]?jsx?$/, "");
+  return [base, `${stem}.ts`, `${stem}.tsx`, `${stem}.mts`, `${stem}/index.ts`];
+}
+
+interface Origin {
+  /** The changed thing, for a reason: "the changed helper `baseRoot` (path:line)" or "the changed file `x.json` (path)". */
+  readonly root: string;
+  /** Whether this name is the changed helper itself. */
+  readonly direct: boolean;
+}
+
+/**
+ * (e): every Xaravel Test whose lines the change edits, every one that uses a test helper or fixture the change edits
+ * (directly, or through another helper, within its file or across relative imports), and every one in a test file whose
+ * top-level setup changes, read from the working tree under `root`. Helpers are declarations in test files (a `tests/`
+ * path segment or `*.test.ts`); a changed non-TypeScript file under `tests/` is matched by its basename.
+ */
+export function xaravelTestEvidence(root: string, files: readonly ChangedFile[]): XaravelTestEntry[] {
+  let universe: string[];
+  try {
+    universe = git(root, ["ls-files", "-c", "-o", "--exclude-standard", "-z"])
+      .split("\0")
+      .filter((path) => path !== "" && !path.startsWith(`${EXCLUDED_DIR}/`) && TS_FILE.test(path) && isTestPath(path));
+  } catch (error) {
+    return [{ ids: [], path: ".", from: 0, to: 0, reasons: [], body: null, unavailable: `cannot list the test files: ${error instanceof Error ? error.message : String(error)}`, consequences: [], citesFrom: "text" }];
+  }
+  const changedTs = files.filter((file) => !file.status.startsWith("removed") && TS_FILE.test(file.filename) && isTestPath(file.filename));
+  universe = [...new Set([...universe, ...changedTs.map((file) => file.filename)])].sort(compareUnits);
+  const texts = new Map<string, string | null>();
+  const read = (path: string): string | null => {
+    if (!texts.has(path)) {
+      const full = join(root, path);
+      texts.set(path, existsSync(full) ? readFileSync(full, "utf8") : null);
+    }
+    return texts.get(path)!;
+  };
+  const scanned = new Map<string, TestUnit[]>();
+  const units = (path: string): TestUnit[] => {
+    if (!scanned.has(path)) {
+      const text = read(path);
+      scanned.set(path, text === null ? [] : testUnits(text));
+    }
+    return scanned.get(path)!;
+  };
+  const reasons = new Map<string, { path: string; unit: TestUnit; reasons: string[] }>();
+  const unavailable: XaravelTestEntry[] = [];
+  const include = (path: string, unit: TestUnit, reason: string): void => {
+    const key = `${path}\0${unit.from}`;
+    const entry = reasons.get(key) ?? { path, unit, reasons: [] };
+    if (!entry.reasons.includes(reason)) {
+      entry.reasons.push(reason);
+    }
+    reasons.set(key, entry);
+  };
+  const affected = new Map<string, Map<string, Origin>>();
+  const queue: string[] = [];
+  const affect = (path: string, name: string, origin: Origin): void => {
+    const names = affected.get(path) ?? new Map<string, Origin>();
+    if (!names.has(name)) {
+      names.set(name, origin);
+      affected.set(path, names);
+      queue.push(path);
+    }
+  };
+
+  // The changed test files' own units.
+  for (const file of changedTs) {
+    if (read(file.filename) === null) {
+      unavailable.push({ ids: [], path: file.filename, from: 0, to: 0, reasons: ["it is a changed test file"], body: null, unavailable: `${file.filename} is missing from the working tree`, consequences: [], citesFrom: "text" });
+      continue;
+    }
+    const lines = changedLines(file.patch ?? "");
+    const all = units(file.filename);
+    for (const unit of all) {
+      let touched = false;
+      for (let n = unit.from; n <= unit.to && !touched; n++) {
+        touched = lines.has(n);
+      }
+      if (!touched) {
+        continue;
+      }
+      if (unit.kind === "xt") {
+        include(file.filename, unit, "its lines change");
+      } else if (unit.kind === "declaration") {
+        affect(file.filename, unit.name!, { root: `the changed helper \`${unit.name}\` (${file.filename}:${unit.from}-${unit.to})`, direct: true });
+      } else if (unit.kind === "setup") {
+        for (const xt of all.filter((other) => other.kind === "xt")) {
+          include(file.filename, xt, `the file's top-level setup changes (${file.filename}:${unit.from}-${unit.to})`);
+        }
+      }
+    }
+  }
+  // Changed non-TypeScript files under tests/: matched by basename.
+  for (const file of files.filter((entry) => !TS_FILE.test(entry.filename) && /(?:^|\/)tests\//.test(entry.filename))) {
+    const name = file.filename.split("/").at(-1)!;
+    const origin: Origin = { root: `the changed file \`${name}\` (${file.filename})`, direct: false };
+    for (const path of universe) {
+      if (!(read(path) ?? "").includes(name)) {
+        continue;
+      }
+      for (const unit of units(path)) {
+        if (!unit.text.includes(name)) {
+          continue;
+        }
+        if (unit.kind === "xt") {
+          include(path, unit, `it names ${origin.root}`);
+        } else if (unit.kind === "declaration") {
+          affect(path, unit.name!, origin);
+        }
+      }
+    }
+  }
+  // Propagate the affected helper names to a fixed point, within each file and across relative imports.
+  const seen = new Set<string>();
+  while (queue.length > 0) {
+    const path = queue.shift()!;
+    const names = affected.get(path)!;
+    for (const unit of units(path)) {
+      for (const [name, origin] of names) {
+        if (unit.kind === "declaration" && unit.name !== name && !names.has(unit.name!) && usesName(unit.text, name)) {
+          affect(path, unit.name!, { root: origin.root, direct: false });
+        } else if (unit.kind === "xt" && usesName(unit.text, name)) {
+          include(path, unit, origin.direct ? `it uses ${origin.root}` : `it uses \`${name}\`, which depends on ${origin.root}`);
+        } else if (unit.kind === "setup" && usesName(unit.text, name)) {
+          const reason = `the file's top-level setup (${path}:${unit.from}-${unit.to}) uses ${origin.direct ? origin.root : `\`${name}\`, which depends on ${origin.root}`}`;
+          for (const xt of units(path).filter((other) => other.kind === "xt")) {
+            include(path, xt, reason);
+          }
+        }
+      }
+    }
+    // A module `…/x/index.ts` is imported as `./x`: its directory name is a stem too.
+    const segments = path.split("/");
+    const stem = segments.at(-1)!.replace(TS_FILE, "");
+    const stems = stem === "index" && segments.length > 1 ? [stem, segments.at(-2)!] : [stem];
+    for (const importer of universe) {
+      if (importer === path || !stems.some((name) => (read(importer) ?? "").includes(name))) {
+        continue;
+      }
+      for (const unit of units(importer).filter((entry) => entry.kind === "import")) {
+        const bindings = importBindings(stripLeadingComments(unit.text));
+        if (bindings === null || !resolveCandidates(importer, bindings.from).includes(path)) {
+          continue;
+        }
+        for (const [imported, local] of bindings.names) {
+          const key = `${path}\0${imported}\0${importer}`;
+          if (seen.has(key)) {
+            continue;
+          }
+          const origin = imported === "*" ? [...names.values()][0] : names.get(imported);
+          if (origin !== undefined) {
+            seen.add(key);
+            affect(importer, local, { root: origin.root, direct: origin.direct && imported === local });
+          }
+        }
+      }
+    }
+  }
+  let lines: Map<string, string[]> | string | null = null;
+  const consequences = (): Map<string, string[]> | string => (lines ??= consequenceLines(root));
+  const out: XaravelTestEntry[] = [...reasons.values()]
+    .sort((a, b) => compareUnits(a.path, b.path) || a.unit.from - b.unit.from)
+    .map(({ path, unit, reasons: why }) => {
+      const cited = [...new Set([...(unit.consequence ?? unit.text).matchAll(/\b(?:FR|AD)-[1-9]\d*(?:\.[1-9]\d*)?\b/g)].map((match) => match[0]))].sort(compareUnits);
+      return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences), citesFrom: unit.consequence === null ? "text" : "consequence" };
+    });
+  return [...unavailable, ...out];
 }
 
 // ---------------------------------------------------------------------------
@@ -671,8 +1240,8 @@ function git(root: string, args: readonly string[], extraEnv: Record<string, str
   return result.stdout.toString();
 }
 
-/** The tree id of `rev` (null: HEAD plus the working tree's tracked changes and untracked, non-ignored files) without `_bmad-output/`. */
-function treeWithout(root: string, rev: string | null): string {
+/** The tree id of `rev` (null: HEAD plus the working tree's tracked changes and untracked, non-ignored files) without the `excluded` directories. */
+function treeWithout(root: string, rev: string | null, excluded: readonly string[]): string {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-fidelity-index-"));
   const index = join(dir, "index");
   const env = { GIT_INDEX_FILE: index };
@@ -682,13 +1251,17 @@ function treeWithout(root: string, rev: string | null): string {
       const real = resolve(root, git(root, ["rev-parse", "--git-path", "index"]).trim());
       if (existsSync(real)) {
         copyFileSync(real, index);
+        // Keep the real index's mtime (rounded down to the second): git re-reads an entry whose file is no older than the
+        // index file ("racy git"), so a same-size edit made in the second the real index was written is never missed.
+        const mtime = Math.floor(statSync(real).mtimeMs / 1000);
+        utimesSync(index, mtime, mtime);
       }
       git(root, ["add", "-A"], env);
     } else {
       git(root, ["read-tree", `${rev}^{tree}`], env);
     }
     // `--force`: an index read from an older commit differs from both HEAD and the working tree; it is a temporary index.
-    git(root, ["rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", EXCLUDED_DIR], env);
+    git(root, ["rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", ...excluded], env);
     return git(root, ["write-tree"], env).trim();
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -696,11 +1269,12 @@ function treeWithout(root: string, rev: string | null): string {
 }
 
 /**
- * The reviewed tree: the git tree id of the repository state with `_bmad-output/` removed. Mode `worktree` is HEAD plus
- * every tracked change and untracked, non-ignored file (what the reviewers see); mode `head` is the HEAD commit.
+ * The reviewed tree a verdict is bound to: the git tree id of the repository state with the BOOKKEEPING directories
+ * (`_bmad-output/`, `stories/`) removed. Mode `worktree` is HEAD plus every tracked change and untracked, non-ignored
+ * file (what the reviewers see); mode `head` is the HEAD commit.
  */
 export function reviewTree(root: string, mode: "worktree" | "head"): string {
-  return treeWithout(root, mode === "head" ? "HEAD" : null);
+  return treeWithout(root, mode === "head" ? "HEAD" : null, BOOKKEEPING);
 }
 
 export interface ReviewDiff {
@@ -713,7 +1287,10 @@ export interface ReviewDiff {
 
 const STATUS_NAMES: Readonly<Record<string, string>> = { A: "added", D: "removed", M: "modified", T: "typechange" };
 
-/** The per-file changes between the `_bmad-output/`-less trees of `base` and the working tree (`git diff-tree -p`). */
+/**
+ * The per-file changes between the `_bmad-output/`-less trees of `base` and the working tree (`git diff-tree -p`); a
+ * change under `stories/` is shown. `tree` is the binding tree, `reviewTree(root, "worktree")`.
+ */
 export function reviewDiff(root: string, base: string): ReviewDiff {
   let sha: string;
   try {
@@ -721,14 +1298,15 @@ export function reviewDiff(root: string, base: string): ReviewDiff {
   } catch {
     throw new Error(`the base ${base} is not a commit of ${root}`);
   }
-  const from = treeWithout(root, sha);
+  const from = treeWithout(root, sha, [EXCLUDED_DIR]);
+  const to = treeWithout(root, null, [EXCLUDED_DIR]);
   const tree = reviewTree(root, "worktree");
-  const names = git(root, ["diff-tree", "-r", "-z", "--no-renames", "--name-status", from, tree]).split("\0");
+  const names = git(root, ["diff-tree", "-r", "-z", "--no-renames", "--name-status", from, to]).split("\0");
   const entries: { status: string; path: string }[] = [];
   for (let i = 0; i + 1 < names.length; i += 2) {
     entries.push({ status: names[i]!, path: names[i + 1]! });
   }
-  const patch = git(root, ["diff-tree", "-r", "-p", "--no-renames", "--no-color", "--no-ext-diff", from, tree]);
+  const patch = git(root, ["diff-tree", "-r", "-p", "--no-renames", "--no-color", "--no-ext-diff", from, to]);
   const chunks: string[][] = [];
   for (const line of patch.split("\n")) {
     if (line.startsWith("diff --git ")) {
@@ -988,8 +1566,33 @@ export interface VerdictCount {
   readonly slots: readonly [VerdictRecord | null, VerdictRecord | null];
 }
 
+/** A slot's standing reject on one tree: its last `reject` record there, and the `pass` records after it, which never count. */
+export interface StandingReject {
+  readonly reviewer: 1 | 2;
+  readonly entry: RecordEntry;
+  readonly laterPasses: readonly RecordEntry[];
+}
+
 /**
- * The counting rule: per reviewer slot, the last record whose `tree` is `tree`. It passes when slots 1 and 2 are both
+ * The standing rejects on `tree` (ESC-8.8-1): for each reviewer slot with a well-formed `reject` record for `tree`, the
+ * last such record. A reject on an unchanged reviewed tree stands until its findings are fixed (which changes the tree)
+ * or the evidence it asks for is supplied; re-running the review on the same tree never replaces it.
+ */
+export function standingRejects(entries: readonly RecordEntry[], tree: string): StandingReject[] {
+  const out: StandingReject[] = [];
+  for (const reviewer of [1, 2] as const) {
+    const slot = entries.filter((entry) => entry.record !== null && entry.record.reviewer === reviewer && entry.record.tree === tree);
+    const at = slot.findLastIndex((entry) => entry.record!.verdict === "reject");
+    if (at !== -1) {
+      out.push({ reviewer, entry: slot[at]!, laterPasses: slot.slice(at + 1).filter((entry) => entry.record!.verdict === "pass") });
+    }
+  }
+  return out;
+}
+
+/**
+ * The counting rule: per reviewer slot, its standing reject on `tree` when it has one (a later `pass` on the same tree
+ * never overrides it, ESC-8.8-1), else the last record whose `tree` is `tree`. It passes when slots 1 and 2 are both
  * `pass`, and slot 1 ran on another CLI than the loop's or recorded why it fell back. A malformed record fails it.
  */
 export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, checklist: readonly ChecklistItem[]): VerdictCount {
@@ -998,7 +1601,8 @@ export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, 
   if (malformed.length > 0) {
     return malformedResult(malformed.map((entry) => ({ line: entry.line, problem: entry.problem ?? "is malformed" })));
   }
-  const slotEntry = (n: 1 | 2): RecordEntry | null => entries.filter((entry) => entry.record!.reviewer === n && entry.record!.tree === tree).at(-1) ?? null;
+  const standing = standingRejects(entries, tree);
+  const slotEntry = (n: 1 | 2): RecordEntry | null => standing.find((reject) => reject.reviewer === n)?.entry ?? entries.filter((entry) => entry.record!.reviewer === n && entry.record!.tree === tree).at(-1) ?? null;
   const counted = [slotEntry(1), slotEntry(2)];
   // Each counted record's items are re-validated against the checklist, and must decide its verdict.
   const invalid: { line: number; problem: string }[] = [];
@@ -1024,6 +1628,11 @@ export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, 
     return { pass: true, detail: `2 pass verdicts for tree ${tree} (${who})`, items: [], slots };
   }
   const items = slots.map((record, index) => (record === null ? `reviewer ${index + 1}: none for tree ${tree}` : `reviewer ${index + 1}: ${record.verdict} at tree ${record.tree}`));
+  for (const reject of standing) {
+    for (const later of reject.laterPasses) {
+      items.push(`reviewer ${reject.reviewer}: the later pass at tree ${tree} (record at line ${later.line}) does not count: the reject at line ${reject.entry.line} stands until the reviewed tree changes (ESC-8.8-1)`);
+    }
+  }
   if (!crossModel) {
     items.push(`reviewer 1 ran on ${slots[0]!.cli}, the loop's own CLI, and recorded no fallback reason; it must run on the other CLI when that is available (ESC-8.5-1)`);
   }
@@ -1399,6 +2008,24 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   if (base === null) {
     return stop(`${display(root, spec)} has no baseline_revision; pass --base`);
   }
+  // A reject on the unchanged reviewed tree stands (ESC-8.8-1): no reviewer runs, nothing is recorded.
+  const standing = standingRejects(parseRecords(readFileSync(spec, "utf8")), reviewTree(root, "worktree"));
+  if (standing.length > 0) {
+    for (const { reviewer, entry } of standing) {
+      out.push(`STANDING reviewer ${reviewer}: reject at tree ${entry.record!.tree}`);
+      for (const item of entry.record!.items) {
+        if (item.result === "fail") {
+          for (const finding of item.findings) {
+            out.push(`${item.id} ${finding.path.replace(/\r?\n/g, " ")}: ${finding.detail.replace(/\r?\n/g, " ")}`);
+          }
+        }
+      }
+    }
+    const tree = standing[0]!.entry.record!.tree;
+    const what = standing.length === 1 ? `reviewer ${standing[0]!.reviewer}'s reject at tree ${tree} stands` : `reviewer 1's and reviewer 2's rejects at tree ${tree} stand`;
+    const their = standing.length === 1 ? { findings: "its findings", asks: "it asks" } : { findings: "their findings", asks: "they ask" };
+    return stop(`${what} (ESC-8.8-1): fix ${their.findings}, which changes the reviewed tree, or supply the evidence ${their.asks} for, then review again; a re-run on the same tree is not allowed and runs no reviewer`);
+  }
   const diff = reviewDiff(root, base);
   if (diff.files.length === 0) {
     return stop(`the diff from ${diff.base} to tree ${diff.tree} is empty`);
@@ -1431,7 +2058,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   const readmePath = join(root, "conformance", "README.md");
   const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
-  const prompt = buildPrompt({
+  const promptInput: PromptInput = {
     checklistText,
     items,
     precedence,
@@ -1442,10 +2069,12 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     inventory: inventoryContext(root, manifest.testIds),
     oracleRequests,
     files: diff.files,
-    evidence: { ...gatherEvidence(root, diff.files, manifest), headErrorFixtures: headErrorFixtures(fixtures, requestIds) },
-  });
+    evidence: { ...gatherEvidence(root, diff.files, manifest), headErrorFixtures: headErrorFixtures(fixtures, requestIds), xaravelTests: xaravelTestEvidence(root, diff.files) },
+  };
+  const prompt = buildPrompt(promptInput);
   if (prompt.length > PROMPT_CAP) {
-    return stop(`the prompt is ${prompt.length} characters, over the ${PROMPT_CAP} cap; the diff is too large to review`);
+    const withoutE = buildPrompt({ ...promptInput, evidence: { ...promptInput.evidence, xaravelTests: [] } }).length;
+    return stop(`the prompt is ${prompt.length} characters, over the ${PROMPT_CAP} cap, of which section (e), the touched Xaravel Tests, is ${prompt.length - withoutE}; the diff and its evidence are too large to review`);
   }
 
   const other: Cli = cli === "claude" ? "codex" : "claude";

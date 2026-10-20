@@ -11,7 +11,7 @@
 // stdin, then answers from a per-CLI plan. Nothing here runs a real agent CLI
 // or contacts a model.
 import { afterAll, expect } from "bun:test";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
@@ -38,7 +38,10 @@ import {
   reviewTree,
   runFidelity,
   runReviewer,
+  standingRejects,
+  testUnits,
   verdictSchema,
+  xaravelTestEvidence,
   type ChecklistItem,
   type VerdictRecord,
 } from "../../../tools/fidelity-review/fidelity-review";
@@ -394,6 +397,9 @@ xaravelTest(
     expect(user).not.toContain(SPEC);
     expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker.");
     expect(user).toContain("No added line contains `@asyncRoot`.");
+    // (e): the change edits only packages/support/src/, so no Xaravel Test is touched.
+    expect(user).toContain("### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
+    expect(user).toContain("No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
 
     // status: current for the working tree. Committed unchanged, the head tree is the reviewed tree: approvals passes.
     expect(await status(repo.dir)).toEqual({ code: 0, out: [`current: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`], err: [] });
@@ -406,6 +412,16 @@ xaravelTest(
     commitAll(repo.dir, "bookkeeping");
     expect((await status(repo.dir)).out[0]).toStartWith("current: ");
     expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
+    // A manifest status edit is bookkeeping too (ESC-8.8-1): stories/ is outside the binding tree, before and after a commit.
+    const manifestPath = join(repo.dir, "stories", "9.1.md");
+    writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("status: in-progress", "status: done"));
+    expect(reviewTree(repo.dir, "worktree")).toBe(tree);
+    expect((await status(repo.dir)).out[0]).toStartWith("current: ");
+    commitAll(repo.dir, "story done");
+    expect(reviewTree(repo.dir, "head")).toBe(tree);
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`PASS approvals: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`]);
+    // The diff still shows a stories/ change; only the binding tree leaves it out.
+    expect(reviewDiff(repo.dir, repo.base).files.map((file) => file.filename)).toContain("stories/9.1.md");
 
     // The other CLI not installed: reviewer 1 falls back to claude, recording why; approvals still passes.
     const noCodex = makeRepo();
@@ -512,7 +528,7 @@ xaravelTest(
       ["no spec", (dir) => rmSync(join(dir, SPEC)), "no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md"],
       ["two specs", (dir) => write(dir, "_bmad-output/implementation-artifacts/spec-9-1-other.md", "x\n"), "2 specs match"],
       ["no baseline", (dir) => write(dir, SPEC, "---\ntitle: x\n---\n"), "has no baseline_revision"],
-      ["too large", (dir) => write(dir, "packages/support/src/Big.ts", `${"x".repeat(PROMPT_CAP)}\n`), "over the 600000 cap"],
+      ["too large", (dir) => write(dir, "packages/support/src/Big.ts", `${"x".repeat(PROMPT_CAP)}\n`), "over the 600000 cap, of which section (e), the touched Xaravel Tests, is 0; the diff and its evidence are too large to review"],
     ];
     for (const [name, mutate, expected] of refusals) {
       const refused = makeRepo();
@@ -616,6 +632,208 @@ xaravelTest(
     expect(fixtureUser).toContain(`#### ${TEST_ID} (${headFixture}, changed)`);
     expect(fixtureUser).toContain("Division by zero");
 
+    // (e) Xaravel Tests the change touches (ESC-8.8-1). A base with a test file, a fixture module it imports and a JSON
+    // fixture that module reads; the helper's string and regex hold braces the scanner must not count.
+    const sampleTest = "conformance/tests/xaravel/sample.test.ts";
+    const sampleFixtures = "conformance/tests/xaravel/sample-fixtures.ts";
+    const sampleJson = "conformance/tests/xaravel/fixtures/sample.json";
+    const sampleText = [
+      'import { xaravelTest } from "../../../packages/assert/src/index";',
+      'import { sharedRoot } from "./sample-fixtures";',
+      "",
+      '// A helper with a brace in a string, a template and a regex: "}" /}/',
+      "function baseRoot(): string {",
+      '  return "}" + `${"{"}` + String(/}/.source);',
+      "}",
+      "",
+      "function wrapRoot(): string {",
+      "  return `${baseRoot()}/wrapped`;",
+      "}",
+      "",
+      "beforeEach(() => {});",
+      "",
+      'xaravelTest("XT-sample-1", "covers FR-111.1 and FR-999.9", () => {',
+      "  const value = 1;",
+      "});",
+      "",
+      "xaravelTest(",
+      '  "XT-sample-2",',
+      '  "uses a helper through another (FR-111.2)",',
+      "  () => {",
+      "    wrapRoot();",
+      "  },",
+      ");",
+      "",
+      'xaravelTest("XT-sample-3", "uses the imported fixture", () => {',
+      "  sharedRoot();",
+      "});",
+      "",
+      'xaravelTest("XT-sample-4", "uses the helper directly", () => {',
+      "  baseRoot();",
+      "});",
+      "",
+    ].join("\n");
+    const fixturesText = 'import { readFileSync } from "node:fs";\n\nexport function sharedRoot(): string {\n  return readFileSync("fixtures/sample.json", "utf8");\n}\n';
+    expect(testUnits(sampleText).map((unit) => [unit.kind, unit.name ?? unit.ids.join(","), unit.from, unit.to])).toEqual([
+      ["import", "", 1, 1],
+      ["import", "", 2, 2],
+      ["declaration", "baseRoot", 4, 7],
+      ["declaration", "wrapRoot", 9, 11],
+      ["setup", "", 13, 13],
+      ["xt", "XT-sample-1", 15, 17],
+      ["xt", "XT-sample-2", 19, 25],
+      ["xt", "XT-sample-3", 27, 29],
+      ["xt", "XT-sample-4", 31, 33],
+    ]);
+    expect(testUnits(sampleText).map((unit) => unit.consequence)).toEqual([null, null, null, null, null, "covers FR-111.1 and FR-999.9", "uses a helper through another (FR-111.2)", "uses the imported fixture", "uses the helper directly"]);
+    const xtRepo = makeRepo({ change: false });
+    write(xtRepo.dir, sampleTest, sampleText);
+    write(xtRepo.dir, sampleFixtures, fixturesText);
+    write(xtRepo.dir, sampleJson, '{"root":"a"}\n');
+    const xtBase = commitAll(xtRepo.dir, "sample tests");
+    const touchedIn = (dir: string, base: string, edit: [string, string, string][]): [string, string, string][] => {
+      for (const [path, from, to] of edit) {
+        write(dir, path, readFileSync(join(dir, path), "utf8").replace(from, to));
+      }
+      const entries = xaravelTestEvidence(dir, reviewDiff(dir, base).files);
+      git(dir, "checkout", "-q", "--", ".");
+      return entries.map((entry) => [entry.ids.join(","), `${entry.path}:${entry.from}-${entry.to}`, entry.reasons.join("; ")]);
+    };
+    const touched = (edit: [string, string, string][]): [string, string, string][] => touchedIn(xtRepo.dir, xtBase, edit);
+    // A changed helper: every XT that uses it, directly or through another helper, with a reason naming it.
+    const baseRootChanged = "the changed helper `baseRoot` (conformance/tests/xaravel/sample.test.ts:4-7)";
+    expect(touched([[sampleTest, 'String(/}/.source)', 'String(/{/.source)']])).toEqual([
+      ["XT-sample-2", `${sampleTest}:19-25`, `it uses \`wrapRoot\`, which depends on ${baseRootChanged}`],
+      ["XT-sample-4", `${sampleTest}:31-33`, `it uses ${baseRootChanged}`],
+    ]);
+    // A helper in an imported test module, and a JSON fixture under tests/ (matched by basename) that module names.
+    expect(touched([[sampleFixtures, '"utf8"', '"latin1"']])).toEqual([["XT-sample-3", `${sampleTest}:27-29`, `it uses the changed helper \`sharedRoot\` (${sampleFixtures}:3-5)`]]);
+    expect(touched([[sampleJson, '"a"', '"b"']])).toEqual([["XT-sample-3", `${sampleTest}:27-29`, `it uses \`sharedRoot\`, which depends on the changed file \`sample.json\` (${sampleJson})`]]);
+    // Top-level setup: every XT in the file.
+    const setupReason = `the file's top-level setup changes (${sampleTest}:13-13)`;
+    expect(touched([[sampleTest, "beforeEach(() => {});", "beforeEach(() => { void 0; });"]])).toEqual([
+      ["XT-sample-1", `${sampleTest}:15-17`, setupReason],
+      ["XT-sample-2", `${sampleTest}:19-25`, setupReason],
+      ["XT-sample-3", `${sampleTest}:27-29`, setupReason],
+      ["XT-sample-4", `${sampleTest}:31-33`, setupReason],
+    ]);
+    // Removed lines inside an XT touch it; a whole removed XT touches no other one.
+    expect(touched([[sampleTest, "  const value = 1;\n", ""]])).toEqual([["XT-sample-1", `${sampleTest}:15-16`, "its lines change"]]);
+    expect(touched([[sampleTest, '\nxaravelTest("XT-sample-4", "uses the helper directly", () => {\n  baseRoot();\n});\n', ""]])).toEqual([]);
+    // A change outside any test file touches none.
+    expect(touched([["packages/support/src/Base.ts", "0", "1"]])).toEqual([]);
+    // An XT's own lines: the full review's prompt carries its full body, path:lines, the reason and each cited consequence.
+    write(xtRepo.dir, sampleTest, sampleText.replace("const value = 1;", "const value = 2;"));
+    const xtFakes = fakes({});
+    expect((await review(xtRepo.dir, xtFakes.env, "--loop-cli", "claude", "--base", xtBase)).code).toBe(0);
+    const xtUser = xtFakes.calls("claude")[0]!.stdin;
+    expect(xtUser).toContain(
+      [
+        `#### XT-sample-1 (${sampleTest}:15-17)`,
+        "",
+        "Included because: its lines change.",
+        "",
+        "```ts",
+        'xaravelTest("XT-sample-1", "covers FR-111.1 and FR-999.9", () => {',
+        "  const value = 2;",
+        "});",
+        "```",
+        "",
+        "The consequences its consequence string cites:",
+        "",
+        "- FR-111.1:",
+        "",
+        "```jsonl",
+        `conformance/xaravel-consequences/conformance.jsonl: ${fr1111}`,
+        "```",
+        "",
+        "- FR-999.9:",
+        "",
+        "unavailable: unknown consequence id FR-999.9: no line in conformance/xaravel-consequences/*.jsonl has it",
+      ].join("\n"),
+    );
+    expect(xtUser).not.toContain("#### XT-sample-2");
+
+    // Aliased and namespace imports of a changed helper, an XT naming a changed fixture itself, a helper module
+    // `helpers/index.ts` imported as `./helpers` and used only in top-level setup, and a replaced line directly below
+    // another XT.
+    const aliasTest = "conformance/tests/xaravel/alias.test.ts";
+    const indexHelper = "conformance/tests/xaravel/helpers/index.ts";
+    const aliasRepo = makeRepo({ change: false });
+    write(aliasRepo.dir, sampleFixtures, fixturesText);
+    write(aliasRepo.dir, sampleJson, '{"root":"a"}\n');
+    write(aliasRepo.dir, indexHelper, 'export function indexRoot(): string {\n  return "index";\n}\n');
+    write(
+      aliasRepo.dir,
+      aliasTest,
+      [
+        'import { readFileSync } from "node:fs";',
+        'import { sharedRoot as fixtureRoot } from "./sample-fixtures";',
+        'import * as fx from "./sample-fixtures";',
+        'import { indexRoot } from "./helpers";',
+        "",
+        "beforeEach(() => indexRoot());",
+        "",
+        'xaravelTest("XT-alias-1", "aliased import", () => {',
+        "  fixtureRoot();",
+        "});",
+        "",
+        'xaravelTest("XT-alias-2", "namespace import", () => {',
+        "  fx.sharedRoot();",
+        "});",
+        "",
+        'xaravelTest("XT-alias-3", "names the fixture", () => {',
+        '  readFileSync("fixtures/sample.json", "utf8");',
+        "});",
+        "",
+        'xaravelTest("XT-alias-4", "first", () => {});',
+        'xaravelTest("XT-alias-5", "second", () => {});',
+        "",
+      ].join("\n"),
+    );
+    const aliasBase = commitAll(aliasRepo.dir, "alias tests");
+    const sharedRootChanged = `the changed helper \`sharedRoot\` (${sampleFixtures}:3-5)`;
+    expect(touchedIn(aliasRepo.dir, aliasBase, [[sampleFixtures, '"utf8"', '"latin1"']])).toEqual([
+      ["XT-alias-1", `${aliasTest}:8-10`, `it uses \`fixtureRoot\`, which depends on ${sharedRootChanged}`],
+      ["XT-alias-2", `${aliasTest}:12-14`, `it uses \`fx\`, which depends on ${sharedRootChanged}`],
+    ]);
+    const jsonChanged = `the changed file \`sample.json\` (${sampleJson})`;
+    expect(touchedIn(aliasRepo.dir, aliasBase, [[sampleJson, '"a"', '"b"']])).toEqual([
+      ["XT-alias-1", `${aliasTest}:8-10`, `it uses \`fixtureRoot\`, which depends on ${jsonChanged}`],
+      ["XT-alias-2", `${aliasTest}:12-14`, `it uses \`fx\`, which depends on ${jsonChanged}`],
+      ["XT-alias-3", `${aliasTest}:16-18`, `it names ${jsonChanged}`],
+    ]);
+    const indexSetup = `the file's top-level setup (${aliasTest}:6-6) uses the changed helper \`indexRoot\` (${indexHelper}:1-3)`;
+    expect(touchedIn(aliasRepo.dir, aliasBase, [[indexHelper, '"index"', '"changed"']])).toEqual([
+      ["XT-alias-1", `${aliasTest}:8-10`, indexSetup],
+      ["XT-alias-2", `${aliasTest}:12-14`, indexSetup],
+      ["XT-alias-3", `${aliasTest}:16-18`, indexSetup],
+      ["XT-alias-4", `${aliasTest}:20-20`, indexSetup],
+      ["XT-alias-5", `${aliasTest}:21-21`, indexSetup],
+    ]);
+    expect(touchedIn(aliasRepo.dir, aliasBase, [[aliasTest, '"second"', '"second, changed"']])).toEqual([["XT-alias-5", `${aliasTest}:21-21`, "its lines change"]]);
+    // An unavailable entry is headed by its path; an XT with no literal consequence string cites from its text.
+    const eOnly = (xaravelTests: Parameters<typeof buildPrompt>[0]["evidence"]["xaravelTests"]): string => buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: { ...NO_EVIDENCE, xaravelTests } }).user;
+    expect(eOnly([{ ids: [], path: "conformance/tests/xaravel/gone.test.ts", from: 0, to: 0, reasons: [], body: null, unavailable: "gone", consequences: [], citesFrom: "text" }])).toContain("#### unavailable (conformance/tests/xaravel/gone.test.ts)\n\nunavailable: gone");
+    const loopText = 'for (const id of ["XT-loop-1"]) {\n  xaravelTest(id, "FR-111.1", () => {});\n}';
+    const [loopUnit] = testUnits(loopText);
+    expect([loopUnit!.kind, loopUnit!.ids, loopUnit!.consequence]).toEqual(["xt", ["XT-loop-1"], null]);
+    expect(eOnly([{ ids: ["XT-loop-1"], path: "a.test.ts", from: 1, to: 3, reasons: ["its lines change"], body: loopText, unavailable: null, consequences: [{ label: "FR-111.1", text: "x", unavailable: null }], citesFrom: "text" }])).toContain("The consequences its text (it has no literal consequence string) cites:");
+
+    // The reviewed tree sees a same-size edit made in the second the real index was written (racy git): the temporary
+    // index keeps the real index's mtime.
+    const racy = tempDir("xt-fidelity-racy-");
+    git(racy, "init", "-q");
+    write(racy, "a.txt", "value 1\n");
+    const racySecond = 1_700_000_000;
+    utimesSync(join(racy, "a.txt"), racySecond, racySecond);
+    git(racy, "add", "a.txt");
+    const racyBefore = reviewTree(racy, "worktree");
+    write(racy, "a.txt", "value 2\n");
+    utimesSync(join(racy, "a.txt"), racySecond, racySecond);
+    utimesSync(join(racy, ".git", "index"), racySecond, racySecond);
+    expect(reviewTree(racy, "worktree")).not.toBe(racyBefore);
+
     // A removed Oracle request file is not read; the review still records its verdicts.
     const removedRepo = makeRepo({ change: false });
     write(removedRepo.dir, REQUESTS, '{"id":"x"}\n');
@@ -656,6 +874,40 @@ xaravelTest(
     expect(status1.out).toEqual([`missing: 1 of 2 pass verdicts for tree ${tree}`, `  reviewer 1: reject at tree ${tree}`, `  reviewer 2: pass at tree ${tree}`]);
     commitAll(repo.dir);
     expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`FAIL approvals: 1 of 2 pass verdicts for tree ${tree}`, `  reviewer 1: reject at tree ${tree}`, `  reviewer 2: pass at tree ${tree}`]);
+    // The reject stands on the unchanged tree (ESC-8.8-1), bookkeeping edits included: a re-run runs no reviewer, records
+    // nothing, prints the standing reject and its findings, and exits 1.
+    const manifestPath = join(repo.dir, "stories", "9.1.md");
+    writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("status: in-progress", "status: review"));
+    write(repo.dir, "_bmad-output/implementation-artifacts/sprint-status.yaml", "development_status:\n  9-1-fidelity: review\n");
+    expect(reviewTree(repo.dir, "worktree")).toBe(tree);
+    const rerunSpec = readFileSync(repo.spec, "utf8");
+    const rerunFakes = fakes({});
+    const rerun = await review(repo.dir, rerunFakes.env, "--loop-cli", "claude", "--base", repo.base);
+    expect(rerun.code).toBe(1);
+    expect(rerun.out).toEqual([`STANDING reviewer 1: reject at tree ${tree}`, `F-2 ${finding.path}: ${finding.detail}`]);
+    expect(rerun.err).toEqual([
+      `fidelity-review: reviewer 1's reject at tree ${tree} stands (ESC-8.8-1): fix its findings, which changes the reviewed tree, or supply the evidence it asks for, then review again; a re-run on the same tree is not allowed and runs no reviewer; nothing recorded`,
+    ]);
+    expect([rerunFakes.calls("claude").length, rerunFakes.calls("codex").length]).toEqual([0, 0]);
+    expect(readFileSync(repo.spec, "utf8")).toBe(rerunSpec);
+    const standing = standingRejects(parseRecords(rerunSpec), tree);
+    expect(standing.map((entry) => [entry.reviewer, entry.entry.record!.verdict, entry.laterPasses.length])).toEqual([[1, "reject", 0]]);
+    expect(standingRejects(parseRecords(rerunSpec), "f".repeat(40))).toEqual([]);
+    commitAll(repo.dir, "bookkeeping");
+    // Rejects standing in both slots: both are printed, a finding's path is one line, and stderr speaks of both.
+    const bothRepo = makeRepo();
+    const bothTree = reviewTree(bothRepo.dir, "worktree");
+    const twoLine = { path: "a.ts\nb.ts", detail: "two\nlines" };
+    const rejectBoth: Step = { kind: "answer", answer: { items: answers({ "F-2": "fail" }, { "F-2": [twoLine] }) } };
+    expect((await review(bothRepo.dir, fakes({ codex: [rejectBoth], claude: [rejectBoth] }).env, "--loop-cli", "claude")).code).toBe(1);
+    const bothFakes = fakes({});
+    const bothRun = await review(bothRepo.dir, bothFakes.env, "--loop-cli", "claude");
+    expect(bothRun.code).toBe(1);
+    expect(bothRun.out).toEqual([`STANDING reviewer 1: reject at tree ${bothTree}`, "F-2 a.ts b.ts: two lines", `STANDING reviewer 2: reject at tree ${bothTree}`, "F-2 a.ts b.ts: two lines"]);
+    expect(bothRun.err).toEqual([
+      `fidelity-review: reviewer 1's and reviewer 2's rejects at tree ${bothTree} stand (ESC-8.8-1): fix their findings, which changes the reviewed tree, or supply the evidence they ask for, then review again; a re-run on the same tree is not allowed and runs no reviewer; nothing recorded`,
+    ]);
+    expect([bothFakes.calls("claude").length, bothFakes.calls("codex").length]).toEqual([0, 0]);
     // A later review of the fixed tree appends; the earlier records are never edited.
     write(repo.dir, CHANGED, "export const added = 2;\n");
     const fixedTree = reviewTree(repo.dir, "worktree");
@@ -766,6 +1018,21 @@ xaravelTest(
     expect(count([record(2, "claude"), record(2, "claude")]).pass).toBe(false);
     expect(count([record(1, "codex"), record(2, "claude")], "f".repeat(40)).pass).toBe(false);
     expect(count([record(1, "codex"), record(2, "claude", { tree: "f".repeat(40) })]).items).toEqual([`reviewer 1: pass at tree ${t}`, `reviewer 2: none for tree ${t}`]);
+    // A reject stands against a later pass in the same slot on the same tree (ESC-8.8-1); an item names the pass that does not count.
+    const rejectRecord = record(1, "codex", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] });
+    const reRolledText = appendRecords("# spec\n", [rejectRecord, record(2, "claude"), record(1, "codex")].map((entry) => renderRecord(entry, ITEMS)));
+    const [rejectLine, , laterLine] = parseRecords(reRolledText).map((entry) => entry.line);
+    const reRolled = fidelityVerdicts(parseRecords(reRolledText), t, ITEMS);
+    expect(reRolled.pass).toBe(false);
+    expect(reRolled.slots[0]).toEqual(rejectRecord);
+    expect(reRolled.items).toEqual([
+      `reviewer 1: reject at tree ${t}`,
+      `reviewer 2: pass at tree ${t}`,
+      `reviewer 1: the later pass at tree ${t} (record at line ${laterLine}) does not count: the reject at line ${rejectLine} stands until the reviewed tree changes (ESC-8.8-1)`,
+    ]);
+    // A reject on another tree does not stand on this one, and a reject in one slot leaves the other slot's count alone.
+    expect(count([record(1, "codex", { ...rejectRecord, tree: "f".repeat(40) }), record(1, "codex"), record(2, "claude")]).pass).toBe(true);
+    expect(count([record(2, "claude", { verdict: "reject", items: rejectRecord.items }), record(1, "codex"), record(2, "claude")]).items[0]).toBe(`reviewer 1: pass at tree ${t}`);
 
     // Records live only in the `## Fidelity Review` section, and appending keeps the sections after it in place.
     const withLater = appendRecords(`# s\n\n${RECORDS_HEADING}\n\nold\n\n## Auto Run Result\n\nDone.\n`, [renderRecord(record(1, "codex"), ITEMS)]);
