@@ -113,7 +113,7 @@ development_status:
   8-3-bun-primitive-probes-oq-11: done  # ESC-8.3-2 and ESC-8.3-3 (open-question) wait on the Maintainer
   8-4-temporal-and-bcrypt-spikes-and-the-oq-12-decision: done  # ESC-8.4-1 (OQ-4) and ESC-8.4-2 (OQ-12) wait on the Maintainer
   8-5-fidelity-review-workflow: done  # ESC-8.5-1 (open-question: reviewer Apps, key and cost) waits on the Maintainer
-  8-6-framework-agent-operating-instructions-and-stop-rules: in-progress
+  8-6-framework-agent-operating-instructions-and-stop-rules: done
   8-7-porting-md-pilot-on-support-and-collections: backlog
   8-8-phase-1-gate: backlog
   epic-8-retrospective: optional
