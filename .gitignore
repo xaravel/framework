@@ -1,8 +1,12 @@
 # Dependencies and build output
 node_modules/
-dist/
-build/
-coverage/
+# Anchored: an unanchored `build/` would hide a packages/*/src/**/build/ source directory from oxlint
+/dist/
+/build/
+/coverage/
+/packages/*/dist/
+/packages/*/build/
+/packages/*/coverage/
 .cache/
 *.tsbuildinfo
 
