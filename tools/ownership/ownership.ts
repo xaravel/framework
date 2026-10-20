@@ -81,8 +81,9 @@
 //                        the Story, its epic, the input and its problem, and
 //                        ending `(FR-8, Story 8.8)` (Story 8.8)
 //
-// The Phase 1 gate (Story 8.8, FR-8; ./phase-gate.ts). `pr` (the CLI path; the
-// synchronous `evaluatePr` only returns the manifest's `epic`) checks a
+// The Phase 1 gate (Story 8.8, FR-8; ./phase-gate.ts). Only `pr` (the CLI path, not
+// the synchronous `evaluatePr`) runs it: it re-reads the base manifest's
+// `epic` and checks a
 // Phase 1 or later Story against the base checkout, never the PR head: it
 // needs `PORTING.md` passing `checkPorting`, `decisions/DIV-1.md`..`DIV-12.md`,
 // `docs/porting/pilot-report.md` (not blank) and a Maintainer-signed
@@ -232,8 +233,6 @@ export interface OwnershipPrResult {
   outOfScope: string[];
   /** Empty when the check passes. */
   violations: string[];
-  /** The `epic` of the valid base manifest of a `story/<id>` PR, or null when there is none (Story 8.8). */
-  epic: number | null;
 }
 
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
@@ -1165,7 +1164,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
       ),
     ];
     // No line rules: the planning rule already rejects every Expectations change, so a demotion cannot pass here.
-    return { storyId: null, outOfScope, violations, epic: null };
+    return { storyId: null, outOfScope, violations };
   }
   if (pr.headRef.startsWith(BOT_BRANCH)) {
     const outOfScope = disallowed(pr.files, botAllowedPath);
@@ -1177,27 +1176,27 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
       ),
       ...botRules(pr),
     ];
-    return { storyId: null, outOfScope, violations, epic: null };
+    return { storyId: null, outOfScope, violations };
   }
   if (!pr.headRef.startsWith(STORY_BRANCH)) {
-    return { storyId: null, outOfScope: [], violations: lineRules(root, pr, null, null), epic: null };
+    return { storyId: null, outOfScope: [], violations: lineRules(root, pr, null, null) };
   }
   const storyId = pr.headRef.slice(STORY_BRANCH.length);
   const violations: string[] = truncated(pr);
   if (!STORY_ID.test(storyId)) {
     violations.push(`missing manifest: branch ${pr.headRef} does not name a Story ID <epic>.<story>, so no manifest on base can own it (AD-16)`);
-    return { storyId, outOfScope: [], violations, epic: null };
+    return { storyId, outOfScope: [], violations };
   }
   const file = `${STORIES_DIR}/${storyId}.md`;
   const path = join(root, file);
   if (!existsSync(path)) {
     violations.push(`missing manifest: branch ${pr.headRef} has no ${file} on the base branch; a manifest the PR adds does not count (AD-16)`);
-    return { storyId, outOfScope: [], violations, epic: null };
+    return { storyId, outOfScope: [], violations };
   }
   const parsed = parseManifest(file, readFileSync(path, "utf8"));
   if (parsed.manifest === null) {
     violations.push(...parsed.violations);
-    return { storyId, outOfScope: [], violations, epic: null };
+    return { storyId, outOfScope: [], violations };
   }
   const manifest = parsed.manifest;
   const outOfScope = disallowed(pr.files, (candidate) => allowedPath(manifest, candidate));
@@ -1205,7 +1204,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
     violations.push(`out of scope: ${candidate} is outside Story ${storyId}'s allowed paths (component ${manifest.component}) (AD-16)`);
   }
   violations.push(...lineRules(root, pr, storyId, new Set(manifest.testIds)));
-  return { storyId, outOfScope, violations, epic: manifest.epic };
+  return { storyId, outOfScope, violations };
 }
 
 // ---------------------------------------------------------------------------
@@ -1275,6 +1274,16 @@ function manifests(options: Options): number {
   return 0;
 }
 
+/** The `epic` of Story `storyId`'s valid manifest on the base checkout at `root`, or null when there is none (Story 8.8). */
+function baseManifestEpic(root: string, storyId: string | null): number | null {
+  if (storyId === null || !STORY_ID.test(storyId)) {
+    return null;
+  }
+  const file = `${STORIES_DIR}/${storyId}.md`;
+  const path = join(root, file);
+  return existsSync(path) ? (parseManifest(file, readFileSync(path, "utf8")).manifest?.epic ?? null) : null;
+}
+
 async function pr(options: Options): Promise<number> {
   if (options.repo === null || options.pr === null) {
     throw new UsageError("pr needs --repo <owner/name> and --pr <n>");
@@ -1334,8 +1343,9 @@ async function pr(options: Options): Promise<number> {
   const author = user !== null && typeof user.login === "string" && typeof user.type === "string" ? { login: user.login, type: user.type } : null;
   const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha, author });
   // The Phase 1 gate (Story 8.8) reads the base checkout only, whatever the PR head holds.
-  if (result.storyId !== null && result.epic !== null && result.epic > PHASE_0_LAST_EPIC) {
-    result.violations.push(...(await phaseGateViolations(options.root, result.storyId, result.epic)));
+  const epic = baseManifestEpic(options.root, result.storyId);
+  if (result.storyId !== null && epic !== null && epic > PHASE_0_LAST_EPIC) {
+    result.violations.push(...(await phaseGateViolations(options.root, result.storyId, epic)));
   }
 
   if (result.violations.length > 0) {

@@ -56,9 +56,11 @@ function decision(escalationText: string, verdict = "approved"): string {
   return `---\ndecision: ${verdict}\nescalation_sha256: "${escalationDigest(escalationText)}"\n---\n\nRuled.\n`;
 }
 
+/** A base checkout with Story 11.1's manifest and `files`; it also holds the Phase 1 gate's inputs (Story 8.8), since 11.1 is in Phase 1. */
 function baseRoot(files: Record<string, string> = {}): string {
   const dir = mkdtempSync(join(tmpdir(), "xt-ownership-lines-"));
   dirs.push(dir);
+  writeGateInputs(dir);
   for (const [path, text] of Object.entries({ "stories/11.1.md": manifest("11.1", [A, X, `${Z}#1`]), ...files })) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
@@ -176,8 +178,6 @@ xaravelTest("XT-conformance-244", "a Story PR changing portedTest blocks outside
 
 xaravelTest("XT-conformance-245", "the pr command reads changed shards at the merge base from the compare API and at the head, and lists each unowned line (FR-4.3, AD-16.5)", async () => {
   const dir = baseRoot();
-  // Story 8.8: Story 11.1 is in Phase 1, so its base also holds the Phase 1 gate's inputs.
-  writeGateInputs(dir);
   const paths: string[] = [];
   const server = Bun.serve({
     port: 0,
