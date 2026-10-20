@@ -102,7 +102,7 @@ development_status:
 
   epic-7: in-progress
   7-1-conformance-aggregator: done
-  7-2-public-dashboard-and-epic-review-view: in-progress
+  7-2-public-dashboard-and-epic-review-view: done
   7-3-boost-framework-mode-mcp-server: backlog
   7-4-framework-mode-is-read-only: backlog
   epic-7-retrospective: optional

@@ -1,12 +1,15 @@
 // The conformance history (Story 7.1; FR-5.4, FR-5.5).
 //
 //   bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>]
-//       [--remote <remote>] [--branch <branch>]
+//       [--remote <remote>] [--branch <branch>] [--history-out <file>]
 //       (`bun run conformance:history`, run by `.github/workflows/dashboard.yml`
 //       after `conformance:report` on every push to main) appends one record
 //       built from `report.json` (default `<root>/.cache/conformance/report.json`)
 //       to `history.jsonl` on `--branch` (default `dashboard-data`) of
-//       `--remote` (default `origin`), and pushes it.
+//       `--remote` (default `origin`), and pushes it. `--history-out` writes
+//       the branch's full `history.jsonl` after the append (or as it already
+//       is when the record is already there) to `<file>`, for the dashboard
+//       site build (Story 7.2).
 //
 // A record is `{"commit","pin":{"tag","commit"},"overall":{"pairs","passing"},
 // "alpha":{"applicable","passing"},"components":{<c>:{"pairs","passing"}}}`,
@@ -24,11 +27,14 @@
 // - The push is a fast-forward of the branch (never forced). A non-fast-forward
 //   rejection refetches and re-appends, up to 3 retries.
 //
+// `git`, `gitOk`, `fetchTip`, `BOT` and `readReport` are exported for the
+// site publish (publish.ts) and the site build (site.ts), Story 7.2.
+//
 // Exit codes: 0 ok (appended, created or already recorded), 1 data or git
 // error, 2 usage error.
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { compareUnits } from "../inventory/inventory";
 import { DEFAULT_OUT, type Report } from "./report";
 
@@ -37,7 +43,7 @@ export const DEFAULT_BRANCH = "dashboard-data";
 export const HISTORY_FILE = "history.jsonl";
 /** Retries after a non-fast-forward rejection. */
 export const PUSH_RETRIES = 3;
-const BOT = { name: "github-actions[bot]", email: "41898599+github-actions[bot]@users.noreply.github.com" };
+export const BOT = { name: "github-actions[bot]", email: "41898599+github-actions[bot]@users.noreply.github.com" };
 
 export interface HistoryRecord {
   commit: string;
@@ -53,6 +59,8 @@ export interface AppendResult {
   tip: string;
   /** Push attempts made (0 when already recorded). */
   attempts: number;
+  /** The branch's full `history.jsonl` after the run. */
+  content: string;
 }
 
 /** A data or git error: the CLI exits 1. */
@@ -82,13 +90,13 @@ export function serialiseRecord(record: HistoryRecord): string {
   return `${JSON.stringify(record)}\n`;
 }
 
-interface Run {
+export interface Run {
   exitCode: number;
   stdout: string;
   stderr: string;
 }
 
-function git(root: string, args: readonly string[], options: { input?: string; env?: Record<string, string> } = {}): Run {
+export function git(root: string, args: readonly string[], options: { input?: string; env?: Record<string, string> } = {}): Run {
   const proc = Bun.spawnSync(["git", ...args], {
     cwd: root,
     stdin: options.input === undefined ? "ignore" : Buffer.from(options.input),
@@ -99,7 +107,7 @@ function git(root: string, args: readonly string[], options: { input?: string; e
   return { exitCode: proc.exitCode ?? -1, stdout: proc.stdout.toString(), stderr: proc.stderr.toString() };
 }
 
-function gitOk(root: string, args: readonly string[], options: { input?: string; env?: Record<string, string> } = {}): string {
+export function gitOk(root: string, args: readonly string[], options: { input?: string; env?: Record<string, string> } = {}): string {
   const run = git(root, args, options);
   if (run.exitCode !== 0) {
     throw new HistoryError(`git ${args[0]} failed: ${run.stderr.trim() || `exit ${run.exitCode}`}`);
@@ -120,7 +128,7 @@ function sameKey(line: string, record: HistoryRecord, at: string): boolean {
 }
 
 /** The remote branch tip, fetched into `refs/xaravel-history/<branch>`, or null when the remote has no such branch. */
-function fetchTip(root: string, remote: string, branch: string): string | null {
+export function fetchTip(root: string, remote: string, branch: string): string | null {
   const ref = `refs/heads/${branch}`;
   const listed = gitOk(root, ["ls-remote", "--heads", remote, ref]).trim();
   if (listed === "") {
@@ -130,8 +138,8 @@ function fetchTip(root: string, remote: string, branch: string): string | null {
   return gitOk(root, ["rev-parse", "--verify", `refs/xaravel-history/${branch}^{commit}`]).trim();
 }
 
-/** Builds the commit appending `record` on `tip` (an orphan when null); null when the key is already recorded. */
-function buildCommit(root: string, tip: string | null, record: HistoryRecord): string | null {
+/** Builds the commit appending `record` on `tip` (an orphan when null), with the resulting content; a null commit when the key is already recorded. */
+function buildCommit(root: string, tip: string | null, record: HistoryRecord): { commit: string | null; content: string } {
   let content = "";
   if (tip !== null) {
     const has = git(root, ["cat-file", "-e", `${tip}:${HISTORY_FILE}`]);
@@ -144,7 +152,7 @@ function buildCommit(root: string, tip: string | null, record: HistoryRecord): s
   }
   const lines = content === "" ? [] : content.slice(0, -1).split("\n");
   if (lines.some((line, index) => line !== "" && sameKey(line, record, `${HISTORY_FILE}:${index + 1}`))) {
-    return null;
+    return { commit: null, content };
   }
   content += serialiseRecord(record);
   const blob = gitOk(root, ["hash-object", "-w", "--stdin"], { input: content }).trim();
@@ -159,7 +167,7 @@ function buildCommit(root: string, tip: string | null, record: HistoryRecord): s
     const identity = { GIT_AUTHOR_NAME: BOT.name, GIT_AUTHOR_EMAIL: BOT.email, GIT_COMMITTER_NAME: BOT.name, GIT_COMMITTER_EMAIL: BOT.email };
     const subject = `conformance history: ${record.commit.slice(0, 12)} at ${record.pin.tag}`;
     const parents = tip === null ? [] : ["-p", tip];
-    return gitOk(root, ["commit-tree", tree, ...parents, "-m", subject], { env: identity }).trim();
+    return { commit: gitOk(root, ["commit-tree", tree, ...parents, "-m", subject], { env: identity }).trim(), content };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -174,13 +182,13 @@ export function appendHistory(options: { root: string; remote: string; branch: s
   const record = historyRecord(options.report);
   for (let attempt = 1; attempt <= PUSH_RETRIES + 1; attempt++) {
     const tip = fetchTip(root, remote, branch);
-    const commit = buildCommit(root, tip, record);
+    const { commit, content } = buildCommit(root, tip, record);
     if (commit === null) {
-      return { outcome: "already recorded", tip: tip!, attempts: attempt - 1 };
+      return { outcome: "already recorded", tip: tip!, attempts: attempt - 1, content };
     }
     const push = git(root, ["push", "--quiet", "--no-verify", remote, `${commit}:refs/heads/${branch}`]);
     if (push.exitCode === 0) {
-      return { outcome: tip === null ? "created" : "appended", tip: commit, attempts: attempt };
+      return { outcome: tip === null ? "created" : "appended", tip: commit, attempts: attempt, content };
     }
     if (!REJECTED.test(push.stderr)) {
       throw new HistoryError(`git push failed: ${push.stderr.trim() || `exit ${push.exitCode}`}`);
@@ -194,18 +202,19 @@ export function appendHistory(options: { root: string; remote: string; branch: s
 
 class UsageError extends Error {}
 
-const USAGE = "Usage: bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>] [--remote <remote>] [--branch <branch>]";
-const FLAGS = ["--root", "--report", "--remote", "--branch"] as const;
+const USAGE = "Usage: bun --no-env-file tools/conformance-report/history.ts [--root <dir>] [--report <file>] [--remote <remote>] [--branch <branch>] [--history-out <file>]";
+const FLAGS = ["--root", "--report", "--remote", "--branch", "--history-out"] as const;
 
 interface Args {
   root: string;
   report: string | null;
   remote: string;
   branch: string;
+  historyOut: string | null;
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const args: Args = { root: resolve(import.meta.dir, "..", ".."), report: null, remote: DEFAULT_REMOTE, branch: DEFAULT_BRANCH };
+  const args: Args = { root: resolve(import.meta.dir, "..", ".."), report: null, remote: DEFAULT_REMOTE, branch: DEFAULT_BRANCH, historyOut: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (!(FLAGS as readonly string[]).includes(arg)) {
@@ -221,6 +230,8 @@ function parseArgs(argv: readonly string[]): Args {
       args.report = resolve(value);
     } else if (arg === "--remote") {
       args.remote = value;
+    } else if (arg === "--history-out") {
+      args.historyOut = resolve(value);
     } else {
       if (git(args.root, ["check-ref-format", `refs/heads/${value}`]).exitCode !== 0) {
         throw new UsageError(`--branch ${JSON.stringify(value)} is not a valid branch name`);
@@ -231,7 +242,8 @@ function parseArgs(argv: readonly string[]): Args {
   return args;
 }
 
-function readReport(path: string): Report {
+/** Reads and shape-checks a schema 1 `report.json`; throws HistoryError naming `path`. */
+export function readReport(path: string): Report {
   if (!existsSync(path)) {
     throw new HistoryError(`${path} does not exist (run bun run conformance:report first)`);
   }
@@ -253,6 +265,10 @@ export function main(argv: readonly string[]): number {
     const args = parseArgs(argv);
     const report = readReport(args.report ?? join(args.root, DEFAULT_OUT));
     const result = appendHistory({ root: args.root, remote: args.remote, branch: args.branch, report });
+    if (args.historyOut !== null) {
+      mkdirSync(dirname(args.historyOut), { recursive: true });
+      writeFileSync(args.historyOut, result.content);
+    }
     const key = `${report.commit} (${report.pin.tag} ${report.pin.commit})`;
     if (result.outcome === "already recorded") {
       process.stdout.write(`conformance:history: ${key} already recorded on ${args.remote} ${args.branch}\n`);

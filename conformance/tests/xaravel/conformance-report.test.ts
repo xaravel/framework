@@ -357,16 +357,26 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(repeat).toEqual({ exitCode: 0, stdout: `conformance:history: ${head} (v13.37.0 ${"a".repeat(40)}) already recorded on origin dashboard-data\n`, stderr: "" });
   expect(tip()).toBe(first);
   expect(history()).toBe(serialiseRecord(record));
+  // --history-out writes the branch's full history.jsonl, also when the record is already there.
+  const historyOut = join(reports, "out", "history.jsonl");
+  expect(cli(HISTORY, ["--root", caller, "--report", reportPath, "--history-out", historyOut]).exitCode).toBe(0);
+  expect(readFileSync(historyOut, "utf8")).toBe(serialiseRecord(record));
+  expect(tip()).toBe(first);
 
   // Pin change: the same commit under a new Pin appends a second line on top of the first commit.
   const bumped: Report = { ...report, pin: { tag: "v13.38.0", commit: "9".repeat(40) } };
   const bumpedPath = join(reports, "bumped.json");
   writeFileSync(bumpedPath, serialiseReport(bumped));
-  const appended = cli(HISTORY, ["--root", caller, "--report", bumpedPath, "--remote", remote, "--branch", "dashboard-data"]);
+  const appendedOut = join(reports, "appended-history.jsonl");
+  const appended = cli(HISTORY, ["--root", caller, "--report", bumpedPath, "--remote", remote, "--branch", "dashboard-data", "--history-out", appendedOut]);
   expect(appended.stderr).toBe("");
   expect(appended.exitCode).toBe(0);
   expect(appended.stdout).toMatch(/^conformance:history: appended to .+ dashboard-data with [0-9a-f]{40} \(v13\.38\.0 9{40}\) at [0-9a-f]{40}\n$/);
   expect(history()).toBe(serialiseRecord(record) + serialiseRecord(historyRecord(bumped)));
+  // After an append, --history-out holds the new full content, the new line included.
+  expect(readFileSync(appendedOut, "utf8")).toBe(history());
+  expect(readFileSync(appendedOut, "utf8")).toBe(serialiseRecord(record) + serialiseRecord(historyRecord(bumped)));
+  expect(cli(HISTORY, ["--history-out"]).exitCode).toBe(2);
   expect(git(remote, ["rev-parse", "dashboard-data^"]).trim()).toBe(first);
   expect(cli(HISTORY, ["--root", caller, "--report", bumpedPath]).stdout).toContain("already recorded");
 
@@ -422,17 +432,21 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   for (const value of uses) {
     expect([value, /@[0-9a-f]{40}$/.test(value), ciUses.has(value)]).toEqual([value, true, true]);
   }
-  // The checkout persists no credentials; only the history step gets the token, and it runs conformance:history last.
+  // The checkout persists no credentials (and fetches full history for the Epic view, Story 7.2); the history step
+  // runs conformance:history right after the report, and only it and the publish step get the token.
   expect(job.steps[0]!.uses).toStartWith("actions/checkout@");
-  expect(job.steps[0]!.with).toEqual({ "persist-credentials": false });
+  expect(job.steps[0]!.with).toEqual({ "fetch-depth": 0, "persist-credentials": false });
   const runs = job.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
   expect(runs.slice(0, 2)).toEqual(["bun install --frozen-lockfile --ignore-scripts", "bun run conformance:report"]);
-  expect(runs.length).toBe(3);
+  expect(runs.length).toBe(5);
   const historyStep = job.steps.find((step) => step.run === runs[2])!;
-  expect(historyStep.run!.trimEnd().split("\n").at(-1)).toBe("bun run conformance:history");
+  expect(historyStep.run!.trimEnd().split("\n").at(-1)).toBe("bun run conformance:history --history-out .cache/conformance/history.jsonl");
   expect(historyStep.env).toEqual({ GH_TOKEN: "${{ github.token }}" });
-  expect(job.steps.filter((step) => JSON.stringify(step).includes("github.token")).length).toBe(1);
-  expect(text).toContain("Story 7.2 adds the GitHub Pages publish to this same job.");
+  const tokenSteps = job.steps.filter((step) => JSON.stringify(step).includes("github.token"));
+  expect(tokenSteps.length).toBe(2);
+  expect(tokenSteps[0]).toBe(historyStep);
+  expect(tokenSteps[1]!.run!.trimEnd().split("\n").at(-1)).toStartWith("bun run conformance:publish");
+  expect(text).toContain("commits that directory to the `gh-pages`");
   expect(checkWorkflows(root).violations).toEqual([]);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["conformance:history"]).toBe("bun --no-env-file tools/conformance-report/history.ts");
