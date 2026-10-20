@@ -1349,6 +1349,7 @@ The alpha targets **Laravel 13**, at the newest 13.x Baseline Pin reached by a f
 - Redis Cluster.
 - Additional mail transports.
 - SQS and Beanstalkd.
+- AVIF, HEIC and JPEG XL image output, which needs codecs Bun does not ship on Linux (ESC-8.3-3).
 
 Tests for those backends and features are recorded as `deferred:<item>` until then.
 

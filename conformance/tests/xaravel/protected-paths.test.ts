@@ -187,6 +187,7 @@ xaravelTest("XT-conformance-17", "conformance/protected-paths holds exactly AD-1
     include("/AGENTS.md"),
     include("**/CLAUDE.md"),
     include("/.claude/"),
+    include("/.mcp.json"),
   ]);
 
   const protectedNow = (path: string) => isProtected(entries, NONE, path);
@@ -412,7 +413,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
       base!,
     );
     expect(phase2Stale.code).toBe(1);
-    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 29 is end of file, expected "/docs/ @edanisko"');
+    expect(phase2Stale.stderr).toContain('codeowners drift: .github/CODEOWNERS line 30 is end of file, expected "/docs/ @edanisko"');
     const phase2Open = await runPr(
       { files: [file("packages/support/src/y.ts")], head: { [LIST_PATH]: phase2List, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
       base!,
@@ -442,7 +443,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
       base!,
     );
     expect(drift.code).toBe(1);
-    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 29 is end of file, expected "/docs/ @edanisko"');
+    expect(drift.stderr).toContain('codeowners drift: .github/CODEOWNERS line 30 is end of file, expected "/docs/ @edanisko"');
 
     // The base list judges the PR: a head list that drops `/tools/` and `/conformance/`, with a matching CODEOWNERS, still fails.
     const weakenedList = listText.split("\n").filter((line) => !line.startsWith("/tools/") && !line.startsWith("/conformance/")).join("\n");

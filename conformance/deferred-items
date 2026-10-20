@@ -26,6 +26,8 @@ browser-tests
 email-spoof
 # "The rest of Foundation (Cloud and other integrations)."
 foundation-cloud
+# "AVIF, HEIC and JPEG XL image output, which needs codecs Bun does not ship on Linux (ESC-8.3-3)."
+image-avif-heic-jxl
 # "The Laravel 14 re-sync Epic."
 laravel-14-resync
 # "Additional mail transports."

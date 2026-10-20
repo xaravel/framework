@@ -44,14 +44,11 @@ epic-6:
   doc: _bmad-output/implementation-artifacts/epic-6-retro-2026-10-19.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-6-retro-item-13-story-check-api-surface-gate
+  waiting_on_maintainer: []
 epic-7:
   verdict: accepted-with-open-items
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-7-retro-item-7-sm1-none-remaining-ruling
-    - epic-7-retro-item-8-sm1-target-covering-story
+  waiting_on_maintainer: []
