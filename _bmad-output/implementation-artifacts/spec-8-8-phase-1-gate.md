@@ -2,10 +2,10 @@
 title: 'Story 8.8: Phase 1 gate'
 type: 'feature'
 created: '2026-10-20'
-status: 'in-review'
+status: 'done'
 baseline_revision: 'd1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f'
-review_loop_iteration: 2
-followup_review_recommended: false
+review_loop_iteration: 3
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-8-context.md'
 warnings: ['oversized']
@@ -132,6 +132,16 @@ deferred:
 - findings:
   - (fidelity) `[false]` `[reject]` F-7 reviewer 1 (codex): asks for FR-4.3/AD-16.5 and the full XT-conformance-245 body to compare its retained citations — no defect claimed; the diff changes only that test's fixture setup (`writeGateInputs(dir)`), not its title, consequence or assertions, and the tool's evidence covers citations on added lines only. Reviewer 2 (claude) passed the same tree.
   - (fidelity) `[false]` `[reject]` F-7 reviewer 1 (codex): asks for AD-16.5/AD-21.1 and the full XT-conformance-23 body — same: only the fixture root gains `gate = true` and `epic: null` joins an exact-equality result, which tightens it; the consequence is unchanged.
+
+### 2026-10-20 — Review pass (Finalize re-check, iteration 2)
+- verdicts: 2 findings — high 0, medium 0, low 2, false 0, maybe-false 0
+- findings:
+  - (fidelity) `[low]` `[patch]` F-7 reviewer 1 (codex): the changed XT-conformance-23 body cannot be checked against AD-16.5/AD-21.1 — the diff no longer edits it: `evaluatePr`'s result is unchanged and `fixtureRoot` writes the gate inputs (Spec Change Log).
+  - (fidelity) `[low]` `[patch]` F-7 reviewer 1 (codex): the XT-conformance-245 fixture hunk cannot establish its consequence — the gate inputs moved into `baseRoot`, so its body is untouched.
+
+### 2026-10-20 — Review pass (Finalize re-check, iteration 3)
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- findings: none. Reviewer 1 codex `gpt-6.1-sol` pass, reviewer 2 claude `claude-opus-5-5` pass, on tree `a3cfaa918e4cbacab7348ec34b491df8b8b3a7fc`.
 
 ## Design Notes
 
@@ -300,3 +310,89 @@ None.
 ```json
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"ae3435b5e407e1051402e8cf4da32ae2d4d9398d","base":"d1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-20T21:29:09.127Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the diff adds or changes no Ported Test. Every changed test is an xaravelTest, so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test is added or changed, so there are no Upstream expected values that could be weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there are no Upstream assertions to count.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff touches no Expectations shard and sets no line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field is changed.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): the Story relies on no Oracle error fixture, and none is added or modified.","findings":[]},{"id":"F-7","result":"pass","note":"XT-conformance-168 checks everything its consequence claims. With the gate open there are no violations. Each unmet condition gives exactly one 'phase gate:' line: PORTING.md missing, failing or throwing; a DIV record missing; the pilot report missing or blank; the exit file missing or with each signature defect. With every input missing there are four lines, and the CLI exits 1 with those lines. XT-conformance-169 checks that, once the gate is open, a run of Phase 1 PRs passes. A head that deletes the gate inputs produces no gate line and no contents fetch, which shows the gate reads only the base. Phase 0, planning/*, bot/* and feature/* PRs are never gated. ci.yml's check job runs porting:check and divergence:check unconditionally on pull_request and merge_group. Both tests cite only FR-8, with no FR-<n>.<k> or AD-<n>.<k> token (evidence (b)). In XT-conformance-24 and its neighbours, the edits add epic: null to the expected results and shift the step indexes. The 'no install' loop now leaves out the new install step, but a new assertion pins that step exactly to `bun install --frozen-lockfile --ignore-scripts` on the base checkout. Caveat: the diff truncates XT-conformance-24's consequence string, so I could not confirm its full wording still matches the edited body.","findings":[]},{"id":"F-8","result":"pass","note":"The changes are to conformance tooling (tools/ownership), the ownership workflow, docs/ops and conformance Xaravel Tests, all within the conformance Component's tooling. The gate calls the real checkPorting and the real parseFrontmatter instead of stubbing them. The signed PHASE-0-EXIT text exists only in the test fixture; it is never written to the real repository and is not a hard-coded production return.","findings":[]},{"id":"F-9","result":"n/a","note":"Evidence (d): no @asyncRoot tag is added. The async phaseGateViolations is conformance tooling that awaits a dynamic import, not framework code behind an async-root Driver contract, so the item has nothing to apply to.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}]}
 ```
+
+### Reviewer 1: pass at tree a3cfaa918e4cbacab7348ec34b491df8b8b3a7fc
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `d1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f`, on 2026-10-20T21:32:58.885Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and the diff changes none. |
+| F-2: No expected value is weakened | n/a | No Upstream expected values are changed; the workflow assertions belong to Xaravel Tests. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are removed or changed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change contains no adapted markers or Expectations adapted fields. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied evidence identifies no relied-on Oracle error fixtures. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-conformance-168 checks gate prerequisites, failure diagnostics and CLI enforcement. XT-conformance-169 checks passing bases, head independence, branch exemptions and CI commands. The changed ownership test checks the updated workflow. No cited FR or AD bullet tokens require additional matching. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The implementation stays within conformance tooling and calls the existing porting checker. Temporary gate files and the GitHub API fake are test fixtures, not implementations of another Component. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No asyncRoot tags or async-root Driver implementations are added or changed; the asynchronous additions are conformance tooling. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"a3cfaa918e4cbacab7348ec34b491df8b8b3a7fc","base":"d1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-20T21:32:58.885Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and the diff changes none.","findings":[]},{"id":"F-2","result":"n/a","note":"No Upstream expected values are changed; the workflow assertions belong to Xaravel Tests.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are removed or changed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no adapted markers or Expectations adapted fields.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied evidence identifies no relied-on Oracle error fixtures.","findings":[]},{"id":"F-7","result":"pass","note":"XT-conformance-168 checks gate prerequisites, failure diagnostics and CLI enforcement. XT-conformance-169 checks passing bases, head independence, branch exemptions and CI commands. The changed ownership test checks the updated workflow. No cited FR or AD bullet tokens require additional matching.","findings":[]},{"id":"F-8","result":"pass","note":"The implementation stays within conformance tooling and calls the existing porting checker. Temporary gate files and the GitHub API fake are test fixtures, not implementations of another Component.","findings":[]},{"id":"F-9","result":"n/a","note":"No asyncRoot tags or async-root Driver implementations are added or changed; the asynchronous additions are conformance tooling.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}]}
+```
+
+### Reviewer 2: pass at tree a3cfaa918e4cbacab7348ec34b491df8b8b3a7fc
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `d1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f`, on 2026-10-20T21:32:58.885Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | Manifest test_ids is empty and the diff adds or changes no Ported Test; there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | n/a | No Ported Test is added or changed, so no Upstream expected value can be weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, so there are no Upstream assertions to count. Evidence (a) shows no adapted markers. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff sets no Expectations line to skip; it touches no Expectations file. |
+| F-5: Every `adapted` marker matches its clause | n/a | Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field is changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c): no base or changed Oracle fixture the Story relies on has an error output, and the Story assigns no Ported Tests. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-conformance-168: the body checks that the gate is open with all inputs (empty violations), then each unmet condition. Those are PORTING.md missing, failing porting:check (count plus at most 3 quoted) and checkPorting throwing; a missing DIV record; the pilot report missing or blank; the exit file missing or unsigned (each field). It checks one line per condition when everything is missing. Through the CLI it checks exit 1 with the phase gate: lines on stderr, both alone and beside other violations. It also checks the Phase 0 epic range against epics.md and the workflow install step. That covers the consequence string. XT-conformance-169: the body checks that an open base passes several Phase 1 PRs through the CLI. A head that deletes the gate inputs gets only path violations, and no contents API is called. Phase 0 Stories and planning/, bot/ and feature/ branches get no gate lines. ci.yml's check job runs porting:check and divergence:check unconditionally, on pull_request and merge_group. That matches the declared consequence. Both cite only FR-8, the requirement the gate implements; no FR-n.k or AD-n.k bullet is cited (evidence b). |
+| F-8: No stub, fake or partial implementation of another Component | pass | Story component is conformance. The changes are to the conformance tooling (tools/ownership/ownership.ts and the new phase-gate.ts), the ownership workflow, ops docs and conformance Xaravel Tests. phase-gate.ts reuses the existing parseFrontmatter and loads the real checkPorting dynamically. There is no stub, fake or hard-coded return of another Component's behaviour. The test fixtures copy the real gate inputs and write a stand-in PHASE-0-EXIT.md only in temporary folders, never the real file. |
+| F-9: Every `@asyncRoot` tag is true | n/a | Evidence (d): no added line contains @​asyncRoot, and the change is to tooling, not a Driver contract. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"a3cfaa918e4cbacab7348ec34b491df8b8b3a7fc","base":"d1dac4b8e6576dd2e5db51fb2dde0fa3e0a9820f","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-20T21:32:58.885Z","items":[{"id":"F-1","result":"n/a","note":"Manifest test_ids is empty and the diff adds or changes no Ported Test; there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test is added or changed, so no Upstream expected value can be weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there are no Upstream assertions to count. Evidence (a) shows no adapted markers.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff sets no Expectations line to skip; it touches no Expectations file.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field is changed.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): no base or changed Oracle fixture the Story relies on has an error output, and the Story assigns no Ported Tests.","findings":[]},{"id":"F-7","result":"pass","note":"XT-conformance-168: the body checks that the gate is open with all inputs (empty violations), then each unmet condition. Those are PORTING.md missing, failing porting:check (count plus at most 3 quoted) and checkPorting throwing; a missing DIV record; the pilot report missing or blank; the exit file missing or unsigned (each field). It checks one line per condition when everything is missing. Through the CLI it checks exit 1 with the phase gate: lines on stderr, both alone and beside other violations. It also checks the Phase 0 epic range against epics.md and the workflow install step. That covers the consequence string. XT-conformance-169: the body checks that an open base passes several Phase 1 PRs through the CLI. A head that deletes the gate inputs gets only path violations, and no contents API is called. Phase 0 Stories and planning/, bot/ and feature/ branches get no gate lines. ci.yml's check job runs porting:check and divergence:check unconditionally, on pull_request and merge_group. That matches the declared consequence. Both cite only FR-8, the requirement the gate implements; no FR-n.k or AD-n.k bullet is cited (evidence b).","findings":[]},{"id":"F-8","result":"pass","note":"Story component is conformance. The changes are to the conformance tooling (tools/ownership/ownership.ts and the new phase-gate.ts), the ownership workflow, ops docs and conformance Xaravel Tests. phase-gate.ts reuses the existing parseFrontmatter and loads the real checkPorting dynamically. There is no stub, fake or hard-coded return of another Component's behaviour. The test fixtures copy the real gate inputs and write a stand-in PHASE-0-EXIT.md only in temporary folders, never the real file.","findings":[]},{"id":"F-9","result":"n/a","note":"Evidence (d): no added line contains @asyncRoot, and the change is to tooling, not a Driver contract.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}]}
+```
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** The required `ownership` check now enforces FR-8's Phase 1 gate. For a `story/<id>` PR whose base manifest's `epic` is above 8, `ownership pr` re-reads the manifest on the base checkout (`main`). It then fails with one `phase gate:` line per unmet condition unless that checkout holds all four inputs:
+- `PORTING.md` passing `checkPorting`;
+- `decisions/DIV-1.md`..`DIV-12.md`;
+- a non-blank `docs/porting/pilot-report.md`;
+- a Maintainer-signed `decisions/PHASE-0-EXIT.md` (`decision: approved`, `decided_by: Maintainer`, a real date, a body).
+
+The gate holds no state and never reads the PR head. `checkPorting` is imported lazily. The `ownership` job installs the base lockfile (`--ignore-scripts`) before the check.
+
+**Files changed.**
+- `tools/ownership/phase-gate.ts`: the gate, the signature check and the Phase 0 derivation from `epics.md`.
+- `tools/ownership/ownership.ts`: `pr()` runs the gate, and the header documents the `phase gate:` kind.
+- `.github/workflows/ownership.yml`: the install step.
+- `conformance/tests/xaravel/phase-gate.test.ts`: XT-conformance-168 (AC1) and XT-conformance-169 (AC2).
+- `conformance/tests/xaravel/phase-gate-fixtures.ts`: the shared gate-open fixture.
+- `conformance/tests/xaravel/ownership.test.ts`: the shared fixture writes the gate inputs, and the workflow assertion expects 5 steps.
+- `conformance/tests/xaravel/ownership-lines.test.ts`: the shared fixture writes the gate inputs.
+- `docs/ops/ci.md` and `docs/ops/porting.md`: the gate, and the form the Maintainer signs.
+
+**Review.**
+- Pass 1 had 29 findings. 7 were patched: the fail-closed test, the truncation count, the CI guarantee and the narrowed XT-169 title, the `feature/x` run, and the Protected wording. 2 were deferred: the Maintainer must sign `PHASE-0-EXIT.md`, and branches outside `story/`, `planning/` and `bot/` are ungated, which predates this Story. The other 20 were rejected, each with its reason in the triage log.
+- The Fidelity re-checks found nothing wrong in the code. Reviewer 1 (codex) twice rejected the diff's edits to other Stories' test bodies, because it had no evidence for their consequences. The design changed so that the diff no longer edits those bodies: `evaluatePr`'s result is unchanged, and the shared fixtures write the gate inputs. Both reviewers then passed on tree `a3cfaa9…`.
+- `followup_review_recommended: true`. Pass 1 patched 3 medium entries (and 2 low). The named unverified risk: the install step and the gate run only under `pull_request_target` on GitHub, and no test exercises them live. The first Epic 9 PR is their first real run.
+
+**Verification.**
+- `harness --xaravel`: 286/286.
+- `typecheck`, `lint`, `workflows:check`, `ownership:check` and `porting:check` all pass.
+- `story:check 8.8` passes every clause except `full-run`, which cannot run without `GH_TOKEN` locally. `approvals` shows 2 pass verdicts.
+
+**Residual risks.**
+- Phase 1 is closed until the Maintainer merges a signed `decisions/PHASE-0-EXIT.md`. The orchestrator's checkpoint `go` writes only `MAINT-checkpoint-epic-8.md`. Until the exit file exists, the Story 9.1 PR fails `ownership` with `phase gate:` lines.
+- The signature check verifies the file's form, not who wrote it (lesson, epic 1).
