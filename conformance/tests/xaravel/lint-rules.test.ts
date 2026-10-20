@@ -14,7 +14,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, wri
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { checkConfig, findDisables, scanSource, SPINE_RULES } from "../../../tools/lint-rules/disables";
-import plugin, { isFrameworkSource, isGraderLocation, isModelFile, isPackageSource, isPortedTest, RULE_NAMES, scopePath } from "../../../tools/lint-rules/plugin";
+import plugin, { isFrameworkSource, isGraderLocation, isModelFile, isPackageFile, isPackageSource, isPortedTest, RULE_NAMES, scopePath } from "../../../tools/lint-rules/plugin";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -233,6 +233,63 @@ function edgeCases(): void {
     "packages/demo/tests/ported/Require.ts": ['export const m: unknown = require("bun:test");\n', x(PORTED)],
     "packages/demo/tests/ported/MetaRequire.ts": ['export const m: unknown = import.meta.require("bun:test");\n', x(PORTED)],
     "packages/demo/tests/ported/TypeOnly.ts": ['import { type expect as E, test } from "bun:test";\n\nexport type X = typeof E;\nexport const t = test;\n', []],
+    // no-ported-bun-expect, any package file (retro 6 item 4): every export of `bun:test`'s `expect` or namespace, with
+    // or without `from`, hoisting included, in tests, support and src; type-only exports, Xaravel Tests and files
+    // outside `packages/<p>/` pass.
+    "packages/demo/tests/support/E.ts": ['export { expect } from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/support/Alias.ts": ['export { expect as e } from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/support/All.ts": ['export * from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/support/AllAs.ts": ['export * as b from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/support/ImportExport.ts": ['import { expect as e } from "bun:test";\n\nexport { e };\n', x(PORTED)],
+    "packages/demo/tests/support/ImportExportAs.ts": ['import { expect as e } from "bun:test";\n\nexport { e as check };\n', x(PORTED)],
+    "packages/demo/tests/support/ImportDefault.ts": ['import { expect as e } from "bun:test";\n\nexport default e;\n', x(PORTED)],
+    "packages/demo/tests/support/ImportConst.ts": ['import { expect as e } from "bun:test";\n\nexport const c = e;\n', x(PORTED)],
+    "packages/demo/tests/support/ImportHoisted.ts": ['export { e };\n\nimport { expect as e } from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/support/Namespace.ts": ['import * as b from "bun:test";\n\nexport { b };\n', x(PORTED)],
+    "packages/demo/tests/support/NamespaceMember.ts": ['import * as b from "bun:test";\n\nexport const c = b.expect;\n', x(PORTED)],
+    "packages/demo/tests/support/TypeExport.ts": ['export type { expect } from "bun:test";\n', []],
+    "packages/demo/src/ExpectExport.ts": ['export { expect } from "bun:test";\n', x(PORTED)],
+    "packages/demo/tests/xaravel/X.test.ts": ['import { expect, test } from "bun:test";\n\ntest("x", () => {\n  expect(1).toBe(1);\n});\n', []],
+    "conformance/tests/x/E.ts": ['export { expect } from "bun:test";\n', []],
+    "conformance/tests/x/packages/demo/E.ts": ['export { expect } from "bun:test";\n', []],
+    // Further export forms: `export =`, a namespace member (dot or computed) by default or const, a wrapped binding,
+    // `import … = require`, a global `expect`, a `require` / `import()` value, destructured exports, and a
+    // test-globals reference in a support declaration file.
+    "packages/demo/tests/support/ExportAssign.cts": ['import { expect as e } from "bun:test";\n\nexport = e;\n', x(PORTED)],
+    "packages/demo/tests/support/DefaultNamespaceMember.ts": ['import * as b from "bun:test";\n\nexport default b.expect;\n', x(PORTED)],
+    "packages/demo/tests/support/NamespaceComputed.ts": ['import * as b from "bun:test";\n\nexport const c = b["expect"];\n', x(PORTED)],
+    "packages/demo/tests/support/ConstAs.ts": ['import { expect as e } from "bun:test";\n\nexport const c = e as unknown;\n', x(PORTED)],
+    "packages/demo/tests/support/ExportImportEquals.ts": ['export import bt = require("bun:test");\n', x(PORTED)],
+    "packages/demo/tests/support/ImportEqualsExport.ts": ['import bt = require("bun:test");\n\nexport { bt };\n', x(PORTED)],
+    "packages/demo/tests/support/GlobalMember.ts": ["export const e = globalThis.expect;\n", x(PORTED)],
+    "packages/demo/tests/support/GlobalSelf.ts": ["export const e: unknown = self.expect;\n", x(PORTED)],
+    "packages/demo/tests/support/UnboundExport.ts": ["export { expect };\n", x(PORTED)],
+    "packages/demo/tests/support/RequireMember.ts": ['export const e: unknown = require("bun:test").expect;\n', x(PORTED)],
+    "packages/demo/tests/support/RequireDestructure.ts": ['export const { expect } = require("bun:test");\n', x(PORTED)],
+    "packages/demo/tests/support/ImportMember.ts": ['export const e = (await import("bun:test")).expect;\n', x(PORTED)],
+    "packages/demo/tests/support/GlobalDestructure.ts": ["export const { expect } = globalThis;\n", x(PORTED)],
+    "packages/demo/tests/support/Globals.d.ts": ['/// <reference types="bun-types/test-globals" />\n', x(PORTED)],
+    // no-ported-bun-expect, Ported Tests: a test-globals reference and a global `expect` (bare, `globalThis.expect`,
+    // `globalThis["expect"]`); a locally bound `expect` passes.
+    "packages/demo/tests/ported/TestGlobals.ts": ['/// <reference types="bun-types/test-globals" />\n\nexport const x = 1;\n', x(PORTED)],
+    "packages/demo/tests/ported/GlobalBare.ts": ["expect(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/GlobalThis.ts": ["globalThis.expect(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/GlobalThisComputed.ts": ['export const g: unknown = globalThis["expect"];\n', x(PORTED)],
+    "packages/demo/tests/ported/support.ts": ["export function expect(value: unknown): unknown {\n  return value;\n}\n", []],
+    "packages/demo/tests/ported/LocalExpect.ts": ['import { expect } from "./support";\n\nexpect(1);\n', []],
+    // A test-globals `path=` reference, `import … = require`, an ambient `expect` (which would make Bun's runtime global
+    // look local; under `declare global` the use stays global too), a destructured or aliased global, and a global
+    // `expect` nested in a function body.
+    "packages/demo/tests/ported/TestGlobalsPath.ts": ['/// <reference path="../../node_modules/bun-types/test-globals.d.ts" />\n\nexport const x = 1;\n', x(PORTED)],
+    "packages/demo/tests/ported/ImportEquals.ts": ['import bt = require("bun:test");\n\nexport const t = bt.test;\n', x(PORTED)],
+    "packages/demo/tests/ported/DeclareConst.ts": ["declare const expect: (v: unknown) => unknown;\n\nexpect(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/DeclareFunction.ts": ["declare function expect(v: unknown): unknown;\n\nexpect(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/DeclareGlobal.ts": ["declare global {\n  var expect: (v: unknown) => unknown;\n}\n\nexpect(1);\n\nexport {};\n", x(PORTED, 2)],
+    "packages/demo/tests/ported/DestructureGlobal.ts": ["const { expect } = globalThis as unknown as { expect: (v: unknown) => unknown };\n\nexpect(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/DestructureAlias.ts": ["const { expect: e } = globalThis as unknown as { expect: (v: unknown) => unknown };\n\ne(1);\n", x(PORTED)],
+    "packages/demo/tests/ported/DestructureAssign.ts": ["let e: unknown = null;\n({ expect: e } = globalThis as unknown as { expect: unknown });\n\nexport const f = e;\n", x(PORTED)],
+    "packages/demo/tests/ported/GlobalAliases.ts": ["global.expect(1);\nself.expect(1);\nwindow.expect(1);\n", x(PORTED, 3)],
+    "packages/demo/tests/ported/GlobalNested.ts": ["export function run(): void {\n  if (Math.random() > 2) {\n    expect(1);\n  }\n}\n", x(PORTED)],
     // no-type-import-injection: an inject(...) call, <obj>.inject with `as`, shorthand, an `@<obj>.inject(...)`
     // decorator, a type import after its use; type arguments and keys pass.
     "packages/demo/src/inject/InjectCall.ts": ['import { inject } from "./support";\nimport { type Mailer } from "./support";\n\nexport const decorate = inject({ mailer: Mailer });\nexport type M = Mailer;\n', x(INJECT)],
@@ -263,13 +320,15 @@ function edgeCases(): void {
   const run = oxlint(CONFIG, [dir]);
   const found = byFile(run, dir);
   // Only the plugin's diagnostics count: some spellings are odd enough that built-in rules fire too
-  // (`no-unsafe-optional-chaining` on `(a?.b).c`, `unbound-method` on a destructured `stringify`).
+  // (`no-unsafe-optional-chaining` on `(a?.b).c`, `unbound-method` on a destructured `stringify`, `triple-slash-reference` on a `path=` reference).
   const actual = Object.fromEntries(Object.keys(cases).map((path) => [path, (found[path] ?? []).filter((rule) => rule.startsWith("xaravel("))]));
   expect(actual).toEqual(Object.fromEntries(Object.entries(cases).map(([path, [, rules]]) => [path, [...rules]])));
   expect(Object.keys(found).filter((path) => !(path in cases))).toEqual([]);
   expect(run.diagnostics.filter(([, rule]) => !rule.startsWith("xaravel(")).map(([, rule]) => rule).sort()).toEqual([
     "eslint(no-unsafe-optional-chaining)",
     "eslint(no-unsafe-optional-chaining)",
+    // The test-globals `path=` reference (`TestGlobalsPath.ts`).
+    "typescript(triple-slash-reference)",
     "typescript(unbound-method)",
   ]);
 }
@@ -309,6 +368,13 @@ function pathCases(): void {
   expect(isPackageSource("skeleton/config/app.ts")).toBe(false);
   expect(isPortedTest("packages/demo/tests/ported/A.ts")).toBe(true);
   expect(isPortedTest("packages/demo/tests/xaravel/A.ts")).toBe(false);
+  expect(isPackageFile("packages/demo/tests/support/E.ts")).toBe(true);
+  expect(isPackageFile("/tmp/t/packages/demo/src/E.ts")).toBe(true);
+  expect(isPackageFile("conformance/tests/x/E.ts")).toBe(false);
+  expect(isPackageFile("mypackages/demo/src/E.ts")).toBe(false);
+  expect(isPackageFile("conformance/tests/x/packages/demo/E.ts")).toBe(false);
+  expect(isPackageFile("/tmp/t/conformance/tests/x/packages/demo/E.ts")).toBe(false);
+  expect(isPackageFile("/tmp/t/packages/demo/tests/conformance/E.ts")).toBe(true);
   expect(isModelFile("packages/database/src/Eloquent/Model.ts")).toBe(true);
   expect(isModelFile("packages/database/src/Eloquent/Concerns/Deep/A.ts")).toBe(true);
   expect(isModelFile("packages/database/src/Eloquent/ModelNotFoundException.ts")).toBe(false);

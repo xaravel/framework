@@ -7,7 +7,8 @@
 //                                 locations (AD-10; decisions/ESC-6.2-1.md)
 //   no-framework-json-stringify   `JSON.stringify` in `packages/<p>/src/`, `<p>`
 //                                 not a grader package (AD-23)
-//   no-ported-bun-expect          `expect` from `bun:test` under `tests/ported/` (AD-15)
+//   no-ported-bun-expect          `expect` from `bun:test` under `tests/ported/`, or
+//                                 exported from `bun:test` anywhere in `packages/<p>/` (AD-15)
 //   no-type-import-injection      a type-only import used as a value in `inject(...)` (AD-1)
 //   no-model-private              `#private` in `Model` or its concerns (AD-7)
 //   no-package-default-export     a default export from `packages/<p>/src/` or `installer/src/` (AD-3)
@@ -79,10 +80,34 @@ interface Node {
   readonly kind?: string;
   readonly static?: boolean;
   readonly declare?: boolean;
+  readonly moduleReference?: Node;
+}
+
+/** A comment, as `sourceCode.getAllComments()` returns it (`Line` for a line comment, `Block` for a block comment). */
+interface Comment {
+  readonly type: string;
+  readonly value: string;
+}
+
+/** A scope reference, as the scope manager records it: the identifier and the variable it resolves to (null if unresolved). */
+interface Reference {
+  readonly identifier: Node;
+  readonly resolved: { readonly defs: readonly unknown[] } | null;
+}
+
+/** A scope, as the scope manager records it: its references and the enclosing scope. */
+interface Scope {
+  readonly references: readonly Reference[];
+  readonly upper: Scope | null;
 }
 
 interface Context {
   readonly filename: string;
+  readonly sourceCode?: {
+    getAllComments(): readonly Comment[];
+    isGlobalReference(node: Node): boolean;
+    getScope(node: Node): Scope;
+  };
   report(descriptor: { node: Node; message: string }): void;
 }
 
@@ -152,6 +177,7 @@ const ROOT_MARKER = /\/(packages\/[^/]+|conformance|tools|skeleton|installer)\//
 const PACKAGE_SRC = /(^|\/)packages\/([^/]+)\/src\//;
 const INSTALLER_SRC = /(^|\/)installer\/src\//;
 const PORTED_TESTS = /(^|\/)tests\/ported\//;
+const PACKAGE_FILES = /^packages\/[^/]+\//;
 const MODEL_FILES = /(^|\/)packages\/database\/src\/Eloquent\/(Model\.ts$|Concerns\/)/;
 
 export function isFrameworkSource(path: string): boolean {
@@ -177,6 +203,19 @@ export function isPackageSource(path: string): boolean {
 
 export function isPortedTest(path: string): boolean {
   return PORTED_TESTS.test(path);
+}
+
+/**
+ * Whether `path` is any file of a package (`packages/<p>/…`: src, tests and support alike). Anchored like
+ * isGraderLocation: a cwd-relative path must start with `packages/<p>/`; an absolute one is judged from its first
+ * root-level marker segment, so `conformance/…/packages/demo/` is not a package file.
+ */
+export function isPackageFile(path: string): boolean {
+  if (!path.startsWith("/") && !/^[A-Za-z]:\//.test(path)) {
+    return PACKAGE_FILES.test(path);
+  }
+  const marker = ROOT_MARKER.exec(path);
+  return marker !== null && PACKAGE_FILES.test(path.slice(marker.index + 1));
 }
 
 export function isModelFile(path: string): boolean {
@@ -343,22 +382,156 @@ const noFrameworkJsonStringify = rule("Disallow `JSON.stringify` in framework so
 
 const BUN_TEST = "bun:test";
 
-const noPortedBunExpect = rule("Disallow `expect` from `bun:test` in Ported Tests (AD-15).", (context, path) => {
-  if (!isPortedTest(path)) {
+/** A `/// <reference types="…test-globals…" />` or `/// <reference path="…test-globals…" />` comment's value (after the leading `//`). */
+const TEST_GLOBALS_REFERENCE = /^\/\s*<reference\s+(types|path)\s*=\s*["'][^"']*test-globals/;
+
+/** The global objects a global `expect` can be read from. */
+const GLOBAL_OBJECTS: ReadonlySet<string> = new Set(["globalThis", "global", "self", "window"]);
+
+/** `globalThis`, `global`, `self` or `window`, through wrappers. */
+function isGlobalObject(node: Node | null | undefined): boolean {
+  const target = node === undefined || node === null ? null : unwrap(node);
+  return target?.type === "Identifier" && target.name !== undefined && GLOBAL_OBJECTS.has(target.name);
+}
+
+/** `require("bun:test")`, `<obj>.require("bun:test")` or `import("bun:test")`, awaited or not. */
+function isBunTestModule(node: Node | null | undefined): boolean {
+  if (node === undefined || node === null) {
+    return false;
+  }
+  let target = unwrap(node);
+  if (target.type === "AwaitExpression" && target.argument !== undefined && target.argument !== null) {
+    target = unwrap(target.argument);
+  }
+  if (target.type === "ImportExpression") {
+    return staticString(target.source) === BUN_TEST;
+  }
+  if (target.type !== "CallExpression" || target.callee === undefined) {
+    return false;
+  }
+  const callee = unwrap(target.callee);
+  const isRequire = (callee.type === "Identifier" && callee.name === "require") || memberName(callee) === "require";
+  return isRequire && staticString(target.arguments?.[0]) === BUN_TEST;
+}
+
+/** `import b = require("bun:test")`. */
+function isBunTestImportEquals(node: Node | null | undefined): boolean {
+  return node?.type === "TSImportEqualsDeclaration" && node.importKind !== "type" && node.moduleReference?.type === "TSExternalModuleReference" && staticString(inner(node.moduleReference)) === BUN_TEST;
+}
+
+/** Whether an ObjectPattern binds the key `expect`. */
+function bindsExpect(pattern: Node | null | undefined): boolean {
+  return pattern?.type === "ObjectPattern" && (pattern.properties ?? []).some((property) => property.type === "Property" && keyName(property) === "expect");
+}
+
+/** Whether a declaration is ambient: `declare` itself, or inside a `declare global` / `declare module` / `declare namespace` block. */
+function isAmbient(node: Node): boolean {
+  for (let current: Node | null | undefined = node; current !== undefined && current !== null; current = current.parent) {
+    if (current.declare === true || (current.type === "TSModuleDeclaration" && current.kind === "global")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const PORTED_EXPECT_RULE = "xaravel/no-ported-bun-expect";
+
+const noPortedBunExpect = rule("Disallow `expect` from `bun:test` in Ported Tests, and its export from any package file (AD-15).", (context, path) => {
+  const ported = isPortedTest(path);
+  const pkg = isPackageFile(path);
+  if (!ported && !pkg) {
     return NONE;
   }
+  const source = context.sourceCode;
+  if (source === undefined || typeof source.getScope !== "function" || typeof source.getAllComments !== "function") {
+    throw new Error(`${PORTED_EXPECT_RULE}: oxlint gave no sourceCode scope API for ${path}; the rule cannot check global \`expect\``);
+  }
   const report = (node: Node): void => context.report({ node, message: MESSAGES.portedExpect });
-  return {
+  /** Local names bound by a value import of `bun:test`'s `expect`, and by a namespace import of `bun:test`. */
+  const expectLocals = new Set<string>();
+  const namespaceLocals = new Set<string>();
+  /** Whether an Identifier `expect` refers to no binding of the file: a configured global, or unresolved. */
+  const isGlobalExpect = (node: Node): boolean => {
+    if (node.type !== "Identifier" || node.name !== "expect") {
+      return false;
+    }
+    if (source.isGlobalReference(node)) {
+      return true;
+    }
+    for (let scope: Scope | null = source.getScope(node); scope !== null; scope = scope.upper) {
+      const reference = scope.references.find((candidate) => candidate.identifier === node);
+      if (reference !== undefined) {
+        return reference.resolved === null || reference.resolved.defs.length === 0;
+      }
+    }
+    return false;
+  };
+  /** A tracked namespace binding, or a `bun:test` module value. */
+  const isNamespace = (node: Node | null | undefined): boolean => {
+    if (node === undefined || node === null) {
+      return false;
+    }
+    const target = unwrap(node);
+    return (target.type === "Identifier" && target.name !== undefined && namespaceLocals.has(target.name)) || isBunTestModule(target);
+  };
+  /**
+   * Whether `node` is `bun:test`'s `expect` or namespace: a tracked binding or `bun:test` module value, `.expect` of
+   * one, a global `expect` (`<global>.expect`, or an `expect` bound nowhere in the file).
+   */
+  const isTracked = (node: Node | null | undefined): boolean => {
+    if (node === undefined || node === null) {
+      return false;
+    }
+    const target = unwrap(node);
+    if (target.type === "Identifier") {
+      return (target.name !== undefined && expectLocals.has(target.name)) || isNamespace(target) || isGlobalExpect(target);
+    }
+    if (memberName(target) === "expect" && target.object !== undefined) {
+      return isNamespace(target.object) || isGlobalObject(target.object);
+    }
+    return isBunTestModule(target);
+  };
+  const visitor: Record<string, (node: Node) => void> = {
+    // A test-globals reference in any package file: a support `.d.ts` leaks the globals into Ported Tests.
+    Program(): void {
+      for (const comment of source.getAllComments()) {
+        if (comment.type === "Line" && TEST_GLOBALS_REFERENCE.test(comment.value)) {
+          report(comment);
+        }
+      }
+    },
     ImportDeclaration(node: Node): void {
       if (staticString(node.source) !== BUN_TEST || node.importKind === "type") {
         return;
       }
       for (const specifier of node.specifiers ?? []) {
+        const local = specifier.local?.name;
         if (specifier.type === "ImportNamespaceSpecifier") {
-          report(specifier);
+          if (local !== undefined) {
+            namespaceLocals.add(local);
+          }
+          if (ported) {
+            report(specifier);
+          }
         } else if (specifier.type === "ImportSpecifier" && specifier.importKind !== "type" && specifierName(specifier.imported) === "expect") {
-          report(specifier);
+          if (local !== undefined) {
+            expectLocals.add(local);
+          }
+          if (ported) {
+            report(specifier);
+          }
         }
+      }
+    },
+    TSImportEqualsDeclaration(node: Node): void {
+      if (!isBunTestImportEquals(node)) {
+        return;
+      }
+      if (node.id?.name !== undefined) {
+        namespaceLocals.add(node.id.name);
+      }
+      if (ported || node.parent?.type === "ExportNamedDeclaration") {
+        report(node);
       }
     },
     ExportNamedDeclaration(node: Node): void {
@@ -376,6 +549,50 @@ const noPortedBunExpect = rule("Disallow `expect` from `bun:test` in Ported Test
         report(node);
       }
     },
+  };
+  if (!ported) {
+    // Imports are hoisted, so source-less exports are checked once every import is collected. (In a Ported Test the
+    // import, `require`, `import()` or global read is itself reported, so its export is not reported again.)
+    visitor["Program:exit"] = (node: Node): void => {
+      for (const statement of list(node.body)) {
+        if (statement.type === "ExportNamedDeclaration" && (statement.source === undefined || statement.source === null) && statement.exportKind !== "type") {
+          for (const specifier of statement.specifiers ?? []) {
+            if (specifier.exportKind !== "type" && isNode(specifier.local) && isTracked(specifier.local)) {
+              report(specifier);
+            }
+          }
+          const declaration = statement.declaration;
+          if (declaration?.type === "VariableDeclaration") {
+            for (const declarator of declaration.declarations ?? []) {
+              const destructured = bindsExpect(declarator.id) && (isNamespace(declarator.init) || isGlobalObject(declarator.init));
+              if (destructured || (declarator.id?.type === "Identifier" && isTracked(declarator.init))) {
+                report(declarator);
+              }
+            }
+          }
+        } else if (statement.type === "ExportDefaultDeclaration" && isNode(statement.declaration) && isTracked(statement.declaration)) {
+          report(statement);
+        } else if (statement.type === "TSExportAssignment" && isNode(statement.expression) && isTracked(statement.expression)) {
+          report(statement);
+        }
+      }
+    };
+    return visitor;
+  }
+  /** An ambient declaration of a binding named `expect`, which would make the runtime global look local. */
+  const ambientExpect = (node: Node): void => {
+    if (node.id?.type === "Identifier" && node.id.name === "expect" && isAmbient(node)) {
+      report(node.id);
+    }
+  };
+  /** `{ expect } = <global>` (declaration or assignment). */
+  const globalDestructure = (pattern: Node | null | undefined, init: Node | null | undefined, node: Node): void => {
+    if (bindsExpect(pattern) && isGlobalObject(init)) {
+      report(node);
+    }
+  };
+  return {
+    ...visitor,
     ImportExpression(node: Node): void {
       if (staticString(node.source) === BUN_TEST) {
         report(node);
@@ -388,6 +605,25 @@ const noPortedBunExpect = rule("Disallow `expect` from `bun:test` in Ported Test
         report(node);
       }
     },
+    Identifier(node: Node): void {
+      if (isGlobalExpect(node)) {
+        report(node);
+      }
+    },
+    MemberExpression(node: Node): void {
+      if (memberName(node) === "expect" && isGlobalObject(node.object)) {
+        report(node);
+      }
+    },
+    VariableDeclarator(node: Node): void {
+      ambientExpect(node);
+      globalDestructure(node.id, node.init, node);
+    },
+    AssignmentExpression(node: Node): void {
+      globalDestructure(node.left, node.right, node);
+    },
+    FunctionDeclaration: ambientExpect,
+    TSDeclareFunction: ambientExpect,
   };
 });
 
