@@ -8,8 +8,7 @@ State directory: `$XARAVEL_ORCH_STATE`. The driver has already reset the working
 
 Files this prompt names:
 - STATUS: `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- GATES: `_bmad-output/implementation-artifacts/retro-gates.yaml`. It holds the orchestrator's record of each epic's retrospective, in this shape: `epic-<N>: {verdict: accepted | accepted-with-open-items | rejected, attempts: <n>, doc: <path>, blocked: <bool>, checkpoint_approved: <bool>, blocking: [<action item ids>], waiting_on_maintainer: [<action item ids>]}`. Create it when you first need it. An entry written before `blocking` existed has none; read a missing `blocking` as empty.
-- BLOCKING and DEFERRED items: an open or `in-progress` action item is BLOCKING when its id is in its epic's GATES `blocking`, and DEFERRED otherwise. Step C sets `blocking`. Only the Maintainer may remove an id from it.
+- GATES: `_bmad-output/implementation-artifacts/retro-gates.yaml`. It holds the orchestrator's record of each epic's retrospective, in this shape: `epic-<N>: {verdict: accepted | accepted-with-open-items | rejected, attempts: <n>, doc: <path>, blocked: <bool>, checkpoint_approved: <bool>, waiting_on_maintainer: [<action item ids>]}`. Create it when you first need it.
 - INBOX: the open issue with label `orchestrator` and title `Maintainer inbox`. Section 5 keeps it current.
 - LESSONS: `_bmad-output/implementation-artifacts/lessons.md`. Every `bmad-build-auto` run loads it.
 - SPS: `.claude/skills/bmad-retrospective/scripts/sprint_status.py`. It is the only supported way to change an action item's status: `uv run --no-cache SPS update --file STATUS --epic <N> --set-action-status '[{"id":"<id>","status":"done"}]'`.
@@ -45,27 +44,19 @@ C. **Retrospective due.** Take the lowest-numbered epic `N` that is `done` in ST
    1. Create branch `planning/retro-epic-<N>`, or `planning/retro-epic-<N>-rerun` for a second attempt.
    2. Run the `bmad-retrospective` skill as `-H <N>`, headless with the epic named explicitly. Follow it to the end. It writes the retrospective document, appends action items to STATUS and marks `epic-<N>-retrospective: done`.
    3. Record the result in GATES: the verdict from the document's frontmatter, `attempts` incremented, and `doc`.
-   4. Classify every action item this retrospective appended, now, in this PR. Do not leave the classification for later iterations:
-      - **Waiting on the Maintainer:** its owner is `Maintainer`, or it meets the waiting test in D. Add its id to the epic's `waiting_on_maintainer`.
-      - **Blocking:** add its id to the epic's `blocking` only when leaving it open would make a later Story wrong. That covers three cases. (a) The verdict is `rejected`: every item of the fix pass is blocking. (b) It fixes the grader, the harness, the Expectations File or a check that every Story runs (`story:check`, `ownership`, `protected-paths`, CI) in a way that lets a wrong result pass or a right one fail. (c) It fixes a package or contract that a Story in the next epic depends on (its `epics.md` dependencies or its `package.json` deps). Docs, cleanups, hardening of a tool no later Story relies on, and targeting deferrals are not blocking. An item can be both blocking and waiting on the Maintainer.
-      - Everything else is DEFERRED: it no longer holds back the next epic. D works it alongside the next epic's Stories, and it must be `done` before epic N+2 starts (F).
+   4. Route every action item this retrospective appended that needs the Maintainer, now, in this PR: each one whose owner is `Maintainer` or that meets the waiting test in D. Add their ids to the epic's `waiting_on_maintainer` all at once. Do not spend a later iteration on each one.
    5. Update LESSONS. Add only durable, cross-epic process lessons from this retrospective: pitfalls, conventions that held or failed, and verification habits that caught real problems. Write one or two lines each, in the form `- (epic N) <lesson>. Source: <doc path>`. Skip anything specific to one Story. Merge duplicates into the existing entry. Keep the file under 150 lines; when it grows past that, consolidate older entries rather than deleting their substance.
    6. Apply the verdict:
       - `accepted`: nothing more.
-      - `accepted-with-open-items`: the open action items become work in D. Only the BLOCKING ones hold back the next epic.
-      - `rejected` on attempt 1: the action items are the fix pass in D, all BLOCKING (C step 4). After D finishes them, this step re-runs the retrospective.
+      - `accepted-with-open-items`: the open action items become work in D.
+      - `rejected` on attempt 1: the action items are the fix pass in D. After D finishes them, this step re-runs the retrospective.
       - `rejected` on attempt 2: set `blocked: true` in GATES. Stories in later epics stay blocked until the Maintainer acts, for example with `bmad-correct-course` or a ruling in `decisions/`.
    7. Commit, open a PR and merge it (section 4).
-   8. Comment on ISSUE: `🤖 Retro epic <N> (attempt <a>): <verdict>, <k> action items (<b> blocking, <w> waiting on the Maintainer, <d> deferred). <doc link on GitHub>`, then one bullet per action item, starting with `[blocking]`, `[waiting]`, `[blocking, waiting]` or `[deferred]`. Give each blocking item its reason in a few words. On a second rejection, add: `Later epics are paused until the Maintainer acts.`
+   8. Comment on ISSUE: `🤖 Retro epic <N> (attempt <a>): <verdict>, <k> action items (<w> waiting on the Maintainer). <doc link on GitHub>`, then one bullet per action item, starting with `[waiting]` for each one step 4 routed. On a second rejection, add: `Later epics are paused until the Maintainer acts.`
 
    Outcome `progress`.
 
-D. **Retrospective action items.** Consider the action items in STATUS whose status is `open` or `in-progress` and whose id is not in any epic's `waiting_on_maintainer`. Take the first BLOCKING one in STATUS order. If there is none, take the first DEFERRED one, but only when one of these holds:
-   - its epic N is two or more epics before the lowest epic that still has a Story not `done`, so it is now holding that epic back (F);
-   - the newest commit on `origin/main` is a Story's (its subject starts `<story-id>: `). Stories and DEFERRED items therefore alternate one for one while any remain;
-   - F would pick no Story, for example at a closed checkpoint. Use the wait.
-
-   If no item qualifies, go on to E. Otherwise decide whether you may do it:
+D. **Retrospective action items.** Take the first action item in STATUS whose status is `open` or `in-progress` and whose id is not in any epic's `waiting_on_maintainer`. Decide whether you may do it:
    - Waiting test: it requires changing `AGENTS.md` or any `CLAUDE.md`, weakening the grader, adding a divergence outside DIV-1..12, editing the PRD, architecture spine, SPEC or `epics.md`, or a live GitHub setting, App or secret. If so, add its id to that epic's `waiting_on_maintainer` in GATES, commit that on `planning/retro-<N>-waiting`, and open and merge the PR. Section 5 lists it in INBOX. Outcome `progress`. Step C already routes most such items. This bullet catches the ones that turn out to need the Maintainer only once work starts.
    - If the item is to raise an Escalation for Story `<id>`, commit it on that Story's `story/<id>` branch and open the PR from there: the `escalations` check rejects an Escalation raised from a `planning/*` branch.
    - Otherwise, do it on branch `planning/retro-<N>-<short-slug>`. If a local `planning/retro-<N>-*` branch for this item already has `[orchestrator wip]` commits, `run.sh` saved an interrupted attempt there: check it out, merge `origin/main` into it, and resume instead of starting over. If it changes code or tests, run `bmad-build-auto` with the action item, its `ref` finding, and this instruction as intent. If it is a docs, process or LESSONS change, make the change directly. Then set the item `done` with SPS. Commit, open a PR, merge it, and comment on ISSUE: `🤖 Done retro action <id> in #<n>`. If it can't be done, set it `in-progress`, record why under its finding in the retrospective document, and treat it as waiting on the Maintainer as above.
@@ -83,8 +74,7 @@ F. **Next Story.** Read STATUS. Pick the first Story in file order whose status 
    - epic N has any Story that is not `done`. A blocked Story therefore idles the loop instead of letting a later epic start;
    - epic N is `done` but its retrospective is not `done`;
    - GATES has epic N `blocked: true`, or `rejected` and still in its fix pass;
-   - epic N has a BLOCKING action item, whether or not it waits on the Maintainer;
-   - epic N ≤ M−2 has a DEFERRED action item that is not in `waiting_on_maintainer`. A DEFERRED item may trail into the next epic, but not past it;
+   - epic N has action items that are `open` or `in-progress` and not in `waiting_on_maintainer`;
    - epic N is a CHECKPOINT EPIC without `checkpoint_approved: true`.
 
    Then:
@@ -145,7 +135,7 @@ INBOX is the one place that lists everything waiting on the Maintainer, so they 
 
 1. Find INBOX with `gh issue list --label orchestrator --state open` and the title `Maintainer inbox`. If it is missing, create it.
 2. Build its body from `origin/main` after this iteration's merges, and from GitHub. It has these sections, in this order:
-   - **Holding the loop:** anything that stops F from starting a Story. That means a BLOCKING item in `waiting_on_maintainer`, a closed checkpoint (H), an epic with `blocked: true` in GATES, a `blocked` Story in the lowest epic that still has a Story not `done`, and any other reason F picks no Story.
+   - **Holding the loop:** anything that stops F from starting a Story. That means a closed checkpoint (H), an epic with `blocked: true` in GATES, a `blocked` Story in the lowest epic that still has a Story not `done`, and any other reason F picks no Story.
    - **Rulings:** each Escalation in `conformance/escalations/` that has no decision file in `decisions/` and that G does not let the orchestrator decide.
    - **Blocked Stories:** each Story that is `blocked` in STATUS, with its reason.
    - **Retro items:** each id in any epic's `waiting_on_maintainer` that is not `done`, with its epic and its `action` text from STATUS.
