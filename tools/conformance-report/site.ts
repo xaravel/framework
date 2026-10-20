@@ -325,9 +325,15 @@ export interface EpicReview {
   components: { component: string; bucket: Bucket | null }[];
   /** The parent of the Epic's oldest Story commit, or null when no Story has a commit (or that commit has no parent). */
   began: string | null;
-  /** The Divergence Records added in `began..HEAD`, as `DIV-<n>` with their paths. */
+  /**
+   * Where the Epic's range ends: the later (in the `--topo-order` list) of the Epic's newest Story commit and the newest commit
+   * that added its retrospective document (`_bmad-output/implementation-artifacts/epic-<N>-retro-*.md`, add-only with rename
+   * detection), so the retrospective only ever extends the range; null exactly when `began` is null.
+   */
+  ended: { sha: string; by: "retrospective" | "last Story commit" } | null;
+  /** The Divergence Records added in `began..ended` that still exist at HEAD, as `DIV-<n>` with their paths. */
   divergences: { id: string; file: string }[];
-  /** The Escalations added in `began..HEAD`. */
+  /** The Escalations added in `began..ended` that still exist at HEAD. */
   escalations: EscalationEntry[];
   /**
    * Every open (or undecidable) Escalation that concerns the Epic, whenever it was added: its Story ID is one of the
@@ -394,6 +400,9 @@ export function epicSources(root: string): EpicSources {
   return { manifests: applySprintStatus(root, storyManifests(root)).manifests, commits: logCommits(root), escalations: readEscalations(root) };
 }
 
+/** Where an Epic's retrospective document lives; the Epic's review range ends at the commit that added it. */
+const RETRO_DIR = "_bmad-output/implementation-artifacts";
+
 /** The Epic review view of `epic` at `root`, reading Component figures from `report`; `sources` defaults to `epicSources(root)`. */
 export function epicReview(root: string, epic: number, report: Report, sources: EpicSources = epicSources(root)): EpicReview {
   const manifests = sources.manifests
@@ -419,12 +428,27 @@ export function epicReview(root: string, epic: number, report: Report, sources: 
   });
 
   const ids = new Set(manifests.map((manifest) => manifest.storyId));
-  const oldest = commits.find((commit) => [...ids].some((id) => commit.subject.startsWith(`${id}: `)));
+  const isStoryCommit = (commit: LoggedCommit): boolean => [...ids].some((id) => commit.subject.startsWith(`${id}: `));
+  const oldestAt = commits.findIndex(isStoryCommit);
+  const oldest = oldestAt === -1 ? null : commits[oldestAt]!;
   const began = oldest?.parents[0] ?? null;
+  let ended: EpicReview["ended"] = null;
   const divergences: { id: string; file: string }[] = [];
   const escalations: EscalationEntry[] = [];
   if (began !== null) {
-    const run = git(root, ["log", "--no-renames", "--diff-filter=A", "--name-only", "--format=", `${began}..HEAD`, "--", DECISIONS_DIR, ESCALATIONS_DIR]);
+    const newestAt = commits.findLastIndex(isStoryCommit);
+    ended = { sha: commits[newestAt]!.sha, by: "last Story commit" };
+    // The newest commit (in the --topo-order list) that added the Epic's retrospective, if it comes after the newest Story commit.
+    const retro = git(root, ["log", "-M", "--diff-filter=A", "--format=%H", "HEAD", "--", `:(glob)${RETRO_DIR}/epic-${epic}-retro-*.md`]);
+    if (retro.exitCode !== 0) {
+      throw new SiteError(`git log failed: ${retro.stderr.trim() || `exit ${retro.exitCode}`}`);
+    }
+    const at = new Map(commits.map((commit, index) => [commit.sha, index]));
+    const retroAt = Math.max(-1, ...retro.stdout.split("\n").filter((line) => line !== "").map((sha) => at.get(sha) ?? -1));
+    if (retroAt > newestAt) {
+      ended = { sha: commits[retroAt]!.sha, by: "retrospective" };
+    }
+    const run = git(root, ["log", "--no-renames", "--diff-filter=A", "--name-only", "--format=", `${began}..${ended.sha}`, "--", DECISIONS_DIR, ESCALATIONS_DIR]);
     if (run.exitCode !== 0) {
       throw new SiteError(`git log failed: ${run.stderr.trim() || `exit ${run.exitCode}`}`);
     }
@@ -447,7 +471,7 @@ export function epicReview(root: string, epic: number, report: Report, sources: 
   const blocking = sources.escalations.filter(
     (entry) => isOpen(entry.status) && (parseEscalationId(entry.id)?.storyId?.startsWith(`${epic}.`) === true || entry.testIds.some((id) => epicTestIds.has(id))),
   );
-  return { epic, components, began, divergences, escalations, blocking, stories };
+  return { epic, components, began, ended, divergences, escalations, blocking, stories };
 }
 
 /** The Story manifests under `root` (none without a `stories/` directory); invalid manifests are left out. */
@@ -617,6 +641,7 @@ function renderEpic(input: SiteInput, review: EpicReview): string {
 
   out.push(`<section id="since">\n<h2>Added since the Epic began</h2>`);
   out.push(`<p>Began at: ${review.began === null ? "not begun (no Story commit)" : esc(review.began)}</p>`);
+  out.push(`<p>Ended at: ${review.ended === null ? "not begun (no Story commit)" : `${esc(review.ended.sha)} (${esc(review.ended.by)})`}</p>`);
   out.push(`<h3>Divergence Records</h3>`);
   out.push(table(["DIV", "record"], review.divergences.map((div) => [esc(div.id), repoLink(repo, ref, div.file, div.file)]), "none"));
   out.push(`<h3>Escalations</h3>`);
