@@ -39,21 +39,27 @@
 //     (a bcrypt case's results are a string, a bool and an int);
 //   - `<id>: <n> result(s) for <m> expression(s)`;
 //   - `<id>: Temporal returned <n> string(s) for <m> expression(s)`;
+//   - a failed bcrypt measurement: `<id>: the Oracle hash <h> does not start with $2y$12$<salt>`,
+//     `<id>: the Oracle's password_verify is <v>, not true`, `<id>: the Oracle's strlen is <n>, not
+//     the UTF-8 byte count <m>`, `<id>: Bun does not verify the 72-byte truncation against PHP's hash`,
+//     `<id>: the untruncated control verifies over 72 bytes (<n>)` or `<id>: the untruncated control
+//     does not verify at <n> bytes`;
 //   - `running Bun <Bun.version>, .bun-version <pin>`;
 //   - `conformance/spikes/REPORT.md: drift at line <n>; run bun run spikes:generate`.
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { verifyFixture } from "../../tools/oracle/fixtures";
+import { FIXTURES_DIR, PUBLIC_KEY_FILE, verifyFixture } from "../../tools/oracle/fixtures";
 import { makeRequest, renderRequest, type Json, type OracleRequest } from "../../tools/oracle/request";
 import { UsageError } from "../../tools/expectations/expectations";
 import { runningBunViolation } from "../probes/probes";
 
 export const REQUESTS_FILE = "conformance/oracle-requests/8.4.jsonl";
 export const REPORT_FILE = "conformance/spikes/REPORT.md";
-export const FIXTURE_DIR = "conformance/fixtures/conformance";
-export const PUBLIC_KEY_FILE = "conformance/oracle/oracle.pub";
+/** The manifest's Component (`stories/8.4.md`): the `story` job writes its fixtures here. */
+export const FIXTURE_DIR = `${FIXTURES_DIR}/conformance`;
+export { PUBLIC_KEY_FILE };
 export const NEEDS_TEST_ID = "XT-conformance-157";
 export const BCRYPT_TEST_ID = "XT-conformance-158";
 export const OQ12_TEST_ID = "XT-conformance-159";
@@ -290,6 +296,9 @@ const BOUNDS_NEEDS: Need[] = BOUNDS.map(([unit, bounds]) => {
   );
 });
 
+/** PHP's round(): half away from zero (Math.round rounds half up). */
+const phpRound = (n: number): number => Math.sign(n) * Math.round(Math.abs(n));
+
 const UU = "1760790896.789012";
 const PRE_EPOCH = "1969-12-31 23:59:59.250000";
 const uu = (z: Zoned | Temporal.Instant): string => {
@@ -318,7 +327,7 @@ const INSTANT_NEEDS: Need[] = [
     [`(string) ${carbon("2026-10-18 08:34:56.789012", NY)}->getTimestampMs()`, `(string) ${carbon(PRE_EPOCH, "UTC")}->getTimestampMs()`],
     // Carbon reads the milliseconds from the digits of `Uu` (`round(rawFormat('Uu') / 1000)`), not from the instant,
     // so before the epoch it is `U` * 1000 - `u` / 1000 (-1250 for -0.75 s); the mapping does the same arithmetic.
-    () => [at("2026-10-18 08:34:56.789012", NY), at(PRE_EPOCH, "UTC")].map((z) => String(Math.round(Number(phpFormat(z, "Uu")) / 1000))),
+    () => [at("2026-10-18 08:34:56.789012", NY), at(PRE_EPOCH, "UTC")].map((z) => String(phpRound(Number(phpFormat(z, "Uu")) / 1000))),
   ),
   need(
     "instant",
@@ -448,13 +457,8 @@ export function runNeed(item: Need): LiveNeed {
 /** Bun's verdicts on a PHP hash: the 72-byte truncation (bytes, never re-decoded) and the untruncated control. */
 export function verifyCase(password: string, hash: string): LiveCase {
   const bytes = utf8(password);
-  const check = (input: string | Uint8Array): boolean => {
-    try {
-      return Bun.password.verifySync(input, hash);
-    } catch {
-      return false;
-    }
-  };
+  // A throw (a hash Bun rejects) propagates: it must never read as a mismatch.
+  const check = (input: string | Uint8Array): boolean => Bun.password.verifySync(input, hash);
   return { truncated: check(bytes.subarray(0, BCRYPT_LIMIT)), untruncated: check(password) };
 }
 
@@ -654,8 +658,33 @@ export function checkSpikes(root: string, live: Live, needs: readonly Need[] = N
     }
   }
   for (const item of cases) {
-    if (live.cases.get(item.id)?.truncated === true) {
+    const bytes = utf8(item.password).length;
+    const php = oracle.values.get(item.id);
+    if (php !== undefined) {
+      const [hash, verified, length] = php;
+      if (typeof hash !== "string" || !hash.startsWith(SALT_PREFIX)) {
+        violations.push(`${item.id}: the Oracle hash ${JSON.stringify(hash)} does not start with ${SALT_PREFIX}`);
+      }
+      if (verified !== true) {
+        violations.push(`${item.id}: the Oracle's password_verify is ${String(verified)}, not true`);
+      }
+      if (length !== bytes) {
+        violations.push(`${item.id}: the Oracle's strlen is ${String(length)}, not the UTF-8 byte count ${bytes}`);
+      }
+    }
+    const run = live.cases.get(item.id) ?? null;
+    if (run === null) {
+      continue;
+    }
+    if (run.truncated) {
       report.verified++;
+    } else {
+      violations.push(`${item.id}: Bun does not verify the ${BCRYPT_LIMIT}-byte truncation against PHP's hash`);
+    }
+    if (bytes > BCRYPT_LIMIT && run.untruncated) {
+      violations.push(`${item.id}: the untruncated control verifies over ${BCRYPT_LIMIT} bytes (${bytes})`);
+    } else if (bytes <= BCRYPT_LIMIT && !run.untruncated) {
+      violations.push(`${item.id}: the untruncated control does not verify at ${bytes} bytes`);
     }
   }
   const reportPath = join(root, REPORT_FILE);

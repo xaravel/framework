@@ -10,15 +10,20 @@ proposed: >-
   metadata Temporal does not expose, and both get the same approach:
   `format.I` (the DST flag) and `format.T` (the zone abbreviation) read the
   `isdst` bit and abbreviation of the IANA transition in effect from a
-  generated, committed table. The table is never hand-written: it is
-  generated from the tzdata release of the pinned Bun's ICU, and checked
-  against the Oracle (PHP's `DateTimeZone::getTransitions()`) by a
-  Differential Test, so it moves only with a Bun bump. The alternative,
-  deriving `I` from the zone's offsets and `T` from Intl, is rejected:
-  Intl's CLDR names are locale-dependent and differ from tzdata (IST shows
-  as `GMT+5:30` in en-US), and an offset rule gets negative-DST zones such
-  as Europe/Dublin wrong. No `deferred:` item, skip or divergence is
-  proposed. Three needs only matched once the mapping reproduced Carbon
+  generated, committed table, and `format.p` reads its UTC test from the
+  same table. The table is never hand-written. ICU's zoneinfo64 carries
+  offsets but no tzdata abbreviations (ICU takes its names from CLDR
+  metazones), so the table is generated either from the IANA tzdata release
+  that matches the pinned Bun's ICU data (Bun 1.4.3 has ICU 78.1 and no
+  `process.versions.tz`, so the release is recorded with the table) or from
+  PHP's timelib through the Oracle. Either way a Differential Test checks it
+  against `DateTimeZone::getTransitions()`, and it moves only with a Bun or
+  Pin bump. The alternative, deriving `I` from the zone's offsets and `T`
+  from Intl, is rejected. Intl's CLDR names depend on the locale and differ
+  from tzdata, which the spike measured: IST shows as `GMT+5:30` in en-US.
+  An offset rule would also get negative-DST zones such as Europe/Dublin
+  wrong; that is reasoning, not something the spike measured. No `deferred:`
+  item, skip or divergence is proposed. Three needs only matched once the mapping reproduced Carbon
   exactly, and the port must keep those rules (see the body).
 evidence: >-
   `bun run spikes:check` on Bun 1.4.3 (conformance/spikes/spikes.ts,
@@ -50,16 +55,34 @@ The spike checks 65 Carbon needs. Each need's PHP expressions run in the Oracle 
 | `format.I` | `1`, `0`, `0`, `0` | null (no DST flag in Temporal) | Read the `isdst` bit of the transition in effect from the generated tzdata table. |
 | `format.T` | `EDT`, `GMT`, `IST`, `UTC` | `EDT`, `GMT`, `GMT+5:30`, `UTC` (Intl, en-US) | Read the abbreviation of the transition in effect from the same table. Intl is not used. |
 
-The table holds, per zone, the transitions' instants, `isdst` bits and abbreviations. It is generated from the tzdata release bundled with the pinned Bun's ICU, so its offsets agree with Temporal's. A Differential Test checks it against PHP's `DateTimeZone::getTransitions()` in the Oracle. Neither need has a Temporal API, and neither can be derived from Intl or from offsets without being wrong for some zones. This is the only zone data the port would carry.
+The table holds, per zone, the instant, `isdst` bit and abbreviation of each transition. ICU's zoneinfo64 has the offsets but not the tzdata abbreviations, because ICU takes its names from CLDR metazones. So the table is generated from one of two sources:
+
+- the IANA tzdata release matching the pinned Bun's ICU data (Bun 1.4.3 reports ICU 78.1 and has no `process.versions.tz`, so the release is recorded beside the table), which keeps its offsets in step with Temporal's;
+- PHP's timelib, through the Oracle.
+
+Either way, a Differential Test checks it against PHP's `DateTimeZone::getTransitions()` in the Oracle. `format.p` is covered in the spike only through an Intl check that the abbreviation is `UTC`, so the port's `p` also reads the abbreviation from this table. Neither gap has a Temporal API. Intl's names were measured to differ from tzdata. Deriving `I` from offsets would, by reasoning rather than measurement, be wrong for negative-DST zones such as Europe/Dublin. This is the only zone data the port would carry.
 
 ## Rules the port must keep
 
 These needs matched the Oracle only after the mapping was corrected to Carbon's exact behaviour:
 
 - `instant.getTimestampMs`: Carbon reads the milliseconds from the digits of `format('Uu')`, so before the epoch it gives `-1250` for -0.75 s, where the instant's own epoch milliseconds would be `-750`.
-- `format.p`: PHP prints `Z` only when the zone's abbreviation is UTC, not for every zero offset. Europe/London in winter prints `+00:00`.
+- `format.p`: PHP prints `Z` only when the zone's abbreviation is UTC, not for every zero offset. Europe/London in winter prints `+00:00`. The spike tests Intl's abbreviation; the port reads it from the table above.
 - `bounds.week`: Carbon's week starts on its locale's first day. Its `en` locale says Monday, not CLDR en-US's Sunday.
 
 Everything else maps directly onto Temporal: exact-time `add({hours})` across both DST transitions, `compatible` disambiguation for parse and `addDay` into the gap, `until({largestUnit})` for the diffs, `startOfDay()`, and nanosecond `Instant`s. Month overflow (`addMonth` from Jan 31 landing on Mar 3) is expressible as day 1, plus n months, plus (day − 1) days. Temporal's own `add({months})` gives the `NoOverflow` forms.
+
+## Not covered by the spike
+
+The spike does not cover:
+
+- Carbon 3's float `diffIn*` results (the spike casts them to int);
+- `diffInDays` and `diffInMonths` across DST transitions and month ends;
+- `createFromTimestamp` with a zone;
+- `now()` and `setTestNow`;
+- years outside 1969-2027 for `X`, `x`, `Y` and `y`;
+- ordinal suffixes for days other than the sampled ones.
+
+The Carbon port's own Differential Tests must cover these.
 
 The ruling belongs to the Maintainer, who writes `decisions/OQ-4.md`. This Escalation stays open until then.

@@ -37,4 +37,4 @@ The proposal keeps every gate of the pin-bump flow. The new Pin's Oracle image, 
 
 If this is approved, a follow-up Infrastructure Story adds the override to `tools/pin-bump/pin-bump.ts` and documents it in `docs/ops/upstream.md`. Until then, an urgent bump would need a separate Escalation.
 
-The ruling belongs to the Maintainer, who writes `decisions/OQ-12.md`. This Escalation stays open until then.
+The ruling belongs to the Maintainer, who writes `decisions/OQ-12.md` with `decided_by: Maintainer` and an explicit frontmatter field, `decision: allowed` or `decision: not-allowed`. XT-conformance-159 reads that field. This Escalation stays open until then.

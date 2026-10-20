@@ -274,7 +274,8 @@ xaravelTest(
 xaravelTest("XT-conformance-159", "OQ-12 (an out-of-cycle pin bump for a security-relevant Upstream release) is ruled by the Maintainer or raised as an open Escalation (OQ-12)", () => {
   const { ruled, text } = ruledOrEscalated("OQ-12", "ESC-8.4-2", OQ12_TEST_ID);
   if (ruled) {
-    expect(/\b(allowed|not allowed|may|may not)\b/.test(text)).toBe(true);
+    // decided_by: Maintainer is checked by ruledOrEscalated; the ruling itself is an explicit field.
+    expect(["allowed", "not-allowed"]).toContain(String(frontmatter(text)?.["decision"]));
   } else {
     expect(text).toContain("out-of-cycle pin bump");
   }
@@ -329,6 +330,32 @@ function cliMatrix(): void {
   expect(generate.code).toBe(1);
   expect(generate.stderr).toContain(`${first.id}: no signed fixture ${firstPath}\n`);
   expect(readFileSync(join(refused, REPORT_FILE), "utf8")).toBe("edited\n");
+
+  // A running Bun other than the pin: check and generate fail, and generate writes nothing.
+  const pinned = fixture({ ".bun-version": "0.0.0\n", [REPORT_FILE]: "edited\n" });
+  const wrongBun = run(["check", "--root", pinned]);
+  expect(wrongBun.code).toBe(1);
+  expect(wrongBun.stderr).toContain(`running Bun ${Bun.version}, .bun-version 0.0.0\n`);
+  const wrongGenerate = run(["generate", "--root", pinned]);
+  expect(wrongGenerate.code).toBe(1);
+  expect(wrongGenerate.stderr).toContain(`running Bun ${Bun.version}, .bun-version 0.0.0\n`);
+  expect(readFileSync(join(pinned, REPORT_FILE), "utf8")).toBe("edited\n");
+
+  // requests rewrites a stale request file from the registry.
+  const rewrite = fixture({ [REQUESTS_FILE]: lines.slice(1).join("\n") });
+  const written = run(["requests", "--root", rewrite]);
+  expect([written.code, written.stderr]).toEqual([0, ""]);
+  expect(written.stdout).toContain(`${REQUESTS_FILE}: written (`);
+  expect(readFileSync(join(rewrite, REQUESTS_FILE), "utf8")).toBe(read(REQUESTS_FILE));
+
+  // A failed bcrypt measurement fails closed, naming the case.
+  const failed: Live = { ...live(), cases: new Map(live().cases) };
+  failed.cases.set("bcrypt.ascii-200", { truncated: false, untruncated: true });
+  failed.cases.set("bcrypt.ascii-71", { truncated: true, untruncated: false });
+  const violations = checkSpikes(root, failed).violations;
+  expect(violations).toContain("bcrypt.ascii-200: Bun does not verify the 72-byte truncation against PHP's hash");
+  expect(violations).toContain("bcrypt.ascii-200: the untruncated control verifies over 72 bytes (200)");
+  expect(violations).toContain("bcrypt.ascii-71: the untruncated control does not verify at 71 bytes");
 
   // Usage.
   for (const args of [["nope"], ["check", "--nope"], ["check", "--check"], ["requests", "--root"], []]) {
