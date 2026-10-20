@@ -12,7 +12,7 @@ import { afterAll, expect } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { checkConfig, comments, findDisables, formatViolation, ignoreMatches, IGNORE_PROBES, parseDirective, scanSource, SPINE_RULE_OPTIONS, SPINE_RULES } from "../../../tools/lint-rules/disables";
+import { checkConfig, checkGitignore, comments, findDisables, formatViolation, GITIGNORE_PROBES, ignoreMatches, IGNORE_PROBES, parseDirective, scanSource, SPINE_RULE_OPTIONS, SPINE_RULES } from "../../../tools/lint-rules/disables";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -329,6 +329,44 @@ function configCases(): void {
   // A root .eslintignore, which oxlint honours by default.
   expect(violationsWith({ ".eslintignore": "# generated\n\ndist/\npackages/demo/**\n" })).toEqual(['.eslintignore: entry "packages/demo/**" excludes packages/demo/src/Demo.ts from the spine rules']);
   expect(findDisables(gitRootWith({ ".eslintignore": "dist/\nskeleton/\n" })).violations.map(formatViolation)).toEqual(['.eslintignore:2:1: entry "skeleton/" excludes skeleton/app/Demo.ts from the spine rules (AD-16)']);
+
+  // Git excludes, which oxlint honours: a tracked (force-added) linted file, a build-directory probe or a protected
+  // path that any git exclude source hides fails, at the ignore file's line (Retro 6 item 3).
+  const tracked = (files: Record<string, string>, ignores: Record<string, string>): string => {
+    const dir = gitRoot("xaravel-lint-131-gitignore-");
+    write(dir, { "src/a.ts": "export const a = 1;\n", ...ignores, ...files });
+    const add = Bun.spawnSync(["git", "add", "-f", "--", ...Object.keys(files)], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+    expect(add.exitCode).toBe(0);
+    return dir;
+  };
+  const gitignoreViolations = (files: Record<string, string>, ignores: Record<string, string>): string[] => findDisables(tracked(files, ignores)).violations.map(formatViolation);
+  expect(GITIGNORE_PROBES).toEqual(["packages/demo/src/build/Demo.ts", "packages/demo/src/dist/Demo.ts", "packages/demo/src/coverage/Demo.ts"]);
+  expect(gitignoreViolations({ "packages/demo/src/Bad.ts": "export const bad = 1;\n" }, { ".gitignore": "Bad.ts\n" })).toEqual([
+    '.gitignore:1:1: entry "Bad.ts" excludes packages/demo/src/Bad.ts from the spine rules (AD-16)',
+  ]);
+  const forced = tracked({ "packages/demo/src/Bad.ts": "export const bad = 1;\n" }, { ".gitignore": "Bad.ts\n" });
+  const forcedRun = runDisables(forced);
+  expect(forcedRun.exitCode).toBe(1);
+  expect(forcedRun.stderr).toBe('.gitignore:1:1: entry "Bad.ts" excludes packages/demo/src/Bad.ts from the spine rules (AD-16)\n');
+  expect(violationsWith({ ".gitignore": "node_modules/\nbuild/\n" })).toEqual(['.gitignore: entry "build/" excludes packages/demo/src/build/Demo.ts from the spine rules']);
+  expect(violationsWith({ ".gitignore": "dist/\n" })).toEqual(['.gitignore: entry "dist/" excludes packages/demo/src/dist/Demo.ts from the spine rules']);
+  expect(violationsWith({ ".gitignore": "coverage/\n" })).toEqual(['.gitignore: entry "coverage/" excludes packages/demo/src/coverage/Demo.ts from the spine rules']);
+  expect(violationsWith({ ".gitignore": "/dist/\n/build/\n/coverage/\n/packages/*/dist/\n/packages/*/build/\n/packages/*/coverage/\n" })).toEqual([]);
+  expect(gitignoreViolations({ "packages/foo/src/A.ts": "export const a = 1;\n" }, { "packages/foo/.gitignore": "src/\n" })).toEqual([
+    'packages/foo/.gitignore:1:1: entry "src/" excludes packages/foo/src/A.ts from the spine rules (AD-16)',
+  ]);
+  expect(gitignoreViolations({ "packages/foo/src/A.ts": "export const a = 1;\n" }, { ".git/info/exclude": "# local\npackages/foo/\n" })).toEqual([
+    '.git/info/exclude:2:1: entry "packages/foo/" excludes packages/foo/src/A.ts from the spine rules (AD-16)',
+  ]);
+  expect(gitignoreViolations({ "tools/x/T.ts": "export const t = 1;\n" }, { ".gitignore": "tools/x/\n" })).toEqual([
+    '.gitignore:1:1: entry "tools/x/" excludes tools/x/T.ts from the spine rules (AD-16)',
+  ]);
+  expect(gitignoreViolations({ "packages/foo/src/A.ts": "export const a = 1;\n" }, { ".gitignore": "*.ts\n!packages/**\n!skeleton/**\n" })).toEqual([]);
+  expect(gitignoreViolations({ "notes.log": "x\n" }, { ".gitignore": "*.log\n" })).toEqual([]);
+  expect(gitignoreViolations({ "_bmad/render/x.ts": "export const x = 1;\n" }, { "_bmad/render/.gitignore": "*\n" })).toEqual([]);
+  expect(checkGitignore(gitRoot("xaravel-lint-131-gitignore-empty-"), [])).toEqual([]);
+  expect(() => checkGitignore(tempDir("xaravel-lint-131-nogit-"), ["packages/demo/src/Demo.ts"])).toThrow(/git check-ignore failed/);
+
   const missing = gitRoot("xaravel-lint-131-missing-");
   rmSync(join(missing, CONFIG));
   expect(findDisables(missing).violations.map((violation) => violation.message)).toEqual(["is missing, so no spine rule runs"]);

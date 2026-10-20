@@ -5,7 +5,7 @@
 //       way of switching off a rule the spine names (`SPINE_RULES`); it only
 //       reads files
 //
-// It checks two things.
+// It checks three things.
 //
 // Disable directives. The scanned files are `git ls-files -co
 // --exclude-standard` under the root with oxlint's extensions (`LINTED_EXTENSIONS`),
@@ -35,6 +35,14 @@
 // every listed linted file under `packages/*/src`, `packages/*/tests` or
 // `skeleton/`), a config that does not parse, and an `oxlint.config.*` (a JS
 // config this check cannot read).
+//
+// Git excludes. oxlint skips what git ignores, so no `.gitignore` entry (root or
+// nested), `.git/info/exclude` line or `core.excludesFile` line may match a
+// protected path, a `GITIGNORE_PROBES` build-directory probe, or any listed
+// linted file outside the root `ignorePatterns`. Git's own matcher decides
+// (`git check-ignore --no-index`, so a tracked, force-added file counts); a
+// negated (`!`) match re-includes the path and is not a violation. The
+// violation is at the ignore file's line, column 1.
 //
 // Each violation is one line, `<path>:<line>:<col>: <message> (AD-16)`, on
 // stderr. Exit codes: 0 none (prints `lint disables: ok (<n> files)`), 1 any
@@ -83,6 +91,9 @@ export const IGNORE_PROBES: readonly string[] = [
   "skeleton/app/Demo.ts",
   "packages/view/tests/__snapshots__/demo.ts",
 ];
+
+/** Paths under a source tree's build-output-named directories; an unanchored `build/`, `dist/` or `coverage/` git exclude would hide them. */
+export const GITIGNORE_PROBES: readonly string[] = ["packages/demo/src/build/Demo.ts", "packages/demo/src/dist/Demo.ts", "packages/demo/src/coverage/Demo.ts"];
 
 export const ROOT_CONFIG = ".oxlintrc.json";
 /** The `jsPlugins` entry the root config must carry for the `xaravel` spine rules (Story 6.2). */
@@ -509,6 +520,39 @@ export function checkEslintignore(root: string, paths: readonly string[] = prote
   return out;
 }
 
+/**
+ * The violations from git's exclude rules (root and nested `.gitignore`, `.git/info/exclude`, `core.excludesFile`):
+ * one per path in `paths` (relative to `root`) that a non-negated entry matches, at that entry's file and line. Git's
+ * own matcher decides, with `--no-index` so tracked files count. A git failure throws.
+ */
+export function checkGitignore(root: string, paths: readonly string[]): Violation[] {
+  if (paths.length === 0) {
+    return [];
+  }
+  const proc = Bun.spawnSync(["git", "check-ignore", "--no-index", "-v", "-z", "--stdin"], {
+    cwd: root,
+    stdin: new TextEncoder().encode(paths.map((path) => `${path}\0`).join("")),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0 && proc.exitCode !== 1) {
+    throw new Error(`git check-ignore failed in ${root}: ${proc.stderr.toString().trim()}`);
+  }
+  const fields = proc.stdout.toString().split("\0");
+  const out: Violation[] = [];
+  for (let i = 0; i + 3 < fields.length; i += 4) {
+    const source = fields[i]!;
+    const line = Number(fields[i + 1]);
+    const pattern = fields[i + 2]!;
+    const path = fields[i + 3]!;
+    if (source === "" || pattern.startsWith("!")) {
+      continue;
+    }
+    out.push({ path: source, line, col: 1, message: `entry ${JSON.stringify(pattern)} excludes ${path} from the spine rules` });
+  }
+  return out;
+}
+
 /** The violations in the config at relative `path` under `root`; its `ignorePatterns` (relative to its directory) may exclude none of `paths`. */
 export function checkConfig(root: string, path: string, paths: readonly string[] = protectedPaths()): Violation[] {
   const file = join(root, path);
@@ -602,7 +646,9 @@ export function findDisables(root: string): DisablesResult {
   const listed = gitFiles(root).filter((path) => existsSync(join(root, path)));
   const files = listed.filter((path) => !ignoredBy(patterns, path));
   const paths = protectedPaths(listed);
-  const violations: Violation[] = [...checkConfig(root, ROOT_CONFIG, paths), ...checkEslintignore(root, paths)];
+  const linted = files.filter((path) => LINTED_EXTENSIONS.some((extension) => path.endsWith(extension)));
+  const gitignored = checkGitignore(root, [...new Set([...paths, ...GITIGNORE_PROBES, ...linted])]);
+  const violations: Violation[] = [...checkConfig(root, ROOT_CONFIG, paths), ...checkEslintignore(root, paths), ...gitignored];
   for (const path of files) {
     const base = posix.basename(path);
     if (path !== ROOT_CONFIG && (JSON_CONFIG_NAMES.has(base) || JS_CONFIG.test(path))) {
