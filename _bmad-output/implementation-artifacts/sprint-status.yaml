@@ -100,11 +100,11 @@ development_status:
   6-6-duplicate-fqcn-and-registration-scan: done
   epic-6-retrospective: done
 
-  epic-7: in-progress
+  epic-7: done
   7-1-conformance-aggregator: done
   7-2-public-dashboard-and-epic-review-view: done
   7-3-boost-framework-mode-mcp-server: done
-  7-4-framework-mode-is-read-only: in-progress
+  7-4-framework-mode-is-read-only: done  # ESC-7.4-1 (protected-path) waits on the Maintainer
   epic-7-retrospective: optional
 
   epic-8: backlog

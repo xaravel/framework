@@ -31,4 +31,21 @@ All six are read-only, and read only `conformance/`, `stories/` and `decisions/`
 | `divergence.get` | `id` (`DIV-<n>` or `DIV-<n>.<k>`) | a Divergence Record and its numbered clauses |
 | `escalations.open` | `story?` | the open Escalations |
 
-See [docs/framework-mode.md](docs/framework-mode.md) for the result shapes, the mirrored rules and the limits.
+## Read-only
+
+The server cannot write, spawn or read outside its data scope (Story 7.4):
+
+- `dataPath` checks every data path lexically and on its real path, so a symlink out of `conformance/`, `stories/` or `decisions/` is refused.
+- `src/server.ts` calls `lockdown(root)` before it imports the rest of the server (`src/mcp.ts`). From then on, these throw:
+  - every `node:fs` function except six scope-checked reads, and those reads too when given a write `flag`;
+  - every `node:child_process`, `node:worker_threads`, `bun:sqlite` and `bun:ffi` function;
+  - `Worker`, `fetch` and `WebSocket`;
+  - `Bun.spawn`/`spawnSync`/`$`/`write`/`file`/`mmap`/`openInEditor`/`build`/`Glob`/`s3`/`S3Client`/`sql`/`SQL`/`connect`/`listen`/`serve`/`udpSocket`.
+- Not covered:
+  - the network modules (`node:net`, `node:http` and the like);
+  - `process.binding` and `dlopen`;
+  - a symlink swapped mid-read;
+  - an in-process `createServer`, which is not locked down;
+  - an in-process `main()`, which locks down its caller.
+
+See [docs/framework-mode.md](docs/framework-mode.md) for the result shapes, the data scope, the lockdown, the mirrored rules and the limits.
