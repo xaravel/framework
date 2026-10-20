@@ -20,7 +20,7 @@ portedTest("Illuminate\\Tests\\Support\\SupportArrTest::testDivide", { case: Tes
   this.assertEquals(["Desk", 100, true], values);
 
   // Test dividing an array with numeric keys
-  [keys, values] = Arr.divide(new PhpArray([[0, "first"], [1, "second"]]));
+  [keys, values] = Arr.divide(["first", "second"]);
   this.assertEquals([0, 1], keys);
   this.assertEquals(["first", "second"], values);
 
@@ -30,7 +30,7 @@ portedTest("Illuminate\\Tests\\Support\\SupportArrTest::testDivide", { case: Tes
   this.assertEquals(["Null", "one"], values);
 
   // Test dividing an array where the keys are arrays
-  [keys, values] = Arr.divide(new PhpArray<string | number | null, unknown>([[0, new PhpArray<string | number | null, unknown>([["one", 1], [2, "second"]])], [1, "one"]]));
+  [keys, values] = Arr.divide([new PhpArray<string | number | null, unknown>([["one", 1], [2, "second"]]), "one"]);
   this.assertEquals([0, 1], keys);
   this.assertEquals([new PhpArray<string | number | null, unknown>([["one", 1], [2, "second"]]), "one"], values);
 
@@ -174,7 +174,7 @@ portedTest("Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean", { c
 
   // Test that an exception is raised if the value is not a boolean
   this.expectException(InvalidArgumentException);
-  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be a boolean, (.*) found./);
+  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be a boolean, (.*) found./); // adapted:DIV-10.1
   Arr.boolean(test_array, "string");
 });
 
@@ -206,7 +206,7 @@ portedTest("Illuminate\\Tests\\Support\\SupportArrTest::testOnlyValues", { case:
 
   array = [1, "1", 2, "2", 3];
   this.assertEquals(new PhpArray([[0, 1], [2, 2], [4, 3]]), Arr.onlyValues(array, [1, 2, 3], true));
-  this.assertEquals(new PhpArray<string | number | null, unknown>([[0, 1], [1, "1"], [2, 2], [3, "2"], [4, 3]]), Arr.onlyValues(array, [1, 2, 3]));
+  this.assertEquals([1, "1", 2, "2", 3], Arr.onlyValues(array, [1, 2, 3]));
 
   array = { a: true, b: false, c: 1, d: 0 };
   this.assertEquals({ c: 1, d: 0 }, Arr.onlyValues(array, [1, 0], true));

@@ -1,6 +1,6 @@
 // pilot/porting: Story 8.7 pilot translation, never merged
 // Ported from tests/Support/SupportCollectionTest.php (Illuminate\Tests\Support\SupportCollectionTest).
-import { portedTest, TestCase } from "@xaravel/assert";
+import { phpArrayEntries, type PhpKey, portedTest, TestCase } from "@xaravel/assert";
 import { Mockery } from "@xaravel/mockery";
 import { collect, Collection, LazyCollection } from "@xaravel/collections";
 import { Model } from "@xaravel/database";
@@ -70,17 +70,20 @@ portedTest(`${ID}::testArrayAccessOffsetGet`, { case: TestCase }, async function
 });
 
 portedTest(`${ID}::testForgetArrayOfKeys`, { case: TestCase }, async function () {
+  // `all()` returns a list, a plain object or a PhpArray by its keys (DIV-9.2), so `isset($c[k])` reads its
+  // [key, value] pairs, in any of the three forms, through `phpArrayEntries`.
+  const isset = (array: object, k: PhpKey): boolean => phpArrayEntries(array).some(([key, value]) => key === k && value !== null);
   let c = new Collection(["foo", "bar", "baz"]);
   c = c.forget([0, 2]).all();
-  this.assertFalse((c?.[0] ?? null) !== null);
-  this.assertFalse((c?.[2] ?? null) !== null);
-  this.assertTrue((c?.[1] ?? null) !== null);
+  this.assertFalse(isset(c, 0));
+  this.assertFalse(isset(c, 2));
+  this.assertTrue(isset(c, 1));
 
   c = new Collection({ name: "taylor", foo: "bar", baz: "qux" });
   c = c.forget(["foo", "baz"]).all();
-  this.assertFalse((c?.["foo"] ?? null) !== null);
-  this.assertFalse((c?.["baz"] ?? null) !== null);
-  this.assertTrue((c?.["name"] ?? null) !== null);
+  this.assertFalse(isset(c, "foo"));
+  this.assertFalse(isset(c, "baz"));
+  this.assertTrue(isset(c, "name"));
 });
 
 portedTest(`${ID}::testWhere`, { case: TestCase, dataset: collectionClassProvider }, async function (collection: CollectionClass) {
@@ -377,14 +380,8 @@ portedTest(`${ID}::testRejectWithoutAnArgumentRemovesTruthyValues`, { case: Test
 });
 
 portedTest(`${ID}::testPushWithOneItem`, { case: TestCase }, async function () {
-  const expected = new PhpArray<number, unknown>([
-    [0, 4],
-    [1, 5],
-    [2, 6],
-    [3, ["a", "b", "c"]],
-    [4, { who: "Jonny", preposition: "from", where: "Laroe" }],
-    [5, "Jonny from Laroe"],
-  ]);
+  // Keys 0..5 in order: a PHP list, so a JS Array (DIV-9.2).
+  const expected = [4, 5, 6, ["a", "b", "c"], { who: "Jonny", preposition: "from", where: "Laroe" }, "Jonny from Laroe"];
 
   const data = new Collection([4, 5, 6]);
   data.push(["a", "b", "c"]);
