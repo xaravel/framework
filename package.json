@@ -25,6 +25,8 @@
     "scaffold": "bun tools/scaffold/scaffold.ts",
     "scaffold:check": "bun tools/scaffold/scaffold.ts --check",
     "registration:check": "bun --no-env-file tools/registration/registration.ts",
+    "conformance:report": "bun --no-env-file tools/conformance-report/report.ts",
+    "conformance:history": "bun --no-env-file tools/conformance-report/history.ts",
     "scaffold:table": "bun tools/scaffold/table.ts",
     "graph:check": "bun tools/graph/graph.ts",
     "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners",

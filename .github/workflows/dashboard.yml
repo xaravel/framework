@@ -1,0 +1,63 @@
+# The conformance dashboard data (Story 7.1; FR-5, SM-1, AD-16, AD-28).
+#
+# `dashboard` runs on every push to main. It installs from the frozen
+# lockfile without lifecycle scripts, runs `bun run conformance:report`
+# (tools/conformance-report/report.ts, which writes the gitignored
+# .cache/conformance/report.json) and then `bun run conformance:history`,
+# which appends one record keyed by (commit, Baseline Pin) to history.jsonl on
+# the `dashboard-data` branch and pushes it, never touching main
+# (docs/ops/conformance-report.md).
+#
+# The top level is `contents: read`. Only this job holds `contents: write`
+# (AD-16; tools/workflow-permissions allows `dashboard.yml#dashboard`). The
+# checkout does not persist credentials: only the history step gets the job
+# token, as a one-command git `http.extraheader` (GIT_CONFIG_*), never
+# written to .git/config. It never runs PR code: it triggers only on push to
+# main.
+# The `dashboard` concurrency group never cancels a running run, but GitHub
+# keeps at most one pending run per group and a newer push cancels the
+# pending one: with 3+ pushes during one run, the middle commits get no
+# record. That is rare, since merges reach main one at a time through the
+# merge queue. The history tool refetches and re-appends on a
+# non-fast-forward rejection.
+#
+# Story 7.2 adds the GitHub Pages publish to this same job.
+name: dashboard
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard
+  cancel-in-progress: false
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Compute the conformance report
+        run: bun run conformance:report
+      - name: Append the history record to dashboard-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          export GIT_CONFIG_VALUE_0
+          bun run conformance:history
