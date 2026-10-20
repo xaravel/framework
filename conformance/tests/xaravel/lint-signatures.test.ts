@@ -132,7 +132,8 @@ xaravelTest(
     for (const [name] of RULES) {
       expect(config.rules[`xaravel/${name}`]).toBe("error");
     }
-    expect(config.overrides).toBeUndefined();
+    // The one override is return-await for packages (Retro 6 item 11); none touches the xaravel rules.
+    expect(config.overrides).toEqual([{ files: ["packages/**"], rules: { "typescript/return-await": ["error", "always"] } }]);
     expect(checkConfig(root, CONFIG)).toEqual([]);
 
     // The thenable list (Story 6.4's fixture list) and the committed boot-only writers the fixtures rely on.

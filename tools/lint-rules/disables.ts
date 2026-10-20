@@ -2,10 +2,10 @@
 //
 //   bun --no-env-file tools/lint-rules/disables.ts [--root <dir>]
 //       (`bun run lint:disables`, chained into `bun run lint`) fails on any
-//       way of switching off a rule the spine names (`SPINE_RULES`); it only
-//       reads files
+//       way of switching off a rule the spine names (`SPINE_RULES`), or a
+//       package rule (`PACKAGE_RULES`) for `packages/`; it only reads files
 //
-// It checks three things.
+// It checks four things.
 //
 // Disable directives. The scanned files are `git ls-files -co
 // --exclude-standard` under the root with oxlint's extensions (`LINTED_EXTENSIONS`),
@@ -18,7 +18,8 @@
 // description. A rule matches a spine rule by its last `/` segment
 // (`no-floating-promises`, `typescript/…`, `@typescript-eslint/…`). A
 // directive naming a spine rule, or naming no rule (which disables every
-// rule), is a violation.
+// rule), is a violation. In a file under `packages/` a directive naming a
+// `PACKAGE_RULES` entry (`return-await`) is one too (Retro 6 item 11).
 //
 // Lint configs. The root `.oxlintrc.json` and every nested `.oxlintrc.json` /
 // `.oxlintrc.jsonc` (not under an ignored path) must leave each spine rule an
@@ -35,6 +36,18 @@
 // every listed linted file under `packages/*/src`, `packages/*/tests` or
 // `skeleton/`), a config that does not parse, and an `oxlint.config.*` (a JS
 // config this check cannot read).
+//
+// Package rules (Retro 6 item 11). `PACKAGE_RULES` must hold, at `error` and
+// with their `RULE_MODES` mode (the setting's second element, `["error",
+// "always"]`), for framework packages and Ported Tests: in the root config's
+// effective setting for each `PACKAGE_PROBES` path (top-level `rules`, then
+// each `overrides` entry whose `files` globs match it, in order) and, when the
+// probes hold, for every protected path under `packages/` (the first that falls
+// short is reported, so a narrowed override fails), in every
+// nested config under `packages/` (which replaces the root's overrides too, so
+// its own effective `rules` must carry them), and in no config's `overrides`
+// may one be weakened. The Skeleton, `installer/` (not a framework package),
+// `tools/` and `conformance/` are not held to them.
 //
 // Git excludes. oxlint skips what git ignores, so no `.gitignore` entry (root or
 // nested), `.git/info/exclude` line or `core.excludesFile` line may match a
@@ -80,6 +93,26 @@ export const SPINE_RULE_OPTIONS: Readonly<Record<string, Readonly<Record<string,
   "no-floating-promises": { checkThenables: true },
   "no-misused-promises": { checksVoidReturn: true, checksConditionals: true },
 };
+
+/**
+ * The rules framework packages and Ported Tests must hold beside `SPINE_RULES` (Retro 6 item 11, ruling
+ * `decisions/MAINT-2026-10-19-epic-6-items.md` item 6): the type-aware `typescript/return-await` set to `always`, which
+ * catches the thenable returned from a call in an `async` function (`return this.query()`) that the syntactic
+ * `no-async-thenable-return` cannot see. The root config turns it on in an `overrides` entry for `packages/**`, so the
+ * Skeleton, `tools/` and `conformance/` keep only the syntactic rule.
+ */
+export const PACKAGE_RULES: readonly string[] = ["return-await"];
+
+/** The mode (a setting's second array element) a rule must carry. */
+export const RULE_MODES: Readonly<Record<string, string>> = { "return-await": "always" };
+
+/** Package paths the root config's effective setting (top-level `rules`, then each matching override) must give every `PACKAGE_RULES` entry. */
+export const PACKAGE_PROBES: readonly string[] = ["packages/demo/src/Demo.ts", "packages/demo/tests/ported/DemoTest.ts"];
+
+/** Whether a path, relative to the root, is under `packages/`, which the root's `packages/**` override covers. */
+export function isPackagePath(path: string): boolean {
+  return path.startsWith("packages/");
+}
 
 /** The file extensions oxlint lints. */
 export const LINTED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
@@ -306,9 +339,10 @@ export function parseDirective(text: string): Directive | null {
   return null;
 }
 
-/** The violations in one source's disable directives. */
+/** The violations in one source's disable directives (relative `path`); in a package file `PACKAGE_RULES` count too. */
 export function scanSource(path: string, source: string): Violation[] {
   const out: Violation[] = [];
+  const guarded = isPackagePath(path) ? [...SPINE_RULES, ...PACKAGE_RULES] : SPINE_RULES;
   for (const comment of comments(source)) {
     const directive = parseDirective(comment.text);
     if (directive === null) {
@@ -316,11 +350,11 @@ export function scanSource(path: string, source: string): Violation[] {
     }
     const at = { path, line: comment.line, col: comment.col };
     if (directive.rules.length === 0) {
-      out.push({ ...at, message: `\`${directive.directive}\` with no rule list disables every rule, including ${SPINE_RULES.join(", ")}` });
+      out.push({ ...at, message: `\`${directive.directive}\` with no rule list disables every rule, including ${guarded.join(", ")}` });
       continue;
     }
     for (const rule of directive.rules) {
-      if (SPINE_RULES.includes(ruleName(rule))) {
+      if (guarded.includes(ruleName(rule))) {
         out.push({ ...at, message: `\`${directive.directive}\` disables ${ruleName(rule)}` });
       }
     }
@@ -414,6 +448,10 @@ export function ruleShortfall(rule: string, setting: unknown): string | null {
   }
   if (severity !== "error" && severity !== "deny" && severity !== 2) {
     return `sets ${rule} to ${JSON.stringify(severity)} (a spine rule must be "error")`;
+  }
+  const mode = RULE_MODES[rule];
+  if (mode !== undefined && !(Array.isArray(setting) && setting[1] === mode)) {
+    return `sets ${rule} without ${JSON.stringify(mode)}`;
   }
   const required = SPINE_RULE_OPTIONS[rule];
   if (required === undefined) {
@@ -577,14 +615,55 @@ export function checkConfig(root: string, path: string, paths: readonly string[]
       out.push({ path, ...locate(text, rule), message: shortfall });
     }
   }
-  const overrides = config["overrides"];
-  if (Array.isArray(overrides)) {
+  const overrides = Array.isArray(config["overrides"]) ? (config["overrides"] as unknown[]) : [];
+  const base = posix.dirname(path) === "." ? "" : posix.dirname(path);
+  if (path === ROOT_CONFIG) {
+    // The package rules live in an override, so a path's setting is the top-level one, then each matching override's, in order.
+    const shortfallFor = (rule: string, target: string): string | null => {
+      let setting = effective.get(rule);
+      for (const override of overrides) {
+        if (isObject(override) && overrideMatches(override, target) && rulesOf(override).has(rule)) {
+          setting = rulesOf(override).get(rule);
+        }
+      }
+      return ruleShortfall(rule, setting);
+    };
+    for (const rule of PACKAGE_RULES) {
+      let probesHold = true;
+      for (const probe of PACKAGE_PROBES) {
+        const shortfall = shortfallFor(rule, probe);
+        if (shortfall !== null) {
+          probesHold = false;
+          out.push({ path, ...locate(text, rule), message: `${shortfall} for ${probe}` });
+        }
+      }
+      // A narrowed override (`packages/demo/**`, `packages/**/*.ts`) passes the probes, so the protected package paths are walked too; the first that falls short is reported.
+      if (probesHold) {
+        for (const target of paths.filter(isPackagePath)) {
+          const shortfall = shortfallFor(rule, target);
+          if (shortfall !== null) {
+            out.push({ path, ...locate(text, rule), message: `${shortfall} for ${target}` });
+            break;
+          }
+        }
+      }
+    }
+  } else if (base === "packages" || base.startsWith("packages/")) {
+    // A nested config replaces the root's, overrides included (an `extends` brings only the root's `rules`), so it must carry the package rules itself.
+    for (const rule of PACKAGE_RULES) {
+      const shortfall = ruleShortfall(rule, effective.get(rule));
+      if (shortfall !== null) {
+        out.push({ path, ...locate(text, rule), message: shortfall });
+      }
+    }
+  }
+  if (overrides.length > 0) {
     overrides.forEach((override: unknown, index) => {
       if (!isObject(override)) {
         return;
       }
       for (const [rule, setting] of rulesOf(override)) {
-        if (!SPINE_RULES.includes(rule)) {
+        if (!SPINE_RULES.includes(rule) && !PACKAGE_RULES.includes(rule)) {
           continue;
         }
         const shortfall = ruleShortfall(rule, setting);
@@ -601,7 +680,6 @@ export function checkConfig(root: string, path: string, paths: readonly string[]
   if (Array.isArray(plugins) && !plugins.includes("typescript")) {
     out.push({ path, ...locate(text, '"plugins"'), message: "sets plugins without typescript, which turns the type-aware spine rules off" });
   }
-  const base = posix.dirname(path) === "." ? "" : posix.dirname(path);
   for (const pattern of ignorePatterns(config)) {
     const probe = excluded(pattern, base, paths);
     if (probe !== undefined) {
@@ -609,6 +687,13 @@ export function checkConfig(root: string, path: string, paths: readonly string[]
     }
   }
   return out;
+}
+
+/** Whether an `overrides` entry's `files` globs (relative to its config's directory, here the root) match `path`. */
+function overrideMatches(override: Json, path: string): boolean {
+  const files = override["files"];
+  const globs = typeof files === "string" ? [files] : Array.isArray(files) ? files.filter((glob): glob is string => typeof glob === "string") : [];
+  return globs.some((glob) => new Bun.Glob(glob.replace(/^\.\//, "")).match(path));
 }
 
 /** Whether a `jsPlugins` value loads the `xaravel` plugin, as a string entry or a `{ specifier }` object. */
