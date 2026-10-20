@@ -13,6 +13,7 @@ import { BOT_LOGIN, type ContentSide, evaluatePr } from "../../../tools/ownershi
 import { scanPortedBlocks } from "../../../tools/ownership/ported-blocks";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { writeGateInputs } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "ownership", "ownership.ts");
@@ -175,6 +176,8 @@ xaravelTest("XT-conformance-244", "a Story PR changing portedTest blocks outside
 
 xaravelTest("XT-conformance-245", "the pr command reads changed shards at the merge base from the compare API and at the head, and lists each unowned line (FR-4.3, AD-16.5)", async () => {
   const dir = baseRoot();
+  // Story 8.8: Story 11.1 is in Phase 1, so its base also holds the Phase 1 gate's inputs.
+  writeGateInputs(dir);
   const paths: string[] = [];
   const server = Bun.serve({
     port: 0,

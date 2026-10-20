@@ -20,7 +20,8 @@
 //       reads the PR's head branch and files from the GitHub API
 //       (`GITHUB_API_URL`, default https://api.github.com; token from
 //       `GH_TOKEN`) as data, and judges a `story/<id>` PR against the manifest
-//       in the root (the base checkout), never the PR's copy
+//       in the root (the base checkout), never the PR's copy. A Story in
+//       Phase 1 or later also passes the Phase 1 gate (./phase-gate.ts)
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 // Every violation kind the check reports, one line each, on stderr:
@@ -74,6 +75,25 @@
 //                        Expectations line; fails closed
 //   unparsable ported test file: a changed Ported Test file does not lex or
 //                        its brackets do not balance; fails closed
+//   phase gate:          a `story/<id>` PR whose base manifest's `epic` is in
+//                        Phase 1 or later (above `PHASE_0_LAST_EPIC`, 8), while
+//                        the base checkout lacks one of FR-8's inputs: naming
+//                        the Story, its epic, the input and its problem, and
+//                        ending `(FR-8, Story 8.8)` (Story 8.8)
+//
+// The Phase 1 gate (Story 8.8, FR-8; ./phase-gate.ts). `pr` (the CLI path; the
+// synchronous `evaluatePr` only returns the manifest's `epic`) checks a
+// Phase 1 or later Story against the base checkout, never the PR head: it
+// needs `PORTING.md` passing `checkPorting`, `decisions/DIV-1.md`..`DIV-12.md`,
+// `docs/porting/pilot-report.md` (not blank) and a Maintainer-signed
+// `decisions/PHASE-0-EXIT.md` (`decision: approved`, `decided_by: Maintainer`,
+// `date: YYYY-MM-DD`, a body line that is not a heading). Every unmet
+// condition is one line. The gate has no state: it passes for every later PR
+// while `main` keeps those files, which are Protected, and the required
+// `check` job's `porting:check` and `divergence:check` keep them valid.
+// `planning/*`, `bot/*`, other branches and Phase 0 Stories are never gated.
+// `checkPorting` is loaded with a dynamic `import()` only then, so the tools
+// that import this file never need `oxc-parser`.
 //
 // Line rules (Story 5.6, AD-16). They diff the PR head against its merge base
 // (the compare API's `merge_base_commit`), over the changed files and, for a
@@ -138,6 +158,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { decisionStatus, DECISIONS_DIR, ESCALATIONS_DIR, parseEscalation } from "../escalations/escalations";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
+import { PHASE_0_LAST_EPIC, phaseGateViolations } from "./phase-gate";
 import { scanPortedBlocks } from "./ported-blocks";
 
 export const STORIES_DIR = "stories";
@@ -209,6 +230,8 @@ export interface OwnershipPrResult {
   outOfScope: string[];
   /** Empty when the check passes. */
   violations: string[];
+  /** The `epic` of the valid base manifest of a `story/<id>` PR, or null when there is none (Story 8.8). */
+  epic: number | null;
 }
 
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
@@ -1140,7 +1163,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
       ),
     ];
     // No line rules: the planning rule already rejects every Expectations change, so a demotion cannot pass here.
-    return { storyId: null, outOfScope, violations };
+    return { storyId: null, outOfScope, violations, epic: null };
   }
   if (pr.headRef.startsWith(BOT_BRANCH)) {
     const outOfScope = disallowed(pr.files, botAllowedPath);
@@ -1152,27 +1175,27 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
       ),
       ...botRules(pr),
     ];
-    return { storyId: null, outOfScope, violations };
+    return { storyId: null, outOfScope, violations, epic: null };
   }
   if (!pr.headRef.startsWith(STORY_BRANCH)) {
-    return { storyId: null, outOfScope: [], violations: lineRules(root, pr, null, null) };
+    return { storyId: null, outOfScope: [], violations: lineRules(root, pr, null, null), epic: null };
   }
   const storyId = pr.headRef.slice(STORY_BRANCH.length);
   const violations: string[] = truncated(pr);
   if (!STORY_ID.test(storyId)) {
     violations.push(`missing manifest: branch ${pr.headRef} does not name a Story ID <epic>.<story>, so no manifest on base can own it (AD-16)`);
-    return { storyId, outOfScope: [], violations };
+    return { storyId, outOfScope: [], violations, epic: null };
   }
   const file = `${STORIES_DIR}/${storyId}.md`;
   const path = join(root, file);
   if (!existsSync(path)) {
     violations.push(`missing manifest: branch ${pr.headRef} has no ${file} on the base branch; a manifest the PR adds does not count (AD-16)`);
-    return { storyId, outOfScope: [], violations };
+    return { storyId, outOfScope: [], violations, epic: null };
   }
   const parsed = parseManifest(file, readFileSync(path, "utf8"));
   if (parsed.manifest === null) {
     violations.push(...parsed.violations);
-    return { storyId, outOfScope: [], violations };
+    return { storyId, outOfScope: [], violations, epic: null };
   }
   const manifest = parsed.manifest;
   const outOfScope = disallowed(pr.files, (candidate) => allowedPath(manifest, candidate));
@@ -1180,7 +1203,7 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
     violations.push(`out of scope: ${candidate} is outside Story ${storyId}'s allowed paths (component ${manifest.component}) (AD-16)`);
   }
   violations.push(...lineRules(root, pr, storyId, new Set(manifest.testIds)));
-  return { storyId, outOfScope, violations };
+  return { storyId, outOfScope, violations, epic: manifest.epic };
 }
 
 // ---------------------------------------------------------------------------
@@ -1308,6 +1331,10 @@ async function pr(options: Options): Promise<number> {
   const user = pull.user ?? null;
   const author = user !== null && typeof user.login === "string" && typeof user.type === "string" ? { login: user.login, type: user.type } : null;
   const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha, author });
+  // The Phase 1 gate (Story 8.8) reads the base checkout only, whatever the PR head holds.
+  if (result.storyId !== null && result.epic !== null && result.epic > PHASE_0_LAST_EPIC) {
+    result.violations.push(...(await phaseGateViolations(options.root, result.storyId, result.epic)));
+  }
 
   if (result.violations.length > 0) {
     report(result.violations);

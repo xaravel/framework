@@ -10,7 +10,7 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 | `bun audit` | `ci.yml#audit` (required) | `bun install --frozen-lockfile --ignore-scripts`, then `bun audit --audit-level=high` |
 | fixture signatures | `ci.yml#fixtures` (required) | `oracle:verify-fixtures` ([oracle.md](oracle.md)) |
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
-| edit ownership | `ownership.yml` (required, `pull_request_target`) | path and line ownership ([ratchet.md](ratchet.md#line-ownership)) |
+| edit ownership | `ownership.yml` (required, `pull_request_target`) | path and line ownership ([ratchet.md](ratchet.md#line-ownership)), and the Phase 1 gate for Stories in epic 9 or later ([porting.md](porting.md#phase-1-gate)); it installs the base checkout's locked dependencies (`--ignore-scripts`) for the gate's `porting:check` |
 | Ratchet | `ratchet.yml#ratchet` (required, `pull_request_target`) | `scope`, `overlay`, `run --scope`, `story`, same-repository PRs only; a fork PR fails ([ratchet.md](ratchet.md)) |
 | API-surface report | `api-surface.yml#report` (not required; never fails) | `api-surface --all --markdown`, the per-Component table in the job summary ([api-surface.md](api-surface.md)) |
 

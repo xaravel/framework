@@ -23,6 +23,7 @@ import {
 } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { writeGateInputs } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "ownership", "ownership.ts");
@@ -55,10 +56,14 @@ const EPICS_TEXT = "# Epics\n\n### Story 9.1: One\n\n**Then** it works.\n\n### S
 
 /**
  * A hermetic root holding `stories/<id>.md` for each manifest, plus sprint status when `sprintStatus` is given, and
- * `epics.md` (`EPICS_TEXT` unless `epics` is given; none when it is null).
+ * `epics.md` (`EPICS_TEXT` unless `epics` is given; none when it is null). With `gate`, it also holds the Phase 1 gate's
+ * inputs (Story 8.8), so a `pr` run on a Phase 1 Story is judged by the other rules alone.
  */
-function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null, epics: string | null = EPICS_TEXT): string {
+function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null, epics: string | null = EPICS_TEXT, gate = false): string {
   const tmp = mkdtempSync(join(tmpdir(), "xaravel-ownership-"));
+  if (gate) {
+    writeGateInputs(tmp);
+  }
   mkdirSync(join(tmp, STORIES_DIR), { recursive: true });
   if (epics !== null) {
     mkdirSync(dirname(join(tmp, EPICS)), { recursive: true });
@@ -383,7 +388,7 @@ xaravelTest("XT-conformance-22", "every Story manifest requires story_id, epic, 
 });
 
 xaravelTest("XT-conformance-23", "a story/<story-id> PR is judged by the manifest on the base checkout only; a branch with no manifest on base fails, other branches pass (AD-16.5, AD-21.1)", async () => {
-  await withRoots([fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3", { component: undefined }) })], async ([base]) => {
+  await withRoots([fixtureRoot({ "9.1": story("9.1"), "9.3": story("9.3", { component: undefined }) }, null, EPICS_TEXT, true)], async ([base]) => {
     // No manifest on base.
     const missing = await runPr({ ref: "story/99.9", files: [file("packages/support/src/A.ts")] }, base!);
     expect(missing.code).toBe(1);
@@ -425,6 +430,7 @@ xaravelTest("XT-conformance-23", "a story/<story-id> PR is judged by the manifes
       storyId: null,
       outOfScope: [],
       violations: [],
+      epic: null,
     });
   });
 });
@@ -461,7 +467,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
     expect([path, allowedPath(support, path)]).toEqual([path, false]);
   }
 
-  await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([base]) => {
+  await withRoots([fixtureRoot({ "9.1": story("9.1") }, null, EPICS_TEXT, true)], async ([base]) => {
     const inScope = await runPr(
       {
         ref: "story/9.1",
@@ -544,7 +550,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
         if?: string;
         permissions?: Record<string, string>;
         "continue-on-error"?: unknown;
-        steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
+        steps: { id?: string; name?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
       }
     >;
   };
@@ -569,7 +575,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
     { uses: checkout.uses, with: { ref: "${{ github.event.merge_group.base_sha || github.sha }}", "persist-credentials": false } },
     setupBun,
   ]);
-  expect(job.steps).toHaveLength(4);
+  expect(job.steps).toHaveLength(5);
   expect(job.steps[2]!.id).toBe("pr");
   expect(job.steps[2]!.env).toEqual({
     EVENT_NAME: "${{ github.event_name }}",
@@ -594,10 +600,13 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
   expect(direct).toEqual({ code: 0, output: "number=34\n" });
   // A queue ref that names no PR fails the step rather than passing an empty number on.
   expect(await runStep(job.steps[2]!.run!, { EVENT_NAME: "merge_group", QUEUE_REF: "refs/heads/main", EVENT_PR: "" })).toEqual({ code: 1, output: "" });
+  // Story 8.8: the Phase 1 gate's `porting:check` needs `oxc-parser`, so the base checkout's locked dependencies are
+  // installed, with no lifecycle scripts, before the check step.
+  expect(job.steps[3]).toEqual({ name: "Install from the lockfile", run: "bun install --frozen-lockfile --ignore-scripts" });
   const outputKey = queued.output.slice(0, queued.output.indexOf("="));
-  expect(job.steps[3]!.env!["PR_NUMBER"]).toBe(`\${{ steps.${job.steps[2]!.id}.outputs.${outputKey} }}`);
-  expect(job.steps[3]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
-  expect(job.steps[3]!.env).toEqual({
+  expect(job.steps[4]!.env!["PR_NUMBER"]).toBe(`\${{ steps.${job.steps[2]!.id}.outputs.${outputKey} }}`);
+  expect(job.steps[4]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
+  expect(job.steps[4]!.env).toEqual({
     GH_TOKEN: "${{ github.token }}",
     REPO: "${{ github.repository }}",
     PR_NUMBER: "${{ steps.pr.outputs.number }}",
@@ -608,7 +617,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
   expect(manifestsJob.steps.slice(0, 2)).toEqual([checkout, setupBun]);
   expect(manifestsJob.steps).toHaveLength(3);
   expect(manifestsJob.steps[2]!.run).toBe("bun tools/ownership/ownership.ts manifests");
-  for (const step of [...job.steps.slice(1), ...manifestsJob.steps]) {
+  for (const step of [...job.steps.slice(1).filter((step) => step !== job.steps[3]), ...manifestsJob.steps]) {
     expect(step.with?.["ref"]).toBeUndefined();
     expect(step.run ?? "").not.toContain("${{");
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);
@@ -634,6 +643,7 @@ xaravelTest("XT-conformance-180", "a planning/* PR may not change packages/** or
       storyId: null,
       outOfScope: [],
       violations: [],
+      epic: null,
     });
     expect(await runPr({ ref: "planning/x", files: allowed.map((path) => file(path)) }, base!)).toMatchObject({
       code: 0,
@@ -647,6 +657,7 @@ xaravelTest("XT-conformance-180", "a planning/* PR may not change packages/** or
       storyId: null,
       outOfScope: sorted,
       violations: sorted.map(scope),
+      epic: null,
     });
     const failing = await runPr({ ref: "planning/x", files: forbidden.map((path) => file(path)) }, base!);
     expect(failing.code).toBe(1);
@@ -707,7 +718,7 @@ xaravelTest("XT-conformance-181", "a bot/* PR may change only conformance/expect
 
   await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([base]) => {
     // Allowed.
-    expect(evaluatePr(base!, { headRef: "bot/q", files: botFiles, changedFiles: 2, author: BOT, content: botContent })).toEqual({ storyId: null, outOfScope: [], violations: [] }); // Story 5.8: author and content inputs
+    expect(evaluatePr(base!, { headRef: "bot/q", files: botFiles, changedFiles: 2, author: BOT, content: botContent })).toEqual({ storyId: null, outOfScope: [], violations: [], epic: null }); // Story 5.8: author and content inputs
     expect(await runPr({ ref: "bot/q", files: botFiles, base: botBase, head: botHead, user: BOT }, base!)).toMatchObject({
       code: 0,
       stdout: "Ownership OK: PR #7: bot/q passed the bot rules (path, identity, status-only values).\n", // Story 5.8: the OK text names the three bot rules
@@ -720,6 +731,7 @@ xaravelTest("XT-conformance-181", "a bot/* PR may change only conformance/expect
       storyId: null,
       outOfScope: sorted,
       violations: sorted.map(scope),
+      epic: null,
     });
     // Story 5.8: the allowed half is the App's status-only change, so only the path rule fails.
     const failing = await runPr({ ref: "bot/q", files: [...botFiles, ...forbidden.map((path) => file(path))], base: botBase, head: botHead, user: BOT }, base!);
@@ -746,7 +758,7 @@ xaravelTest("XT-conformance-181", "a bot/* PR may change only conformance/expect
 
     // Any other branch, including a fork's, passes unchanged whatever it touches.
     for (const ref of ["feature/x", "main", "planningx/y", "botx/y"]) {
-      expect(evaluatePr(base!, { headRef: ref, files: [file("packages/support/A.ts")], changedFiles: 1 })).toEqual({ storyId: null, outOfScope: [], violations: [] });
+      expect(evaluatePr(base!, { headRef: ref, files: [file("packages/support/A.ts")], changedFiles: 1 })).toEqual({ storyId: null, outOfScope: [], violations: [], epic: null });
     }
     // Story 5.6: the pass-demotion rule reads a changed shard on every branch but bot/*; this added line demotes nothing.
     expect(await runPr({ ref: "feature/x", files: [file("packages/support/A.ts"), file("conformance/expectations/support/x.jsonl")], head: { "conformance/expectations/support/x.jsonl": OWN_LINE } }, base!)).toMatchObject({
