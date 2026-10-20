@@ -115,7 +115,7 @@ development_status:
   8-5-fidelity-review-workflow: done  # ESC-8.5-1 (open-question: reviewer Apps, key and cost) waits on the Maintainer
   8-6-framework-agent-operating-instructions-and-stop-rules: done
   8-7-porting-md-pilot-on-support-and-collections: done  # ESC-8.7-1 approved (decisions/ESC-8.7-1.md); pilot on pilot/porting
-  8-8-phase-1-gate: backlog
+  8-8-phase-1-gate: in-progress
   epic-8-retrospective: optional
 
   epic-9: backlog
