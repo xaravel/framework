@@ -97,7 +97,7 @@ development_status:
   6-3-lint-rules-for-async-signatures-frame-state-and-declarations: done
   6-4-async-surface-json-generator-and-drift-check: done
   6-5-api-surface-diff: done
-  6-6-duplicate-fqcn-and-registration-scan: backlog
+  6-6-duplicate-fqcn-and-registration-scan: in-progress
   epic-6-retrospective: optional
 
   epic-7: backlog
