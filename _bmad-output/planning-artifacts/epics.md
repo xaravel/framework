@@ -2886,13 +2886,14 @@ So that weakened, removed or mislabelled assertions are caught before merge (FR-
 - no stub, fake or partial implementation of another Component;
 - every `@asyncRoot` tag is true.
 
-**Given** a Story PR
-**When** the review workflow runs
-**Then** two reviewer agents, each with its own GitHub identity and neither the PR author, post PR reviews with their findings.
+**Given** a Story whose implementation passes verification
+**When** its review step runs
+**Then** two reviewer agents, each in a fresh context and neither the implementer, apply the checklist to the diff
+**And** at least one runs on the other agent CLI from the loop's (Codex when the loop runs `claude -p`, Claude when it runs Codex) when that CLI is available, falling back to the loop's own CLI otherwise, and its verdict records which CLI reviewed and why it fell back (ESC-8.5-1).
 
-**Given** a rejecting review
-**When** it is posted
-**Then** the PR returns to its implementer with the findings, and `story:check` counts only approvals by distinct identity.
+**Given** a reviewer's verdict
+**When** it is recorded in the Story's spec, bound to the reviewed tree
+**Then** a `reject` returns the Story to its implementer with the findings, and `story:check`'s `approvals` clause passes only with two `pass` verdicts for the head tree.
 
 **Given** a Story PR that adds or changes `conformance/oracle-requests/<story-id>.jsonl`
 **When** the Fidelity Review runs

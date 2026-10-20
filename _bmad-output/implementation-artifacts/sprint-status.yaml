@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 03:23
+last_updated: 10-20-2026 11:34
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1266,3 +1266,15 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-8-item-1-fidelity-review-in-loop"
+    epic: 8
+    action: "Rebuild the Fidelity Review in the loop per decisions/ESC-8.5-1.md: two
+      fresh-context reviewer agents apply conformance/review/fidelity.md in bmad-build-auto's
+      review step, at least one on the other agent CLI (Codex at ~/.local/bin/codex
+      when the loop runs claude -p, else claude -p) with recorded fallback; verdicts
+      recorded in the Story spec bound to the reviewed tree; story:check approvals
+      counts two pass verdicts for the head tree; retire fidelity.yml and the Messages
+      API path in tools/fidelity-review; update Story 8.5's Xaravel Tests"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-8.5-1.md"

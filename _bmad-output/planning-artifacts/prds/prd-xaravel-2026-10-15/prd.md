@@ -313,6 +313,7 @@ Every Story's Ported Tests and Skip Reasons pass a Fidelity Review before the St
 - The review verdict and its findings are stored with the Story.
 - A rejected Story goes back to its implementer with the findings.
 - The implementing agent doesn't stub, fake or partly implement a Component just to make another Component's tests pass. Reviewers reject changes that do.
+- At least one reviewer runs on a different model family from the implementing agent when one is available, so the two do not share blind spots (ESC-8.5-1).
 
 #### FR-112: Protected Paths
 
