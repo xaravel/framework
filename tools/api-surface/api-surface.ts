@@ -11,8 +11,9 @@
 // It emits the packages' declarations with Story 6.4's `tsc -b` helper
 // (a package with no `package.json` has no declarations: everything is
 // missing), maps each top-level `registerClass('<FQCN>', X)` in
-// `packages/<c>/src/**/*.ts` to the `class`/`interface` `X` of that file's
-// `.d.ts`, and compares its public members with the Upstream records, after
+// `packages/<c>/src/**/*.ts` (or, for a contract, a top-level
+// `const X = contract('<FQCN>')` or one holding `Symbol.for('<FQCN>')`, AD-1)
+// to the `class`/`interface` `X` of that file's `.d.ts`, and compares its public members with the Upstream records, after
 // the parity mappings: camelCase (`camel`), `__construct` → `constructor`,
 // `__toString` → `toString`, the AD-26 options object, and the DIV-12 pairs
 // (`conformance/scans/div12-pairs.jsonl`). Findings: `missing`, `extra`,
@@ -83,6 +84,9 @@ export interface Div12Pair {
   readonly class: string;
   readonly name: string;
   readonly classification: string;
+  /** The class declaring each side: the export lists a member on its declaring class. */
+  readonly property?: { readonly declaredIn?: string } | null;
+  readonly method?: { readonly declaredIn?: string } | null;
 }
 
 /** A source file of the package: `file` is `src/<path>.ts`. */
@@ -186,19 +190,16 @@ function admitsNull(value: unknown): boolean {
   }
 }
 
-/** Whether a type node holds `undefined` anywhere. */
+/** Whether a type is `undefined` at its top level: through parentheses and unions, after unwrapping `Promise` / `PromiseLike` (AD-9). */
 function holdsUndefined(value: unknown): boolean {
-  if (Array.isArray(value)) {
-    return value.some(holdsUndefined);
-  }
-  const n = node(value);
+  const n = unwrapPromise(value);
   if (n === null) {
     return false;
   }
   if (n.type === "TSUndefinedKeyword") {
     return true;
   }
-  return Object.entries(n).some(([key, child]) => key !== "type" && typeof child === "object" && child !== null && holdsUndefined(child));
+  return n.type === "TSUnionType" && nodes(n["types"]).some(holdsUndefined);
 }
 
 function typeArgs(n: Node): Node[] {
@@ -264,7 +265,7 @@ interface TsMember {
   readonly static: boolean;
   readonly signatures: TsSignature[];
   /** A property (field, accessor, getter/setter, property signature) with its type; null when the member is not one. */
-  property: { readonly type: Node | null } | null;
+  property: { readonly type: Node | null; readonly optional: boolean } | null;
   matched: boolean;
 }
 
@@ -348,11 +349,11 @@ function collectMembers(decl: Node, members: Map<string, TsMember[]>): void {
         } else if (kind === "method") {
           entry(raw).signatures.push(fnSignature(fn, true));
         } else if (kind === "get") {
-          entry(raw).property = { type: unwrapAnnotation(fn["returnType"]) };
+          entry(raw).property = { type: unwrapAnnotation(fn["returnType"]), optional: false };
         } else if (kind === "set") {
           const target = entry(raw);
           if (target.property === null) {
-            target.property = { type: tsParams(fn["params"])[0]?.type ?? null };
+            target.property = { type: tsParams(fn["params"])[0]?.type ?? null, optional: false };
           }
         }
         break;
@@ -363,7 +364,7 @@ function collectMembers(decl: Node, members: Map<string, TsMember[]>): void {
       case "TSAbstractAccessorProperty":
       case "TSPropertySignature": {
         const target = entry(raw);
-        target.property = { type: unwrapAnnotation(member["typeAnnotation"]) };
+        target.property = { type: unwrapAnnotation(member["typeAnnotation"]), optional: member["optional"] === true };
         for (const fn of functionTypes(member["typeAnnotation"])) {
           target.signatures.push(fnSignature(fn, true));
         }
@@ -372,11 +373,11 @@ function collectMembers(decl: Node, members: Map<string, TsMember[]>): void {
       case "TSMethodSignature": {
         const kind = member["kind"];
         if (kind === "get") {
-          entry(raw).property = { type: unwrapAnnotation(member["returnType"]) };
+          entry(raw).property = { type: unwrapAnnotation(member["returnType"]), optional: false };
         } else if (kind === "set") {
           const target = entry(raw);
           if (target.property === null) {
-            target.property = { type: tsParams(member["params"])[0]?.type ?? null };
+            target.property = { type: tsParams(member["params"])[0]?.type ?? null, optional: false };
           }
         } else {
           entry(raw).signatures.push(fnSignature(member, true));
@@ -405,6 +406,38 @@ function parse(file: string, text: string, lang: "ts" | "dts"): Node[] {
   return nodes((result.program as unknown as Node)["body"]);
 }
 
+/** The FQCN of a contract token initializer: `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or any `Symbol.for('<FQCN>')` inside it. */
+function contractFqcn(init: Node | null): string | null {
+  if (init === null) {
+    return null;
+  }
+  const literal = (args: unknown): string | null => {
+    const first = nodes(args)[0];
+    return first !== undefined && first.type === "Literal" && typeof first["value"] === "string" ? first["value"] : null;
+  };
+  if (init.type === "CallExpression") {
+    const callee = node(init["callee"]);
+    if (callee?.type === "Identifier" && callee["name"] === "contract") {
+      return literal(init["arguments"]);
+    }
+    if (callee?.type === "MemberExpression" && nameOf(callee["object"]) === "Symbol" && nameOf(callee["property"]) === "for" && callee["computed"] !== true) {
+      return literal(init["arguments"]);
+    }
+  }
+  for (const [key, child] of Object.entries(init)) {
+    if (key === "type" || typeof child !== "object" || child === null) {
+      continue;
+    }
+    for (const sub of Array.isArray(child) ? child : [child]) {
+      const found = contractFqcn(node(sub));
+      if (found !== null) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
 interface Registration {
   readonly fqcn: string;
   readonly file: string;
@@ -420,20 +453,25 @@ interface ParsedPackage {
   /** Exported functions: name → signatures and the file declaring them. */
   readonly functions: Map<string, { file: string; signatures: TsSignature[] }>;
   /** Type literal keys by interface / type alias name, across the package's declarations. */
-  readonly typeKeys: Map<string, string[][]>;
+  readonly typeKeys: Map<string, LiteralKey[][]>;
 }
 
 function compareUnits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+interface LiteralKey {
+  readonly name: string;
+  readonly optional: boolean;
+}
+
 /** The keys of a type literal or interface body. */
-function literalKeys(members: unknown): string[] {
-  const out: string[] = [];
+function literalKeys(members: unknown): LiteralKey[] {
+  const out: LiteralKey[] = [];
   for (const member of nodes(members)) {
     const name = member["computed"] === true ? null : nameOf(member["key"]);
     if (name !== null) {
-      out.push(name);
+      out.push({ name, optional: member["optional"] === true });
     }
   }
   return out;
@@ -441,10 +479,23 @@ function literalKeys(members: unknown): string[] {
 
 function parsePackage(declarations: readonly DeclarationFile[], sources: readonly SourceFile[]): ParsedPackage {
   const parsed: ParsedPackage = { registrations: new Map(), declarations: new Map(), sources: new Map(), functions: new Map(), typeKeys: new Map() };
+  // Contract tokens (AD-1): registrations unless a registerClass of the same FQCN exists.
+  const contracts = new Map<string, Registration>();
   for (const { file, text } of [...sources].sort((a, b) => compareUnits(a.file, b.file))) {
     const statements = parse(file, text, "ts");
     parsed.sources.set(file, { statements, text });
     for (const statement of statements) {
+      const variable = declarationOf(statement);
+      if (variable !== null && variable.type === "VariableDeclaration" && variable["kind"] === "const") {
+        for (const declarator of nodes(variable["declarations"])) {
+          const local = nameOf(declarator["id"]);
+          const fqcn = contractFqcn(node(declarator["init"]));
+          if (local !== null && fqcn !== null && !contracts.has(fqcn)) {
+            contracts.set(fqcn, { fqcn, file, local });
+          }
+        }
+        continue;
+      }
       const call = statement.type === "ExpressionStatement" ? node(statement["expression"]) : null;
       if (call === null || call.type !== "CallExpression") {
         continue;
@@ -463,12 +514,31 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
       }
     }
   }
+  for (const [fqcn, registration] of contracts) {
+    if (!parsed.registrations.has(fqcn)) {
+      parsed.registrations.set(fqcn, registration);
+    }
+  }
   for (const { file, text } of [...declarations].sort((a, b) => compareUnits(a.file, b.file))) {
     const statements = parse(file, text, "dts");
     parsed.declarations.set(file, statements);
     for (const statement of statements) {
       const decl = declarationOf(statement);
       if (decl === null) {
+        continue;
+      }
+      if (statement.type === "ExportNamedDeclaration" && decl.type === "VariableDeclaration" && decl["kind"] === "const") {
+        // `export declare const f: (…) => T`: a function.
+        for (const declarator of nodes(decl["declarations"])) {
+          const id = node(declarator["id"]);
+          const fns = functionTypes(id?.["typeAnnotation"]);
+          const constName = nameOf(id);
+          if (constName !== null && fns.length > 0) {
+            const entry = parsed.functions.get(constName) ?? { file, signatures: [] };
+            entry.signatures.push(...fns.map((fn) => fnSignature(fn, true)));
+            parsed.functions.set(constName, entry);
+          }
+        }
         continue;
       }
       const name = nameOf(decl["id"]);
@@ -508,21 +578,25 @@ function classMembers(statements: readonly Node[], local: string): Map<string, T
   return members;
 }
 
-/** The source defaults of a function's parameters, by position (null where none). */
-function paramDefaults(fn: Node, text: string): (SourceDefault | null)[] {
-  return nodes(fn["params"]).map((param) => {
-    const target = param.type === "TSParameterProperty" ? node(param["parameter"]) : param;
-    if (target === null || target.type !== "AssignmentPattern") {
-      return null;
-    }
-    const right = node(target["right"]);
-    return right === null ? null : { node: right, text: text.slice(right.start, right.end) };
-  });
+/** A function's parameter names and source defaults, by position (null where none); a `this` parameter is skipped. */
+function paramDefaults(fn: Node, text: string): Implementation {
+  const names = tsParams(fn["params"]).map((param) => param.name);
+  const defaults = nodes(fn["params"])
+    .filter((param) => !(param.type === "Identifier" && param["name"] === "this"))
+    .map((param) => {
+      const target = param.type === "TSParameterProperty" ? node(param["parameter"]) : param;
+      if (target === null || target.type !== "AssignmentPattern") {
+        return null;
+      }
+      const right = node(target["right"]);
+      return right === null ? null : { node: right, text: text.slice(right.start, right.end) };
+    });
+  return { names, defaults };
 }
 
 /** Source defaults of class `local`'s methods (`static name` / `name`; `constructor`), from implementations (with a body). */
-function classDefaults(source: { statements: Node[]; text: string } | undefined, local: string): Map<string, (SourceDefault | null)[]> {
-  const out = new Map<string, (SourceDefault | null)[]>();
+function classDefaults(source: { statements: Node[]; text: string } | undefined, local: string): Map<string, Implementation> {
+  const out = new Map<string, Implementation>();
   for (const statement of source?.statements ?? []) {
     const decl = declarationOf(statement);
     if (decl === null || decl.type !== "ClassDeclaration" || nameOf(decl["id"]) !== local) {
@@ -542,14 +616,23 @@ function classDefaults(source: { statements: Node[]; text: string } | undefined,
   return out;
 }
 
-function functionDefaults(source: { statements: Node[]; text: string } | undefined, name: string): (SourceDefault | null)[] {
+/** The implementation of function `name` in a source: a function declaration, or a `const` holding an arrow or function expression. */
+function functionDefaults(source: { statements: Node[]; text: string } | undefined, name: string): Implementation | null {
   for (const statement of source?.statements ?? []) {
     const decl = declarationOf(statement);
     if (decl !== null && decl.type === "FunctionDeclaration" && nameOf(decl["id"]) === name && node(decl["body"]) !== null) {
       return paramDefaults(decl, source!.text);
     }
+    if (decl !== null && decl.type === "VariableDeclaration") {
+      for (const declarator of nodes(decl["declarations"])) {
+        const init = node(declarator["init"]);
+        if (nameOf(declarator["id"]) === name && init !== null && (init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression")) {
+          return paramDefaults(init, source!.text);
+        }
+      }
+    }
   }
-  return [];
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -655,7 +738,16 @@ function paramFailures(p: UpstreamParameter, t: TsParam, position: number, fallb
 }
 
 interface CheckContext {
-  readonly typeKeys: Map<string, string[][]>;
+  readonly typeKeys: Map<string, LiteralKey[][]>;
+  /** The implementation's parameter names and source defaults, or null when there is none. */
+  readonly implementation: Implementation | null;
+  /** The member's signature count: one signature always takes the implementation's defaults. */
+  readonly signatures: number;
+}
+
+/** An implementation's parameter names (no `this`) and their source defaults, by position. */
+interface Implementation {
+  readonly names: readonly string[];
   readonly defaults: readonly (SourceDefault | null)[];
 }
 
@@ -686,24 +778,23 @@ function returnFailures(up: UpstreamRecord, sig: TsSignature): string[] {
   return out;
 }
 
-/** Whether a TS type (or a union member, or a named interface / type alias) is a type literal whose keys are exactly `keys`. */
-function isOptionsType(value: unknown, keys: readonly string[], typeKeys: Map<string, string[][]>): boolean {
-  const same = (found: readonly string[]): boolean => found.length === keys.length && [...found].sort(compareUnits).join("\0") === [...keys].sort(compareUnits).join("\0");
+/** The key lists of a TS type that is (or has a union member, or names an interface / type alias that is) a type literal. */
+function literalKeyLists(value: unknown, typeKeys: Map<string, LiteralKey[][]>): LiteralKey[][] {
   const n = stripParens(value);
   if (n === null) {
-    return false;
+    return [];
   }
   if (n.type === "TSUnionType") {
-    return nodes(n["types"]).some((member) => isOptionsType(member, keys, typeKeys));
+    return nodes(n["types"]).flatMap((member) => literalKeyLists(member, typeKeys));
   }
   if (n.type === "TSTypeLiteral") {
-    return same(literalKeys(n["members"]));
+    return [literalKeys(n["members"])];
   }
   if (n.type === "TSTypeReference") {
     const name = typeNameTail(n["typeName"]);
-    return name !== null && (typeKeys.get(name) ?? []).some(same);
+    return name === null ? [] : (typeKeys.get(name) ?? []);
   }
-  return false;
+  return [];
 }
 
 /** The failures of one signature against an Upstream method or function, positional form. */
@@ -718,26 +809,60 @@ function positionalFailures(params: readonly UpstreamParameter[], sig: TsSignatu
     } else if (t === undefined) {
       out.push(`parameter ${i + 1} (${p.name}) is missing`);
     } else {
-      out.push(...paramFailures(p, t, i + 1, ctx.defaults[i] ?? null));
+      out.push(...paramFailures(p, t, i + 1, defaultsFor(sig, ctx)[i] ?? null));
     }
   }
   return out;
 }
 
-/** The failures of one signature in the AD-26 options form: the required parameters positionally, then one options object. */
+/** A signature's source defaults: the implementation's, when the member has one signature or the names agree; else none. */
+function defaultsFor(sig: TsSignature, ctx: CheckContext): readonly (SourceDefault | null)[] {
+  const impl = ctx.implementation;
+  if (impl === null) {
+    return [];
+  }
+  const same = sig.params.length === impl.names.length && sig.params.every((param, i) => param.name === impl.names[i]);
+  return ctx.signatures === 1 || same ? impl.defaults : [];
+}
+
+/**
+ * The failures of one signature in the AD-26 options form: the required parameters positionally, then one optional
+ * options object whose keys are exactly the optional parameters' names, each optional, then a rest parameter when
+ * Upstream ends with a variadic one.
+ */
 function optionsFailures(params: readonly UpstreamParameter[], sig: TsSignature, ctx: CheckContext): string[] {
   const required = params.filter((p) => !p.optional);
   const optional = params.filter((p) => p.optional && !p.variadic);
+  const variadic = params.find((p) => p.variadic) ?? null;
   const out = positionalFailures(required, { ...sig, params: sig.params.slice(0, required.length) }, ctx);
   const keys = optional.map((p) => camel(p.name));
   const position = required.length + 1;
   const options = sig.params[required.length];
+  const sorted = (names: readonly string[]): string => [...names].sort(compareUnits).join("\0");
+  const match = options === undefined || options.rest ? undefined : literalKeyLists(options.type, ctx.typeKeys).find((list) => sorted(list.map((key) => key.name)) === sorted(keys));
   if (options === undefined) {
     out.push(`parameter ${position} (options) is missing`);
-  } else if (options.rest || !isOptionsType(options.type, keys, ctx.typeKeys)) {
+  } else if (match === undefined) {
     out.push(`parameter ${position} is not an options object with keys ${keys.join(", ")}`);
+  } else {
+    if (!options.optional) {
+      out.push(`parameter ${position} is not optional`);
+    }
+    for (const key of match.filter((k) => !k.optional)) {
+      out.push(`parameter ${position} key ${key.name} is not optional`);
+    }
   }
-  for (let i = required.length + 1; i < sig.params.length; i++) {
+  let next = required.length + 1;
+  if (variadic !== null) {
+    const rest = sig.params[next];
+    if (rest === undefined) {
+      out.push(`parameter ${next + 1} (${variadic.name}) is missing`);
+    } else {
+      out.push(...paramFailures(variadic, rest, next + 1, null));
+    }
+    next++;
+  }
+  for (let i = next; i < sig.params.length; i++) {
     out.push(`parameter ${i + 1} (${sig.params[i]!.name}) is extra`);
   }
   return out;
@@ -760,6 +885,9 @@ function signatureFailures(up: UpstreamRecord, sig: TsSignature, tsStatic: boole
 /** The failures of a property, constant or case against a TS property. */
 function propertyFailures(up: UpstreamRecord, member: TsMember): string[] {
   const out = staticFailures(up.static === true, member.static);
+  if (member.property?.optional === true || holdsUndefined(member.property?.type ?? null)) {
+    out.push("returns undefined (AD-9)");
+  }
   const type = up.type ?? null;
   if (up.kind === "property" && type !== null) {
     const nullable = admitsNull(member.property?.type ?? null);
@@ -830,14 +958,23 @@ export function diffComponent(input: DiffInput): ComponentDiff {
   // DIV-12: the Upstream members not expected, keyed `<fqcn>\0<kind>\0<name>`.
   const notExpected = new Map<string, string>();
   for (const pair of input.div12) {
-    const at = (kind: string): string => `${pair.class}\0${kind}\0${pair.name}`;
+    // Each side's rule applies on the pair's class and on that side's declaring class.
+    const set = (kind: "property" | "method"): void => {
+      const declaredIn = pair[kind]?.declaredIn;
+      for (const owner of new Set([pair.class, ...(typeof declaredIn === "string" ? [declaredIn] : [])])) {
+        const at = `${owner}\0${kind}\0${pair.name}`;
+        if (!notExpected.has(at)) {
+          notExpected.set(at, pair.classification);
+        }
+      }
+    };
     if (pair.classification === "option-pair") {
-      notExpected.set(at("property"), pair.classification);
-      notExpected.set(at("method"), pair.classification);
+      set("property");
+      set("method");
     } else if (pair.classification === "method-plus-state") {
-      notExpected.set(at("property"), pair.classification);
+      set("property");
     } else if (pair.classification === "model-config") {
-      notExpected.set(at("method"), pair.classification);
+      set("method");
     }
   }
 
@@ -879,13 +1016,20 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       const candidates = (members.get(name) ?? []).filter((m) => (role === "method" ? m.signatures.length > 0 : m.property !== null));
       const member = candidates.find((m) => m.static === (up.static === true)) ?? candidates[0];
       if (member === undefined) {
-        unmatched.push(up);
+        // The same name in the other role: a mismatch, not a rename.
+        const other = (members.get(name) ?? []).find((m) => !m.matched);
+        if (other !== undefined) {
+          other.matched = true;
+          add("mismatch", up.kind, fqcn, up.member, role === "method" ? "is a property, Upstream method" : `is a method, Upstream ${up.kind}`);
+        } else {
+          unmatched.push(up);
+        }
         continue;
       }
       member.matched = true;
       let failures: string[];
       if (role === "method") {
-        const ctx = { typeKeys: pkg.typeKeys, defaults: defaults.get(`${member.static ? "static " : ""}${member.name}`) ?? [] };
+        const ctx = { typeKeys: pkg.typeKeys, implementation: defaults.get(`${member.static ? "static " : ""}${member.name}`) ?? null, signatures: member.signatures.length };
         failures = bestFailures(member.signatures.map((sig) => signatureFailures(up, sig, member.static, ctx)));
       } else {
         failures = propertyFailures(up, member);
@@ -929,7 +1073,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       add("missing", "function", up.fqcn, null);
       continue;
     }
-    const ctx = { typeKeys: pkg.typeKeys, defaults: functionDefaults(pkg.sources.get(fn.file), name) };
+    const ctx = { typeKeys: pkg.typeKeys, implementation: functionDefaults(pkg.sources.get(fn.file), name), signatures: fn.signatures.length };
     const failures = bestFailures(fn.signatures.map((sig) => signatureFailures(up, sig, false, ctx)));
     if (failures.length > 0) {
       add("mismatch", "function", up.fqcn, null, failures.join("; "));
@@ -1245,7 +1389,12 @@ export function main(argv: readonly string[]): number {
     console.log(renderSummary(diff));
   }
   if (markdown !== null) {
-    writeFileSync(markdown, renderMarkdown(diffs));
+    try {
+      writeFileSync(markdown, renderMarkdown(diffs));
+    } catch (error) {
+      console.error(`api-surface: ${(error as Error).message}`);
+      return 1;
+    }
   }
   return 0;
 }

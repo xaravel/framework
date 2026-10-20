@@ -1,3 +1,5 @@
+{"fqcn":"Demo\\Contracts\\Store","kind":"interface","member":null,"stubbed":[]}
+{"fqcn":"Demo\\Contracts\\Store","kind":"method","member":"get","static":false,"parameters":[{"name":"key","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":"mixed","nullable":true}
 {"fqcn":"Demo\\Missing","kind":"class","member":null,"stubbed":[]}
 {"fqcn":"Demo\\Missing","kind":"method","member":"run","static":false,"parameters":[],"returns":"void","nullable":false}
 {"fqcn":"Demo\\Model","kind":"class","member":null,"stubbed":[]}
@@ -10,6 +12,7 @@
 {"fqcn":"Demo\\Repository","kind":"class","member":null,"stubbed":[]}
 {"fqcn":"Demo\\Repository","kind":"constant","member":"LIMIT","static":true}
 {"fqcn":"Demo\\Repository","kind":"property","member":"cache_key","static":false,"type":"?string","nullable":true}
+{"fqcn":"Demo\\Repository","kind":"property","member":"connection","static":false,"type":"?string","nullable":true}
 {"fqcn":"Demo\\Repository","kind":"property","member":"label","static":false,"type":"?string","nullable":true}
 {"fqcn":"Demo\\Repository","kind":"method","member":"__construct","static":false,"parameters":[{"name":"config","type":"array","nullable":false,"default":"[]","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Demo\\Repository","kind":"method","member":"__toString","static":false,"parameters":[],"returns":"string","nullable":false}

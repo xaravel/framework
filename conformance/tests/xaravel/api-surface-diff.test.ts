@@ -77,6 +77,8 @@ const DETAILS = [
   `demo: div12 property ${M}::status: method-plus-state`,
   `demo: div12 method ${M}::fillable: model-config`,
   `demo: div12 method ${M}::middleware: option-pair`,
+  `demo: extra method ${M}::setFillable (explained: DIV-12)`,
+  `demo: div12 property ${R}::connection: method-plus-state`,
   `demo: mismatch property ${R}::label: is not nullable, Upstream ?string`,
   `demo: mismatch method ${R}::find: returns undefined (AD-9)`,
   `demo: mismatch method ${R}::remember: parameter 2 default 30, Upstream 60`,
@@ -88,7 +90,7 @@ const DETAILS = [
   String.raw`demo: missing function Demo\other_fn`,
   `demo: stale exception ${R}::gone: DIV-1`,
 ];
-const SUMMARY = "api-surface demo: 32 Upstream, 18 matched, 3 missing, 1 renamed, 2 extra, 5 mismatched, 4 div12; 7 unexplained (AD-15)";
+const SUMMARY = "api-surface demo: 35 Upstream, 20 matched, 3 missing, 1 renamed, 3 extra, 5 mismatched, 5 div12; 7 unexplained (AD-15)";
 /** The unexplained ones, in order. */
 const UNEXPLAINED = DETAILS.filter((line) => !line.includes("(explained:") && !/: (div12|stale) /.test(line));
 
@@ -174,7 +176,30 @@ function matrixEdgeCases(): void {
   expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: { bC?: number }): void;")).toEqual([
     "x: mismatch method X\\A::f: parameter 2 is not an options object with keys bC, d",
   ]);
-  // Returns: undefined anywhere (AD-9); nullability after unwrapping a Promise.
+  // The options parameter and each of its keys must be optional; a trailing Upstream variadic needs a rest parameter after it.
+  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options: { bC?: number; d?: number }): void;")).toEqual(["x: mismatch method X\\A::f: parameter 2 is not optional"]);
+  expect(single([method("X\\A", "f", opts)], "f(a: unknown, options?: { bC: number; d?: number }): void;")).toEqual(["x: mismatch method X\\A::f: parameter 2 key bC is not optional"]);
+  const withRest = [...opts, p("rest", { optional: true, variadic: true })];
+  expect(single([method("X\\A", "f", withRest)], "f(a: unknown, options?: { bC?: number; d?: number }, ...rest: unknown[]): void;")).toEqual([]);
+  expect(single([method("X\\A", "f", withRest)], "f(a: unknown, options?: { bC?: number; d?: number }): void;")).toEqual([
+    "x: mismatch method X\\A::f: parameter 3 (rest) is missing",
+  ]);
+  // Returns: undefined at the top level only (AD-9); nullability after unwrapping a Promise.
+  expect(single([method("X\\A", "f")], "f(): (x?: string | undefined) => void;")).toEqual([]);
+  expect(single([method("X\\A", "f")], "f(): (string | undefined);")).toEqual(["x: mismatch method X\\A::f: returns undefined (AD-9)"]);
+  // Properties: an optional property or a top-level undefined fails (AD-9).
+  const label = { fqcn: "X\\A", kind: "property", member: "label", static: false, type: null, nullable: true } as const;
+  expect(single([label], "label?: string;")).toEqual(["x: mismatch property X\\A::label: returns undefined (AD-9)"]);
+  expect(single([label], "label: string | undefined;")).toEqual(["x: mismatch property X\\A::label: returns undefined (AD-9)"]);
+  // A member in the other role is a mismatch, not a rename.
+  expect(single([method("X\\A", "size")], "size: number;")).toEqual(["x: mismatch method X\\A::size: is a property, Upstream method"]);
+  expect(single([label], "label(): string;")).toEqual(["x: mismatch property X\\A::label: is a method, Upstream property"]);
+  // Overloads take the implementation's defaults only when their names match it; a single signature always does.
+  expect(single([method("X\\A", "f", [p("b", { optional: true, default: "5" })])], "f(b?: unknown): void;\nf(a: unknown, b: unknown): void;", "f(a: unknown = 1, b: unknown = 2) {}")).toEqual([]);
+  expect(single([method("X\\A", "f", [p("a", { optional: true, default: "5" })])], "f(a?: unknown): void;", "f(a: unknown = 1) {}")).toEqual(["x: mismatch method X\\A::f: parameter 1 default 1, Upstream 5"]);
+  // A `this` parameter does not shift the defaults.
+  expect(single([method("X\\A", "f", [p("a", { optional: true, default: "1" })])], "f(this: A, a?: unknown): void;", "f(this: A, a: unknown = 2) {}")).toEqual(["x: mismatch method X\\A::f: parameter 1 default 2, Upstream 1"]);
+  // Returns: nullability after unwrapping a Promise.
   expect(single([method("X\\A", "f", [], { returns: "?int", nullable: true })], "f(): Promise<number | null>;")).toEqual([]);
   expect(single([method("X\\A", "f", [], { returns: "?int", nullable: true })], "f(): number;")).toEqual(["x: mismatch method X\\A::f: return is not nullable, Upstream ?int"]);
   expect(single([method("X\\A", "f", [], { returns: "int", nullable: false })], "f(): Promise<number | undefined>;")).toEqual(["x: mismatch method X\\A::f: returns undefined (AD-9)"]);
@@ -219,6 +244,29 @@ function matrixEdgeCases(): void {
   });
   expect(registrations.items.map((item) => renderItem("x", item))).toEqual(["x: missing class X\\B"]);
   expect(registrations.matched).toBe(2);
+  // Functions: an exported const typed as a function counts, with defaults from its arrow function.
+  const consts = diffComponent({
+    component: "x",
+    upstream: [{ fqcn: "X\\do_it", kind: "function", member: null, static: false, parameters: [p("a", { optional: true, default: "1" })], returns: null, nullable: true }],
+    additions: [],
+    exceptions: [],
+    div12: [],
+    declarations: [{ file: "src/f.ts", text: "export declare const doIt: (a?: number) => void;\n" }],
+    sources: [{ file: "src/f.ts", text: "export const doIt = (a = 2): void => {\n  void a;\n};\n" }],
+  });
+  expect(consts.items.map((item) => renderItem("x", item))).toEqual(["x: mismatch function X\\do_it: parameter 1 default 2, Upstream 1"]);
+  // Contracts (AD-1): a top-level const holding Symbol.for('<FQCN>') registers the interface of that name; registerClass wins.
+  const contracts = diffComponent({
+    component: "x",
+    upstream: [{ fqcn: "X\\Lock", kind: "interface", member: null }, method("X\\Lock", "release"), { fqcn: "X\\Gate", kind: "interface", member: null }, method("X\\Gate", "allows")],
+    additions: [],
+    exceptions: [],
+    div12: [],
+    declarations: [{ file: "src/L.ts", text: "export interface Lock {\n  release(): void;\n}\nexport declare const Lock: { readonly brand: symbol };\nexport interface Gate {\n  denies(): void;\n}\nexport declare class G {\n  allows(): void;\n}\n" }],
+    sources: [{ file: "src/L.ts", text: 'export const Lock = { brand: Symbol.for("X\\\\Lock") };\nconst Gate = contract("X\\\\Gate");\nexport class G {}\nregisterClass("X\\\\Gate", G);\n' }],
+  });
+  expect(contracts.items.map((item) => renderItem("x", item))).toEqual([]);
+  expect(contracts.matched).toBe(4);
   // A declaration that does not parse fails, naming the file.
   expect(() => single([], "f(: void;")).toThrow("src/A.ts (declarations) does not parse");
 }
@@ -235,6 +283,10 @@ xaravelTest(
     expect(run.stderr).toBe("");
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toBe([...DETAILS, SUMMARY, ""].join("\n"));
+    // The contract interface Demo\Contracts\Store, registered by its `contract<Store>('<FQCN>')` token (AD-1), matches:
+    // no item names it. The DIV-12 pair on Demo\Child applies to the property on its declaring class Demo\Repository.
+    expect(run.stdout).not.toContain("Store");
+    expect(run.stdout).toContain(`demo: div12 property ${R}::connection: method-plus-state\n`);
     // The declarations came from tsc, into the fixture tsconfig's outDir.
     expect(existsSync(join(dir, ".cache", "tsc", "demo", "src", "Repository.d.ts"))).toBe(true);
     // Without --details: the summary line only; --all is every component file (the citation files are not components).
@@ -317,6 +369,8 @@ xaravelTest(
         `demo: div12 property ${M}::status: method-plus-state`,
         `demo: div12 method ${M}::fillable: model-config`,
         `demo: div12 method ${M}::middleware: option-pair`,
+        `demo: extra method ${M}::setFillable (explained: DIV-12)`,
+        `demo: div12 property ${R}::connection: method-plus-state`,
         `demo: mismatch property ${R}::label: is not nullable, Upstream ?string (explained: DIV-3)`,
         `demo: mismatch method ${R}::find: returns undefined (AD-9) (explained: DIV-3)`,
         `demo: mismatch method ${R}::remember: parameter 2 default 30, Upstream 60 (explained: DIV-3)`,
@@ -326,7 +380,7 @@ xaravelTest(
         `demo: renamed method ${R}::getURL -> getUrl (explained: DIV-12, FR-115)`,
         `demo: extra method ${R}::extraHelper (explained: DIV-12)`,
         String.raw`demo: missing function Demo\other_fn (explained: deferred:helpers)`,
-        "api-surface demo: 32 Upstream, 18 matched, 3 missing, 1 renamed, 2 extra, 5 mismatched, 4 div12; 0 unexplained (AD-15)",
+        "api-surface demo: 35 Upstream, 20 matched, 3 missing, 1 renamed, 3 extra, 5 mismatched, 5 div12; 0 unexplained (AD-15)",
         "",
       ].join("\n"),
     );
@@ -383,14 +437,18 @@ xaravelTest(
       [
         "| Component | Upstream | Matched | Missing | Renamed | Extra | Mismatched | Unexplained |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
-        "| demo | 32 | 18 | 3 | 1 | 2 | 5 | 7 |",
-        "| **Total** | 32 | 18 | 3 | 1 | 2 | 5 | 7 |",
+        "| demo | 35 | 20 | 3 | 1 | 3 | 5 | 7 |",
+        "| **Total** | 35 | 20 | 3 | 1 | 3 | 5 | 7 |",
         "",
       ].join("\n"),
     );
     expect(renderMarkdown([])).toContain("| **Total** | 0 | 0 | 0 | 0 | 0 | 0 | 0 |");
-    // The gate fails on the same root.
+    // The gate fails on the same root. An unwritable --markdown path fails with the reason, not a stack trace.
     expect(cli(dir, ["--gate", "demo"]).exitCode).toBe(1);
+    const unwritable = cli(dir, ["--markdown", join(dir, "no", "such", "dir", "table.md"), "demo"]);
+    expect(unwritable.exitCode).toBe(1);
+    expect(unwritable.stderr).toStartWith("api-surface: ENOENT");
+    expect(unwritable.stderr).not.toContain("    at ");
 
     // Usage: an unknown component is named (exit 2); nothing selected, both forms, an unknown option.
     const unknown = cli(dir, ["nope"]);
@@ -410,6 +468,7 @@ xaravelTest(
     expect(Object.keys(flow.jobs)).toEqual(["report"]);
     const job = flow.jobs["report"]!;
     expect(job.permissions).toEqual({ contents: "read" });
+    expect((job as { "timeout-minutes"?: unknown })["timeout-minutes"]).toBe(20);
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
     expect(job.steps[0]).toEqual({ uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } });

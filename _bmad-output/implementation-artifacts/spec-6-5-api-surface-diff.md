@@ -3,9 +3,9 @@ title: 'Story 6.5: API-surface diff'
 type: 'feature'
 created: '2026-10-19'
 baseline_revision: '5541ef69e7132106ddf6f04c17af3f6a4ebf0b41'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-6-context.md'
   - '{project-root}/AGENTS.md'
@@ -99,6 +99,40 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-19 — Review pass
+- verdicts: 30 findings — high 2, medium 6, low 16, false 6, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` (blind) DIV-12 pairs applied only on `pair.class`, while the export lists a member on its `declaredIn` class (35 real records) — each side's not-expected rule now also applies to the record on that side's `declaredIn` class; fixture pair added.
+  - `[high]` `[patch]` (blind) interfaces can never match: spine AD-1 ports contracts as `interface` plus a `Symbol.for('<FQCN>')` / `contract<T>('<FQCN>')` token, never `registerClass`, so `api-surface:gate contracts` could not pass — a top-level token const is now a registration of its FQCN; fixture and docs added. The spine names exactly one form, so this follows the intent rather than widening it.
+  - `[medium]` `[patch]` (blind) trait members are never seen — documented in § Limits (mixin-built traits, members from mixins); the mixin shape is PORTING.md's (AD-26), not yet decided.
+  - `[low]` `[patch]` (blind) options form ignores a trailing variadic and the options parameter's optionality — the rest parameter and optional options/keys are now required; tested.
+  - `[medium]` `[patch]` (blind) implementation defaults applied by position to every overload — defaults are compared only on a signature whose names equal the implementation's; tested.
+  - `[medium]` `[patch]` (blind) AD-9 not checked on properties, and nested `undefined` flagged in returns — top-level only for returns; optional or `undefined` properties fail; tested.
+  - `[low]` `[reject]` (blind) the Missing column understates scale for unregistered classes — the summary format is the spec's; the Upstream column gives the scale, `--details` lists each class.
+  - `[low]` `[reject]` (blind) stale citations are shown only with `--details`, and lines naming an unknown component are never reported — `oracle:api-surface --check` already validates the citation files' schema; unlikely, and the fix adds a cross-component pass.
+  - `[low]` `[reject]` (blind) XT-139 runs `tsc -b` on the real repository, writing `.cache/tsc` — gitignored build output, the same as `bun run typecheck` and Story 6.4's XT-136; no tracked path is written.
+  - `[false]` `[reject]` (blind) Story marked done while sprint status says in-progress and the spec in-review — the orchestrator sets sprint status and the spec to done at finalize, in the same PR.
+  - `[low]` `[patch]` (blind) workflow has no `timeout-minutes` — added (20). Concurrency and a paths filter rejected: the report is meant to run on every PR and in the queue (AD-15, AD-28); a failing checkout/install is infrastructure, and the check is not required.
+  - `[low]` `[patch]` (blind) no test of a model-config method moved to a new name — fixture `setFillable` as `extra` explained by an `additions.jsonl` DIV-12 line; asserted.
+  - `[low]` `[patch]` (blind) by-reference parameters silently unchecked — documented in § Limits.
+  - `[low]` `[reject]` (blind) duplicate Upstream records overwritten; reader errors untested — the export is schema-checked and canonical (XT-conformance-199, `oracle:api-surface --check`); unlikely.
+  - `[high]` `[patch]` (edge) interfaces ported as contract tokens are always missing — same root cause as the blind row; fixed there.
+  - `[low]` `[patch]` (edge) Upstream method vs same-named TS property reported as `renamed foo -> foo` — now a `mismatch` naming the role.
+  - `[low]` `[patch]` (edge) options form with a trailing variadic never passes — same as the blind options row.
+  - `[low]` `[patch]` (edge) a TS `this` parameter shifts source defaults — skipped in `paramDefaults`.
+  - `[medium]` `[patch]` (edge) nested `undefined` falsely flagged — same as the blind AD-9 row.
+  - `[low]` `[reject]` (edge) two Upstream functions sharing a short name both match one TS function — none at the Pin share a component and short name in a way that matters today; a fix needs a namespace-to-module map.
+  - `[medium]` `[patch]` (edge) `export declare const f: (…) => T` functions not collected — collected as function signatures; tested.
+  - `[low]` `[reject]` (edge) an options interface using `extends`/`Partial` is reported as a mismatch — fails loudly and is citable; resolving heritage is type-aware work outside the syntactic walk.
+  - `[false]` `[reject]` (edge) a registered TS `enum` has no members — AD-26 forbids TS `enum` (enums are classes with static instances).
+  - `[low]` `[reject]` (edge) aliased or member-expression `registerClass` calls are skipped — AD-10 fixes the call form; Story 6.6's registration scan enforces it.
+  - `[low]` `[reject]` (edge) misspelled citation component never reported stale — same as the blind stale row.
+  - `[false]` `[reject]` (edge) a package with `package.json` but no `tsconfig.json` fails `tsc -b` — `scaffold:check` guarantees every package's tsconfig; and the failure is loud, not wrong.
+  - `[low]` `[patch]` (edge) unwritable `--markdown` path throws a stack trace — caught; exit 1 with the reason.
+  - `[false]` `[reject]` (edge) `member: null` on a method record, or a nameless parameter — the export's schema (`$defs/surface`) forbids both, checked by XT-conformance-199.
+  - `[false]` `[reject]` (edge) braced `namespace A { }` followed by non-namespaced code — PHP forbids code outside a namespace block once braced namespaces are used; `namespace {` resets to the global namespace, which the tokenizer handles.
+  - `[false]` `[reject]` (intent) the readings diverge on surface: fixtures instead of the real repository, job summary instead of a PR comment, DIV-12 as suppression, the cross-check proved on the fixture — descriptive. The PR comment is ruled out by AD-16 (Design Notes); the real repository runs in XT-139; model-config renames go through citations because the pair list holds no target; the real export runs the cross-check in `oracle.yml#build`, which this PR triggers through `tools/oracle/**`.
+
 ## Design Notes
 
 "Posts a per-Component summary" is met with the job summary of a read-only check, shown on the PR's checks page: a PR comment needs `pull-requests: write`, which AD-16 reserves for the Oracle, dashboard and release jobs. The dashboard (Epic 7) is the other display AD-15 names.
@@ -112,3 +146,48 @@ Every Component package is a scaffold today, so `--all` reports nearly everythin
 - `bun run api-surface --all` -- expected: exit 0, 41 summary lines
 - `bun run lint`, `bun run typecheck`, `bun run test`, `bun run harness --xaravel`, `bun run async-surface --all --check` -- expected: exit 0
 - `bun run ownership:check`, `bun run escalations:check`, `bun tools/workflow-permissions/workflow-permissions.ts check`, `bun run story:check 6.5` -- expected: exit 0 (approvals/full-run clauses need CI)
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** `bun run api-surface [--root <dir>] [--details] [--markdown <file>] (<component>… | --all)` (`tools/api-surface/api-surface.ts`) builds each Component package's declarations with Story 6.4's `tsc -b` helper. It maps each `registerClass('<FQCN>', X)`, and each AD-1 contract token (`contract<T>('<FQCN>')` or `Symbol.for('<FQCN>')`), to `X`'s `.d.ts` declaration. It then diffs that against `conformance/api-surface/<component>.jsonl`, after these mappings:
+- camelCase, plus `__construct` → `constructor` and `__toString` → `toString`;
+- the AD-26 options-object form;
+- DIV-12 (`div12-pairs.jsonl`, applied on the pair's class and on each side's `declaredIn` class).
+
+It reports missing, renamed, extra and mismatched items. Mismatches cover parameter name, default (literal defaults read from the source), nullability, optionality, variadic, static, role, and AD-9 `undefined`. Citation lines in `exceptions.jsonl` / `additions.jsonl` explain items, and lines that explain nothing are listed as stale. Report mode always exits 0. `bun run api-surface:gate <component>` exits 1 while anything is unexplained. The new read-only workflow `api-surface.yml` runs on PRs and in the merge queue, writes the per-Component table to the job summary, and always ends with `exit 0`. `tools/oracle/api-surface.php` now cross-checks the class list after the load: `get_declared_*`, plus a tokenizer pass over `src/`. Any missed class fails the run and is named.
+
+**Files changed.**
+- `tools/api-surface/api-surface.ts` (new): the diff, the gate and the CLI. `tools/api-surface/fixtures/` (new): the demo package, a demo export, a DIV-12 pair list and citation files.
+- `tools/async-surface/async-surface.ts`: exports its declaration helpers and the new `emitDeclarations`. Behaviour is unchanged.
+- `tools/oracle/api-surface.php`: the class-list cross-check.
+- `.github/workflows/api-surface.yml` (new): the PR and merge-queue report.
+- `package.json`: the `api-surface` and `api-surface:gate` scripts. `tsconfig.json`: includes the tool.
+- `conformance/tests/xaravel/api-surface-diff.test.ts` (new): XT-conformance-137, 138 and 139, plus edge cases. `conformance/tests/xaravel/api-surface.test.ts`: XT-conformance-198 gains the cross-check runs. No assertion was removed.
+- `docs/ops/api-surface.md` (new). `docs/ops/oracle.md` and `docs/ops/ci.md` updated.
+- `stories/6.5.md` and `sprint-status.yaml`: set to done.
+
+**Review.** 30 findings: 2 high, 6 medium, 16 low and 6 false.
+- Patched:
+  - both highs (the same root cause): contract tokens now register interfaces;
+  - 5 medium entries: DIV-12 `declaredIn`, overload defaults, AD-9 on properties and nested types, exported const functions, and trait members (added to § Limits);
+  - 9 low: the options form with a variadic and optional keys, role mismatch, the `this` parameter, the `--markdown` write error, the workflow timeout, a model-config rename fixture, and by-ref parameters in § Limits.
+- Rejected low, each with its reason in the Triage Log: missing-count scale, stale citations outside `--details`, the real-repo `tsc -b` cache, duplicate records, shared function short names, `extends`/`Partial` options types, and aliased `registerClass`.
+- Rejected false: status bookkeeping, TS enums, packages without a tsconfig, `member: null` records, braced namespaces, and the intent audit's descriptive divergences.
+- Nothing was deferred.
+
+**Follow-up review recommended: true.** A high entry (contract-token registration) was patched in one pass. It has been checked only against a fixture, because `@xaravel/contracts` has no tokens yet. Story 10.5 fixes the real token form, and the recognition (`contract(...)` / `Symbol.for(...)` in a top-level const initializer) has to be checked against it.
+
+**Verification.**
+- `bun test` on the two api-surface test files: 9 pass.
+- `bun run test`: 248 pass in 4 of 5 runs. The one failing run overlapped with the implementation subagent's own concurrent `tsc -b`/test run on the same `.cache`, and its output was lost. The 4 later runs passed.
+- `bun run harness --xaravel`: 248 passed, differ=0.
+- These all exit 0: `bun run api-surface --all` (41 components), `typecheck`, `lint`, `async-surface --all --check`, `bun audit --audit-level=high`, `ownership:check`, `escalations:check`, and the workflow-permissions check.
+- `bun run story:check 6.5`: manifest, tests, xaravel-tests, fixtures and escalations pass. approvals and full-run need `GH_TOKEN` and run in CI.
+
+**Residual risks.**
+- The walk is syntactic. It does not see inherited members, mixin-supplied trait members, aliases, or `extends`/`Partial` options types, and by-ref parameters are not checked (see § Limits).
+- DIV-12 model-config renames have no target in the pair list, so each one needs a pair of citation lines.
+- The real Oracle-image run of the cross-check is exercised only by `oracle.yml#build` on this PR. The tokenizer probe found no missed class at the Pin.
+- `bun run test` failed once without a captured cause; possibly a race on the shared `.cache/tsc` outDirs.

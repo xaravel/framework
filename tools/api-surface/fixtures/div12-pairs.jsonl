@@ -1,3 +1,4 @@
+{"class":"Demo\\Child","name":"connection","classification":"method-plus-state","property":{"declaredIn":"Demo\\Repository","static":false},"method":{"declaredIn":"Demo\\Child","static":false}}
 {"class":"Demo\\Model","name":"fillable","classification":"model-config","property":{"declaredIn":"Demo\\Model","static":false},"method":{"declaredIn":"Demo\\Model","static":false}}
 {"class":"Demo\\Model","name":"middleware","classification":"option-pair","property":{"declaredIn":"Demo\\Model","static":false},"method":{"declaredIn":"Demo\\Model","static":false}}
 {"class":"Demo\\Model","name":"status","classification":"method-plus-state","property":{"declaredIn":"Demo\\Model","static":false},"method":{"declaredIn":"Demo\\Model","static":false}}

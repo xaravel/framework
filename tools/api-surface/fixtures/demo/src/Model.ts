@@ -8,6 +8,12 @@ export class Model {
   /** `model-config`: the property is expected (the method is div12). */
   fillable: string[] = [];
 
+  /** `model-config`: Upstream's `fillable(array)` under its new name: extra, explained by additions.jsonl citing DIV-12. */
+  setFillable(fillable: string[]): this {
+    this.fillable = fillable;
+    return this;
+  }
+
   /** `method-plus-state`: the method is expected (the property is div12). */
   status(): number {
     return 200;

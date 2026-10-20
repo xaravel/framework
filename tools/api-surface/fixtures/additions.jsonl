@@ -1,2 +1,3 @@
 {"component":"demo","fqcn":"Demo\\Extra","member":null,"citation":"FR-115"}
+{"component":"demo","fqcn":"Demo\\Model","member":"setFillable","citation":"DIV-12"}
 {"component":"demo","fqcn":"Demo\\Repository","member":"extraHelper","citation":"DIV-12"}
