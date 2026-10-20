@@ -244,6 +244,41 @@ function matrixEdgeCases(): void {
   });
   expect(registrations.items.map((item) => renderItem("x", item))).toEqual(["x: missing class X\\B"]);
   expect(registrations.matched).toBe(2);
+  // A leading `\` is dropped (Story 6.6's recogniser), so `\X\A` matches Upstream `X\A`; a contract token's leading `\` is dropped too.
+  const leading = diffComponent({
+    component: "x",
+    upstream: [decl("X\\A"), method("X\\A", "f"), { fqcn: "X\\Lock", kind: "interface", member: null }],
+    additions: [],
+    exceptions: [],
+    div12: [],
+    declarations: [{ file: "src/A.ts", text: "export declare class A {\n  f(): void;\n}\nexport interface Lock {\n}\n" }],
+    sources: [{ file: "src/A.ts", text: 'export class A {}\nconst Lock = contract("\\\\X\\\\Lock");\nregisterClass("\\\\X\\\\A", A);\n' }],
+  });
+  expect(leading.items.map((item) => renderItem("x", item))).toEqual([]);
+  expect(leading.matched).toBe(3);
+  // A call the scan rejects does not register.
+  const rejected = diffComponent({
+    component: "x",
+    upstream: [decl("X\\A")],
+    additions: [],
+    exceptions: [],
+    div12: [],
+    declarations: [{ file: "src/A.ts", text: "export declare class A {\n}\n" }],
+    sources: [{ file: "src/A.ts", text: 'export class A {}\nregisterClass("X/A", A);\nregisterClass?.("X\\\\A", A);\n' }],
+  });
+  expect(rejected.items.map((item) => renderItem("x", item))).toEqual(["x: missing class X\\A"]);
+  expect(rejected.matched).toBe(0);
+  // The case is kept.
+  const cased = diffComponent({
+    component: "x",
+    upstream: [decl("X\\A")],
+    additions: [],
+    exceptions: [],
+    div12: [],
+    declarations: [{ file: "src/A.ts", text: "export declare class A {\n}\n" }],
+    sources: [{ file: "src/A.ts", text: 'export class A {}\nregisterClass("\\\\x\\\\a", A);\n' }],
+  });
+  expect(cased.items.map((item) => renderItem("x", item))).toEqual(["x: missing class X\\A", "x: extra class x\\a"]);
   // Functions: an exported const typed as a function counts, with defaults from its arrow function.
   const consts = diffComponent({
     component: "x",

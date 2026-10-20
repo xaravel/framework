@@ -11,9 +11,11 @@
 // It emits the packages' declarations with Story 6.4's `tsc -b` helper
 // (a package with no `package.json` has no declarations: everything is
 // missing), maps each top-level `registerClass('<FQCN>', X)` in
-// `packages/<c>/src/**/*.ts` (or, for a contract, a top-level
-// `const X = contract('<FQCN>')` or one holding `Symbol.for('<FQCN>')`, AD-1)
-// to the `class`/`interface` `X` of that file's `.d.ts`, and compares its public members with the Upstream records, after
+// `packages/<c>/src/**/*.ts` that Story 6.6's `recogniseRegistration` accepts
+// (or, for a contract, a top-level `const X = contract('<FQCN>')` or one
+// holding `Symbol.for('<FQCN>')`, AD-1), keyed by the FQCN without its leading
+// `\` (`normaliseFqcn`; the case is kept), to the `class`/`interface` `X` of
+// that file's `.d.ts`, and compares its public members with the Upstream records, after
 // the parity mappings: camelCase (`camel`), `__construct` → `constructor`,
 // `__toString` → `toString`, the AD-26 options object, and the DIV-12 pairs
 // (`conformance/scans/div12-pairs.jsonl`). Findings: `missing`, `extra`,
@@ -39,6 +41,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join, relative, resolve, sep } from "node:path";
 import { parseSync } from "oxc-parser";
 import { emitDeclarations, nameOf, node, nodes, packageDeclarations, typeNameTail, unwrapAnnotation, type DeclarationFile, type Node } from "../async-surface/async-surface";
+import { normaliseFqcn, recogniseRegistration } from "../registration/registration";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 export const API_SURFACE_DIR = "conformance/api-surface";
@@ -489,28 +492,18 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
       if (variable !== null && variable.type === "VariableDeclaration" && variable["kind"] === "const") {
         for (const declarator of nodes(variable["declarations"])) {
           const local = nameOf(declarator["id"]);
-          const fqcn = contractFqcn(node(declarator["init"]));
+          const token = contractFqcn(node(declarator["init"]));
+          const fqcn = token === null ? null : normaliseFqcn(token);
           if (local !== null && fqcn !== null && !contracts.has(fqcn)) {
             contracts.set(fqcn, { fqcn, file, local });
           }
         }
         continue;
       }
-      const call = statement.type === "ExpressionStatement" ? node(statement["expression"]) : null;
-      if (call === null || call.type !== "CallExpression") {
-        continue;
-      }
-      const callee = node(call["callee"]);
-      const args = nodes(call["arguments"]);
-      if (callee?.type !== "Identifier" || callee["name"] !== "registerClass" || args.length !== 2) {
-        continue;
-      }
-      const [fqcn, local] = args as [Node, Node];
-      if (fqcn.type !== "Literal" || typeof fqcn["value"] !== "string" || local.type !== "Identifier" || typeof local["name"] !== "string") {
-        continue;
-      }
-      if (!parsed.registrations.has(fqcn["value"])) {
-        parsed.registrations.set(fqcn["value"], { fqcn: fqcn["value"], file, local: local["name"] });
+      // Story 6.6's recogniser, so a registration here is one the scan accepts; keyed without the leading `\`.
+      const registration = recogniseRegistration(statement)?.registration ?? null;
+      if (registration !== null && !parsed.registrations.has(registration.fqcn)) {
+        parsed.registrations.set(registration.fqcn, { fqcn: registration.fqcn, file, local: registration.name });
       }
     }
   }

@@ -9,7 +9,7 @@ import { afterAll, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { formatViolation, graderPackages, scanRegistrations, SHAPE_MESSAGE, type ScanFile } from "../../../tools/registration/registration";
+import { ALIAS_MESSAGE, formatViolation, graderPackages, NESTED_MESSAGE, scanRegistrations, SHAPE_MESSAGE, type ScanFile } from "../../../tools/registration/registration";
 import { GRADER_PACKAGES } from "../../../tools/lint-rules/plugin";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -187,13 +187,70 @@ xaravelTest("XT-conformance-141", "a framework file in packages/*/src that expor
   expect(at(P, "export class Foo {}\n", new Set(["a"]))).toEqual([]);
   expect(at("packages/assert/src/X.ts", "export class X {}\n", new Set(["assert"]))).toEqual([]);
   expect(at("packages/assert/src/X.ts", "export class X {}\nregisterClass(x, X);\n", new Set(["assert"]))).toEqual([`packages/assert/src/X.ts:2:1: ${SHAPE_MESSAGE} (AD-10)`]);
-  // Every non-conforming shape; aliased and member-expression calls are outside the scan.
+  // Every non-conforming shape; a call of another name and member-expression calls are outside the scan.
   for (const call of ["registerClass(name, Foo)", "registerClass('', Foo)", "registerClass('A/Foo', Foo)", "registerClass('A\\\\\\\\Foo', Foo)", "registerClass(' A\\\\Foo', Foo)", "registerClass('A\\\\', Foo)", "registerClass(`A\\\\Foo`, Foo)", "registerClass('A\\\\Foo')", "registerClass('A\\\\Foo', Foo, 1)", "registerClass('A\\\\Foo', new Foo())", "registerClass(1, Foo)", "registerClass(...args)"]) {
     expect(at(P, `export class Foo {}\n${call};\n`)).toEqual([`${P}:1:8: ${MISSING("Foo")} (AD-10)`, `${P}:2:1: ${SHAPE_MESSAGE} (AD-10)`]);
   }
   expect(at(P, "export class Foo {}\nr('A\\\\Foo', Foo);\n")).toEqual([`${P}:1:8: ${MISSING("Foo")} (AD-10)`]);
   expect(at(P, "export class Foo {}\nregistry.registerClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:1:8: ${MISSING("Foo")} (AD-10)`]);
-  expect(at(P, "export function f(): void {\n  registerClass(x, y);\n}\n")).toEqual([]);
+  expect(at(P, "export function f(): void {\n  registerClass(x, y);\n}\n")).toEqual([`${P}:2:3: ${NESTED_MESSAGE} (AD-10)`]);
+  // Nested calls (a block, a function, a namespace, an arrow) fail at the call and are not registrations.
+  const count = (text: string, path: string = P): number => scanRegistrations([{ path, text }], NONE).registrations;
+  for (const [text, col] of [
+    ["if (x) { registerClass('A\\\\Foo', Foo); }\n", "1:10"],
+    ["function f(): void {\n  registerClass('A\\\\Foo', Foo);\n}\n", "2:3"],
+    ["namespace N {\n  registerClass('A\\\\Foo', Foo);\n}\n", "2:3"],
+    ["const f = (): void => registerClass('A\\\\Foo', Foo);\n", "1:23"],
+    // Wrapped top-level calls.
+    ["void registerClass('A\\\\Foo', Foo);\n", "1:6"],
+    ["(registerClass('A\\\\Foo', Foo));\n", "1:2"],
+    ["registerClass?.('A\\\\Foo', Foo);\n", "1:1"],
+    ["registerClass!('A\\\\Foo', Foo);\n", "1:1"],
+    ["(registerClass)('A\\\\Foo', Foo);\n", "1:1"],
+    ["x, registerClass('A\\\\Foo', Foo);\n", "1:4"],
+    ["registerClass`A\\\\Foo`;\n", "1:1"],
+    // Sequence callees, .call / .apply at any level, and new.
+    ["(0, registerClass)('A\\\\Foo', Foo);\n", "1:1"],
+    ["registerClass.call(null, 'A\\\\Foo', Foo);\n", "1:1"],
+    ["registerClass.apply(null, ['A\\\\Foo', Foo]);\n", "1:1"],
+    ["function f(): void {\n  registerClass.call(null, 'A\\\\Foo', Foo);\n}\n", "2:3"],
+    ["new registerClass('A\\\\Foo', Foo);\n", "1:1"],
+  ] as const) {
+    expect(at(P, text)).toEqual([`${P}:${col}: ${NESTED_MESSAGE} (AD-10)`]);
+    expect(count(text)).toBe(0);
+    // Graders stay subject to it.
+    expect(at("packages/assert/src/X.ts", text, new Set(["assert"]))).toEqual([`packages/assert/src/X.ts:${col}: ${NESTED_MESSAGE} (AD-10)`]);
+  }
+  // A wrapped call does not end the file with a registration, and is not a duplicate of a real one.
+  expect(at(P, "export class Foo {}\nvoid registerClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:1:8: ${MISSING("Foo")} (AD-10)`, `${P}:2:6: ${NESTED_MESSAGE} (AD-10)`]);
+  expect(scan({ "packages/a/src/Foo.ts": FOO, "packages/b/src/Foo.ts": "if (x) {\n  registerClass('A\\\\Foo', Foo);\n}\n" })).toEqual([`packages/b/src/Foo.ts:2:3: ${NESTED_MESSAGE} (AD-10)`]);
+  // Aliasing registerClass fails at the specifier, declarator, destructure or assignment.
+  expect(at(P, "import { registerClass as r } from '@xaravel/runtime/registry';\n")).toEqual([`${P}:1:10: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "const r = registerClass;\n")).toEqual([`${P}:1:7: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "const r = registerClass as typeof registerClass;\n")).toEqual([`${P}:1:7: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "let r;\nr = registerClass;\n")).toEqual([`${P}:2:1: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "const { registerClass: r } = registry;\n")).toEqual([`${P}:1:9: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "import { registerClass } from '@xaravel/runtime/registry';\nexport { registerClass as r };\n")).toEqual([`${P}:2:10: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "export { registerClass as r } from '@xaravel/runtime/registry';\n")).toEqual([`${P}:1:10: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "export { registerClass } from '@xaravel/runtime/registry';\n")).toEqual([]);
+  expect(at(P, "import { registerClass } from '@xaravel/runtime/registry';\nconst { registerClass: registerClass2 = registerClass } = registry;\n")).toEqual([`${P}:2:9: ${ALIAS_MESSAGE} (AD-10)`]);
+  expect(at(P, "import { registerClass } from '@xaravel/runtime/registry';\nexport class Foo {}\nregisterClass('A\\\\Foo', Foo);\n")).toEqual([]);
+  // Class expressions bound by an exported (or locally exported) const/let/var are exported classes, reported at the declarator.
+  for (const init of ["class {}", "class Y {}", "(class {})", "class {} as typeof Base", "class {} satisfies object"]) {
+    expect(at(P, `export const X = ${init};\n`)).toEqual([`${P}:1:14: ${MISSING("X")} (AD-10)`]);
+    expect(at(P, `export const X = ${init};\nregisterClass('A\\\\X', X);\n`)).toEqual([]);
+  }
+  expect(at(P, "export let X = class {}, y = 1;\n")).toEqual([`${P}:1:12: ${MISSING("X")} (AD-10)`]);
+  expect(at(P, "const X = class {};\nexport { X };\n")).toEqual([`${P}:1:7: ${MISSING("X")} (AD-10)`]);
+  expect(at(P, "var X = class {};\nexport { X as Z };\nregisterClass('A\\\\X', X);\n")).toEqual([]);
+  expect(at(P, "const X = class {};\nexport default X;\n")).toEqual([`${P}:1:7: ${MISSING("X")} (AD-10)`]);
+  expect(at(P, "const X = class {};\nexport default (X);\n")).toEqual([`${P}:1:7: ${MISSING("X")} (AD-10)`]);
+  expect(at(P, "class X {}\nexport default (X);\n")).toEqual([`${P}:1:1: ${MISSING("X")} (AD-10)`]);
+  expect(at(P, "class X {}\nexport default (X);\nregisterClass('A\\\\X', X);\n")).toEqual([]);
+  expect(at(P, "const X = class {};\nexport const x = new X();\n")).toEqual([]);
+  expect(at(P, "export const X = class {};\n", new Set(["a"]))).toEqual([]);
+  // A default-exported class expression cannot be registered.
+  expect(at(P, "export default (class {});\n")).toEqual([`${P}:1:17: exports an anonymous default class, which cannot be registered; name it and end the file with registerClass('<FQCN>', <Name>) (AD-10)`]);
   // Extensions: .tsx, .mts and .cts are scanned; declaration files, tests and other directories are not.
   for (const path of ["packages/a/src/F.tsx", "packages/a/src/F.mts", "packages/a/src/F.cts"]) {
     expect(at(path, "export class F {}\n")).toEqual([`${path}:1:8: ${MISSING("F")} (AD-10)`]);

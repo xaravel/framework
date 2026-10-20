@@ -7,13 +7,20 @@
 // The scanned files are `git ls-files -co --exclude-standard` under the root:
 // every `packages/<p>/src/**/*.{ts,tsx,mts,cts}` except declaration files,
 // and every `packages/<p>/package.json`. Each source is parsed with
-// `oxc-parser`; only top-level statements count.
+// `oxc-parser`; its whole AST is walked.
 //
-// A registration is a top-level `registerClass(...)` expression statement. A
-// conforming one is `registerClass('<FQCN>', X)`: two arguments, a string
-// literal shaped as a PHP FQCN (identifier segments joined by single `\`,
-// optional leading `\`) and an identifier. Any other top-level `registerClass` call
-// is a violation. The rules:
+// A registration is a top-level expression statement calling the identifier
+// `registerClass` directly (`recogniseRegistration`, which `tools/api-surface`
+// shares). A conforming one is `registerClass('<FQCN>', X)`: two arguments, a
+// string literal shaped as a PHP FQCN (identifier segments joined by single
+// `\`, optional leading `\`, which `normaliseFqcn` drops) and an identifier.
+// Any other top-level `registerClass` call is a violation (`SHAPE_MESSAGE`).
+// Any `registerClass` call elsewhere (in a block, function, arrow or namespace,
+// or wrapped: `void`, parentheses, `?.`, `!`, a sequence, a sequence callee
+// `(0, registerClass)`, `.call` / `.apply`, `new`, a tagged template) is a
+// violation at the call (`NESTED_MESSAGE`), and so is aliasing it (a renaming
+// import or export specifier or destructure, `const r = registerClass`,
+// `r = registerClass`; `ALIAS_MESSAGE`); neither is a registration. The rules:
 //
 // - Duplicates (AD-22, every package, graders included): an FQCN registered
 //   at more than one site (compared case-insensitively, without a leading
@@ -22,19 +29,25 @@
 // - Framework files (AD-10): in a package whose `tools/scaffold/packages.jsonl`
 //   row is not `kind: "grader"` (a package the table lacks, or a root with no
 //   table, counts as framework), each exported class (`export class X`,
-//   `export abstract class X`, `export default class X`, or a local class
-//   named in a local `export { X }` / `export { X as Y }` or by
-//   `export default X`; an anonymous default class always fails; `declare` classes
-//   are skipped) must be the second argument of a conforming `registerClass`
+//   `export abstract class X`, `export default class X`, a top-level
+//   `const`/`let`/`var X = class …` that is exported, or a local class or
+//   class-expression binding named in a local `export { X }` /
+//   `export { X as Y }` or by `export default X`; an anonymous default class or
+//   a default-exported class expression always fails; `declare` classes are
+//   skipped) must be the second argument of a conforming `registerClass`
 //   in the file's trailing run of top-level statements, which must hold only
 //   conforming `registerClass` calls (empty statements are skipped).
 // - `sideEffects` (AD-10): a package `package.json` whose top-level
 //   `sideEffects` is `false` or a list fails, at the key. Invalid JSON fails.
 //
-// The scan is syntactic: an aliased or member-expression `registerClass`
-// (`r(...)`, `registry.registerClass(...)`) is not a registration, and a
-// class re-exported from another file (`export { X } from "./X"`) is checked
-// only in the file that declares it.
+// The scan is syntactic: a member-expression `registerClass`
+// (`registry.registerClass(...)`, `ns.registerClass(...)`), `registerClass`
+// passed as a value (`f(registerClass)`, `.bind`, `Reflect.apply`) or aliased
+// through a conditional or logical expression or a member read are not seen,
+// `export =` and classes inside namespaces are not exported classes (and
+// cannot be registered), and a class re-exported from
+// another file (`export { X } from "./X"`) is checked only in the file that
+// declares it.
 //
 // Each violation is one line, `<path>:<line>:<col>: <message> (AD-10)`
 // (`(AD-22)` for duplicates), on stderr, sorted by path, line and col. A file
@@ -45,7 +58,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
 import { parseSync } from "oxc-parser";
-import { node, nodes, type Node } from "../async-surface/async-surface";
+import { nameOf, node, nodes, type Node } from "../async-surface/async-surface";
 import { gitFiles } from "../lint-rules/disables";
 import { TABLE_PATH } from "../scaffold/scaffold";
 import { readTable } from "../scaffold/table";
@@ -76,7 +89,10 @@ export interface ScanResult {
 
 /** One conforming `registerClass('<FQCN>', X)` site. */
 interface Registration {
-  readonly fqcn: string;
+  /** The literal FQCN as written (the duplicate message names it). */
+  readonly literal: string;
+  /** The duplicate key: the normalised FQCN, lowercased. */
+  readonly key: string;
   readonly path: string;
   readonly pkg: string;
   readonly line: number;
@@ -84,6 +100,8 @@ interface Registration {
 }
 
 export const SHAPE_MESSAGE = "registerClass must be called as registerClass('<FQCN>', X) with a string literal FQCN";
+export const NESTED_MESSAGE = "registerClass must be called only as a top-level statement registerClass('<FQCN>', X), not nested in a block, function or namespace or wrapped in another expression";
+export const ALIAS_MESSAGE = "registerClass must not be aliased; call it by its own name as registerClass('<FQCN>', X)";
 const SOURCE = /^packages\/([^/]+)\/src\/.+\.(?:ts|tsx|mts|cts)$/;
 const DECLARATION = /\.d\.[cm]?ts$/;
 const PACKAGE_JSON = /^packages\/([^/]+)\/package\.json$/;
@@ -118,21 +136,49 @@ function position(text: string, offset: number): { line: number; col: number } {
   return { line, col: offset - (before.lastIndexOf("\n") + 1) + 1 };
 }
 
-/** The callee-`registerClass` call of a top-level statement, or null. */
-function registerCall(statement: Node): Node | null {
+/** A conforming registration: the FQCN without its leading `\`, the literal as written, and the class identifier. */
+export interface RecognisedRegistration {
+  /** The FQCN without a leading `\` (`normaliseFqcn(literal)`). */
+  readonly fqcn: string;
+  /** The string literal's value as written, leading `\` included. */
+  readonly literal: string;
+  /** The class identifier (the second argument). */
+  readonly name: string;
+}
+
+/** A top-level `registerClass(...)` statement's call, and its registration when it conforms. */
+export interface RecognisedCall {
+  readonly call: Node;
+  readonly registration: RecognisedRegistration | null;
+}
+
+/** A PHP FQCN without its optional leading `\` (`\A\Foo` → `A\Foo`); the case is kept. */
+export function normaliseFqcn(fqcn: string): string {
+  return fqcn.startsWith("\\") ? fqcn.slice(1) : fqcn;
+}
+
+/**
+ * The one registration recogniser (the scan and `tools/api-surface` share it): a top-level statement that is an
+ * expression statement calling the identifier `registerClass` directly (not optionally, not wrapped) yields its call,
+ * with the registration when it is `registerClass('<FQCN>', X)`; any other statement yields null.
+ */
+export function recogniseRegistration(statement: Node): RecognisedCall | null {
   if (statement.type !== "ExpressionStatement") {
     return null;
   }
   const call = node(statement["expression"]);
-  if (call === null || call.type !== "CallExpression") {
+  if (call === null || call.type !== "CallExpression" || call["optional"] === true) {
     return null;
   }
   const callee = node(call["callee"]);
-  return callee !== null && callee.type === "Identifier" && callee["name"] === "registerClass" ? call : null;
+  if (callee === null || callee.type !== "Identifier" || callee["name"] !== "registerClass") {
+    return null;
+  }
+  return { call, registration: conforming(call) };
 }
 
-/** A conforming call's FQCN and class identifier, or null. */
-function conforming(call: Node): { fqcn: string; name: string } | null {
+/** A conforming call's registration, or null. */
+function conforming(call: Node): RecognisedRegistration | null {
   const args = nodes(call["arguments"]);
   if (args.length !== 2) {
     return null;
@@ -141,7 +187,80 @@ function conforming(call: Node): { fqcn: string; name: string } | null {
   if (fqcn.type !== "Literal" || typeof fqcn["value"] !== "string" || !FQCN.test(fqcn["value"]) || cls.type !== "Identifier" || typeof cls["name"] !== "string") {
     return null;
   }
-  return { fqcn: fqcn["value"], name: cls["name"] };
+  return { fqcn: normaliseFqcn(fqcn["value"]), literal: fqcn["value"], name: cls["name"] };
+}
+
+/** An expression without its parentheses, `!`, `as`, `satisfies` and `<T>` wrappers. */
+function unwrap(value: unknown): Node | null {
+  let n = node(value);
+  while (n !== null && (n.type === "ParenthesizedExpression" || n.type === "TSNonNullExpression" || n.type === "TSAsExpression" || n.type === "TSSatisfiesExpression" || n.type === "TSTypeAssertion" || n.type === "TSInstantiationExpression")) {
+    n = node(n["expression"]);
+  }
+  return n;
+}
+
+/** Whether an expression is the identifier `registerClass`, unwrapped (a sequence `(0, registerClass)` counts as its last expression). */
+function isRegisterClass(value: unknown): boolean {
+  let n = unwrap(value);
+  while (n !== null && n.type === "SequenceExpression") {
+    n = unwrap(nodes(n["expressions"]).at(-1) ?? null);
+  }
+  return n !== null && n.type === "Identifier" && n["name"] === "registerClass";
+}
+
+/** Whether a callee is `registerClass`, `registerClass.call` or `registerClass.apply` (unwrapped). */
+function isRegisterClassCallee(value: unknown): boolean {
+  if (isRegisterClass(value)) {
+    return true;
+  }
+  const n = unwrap(value);
+  return n !== null && n.type === "MemberExpression" && n["computed"] !== true && isRegisterClass(n["object"]) && (nameOf(n["property"]) === "call" || nameOf(n["property"]) === "apply");
+}
+
+/**
+ * The shape violations anywhere in a program (`recognised` holds the top-level statement calls, which the caller checks):
+ * every other call of `registerClass` (`NESTED_MESSAGE`, at the call node), whatever its position or form: direct,
+ * optional or wrapped callee, a sequence callee `(0, registerClass)`, `registerClass.call` / `.apply`, `new registerClass`
+ * or a tagged template; and each aliasing of `registerClass` (`ALIAS_MESSAGE`, at the renaming import or export
+ * specifier, declarator, destructuring property or assignment).
+ */
+function strayUses(program: Node, recognised: ReadonlySet<Node>): { at: Node; message: string }[] {
+  const out: { at: Node; message: string }[] = [];
+  const visit = (n: Node): void => {
+    if (((n.type === "CallExpression" || n.type === "NewExpression") && !recognised.has(n) && isRegisterClassCallee(n["callee"])) || (n.type === "TaggedTemplateExpression" && isRegisterClass(n["tag"]))) {
+      out.push({ at: n, message: NESTED_MESSAGE });
+    } else if (n.type === "ImportSpecifier" && nameOf(n["imported"]) === "registerClass" && nameOf(n["local"]) !== "registerClass") {
+      out.push({ at: n, message: ALIAS_MESSAGE });
+    } else if (n.type === "ExportSpecifier" && nameOf(n["local"]) === "registerClass" && nameOf(n["exported"]) !== "registerClass") {
+      out.push({ at: n, message: ALIAS_MESSAGE });
+    } else if (n.type === "VariableDeclarator" && isRegisterClass(n["init"])) {
+      out.push({ at: n, message: ALIAS_MESSAGE });
+    } else if (n.type === "AssignmentExpression" && isRegisterClass(n["right"])) {
+      out.push({ at: n, message: ALIAS_MESSAGE });
+    } else if (n.type === "ObjectPattern") {
+      // `const { registerClass: r } = registry`: a renaming destructure.
+      for (const property of nodes(n["properties"])) {
+        const value = node(property["value"]);
+        const bound = value !== null && value.type === "AssignmentPattern" ? node(value["left"]) : value;
+        if (property.type === "Property" && property["computed"] !== true && nameOf(property["key"]) === "registerClass" && bound !== null && bound.type === "Identifier" && bound["name"] !== "registerClass") {
+          out.push({ at: property, message: ALIAS_MESSAGE });
+        }
+      }
+    }
+    for (const [key, child] of Object.entries(n)) {
+      if (key === "type" || typeof child !== "object" || child === null) {
+        continue;
+      }
+      for (const sub of Array.isArray(child) ? child : [child]) {
+        const c = node(sub);
+        if (c !== null) {
+          visit(c);
+        }
+      }
+    }
+  };
+  visit(program);
+  return out;
 }
 
 /** The non-`declare` class a `ClassDeclaration` node names, or null. */
@@ -150,7 +269,23 @@ function classOf(value: unknown): Node | null {
   return n !== null && n.type === "ClassDeclaration" && n["declare"] !== true ? n : null;
 }
 
-/** The exported classes of a program body: each class's local name and declaration node. */
+/** The classes a variable declaration binds: each `X = class …` declarator's name and declarator node (wrappers allowed). */
+function classDeclarators(value: unknown): { name: string; at: Node }[] {
+  const n = node(value);
+  if (n === null || n.type !== "VariableDeclaration" || n["declare"] === true) {
+    return [];
+  }
+  const out: { name: string; at: Node }[] = [];
+  for (const declarator of nodes(n["declarations"])) {
+    const id = node(declarator["id"]);
+    if (id !== null && id.type === "Identifier" && typeof id["name"] === "string" && unwrap(declarator["init"])?.type === "ClassExpression") {
+      out.push({ name: id["name"], at: declarator });
+    }
+  }
+  return out;
+}
+
+/** The exported classes of a program body: each class's local name and declaration (or declarator) node. */
 function exportedClasses(body: readonly Node[]): { name: string; at: Node }[] {
   const local = new Map<string, Node>();
   for (const statement of body) {
@@ -158,6 +293,9 @@ function exportedClasses(body: readonly Node[]): { name: string; at: Node }[] {
     const id = cls === null ? null : node(cls["id"]);
     if (cls !== null && id !== null && typeof id["name"] === "string") {
       local.set(id["name"], cls);
+    }
+    for (const { name, at } of classDeclarators(statement)) {
+      local.set(name, at);
     }
   }
   const out: { name: string; at: Node }[] = [];
@@ -178,6 +316,9 @@ function exportedClasses(body: readonly Node[]): { name: string; at: Node }[] {
       if (cls !== null && id !== null && typeof id["name"] === "string") {
         add(id["name"], cls);
       }
+      for (const { name, at } of classDeclarators(statement["declaration"])) {
+        add(name, at);
+      }
       for (const specifier of nodes(statement["specifiers"])) {
         const name = node(specifier["local"]);
         if (specifier["exportKind"] === "type" || name === null || typeof name["name"] !== "string") {
@@ -191,13 +332,17 @@ function exportedClasses(body: readonly Node[]): { name: string; at: Node }[] {
     } else if (statement.type === "ExportDefaultDeclaration") {
       const declaration = node(statement["declaration"]);
       const cls = classOf(declaration);
+      const expression = unwrap(declaration);
       if (cls !== null) {
         const id = node(cls["id"]);
         add(id !== null && typeof id["name"] === "string" ? id["name"] : ANONYMOUS, cls);
-      } else if (declaration !== null && declaration.type === "Identifier" && typeof declaration["name"] === "string") {
-        const target = local.get(declaration["name"]);
+      } else if (expression !== null && expression.type === "ClassExpression") {
+        // `export default (class {})`: a class expression's own name is not in scope at the top level, so it cannot be registered either.
+        add(ANONYMOUS, expression);
+      } else if (expression !== null && expression.type === "Identifier" && typeof expression["name"] === "string") {
+        const target = local.get(expression["name"]);
         if (target !== undefined) {
-          add(declaration["name"], target);
+          add(expression["name"], target);
         }
       }
     }
@@ -217,18 +362,22 @@ function scanSource(file: ScanFile, framework: boolean): { violations: Violation
     return { violations: [{ path: file.path, ...position(file.text, offset), message: `does not parse: ${error.message}`, ad: "AD-10" }], registrations };
   }
   const body = nodes(parsed.program.body);
+  const recognised = new Set<Node>();
   for (const statement of body) {
-    const call = registerCall(statement);
-    if (call === null) {
+    const found = recogniseRegistration(statement);
+    if (found === null) {
       continue;
     }
+    recognised.add(found.call);
     const at = position(file.text, statement.start);
-    const ok = conforming(call);
-    if (ok === null) {
+    if (found.registration === null) {
       violations.push({ path: file.path, ...at, message: SHAPE_MESSAGE, ad: "AD-10" });
     } else {
-      registrations.push({ fqcn: ok.fqcn, path: file.path, pkg: packageOf(file.path), ...at });
+      registrations.push({ literal: found.registration.literal, key: found.registration.fqcn.toLowerCase(), path: file.path, pkg: packageOf(file.path), ...at });
     }
+  }
+  for (const { at, message } of strayUses(parsed.program as unknown as Node, recognised)) {
+    violations.push({ path: file.path, ...position(file.text, at.start), message, ad: "AD-10" });
   }
   if (framework) {
     const trailing = new Set<string>();
@@ -236,8 +385,7 @@ function scanSource(file: ScanFile, framework: boolean): { violations: Violation
       if (body[i]!.type === "EmptyStatement") {
         continue;
       }
-      const call = registerCall(body[i]!);
-      const ok = call === null ? null : conforming(call);
+      const ok = recogniseRegistration(body[i]!)?.registration ?? null;
       if (ok === null) {
         break;
       }
@@ -329,10 +477,9 @@ export function scanRegistrations(files: readonly ScanFile[], graders: ReadonlyS
   // PHP class names are case-insensitive and a leading `\` is optional, so `\A\Foo` and `a\foo` are `A\Foo`.
   const byFqcn = new Map<string, Registration[]>();
   for (const registration of registrations) {
-    const key = registration.fqcn.replace(/^\\/, "").toLowerCase();
-    const sites = byFqcn.get(key) ?? [];
+    const sites = byFqcn.get(registration.key) ?? [];
     sites.push(registration);
-    byFqcn.set(key, sites);
+    byFqcn.set(registration.key, sites);
   }
   for (const sites of byFqcn.values()) {
     if (sites.length < 2) {
@@ -344,7 +491,7 @@ export function scanRegistrations(files: readonly ScanFile[], graders: ReadonlyS
         path: site.path,
         line: site.line,
         col: site.col,
-        message: `${site.fqcn} is already registered in ${first.path}:${first.line} (package ${first.pkg}); registered again here (package ${site.pkg})`,
+        message: `${site.literal} is already registered in ${first.path}:${first.line} (package ${first.pkg}); registered again here (package ${site.pkg})`,
         ad: "AD-22",
       });
     }
