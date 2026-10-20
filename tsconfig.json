@@ -31,7 +31,8 @@
     "tools/lint-rules/**/*.ts",
     "tools/async-surface/*.ts",
     "tools/api-surface/*.ts",
-    "tools/registration/*.ts"
+    "tools/registration/*.ts",
+    "tools/conformance-report/*.ts"
   ],
   "exclude": [
     "conformance/upstream"
