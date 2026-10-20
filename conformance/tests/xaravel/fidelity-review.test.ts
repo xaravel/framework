@@ -1,33 +1,67 @@
-// Xaravel Tests for Story 8.5 (the Fidelity Review workflow; FR-111, AD-15.8,
-// AD-16).
+// Xaravel Tests for Story 8.5 (the Fidelity Review), as rebuilt by Epic 8
+// action item 1 under ESC-8.5-1 (FR-111, FR-115.3, AD-15.8, AD-16).
 //
-// The checklist and the workflow are read from the real repository. The
-// review CLI runs against hermetic fixture roots (the real checklist, a Story
-// manifest, an Inventory and an Upstream snapshot file) with the GitHub API
-// and the Anthropic Messages API as `Bun.serve` fakes on port 0. Nothing here
-// contacts GitHub or Anthropic.
+// The checklist is read from the real repository. The review runs against
+// hermetic fixture git repositories (the real checklist, a Story manifest, an
+// Inventory, an Upstream snapshot file and a Story spec whose
+// `baseline_revision` is the fixture's first commit), with the reviewer CLIs
+// replaced by fake `claude` and `codex` executables selected through
+// `XARAVEL_FIDELITY_CLAUDE_BIN` / `XARAVEL_FIDELITY_CODEX_BIN`. Each fake
+// records its argv, working directory (and that directory's entries) and
+// stdin, then answers from a per-CLI plan. Nothing here runs a real agent CLI
+// or contacts a model.
 import { afterAll, expect } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { buildPrompt, CHECKLIST_FILE, decideEvent, DEFAULT_MODEL, NO_EVIDENCE, NO_TEXTUAL_CHANGE, parseChecklist, parseVerdict, precedenceSection, PROMPT_CAP, renderReviewBody, runReview, VERDICT_TOOL, verdictTool, type ChecklistItem } from "../../../tools/fidelity-review/fidelity-review";
-import { approvalsClause, type Review } from "../../../tools/story-check/story-check";
+import {
+  appendRecords,
+  buildPrompt,
+  CHECKLIST_FILE,
+  classifyUnavailable,
+  decideVerdict,
+  EXCERPT_CAP,
+  fidelityVerdicts,
+  findStorySpec,
+  NO_EVIDENCE,
+  noMention,
+  parseChecklist,
+  parseRecords,
+  parseVerdict,
+  precedenceSection,
+  PROMPT_CAP,
+  RECORD_KIND,
+  RECORDS_HEADING,
+  renderRecord,
+  REVIEWER_TIMEOUT_MS,
+  reviewDiff,
+  reviewTree,
+  runFidelity,
+  runReviewer,
+  verdictSchema,
+  type ChecklistItem,
+  type VerdictRecord,
+} from "../../../tools/fidelity-review/fidelity-review";
+import { approvalsClause, renderClause } from "../../../tools/story-check/story-check";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CHECKLIST = readFileSync(join(root, CHECKLIST_FILE), "utf8");
 const ITEMS: ChecklistItem[] = parseChecklist(CHECKLIST);
 const IDS = Array.from({ length: 10 }, (_, i) => `F-${i + 1}`);
-const roots: string[] = [];
+const dirs: string[] = [];
 afterAll(() => {
-  for (const dir of roots) {
+  for (const dir of dirs) {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-const SHA = "a".repeat(40);
-const OTHER_SHA = "b".repeat(40);
-const AUTHOR = "edanisko";
+function tempDir(prefix: string): string {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  dirs.push(dir);
+  return dir;
+}
+
 const TEST_ID = "Illuminate\\Tests\\Support\\SupportFidelityTest::testA";
 const MISSING_ID = "Illuminate\\Tests\\Support\\SupportFidelityTest::testGone";
 /** A data-provider test: the manifest lists `DATASET_ID`, the Inventory has its rows `#a` and `#b`. */
@@ -35,15 +69,35 @@ const DATASET_ID = "Illuminate\\Tests\\Support\\SupportFidelityTest::testRows";
 /** A real committed batch request whose real signed fixture is an error (`Cannot 'continue' 2 levels`). */
 const ERROR_REQUEST_ID = "Illuminate\\Tests\\View\\Blade\\BladeContinueStatementsTest::testContinueStatementsWithArgumentAreCompiled";
 const ERROR_FIXTURE = "conformance/fixtures/view/02cb543f0363e6d73c44b9b5d52589def1238cbd68c4eeab68dab554487db0c2.json";
+const SPEC = "_bmad-output/implementation-artifacts/spec-9-1-fidelity.md";
+const CHANGED = "packages/support/src/Str.ts";
+const REQUESTS = "conformance/oracle-requests/9.1.jsonl";
+
+function git(dir: string, ...args: string[]): string {
+  const result = Bun.spawnSync(["git", "-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", ...args], { stdout: "pipe", stderr: "pipe" });
+  expect([args[0], result.exitCode, result.stderr.toString()]).toEqual([args[0], 0, ""]);
+  return result.stdout.toString().trim();
+}
+
+function commitAll(dir: string, message = "change"): string {
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "--allow-empty", "-m", message);
+  return git(dir, "rev-parse", "HEAD");
+}
+
+function write(dir: string, path: string, text: string): void {
+  mkdirSync(dirname(join(dir, path)), { recursive: true });
+  writeFileSync(join(dir, path), text);
+}
 
 /**
- * A fixture root: the real checklist, conformance/README.md, DIV-1, DIV-9 and consequence file, a Story 9.1 manifest,
- * an Inventory and an Upstream snapshot file. With `oracle`, also the real `conformance/oracle/` (batch requests,
- * schema, key) and one real error fixture, whose request id the manifest assigns.
+ * A fixture repository: the real checklist, conformance/README.md, DIV-1, DIV-9 and consequence file, a Story 9.1
+ * manifest, an Inventory and an Upstream snapshot file, committed as the base; the Story spec (baseline_revision = the
+ * base); and, uncommitted, the Story's change: `CHANGED` and its Oracle request file. With `oracle`, the base also has the
+ * real `conformance/oracle/` and one real error fixture, whose request id the manifest assigns.
  */
-function makeRoot(options: { oracle?: boolean } = {}): string {
-  const dir = mkdtempSync(join(tmpdir(), "xt-fidelity-"));
-  roots.push(dir);
+function makeRepo(options: { oracle?: boolean; change?: boolean } = {}): { dir: string; base: string; spec: string } {
+  const dir = tempDir("xt-fidelity-");
   const testIds = [TEST_ID, MISSING_ID, DATASET_ID, ...(options.oracle === true ? [ERROR_REQUEST_ID] : [])];
   const row = (id: string, source: string): string => JSON.stringify({ id, component: "support", kind: "unit", backends: ["none"], source, hash: "0".repeat(64), assertions: { assertSame: 1 }, oracle: { none: "pass" } });
   const files: Record<string, string> = {
@@ -57,63 +111,103 @@ function makeRoot(options: { oracle?: boolean } = {}): string {
       "",
     ].join("\n"),
     "conformance/upstream/framework/tests/Support/SupportFidelityTest.php": "<?php\nclass SupportFidelityTest {\n  public function testA() {\n    $this->assertSame(3, sum(1, 2));\n  }\n  public static function rows() { return [\n    'a' => [$this->assertSame('row-a', rowA())],\n    'b' => [$this->assertSame('row-b', rowB())],\n  ]; }\n}\n",
+    "packages/support/src/Base.ts": "export const base = 0;\n",
   };
   for (const [path, text] of Object.entries(files)) {
-    mkdirSync(dirname(join(dir, path)), { recursive: true });
-    writeFileSync(join(dir, path), text);
+    write(dir, path, text);
   }
   for (const rel of ["conformance/README.md", "decisions/DIV-1.md", "decisions/DIV-9.md", "conformance/xaravel-consequences/conformance.jsonl", ...(options.oracle === true ? ["conformance/oracle", ERROR_FIXTURE] : [])]) {
     cpSync(join(root, rel), join(dir, rel), { recursive: true });
   }
-  return dir;
+  git(dir, "init", "-q");
+  const base = commitAll(dir, "base");
+  write(dir, SPEC, `---\ntitle: 'Story 9.1'\nbaseline_revision: '${base}'\nstatus: 'in-review'\n---\n\n# Story 9.1\n\n## Spec Change Log\n\n## Auto Run Result\n\nNot yet.\n`);
+  if (options.change !== false) {
+    write(dir, CHANGED, "export const added = 1; // FR-111.1\n");
+    write(dir, REQUESTS, '{"id":"x","kind":"php-expr","input":{"setup":[],"exprs":["1 + 2"]}}\n');
+  }
+  return { dir, base, spec: join(dir, SPEC) };
 }
 
-interface PrFake {
-  number: number;
-  user: { login: string };
-  head: { sha: string; ref: string };
-  changed_files: number;
+// ---------------------------------------------------------------------------
+// Fake reviewer CLIs
+
+type Step = { kind: "answer" | "needs-token"; answer: unknown; model?: string; token?: string } | { kind: "raw"; stdout?: string; stderr?: string; code: number; echo?: boolean } | { kind: "sleep"; ms: number } | { kind: "hang" };
+
+interface Call {
+  argv: string[];
+  cwd: string;
+  cwdEntries: string[];
+  stdin: string;
+  /** The names in the fake's env. */
+  env: string[];
 }
 
-interface FakeState {
-  pr: PrFake;
-  files: { filename: string; status: string; patch?: string; changes?: number }[];
-  contents: Record<string, string>;
-  /** Every posted review, with the token's identity as its user. */
-  posted: { user: { login: string }; state: string; commit_id: string; body: string; event: string }[];
-  /** The login each bearer token acts as. */
-  tokens: Record<string, string>;
-  /** The Messages API response body. */
-  message: unknown;
-  /** Responses served, in order, before `message`: each a status and a body. */
-  responses: { status: number; body: unknown }[];
-  /** When set, every `GET /pulls/<n>` after the first answers with this head sha (a push during the review). */
-  headAfter: string | null;
-  /** How many times `GET /pulls/<n>` was served. */
-  prGets: number;
-  /** The status of `POST /pulls/<n>/reviews`; a non-2xx records nothing. */
-  reviewStatus: number;
-  /** Every Messages API request body, and its headers. */
-  requests: { body: Record<string, unknown>; version: string | null; key: string | null }[];
+const FAKE = `
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+const [cli, ...argv] = process.argv.slice(2);
+const dir = process.env["FAKE_DIR"];
+const plan = JSON.parse(readFileSync(join(dir, cli + ".json"), "utf8"));
+let n = 0;
+for (;; n++) {
+  try { mkdirSync(join(dir, cli + "-slot-" + n)); break; } catch {}
+}
+const stdin = await Bun.stdin.text();
+writeFileSync(join(dir, cli + "-call-" + n + ".json"), JSON.stringify({ argv, cwd: process.cwd(), cwdEntries: readdirSync(process.cwd()), stdin, env: Object.keys(process.env) }));
+const step = plan[Math.min(n, plan.length - 1)];
+if (step.kind === "hang") {
+  // A grandchild holds stdout and stderr open; the fake itself never exits.
+  Bun.spawn(["sleep", "30"], { stdout: "inherit", stderr: "inherit" });
+  await Bun.sleep(30000);
+}
+if (step.kind === "sleep") {
+  await Bun.sleep(step.ms);
+  process.exit(0);
+}
+if (step.kind === "needs-token" && process.env["CLAUDE_CODE_OAUTH_TOKEN"] !== step.token) {
+  process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: true, result: "Not logged in · Please run /login", modelUsage: {} }));
+  process.exit(0);
+}
+if (step.kind === "raw") {
+  // Codex echoes the prompt it was given ("user", then the prompt).
+  process.stdout.write((step.echo ? "user\\n" + stdin + "\\n" : "") + (step.stdout ?? ""));
+  process.stderr.write(step.stderr ?? "");
+  process.exit(step.code);
+}
+if (cli === "claude") {
+  process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "", structured_output: step.answer, modelUsage: { [step.model ?? "claude-fake-1"]: { inputTokens: 1 } } }));
+  process.exit(0);
+}
+process.stderr.write("OpenAI Codex (fake)\\n--------\\nmodel: " + (step.model ?? "gpt-fake-1") + "\\nprovider: openai\\n--------\\n");
+writeFileSync(argv[argv.indexOf("-o") + 1], JSON.stringify(step.answer));
+process.exit(0);
+`;
+
+interface Fakes {
+  env: Record<string, string | undefined>;
+  calls: (cli: "claude" | "codex") => Call[];
 }
 
-function fakeState(overrides: Partial<FakeState> = {}): FakeState {
+/** Fake `claude` and `codex` binaries answering from `plans` (the k-th call takes step k, the last step repeating); `missing` names a CLI whose binary does not exist. */
+function fakes(plans: { claude?: Step[]; codex?: Step[] }, missing: ("claude" | "codex")[] = [], extra: Record<string, string | undefined> = {}): Fakes {
+  const dir = tempDir("xt-fidelity-fakes-");
+  writeFileSync(join(dir, "fake.ts"), FAKE);
+  const bins: Record<string, string> = {};
+  for (const cli of ["claude", "codex"] as const) {
+    writeFileSync(join(dir, `${cli}.json`), JSON.stringify(plans[cli] ?? [pass()]));
+    const bin = join(dir, cli);
+    bins[cli] = missing.includes(cli) ? join(dir, "nowhere", cli) : bin;
+    writeFileSync(bin, `#!/bin/sh\nFAKE_DIR="${dir}" exec "${process.execPath}" "${join(dir, "fake.ts")}" ${cli} "$@"\n`);
+    chmodSync(bin, 0o755);
+  }
   return {
-    pr: { number: 7, user: { login: AUTHOR }, head: { sha: SHA, ref: "story/9.1" }, changed_files: 2 },
-    files: [
-      { filename: "packages/support/src/Str.ts", status: "modified", patch: "@@ -1 +1 @@\n-old\n+new" },
-      { filename: "conformance/oracle-requests/9.1.jsonl", status: "added", patch: "@@ -0,0 +1 @@\n+{\"id\":\"x\"}" },
-    ],
-    contents: { "conformance/oracle-requests/9.1.jsonl": '{"id":"x","kind":"php-expr","input":{"setup":[],"exprs":["1 + 2"]}}\n' },
-    posted: [],
-    tokens: { "token-1": "xaravel-fidelity-1[bot]", "token-2": "xaravel-fidelity-2[bot]" },
-    message: verdictMessage(answers()),
-    responses: [],
-    headAfter: null,
-    prGets: 0,
-    reviewStatus: 200,
-    requests: [],
-    ...overrides,
+    env: { PATH: process.env["PATH"], HOME: process.env["HOME"], XARAVEL_FIDELITY_CLAUDE_BIN: bins["claude"], XARAVEL_FIDELITY_CODEX_BIN: bins["codex"], ...extra },
+    calls: (cli) =>
+      readdirSync(dir)
+        .filter((name) => name.startsWith(`${cli}-call-`))
+        .sort((a, b) => Number(/(\d+)\.json$/.exec(a)![1]) - Number(/(\d+)\.json$/.exec(b)![1]))
+        .map((name) => JSON.parse(readFileSync(join(dir, name), "utf8")) as Call),
   };
 }
 
@@ -121,88 +215,23 @@ function answers(results: Record<string, "pass" | "fail" | "n/a"> = {}, findings
   return IDS.map((id) => ({ id, result: results[id] ?? "pass", note: `checked ${id}`, findings: findings[id] ?? [] }));
 }
 
-function verdictMessage(items: unknown, extra: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "msg_1",
-    type: "message",
-    role: "assistant",
-    model: DEFAULT_MODEL,
-    stop_reason: "tool_use",
-    content: [
-      { type: "thinking", thinking: "", signature: "sig" },
-      { type: "tool_use", id: "toolu_1", name: VERDICT_TOOL, input: { items } },
-    ],
-    ...extra,
-  };
+function pass(model?: string): Step {
+  return { kind: "answer", answer: { items: answers() }, ...(model === undefined ? {} : { model }) };
 }
 
-/** Serves `state` as the GitHub API of `acme/xaravel` and the Anthropic API while `body` runs. */
-async function withFakes<T>(state: FakeState, body: (github: string, anthropic: string) => Promise<T>): Promise<T> {
-  const github = Bun.serve({
-    port: 0,
-    async fetch(request) {
-      const url = new URL(request.url);
-      const token = (request.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-      const login = state.tokens[token];
-      if (login === undefined) {
-        return new Response("unauthorized", { status: 401 });
-      }
-      const base = "/repos/acme/xaravel";
-      if (!url.pathname.startsWith(base)) {
-        return new Response("not found", { status: 404 });
-      }
-      const path = url.pathname.slice(base.length);
-      if (request.method === "GET" && path === `/pulls/${state.pr.number}`) {
-        state.prGets++;
-        return Response.json(state.prGets > 1 && state.headAfter !== null ? { ...state.pr, head: { ...state.pr.head, sha: state.headAfter } } : state.pr);
-      }
-      if (request.method === "GET" && path === `/pulls/${state.pr.number}/files`) {
-        const page = Number(url.searchParams.get("page") ?? "1");
-        return Response.json(state.files.slice((page - 1) * 100, page * 100));
-      }
-      if (request.method === "GET" && path.startsWith("/contents/")) {
-        const file = decodeURIComponent(path.slice("/contents/".length));
-        const text = url.searchParams.get("ref") === state.pr.head.sha ? state.contents[file] : undefined;
-        return text === undefined ? new Response("not found", { status: 404 }) : new Response(text);
-      }
-      if (request.method === "POST" && path === `/pulls/${state.pr.number}/reviews`) {
-        const posted = (await request.json()) as { commit_id: string; body: string; event: string };
-        if (state.reviewStatus !== 200) {
-          return Response.json({ message: "Unprocessable Entity: review body too long" }, { status: state.reviewStatus });
-        }
-        const stateName = posted.event === "APPROVE" ? "APPROVED" : posted.event === "REQUEST_CHANGES" ? "CHANGES_REQUESTED" : "COMMENTED";
-        state.posted.push({ user: { login }, state: stateName, commit_id: posted.commit_id, body: posted.body, event: posted.event });
-        return Response.json({ id: state.posted.length }, { status: 200 });
-      }
-      return new Response("not found", { status: 404 });
-    },
+function review(dir: string, env: Record<string, string | undefined>, ...extra: string[]): ReturnType<typeof runFidelity> {
+  return runFidelity(["review", "--story", "9.1", "--root", dir, ...extra], env);
+}
+
+function status(dir: string): ReturnType<typeof runFidelity> {
+  return runFidelity(["status", "--story", "9.1", "--root", dir], {});
+}
+
+function records(spec: string): VerdictRecord[] {
+  return parseRecords(readFileSync(spec, "utf8")).map((entry) => {
+    expect(entry.problem).toBeNull();
+    return entry.record!;
   });
-  const anthropic = Bun.serve({
-    port: 0,
-    async fetch(request) {
-      const url = new URL(request.url);
-      if (request.method !== "POST" || url.pathname !== "/v1/messages") {
-        return new Response("not found", { status: 404 });
-      }
-      state.requests.push({ body: (await request.json()) as Record<string, unknown>, version: request.headers.get("anthropic-version"), key: request.headers.get("x-api-key") });
-      const next = state.responses.shift();
-      return next === undefined ? Response.json(state.message) : Response.json(next.body, { status: next.status });
-    },
-  });
-  try {
-    return await body(`http://localhost:${github.port}`, `http://localhost:${anthropic.port}`);
-  } finally {
-    await github.stop(true);
-    await anthropic.stop(true);
-  }
-}
-
-function env(github: string, anthropic: string, token: string, extra: Record<string, string | undefined> = {}): Record<string, string | undefined> {
-  return { GH_TOKEN: token, ANTHROPIC_API_KEY: "test-model-key", GITHUB_REPOSITORY: "acme/xaravel", GITHUB_API_URL: github, ANTHROPIC_BASE_URL: anthropic, XARAVEL_FIDELITY_RETRY_DELAY_MS: "0", ...extra };
-}
-
-function args(dir: string, reviewer: 1 | 2, login: string, sha = SHA): string[] {
-  return ["review", "--pr", "7", "--sha", sha, "--reviewer", String(reviewer), "--login", login, "--root", dir];
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +239,7 @@ function args(dir: string, reviewer: 1 | 2, login: string, sha = SHA): string[] 
 
 xaravelTest(
   "XT-conformance-160",
-  "conformance/review/fidelity.md covers the Fidelity Review checklist F-1..F-10 (assertions match Upstream, no weakened expected value, no removed assertion without a DIV clause, Skip Reason precedence citing conformance/README.md#precedence and ESC-5.2-1, adapted markers, Oracle error fixtures, Xaravel Test consequences, no stub or fake of another Component, @asyncRoot tags, Oracle request setup and exprs); F-7 makes the review check that each Xaravel Test verifies the behaviour it claims; the reviewer prompt and verdict tool are built from it (FR-111.1, FR-111.4, FR-115.3)",
+  "conformance/review/fidelity.md covers the Fidelity Review checklist F-1..F-10 (assertions match Upstream, no weakened expected value, no removed assertion without a DIV clause, Skip Reason precedence citing conformance/README.md#precedence and ESC-5.2-1, adapted markers, Oracle error fixtures, Xaravel Test consequences, no stub or fake of another Component, @asyncRoot tags, Oracle request setup and exprs); F-7 makes the review check that each Xaravel Test verifies the behaviour it claims; the reviewer prompt and verdict schema are built from it (FR-111.1, FR-111.4, FR-115.3)",
   () => {
     expect(ITEMS.map((item) => item.id)).toEqual(IDS);
     const byId = new Map(ITEMS.map((item) => [item.id, `${item.title}\n${item.body}`]));
@@ -237,23 +266,26 @@ xaravelTest(
     // The precedence link resolves: conformance/README.md has the `## Precedence` heading.
     expect(readFileSync(join(root, "conformance", "README.md"), "utf8").split("\n")).toContain("## Precedence");
 
-    // The prompt names every item; the tool enumerates exactly the parsed ids.
+    // The prompt names every item; the verdict schema enumerates exactly the parsed ids.
     const precedence = precedenceSection(readFileSync(join(root, "conformance", "README.md"), "utf8"));
     expect(precedence!.startsWith("## Precedence\n")).toBe(true);
     expect(precedence).toContain("When in doubt, pick the reason that counts against conformance.");
     expect(precedence).not.toContain("## Ratchet");
-    const prompt = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence, storyId: "9.1", prNumber: 7, sha: SHA, manifestText: "---\n---\n", inventory: [], oracleRequests: [], files: [{ filename: "a.ts", status: "added", patch: "+x" }], evidence: NO_EVIDENCE });
+    const prompt = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "---\n---\n", inventory: [], oracleRequests: [], files: [{ filename: "a.ts", status: "added", patch: "+x" }], evidence: NO_EVIDENCE });
     for (const item of ITEMS) {
       expect(prompt.system).toContain(`### ${item.id}: ${item.title}`);
     }
     // F-4's precedence is in the prompt itself, not only as a link.
     expect(prompt.system).toContain(precedence!);
     expect(prompt.system).toContain("Fail when unsure");
+    expect(prompt.system).toContain("Do not use any tool, command or file: judge only the material given in this prompt.");
+    expect(prompt.user.startsWith(`# Story 9.1: tree ${"a".repeat(40)} against base ${"b".repeat(40)}\n`)).toBe(true);
     expect(prompt.length).toBe(prompt.system.length + prompt.user.length);
     expect(PROMPT_CAP).toBe(600_000);
-    const tool = verdictTool(ITEMS);
-    expect(tool.name).toBe(VERDICT_TOOL);
-    const schema = tool.input_schema as { properties: { items: { items: { properties: { id: { enum: string[] }; result: { enum: string[] } } } } } };
+    const schema = verdictSchema(ITEMS) as { additionalProperties: boolean; required: string[]; properties: { items: { items: { required: string[]; properties: { id: { enum: string[] }; result: { enum: string[] } } } } } };
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(["items"]);
+    expect(schema.properties.items.items.required).toEqual(["id", "result", "note", "findings"]);
     expect(schema.properties.items.items.properties.id.enum).toEqual(IDS);
     expect(schema.properties.items.items.properties.result.enum).toEqual(["pass", "fail", "n/a"]);
 
@@ -270,234 +302,292 @@ xaravelTest(
 );
 
 // ---------------------------------------------------------------------------
-// XT-conformance-161 (AC2): two reviewer identities post PR reviews
-
-interface Job {
-  if: string;
-  "timeout-minutes": number;
-  environment: string;
-  permissions: Record<string, string>;
-  concurrency: { group: string };
-  steps: { name?: string; uses?: string; if?: string; id?: string; with?: Record<string, unknown>; env?: Record<string, string>; run?: string }[];
-}
+// XT-conformance-161 (AC2): two fresh-context reviewers, one cross-model, verdicts recorded with the Story
 
 xaravelTest(
   "XT-conformance-161",
-  "a Story PR gets two Fidelity Reviews from two distinct reviewer App identities (xaravel-fidelity-1[bot], xaravel-fidelity-2[bot]), neither the PR author, each a GitHub PR review on the head commit whose body holds the verdict and findings, stored with the Story PR; story:check's approvals clause counts them (FR-111.1, FR-111.2, AD-15.8)",
+  "the review step's Fidelity Review runs two reviewer subprocesses, each in a fresh empty directory with no tools and only the prompt the tool builds, reviewer 1 on the other agent CLI from the loop's (Codex for a claude loop, Claude for a Codex loop) or on the loop's CLI with the recorded reason when the other is not installed, not signed in or at a usage limit; each verdict is appended to the Story's spec bound to the reviewed tree, and story:check's approvals passes on two pass verdicts for the head tree; no workflow calls a model (FR-111.1, FR-111.2, FR-111.5, AD-15.8)",
   async () => {
     const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["fidelity:review"];
     expect(script).toBe("bun --no-env-file tools/fidelity-review/fidelity-review.ts");
-
-    // The workflow: two reviewer jobs, identical but for their App variable, secret and reviewer number.
-    const workflow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "fidelity.yml"), "utf8")) as { on: Record<string, { types: string[] }>; permissions: Record<string, string>; jobs: Record<string, Job> };
-    expect(Object.keys(workflow.on)).toEqual(["pull_request_target"]);
-    expect(workflow.on["pull_request_target"]!.types).toEqual(["opened", "synchronize", "reopened", "ready_for_review"]);
-    expect(workflow.permissions).toEqual({ contents: "read" });
-    expect(Object.keys(workflow.jobs).sort()).toEqual(["reviewer-1", "reviewer-2"]);
-    for (const n of [1, 2]) {
-      const job = workflow.jobs[`reviewer-${n}`]!;
-      expect(job.if).toContain("github.event.pull_request.head.repo.full_name == github.repository");
-      expect(job.if).toContain("startsWith(github.event.pull_request.head.ref, 'story/')");
-      expect(job.if).toContain("github.event.pull_request.base.ref == 'main'");
-      expect(job.if).toContain("github.event.pull_request.draft == false");
-      expect(job.permissions).toEqual({ contents: "read" });
-      expect(job.environment).toBe("fidelity");
-      // 3 model attempts of up to 8 minutes each, plus their delays, fit in the job.
-      expect(job["timeout-minutes"]).toBe(45);
-      expect(job.concurrency.group).toBe(`fidelity-\${{ github.event.pull_request.number }}-reviewer-${n}`);
-      const configured = job.steps[0]!;
-      expect(configured.id).toBe("configured");
-      expect(configured.env).toEqual({ APP_ID: `\${{ vars.XARAVEL_FIDELITY_${n}_APP_ID }}`, HAS_APP_KEY: `\${{ secrets.XARAVEL_FIDELITY_${n}_APP_KEY != '' }}`, HAS_MODEL_KEY: "${{ secrets.ANTHROPIC_API_KEY != '' }}" });
-      expect(configured.run).toContain("::warning::");
-      expect(configured.run).toContain(`vars.XARAVEL_FIDELITY_${n}_APP_ID`);
-      expect(configured.run).toContain(`secrets.XARAVEL_FIDELITY_${n}_APP_KEY`);
-      for (const step of job.steps.slice(1)) {
-        expect(step.if).toBe("steps.configured.outputs.ok == 'true'");
-      }
-      const checkout = job.steps.find((step) => step.uses?.startsWith("actions/checkout@") === true)!;
-      expect(checkout.with).toEqual({ ref: "${{ github.event.pull_request.base.sha }}", "persist-credentials": false });
-      const app = job.steps.find((step) => step.uses?.startsWith("actions/create-github-app-token@") === true)!;
-      expect(app.uses).toBe("actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510");
-      expect(app.with).toEqual({ "app-id": `\${{ vars.XARAVEL_FIDELITY_${n}_APP_ID }}`, "private-key": `\${{ secrets.XARAVEL_FIDELITY_${n}_APP_KEY }}`, "permission-pull-requests": "write", "permission-contents": "read" });
-      expect(job.steps.some((step) => step.run === "bun run upstream:sync")).toBe(true);
-      const review = job.steps.at(-1)!;
-      expect(review.run).toBe(`bun run fidelity:review review --pr "$PR" --sha "$SHA" --reviewer ${n} --login "\${APP_SLUG}[bot]"`);
-      expect(review.env!["XARAVEL_FIDELITY_MODEL"]).toBe("${{ vars.XARAVEL_FIDELITY_MODEL || 'claude-opus-5-5' }}");
-      expect(review.env!["GH_TOKEN"]).toBe("${{ steps.app.outputs.token }}");
+    // The GitHub Actions path is retired: no fidelity.yml, and no workflow runs the review or reaches a model API.
+    const workflows = join(root, ".github", "workflows");
+    expect(existsSync(join(workflows, "fidelity.yml"))).toBe(false);
+    for (const name of readdirSync(workflows)) {
+      const text = readFileSync(join(workflows, name), "utf8");
+      expect(`${name}: ${/fidelity:review|ANTHROPIC|anthropic\.com|OPENAI|openai\.com|claude -p|codex exec/.test(text)}`).toBe(`${name}: false`);
     }
-    const normalise = (job: Job): string => JSON.stringify(job).replace(/XARAVEL_FIDELITY_[12]_/g, "XARAVEL_FIDELITY_N_").replace(/reviewer-[12]/g, "reviewer-N").replace(/--reviewer [12]/g, "--reviewer N");
-    expect(normalise(workflow.jobs["reviewer-1"]!)).toBe(normalise(workflow.jobs["reviewer-2"]!));
-    expect(JSON.stringify(workflow.jobs["reviewer-1"])).not.toContain("XARAVEL_FIDELITY_2_");
-    expect(JSON.stringify(workflow.jobs["reviewer-2"])).not.toContain("XARAVEL_FIDELITY_1_");
 
-    // Two all-pass runs under two App identities post two APPROVE reviews on --sha; approvals passes for the author.
-    const dir = makeRoot();
-    const state = fakeState();
-    await withFakes(state, async (github, anthropic) => {
-      const first = await runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1"));
-      expect(first.err).toEqual([]);
-      expect(first.code).toBe(0);
-      expect(first.out[0]).toBe(`posted APPROVE on PR #7 at ${SHA} as xaravel-fidelity-1[bot] (reviewer 1)`);
-      const second = await runReview(args(dir, 2, "xaravel-fidelity-2[bot]"), env(github, anthropic, "token-2"));
-      expect(second.code).toBe(0);
-    });
-    expect(state.posted.map((review) => [review.user.login, review.event, review.commit_id])).toEqual([
-      ["xaravel-fidelity-1[bot]", "APPROVE", SHA],
-      ["xaravel-fidelity-2[bot]", "APPROVE", SHA],
+    // Both pass, cross-model: a claude loop puts reviewer 1 on codex and reviewer 2 on claude.
+    const repo = makeRepo();
+    const tree = reviewTree(repo.dir, "worktree");
+    const both = fakes({ codex: [pass("gpt-fake-1")], claude: [pass("claude-fake-1")] }, [], { GH_TOKEN: "ghp-parent-secret", LC_ALL: "C" });
+    const run = await review(repo.dir, both.env, "--loop-cli", "claude");
+    expect(run.err).toEqual([]);
+    expect(run.out).toEqual(["reviewer 1: pass (codex/gpt-fake-1)", "reviewer 2: pass (claude/claude-fake-1)", `recorded 2 verdict(s) in ${SPEC} for tree ${tree}`]);
+    expect(run.code).toBe(0);
+    const recorded = records(repo.spec);
+    expect(recorded.map((record) => [record.reviewer, record.verdict, record.tree, record.base, record.cli, record.model, record.loop_cli, record.fallback])).toEqual([
+      [1, "pass", tree, repo.base, "codex", "gpt-fake-1", "claude", null],
+      [2, "pass", tree, repo.base, "claude", "claude-fake-1", "claude", null],
     ]);
-    for (const [index, review] of state.posted.entries()) {
-      expect(review.body.startsWith(`Fidelity Review (reviewer ${index + 1}) of Story 9.1 at ${SHA}\n`)).toBe(true);
-      for (const item of ITEMS) {
-        expect(review.body).toContain(`| ${item.id}: ${item.title} | pass | checked ${item.id} |`);
-      }
+    expect(recorded[0]!.items as unknown).toEqual(answers());
+    // The records sit in a `## Fidelity Review` section, after the spec's existing sections, each headed and tabled.
+    const specText = readFileSync(repo.spec, "utf8");
+    expect(specText.startsWith(`---\ntitle: 'Story 9.1'\nbaseline_revision: '${repo.base}'\n`)).toBe(true);
+    expect(specText.indexOf("## Auto Run Result")).toBeLessThan(specText.indexOf(RECORDS_HEADING));
+    expect(specText).toContain(`### Reviewer 1: pass at tree ${tree}`);
+    expect(specText).toContain(`### Reviewer 2: pass at tree ${tree}`);
+    expect(specText).toContain(`| ${ITEMS[9]!.id}: ${ITEMS[9]!.title} | pass | checked F-10 |`);
+    // The record JSON round-trips through parseRecords.
+    for (const record of recorded) {
+      expect(parseRecords(appendRecords("# s\n", [renderRecord(record, ITEMS)])).map((entry) => entry.record)).toEqual([record]);
     }
-    const reviews: Review[] = state.posted.map((review) => ({ user: review.user, state: review.state, commit_id: review.commit_id }));
-    const clause = approvalsClause(7, AUTHOR, SHA, reviews);
-    expect(clause.pass).toBe(true);
-    expect(clause.detail).toBe("PR #7: 2 approvals (xaravel-fidelity-1[bot], xaravel-fidelity-2[bot])");
 
-    // The model request: the Messages API, the verdict tool, the evidence.
-    expect(state.requests).toHaveLength(2);
-    const request = state.requests[0]!;
-    expect(request.version).toBe("2023-06-01");
-    expect(request.key).toBe("test-model-key");
-    expect(request.body["model"]).toBe(DEFAULT_MODEL);
-    expect((request.body["tools"] as { name: string }[]).map((tool) => tool.name)).toEqual([VERDICT_TOOL]);
-    // Opus 5.5 rejects a forced tool_choice, so the request asks with auto and a strict tool; the force is ours.
-    expect(request.body["tool_choice"]).toEqual({ type: "auto", disable_parallel_tool_use: true });
-    expect((request.body["tools"] as { strict?: unknown }[])[0]!.strict).toBe(true);
-    const user = (request.body["messages"] as { content: string }[])[0]!.content;
+    // Isolation: one call each, in a fresh empty directory that is not the repository and is removed afterwards; the
+    // prompt on stdin; no tools, no project settings, no session; the schema enumerates the checklist ids.
+    const [codexCall] = both.calls("codex");
+    const [claudeCall] = both.calls("claude");
+    expect([both.calls("codex").length, both.calls("claude").length]).toEqual([1, 1]);
+    for (const call of [codexCall!, claudeCall!]) {
+      expect(call.cwdEntries).toEqual([]);
+      // The child env is allow-listed: the loop's GH_TOKEN and the tool's own settings never reach a reviewer.
+      expect(call.env).not.toContain("GH_TOKEN");
+      expect(call.env).not.toContain("XARAVEL_FIDELITY_CLAUDE_BIN");
+      expect(call.env).toContain("LC_ALL");
+      expect(call.cwd.startsWith(repo.dir)).toBe(false);
+      expect(existsSync(call.cwd)).toBe(false);
+      expect(call.stdin).toContain(`### ${CHANGED} (added)`);
+      expect(call.stdin).toContain("+export const added = 1; // FR-111.1");
+    }
+    const claudeArgv = claudeCall!.argv;
+    const flag = (name: string): string => claudeArgv[claudeArgv.indexOf(name) + 1]!;
+    expect(claudeArgv.slice(0, 3)).toEqual(["-p", "--output-format", "json"]);
+    for (const name of ["--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence"]) {
+      expect(claudeArgv).toContain(name);
+    }
+    expect([flag("--tools"), flag("--setting-sources")]).toEqual(["", ""]);
+    expect(JSON.parse(flag("--json-schema"))).toEqual(verdictSchema(ITEMS));
+    expect(flag("--system-prompt")).toContain(CHECKLIST.trim());
+    expect(claudeArgv).not.toContain("--model");
+    expect(claudeCall!.stdin).not.toContain("### F-1: ");
+    const codexArgv = codexCall!.argv;
+    const schemaFile = codexArgv[codexArgv.indexOf("--output-schema") + 1]!;
+    const outputFile = codexArgv[codexArgv.indexOf("-o") + 1]!;
+    expect(codexArgv).toEqual(["exec", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "--color", "never", "-C", codexCall!.cwd, "--output-schema", schemaFile, "-o", outputFile, "-"]);
+    expect(dirname(schemaFile)).not.toBe(codexCall!.cwd);
+    expect(existsSync(schemaFile)).toBe(false);
+    // Codex has no system prompt flag: the system text is prepended to the prompt on stdin.
+    expect(codexCall!.stdin.startsWith("You are a Fidelity Reviewer for Xaravel")).toBe(true);
+    expect(codexCall!.stdin).toContain(CHECKLIST.trim());
+    // The prompt carries the Story's evidence.
+    const user = claudeCall!.stdin;
+    expect(user).toContain(`# Story 9.1: tree ${tree} against base ${repo.base}`);
     expect(user).toContain("$this->assertSame(3, sum(1, 2));");
     expect(user).toContain(`### ${MISSING_ID}`);
-    // The "Upstream source unavailable" prefix appears once, for the one unreadable source.
     expect(user.split("Upstream source unavailable").length - 1).toBe(1);
-    expect(user).toContain("Upstream source unavailable: ");
-    // A listed dataset id X brings in both of its rows X#a and X#b, each with its Upstream line.
     expect(user).toContain(`### ${DATASET_ID}#a`);
     expect(user).toContain(`### ${DATASET_ID}#b`);
     expect(user).toContain("$this->assertSame('row-a', rowA())");
     expect(user).toContain("$this->assertSame('row-b', rowB())");
     expect(user).toContain('"exprs":["1 + 2"]');
-    expect(user).toContain("### packages/support/src/Str.ts (modified)");
-    expect(String(request.body["system"])).toContain("### F-10: Oracle requests match the Upstream test's inputs");
+    expect(user).not.toContain(SPEC);
+    expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker.");
+    expect(user).toContain("No added line contains `@asyncRoot`.");
 
-    // Self-review (case-insensitive): refused, nothing posted.
-    const self = fakeState({ tokens: { "token-1": AUTHOR } });
-    const selfRun = await withFakes(self, (github, anthropic) => runReview(args(dir, 1, "EdAnisko"), env(github, anthropic, "token-1")));
-    expect(selfRun.code).toBe(1);
-    expect(selfRun.err.join("\n")).toContain("is the PR author");
-    expect(self.posted).toEqual([]);
-    expect(self.requests).toEqual([]);
+    // status: current for the working tree. Committed unchanged, the head tree is the reviewed tree: approvals passes.
+    expect(await status(repo.dir)).toEqual({ code: 0, out: [`current: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`], err: [] });
+    commitAll(repo.dir);
+    expect(reviewTree(repo.dir, "head")).toBe(tree);
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`PASS approvals: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`]);
+    // Bookkeeping only: the spec and sprint status change and are committed; the verdicts stay current.
+    writeFileSync(repo.spec, `${readFileSync(repo.spec, "utf8")}\nFinalized.\n`);
+    write(repo.dir, "_bmad-output/implementation-artifacts/sprint-status.yaml", "development_status:\n  9-1-fidelity: done\n");
+    commitAll(repo.dir, "bookkeeping");
+    expect((await status(repo.dir)).out[0]).toStartWith("current: ");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
 
-    // Not a Story branch: refused.
-    const planning = fakeState({ pr: { ...fakeState().pr, head: { sha: SHA, ref: "planning/x" } } });
-    const planningRun = await withFakes(planning, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-    expect(planningRun.code).toBe(1);
-    expect(planningRun.err.join("\n")).toContain("planning/x, not story/<id>");
-    expect(planning.posted).toEqual([]);
+    // The other CLI not installed: reviewer 1 falls back to claude, recording why; approvals still passes.
+    const noCodex = makeRepo();
+    const noCodexFakes = fakes({}, ["codex"], { XARAVEL_FIDELITY_CLAUDE_MODEL: "opus-test" });
+    const noCodexRun = await review(noCodex.dir, noCodexFakes.env, "--loop-cli", "claude");
+    expect(noCodexRun.code).toBe(0);
+    const [fellBack, second] = records(noCodex.spec);
+    expect([fellBack!.cli, fellBack!.loop_cli, second!.cli]).toEqual(["claude", "claude", "claude"]);
+    expect(fellBack!.fallback).toStartWith("codex unavailable: not installed: ");
+    expect(fellBack!.fallback).toContain("nowhere/codex");
+    expect(second!.fallback).toBeNull();
+    expect(noCodexRun.out[0]).toBe(`reviewer 1: pass (claude/claude-fake-1); fallback: ${fellBack!.fallback}`);
+    // XARAVEL_FIDELITY_CLAUDE_MODEL is passed as --model; the recorded model is the one the result reports.
+    expect(noCodexFakes.calls("claude").map((call) => call.argv[call.argv.indexOf("--model") + 1])).toEqual(["opus-test", "opus-test"]);
+    commitAll(noCodex.dir);
+    expect(renderClause(approvalsClause(noCodex.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
 
-    // A Story whose manifest is missing: refused.
-    const unknown = fakeState({ pr: { ...fakeState().pr, head: { sha: SHA, ref: "story/9.2" } } });
-    const unknownRun = await withFakes(unknown, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-    expect(unknownRun.code).toBe(1);
-    expect(unknownRun.err.join("\n")).toContain("stories/9.2.md does not exist");
-    expect(unknown.posted).toEqual([]);
-
-    // Superseded: the PR head moved on; nothing posted, exit 0.
-    const superseded = fakeState();
-    const supersededRun = await withFakes(superseded, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]", OTHER_SHA), env(github, anthropic, "token-1")));
-    expect(supersededRun.code).toBe(0);
-    expect(supersededRun.out[0]!.startsWith("superseded")).toBe(true);
-    expect(superseded.posted).toEqual([]);
-    expect(superseded.requests).toEqual([]);
-
-    // Too large: a file without a patch, a truncated file list, or a prompt over the cap.
-    const noPatch = fakeState({ files: [{ filename: "big.bin", status: "added" }], pr: { ...fakeState().pr, changed_files: 1 } });
-    const noPatchRun = await withFakes(noPatch, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-    expect(noPatchRun.code).toBe(1);
-    expect(noPatchRun.err.join("\n")).toContain("without a patch");
-    expect(noPatch.posted).toEqual([]);
-    const truncated = fakeState({ pr: { ...fakeState().pr, changed_files: 3001 } });
-    const truncatedRun = await withFakes(truncated, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-    expect(truncatedRun.code).toBe(1);
-    expect(truncated.posted).toEqual([]);
-    const huge = fakeState({ files: [{ filename: "packages/support/src/Big.ts", status: "added", patch: `+${"x".repeat(PROMPT_CAP)}` }], pr: { ...fakeState().pr, changed_files: 1 } });
-    const hugeRun = await withFakes(huge, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-    expect(hugeRun.code).toBe(1);
-    expect(hugeRun.err.join("\n")).toContain("over the 600000 cap");
-    expect(huge.posted).toEqual([]);
-    expect(huge.requests).toEqual([]);
-
-    // Usage: a missing option or env var is exit 2.
-    const base = { GH_TOKEN: "t", ANTHROPIC_API_KEY: "k", GITHUB_REPOSITORY: "acme/xaravel" };
-    for (const drop of ["--pr", "--sha", "--reviewer", "--login"]) {
-      const argv = args(dir, 1, "x");
-      argv.splice(argv.indexOf(drop), 2);
-      const usage = await runReview(argv, base);
-      expect(`${drop}: ${usage.code}`).toBe(`${drop}: 2`);
-      expect(usage.err.join("\n")).toContain(`${drop} is required`);
+    // A usage limit or a missing sign-in, recognised from the CLI's output, is a fallback with that reason.
+    const limits: [Step, string][] = [
+      [{ kind: "raw", stderr: "ERROR: You've hit your usage limit. Upgrade to Pro or try again later.\n", code: 1 }, "codex unavailable: usage limit: ERROR: You've hit your usage limit. Upgrade to Pro or try again later."],
+      [{ kind: "raw", stderr: "Not signed in. Please run `codex login` first.\n", code: 1 }, "codex unavailable: not signed in: Not signed in. Please run `codex login` first."],
+    ];
+    for (const [step, reason] of limits) {
+      const limited = makeRepo();
+      const limitedFakes = fakes({ codex: [step] });
+      const limitedRun = await review(limited.dir, limitedFakes.env, "--loop-cli", "claude");
+      expect(limitedRun.code).toBe(0);
+      expect(records(limited.spec)[0]!.fallback).toBe(reason);
+      expect(limitedFakes.calls("codex")).toHaveLength(1);
+      expect(limitedFakes.calls("claude")).toHaveLength(2);
     }
-    for (const name of ["GH_TOKEN", "ANTHROPIC_API_KEY"]) {
-      const usage = await runReview(args(dir, 1, "x"), { ...base, [name]: undefined });
+    // A Codex loop puts reviewer 1 on claude; claude's own "not logged in" error result (exit 0) falls back to codex.
+    const codexLoop = makeRepo();
+    const notLoggedIn = JSON.stringify({ type: "result", subtype: "success", is_error: true, result: "Not logged in · Please run /login", modelUsage: {} });
+    const codexLoopFakes = fakes({ claude: [{ kind: "raw", stdout: notLoggedIn, code: 0 }] });
+    const codexLoopRun = await review(codexLoop.dir, { ...codexLoopFakes.env, XARAVEL_LOOP_CLI: "codex" });
+    expect(codexLoopRun.code).toBe(0);
+    expect(records(codexLoop.spec).map((record) => [record.cli, record.loop_cli, record.fallback])).toEqual([
+      ["codex", "codex", "claude unavailable: not signed in: Not logged in · Please run /login"],
+      ["codex", "codex", null],
+    ]);
+    // Claude Code strips CLAUDE_CODE_OAUTH_TOKEN from tool subprocesses: the claude child gets it from the token file,
+    // trimmed, and it never reaches the output or the spec.
+    const tokenRepo = makeRepo();
+    const tokenDir = tempDir("xt-fidelity-token-");
+    const secret = "sk-ant-oat-test-secret-0123";
+    writeFileSync(join(tokenDir, "token"), `  ${secret}\n`);
+    const needsToken: Step = { kind: "needs-token", answer: { items: answers() }, token: secret };
+    const tokenFakes = fakes({ claude: [needsToken] }, [], { XARAVEL_FIDELITY_CLAUDE_TOKEN_FILE: join(tokenDir, "token") });
+    const tokenRun = await review(tokenRepo.dir, tokenFakes.env, "--loop-cli", "codex");
+    expect(tokenRun.code).toBe(0);
+    expect(records(tokenRepo.spec).map((record) => [record.cli, record.fallback])).toEqual([["claude", null], ["codex", null]]);
+    expect(`${tokenRun.out.join("\n")}\n${tokenRun.err.join("\n")}\n${readFileSync(tokenRepo.spec, "utf8")}`).not.toContain(secret);
+    // Without the file the same fake answers "Not logged in", and reviewer 1 falls back.
+    const noTokenRepo = makeRepo();
+    const noTokenRun = await review(noTokenRepo.dir, fakes({ claude: [needsToken] }, [], { XARAVEL_FIDELITY_CLAUDE_TOKEN_FILE: join(tokenDir, "absent") }).env, "--loop-cli", "codex");
+    expect(records(noTokenRepo.spec)[0]!.fallback).toBe("claude unavailable: not signed in: Not logged in · Please run /login");
+    expect(noTokenRun.code).toBe(0);
+    // With XARAVEL_FIDELITY_CODEX_BIN unset and no codex on PATH, the codex binary is ~/.local/bin/codex;
+    // XARAVEL_FIDELITY_CODEX_MODEL is passed as -m.
+    const homeRepo = makeRepo();
+    const homeFakes = fakes({});
+    const home = tempDir("xt-fidelity-home-");
+    mkdirSync(join(home, ".local", "bin"), { recursive: true });
+    cpSync(homeFakes.env["XARAVEL_FIDELITY_CODEX_BIN"]!, join(home, ".local", "bin", "codex"));
+    chmodSync(join(home, ".local", "bin", "codex"), 0o755);
+    const homeRun = await review(homeRepo.dir, { ...homeFakes.env, XARAVEL_FIDELITY_CODEX_BIN: undefined, PATH: "/usr/bin:/bin", HOME: home, XARAVEL_FIDELITY_CODEX_MODEL: "gpt-test-m" }, "--loop-cli", "claude");
+    expect(homeRun.code).toBe(0);
+    expect(records(homeRepo.spec).map((record) => [record.cli, record.fallback])).toEqual([["codex", null], ["claude", null]]);
+    const homeArgv = homeFakes.calls("codex")[0]!.argv;
+    expect(homeArgv[homeArgv.indexOf("-m") + 1]).toBe("gpt-test-m");
+
+    // Excerpts are capped.
+    expect(classifyUnavailable({ output: `usage limit ${"x".repeat(500)}` })!.excerpt.length).toBeLessThanOrEqual(EXCERPT_CAP);
+    expect(classifyUnavailable({ output: "segmentation fault" })).toBeNull();
+
+    // The loop CLI: --loop-cli, else XARAVEL_LOOP_CLI, else claude under CLAUDECODE; otherwise a usage error.
+    const loopRepo = makeRepo();
+    const loopFakes = fakes({});
+    expect((await review(loopRepo.dir, { ...loopFakes.env, CLAUDECODE: "1" })).code).toBe(0);
+    expect(loopFakes.calls("codex")).toHaveLength(1);
+    for (const [env, args] of [[loopFakes.env, []], [loopFakes.env, ["--loop-cli", "gemini"]], [{ ...loopFakes.env, XARAVEL_LOOP_CLI: "gemini" }, []]] as const) {
+      const usage = await review(loopRepo.dir, env, ...args);
       expect(usage.code).toBe(2);
-      expect(usage.err[0]).toBe(`${name} is not set`);
-      expect(usage.err.join("\n")).not.toContain("acme");
+      expect(usage.err.at(-1)).toContain("Usage:");
     }
-    expect((await runReview([], base)).code).toBe(2);
-    expect((await runReview(["review", "--pr", "7", "--sha", SHA, "--reviewer", "3", "--login", "x"], base)).code).toBe(2);
+    expect((await runFidelity(["review", "--loop-cli", "claude"], {})).code).toBe(2);
+    expect((await runFidelity(["review", "--story", "x", "--loop-cli", "claude"], {})).code).toBe(2);
+    expect((await runFidelity([], {})).code).toBe(2);
+    expect((await runFidelity(["status"], {})).code).toBe(2);
 
-    const login1 = "xaravel-fidelity-1[bot]";
+    // Refusals, each exit 1 with nothing recorded and no reviewer run: an empty diff, a missing manifest, a missing or
+    // ambiguous spec, a missing baseline, a prompt over the cap.
+    const refusals: [string, (dir: string) => void, string][] = [
+      [
+        "empty diff",
+        (dir) => {
+          rmSync(join(dir, CHANGED));
+          rmSync(join(dir, REQUESTS));
+        },
+        "is empty",
+      ],
+      ["no manifest", (dir) => rmSync(join(dir, "stories", "9.1.md")), "stories/9.1.md does not exist"],
+      ["no spec", (dir) => rmSync(join(dir, SPEC)), "no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md"],
+      ["two specs", (dir) => write(dir, "_bmad-output/implementation-artifacts/spec-9-1-other.md", "x\n"), "2 specs match"],
+      ["no baseline", (dir) => write(dir, SPEC, "---\ntitle: x\n---\n"), "has no baseline_revision"],
+      ["too large", (dir) => write(dir, "packages/support/src/Big.ts", `${"x".repeat(PROMPT_CAP)}\n`), "over the 600000 cap"],
+    ];
+    for (const [name, mutate, expected] of refusals) {
+      const refused = makeRepo();
+      mutate(refused.dir);
+      const before = existsSync(refused.spec) ? readFileSync(refused.spec, "utf8") : null;
+      const refusedFakes = fakes({});
+      const result = await review(refused.dir, refusedFakes.env, "--loop-cli", "claude");
+      expect(`${name}: ${result.code}`).toBe(`${name}: 1`);
+      expect(`${name}: ${result.err.join("\n")}`).toContain(expected);
+      expect(result.err.join("\n")).toContain("nothing recorded");
+      expect(existsSync(refused.spec) ? readFileSync(refused.spec, "utf8") : null).toBe(before);
+      expect([refusedFakes.calls("claude").length, refusedFakes.calls("codex").length]).toEqual([0, 0]);
+    }
+    // --spec and --base override the lookup and the baseline.
+    const explicit = makeRepo();
+    write(explicit.dir, "_bmad-output/implementation-artifacts/spec-9-1-other.md", "---\nbaseline_revision: 'nope'\n---\n");
+    const explicitRun = await review(explicit.dir, fakes({}).env, "--loop-cli", "claude", "--spec", SPEC, "--base", explicit.base);
+    expect(explicitRun.code).toBe(0);
+    expect(records(explicit.spec)).toHaveLength(2);
 
-    // Superseded mid-review: a push lands while the model answers; the second head check stops the post.
-    const moved = fakeState({ headAfter: OTHER_SHA });
-    const movedRun = await withFakes(moved, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(movedRun.code).toBe(0);
-    expect(movedRun.out[0]!.startsWith("superseded")).toBe(true);
-    expect(movedRun.out[0]).toContain(OTHER_SHA);
-    expect(moved.requests).toHaveLength(1);
-    expect(moved.prGets).toBe(2);
-    expect(moved.posted).toEqual([]);
-
-    // A file without a patch but with `changes: 0` (a pure rename) is reviewed, not refused.
-    const renamed = fakeState({ files: [...fakeState().files, { filename: "docs/renamed.md", status: "renamed", changes: 0 }], pr: { ...fakeState().pr, changed_files: 3 } });
-    const renamedRun = await withFakes(renamed, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(renamedRun.err).toEqual([]);
-    expect(renamedRun.code).toBe(0);
-    expect(renamed.posted.map((review) => review.event)).toEqual(["APPROVE"]);
-    expect((renamed.requests[0]!.body["messages"] as { content: string }[])[0]!.content).toContain(`### docs/renamed.md (renamed)\n\n${NO_TEXTUAL_CHANGE}`);
-    // A missing patch on a file with changes is still refused.
-    const binary = fakeState({ files: [{ filename: "big.bin", status: "modified", changes: 12 }], pr: { ...fakeState().pr, changed_files: 1 } });
-    const binaryRun = await withFakes(binary, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(binaryRun.code).toBe(1);
-    expect(binaryRun.err.join("\n")).toContain("without a patch (too large or binary): big.bin");
-    expect(binary.posted).toEqual([]);
+    // The diff is HEAD plus tracked changes and untracked files, without _bmad-output/; the real index is untouched.
+    // A tracked _bmad-output/ file that changed since the base (as the spec does) is left out of both trees.
+    const diffRepo = makeRepo();
+    git(diffRepo.dir, "add", SPEC);
+    git(diffRepo.dir, "commit", "-q", "-m", "spec");
+    const specBase = git(diffRepo.dir, "rev-parse", "HEAD");
+    write(diffRepo.dir, SPEC, `${readFileSync(diffRepo.spec, "utf8")}\nEdited.\n`);
+    git(diffRepo.dir, "commit", "-q", "-am", "spec edited");
+    write(diffRepo.dir, SPEC, `${readFileSync(diffRepo.spec, "utf8")}\nEdited again.\n`);
+    git(diffRepo.dir, "add", CHANGED);
+    const index = git(diffRepo.dir, "ls-files", "--stage");
+    const diff = reviewDiff(diffRepo.dir, specBase);
+    // A symbolic base is resolved and recorded as its commit sha.
+    expect(reviewDiff(diffRepo.dir, "HEAD").base).toBe(git(diffRepo.dir, "rev-parse", "HEAD"));
+    expect(diff.base).toBe(specBase);
+    expect(diff.files.map((file) => [file.filename, file.status])).toEqual([
+      [REQUESTS, "added"],
+      [CHANGED, "added"],
+    ]);
+    expect(diff.tree).toBe(reviewTree(diffRepo.dir, "worktree"));
+    expect(git(diffRepo.dir, "ls-files", "--stage")).toBe(index);
+    expect(git(diffRepo.dir, "diff", "--cached", "--name-only")).toBe(CHANGED);
+    // A removal, a modification and a binary file each show; the removed file's lines are not "added" evidence.
+    rmSync(join(diffRepo.dir, "packages", "support", "src", "Base.ts"));
+    writeFileSync(join(diffRepo.dir, "conformance", "README.md"), `${readFileSync(join(diffRepo.dir, "conformance", "README.md"), "utf8")}\nMore.\n`);
+    writeFileSync(join(diffRepo.dir, "logo.bin"), new Uint8Array([0, 1, 2, 0, 255]));
+    const statuses = Object.fromEntries(reviewDiff(diffRepo.dir, diffRepo.base).files.map((file) => [file.filename, [file.status, file.patch === null]]));
+    expect(statuses).toEqual({ [REQUESTS]: ["added", false], [CHANGED]: ["added", false], "conformance/README.md": ["modified", false], "logo.bin": ["added, binary", true], "packages/support/src/Base.ts": ["removed", false] });
 
     // The evidence (a)-(d): DIV records cited by adapted markers, consequence lines, error fixtures, DIV-1 for @asyncRoot.
-    const evidenceRoot = makeRoot({ oracle: true });
-    const evidencePatch = [
-      "@@ -0,0 +1,6 @@",
-      "+  assertSame(0.1 + 0.2, x); // adapted:DIV-9.1",
-      "+  assertSame(1, y); // adapted:DIV-77.1",
-      '+xaravelTest("XT-conformance-999", "covers FR-111.1 and FR-999.9", () => {});',
-      '+{"id":"x","variant":"none","status":"pass","reason":null,"adapted":"DIV-55.1"}',
-      '+{"id":"y","variant":"none","status":"skip","reason":"intentional-divergence:DIV-66"}',
-      "+/** @asyncRoot */",
-      "+export async function get(): Promise<string> { return ''; }",
-      "+",
-    ].join("\n");
-    const evidence = fakeState({ files: [{ filename: "packages/support/tests/Evidence.test.ts", status: "added", patch: evidencePatch }], pr: { ...fakeState().pr, changed_files: 1 } });
-    const evidenceRun = await withFakes(evidence, (github, anthropic) => runReview(args(evidenceRoot, 1, login1), env(github, anthropic, "token-1")));
-    expect(evidenceRun.err).toEqual([]);
-    expect(evidenceRun.code).toBe(0);
-    const evidenceUser = (evidence.requests[0]!.body["messages"] as { content: string }[])[0]!.content;
-    const evidenceSystem = String(evidence.requests[0]!.body["system"]);
+    const evidenceRepo = makeRepo({ oracle: true, change: false });
+    write(
+      evidenceRepo.dir,
+      "packages/support/tests/Evidence.test.ts",
+      [
+        "  assertSame(0.1 + 0.2, x); // adapted:DIV-9.1",
+        "  assertSame(1, y); // adapted:DIV-77.1",
+        'xaravelTest("XT-conformance-999", "covers FR-111.1 and FR-999.9", () => {});',
+        '{"id":"x","variant":"none","status":"pass","reason":null,"adapted":"DIV-55.1"}',
+        '{"id":"y","variant":"none","status":"skip","reason":"intentional-divergence:DIV-66"}',
+        "/** @asyncRoot */",
+        "export async function get(): Promise<string> { return ''; }",
+        "",
+      ].join("\n"),
+    );
+    const evidenceFakes = fakes({});
+    expect((await review(evidenceRepo.dir, evidenceFakes.env, "--loop-cli", "claude")).code).toBe(0);
+    const evidenceUser = evidenceFakes.calls("claude")[0]!.stdin;
+    const evidenceSystem = (({ argv }) => argv[argv.indexOf("--system-prompt") + 1]!)(evidenceFakes.calls("claude")[0]!);
     expect(evidenceSystem).toContain("When in doubt, pick the reason that counts against conformance.");
     const div9 = readFileSync(join(root, "decisions", "DIV-9.md"), "utf8");
     expect(evidenceUser).toContain("### (a) DIV records cited by added adapted markers (F-3, F-5)");
     expect(evidenceUser).toContain(`#### decisions/DIV-9.md\n\n\`\`\`markdown\n${div9}`);
     expect(evidenceUser).toContain("fewer_assertions:");
     expect(evidenceUser).toContain("unavailable: decisions/DIV-77.md does not exist");
-    // An Expectations `"adapted"` field and an `intentional-divergence` Skip Reason cite their DIV record too.
     expect(evidenceUser).toContain("unavailable: decisions/DIV-55.md does not exist");
     expect(evidenceUser).toContain("unavailable: decisions/DIV-66.md does not exist");
     expect(evidenceUser).toContain("### (b) Consequences cited on added lines (F-7)");
@@ -509,130 +599,204 @@ xaravelTest(
     expect(evidenceUser).toContain("Cannot 'continue' 2 levels");
     expect(evidenceUser).toContain("### (d) DIV-1 for @asyncRoot tags (F-9)");
     expect(evidenceUser).toContain(`#### decisions/DIV-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "DIV-1.md"), "utf8")}`);
-    // Without such lines, each section says so instead.
-    expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker.");
-    expect(user).toContain("No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence.");
-    expect(user).toContain("No added line contains `@asyncRoot`.");
-    // With no error fixture, (c) never claims the PR has none: it points to the PR-head list.
-    const bare = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", prNumber: 7, sha: SHA, manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).user;
-    expect(bare).toContain("No base-branch fixture of an assigned committed Oracle request is an error; the PR-head fixtures are listed below.");
-    expect(bare).toContain("No fixture the pull request adds or modifies is an error.");
+    // With no error fixture, (c) never claims the change has none: it points to the changed-fixture list.
+    const bare = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).user;
+    expect(bare).toContain("No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.");
+    expect(bare).toContain("No fixture the change adds or modifies is an error.");
 
-    // (c) at the PR head: a Story's own error fixture, committed only to its branch, reaches the prompt.
+    // (c) for changed fixtures: a Story's own error fixture, added with its request, reaches the prompt.
+    const fixtureRepo = makeRepo({ change: false });
     const headSha256 = "c".repeat(64);
     const headFixture = `conformance/fixtures/support/${headSha256}.json`;
-    const headRequest = `${JSON.stringify({ id: TEST_ID, kind: "php-expr", input: { bindings: {}, setup: [], exprs: ["intdiv(1, 0)"] }, sha256: headSha256 })}\n`;
-    const withFixture = fakeState({
-      files: [
-        { filename: "conformance/oracle-requests/9.1.jsonl", status: "added", patch: "@@ -0,0 +1 @@\n+{}" },
-        { filename: headFixture, status: "added", patch: "@@ -0,0 +1 @@\n+{}" },
-      ],
-      contents: { "conformance/oracle-requests/9.1.jsonl": headRequest, [headFixture]: JSON.stringify({ sha256: headSha256, output: { error: { class: "DivisionByZeroError", message: "Division by zero", stage: "setup" }, results: [] }, signature: "x" }) },
-      pr: { ...fakeState().pr, changed_files: 2 },
-    });
-    const withFixtureRun = await withFakes(withFixture, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(withFixtureRun.err).toEqual([]);
-    expect(withFixtureRun.code).toBe(0);
-    const withFixtureUser = (withFixture.requests[0]!.body["messages"] as { content: string }[])[0]!.content;
-    expect(withFixtureUser).toContain(`#### ${TEST_ID} (${headFixture}, PR head)`);
-    expect(withFixtureUser).toContain("Division by zero");
+    write(fixtureRepo.dir, REQUESTS, `${JSON.stringify({ id: TEST_ID, kind: "php-expr", input: { bindings: {}, setup: [], exprs: ["intdiv(1, 0)"] }, sha256: headSha256 })}\n`);
+    write(fixtureRepo.dir, headFixture, JSON.stringify({ sha256: headSha256, output: { error: { class: "DivisionByZeroError", message: "Division by zero", stage: "setup" }, results: [] }, signature: "x" }));
+    const fixtureFakes = fakes({});
+    expect((await review(fixtureRepo.dir, fixtureFakes.env, "--loop-cli", "claude")).code).toBe(0);
+    const fixtureUser = fixtureFakes.calls("claude")[0]!.stdin;
+    expect(fixtureUser).toContain(`#### ${TEST_ID} (${headFixture}, changed)`);
+    expect(fixtureUser).toContain("Division by zero");
 
-    // A removed Oracle request file is not read at the head; the review is still posted.
-    const removed = fakeState({ files: [{ filename: "conformance/oracle-requests/9.1.jsonl", status: "removed", patch: '@@ -1 +0,0 @@\n-{"id":"x"}' }], contents: {}, pr: { ...fakeState().pr, changed_files: 1 } });
-    const removedRun = await withFakes(removed, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(removedRun.err).toEqual([]);
+    // A removed Oracle request file is not read; the review still records its verdicts.
+    const removedRepo = makeRepo({ change: false });
+    write(removedRepo.dir, REQUESTS, '{"id":"x"}\n');
+    const removedBase = commitAll(removedRepo.dir, "requests");
+    rmSync(join(removedRepo.dir, REQUESTS));
+    const removedRun = await review(removedRepo.dir, fakes({}).env, "--loop-cli", "claude", "--base", removedBase);
     expect(removedRun.code).toBe(0);
-    expect(removed.posted).toHaveLength(1);
-
-    // The model call: an overload (529) is retried once and the review is posted.
-    const overloaded = fakeState({ responses: [{ status: 529, body: { type: "error", error: { type: "overloaded_error", message: "Overloaded" } } }] });
-    const overloadedRun = await withFakes(overloaded, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(overloadedRun.code).toBe(0);
-    expect(overloaded.requests).toHaveLength(2);
-    expect(overloaded.posted.map((review) => review.event)).toEqual(["APPROVE"]);
-    expect(overloadedRun.err.join("\n")).toContain("HTTP 529");
-    // A 400 fails at once, quoting the response body; nothing is posted.
-    const rejected = fakeState({ responses: [{ status: 400, body: { type: "error", error: { type: "invalid_request_error", message: "tool_choice is not supported" } } }] });
-    const rejectedRun = await withFakes(rejected, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(rejectedRun.code).toBe(1);
-    expect(rejected.requests).toHaveLength(1);
-    expect(rejectedRun.err.join("\n")).toContain("HTTP 400");
-    expect(rejectedRun.err.join("\n")).toContain("tool_choice is not supported");
-    expect(rejectedRun.err.join("\n")).not.toContain("test-model-key");
-    expect(rejected.posted).toEqual([]);
-    // Three overloads in a row exhaust the attempts.
-    const down = fakeState({ responses: [529, 500, 429].map((status) => ({ status, body: { type: "error" } })) });
-    const downRun = await withFakes(down, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(downRun.code).toBe(1);
-    expect(down.requests).toHaveLength(3);
-    expect(downRun.err.join("\n")).toContain("attempt 3 of 3");
-    expect(down.posted).toEqual([]);
-
-    // A review POST that GitHub refuses (422) is exit 1, with the body quoted.
-    const unprocessable = fakeState({ reviewStatus: 422 });
-    const unprocessableRun = await withFakes(unprocessable, (github, anthropic) => runReview(args(dir, 1, login1), env(github, anthropic, "token-1")));
-    expect(unprocessableRun.code).toBe(1);
-    expect(unprocessableRun.err.join("\n")).toContain("HTTP 422");
-    expect(unprocessableRun.err.join("\n")).toContain("review body too long");
-    expect(unprocessable.posted).toEqual([]);
+    expect(records(removedRepo.spec)).toHaveLength(2);
   },
-  120_000,
+  180_000,
 );
 
 // ---------------------------------------------------------------------------
-// XT-conformance-162 (AC3): a rejecting review
+// XT-conformance-162 (AC3): a rejecting verdict, and failing closed
 
 xaravelTest(
   "XT-conformance-162",
-  "a failing Fidelity Review item posts REQUEST_CHANGES with the findings, so the PR returns to its implementer, and approvals then counts only distinct identities' approvals on the head; a missing, extra, duplicate or malformed verdict posts nothing and fails closed (FR-111.3, AD-15.8)",
+  "a failing Fidelity Review item records a reject verdict in the Story's spec and prints each finding for triage, so the Story returns to its implementer, and story:check's approvals then fails; a malformed or missing verdict, or an unclassified CLI failure, is retried once then records nothing and fails closed; verdicts for an older tree are stale, and two from the same slot or two on the loop's CLI without a recorded reason never pass (FR-111.3, AD-15.8)",
   async () => {
-    const dir = makeRoot();
+    // Reject: reviewer 1 fails F-2 with a finding.
     const finding = { path: "conformance/tests/support/SupportStrTest.test.ts", detail: "assertSame(3, …) became assertEquals('3', …)" };
-    const failing = fakeState({ message: verdictMessage(answers({ "F-2": "fail", "F-9": "n/a" }, { "F-2": [finding] })) });
-    const run = await withFakes(failing, (github, anthropic) => runReview(args(dir, 2, "xaravel-fidelity-2[bot]"), env(github, anthropic, "token-2")));
+    const repo = makeRepo();
+    const tree = reviewTree(repo.dir, "worktree");
+    const rejecting = fakes({ codex: [{ kind: "answer", answer: { items: answers({ "F-2": "fail", "F-9": "n/a" }, { "F-2": [finding] }) } }] });
+    const run = await review(repo.dir, rejecting.env, "--loop-cli", "claude");
+    expect(run.code).toBe(1);
     expect(run.err).toEqual([]);
-    expect(run.code).toBe(0);
-    expect(failing.posted).toHaveLength(1);
-    const posted = failing.posted[0]!;
-    expect(posted.event).toBe("REQUEST_CHANGES");
-    expect(posted.commit_id).toBe(SHA);
-    expect(posted.body).toContain("| F-2: No expected value is weakened | fail | checked F-2 |");
-    expect(posted.body).toContain("| F-9: Every `@asyncRoot` tag is true | n/a | checked F-9 |");
-    expect(posted.body).toContain(`- **F-2** \`${finding.path}\`: ${finding.detail}`);
+    expect(run.out).toEqual(["reviewer 1: reject (codex/gpt-fake-1)", "reviewer 2: pass (claude/claude-fake-1)", `F-2 ${finding.path}: ${finding.detail}`, `recorded 2 verdict(s) in ${SPEC} for tree ${tree}`]);
+    const [rejected] = records(repo.spec);
+    expect([rejected!.verdict, rejected!.tree]).toEqual(["reject", tree]);
+    const specText = readFileSync(repo.spec, "utf8");
+    expect(specText).toContain(`### Reviewer 1: reject at tree ${tree}`);
+    expect(specText).toContain("| F-2: No expected value is weakened | fail | checked F-2 |");
+    expect(specText).toContain("| F-9: Every `@asyncRoot` tag is true | n/a | checked F-9 |");
+    expect(specText).toContain(`- **F-2** \`${finding.path}\`: ${finding.detail}`);
+    const status1 = await status(repo.dir);
+    expect(status1.code).toBe(1);
+    expect(status1.out).toEqual([`missing: 1 of 2 pass verdicts for tree ${tree}`, `  reviewer 1: reject at tree ${tree}`, `  reviewer 2: pass at tree ${tree}`]);
+    commitAll(repo.dir);
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`FAIL approvals: 1 of 2 pass verdicts for tree ${tree}`, `  reviewer 1: reject at tree ${tree}`, `  reviewer 2: pass at tree ${tree}`]);
+    // A later review of the fixed tree appends; the earlier records are never edited.
+    write(repo.dir, CHANGED, "export const added = 2;\n");
+    const fixedTree = reviewTree(repo.dir, "worktree");
+    const before = readFileSync(repo.spec, "utf8");
+    expect((await review(repo.dir, fakes({}).env, "--loop-cli", "claude", "--base", repo.base)).code).toBe(0);
+    const after = readFileSync(repo.spec, "utf8");
+    expect(after.startsWith(before.trimEnd())).toBe(true);
+    expect(records(repo.spec).map((record) => [record.reviewer, record.verdict, record.tree])).toEqual([
+      [1, "reject", tree],
+      [2, "pass", tree],
+      [1, "pass", fixedTree],
+      [2, "pass", fixedTree],
+    ]);
+    expect((await status(repo.dir)).out[0]).toStartWith("current: ");
 
-    // Findings are listed only for fail items: a pass item's stray finding is not rendered.
+    // Stale: a reviewed file changes after the verdicts; status says stale, and once committed approvals finds none.
+    write(repo.dir, CHANGED, "export const added = 3;\n");
+    const staleTree = reviewTree(repo.dir, "worktree");
+    expect(await status(repo.dir)).toEqual({ code: 1, out: [`stale: 0 of 2 pass verdicts for tree ${staleTree}`, `  reviewer 1: none for tree ${staleTree}`, `  reviewer 2: none for tree ${staleTree}`], err: [] });
+    commitAll(repo.dir);
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`FAIL approvals: 0 of 2 pass verdicts for tree ${staleTree}`, `  reviewer 1: none for tree ${staleTree}`, `  reviewer 2: none for tree ${staleTree}`]);
+
+    // Malformed answer twice: retried once, then no record for that reviewer; stderr names the id; exit 1.
+    const malformedRepo = makeRepo();
+    const missingF9: Step = { kind: "answer", answer: { items: answers().filter((entry) => entry["id"] !== "F-9") } };
+    const malformed = fakes({ codex: [missingF9] });
+    const malformedRun = await review(malformedRepo.dir, malformed.env, "--loop-cli", "claude");
+    expect(malformedRun.code).toBe(1);
+    expect(malformed.calls("codex")).toHaveLength(2);
+    expect(malformed.calls("claude")).toHaveLength(1);
+    expect(malformedRun.err).toEqual([
+      "fidelity-review: reviewer 1: codex attempt 1 of 2: malformed verdict: missing item id F-9",
+      "fidelity-review: reviewer 1: codex attempt 2 of 2: malformed verdict: missing item id F-9",
+      "fidelity-review: reviewer 1: no verdict from codex after 2 attempts",
+    ]);
+    // The missing verdict is on stdout too, so the review layer reports it as a finding.
+    expect(malformedRun.out).toContain("NO-VERDICT reviewer 1: no verdict from codex after 2 attempts");
+    expect(records(malformedRepo.spec).map((record) => record.reviewer)).toEqual([2]);
+    commitAll(malformedRepo.dir);
+    expect(renderClause(approvalsClause(malformedRepo.dir, "9.1"))[1]).toStartWith("  reviewer 1: none for tree ");
+    // Malformed once, then well-formed: the retry's verdict is recorded.
+    const retryRepo = makeRepo();
+    const retry = fakes({ codex: [{ kind: "answer", answer: { items: answers({ "F-1": "yes" as "pass" }) } }, pass()] });
+    const retryRun = await review(retryRepo.dir, retry.env, "--loop-cli", "claude");
+    expect(retryRun.code).toBe(0);
+    expect(retryRun.err).toEqual(['fidelity-review: reviewer 1: codex attempt 1 of 2: malformed verdict: F-1: result "yes" is not pass, fail or n/a']);
+    expect(records(retryRepo.spec).map((record) => record.cli)).toEqual(["codex", "claude"]);
+    // An answer that is not JSON at all, from claude, counts as malformed too.
+    const notJson = makeRepo();
+    const notJsonFakes = fakes({ claude: [{ kind: "raw", stdout: "All good!", code: 0 }] });
+    const notJsonRun = await review(notJson.dir, notJsonFakes.env, "--loop-cli", "claude");
+    expect(notJsonRun.code).toBe(1);
+    expect(notJsonRun.err.join("\n")).toContain("claude exited 0 without a JSON result: All good!");
+    expect(records(notJson.spec).map((record) => [record.reviewer, record.cli])).toEqual([[1, "codex"]]);
+
+    // Unclassified failure twice: no fallback (claude is asked only for reviewer 2), no record, exit 1.
+    const crashRepo = makeRepo();
+    const crash = fakes({ codex: [{ kind: "raw", stderr: "thread 'main' panicked at core.rs:1\n", code: 3 }] });
+    const crashRun = await review(crashRepo.dir, crash.env, "--loop-cli", "claude");
+    expect(crashRun.code).toBe(1);
+    expect(crash.calls("codex")).toHaveLength(2);
+    expect(crash.calls("claude")).toHaveLength(1);
+    expect(crashRun.err.join("\n")).toContain("codex exited 3: thread 'main' panicked at core.rs:1");
+    expect(records(crashRepo.spec).map((record) => [record.reviewer, record.fallback])).toEqual([[2, null]]);
+    // Codex echoes its prompt; a diff that says "usage limit" or "not logged in" must not make an unrelated failure look
+    // like an unavailable CLI: no fallback, fail closed.
+    const echoRepo = makeRepo();
+    write(echoRepo.dir, CHANGED, "// When the usage limit is hit you are not logged in.\nexport const added = 1;\n");
+    const echo = fakes({ codex: [{ kind: "raw", echo: true, code: 3 }] });
+    const echoRun = await review(echoRepo.dir, echo.env, "--loop-cli", "claude");
+    expect(echoRun.code).toBe(1);
+    expect(echo.calls("codex")).toHaveLength(2);
+    expect(echo.calls("claude")).toHaveLength(1);
+    expect(echoRun.out).toContain("NO-VERDICT reviewer 1: no verdict from codex after 2 attempts");
+    expect(records(echoRepo.spec).map((record) => [record.reviewer, record.fallback])).toEqual([[2, null]]);
+    // Unavailable with no fallback left: both CLIs missing; nothing is recorded.
+    const noneRepo = makeRepo();
+    const noneRun = await review(noneRepo.dir, fakes({}, ["claude", "codex"]).env, "--loop-cli", "claude");
+    expect(noneRun.code).toBe(1);
+    expect(noneRun.err.filter((line) => line.endsWith("no fallback is left"))).toHaveLength(2);
+    expect(parseRecords(readFileSync(noneRepo.spec, "utf8"))).toEqual([]);
+    expect(readFileSync(noneRepo.spec, "utf8")).not.toContain(RECORDS_HEADING);
+    // A timeout is a failure, retried once; the subprocess is killed.
+    const sleepy = fakes({ claude: [{ kind: "sleep", ms: 10_000 }] });
+    const prompt = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE });
+    const timedOut = await runReviewer({ cli: "claude", env: sleepy.env, prompt, items: ITEMS, timeoutMs: 300 });
+    expect(timedOut.kind).toBe("failed");
+    expect(timedOut.log).toEqual(["claude attempt 1 of 2: claude timed out after 300 ms", "claude attempt 2 of 2: claude timed out after 300 ms"]);
+    expect(REVIEWER_TIMEOUT_MS).toBe(15 * 60 * 1000);
+    // A grandchild holding stdout open does not keep an attempt past its timeout; the process group is killed.
+    const hung = fakes({ claude: [{ kind: "hang" }] });
+    const started = Date.now();
+    const hungOutcome = await runReviewer({ cli: "claude", env: hung.env, prompt, items: ITEMS, timeoutMs: 300 });
+    expect(hungOutcome.kind).toBe("failed");
+    expect(Date.now() - started).toBeLessThan(5_000);
+
+    // Counting: hand-written records. Two on the loop's CLI with no reason fail on the fallback rule; same-slot passes
+    // count once; a record for another tree never counts.
+    const t = "d".repeat(40);
+    const record = (reviewer: 1 | 2, cli: "claude" | "codex", extra: Partial<VerdictRecord> = {}): VerdictRecord => ({ kind: RECORD_KIND, reviewer, verdict: "pass", tree: t, base: "e".repeat(40), cli, model: `${cli}-m`, loop_cli: "claude", fallback: null, date: "2026-10-20T00:00:00.000Z", items: answers() as unknown as VerdictRecord["items"], ...extra });
+    const count = (list: VerdictRecord[], tree2 = t) => fidelityVerdicts(parseRecords(appendRecords("# spec\n", list.map((entry) => renderRecord(entry, ITEMS)))), tree2, ITEMS);
+    expect(count([record(1, "codex"), record(2, "claude")]).pass).toBe(true);
+    const sameCli = count([record(1, "claude"), record(2, "claude")]);
+    expect(sameCli.pass).toBe(false);
+    expect(sameCli.items.at(-1)).toContain("reviewer 1 ran on claude, the loop's own CLI, and recorded no fallback reason");
+    expect(count([record(1, "claude", { fallback: "codex unavailable: usage limit: x" }), record(2, "claude")]).pass).toBe(true);
+    expect(count([record(1, "codex"), record(1, "codex")]).pass).toBe(false);
+    expect(count([record(2, "claude"), record(2, "claude")]).pass).toBe(false);
+    expect(count([record(1, "codex"), record(2, "claude")], "f".repeat(40)).pass).toBe(false);
+    expect(count([record(1, "codex"), record(2, "claude", { tree: "f".repeat(40) })]).items).toEqual([`reviewer 1: pass at tree ${t}`, `reviewer 2: none for tree ${t}`]);
+
+    // Records live only in the `## Fidelity Review` section, and appending keeps the sections after it in place.
+    const withLater = appendRecords(`# s\n\n${RECORDS_HEADING}\n\nold\n\n## Auto Run Result\n\nDone.\n`, [renderRecord(record(1, "codex"), ITEMS)]);
+    expect(withLater.indexOf("### Reviewer 1")).toBeLessThan(withLater.indexOf("## Auto Run Result"));
+    expect(withLater.endsWith("## Auto Run Result\n\nDone.\n")).toBe(true);
+    expect(parseRecords(withLater)).toHaveLength(1);
+    expect(parseRecords(`# s\n\n\`\`\`json\n${JSON.stringify(record(1, "codex"))}\n\`\`\`\n`)).toEqual([]);
+    expect(parseRecords(`${RECORDS_HEADING}\n\n\`\`\`json\n{"kind":"other"}\n\`\`\`\n`)[0]!.problem).toBe('kind is "other", not fidelity-verdict');
+
+    // The rendered record: findings only for fail items, and model text cannot @-mention.
     const stray = { path: "packages/support/src/Stray.ts", detail: "a note on a passing item" };
     const strayVerdict = parseVerdict(ITEMS, { items: answers({ "F-2": "fail" }, { "F-2": [finding], "F-3": [stray] }) });
     expect(strayVerdict.ok).toBe(true);
-    const strayBody = strayVerdict.ok ? renderReviewBody({ reviewer: 1, storyId: "9.1", sha: SHA, model: DEFAULT_MODEL, items: ITEMS, verdict: strayVerdict.verdict }) : "";
-    expect(strayBody).toContain(finding.path);
-    expect(strayBody).not.toContain(stray.path);
-    const approveWithStray = parseVerdict(ITEMS, { items: answers({}, { "F-3": [stray] }) });
-    const approveBody = approveWithStray.ok ? renderReviewBody({ reviewer: 1, storyId: "9.1", sha: SHA, model: DEFAULT_MODEL, items: ITEMS, verdict: approveWithStray.verdict }) : "";
-    expect(approveWithStray.ok && decideEvent(approveWithStray.verdict)).toBe("APPROVE");
-    expect(approveBody).not.toContain(stray.path);
-    expect(approveBody).toContain("## Findings\n\nNone.");
-
-    // Model-written notes and findings cannot @-mention: every `@` is followed by U+200B.
+    const strayText = strayVerdict.ok ? renderRecord(record(1, "codex", { verdict: decideVerdict(strayVerdict.verdict), items: strayVerdict.verdict }), ITEMS) : "";
+    expect(strayText.split("```json")[0]).toContain(finding.path);
+    expect(strayText.split("```json")[0]).not.toContain(stray.path);
+    expect(renderRecord(record(1, "codex"), ITEMS)).toContain("Findings:\n\nNone.");
     const mention = parseVerdict(ITEMS, { items: answers({ "F-2": "fail" }, { "F-2": [{ path: "a/@team.ts", detail: "ping @xaravel/maintainers" }] }).map((entry) => (entry["id"] === "F-1" ? { ...entry, note: "cc @edanisko" } : entry)) });
-    const mentionBody = mention.ok ? renderReviewBody({ reviewer: 1, storyId: "9.1", sha: SHA, model: DEFAULT_MODEL, items: ITEMS, verdict: mention.verdict }) : "";
-    expect(mentionBody).toContain("cc @\u200Bedanisko");
-    expect(mentionBody).toContain("`a/@\u200Bteam.ts`: ping @\u200Bxaravel/maintainers");
-    expect(/@(?!\u200B)(edanisko|xaravel|team)/.test(mentionBody)).toBe(false);
-
-    // approvals over that rejection plus one approval fails, listing the rejecting reviewer.
-    const reviews: Review[] = [{ user: { login: "xaravel-fidelity-1[bot]" }, state: "APPROVED", commit_id: SHA }, { user: posted.user, state: posted.state, commit_id: posted.commit_id }];
-    const clause = approvalsClause(7, AUTHOR, SHA, reviews);
-    expect(clause.pass).toBe(false);
-    expect(clause.items).toContain("xaravel-fidelity-2[bot]: CHANGES_REQUESTED");
+    const mentionText = mention.ok ? renderRecord(record(1, "codex", { verdict: "reject", items: mention.verdict }), ITEMS).split("```json")[0]! : "";
+    expect(mentionText).toContain("cc @\u200Bedanisko");
+    expect(mentionText).toContain("`a/@\u200Bteam.ts`: ping @\u200Bxaravel/maintainers");
+    expect(/@(?!\u200B)(edanisko|xaravel|team)/.test(mentionText)).toBe(false);
+    expect(noMention("@a")).toBe("@\u200Ba");
 
     // The pure verdict rules.
     const ok = parseVerdict(ITEMS, { items: answers() });
-    expect(ok.ok).toBe(true);
-    expect(ok.ok && decideEvent(ok.verdict)).toBe("APPROVE");
+    expect(ok.ok && decideVerdict(ok.verdict)).toBe("pass");
+    const naOnly = parseVerdict(ITEMS, { items: answers({ "F-9": "n/a" }) });
+    expect(naOnly.ok && decideVerdict(naOnly.verdict)).toBe("pass");
     const failed = parseVerdict(ITEMS, { items: answers({ "F-2": "fail" }, { "F-2": [finding] }) });
-    expect(failed.ok && decideEvent(failed.verdict)).toBe("REQUEST_CHANGES");
-    expect(failed.ok && renderReviewBody({ reviewer: 1, storyId: "9.1", sha: SHA, model: DEFAULT_MODEL, items: ITEMS, verdict: failed.verdict }).startsWith(`Fidelity Review (reviewer 1) of Story 9.1 at ${SHA}\n`)).toBe(true);
+    expect(failed.ok && decideVerdict(failed.verdict)).toBe("reject");
     const bad = (input: unknown): string[] => {
       const result = parseVerdict(ITEMS, input);
       return result.ok ? [] : result.errors;
@@ -646,23 +810,40 @@ xaravelTest(
     expect(bad({ items: answers({ "F-6": "fail" }, { "F-6": [{ path: "", detail: "x" }] }) })).toEqual(["F-6: findings[0] needs a non-empty path and detail"]);
     expect(bad(null)).toEqual(["the verdict is not an object with an items array"]);
 
-    // The missing-item and malformed rows: nothing posted, exit 1.
-    const cases: [string, unknown, string][] = [
-      ["missing F-9", verdictMessage(answers().filter((entry) => entry["id"] !== "F-9")), "missing item id F-9"],
-      ["bad result", verdictMessage(answers({ "F-1": "yes" as "pass" })), 'F-1: result "yes"'],
-      ["no tool call", { id: "m", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: "All good." }] }, "0 submit_verdict tool calls"],
-      ["refusal", { id: "m", type: "message", role: "assistant", stop_reason: "refusal", content: [] }, "0 submit_verdict tool calls"],
-      ["truncated", verdictMessage(answers(), { stop_reason: "max_tokens" }), "stop_reason \"max_tokens\""],
-    ];
-    for (const [name, message, expected] of cases) {
-      const state = fakeState({ message });
-      const result = await withFakes(state, (github, anthropic) => runReview(args(dir, 1, "xaravel-fidelity-1[bot]"), env(github, anthropic, "token-1")));
-      expect(`${name}: ${result.code}`).toBe(`${name}: 1`);
-      expect(result.err.join("\n")).toContain(expected);
-      expect(result.err.join("\n")).toContain("no review posted");
-      expect(result.err.join("\n")).not.toContain("test-model-key");
-      expect(state.posted).toEqual([]);
+    // Model text with newlines, fences and headings cannot swallow the record's JSON block.
+    const hostile = parseVerdict(ITEMS, { items: answers({ "F-2": "fail" }, { "F-2": [{ path: "a.ts\n```", detail: "x\n```\n## Fidelity Review\n# Top\n```json\n{}" }] }).map((entry) => (entry["id"] === "F-1" ? { ...entry, note: "n\n```\n## Other" } : entry)) });
+    expect(hostile.ok).toBe(true);
+    const hostileRecord = record(1, "codex", { verdict: "reject", items: hostile.ok ? hostile.verdict : [] });
+    const hostileText = appendRecords("# spec\n", [renderRecord(hostileRecord, ITEMS)]);
+    expect(parseRecords(hostileText)).toEqual([{ line: expect.any(Number), record: hostileRecord, problem: null }]);
+    expect(hostileText.split("```json")[0]).not.toContain("```");
+    // Counted records are re-validated against the checklist: a missing item, an empty note or a fail with no finding is malformed.
+    const thin = (items: unknown[]): VerdictRecord => record(1, "codex", { items: items as VerdictRecord["items"] });
+    for (const items of [answers().filter((entry) => entry["id"] !== "F-4"), answers().map((entry) => (entry["id"] === "F-3" ? { ...entry, note: "" } : entry))]) {
+      const result = count([thin(items), record(2, "claude")]);
+      expect(result.pass).toBe(false);
+      expect(result.detail).toBe("1 malformed Fidelity Review record(s)");
     }
+    const failNoFinding = count([record(1, "codex", { verdict: "reject", items: answers({ "F-2": "fail" }) as unknown as VerdictRecord["items"] }), record(2, "claude")]);
+    expect(failNoFinding.items[0]).toContain("F-2: a fail needs at least one finding");
+
+    // The review layer and its Finalize re-check are wired into bmad-build-auto.
+    const custom = Bun.TOML.parse(readFileSync(join(root, "_bmad", "custom", "bmad-build-auto.toml"), "utf8")) as { workflow: { review_layers: { id: string; when?: string; instruction: string }[] } };
+    const layer = custom.workflow.review_layers.find((entry) => entry.id === "fidelity-review")!;
+    expect(layer.when).toContain("stories/<id>.md");
+    expect(layer.instruction).toContain("bun run fidelity:review review --story <id> --spec {spec_file} --loop-cli <cli>");
+    expect(layer.instruction).toContain("Finalize re-check: `bun run fidelity:review status --story <id> --spec {spec_file}`");
+    expect(layer.instruction).toContain("NO-VERDICT");
+    const step4 = readFileSync(join(root, ".claude", "skills", "bmad-build-auto", "step-04-review.md"), "utf8");
+    expect(step4).toContain("A review layer may name a Finalize re-check.");
+    expect(step4).toContain("review repair loop exceeded 5 iterations (non-convergence)");
+
+    // Spec lookup: exactly one spec-<a>-<b>-*.md; spec-9-10-* is not Story 9.1's.
+    const lookup = tempDir("xt-fidelity-lookup-");
+    write(lookup, "_bmad-output/implementation-artifacts/spec-9-10-x.md", "x");
+    expect(() => findStorySpec(lookup, "9.1")).toThrow("no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md");
+    write(lookup, "_bmad-output/implementation-artifacts/spec-9-1-x.md", "x");
+    expect(findStorySpec(lookup, "9.1")).toBe(join(lookup, "_bmad-output/implementation-artifacts/spec-9-1-x.md"));
   },
-  120_000,
+  180_000,
 );

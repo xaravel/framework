@@ -96,6 +96,8 @@ Announce skipped layers first, then launch every active layer before handling an
 
 ## Finalize
 
+A review layer may name a Finalize re-check. Before writing `status: done`, run the re-check of every layer that ran in this review, after any patches. When one fails, treat it as a new review pass: read `{spec_file}` frontmatter `review_loop_iteration` (missing means `0`), increment it by 1 and write it back, as for a loopback. If it exceeds 5, append the triage-log entry for this pass, then HALT with status `blocked` and blocking condition `review repair loop exceeded 5 iterations (non-convergence)`. Otherwise run that layer again, then classify and route its findings from Classify onward.
+
 Write the following details to `{spec_file}` under `## Auto Run Result`:
 - Summary of implemented change
 - Files changed with one-line descriptions

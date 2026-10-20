@@ -5,7 +5,9 @@
 // manifests, an Inventory, an Expectations shard, `conformance/variants`, a
 // stub Ported Test file and a stub Xaravel Test file that import
 // `@xaravel/assert` from the real `packages/assert` by absolute path; the real
-// harness runs them. The GitHub API is a `Bun.serve` fake on port 0. The real
+// harness runs them. `approvals` reads Fidelity Review verdict records from a
+// spec under `_bmad-output/` in a committed fixture root; the GitHub API that
+// `full-run` reads is a `Bun.serve` fake on port 0. The real
 // repository is only read; no test here runs the Xaravel Tests of the real
 // root unfiltered, since that run would include these tests.
 import { afterAll, expect } from "bun:test";
@@ -19,6 +21,7 @@ import { coverage, runCoverage } from "../../../tools/xt-coverage/coverage";
 import { CONSEQUENCE_SOURCES, consequencesFor, declaredConsequences, expectedFiles, PRD_FILE, readConsequences, SPINE_FILE } from "../../../tools/xt-coverage/consequences";
 import { apiSurfaceClause, approvalsClause, CLAUSES, fixturesClause, fullRunClause, lastSummary, MAX_ITEMS, renderClause, repoFromRemote, runApiSurfaceGate, runStoryCheck, testsClause, xaravelClause, type FixturesInput, type GateRun } from "../../../tools/story-check/story-check";
 import { EPICS, parseManifest } from "../../../tools/ownership/ownership";
+import { appendRecords, CHECKLIST_FILE, parseChecklist, RECORD_KIND, renderRecord, reviewTree, type Cli, type VerdictRecord } from "../../../tools/fidelity-review/fidelity-review";
 import { renderFixture, signFixture } from "../../../tools/oracle/fixtures";
 import { makeRequest, renderRequests, REQUESTS_DIR, SCHEMA_FILE, type Json } from "../../../tools/oracle/request";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -36,7 +39,7 @@ afterAll(() => {
 function makeRoot(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "xt-done-check-"));
   roots.push(dir);
-  for (const [path, text] of Object.entries({ "bunfig.toml": "env = false\n", "conformance/variants": "none\npgsql\nsqlite\n", ...files })) {
+  for (const [path, text] of Object.entries({ "bunfig.toml": "env = false\n", "conformance/variants": "none\npgsql\nsqlite\n", [CHECKLIST_FILE]: readFileSync(join(root, CHECKLIST_FILE), "utf8"), ...files })) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   }
@@ -249,7 +252,6 @@ function storyRoot(files: Record<string, string> = {}): string {
 
 interface FakeGitHub {
   pulls: { number: number; updated_at: string; user: { login: string }; head: { sha: string; ref: string } }[];
-  reviews: Record<number, { user: { login: string }; state: string; commit_id: string }[]>;
   runs: Record<string, { id: number; name: string; created_at: string }[]>;
   jobs: Record<number, { id: number; name: string; conclusion?: string | null }[]>;
   logs: Record<number, string>;
@@ -282,12 +284,6 @@ async function withGitHub<T>(fake: FakeGitHub, body: (api: string, paths: string
       if (match !== null) {
         const pull = fake.pulls.find((entry) => entry.number === Number(match![1]));
         return pull === undefined ? new Response("not found", { status: 404 }) : Response.json(pull);
-      }
-      match = /^\/pulls\/(\d+)\/reviews$/.exec(path);
-      if (match !== null) {
-        const all = fake.reviews[Number(match[1])] ?? [];
-        const page = Number(url.searchParams.get("page") ?? "1");
-        return Response.json(all.slice((page - 1) * 100, page * 100));
       }
       if (path === "/actions/runs") {
         return Response.json({ workflow_runs: fake.runs[url.searchParams.get("head_sha") ?? ""] ?? [] });
@@ -335,18 +331,6 @@ function fakeGitHub(overrides: Partial<FakeGitHub> = {}): FakeGitHub {
       { number: 3, updated_at: "2026-10-18T09:00:00Z", user: { login: "agent" }, head: { sha: "b".repeat(40), ref: "story/9.1" } },
       { number: 7, updated_at: "2026-10-19T09:00:00Z", user: { login: "agent" }, head: { sha: SHA, ref: "story/9.1" } },
     ],
-    reviews: {
-      7: [
-        { user: { login: "alice" }, state: "CHANGES_REQUESTED", commit_id: SHA },
-        { user: { login: "agent" }, state: "APPROVED", commit_id: SHA },
-        { user: { login: "alice" }, state: "APPROVED", commit_id: SHA },
-        { user: { login: "bob" }, state: "COMMENTED", commit_id: SHA },
-        { user: { login: "bob" }, state: "APPROVED", commit_id: SHA },
-        { user: { login: "carol" }, state: "APPROVED", commit_id: SHA },
-        { user: { login: "carol" }, state: "DISMISSED", commit_id: SHA },
-        { user: { login: "bob" }, state: "COMMENTED", commit_id: SHA },
-      ],
-    },
     runs: {
       [SHA]: [
         { id: 11, name: "ratchet", created_at: "2026-10-19T08:00:00Z" },
@@ -360,6 +344,31 @@ function fakeGitHub(overrides: Partial<FakeGitHub> = {}): FakeGitHub {
   };
 }
 
+const SPEC = "_bmad-output/implementation-artifacts/spec-9-1-done.md";
+const ITEMS = parseChecklist(readFileSync(join(root, CHECKLIST_FILE), "utf8"));
+
+/** Commits everything in `dir` (a fixture root made by makeRoot). */
+function commitAll(dir: string, message = "fixture"): void {
+  for (const args of [["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", message]]) {
+    const result = Bun.spawnSync(["git", "-C", dir, ...args], { stdout: "pipe", stderr: "pipe" });
+    expect([args[0], result.exitCode, result.stderr.toString()]).toEqual([args[0], 0, ""]);
+  }
+}
+
+/** A Fidelity Review verdict record: reviewer 1 on codex and reviewer 2 on claude for a claude loop, every item pass unless `fail` names one. */
+function verdictRecord(reviewer: 1 | 2, tree: string, overrides: Partial<VerdictRecord> & { fail?: string } = {}): VerdictRecord {
+  const { fail: failing, ...rest } = overrides;
+  const cli: Cli = reviewer === 1 ? "codex" : "claude";
+  const items = ITEMS.map((item) => (item.id === failing ? { id: item.id, result: "fail" as const, note: "weakened", findings: [{ path: "packages/support/src/Str.ts", detail: "assertSame became assertEquals" }] } : { id: item.id, result: "pass" as const, note: `checked ${item.id}`, findings: [] }));
+  return { kind: RECORD_KIND, reviewer, verdict: failing === undefined ? "pass" : "reject", tree, base: "0".repeat(40), cli, model: `${cli}-test`, loop_cli: "claude", fallback: null, date: "2026-10-20T00:00:00.000Z", items, ...rest };
+}
+
+/** Writes the Story 9.1 spec into `dir` holding `records` under `## Fidelity Review` (`_bmad-output/`, so outside every reviewed tree). */
+function writeSpec(dir: string, records: readonly VerdictRecord[], path = SPEC): void {
+  mkdirSync(dirname(join(dir, path)), { recursive: true });
+  writeFileSync(join(dir, path), appendRecords("---\ntitle: 'Story 9.1'\nbaseline_revision: 'HEAD'\nstatus: 'in-review'\n---\n\n# Story 9.1\n", records.map((record) => renderRecord(record, ITEMS))));
+}
+
 const ESCALATION = "---\ntest_ids:\n  - XT-demo-1\ntrigger: open-question\nproposed: >-\n  Decide.\nevidence: >-\n  None yet.\n---\n\n# ESC-9.1-1\n";
 
 // ---------------------------------------------------------------------------
@@ -367,15 +376,18 @@ const ESCALATION = "---\ntest_ids:\n  - XT-demo-1\ntrigger: open-question\npropo
 
 xaravelTest(
   "XT-conformance-127",
-  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, api-surface, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals count by distinct reviewer identity (AD-15.8, FR-111.1, AD-16.5, AD-16.9; FR-114, FR-115, AD-28)",
+  "bun run story:check <story-id> reports PASS or FAIL for each done clause (manifest, tests, xaravel-tests, fixtures, api-surface, approvals, escalations, full-run) and exits 1 when any fails; a manifest with no assigned tests fails; approvals pass only with two pass Fidelity Review verdicts recorded in the Story's spec for the head tree, one per reviewer slot, reviewer 1 cross-model or with its fallback reason, without GH_TOKEN (AD-15.8, FR-111.1, FR-111.2, FR-111.5, AD-16.5, AD-16.9; FR-114, FR-115, AD-28)",
   async () => {
     const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["story:check"];
     expect(script).toBe("bun --no-env-file tools/story-check/story-check.ts");
     expect([...CLAUSES]).toEqual(["manifest", "tests", "xaravel-tests", "fixtures", "api-surface", "approvals", "escalations", "full-run"]);
 
-    // Every clause passes: the Story's own lines are done, its Xaravel Test passes, two distinct non-author approvals
-    // (each reviewer's latest counted review), no open Escalation, and the latest ratchet run's story step passed a full run (a warned difference allowed).
+    // Every clause passes: the Story's own lines are done, its Xaravel Test passes, two pass Fidelity Review verdicts for
+    // the head tree, no open Escalation, and the latest ratchet run's story step passed a full run (a warned difference allowed).
     const good = storyRoot();
+    commitAll(good);
+    const goodTree = reviewTree(good, "head");
+    writeSpec(good, [verdictRecord(1, goodTree), verdictRecord(2, goodTree)]);
     const passing = await withGitHub(fakeGitHub(), (api) => runStoryCheck(["9.1", "--root", good], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
     expect(passing.out).toEqual([
       "PASS manifest: stories/9.1.md: 2 test_ids, 1 xaravel_test_ids",
@@ -383,7 +395,7 @@ xaravelTest(
       "PASS xaravel-tests: 1 Xaravel Test(s) pass",
       "PASS fixtures: no assigned Differential Test ID",
       "PASS api-surface: no api-surface:gate acceptance criterion",
-      "PASS approvals: PR #7: 2 approvals (alice, bob)",
+      `PASS approvals: 2 pass verdicts for tree ${goodTree} (reviewer 1: codex/codex-test, reviewer 2: claude/claude-test)`,
       "PASS escalations: no Escalations",
       "PASS full-run: PR #7 ratchet run 12: SUMMARY variants=11 run=7 not-run=4 checked=2 differ=1; STORY ref=story/9.1 failures=0 passes=0 warnings=1",
       "STORY-CHECK 9.1 pass",
@@ -395,8 +407,10 @@ xaravelTest(
       "stories/9.1.md": manifest("9.1", [A, B, C, D, `${CLASS}::testNoLine`], ["XT-demo-1", "XT-demo-2", "XT-demo-9"]),
       "conformance/escalations/ESC-9.1-1.md": ESCALATION,
     });
-    const reviews = { 7: [{ user: { login: "alice" }, state: "APPROVED", commit_id: SHA }, { user: { login: "agent" }, state: "APPROVED", commit_id: SHA }, { user: { login: "bob" }, state: "CHANGES_REQUESTED", commit_id: SHA }] };
-    const failing = await withGitHub(fakeGitHub({ reviews, jobs: { 12: [{ id: 91, name: "ratchet", conclusion: "success" }] } }), (api) =>
+    commitAll(bad);
+    const badTree = reviewTree(bad, "head");
+    writeSpec(bad, [verdictRecord(1, badTree), verdictRecord(2, badTree, { fail: "F-2" })]);
+    const failing = await withGitHub(fakeGitHub({ jobs: { 12: [{ id: 91, name: "ratchet", conclusion: "success" }] } }), (api) =>
       runStoryCheck(["9.1", "--root", bad, "--pr", "7"], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }),
     );
     expect(failing.out).toEqual([
@@ -410,9 +424,9 @@ xaravelTest(
       "  XT-demo-9: missing",
       "PASS fixtures: no assigned Differential Test ID",
       "PASS api-surface: no api-surface:gate acceptance criterion",
-      "FAIL approvals: PR #7: 1 approval(s) from distinct reviewers other than agent; 2 needed",
-      "  alice: APPROVED",
-      "  bob: CHANGES_REQUESTED",
+      `FAIL approvals: 1 of 2 pass verdicts for tree ${badTree}`,
+      `  reviewer 1: pass at tree ${badTree}`,
+      `  reviewer 2: reject at tree ${badTree}`,
       "FAIL escalations: 1 of 1 Escalation(s) open",
       "  ESC-9.1-1: open",
       "FAIL full-run: PR #7 ratchet run 12: SUMMARY variants=1 run=1 not-run=0 checked=100 differ=0 mode=fast seed=0f0f0f0f was a fast run",
@@ -441,8 +455,8 @@ xaravelTest(
     expect(rows.out.slice(1, 4)).toEqual(["FAIL tests: 2 problem(s) over 2 Test ID × Variant line(s)", `  ${R}#b [none]: fail-known is not done`, `  ${CLASS}::testZ: no Expectations line`]);
     expect(rows.code).toBe(1);
 
-    // A manifest with no assigned tests fails, and so does every clause that needs it; with no GH_TOKEN the GitHub
-    // clauses fail and never pass silently.
+    // A manifest with no assigned tests fails, and so does every clause that needs it; with no spec approvals cannot
+    // check, and with no GH_TOKEN full-run fails; neither passes silently.
     const empty = storyRoot({ "stories/9.1.md": manifest("9.1", [], []) });
     const none = await runStoryCheck(["9.1", "--root", empty], { env: env() });
     expect(none.out).toEqual([
@@ -452,7 +466,7 @@ xaravelTest(
       "FAIL xaravel-tests: cannot check: stories/9.1.md is missing or invalid",
       "FAIL fixtures: cannot check: stories/9.1.md is missing or invalid",
       "FAIL api-surface: cannot check: stories/9.1.md is missing or invalid",
-      "FAIL approvals: cannot check: GH_TOKEN is not set",
+      "FAIL approvals: cannot check: no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md",
       "PASS escalations: no Escalations",
       "FAIL full-run: cannot check: GH_TOKEN is not set",
       "STORY-CHECK 9.1 fail",
@@ -476,13 +490,13 @@ xaravelTest(
 
     // The PR: the most recently updated with head story/<id>; none is a failure, not a pass.
     const noPr = await withGitHub(fakeGitHub({ pulls: [] }), (api) => runStoryCheck(["9.1", "--root", empty], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
-    expect(noPr.out.filter((line) => line.includes("approvals:") || line.includes("full-run:"))).toEqual(["FAIL approvals: no pull request in acme/xaravel has head story/9.1", "FAIL full-run: no pull request in acme/xaravel has head story/9.1"]);
+    expect(noPr.out.filter((line) => line.includes("full-run:"))).toEqual(["FAIL full-run: no pull request in acme/xaravel has head story/9.1"]);
     const noRun = await withGitHub(fakeGitHub({ runs: {} }), (api) => runStoryCheck(["9.1", "--root", empty], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
     expect(noRun.out.find((line) => line.includes("full-run:"))).toBe(`FAIL full-run: PR #7: no ratchet workflow run for ${SHA}`);
     // A --pr whose head is not story/<id> is not this Story's PR.
     const otherPulls = [{ number: 8, updated_at: "2026-10-19T09:00:00Z", user: { login: "agent" }, head: { sha: SHA, ref: "story/9.2" } }];
     const mismatch = await withGitHub(fakeGitHub({ pulls: otherPulls }), (api) => runStoryCheck(["9.1", "--root", empty, "--pr", "8"], { env: env({ GH_TOKEN: "test-token", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
-    expect(mismatch.out.filter((line) => line.includes("approvals:") || line.includes("full-run:"))).toEqual(["FAIL approvals: PR #8's head is story/9.2, not story/9.1", "FAIL full-run: PR #8's head is story/9.2, not story/9.1"]);
+    expect(mismatch.out.filter((line) => line.includes("full-run:"))).toEqual(["FAIL full-run: PR #8's head is story/9.2, not story/9.1"]);
 
     // A Variant whose backend is not running is NOT-RUN, which never satisfies done.
     const pg = storyRoot({
@@ -501,7 +515,8 @@ xaravelTest(
     expect(decided.out).toContain("PASS escalations: 1 Escalation(s), none open");
 
     const apiDown = await withGitHub(fakeGitHub(), (api) => runStoryCheck(["9.1", "--root", empty], { env: env({ GH_TOKEN: "wrong", GITHUB_API_URL: api, GITHUB_REPOSITORY: "acme/xaravel" }) }));
-    expect(apiDown.out.filter((line) => line.includes("approvals:") || line.includes("full-run:")).every((line) => line.startsWith("FAIL ") && line.includes("HTTP 401"))).toBe(true);
+    expect(apiDown.out.filter((line) => line.includes("full-run:"))).toHaveLength(1);
+    expect(apiDown.out.filter((line) => line.includes("full-run:")).every((line) => line.startsWith("FAIL ") && line.includes("HTTP 401"))).toBe(true);
 
     // A ratchet job that concluded failure fails full-run even when its story step's verdict passed.
     const failedJob = await withGitHub(fakeGitHub({ jobs: { 12: [{ id: 99, name: "ratchet", conclusion: "failure" }] } }), (api) =>
@@ -619,18 +634,81 @@ xaravelTest(
     expect(clause(null, never, [{ storyId: "9.2", component: "config", line: 1 }])).toEqual(["PASS api-surface: no api-surface:gate acceptance criterion"]);
     expect(gateAsked).toHaveLength(8);
 
-    // The pure pieces.
-    expect(approvalsClause(7, "agent", SHA, [{ user: { login: "x" }, state: "APPROVED", commit_id: SHA }, { user: { login: "x" }, state: "APPROVED", commit_id: SHA }]).pass).toBe(false);
-    // A review given on a commit older than the PR head is stale: it does not count.
-    const stale = approvalsClause(7, "agent", SHA, [
-      { user: { login: "alice" }, state: "APPROVED", commit_id: SHA },
-      { user: { login: "bob" }, state: "APPROVED", commit_id: "b".repeat(40) },
+    // approvals needs no GH_TOKEN: the passing root's verdicts pass with none, while full-run cannot check.
+    const tokenless = await runStoryCheck(["9.1", "--root", good], { env: env() });
+    expect(tokenless.out).toContain(`PASS approvals: 2 pass verdicts for tree ${goodTree} (reviewer 1: codex/codex-test, reviewer 2: claude/claude-test)`);
+    expect(tokenless.out).toContain("FAIL full-run: cannot check: GH_TOKEN is not set");
+
+    // The approvals clause over verdict records in a committed root.
+    const vroot = makeRoot({ "packages/support/src/Str.ts": "export const a = 1;\n" });
+    commitAll(vroot);
+    const vtree = reviewTree(vroot, "head");
+    const approvals = (records: readonly VerdictRecord[]): string[] => {
+      writeSpec(vroot, records);
+      return renderClause(approvalsClause(vroot, "9.1"));
+    };
+    const passLine = `PASS approvals: 2 pass verdicts for tree ${vtree} (reviewer 1: codex/codex-test, reviewer 2: claude/claude-test)`;
+    expect(approvals([verdictRecord(1, vtree), verdictRecord(2, vtree)])).toEqual([passLine]);
+    // A reject in either slot fails, naming it.
+    expect(approvals([verdictRecord(1, vtree, { fail: "F-3" }), verdictRecord(2, vtree)])).toEqual([`FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`, `  reviewer 1: reject at tree ${vtree}`, `  reviewer 2: pass at tree ${vtree}`]);
+    // Per slot the last record for the tree counts: a later reject replaces a pass, a later pass replaces a reject.
+    expect(approvals([verdictRecord(1, vtree), verdictRecord(2, vtree), verdictRecord(2, vtree, { fail: "F-1" })])[0]).toBe(`FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`);
+    expect(approvals([verdictRecord(1, vtree, { fail: "F-1" }), verdictRecord(2, vtree), verdictRecord(1, vtree)])).toEqual([passLine]);
+    // Two passes from the same slot are one verdict, never two.
+    expect(approvals([verdictRecord(1, vtree), verdictRecord(1, vtree, { cli: "claude", model: "claude-test", fallback: "codex unavailable: usage limit: x" })])).toEqual([
+      `FAIL approvals: 1 of 2 pass verdicts for tree ${vtree}`,
+      `  reviewer 1: pass at tree ${vtree}`,
+      `  reviewer 2: none for tree ${vtree}`,
     ]);
-    expect(renderClause(stale)).toEqual([
-      "FAIL approvals: PR #7: 1 approval(s) from distinct reviewers other than agent; 2 needed",
-      "  alice: APPROVED",
-      `  bob: APPROVED on ${"b".repeat(40)}, not the head ${SHA}`,
+    // Same CLI twice with no fallback reason fails the cross-model rule; with the reason recorded it passes.
+    const sameCli = { cli: "claude" as const, model: "claude-test" };
+    expect(approvals([verdictRecord(1, vtree, sameCli), verdictRecord(2, vtree)])).toEqual([
+      `FAIL approvals: 2 of 2 pass verdicts for tree ${vtree}, but the cross-model rule fails`,
+      `  reviewer 1: pass at tree ${vtree}`,
+      `  reviewer 2: pass at tree ${vtree}`,
+      "  reviewer 1 ran on claude, the loop's own CLI, and recorded no fallback reason; it must run on the other CLI when that is available (ESC-8.5-1)",
     ]);
+    expect(approvals([verdictRecord(1, vtree, { ...sameCli, fallback: "codex unavailable: not installed: codex: not found" }), verdictRecord(2, vtree)])).toEqual([`PASS approvals: 2 pass verdicts for tree ${vtree} (reviewer 1: claude/claude-test, reviewer 2: claude/claude-test)`]);
+    // A malformed record fails the clause, naming it.
+    writeSpec(vroot, [verdictRecord(1, vtree), verdictRecord(2, vtree)]);
+    const tampered = readFileSync(join(vroot, SPEC), "utf8").replace(`"reviewer":2,"verdict":"pass"`, `"reviewer":2,"verdict":"maybe"`);
+    writeFileSync(join(vroot, SPEC), tampered);
+    const malformed = renderClause(approvalsClause(vroot, "9.1"));
+    expect(malformed[0]).toBe("FAIL approvals: 1 malformed Fidelity Review record(s)");
+    expect(malformed[1]).toMatch(/^ {2}record at line \d+ verdict "maybe" is not pass or reject$/);
+    // A pass verdict whose items fail is malformed too.
+    expect(approvals([verdictRecord(1, vtree), { ...verdictRecord(2, vtree, { fail: "F-2" }), verdict: "pass" }])[0]).toBe("FAIL approvals: 1 malformed Fidelity Review record(s)");
+
+    // Bookkeeping under _bmad-output/ (the spec, sprint status) committed afterwards keeps the head tree: still a pass.
+    writeSpec(vroot, [verdictRecord(1, vtree), verdictRecord(2, vtree)]);
+    writeFileSync(join(vroot, "_bmad-output/implementation-artifacts/sprint-status.yaml"), "development_status:\n  9-1-done: done\n");
+    commitAll(vroot, "bookkeeping");
+    expect(reviewTree(vroot, "head")).toBe(vtree);
+    expect(renderClause(approvalsClause(vroot, "9.1"))).toEqual([passLine]);
+    // A reviewed file changed and committed afterwards is a new head tree: the verdicts are stale and do not count.
+    writeFileSync(join(vroot, "packages/support/src/Str.ts"), "export const a = 2;\n");
+    commitAll(vroot, "change");
+    const newTree = reviewTree(vroot, "head");
+    expect(newTree).not.toBe(vtree);
+    expect(renderClause(approvalsClause(vroot, "9.1"))).toEqual([`FAIL approvals: 0 of 2 pass verdicts for tree ${newTree}`, `  reviewer 1: none for tree ${newTree}`, `  reviewer 2: none for tree ${newTree}`]);
+
+    // No spec, two specs, and no head commit: cannot check.
+    const nospec = makeRoot({ "a.txt": "a\n" });
+    commitAll(nospec);
+    expect(renderClause(approvalsClause(nospec, "9.1"))).toEqual(["FAIL approvals: cannot check: no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md"]);
+    writeSpec(nospec, []);
+    writeSpec(nospec, [], "_bmad-output/implementation-artifacts/spec-9-1-other.md");
+    expect(renderClause(approvalsClause(nospec, "9.1"))).toEqual([
+      "FAIL approvals: cannot check: 2 specs match _bmad-output/implementation-artifacts/spec-9-1-*.md: _bmad-output/implementation-artifacts/spec-9-1-done.md, _bmad-output/implementation-artifacts/spec-9-1-other.md; keep exactly one spec-9-1-*.md",
+    ]);
+    // Another Story's spec (spec-9-10-…) is not Story 9.1's.
+    const tenth = makeRoot({ "a.txt": "a\n" });
+    commitAll(tenth);
+    writeSpec(tenth, [], "_bmad-output/implementation-artifacts/spec-9-10-other.md");
+    expect(renderClause(approvalsClause(tenth, "9.1"))[0]).toBe("FAIL approvals: cannot check: no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md");
+    const uncommitted = makeRoot({ "a.txt": "a\n" });
+    writeSpec(uncommitted, []);
+    expect(renderClause(approvalsClause(uncommitted, "9.1"))[0]).toStartWith("FAIL approvals: cannot check: no head tree: ");
     // full-run reads the ratchet story step's verdict (ESC-5.9-2): a story SUMMARY that differed only by warnings passes;
     // a failure or an own unexpected pass fails.
     const scopeStep = "SUMMARY variants=11 run=7 not-run=4 checked=22639 differ=0\nRATCHET ref=story/9.1 scope=components failures=0 passes=0 warnings=0\n";

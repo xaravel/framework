@@ -46,12 +46,16 @@
 //                  fails on the unexplained items and citation problems the
 //                  gate printed; any other exit, or a missing epics.md, fails
 //                  as `cannot check`;
-//   approvals      the PR (`--pr`, else the most recently updated PR whose head
-//                  is `story/<id>`, in any state): each reviewer's latest
-//                  `APPROVED`, `CHANGES_REQUESTED` or `DISMISSED` review, the
-//                  PR author excluded, each counted only when given on the PR
-//                  head commit; at least two distinct `APPROVED` logins. A
-//                  `--pr` whose head is not `story/<id>` fails;
+//   approvals      (ESC-8.5-1) the Story's spec (the one
+//                  `_bmad-output/implementation-artifacts/spec-<a>-<b>-*.md`,
+//                  `findStorySpec`) holds two `pass` Fidelity Review
+//                  verdicts for the head tree (`reviewTree(root, "head")`,
+//                  HEAD without `_bmad-output/`): per reviewer slot the last
+//                  record for that tree counts, and reviewer 1 ran on the
+//                  other CLI from the loop's or recorded why it fell back
+//                  (`fidelityVerdicts`, tools/fidelity-review). It reads no
+//                  GitHub review and needs no `GH_TOKEN`. No spec, two specs,
+//                  a malformed record or no HEAD commit fails;
 //   escalations    no `conformance/escalations/ESC-<id>-<n>.md` is `open`
 //                  (`escalationStatus`);
 //   full-run       the latest workflow run named `ratchet` for the PR head
@@ -72,9 +76,11 @@
 // harness runs get the env without `GH_TOKEN` and `GITHUB_TOKEN`.
 //
 // GitHub: `GITHUB_API_URL` (default https://api.github.com), token `GH_TOKEN`,
-// repository `GITHUB_REPOSITORY`, else the `origin` remote of the root. With no
-// `GH_TOKEN`, `approvals` and `full-run` FAIL with
-// `cannot check: GH_TOKEN is not set`; they never pass silently.
+// repository `GITHUB_REPOSITORY`, else the `origin` remote of the root; only
+// `full-run` reads it (`--pr`, else the most recently updated PR whose head is
+// `story/<id>`, in any state; a `--pr` whose head is not `story/<id>` fails).
+// With no `GH_TOKEN`, `full-run` FAILs with `cannot check: GH_TOKEN is not
+// set`; it never passes silently.
 //
 // Exit codes: 0 when every clause passes, 1 when any fails, 2 on a usage error.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -87,6 +93,7 @@ import { FIXTURES_DIR, readNondeterminism, verifyFixture } from "../oracle/fixtu
 import { committedRequests, verificationKey } from "../oracle/verify";
 import { checkApiSurfaceGates, coveringIds, covers, parseManifest, readGateCriteria, STORIES_DIR, type GateCriterion, type Manifest } from "../ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../pin-bump/pin-bump";
+import { CHECKLIST_FILE, fidelityVerdicts, findStorySpec, parseChecklist, parseRecords, reviewTree, type ChecklistItem } from "../fidelity-review/fidelity-review";
 import { GitHub } from "../protected-paths/protected-paths";
 
 export const CLAUSES = ["manifest", "tests", "xaravel-tests", "fixtures", "api-surface", "approvals", "escalations", "full-run"] as const;
@@ -372,36 +379,31 @@ export const runApiSurfaceGate: ApiSurfaceGate = (root, component, env) => {
   }
 };
 
-/** One review, as the GitHub API returns it (chronological). */
-export interface Review {
-  readonly user: { readonly login: string } | null;
-  readonly state: string;
-  /** The commit the review was made on. */
-  readonly commit_id: string | null;
-}
-
-const COUNTED_STATES: ReadonlySet<string> = new Set(["APPROVED", "CHANGES_REQUESTED", "DISMISSED"]);
-
 /**
- * `approvals`: each reviewer's latest counted state, the author excluded; two distinct `APPROVED` logins. A latest
- * state counts only when it was given on the PR head `headSha`: a review of an older commit is stale.
+ * `approvals` (ESC-8.5-1): two `pass` Fidelity Review verdicts recorded in the Story's spec for the head tree (HEAD
+ * without `_bmad-output/`), counted by `fidelityVerdicts`.
  */
-export function approvalsClause(prNumber: number, author: string, headSha: string, reviews: readonly Review[]): ClauseResult {
-  const latest = new Map<string, Review>();
-  for (const review of reviews) {
-    const login = review.user?.login;
-    if (login === undefined || login === author || !COUNTED_STATES.has(review.state)) {
-      continue;
-    }
-    latest.set(login, review);
+export function approvalsClause(root: string, storyId: string): ClauseResult {
+  let spec: string;
+  try {
+    spec = findStorySpec(root, storyId);
+  } catch (error) {
+    return fail("approvals", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const stateOf = (review: Review): string => (review.commit_id === headSha ? review.state : `${review.state} on ${review.commit_id ?? "an unknown commit"}, not the head ${headSha}`);
-  const approved = [...latest].filter(([, review]) => review.state === "APPROVED" && review.commit_id === headSha).map(([login]) => login).sort(compareUnits);
-  if (approved.length >= 2) {
-    return pass("approvals", `PR #${prNumber}: ${approved.length} approvals (${approved.join(", ")})`);
+  let tree: string;
+  try {
+    tree = reviewTree(root, "head");
+  } catch (error) {
+    return fail("approvals", `cannot check: no head tree: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const items = [...latest].sort(([a], [b]) => compareUnits(a, b)).map(([login, review]) => `${login}: ${stateOf(review)}`);
-  return fail("approvals", `PR #${prNumber}: ${approved.length} approval(s) from distinct reviewers other than ${author}; 2 needed`, items);
+  let checklist: ChecklistItem[];
+  try {
+    checklist = parseChecklist(readFileSync(join(root, CHECKLIST_FILE), "utf8"));
+  } catch (error) {
+    return fail("approvals", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const count = fidelityVerdicts(parseRecords(readFileSync(spec, "utf8")), tree, checklist);
+  return count.pass ? pass("approvals", count.detail) : fail("approvals", count.detail, count.items);
 }
 
 /** `escalations`: each Story Escalation's status, or the error reading it. */
@@ -528,56 +530,37 @@ async function findPr(github: GitHub, repo: string, storyId: string, prNumber: n
   return mine[0] ?? null;
 }
 
-async function githubClauses(storyId: string, prNumber: number | null, root: string, env: Readonly<Record<string, string | undefined>>): Promise<[ClauseResult, ClauseResult]> {
+async function fullRunCheck(storyId: string, prNumber: number | null, root: string, env: Readonly<Record<string, string | undefined>>): Promise<ClauseResult> {
   const token = env["GH_TOKEN"];
   if (token === undefined || token === "") {
-    return [fail("approvals", NO_TOKEN), fail("full-run", NO_TOKEN)];
+    return fail("full-run", NO_TOKEN);
   }
   const repo = repository(root, env);
   if (repo === null) {
-    const why = "cannot check: GITHUB_REPOSITORY is not set and the origin remote is not a GitHub repository";
-    return [fail("approvals", why), fail("full-run", why)];
+    return fail("full-run", "cannot check: GITHUB_REPOSITORY is not set and the origin remote is not a GitHub repository");
   }
   const api = (env["GITHUB_API_URL"] || "https://api.github.com").replace(/\/+$/, "");
   const github = new GitHub(api, repo, token);
-  let pr: PullRequest | null;
   try {
-    pr = await findPr(github, repo, storyId, prNumber);
-  } catch (error) {
-    const why = `cannot check: ${error instanceof Error ? error.message : String(error)}`;
-    return [fail("approvals", why), fail("full-run", why)];
-  }
-  if (pr === null) {
-    const why = `no pull request in ${repo} has head story/${storyId}`;
-    return [fail("approvals", why), fail("full-run", why)];
-  }
-  if (pr.head.ref !== `story/${storyId}`) {
-    const why = `PR #${pr.number}'s head is ${pr.head.ref}, not story/${storyId}`;
-    return [fail("approvals", why), fail("full-run", why)];
-  }
-  let approvals: ClauseResult;
-  try {
-    const reviews = await github.paged<Review>(`/pulls/${pr.number}/reviews`);
-    approvals = approvalsClause(pr.number, pr.user?.login ?? "", pr.head.sha, reviews);
-  } catch (error) {
-    approvals = fail("approvals", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  let fullRun: ClauseResult;
-  try {
+    const pr = await findPr(github, repo, storyId, prNumber);
+    if (pr === null) {
+      return fail("full-run", `no pull request in ${repo} has head story/${storyId}`);
+    }
+    if (pr.head.ref !== `story/${storyId}`) {
+      return fail("full-run", `PR #${pr.number}'s head is ${pr.head.ref}, not story/${storyId}`);
+    }
     const sha = pr.head.sha;
     const runs = (await github.json<{ workflow_runs: WorkflowRun[] }>(`/actions/runs?head_sha=${sha}&per_page=100`)).workflow_runs;
     const ratchet = runs.filter((run) => run.name === "ratchet").sort((a, b) => compareUnits(b.created_at, a.created_at) || b.id - a.id)[0];
     if (ratchet === undefined) {
-      fullRun = fail("full-run", `PR #${pr.number}: no ratchet workflow run for ${sha}`);
-    } else {
-      const jobs = (await github.json<{ jobs: Job[] }>(`/actions/runs/${ratchet.id}/jobs?per_page=100`)).jobs;
-      const job = jobs.find((entry) => entry.name === "ratchet");
-      fullRun = job === undefined ? fail("full-run", `PR #${pr.number}: ratchet run ${ratchet.id} has no ratchet job`) : fullRunClause(`PR #${pr.number} ratchet run ${ratchet.id}`, job.conclusion ?? null, job.conclusion === "success" ? await github.text(`/actions/jobs/${job.id}/logs`) : "");
+      return fail("full-run", `PR #${pr.number}: no ratchet workflow run for ${sha}`);
     }
+    const jobs = (await github.json<{ jobs: Job[] }>(`/actions/runs/${ratchet.id}/jobs?per_page=100`)).jobs;
+    const job = jobs.find((entry) => entry.name === "ratchet");
+    return job === undefined ? fail("full-run", `PR #${pr.number}: ratchet run ${ratchet.id} has no ratchet job`) : fullRunClause(`PR #${pr.number} ratchet run ${ratchet.id}`, job.conclusion ?? null, job.conclusion === "success" ? await github.text(`/actions/jobs/${job.id}/logs`) : "");
   } catch (error) {
-    fullRun = fail("full-run", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
+    return fail("full-run", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return [approvals, fullRun];
 }
 
 // ---------------------------------------------------------------------------
@@ -756,10 +739,9 @@ export async function runStoryCheck(argv: readonly string[], options: StoryCheck
     const gate = options.apiSurfaceGate ?? runApiSurfaceGate;
     clauses.push(guard("api-surface", () => apiSurfaceClause(manifest, readGateCriteria(root), (component) => gate(root, component, harnessEnv))));
   }
-  const [approvals, fullRun] = await githubClauses(storyId, args.pr, root, env);
-  clauses.push(approvals);
+  clauses.push(guard("approvals", () => approvalsClause(root, storyId)));
   clauses.push(guard("escalations", () => escalationsClause(escalationStatuses(root, storyId))));
-  clauses.push(fullRun);
+  clauses.push(await fullRunCheck(storyId, args.pr, root, env));
 
   const ok = clauses.every((clause) => clause.pass);
   const out = [...clauses.flatMap(renderClause), `STORY-CHECK ${storyId} ${ok ? "pass" : "fail"}`];
