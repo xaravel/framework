@@ -809,6 +809,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     "bun run divergence:check",
     // Story 8.2: the PORTING.md gate (FR-8, AD-26, XT-conformance-153, XT-conformance-154).
     "bun run porting:check",
+    // Story 8.3: the Bun primitive probes against the job's four services (OQ-11, XT-conformance-155).
+    "bun run probes:check --require-backends",
     "bun run typecheck",
     // Story 6.4: the async-surface drift check (AD-6, AD-28, XT-conformance-136).
     "bun run async-surface --all --check",

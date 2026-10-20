@@ -162,7 +162,7 @@ SUMMARY variants=<v> run=<r> not-run=<nr> checked=<c> differ=<d>
 
 The Xaravel Tests (`xaravelTest`, FR-115) run under the harness too (Story 5.9, `conformance/harness/xaravel.ts`). A full run (no filter, no `--fast`) does the Xaravel run after every Variant run; `--xaravel` does only the Xaravel run, and its `--id` globs then select XT ids (`*` and `?` as for Test IDs). `runHarness` runs no Xaravel Tests unless `options.xaravel` asks for them (`{ only?, ids? }`), so the [Ratchet](ratchet.md) and the other callers of `runHarness` are unchanged, and a `--story`, `--component` or fast run never does one.
 
-Before it starts, the harness stops the Redis server it started and releases `.cache/harness.lock`: the Xaravel Tests use no backend, and some of them start harness runs of their own, on the real root too. It then runs one more `bun test`, with the same preload, junit report and env as a Variant run but `XARAVEL_VARIANT=none`, over every `conformance/tests/xaravel/**/*.test.ts` and `packages/*/tests/xaravel/**/*.test.ts`. With `--id` globs it adds `-t ^(?:<globs>): `. It reads the preload's `type: "xaravel"` reports.
+Before it starts, the harness stops the Redis server it started and releases `.cache/harness.lock`: the Xaravel Tests use no backend, and some of them start harness runs of their own, on the real root too. It then runs one more `bun test`, with the same preload, junit report and env as a Variant run but `XARAVEL_VARIANT=none`, over every `conformance/tests/xaravel/**/*.test.ts`, `packages/*/tests/xaravel/**/*.test.ts` and `conformance/probes/**/*.test.ts` (the Bun primitive probes, Story 8.3). With `--id` globs it adds `-t ^(?:<globs>): `. It reads the preload's `type: "xaravel"` reports.
 
 | Outcome | When |
 | --- | --- |

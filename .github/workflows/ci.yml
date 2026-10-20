@@ -18,7 +18,13 @@
 # (Story 8.2, FR-8, AD-26): a PORTING.md missing a required section or a
 # decided AD-26 construct row, a DIV-12 pair region that differs from
 # conformance/scans/div12-pairs.jsonl, or a mechanical-rule fixture entry the
-# translator does not reproduce, fails. After the typecheck it
+# translator does not reproduce, fails. Then it runs `probes:check
+# --require-backends` (Story 8.3, OQ-11): the Bun primitive probes, run against
+# the job's Postgres, MySQL, Redis and S3Mock services (host ports 55432,
+# 53306, 56379 and 59090, off the defaults; the XARAVEL_PROBE_* variables are
+# set on that step only), must equal conformance/probes/results.json, every
+# unsupported probe must name its Escalation, and REPORT.md must be current
+# (docs/ops/probes.md). After the typecheck it
 # runs `async-surface --all --check` (Story 6.4, AD-6, AD-28): an async public
 # method without an `@asyncRoot` tag, or a committed async-surface.json that
 # differs from the regenerated one, fails; in the merge queue this catches two
@@ -119,6 +125,38 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The backends the Bun primitive probes run against (Story 8.3, OQ-11). Host ports are
+    # remapped off the defaults so the harness's default-port backend probes still find none.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: probes
+          POSTGRES_USER: probes
+          POSTGRES_PASSWORD: probes
+        ports:
+          - 55432:5432
+        options: --health-cmd=pg_isready --health-interval=10s --health-timeout=5s --health-retries=5
+      mysql:
+        image: mysql:9.7
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: probes
+        ports:
+          - 53306:3306
+        options: --health-cmd="mysqladmin ping" --health-start-period=30s --health-interval=10s --health-timeout=5s --health-retries=3
+      redis:
+        image: redis:8.10.2
+        ports:
+          - 56379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+      s3:
+        image: adobe/s3mock:5.2.3
+        env:
+          COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: probes
+        ports:
+          - 59090:9090
+        options: --health-cmd="wget --spider -q http://localhost:9090/favicon.ico" --health-interval=10s --health-timeout=5s --health-retries=5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -142,6 +180,13 @@ jobs:
         run: bun run divergence:check
       - name: Check PORTING.md
         run: bun run porting:check
+      - name: Probe the Bun primitives
+        run: bun run probes:check --require-backends
+        env:
+          XARAVEL_PROBE_PGSQL_URL: postgres://probes:probes@127.0.0.1:55432/probes
+          XARAVEL_PROBE_MYSQL_URL: mysql://root@127.0.0.1:53306/probes
+          XARAVEL_PROBE_REDIS_URL: redis://127.0.0.1:56379
+          XARAVEL_PROBE_S3_ENDPOINT: http://127.0.0.1:59090
       - name: Typecheck
         run: bun run typecheck
       - name: Check the async surface
