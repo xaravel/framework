@@ -14,7 +14,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, wri
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { checkConfig, findDisables, scanSource, SPINE_RULES } from "../../../tools/lint-rules/disables";
-import plugin, { isFrameworkSource, isGraderLocation, isModelFile, isPackageFile, isPackageSource, isPortedTest, RULE_NAMES, scopePath } from "../../../tools/lint-rules/plugin";
+import plugin, { GRADER_PACKAGES, isFrameworkSource, isGraderLocation, isModelFile, isPackageFile, isPackageSource, isPortedTest, RULE_NAMES, scopePath } from "../../../tools/lint-rules/plugin";
+import { readTable } from "../../../tools/scaffold/table";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -187,6 +188,7 @@ xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule f
 
   edgeCases();
   pathCases();
+  graderListCases();
   disableCases();
 }, 120_000);
 
@@ -331,6 +333,42 @@ function edgeCases(): void {
     "typescript(triple-slash-reference)",
     "typescript(unbound-method)",
   ]);
+}
+
+/**
+ * One grader list (retro 6 item 5): the committed package table's `kind: "grader"` rows decide `GRADER_PACKAGES` and
+ * the identity-rule exemption, so a grader package added to the table but not to the plugin fails here.
+ */
+function graderListCases(): void {
+  const rows = readTable(join(root, "tools", "scaffold", "packages.jsonl"));
+  const inPackages = (dir: string): string | null => /^packages\/([^/]+)$/.exec(dir)?.[1] ?? null;
+  const graders = rows.filter((row) => row.kind === "grader");
+  expect(graders.length).toBeGreaterThan(0);
+  expect(graders.some((row) => row.dir === "tools/boost-framework")).toBe(true);
+  const graderPackages: string[] = [];
+  for (const row of graders) {
+    expect(isGraderLocation(`${row.dir}/src/X.ts`)).toBe(true);
+    expect(isGraderLocation(`/tmp/t/${row.dir}/src/X.ts`)).toBe(true);
+    const name = inPackages(row.dir);
+    if (name !== null) {
+      graderPackages.push(name);
+      expect(GRADER_PACKAGES).toContain(name);
+      expect(isFrameworkSource(`${row.dir}/src/X.ts`)).toBe(false);
+      expect(isFrameworkSource(`/tmp/t/${row.dir}/src/X.ts`)).toBe(false);
+    }
+  }
+  expect([...GRADER_PACKAGES].sort()).toEqual(graderPackages.sort());
+  // `tools/` and `conformance/` are exempt wholesale (decisions/ESC-6.2-1.md); every other non-grader row is not.
+  const others = rows.filter((row) => row.kind !== "grader" && !/^(tools|conformance)\//.test(row.dir));
+  expect(others.some((row) => inPackages(row.dir) === null)).toBe(true);
+  for (const row of others) {
+    expect(isGraderLocation(`${row.dir}/src/X.ts`)).toBe(false);
+    expect(isGraderLocation(`/tmp/t/${row.dir}/src/X.ts`)).toBe(false);
+    if (inPackages(row.dir) !== null) {
+      expect(isFrameworkSource(`${row.dir}/src/X.ts`)).toBe(true);
+      expect(isFrameworkSource(`/tmp/t/${row.dir}/src/X.ts`)).toBe(true);
+    }
+  }
 }
 
 /** The path scopes, relative to the cwd when inside it, else absolute, matched by segment. */
