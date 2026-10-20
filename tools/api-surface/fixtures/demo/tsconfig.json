@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "esnext",
+    "lib": ["esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": [],
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "../../.cache/tsc/demo",
+    "tsBuildInfoFile": "../../.cache/tsc/demo/tsconfig.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

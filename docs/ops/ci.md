@@ -12,10 +12,13 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
 | edit ownership | `ownership.yml` (required, `pull_request_target`) | path and line ownership ([ratchet.md](ratchet.md#line-ownership)) |
 | Ratchet | `ratchet.yml#ratchet` (required, `pull_request_target`) | `scope`, `overlay`, `run --scope`, `story`, same-repository PRs only; a fork PR fails ([ratchet.md](ratchet.md)) |
+| API-surface report | `api-surface.yml#report` (not required; never fails) | `api-surface --all --markdown`, the per-Component table in the job summary ([api-surface.md](api-surface.md)) |
 
 `lint` is `bun --bun oxlint --type-aware && bun run lint:disables`: the type-aware async-safety rules, and a check that no comment or config switches a spine rule off (AD-16.4; [lint.md](lint.md)).
 
 `ci.yml` also runs `workflow-permissions`, `upstream` and `php-fixtures`, which are advisory.
+
+`api-surface.yml#report` (not required) runs on `pull_request` and `merge_group` with `contents: read` only: `bun run api-surface --all --markdown …` diffs every package's `.d.ts` against the Upstream export and appends the per-Component table to the job summary. A tool failure becomes a `::warning` and the step ends with `exit 0`, so it never fails a PR. Only `bun run api-surface:gate <component>`, run when a Component's last Epic is accepted, fails on unexplained members (Story 6.5, AD-15; [api-surface.md](api-surface.md)).
 
 The Ratchet's PR run grades the AD-2 reverse-dependency closure of the packages the PR changed (all of it when a non-package path such as `tools/` changed, nothing for a docs-only PR), then runs the Story's own `test_ids` in full on every Variant. Both run with `CI=true`, so every alpha Variant must run: SQLite in `.cache/`, and the `postgres:18` and `redis:8.10.2` services. `protected-paths` and `ratchet` run from `pull_request_target` workflows, so a PR is judged by the base branch's copy of the check and cannot change it. The Ratchet checks out and runs a PR's code only when the PR's head repository is this repository (`head.repo.full_name == github.repository`). A fork PR fails closed: since a skipped required check counts as passing, the job does not skip but fails with an `::error::` before fetching any PR code.
 
@@ -23,7 +26,7 @@ The Ratchet's PR run grades the AD-2 reverse-dependency closure of the packages 
 
 The queue is required on `main` (`merge_queue` in `.github/rulesets/main.json`: squash, `ALLGREEN`, at most 5 entries). Every required check also runs on `merge_group`, or the queue would stall. The Ratchet's queue run is the full Ratchet on every alpha Variant, for the queued PR's head ref ([ratchet.md](ratchet.md#ci-githubworkflowsratchetyml)).
 
-`ci.yml#check` regenerates every package's `async-surface.json` and fails on any difference from the committed file, printing the diff (`bun run async-surface --all --check`, Story 6.4, AD-6; [async-surface.md](async-surface.md)). It runs on PRs too, which is cheap and catches drift before queueing; the queue run is what catches two PRs that are each green but disagree about a seam's async-ness. That queue path is verified by the workflow's text (XT-conformance-136) until a real queued merge exercises it. The API-surface diff in the queue is Story 6.5.
+`ci.yml#check` regenerates every package's `async-surface.json` and fails on any difference from the committed file, printing the diff (`bun run async-surface --all --check`, Story 6.4, AD-6; [async-surface.md](async-surface.md)). It runs on PRs too, which is cheap and catches drift before queueing; the queue run is what catches two PRs that are each green but disagree about a seam's async-ness. That queue path is verified by the workflow's text (XT-conformance-136) until a real queued merge exercises it. The API-surface diff also runs in the queue, as a report that never fails (below).
 
 ## Nightly (`nightly.yml`)
 
