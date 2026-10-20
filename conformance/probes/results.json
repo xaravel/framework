@@ -29,6 +29,38 @@
       "status": "unsupported",
       "escalation": "ESC-8.3-3"
     },
+    "bun-redis.commands": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-redis.pubsub": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-redis.transactions": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-s3.client": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-sql.mysql.raw-bindings": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-sql.mysql.reserve": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-sql.pgsql.raw-bindings": {
+      "status": "supported",
+      "escalation": null
+    },
+    "bun-sql.pgsql.reserve": {
+      "status": "supported",
+      "escalation": null
+    },
     "bun-test.assertion-counts": {
       "status": "supported",
       "escalation": null
