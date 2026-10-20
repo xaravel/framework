@@ -3,15 +3,48 @@ title: 'Story 8.7: `PORTING.md` pilot on Support and Collections'
 type: 'feature'
 created: '2026-10-20'
 baseline_revision: 'ef28bea389e5c4f5e51b10ba816c12e074d504e7'
-status: 'in-progress'
-review_loop_iteration: 0
-followup_review_recommended: false
+status: 'done'
+review_loop_iteration: 1
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-8-context.md'
   - '{project-root}/decisions/ESC-8.7-1.md'
   - '{project-root}/decisions/ESC-8.5-1.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      fidelity-review's prompt omits a provider-row test's data provider, and reports a nondeterministic request's absent fixture as an unavailable error fixture (F-6).
+    evidence: |-
+      The pilot needed pilot/evidence.md to pass; every Epic 14/18 Story that ports provider tests will meet both. The tool is Protected.
+    location: >-
+      tools/fidelity-review/fidelity-review.ts
+    severity: medium
+  - summary: >-
+      porting:translate emits PhpArray for explicit keys 0..n-1, which DIV-9.2 and PORTING.md's Array literals rule make a JS Array.
+    evidence: |-
+      bun run porting:translate "[0 => 'a', 1 => 'b']" prints new PhpArray([[0, 'a'], [1, 'b']]); PORTING.md's table row now says the tool lags.
+    location: >-
+      tools/porting/translate.ts
+    severity: medium
+  - summary: >-
+      PORTING.md has no rule for forms the pilot sample did not hit: by-value use ($a) snapshots, Mockery spy/partial/multi-target/argument matchers, generator/TestWith/external data providers, escaped or paired PCRE delimiters, multi-type catch, indirect TestCase subclasses, and $a[] = v on a PhpArray.
+    evidence: |-
+      Review findings on the new revisions; none of these occur in the 64 sampled Test IDs.
+    location: >-
+      PORTING.md
+    severity: low
+  - summary: >-
+      pilot/porting is an unprotected branch; nothing keeps commit fe58b871 available as the report's evidence (a tag would).
+    evidence: |-
+      Story 8.8's gate relies on the pilot report, whose evidence lives only on that branch.
+    severity: low
+  - summary: >-
+      XT-conformance-167's secondary checks (rule with no ids, ambiguity numbering, ambiguity with no or unknown ids) have no mutated-copy case.
+    evidence: |-
+      verification-gap layer; deleting any of them leaves the test green.
+    location: >-
+      conformance/tests/xaravel/porting-pilot.test.ts
+    severity: low
 ---
 
 # Story 8.7: `PORTING.md` pilot on Support and Collections
@@ -96,6 +129,106 @@ The `approvals` clause binds to the `story/8.7` HEAD tree, so the Story's own re
 - `bunx tsc --noEmit -p .` and `bun run lint` (whatever the root defines) -- expected: exit 0
 - (on pilot worktree) `bunx tsc --strict --noEmit -p pilot/tsconfig.json` -- expected: exit 0; `bun pilot/floor.ts` -- expected: no `short`
 - `bun run story:check 8.7` -- expected: every clause except `full-run` passes locally
+
+## Spec Change Log
+
+## Review Triage Log
+
+### 2026-10-20 — Review pass
+- verdicts: 60 findings — high 0, medium 16, low 36, false 8, maybe-false 0
+- findings:
+  - (verification-gap) `[low]` `[patch]` "one tree" half of the verdict check untested — added a mutated case swapping Reviewer 2's tree (`d4da7a0`).
+  - (verification-gap) `[low]` `[patch]` duplicate Test ID check untested — added a duplicated-row case (`d4da7a0`).
+  - (verification-gap) `[low]` `[defer]` XT-167 secondary checks (empty rule ids, ambiguity numbering, ambiguity ids) untested — layer disposition defer; headline AC2 checks are tested.
+  - (verification-gap other) `[medium]` `[patch]` report verdict lines not compared with the spec's `fidelity-verdict` records — XT-166 now matches each pass line to a record (reviewer, verdict, cli, model, tree) (`d4da7a0`).
+  - (verification-gap other) `[low]` `[patch]` reviewed tree not tied to the recorded sha — report states `e5f9369…` is `fe58b87…`'s tree without `_bmad-output/`, verified with `git write-tree` (`d4da7a0`).
+  - (intent 3.1) `[medium]` `[patch]` checks are self-reported text — same fix as the verdict-record row; tsc/floor stay reproducible on `pilot/porting` by design (translations never reach `main`).
+  - (intent 3.2) `[medium]` `[patch]` report and spec records could diverge — same fix as above.
+  - (intent 3.3) `[low]` `[reject]` "no rule hits" emits `no rules hit listed` not the matrix string — the matrix row's message is for the missing-revision case, which emits it exactly; the empty case is caught.
+  - (intent 3.4) `[false]` `[reject]` placement unchecked — `porting:check`'s fixed section list fails any new `##`.
+  - (intent 3.5) `[low]` `[patch]` leak surface narrower than "carries the marker" — XT-167 now also flags any tracked path under `pilot/` (`d4da7a0`).
+  - (intent 3.6) `[low]` `[reject]` extra declarations (contracts, `Model`, runtime) — declaration-only, off `main`, disclosed in the report and flagged to the Maintainer; required for the translations' imports to type-check.
+  - (intent 3.7) `[low]` `[reject]` passing translations include coordinator fixes and a review evidence file — the contract allows fix-and-rerun; both are disclosed in § Checks.
+  - (intent 3.8) `[false]` `[reject]` floor counting choices undisclosed — they are written in § Checks.
+  - (blind) `[medium]` `[patch]` keyed-array table row contradicts Array literals — row now names the list case and that `porting:translate` lags (`d4da7a0`); tool fix deferred.
+  - (blind) `[medium]` `[patch]` bare-function row says helpers from `@xaravel/support` — row defers to § Imports (`d4da7a0`).
+  - (blind) `[medium]` `[patch]` Casts rule contradicts `a . b` row — prose aligned to `porting:translate` output (only a string literal stays unwrapped) (`d4da7a0`); the `__toString` construct row is about defining the method and does not conflict.
+  - (blind) `[medium]` `[patch]` DIV-12.2/DIV-10.1 reinterpretation — DIV-12.2: the pair list classifies `Stringable.value` `method-plus-state`, so the rule now cites that row and is limited to such pairs (also Fidelity F-5); DIV-10.1's own text names conversion by the `PORTING.md` rule, so citing it is within the clause; the Markers bullet now cross-references it (`d4da7a0`).
+  - (blind) `[low]` `[patch]` pilot tooling leak undetected — same fix as intent 3.5.
+  - (blind) `[low]` `[defer]` reviewed tree / retention of `pilot/porting` — tree tie patched; retention (a tag) deferred.
+  - (blind) `[medium]` `[patch]` XT-166 reads summary lines, not records — same fix as verification-gap other.
+  - (blind) `[low]` `[reject]` floor per-kind counts not on `main`, approximate bucket broad — the spec's report format is label-only; `bun pilot/floor.ts` on `pilot/porting` reproduces the counts; executed floor comes in Epics 14/18.
+  - (blind) `[low]` `[reject]` revisions not re-validated by re-translation — not required by the intent; FR-8.2 asks for revision from the evidence.
+  - (blind) `[medium]` `[defer]` fidelity-review prompt omits data providers and misreads nondeterministic fixtures (F-6) — pre-existing tool defect in a Protected tool.
+  - (blind) `[medium]` `[patch]` closure rule breaks rebound closures — rebound closures (macros, `bind`/`bindTo`/`call`) are `function` expressions (`d4da7a0`).
+  - (blind) `[low]` `[defer]` by-value `use ($a)` has no rule — pre-existing gap not hit by the sample.
+  - (blind) `[low]` `[defer]` Mockery rule covers only `mock`/`expects` — forms not in the sample.
+  - (blind) `[low]` `[defer]` data-provider forms (generators, `TestWith`, external) — forms not in the sample.
+  - (blind) `[medium]` `[patch]` numeric-string helper choice is run-time — `toInt`/`toFloat` only when the operand's form is fixed, else Escalation (`d4da7a0`).
+  - (blind) `[low]` `[reject]` spec cites two ESC-8.7-1 paths — fix edits this build's spec; both paths are correct (escalation and decision).
+  - (blind) `[low]` `[reject]` spec keeps the old blocked result — fix edits this build's spec; the final Auto Run Result supersedes it.
+  - (blind) `[low]` `[reject]` XT-167 rule-name, separator, pre-existing-text, HTML-marker weaknesses — guards for unlikely report edits.
+  - (edge) `[low]` `[patch]` provider row may be `met` — guard added with a case (`d4da7a0`).
+  - (edge) `[low]` `[reject]` approximate list vs table drift — extra guard; the reverse direction is checked.
+  - (edge) `[false]` `[reject]` passes on two trees flagged — the report holds one pair by design.
+  - (edge) `[false]` `[reject]` cross-CLI pass on another tree — the one-tree check already requires a single tree.
+  - (edge) `[medium]` `[patch]` report lines vs records — same fix as above.
+  - (edge) `[low]` `[reject]` fallback text unvalidated — records are now matched to the tool-written spec records, which validate fallback.
+  - (edge) `[low]` `[patch]` tree/sha link — same as above.
+  - (edge) `[low]` `[reject]` rule name after ` / ` unchecked — added guard, unlikely.
+  - (edge) `[low]` `[reject]` escaped pipes / missing separator — no such cells in the report.
+  - (edge) `[low]` `[reject]` headings inside fences — neither file has `## ` in a fence.
+  - (edge) `[low]` `[patch]` block-comment marker — covered by the `pilot/` path check for tooling; a reformatted marker in a package file is an unlikely evasion.
+  - (edge) `[medium]` `[patch]` bare-function row — same as blind.
+  - (edge) `[medium]` `[patch]` keyed-array row — same as blind.
+  - (edge) `[low]` `[patch]` mixed implicit/explicit list keys — Array literals now says "implicit or explicit" (`d4da7a0`).
+  - (edge) `[low]` `[patch]` typed closures translated by the rule — the annotation bullet covers every closure parameter (`d4da7a0`).
+  - (edge) `[low]` `[patch]` `isset` key normalisation — compares against the PHP-normalised key (`d4da7a0`).
+  - (edge) `[medium]` `[patch]` numeric-string — same as blind.
+  - (edge) `[low]` `[defer]` escaped or paired PCRE delimiters — not in the sample.
+  - (edge) `[low]` `[defer]` multi-type `catch` — not in the sample.
+  - (edge) `[low]` `[defer]` indirect TestCase subclasses — not in the sample.
+  - (edge) `[low]` `[defer]` Mockery multi-target, spy, partial — same as blind Mockery row.
+  - (edge) `[low]` `[patch]` empty callback called directly — limited to callbacks passed to a framework API (`d4da7a0`).
+  - (edge) `[low]` `[defer]` `$a[] = v` on a `PhpArray` — not in the sample.
+  - (edge claim) `[low]` `[patch]` leak claim — same as `pilot/` path check.
+  - (edge claim) `[false]` `[reject]` base `ef28bea` vs merge-base — `ef28bea` only changes status lines and `_bmad-output/`, which the reviewed diff excludes.
+  - (edge claim) `[false]` `[reject]` approximate rule not enforced — enforced now for provider rows; every listed provider row was already `approximate`.
+  - (edge claim) `[false]` `[reject]` gen-dts sources — disclosed; same as intent 3.6.
+  - (edge claim) `[false]` `[reject]` adapted floor clause unchecked — no row is `adapted`; `divergence:check` validates markers on the pilot files.
+  - (fidelity) `[medium]` `[patch]` F-5 reviewer 1 (codex): DIV-12.2 coverage for `Stringable.value` not shown — rule limited to `method-plus-state` pairs and cites the pair-list row; report updated (`d4da7a0`).
+
+### 2026-10-20 — Review pass (Finalize re-check, iteration 1)
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- findings: none. The `fidelity-review` re-check was stale after the patches (`d4da7a0`), so the layer ran again on tree `bea40b98b7c7e65555677e92b49ac361a5db351a`: reviewer 1 codex `gpt-6.1-sol` pass, reviewer 2 claude `claude-opus-5-5` pass; `status` prints `current`.
+
+## Auto Run Result
+
+Status: done
+
+**Summary.** ESC-8.7-1 was ruled, so the Story resumed from a fresh plan. A stratified sample of 64 Test IDs (seed `pilot-8.7`, all 4 Mockery rows) was translated by four fresh-context agents, with `PORTING.md` as their only rulebook. The translations type-check against declaration-only `.d.ts` (`tsc --strict` exit 0) and meet the static floor (34 met, 30 approximate, 0 short). The pilot Fidelity Review passed on its second run (codex `gpt-6.1-sol` + claude `claude-sonnet-5-5`, tree `e5f9369…`). All of it is on the unmerged `pilot/porting` branch at `fe58b871de4b1082106cfa2584fa8696320d726b`. `PORTING.md` received the revisions the pilot's ambiguities called for, inside existing sections.
+
+**Files changed.**
+- `PORTING.md`: pilot revisions (data providers, Mockery, test case, imports, array literals and reads, by-hand closures and locals, exception expectations, casts, `__get` forwarding under DIV-12.2, numeric strings, PCRE delimiters, markers, replacements and wildcards), plus the review patches.
+- `docs/porting/pilot-report.md`: the sample, checks, Fidelity verdicts, rules hit, ambiguities with their revisions, and approximate counts.
+- `conformance/tests/xaravel/porting-pilot.test.ts`: XT-conformance-166 (AC1) and XT-conformance-167 (AC2), run on the real files and on mutated copies.
+
+**Review.**
+- 60 findings in pass 1: 26 patched in `d4da7a0`, 12 deferred (5 frontmatter items) and 22 rejected, each with its reason in the triage log.
+- Fidelity reviewer 1's F-5 reject was fixed, and the re-run passed.
+- `followup_review_recommended: true`. Pass 1 patched 2 or more medium entries: 9 medium patch entries and 15 low. The named unverified risk: the `PORTING.md` revisions written after translation (and patched in review) were never re-piloted by a fresh translator, so it is unverified whether they resolve the ambiguities they answer.
+
+**Verification.**
+- `porting:check` OK.
+- `harness --xaravel`: 284/284.
+- `tsc -p .` exit 0, `lint` ok, `divergence:check` ok.
+- On `pilot/porting`: `tsc --strict -p pilot/tsconfig.json` exit 0, and `bun pilot/floor.ts` shows 0 short.
+- `fidelity:review status` prints `current` (2 pass).
+
+**Residual risks.**
+- The pilot is the first supervised run of the in-loop review. The Maintainer reads both verdicts before any Story relies on them (ESC-8.7-1 item 3).
+- The pilot also declared `@xaravel/contracts/*`, `Model` and runtime helpers beyond the five classes the ruling names. They are declaration-only and stay off `main`.
+- Several revisions settle questions rather than restate decisions, and need a Maintainer read: `phpArrayEntries`, import modules, no `g` flag on `replaceMatches`, DIV-10.1 markers on any line, and list literals as JS Arrays ahead of `porting:translate`.
 
 ## Auto Run Result (blocked attempt, 2026-10-20)
 
@@ -264,4 +397,104 @@ None.
 
 ```json
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"f31a768b8654f43729d4888de60650edf8e80d9a","base":"ef28bea389e5c4f5e51b10ba816c12e074d504e7","cli":"claude","model":"claude-sonnet-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-20T20:43:37.625Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests and the PR adds none, so there is nothing to compare with Upstream assertions.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test expected values are added or changed.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there are no assertions to count against Upstream.","findings":[]},{"id":"F-4","result":"n/a","note":"The PR sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"pass","note":"The only adapted markers are rules added to PORTING.md. DIV-10.1 covers converted PCRE patterns. DIV-12.2 covers a state read becoming a getter call, which is what `$stringable->value` becoming `stringable.value()` is. No assertion line carries a marker.","findings":[]},{"id":"F-6","result":"n/a","note":"No Oracle fixtures are relied on or changed.","findings":[]},{"id":"F-7","result":"pass","note":"XT-166 and XT-167 each cite FR-8.2, which is the pilot-and-revise bullet. XT-166's body checks every claim in its consequence string: the sample size and seed strata, the Mockery, provider and Arr rows, the type-check, the floors, the approximate list, and the two pass verdicts. Each is exercised with a mutation. XT-167's body checks the rules, the ambiguities and their quoted revisions in PORTING.md, the pilot branch sha, and that no marker leaked.","findings":[]},{"id":"F-8","result":"pass","note":"The change touches only PORTING.md, the pilot report and the conformance Xaravel test. It adds no stub or fake of another Component.","findings":[]},{"id":"F-9","result":"n/a","note":"No @asyncRoot tag is added or kept.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}]}
+```
+
+### Reviewer 1: reject at tree f31a768b8654f43729d4888de60650edf8e80d9a
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `ef28bea389e5c4f5e51b10ba816c12e074d504e7`, on 2026-10-20T20:47:41.925Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed; the manifest assigns no Ported Test IDs. |
+| F-2: No expected value is weakened | n/a | No Ported Test expected values or exception expectations are changed. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are added, changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | fail | The new PORTING.md instruction cites DIV-12.2 for magic property forwarding, but that clause permits state-property reads through Upstream getters and does not expressly cover this construct. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied evidence identifies no relied-on Oracle error fixture or changed error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Both Xaravel Test bodies check their declared report consequences: seeded sample membership and recorded checks, plus rule references, quoted revisions, branch SHA and marker absence. Their FR-8.2 citation matches piloting and revising PORTING.md. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The supplied diff adds conformance tests and documentation, with no implementation of another Component. Declaration-only pilot artifacts described in the report are outside this change. |
+| F-9: Every `@asyncRoot` tag is true | n/a | The change contains no async-root Driver method or @​asyncRoot tag requiring verification. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No conformance/oracle-requests file is changed. |
+
+Findings:
+
+- **F-5** `PORTING.md`: The new 'Magic reads that forward to a method' rule prescribes adapted:DIV-12.2 for Stringable.value. Provide an approved clause explicitly covering same-named magic-property forwarding, or demonstrate that this is a state-property read through an Upstream getter covered by DIV-12.2; update the rule and pilot report accordingly.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"f31a768b8654f43729d4888de60650edf8e80d9a","base":"ef28bea389e5c4f5e51b10ba816c12e074d504e7","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-20T20:47:41.925Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed; the manifest assigns no Ported Test IDs.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test expected values or exception expectations are changed.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are added, changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"fail","note":"The new PORTING.md instruction cites DIV-12.2 for magic property forwarding, but that clause permits state-property reads through Upstream getters and does not expressly cover this construct.","findings":[{"path":"PORTING.md","detail":"The new 'Magic reads that forward to a method' rule prescribes adapted:DIV-12.2 for Stringable.value. Provide an approved clause explicitly covering same-named magic-property forwarding, or demonstrate that this is a state-property read through an Upstream getter covered by DIV-12.2; update the rule and pilot report accordingly."}]},{"id":"F-6","result":"n/a","note":"The supplied evidence identifies no relied-on Oracle error fixture or changed error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Both Xaravel Test bodies check their declared report consequences: seeded sample membership and recorded checks, plus rule references, quoted revisions, branch SHA and marker absence. Their FR-8.2 citation matches piloting and revising PORTING.md.","findings":[]},{"id":"F-8","result":"pass","note":"The supplied diff adds conformance tests and documentation, with no implementation of another Component. Declaration-only pilot artifacts described in the report are outside this change.","findings":[]},{"id":"F-9","result":"n/a","note":"The change contains no async-root Driver method or @asyncRoot tag requiring verification.","findings":[]},{"id":"F-10","result":"n/a","note":"No conformance/oracle-requests file is changed.","findings":[]}]}
+```
+
+### Reviewer 2: pass at tree f31a768b8654f43729d4888de60650edf8e80d9a
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `ef28bea389e5c4f5e51b10ba816c12e074d504e7`, on 2026-10-20T20:47:41.925Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty and the diff adds or changes no Ported Test (no portedTest under tests/ported), so there is no Upstream assertion to compare. |
+| F-2: No expected value is weakened | n/a | No Ported Test is added or changed, so no expected value can be weakened. The PORTING.md revisions are guidance text, and they do not touch any expected value in a test. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, so there are no assertions to count against Upstream. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff changes no Expectations file, so no line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | pass | No assertion marker or Expectations 'adapted' field is added. The revised PORTING.md tells ports to use two markers, and both match their clauses. '// adapted:DIV-10.1' goes on a converted PCRE pattern; DIV-10.1 says a pattern with a RegExp equivalent is converted by the PORTING.md rule and its test is ported. '// adapted:DIV-12.2' goes on '$stringable->value' becoming 'stringable.value()'; DIV-12.2 covers a read of a state property that shares its name with a method becoming a read through Upstream's getter. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | There are no assigned Ported Tests, and the evidence lists no error fixture, in the base or among the changed fixtures. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared each test body with its consequence string and with FR-8.2 (pilot PORTING.md on a Support/Collections sample and revise it from the pilot). XT-conformance-166 recomputes the seeded strata with sampleIds and compares them to the report. It also checks that the IDs are unique and in the Inventory, the minimum of 60, the four Mockery rows, the provider and Arr rows, the floor values, the approximate listing, the type-check line, and the two-pass and cross-CLI-or-fallback verdicts. Each check has a mutation that must fail. XT-conformance-167 checks that the rules hit name PORTING.md sections, that the ambiguities are numbered and quote revision text that occurs in PORTING.md, that the report gives a 40-hex sha for pilot/porting, and that the marker has not leaked (with a git-failure case). Both tests verify the sample bullet and the revision bullet of FR-8.2. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The change touches only PORTING.md, docs/porting/pilot-report.md and a conformance Xaravel Test. It adds no stub, fake or partial implementation of another Component. The pilot's 'any'-typed declarations stay on the unmerged pilot/porting branch, and XT-conformance-167 checks that they have not leaked onto the merged branch. |
+| F-9: Every `@asyncRoot` tag is true | pass | No added line has an '@​asyncRoot' tag, and the change adds no async method that does Driver IO without one. The async calls in the test file are synchronous spawns and file reads inside test helpers, not framework methods. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"f31a768b8654f43729d4888de60650edf8e80d9a","base":"ef28bea389e5c4f5e51b10ba816c12e074d504e7","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-20T20:47:41.925Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the diff adds or changes no Ported Test (no portedTest under tests/ported), so there is no Upstream assertion to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test is added or changed, so no expected value can be weakened. The PORTING.md revisions are guidance text, and they do not touch any expected value in a test.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there are no assertions to count against Upstream.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff changes no Expectations file, so no line is set to skip.","findings":[]},{"id":"F-5","result":"pass","note":"No assertion marker or Expectations `adapted` field is added. The revised PORTING.md tells ports to use two markers, and both match their clauses. `// adapted:DIV-10.1` goes on a converted PCRE pattern; DIV-10.1 says a pattern with a RegExp equivalent is converted by the PORTING.md rule and its test is ported. `// adapted:DIV-12.2` goes on `$stringable->value` becoming `stringable.value()`; DIV-12.2 covers a read of a state property that shares its name with a method becoming a read through Upstream's getter.","findings":[]},{"id":"F-6","result":"n/a","note":"There are no assigned Ported Tests, and the evidence lists no error fixture, in the base or among the changed fixtures.","findings":[]},{"id":"F-7","result":"pass","note":"Compared each test body with its consequence string and with FR-8.2 (pilot PORTING.md on a Support/Collections sample and revise it from the pilot). XT-conformance-166 recomputes the seeded strata with sampleIds and compares them to the report. It also checks that the IDs are unique and in the Inventory, the minimum of 60, the four Mockery rows, the provider and Arr rows, the floor values, the approximate listing, the type-check line, and the two-pass and cross-CLI-or-fallback verdicts. Each check has a mutation that must fail. XT-conformance-167 checks that the rules hit name PORTING.md sections, that the ambiguities are numbered and quote revision text that occurs in PORTING.md, that the report gives a 40-hex sha for pilot/porting, and that the marker has not leaked (with a git-failure case). Both tests verify the sample bullet and the revision bullet of FR-8.2.","findings":[]},{"id":"F-8","result":"pass","note":"The change touches only PORTING.md, docs/porting/pilot-report.md and a conformance Xaravel Test. It adds no stub, fake or partial implementation of another Component. The pilot's `any`-typed declarations stay on the unmerged pilot/porting branch, and XT-conformance-167 checks that they have not leaked onto the merged branch.","findings":[]},{"id":"F-9","result":"pass","note":"No added line has an `@asyncRoot` tag, and the change adds no async method that does Driver IO without one. The async calls in the test file are synchronous spawns and file reads inside test helpers, not framework methods.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}]}
+```
+
+### Reviewer 1: pass at tree bea40b98b7c7e65555677e92b49ac361a5db351a
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `ef28bea389e5c4f5e51b10ba816c12e074d504e7`, on 2026-10-20T20:57:31.390Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed; the manifest assigns no Ported Test IDs. |
+| F-2: No expected value is weakened | n/a | No Upstream-derived assertion or expected value is changed. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are removed or changed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | DIV markers appear in documentation examples, not on changed assertions or Expectations adapted fields. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied evidence identifies no relied-on Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-conformance-166 checks the declared report sample, seeded strata, floor classifications, type-check status and reviewer records. XT-conformance-167 checks rule and ambiguity tables, quoted revisions, branch SHA and tracked pilot markers. Both consequences concern the pilot and revisions described by FR-8.2. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The changed executable code is conformance review testing. No implementation of another Component is added; the report describes declaration-only pilot artifacts remaining on an unmerged branch. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No async-root tags or asynchronous methods performing Driver IO are added or retained in the supplied change. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"bea40b98b7c7e65555677e92b49ac361a5db351a","base":"ef28bea389e5c4f5e51b10ba816c12e074d504e7","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-20T20:57:31.390Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed; the manifest assigns no Ported Test IDs.","findings":[]},{"id":"F-2","result":"n/a","note":"No Upstream-derived assertion or expected value is changed.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are removed or changed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"DIV markers appear in documentation examples, not on changed assertions or Expectations adapted fields.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied evidence identifies no relied-on Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-conformance-166 checks the declared report sample, seeded strata, floor classifications, type-check status and reviewer records. XT-conformance-167 checks rule and ambiguity tables, quoted revisions, branch SHA and tracked pilot markers. Both consequences concern the pilot and revisions described by FR-8.2.","findings":[]},{"id":"F-8","result":"pass","note":"The changed executable code is conformance review testing. No implementation of another Component is added; the report describes declaration-only pilot artifacts remaining on an unmerged branch.","findings":[]},{"id":"F-9","result":"n/a","note":"No async-root tags or asynchronous methods performing Driver IO are added or retained in the supplied change.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}]}
+```
+
+### Reviewer 2: pass at tree bea40b98b7c7e65555677e92b49ac361a5db351a
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `ef28bea389e5c4f5e51b10ba816c12e074d504e7`, on 2026-10-20T20:57:31.390Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | Manifest test_ids is empty and the diff adds or changes no Ported Test (only PORTING.md, a Xaravel Test file and a report), so there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | n/a | No Ported Test or expected value is added or changed; the PORTING.md revisions are rules for future ports, not expected values in this PR. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is changed, so no assertion count is compared with Upstream. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip; no Expectations file appears in the diff. |
+| F-5: Every `adapted` marker matches its clause | pass | No code line carries an adapted marker. PORTING.md's new rules cite DIV-10.1 for converted PCRE patterns, which matches its text ('A pattern that has a RegExp equivalent is converted by the rule in PORTING.md, and its test is ported'). They cite DIV-12.2 for the $stringable->value read becoming stringable.value(), which matches 'an Upstream read of the state property becomes a read through Upstream's getter'. Both clauses exist and cover the construct. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The evidence says no base or changed Oracle fixture is an error, and the Story relies on no Oracle fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-conformance-166's sampleViolations checks each part of its consequence string, with mutations for each violation: seed pilot-8.7; strata and ids recomputed with sampleIds; at least 60 unique Inventory ids from the four files; the 4 Mockery rows; provider rows and Arr rows; floor met/approximate/adapted; approximate ids listed; the report's type-check line; two pass verdicts on one tree, one on another CLI or with a fallback; verdicts cross-checked against the spec records. XT-conformance-167 checks: rules-hit and ambiguity tables present; each quoted revision present in PORTING.md (verified against the diff for all 24); the pilot/porting 40-hex sha; no tracked file with the marker or under pilot/ (git failure counted as a violation). Both cite FR-8.2 (pilot PORTING.md and revise it), which is the bullet tested. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The changed files are PORTING.md, docs/porting/pilot-report.md and conformance/tests/xaravel/porting-pilot.test.ts, all in the conformance/docs area. The pilot's any-typed .d.ts declarations and translations stay on the unmerged pilot/porting branch, and XT-conformance-167 checks that none leaked. No stub, fake or hard-coded behaviour of another Component is added. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No added line contains @​asyncRoot, and no async method that does IO is added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"bea40b98b7c7e65555677e92b49ac361a5db351a","base":"ef28bea389e5c4f5e51b10ba816c12e074d504e7","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-20T20:57:31.390Z","items":[{"id":"F-1","result":"n/a","note":"Manifest test_ids is empty and the diff adds or changes no Ported Test (only PORTING.md, a Xaravel Test file and a report), so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test or expected value is added or changed; the PORTING.md revisions are rules for future ports, not expected values in this PR.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is changed, so no assertion count is compared with Upstream.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip; no Expectations file appears in the diff.","findings":[]},{"id":"F-5","result":"pass","note":"No code line carries an adapted marker. PORTING.md's new rules cite DIV-10.1 for converted PCRE patterns, which matches its text ('A pattern that has a RegExp equivalent is converted by the rule in PORTING.md, and its test is ported'). They cite DIV-12.2 for the $stringable->value read becoming stringable.value(), which matches 'an Upstream read of the state property becomes a read through Upstream's getter'. Both clauses exist and cover the construct.","findings":[]},{"id":"F-6","result":"n/a","note":"The evidence says no base or changed Oracle fixture is an error, and the Story relies on no Oracle fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-conformance-166's sampleViolations checks each part of its consequence string, with mutations for each violation: seed pilot-8.7; strata and ids recomputed with sampleIds; at least 60 unique Inventory ids from the four files; the 4 Mockery rows; provider rows and Arr rows; floor met/approximate/adapted; approximate ids listed; the report's type-check line; two pass verdicts on one tree, one on another CLI or with a fallback; verdicts cross-checked against the spec records. XT-conformance-167 checks: rules-hit and ambiguity tables present; each quoted revision present in PORTING.md (verified against the diff for all 24); the pilot/porting 40-hex sha; no tracked file with the marker or under pilot/ (git failure counted as a violation). Both cite FR-8.2 (pilot PORTING.md and revise it), which is the bullet tested.","findings":[]},{"id":"F-8","result":"pass","note":"The changed files are PORTING.md, docs/porting/pilot-report.md and conformance/tests/xaravel/porting-pilot.test.ts, all in the conformance/docs area. The pilot's any-typed .d.ts declarations and translations stay on the unmerged pilot/porting branch, and XT-conformance-167 checks that none leaked. No stub, fake or hard-coded behaviour of another Component is added.","findings":[]},{"id":"F-9","result":"n/a","note":"No added line contains @asyncRoot, and no async method that does IO is added.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}]}
 ```
