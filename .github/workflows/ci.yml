@@ -14,7 +14,11 @@
 # R1), plus the assert and Mockery coverage reports. After the Skip Reasons it
 # runs `divergence:check` (Story 8.1, FR-8, AD-15): a malformed Divergence
 # Record DIV-1..12, or an `adapted` marker in the Expectations File or a Ported
-# Test that names no existing clause, fails. After the typecheck it
+# Test that names no existing clause, fails. Then it runs `porting:check`
+# (Story 8.2, FR-8, AD-26): a PORTING.md missing a required section or a
+# decided AD-26 construct row, a DIV-12 pair region that differs from
+# conformance/scans/div12-pairs.jsonl, or a mechanical-rule fixture entry the
+# translator does not reproduce, fails. After the typecheck it
 # runs `async-surface --all --check` (Story 6.4, AD-6, AD-28): an async public
 # method without an `@asyncRoot` tag, or a committed async-surface.json that
 # differs from the regenerated one, fails; in the merge queue this catches two
@@ -27,7 +31,10 @@
 # phpunit-assertions.jsonl and mockery-api.jsonl) match the snapshot byte for
 # byte and runs conformance/tests/xaravel/scans.test.ts and
 # usage-scans.test.ts, whose real-snapshot assertions need the synced
-# snapshot (Story 3.6, ESC-3.6-1; Story 3.7, ESC-3.7-1).
+# snapshot (Story 3.6, ESC-3.6-1; Story 3.7, ESC-3.7-1), and porting.test.ts,
+# whose Upstream-sourced PORTING.md fixture entries are checked against the
+# snapshot there (Story 8.2); it installs from the lockfile first, because
+# porting.test.ts imports oxc-parser.
 # `php-fixtures` installs the PHPUnit and Pest fixture projects and runs
 # tools/inventory/lister.php and tools/baseline/{runner,recorder}.php against
 # them with real PHP, and tools/oracle/api-surface.php against
@@ -133,6 +140,8 @@ jobs:
         run: bun run expectations:reasons
       - name: Check the Divergence Records and adapted markers
         run: bun run divergence:check
+      - name: Check PORTING.md
+        run: bun run porting:check
       - name: Typecheck
         run: bun run typecheck
       - name: Check the async surface
@@ -174,8 +183,10 @@ jobs:
         run: bun run scan:div12 --check
       - name: Check the test-API usage scan
         run: bun run scan:test-api --check
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Run the scan tests against the snapshot
-        run: bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts
+        run: bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts conformance/tests/xaravel/porting.test.ts
 
   php-fixtures:
     runs-on: ubuntu-latest

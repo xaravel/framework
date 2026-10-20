@@ -218,9 +218,10 @@ The `upstream` job in `.github/workflows/ci.yml` runs these steps in order:
 5. `bun run scan:closures --check`
 6. `bun run scan:div12 --check`
 7. `bun run scan:test-api --check`
-8. `bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts`
+8. `bun install --frozen-lockfile --ignore-scripts` (porting.test.ts imports `oxc-parser`)
+9. `bun test conformance/tests/xaravel/scans.test.ts conformance/tests/xaravel/usage-scans.test.ts conformance/tests/xaravel/porting.test.ts`
 
-The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 8 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, and the expected classes and entries at the Pin), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
+The snapshot is gitignored and exists only after the sync, so the scan checks must come after it. If a committed scan output no longer matches the snapshot, the job fails. Step 9 runs the Xaravel Tests' real-snapshot assertions (the committed outputs against the scan, the expected classes and entries at the Pin, and the Upstream-sourced `PORTING.md` fixture entries, [porting.md](porting.md)), which skip in the `check` job because it has no snapshot (ESC-3.6-1).
 
 ## After a Pin move
 

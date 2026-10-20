@@ -1,6 +1,6 @@
 # Conformance data
 
-This directory holds the Conformance System's data: the Test Inventory (`inventory/`), the Expectations File (`expectations/`), the Variant vocabulary (`variants`), Escalations (`escalations/`), Oracle requests and fixtures, and the lists the Skip Reason rules read (`deferred-items`, `non-goals`). Everything here is Protected (AD-16) except `expectations/`, `escalations/`, `oracle-requests/` and `fixtures/`. Operator docs are in [`docs/ops/expectations.md`](../docs/ops/expectations.md).
+This directory holds the Conformance System's data: the Test Inventory (`inventory/`), the Expectations File (`expectations/`), the Variant vocabulary (`variants`), Escalations (`escalations/`), Oracle requests and fixtures, and the lists the Skip Reason rules read (`deferred-items`, `non-goals`). Everything here is Protected (AD-16) except `expectations/`, `escalations/`, `oracle-requests/` and `fixtures/`. Operator docs are in [`docs/ops/expectations.md`](../docs/ops/expectations.md). `porting/expressions.jsonl` is the 20-entry fixture of the mechanical PHP → TS expression rule in the root `PORTING.md`, checked by `bun run porting:check` ([`docs/ops/porting.md`](../docs/ops/porting.md)).
 
 ## Statuses
 

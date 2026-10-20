@@ -109,7 +109,7 @@ development_status:
 
   epic-8: in-progress
   8-1-divergence-records-div-1-to-div-12: done
-  8-2-porting-md: backlog
+  8-2-porting-md: done
   8-3-bun-primitive-probes-oq-11: backlog
   8-4-temporal-and-bcrypt-spikes-and-the-oq-12-decision: backlog
   8-5-fidelity-review-workflow: backlog
