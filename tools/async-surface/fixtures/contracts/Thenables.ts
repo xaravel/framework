@@ -1,10 +1,10 @@
 // Story 6.4 fixture for the contracts list: with a `@xaravel/contracts/async` naming only
-// `X\Lazy`, `lazy()` is a thenable (tagged) and `where()` (a `Builder`) is not (untagged).
+// `X\Lazy`, `lazy()` is a thenable line (untagged) and `where()` (a `Builder`) is not listed.
 import { Builder, Lazy } from "./Builder";
 
 /** The repository. */
 export class Repository {
-  /** @asyncRoot callback */
+  /** A thenable under the contracts list. */
   lazy(key: string): Lazy {
     return new Lazy(key);
   }

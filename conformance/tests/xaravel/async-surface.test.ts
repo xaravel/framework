@@ -5,19 +5,21 @@
 // The CLI runs for real, with the repository's own tsc, over copies of the
 // committed fixture package in `tools/async-surface/fixtures/` placed in temp
 // roots (`--root`), so nothing tracked is written. The I/O matrix's edge cases
-// also run through the pure `surfaceOf` over inline `.d.ts` texts.
+// also run through `surfaceOf` over inline `.d.ts` texts with a stub resolver,
+// and the thenable resolver (`registeredFqcn`, Retro 6 item 12) over temp
+// source files.
 import { afterAll, expect } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { diff, render, shortNames, surfaceOf, thenableTypes } from "../../../tools/async-surface/async-surface";
-import { THENABLE_TYPES } from "../../../tools/lint-rules/thenables";
+import { diff, render, surfaceOf, thenableTypes, type FqcnResolver } from "../../../tools/async-surface/async-surface";
+import { isThenableFqcn, registeredFqcn, THENABLE_TYPES } from "../../../tools/lint-rules/thenables";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const TOOL = join(root, "tools", "async-surface", "async-surface.ts");
 const FIXTURES = join(root, "tools", "async-surface", "fixtures");
-const FALLBACK = shortNames(THENABLE_TYPES);
+const FALLBACK = THENABLE_TYPES;
 const dirs: string[] = [];
 afterAll(() => {
   for (const dir of dirs) {
@@ -46,6 +48,7 @@ function demoRoot(sources: Readonly<Record<string, string>>): string {
   cpSync(join(FIXTURES, "demo", "package.json"), join(pkg, "package.json"));
   cpSync(join(FIXTURES, "demo", "tsconfig.json"), join(pkg, "tsconfig.json"));
   for (const [name, source] of Object.entries(sources)) {
+    mkdirSync(dirname(join(pkg, "src", name)), { recursive: true });
     cpSync(source, join(pkg, "src", name));
   }
   return dir;
@@ -73,7 +76,7 @@ const EXPECTED = [
   String.raw`{"method":"Repository.ready","file":"src/Repository.ts","root":"Cache\\Store.get"},`,
   String.raw`{"method":"Repository.remember","file":"src/Repository.ts","root":"callback"},`,
   String.raw`{"method":"Repository.static flushAll","file":"src/Repository.ts","root":"Cache\\Store.flush"},`,
-  String.raw`{"method":"Repository.where","file":"src/Repository.ts","root":"callback"},`,
+  String.raw`{"method":"Repository.where","file":"src/Repository.ts","thenable":"Illuminate\\Database\\Query\\Builder"},`,
   String.raw`{"method":"Store.get","file":"src/Repository.ts","root":"Cache\\Store.get"},`,
   String.raw`{"method":"Store.put","file":"src/Repository.ts","root":"Cache\\Store.put"},`,
   String.raw`{"method":"fetchValue","file":"src/Repository.ts","root":"Cache\\Store.get"},`,
@@ -85,6 +88,7 @@ const EXPECTED = [
 const passingSources = (): Record<string, string> => ({
   "Builder.ts": join(FIXTURES, "demo", "src", "Builder.ts"),
   "Repository.ts": join(FIXTURES, "demo", "src", "Repository.ts"),
+  "Schema/Builder.ts": join(FIXTURES, "demo", "src", "Schema", "Builder.ts"),
 });
 
 /** A temp `node_modules/@xaravel/contracts` whose `./async` exports `THENABLE_TYPES` as `source`. */
@@ -100,7 +104,7 @@ function installContracts(dir: string, source: string): void {
 
 xaravelTest(
   "XT-conformance-134",
-  "bun run async-surface <pkg> emits the package's .d.ts with tsc -b, walks it with oxc-parser and writes async-surface.json with one line per Promise- or thenable-returning public method and its @asyncRoot root, using @xaravel/contracts/async's THENABLE_TYPES when it resolves and the tool's list otherwise (AD-6)",
+  "bun run async-surface <pkg> emits the package's .d.ts with tsc -b, walks it with oxc-parser and writes async-surface.json with one line per Promise-returning public method and its @asyncRoot root and one tagless thenable line per method returning a thenable but no Promise, a thenable matched by the FQCN its import resolves to, using @xaravel/contracts/async's THENABLE_TYPES when it resolves and the tool's list otherwise (AD-6)",
   async () => {
     // The fixture package, the fallback list (no @xaravel/contracts in the temp root).
     const dir = demoRoot(passingSources());
@@ -122,16 +126,15 @@ xaravelTest(
     const listed = cli(withContracts, ["demo"]);
     expect(listed.stderr).toBe("");
     expect(listed.exitCode).toBe(0);
-    expect(readFileSync(SURFACE(withContracts), "utf8")).toBe(`[\n${String.raw`{"method":"Repository.lazy","file":"src/Repository.ts","root":"callback"}`}\n]\n`);
+    expect(readFileSync(SURFACE(withContracts), "utf8")).toBe(`[\n${String.raw`{"method":"Repository.lazy","file":"src/Repository.ts","thenable":"X\\Lazy"}`}\n]\n`);
 
-    // The same source under the fallback list: `where()` (a Builder) is untagged and `lazy()`'s tag is stray.
+    // The same source under the fallback list: `where()` (the Query Builder) is a thenable line and `lazy()` is not listed.
     const fallback = demoRoot(contractsSources);
     expect(await thenableTypes(fallback)).toBe(THENABLE_TYPES);
-    const failed = cli(fallback, ["demo"]);
-    expect(failed.exitCode).toBe(1);
-    expect(failed.stderr).toContain("packages/demo/src/Repository.ts: Repository.where returns a Promise or thenable but has no @asyncRoot tag");
-    expect(failed.stderr).toContain("packages/demo/src/Repository.ts: Repository.lazy has an @asyncRoot tag but returns neither a Promise nor a thenable");
-    expect(existsSync(SURFACE(fallback))).toBe(false);
+    const listedFallback = cli(fallback, ["demo"]);
+    expect(listedFallback.stderr).toBe("");
+    expect(listedFallback.exitCode).toBe(0);
+    expect(readFileSync(SURFACE(fallback), "utf8")).toBe(`[\n${String.raw`{"method":"Repository.where","file":"src/Repository.ts","thenable":"Illuminate\\Database\\Query\\Builder"}`}\n]\n`);
 
     // A contracts module whose THENABLE_TYPES is empty or not a string[] is not used.
     for (const source of ["export const THENABLE_TYPES: readonly string[] = [];\n", "export const THENABLE_TYPES = [1, 2];\n", "export const OTHER = 1;\n"]) {
@@ -140,9 +143,9 @@ xaravelTest(
       expect(await thenableTypes(bad)).toBe(THENABLE_TYPES);
     }
 
-    // The tool's list is the Story 6.3 fixture list, by short name.
-    expect(FALLBACK.has("Builder")).toBe(true);
-    expect(FALLBACK.has("PendingRequest")).toBe(true);
+    // The tool's list is the Story 6.3 fixture list, by FQCN.
+    expect(FALLBACK).toContain("Illuminate\\Database\\Query\\Builder");
+    expect(FALLBACK).toContain("Illuminate\\Http\\Client\\PendingRequest");
 
     // A deleted source's stale `.d.ts` (left in outDir by the incremental build) is not read; the existing file is
     // rewritten, to `[]\n` here.
@@ -157,27 +160,29 @@ xaravelTest(
     // An empty package renders `[]\n`.
     expect(render([])).toBe("[]\n");
 
-    // The I/O matrix's edge cases through the pure walk.
+    // The I/O matrix's edge cases through the walk, and the resolver over real files.
     matrixEdgeCases();
+    resolverCases();
   },
 );
 
 // XT-conformance-135
 
 /** Each failing fixture and the method its error names. */
-const FAILING: readonly { readonly fixture: string; readonly method: string; readonly says: string }[] = [
-  { fixture: "untagged.ts", method: "Repository.put", says: "returns a Promise or thenable but has no @asyncRoot tag" },
+const FAILING: readonly { readonly fixture: string; readonly method: string; readonly says: string; readonly builder?: true }[] = [
+  { fixture: "untagged.ts", method: "Repository.put", says: "returns a Promise but has no @asyncRoot tag" },
   { fixture: "malformed.ts", method: "Repository.forget", says: "has a malformed @asyncRoot tag" },
   { fixture: "conflicting.ts", method: "Repository.pull", says: "has conflicting @asyncRoot tags across its overloads" },
   { fixture: "stray.ts", method: "Repository.getPrefix", says: "has an @asyncRoot tag but returns neither a Promise nor a thenable" },
+  { fixture: "tagged-thenable.ts", method: "Repository.where", says: "returns a thenable but no Promise, so it carries no @asyncRoot tag (AD-6)", builder: true },
 ];
 
 xaravelTest(
   "XT-conformance-135",
-  "a Promise-returning public method with no @asyncRoot tag, a malformed tag, conflicting overload tags or a tag on a non-async method makes bun run async-surface exit 1 naming the file, the method and AD-6, and write nothing (AD-6)",
+  "a Promise-returning public method with no @asyncRoot tag, a malformed tag, conflicting overload tags, a tag on a thenable-returning method with no Promise or a tag on a non-async method makes bun run async-surface exit 1 naming the file, the method and AD-6, and write nothing (AD-6)",
   () => {
-    for (const { fixture, method, says } of FAILING) {
-      const dir = demoRoot({ "Repository.ts": join(FIXTURES, "failing", fixture) });
+    for (const { fixture, method, says, builder } of FAILING) {
+      const dir = demoRoot({ "Repository.ts": join(FIXTURES, "failing", fixture), ...(builder === true ? { "Builder.ts": join(FIXTURES, "demo", "src", "Builder.ts") } : {}) });
       // A committed file is left as it was, in both modes.
       write(dir, { "packages/demo/async-surface.json": "[]\n" });
       for (const args of [["demo"], ["--check", "demo"]]) {
@@ -315,19 +320,41 @@ xaravelTest(
   },
 );
 
-// The I/O matrix's edge cases, through the pure walk (run by XT-conformance-134).
+// The I/O matrix's edge cases, through the walk (run by XT-conformance-134).
 
-const surface = (text: string, thenables: ReadonlySet<string> = FALLBACK): ReturnType<typeof surfaceOf> => surfaceOf([{ file: "src/Repository.ts", text }], thenables);
+const QUERY = "Illuminate\\Database\\Query\\Builder";
+
+/**
+ * A stub resolver standing in for `registeredFqcn`: `./Builder` exports the Query Builder, `./Schema` a Schema
+ * `Builder`, `./Lazy` `X\Lazy`; the file's own `Local` registers `\illuminate\http\client\pendingrequest` (a leading
+ * `\` and another case); every other name resolves to nothing (an unregistered local `Builder` included).
+ */
+const STUB: Readonly<Record<string, string>> = {
+  "./Builder#Builder": QUERY,
+  "./Schema#Builder": "Illuminate\\Database\\Schema\\Builder",
+  "./Lazy#Lazy": "X\\Lazy",
+  "#Local": "\\illuminate\\http\\client\\pendingrequest",
+};
+const resolved: string[] = [];
+const stub: FqcnResolver = (file, specifier, name) => {
+  resolved.push(`${file}:${specifier ?? ""}#${name}`);
+  return STUB[`${specifier ?? ""}#${name}`] ?? null;
+};
+
+const surface = (text: string, thenables: readonly string[] = FALLBACK): ReturnType<typeof surfaceOf> => surfaceOf([{ file: "src/Repository.ts", text }], thenables, stub);
+
+const thenableLine = (method: string, thenable: string): string => JSON.stringify({ method, file: "src/Repository.ts", thenable });
 
 /** The I/O matrix shapes and the walk's edge cases, over inline `.d.ts` texts (part of XT-conformance-134). */
 function matrixEdgeCases(): void {
-  // tagged / thenable / sync / private / protected / #private.
-  const base = surface(String.raw`export declare class Repository {
+  // tagged / thenable (untagged) / sync / private / protected / #private.
+  resolved.length = 0;
+  const base = surface(String.raw`import { Builder } from "./Builder";
+export declare class Repository {
   #private;
   private x;
   /** @asyncRoot Cache\Store.get */
   get(): Promise<string>;
-  /** @asyncRoot callback */
   where(): Builder;
   getPrefix(): string;
   protected p(): Promise<void>;
@@ -337,23 +364,73 @@ function matrixEdgeCases(): void {
 }
 `);
   expect(base.errors).toEqual([]);
-  expect(render(base.entries)).toBe(`[\n${String.raw`{"method":"Repository.get","file":"src/Repository.ts","root":"Cache\\Store.get"}`},\n${String.raw`{"method":"Repository.where","file":"src/Repository.ts","root":"callback"}`}\n]\n`);
+  expect(render(base.entries)).toBe(`[\n${String.raw`{"method":"Repository.get","file":"src/Repository.ts","root":"Cache\\Store.get"}`},\n${thenableLine("Repository.where", QUERY)}\n]\n`);
+  // The resolver is asked from the declaration's source file, with the import's specifier and imported name.
+  expect(resolved).toContain("src/Repository.ts:./Builder#Builder");
+
+  // Tagged thenable: the tag is only for a Promise-returning method.
+  const tagged = surface('import { Builder } from "./Builder";\nexport declare class Repository {\n    /** @asyncRoot callback */\n    where(): Builder;\n}\n');
+  expect(tagged.entries).toEqual([]);
+  expect(tagged.errors.map((e) => e.message)).toEqual(["Repository.where returns a thenable but no Promise, so it carries no @asyncRoot tag (AD-6)"]);
+
+  // The same short name with another FQCN, and an unregistered local `Builder`, are not thenables.
+  for (const text of [
+    'import { Builder } from "./Schema";\nexport declare class Repository {\n    getSchemaBuilder(): Builder;\n}\n',
+    "declare class Builder {\n}\nexport declare class Repository {\n    getSchemaBuilder(): Builder;\n}\n",
+    "export declare class Repository {\n    getSchemaBuilder(): Builder;\n}\n",
+  ]) {
+    expect(surface(text)).toEqual({ entries: [], errors: [] });
+  }
 
   // Untagged: named, with AD-6.
   const untagged = surface("export declare class Repository {\n    put(): Promise<void>;\n}\n");
   expect(untagged.entries).toEqual([]);
   expect(untagged.errors).toHaveLength(1);
   expect(untagged.errors[0]!.method).toBe("Repository.put");
-  expect(untagged.errors[0]!.message).toEndWith("(AD-6)");
+  expect(untagged.errors[0]!.message).toBe("Repository.put returns a Promise but has no @asyncRoot tag (`@asyncRoot <Contract.method>` or `@asyncRoot callback`) (AD-6)");
+
+  // A Promise or a thenable: async, so the tag is required and the line is an async one.
+  const either = 'import { Builder } from "./Builder";\nexport declare class R {\n    m(): Promise<string> | Builder;\n}\n';
+  expect(surface(either).errors.map((e) => e.message)).toEqual([expect.stringContaining("R.m returns a Promise but has no @asyncRoot tag")]);
+  expect(surface(either.replace("    m()", "    /** @asyncRoot callback */\n    m()"))).toEqual({ entries: [{ method: "R.m", file: "src/Repository.ts", root: "callback" }], errors: [] });
+  // ...and so is a Promise on one overload and a thenable on another.
+  expect(surface('import { Builder } from "./Builder";\nexport declare class R {\n    /** @asyncRoot callback */\n    m(): Builder;\n    m(x: 1): Promise<void>;\n}\n').entries).toEqual([{ method: "R.m", file: "src/Repository.ts", root: "callback" }]);
 
   // Return types through parentheses, unions and intersections; qualified names; PromiseLike.
-  for (const type of ["(Promise<void>)", "Promise<void> | null", "Promise<void> & { x: 1 }", "ns.Promise<void>", "PromiseLike<void>", "Eloquent.Builder"]) {
+  for (const type of ["(Promise<void>)", "Promise<void> | null", "Promise<void> & { x: 1 }", "ns.Promise<void>", "PromiseLike<void>"]) {
     expect(surface(`export declare function f(): ${type};\n`).errors.map((e) => e.method)).toEqual(["f"]);
   }
+  // A qualified thenable name counts only through a namespace import: `Eloquent.Builder` alone is no thenable.
+  expect(surface("export declare function f(): Eloquent.Builder;\n")).toEqual({ entries: [], errors: [] });
+  expect(render(surface('import * as Eloquent from "./Builder";\nexport declare function f(): Eloquent.Builder;\n').entries)).toBe(`[\n${thenableLine("f", QUERY)}\n]\n`);
   // Not async: a Promise nested in a type argument, an array or a callback parameter.
   for (const type of ["Array<Promise<void>>", "Promise<void>[]", "Map<string, Builder>"]) {
-    expect(surface(`export declare function f(cb: () => Promise<void>): ${type};\n`)).toEqual({ entries: [], errors: [] });
+    expect(surface(`import { Builder } from "./Builder";\nexport declare function f(cb: () => Promise<void>): ${type};\n`)).toEqual({ entries: [], errors: [] });
   }
+
+  // Resolution paths, each to the Query Builder: named, renamed, `import type`, a type-only specifier, a namespace,
+  // `import("…")`, and a same-file registration (compared without the leading `\`, case-insensitively, printed as the
+  // list spells it).
+  for (const [text, thenable] of [
+    ['import { Builder } from "./Builder";\nexport declare function f(): Builder;\n', QUERY],
+    ['import { Builder as QB } from "./Builder";\nexport declare function f(): QB | null;\n', QUERY],
+    ['import type { Builder } from "./Builder";\nexport declare function f(): Builder & { x: 1 };\n', QUERY],
+    ['import { type Builder } from "./Builder";\nexport declare function f(): (Builder);\n', QUERY],
+    ['import * as db from "./Builder";\nexport declare function f(): db.Builder;\n', QUERY],
+    ['export declare function f(): import("./Builder").Builder;\n', QUERY],
+    ["export declare class Local {\n}\nexport declare function f(): Local;\n", "Illuminate\\Http\\Client\\PendingRequest"],
+  ] as const) {
+    expect(render(surface(text).entries)).toBe(`[\n${thenableLine("f", thenable)}\n]\n`);
+  }
+  // A namespace binding itself, an unresolvable `import("…")` and a deeper qualifier are no thenables.
+  expect(surface('import * as Builder from "./Builder";\nexport declare function f(): Builder;\nexport declare function g(): import("./Nope").Builder;\nexport declare function h(): import("./Builder").x.Builder;\n')).toEqual({ entries: [], errors: [] });
+
+  // Several thenables (a union, or across overloads): distinct, sorted, joined by `|`.
+  const several = surface('import { Builder } from "./Builder";\nimport { Lazy } from "./Lazy";\nexport declare class R {\n    m(): Lazy | Builder;\n    n(): Lazy;\n    n(x: 1): Builder;\n    n(x: 2): Builder;\n}\n', ["X\\Lazy", ...FALLBACK]);
+  expect(several.entries).toEqual([
+    { method: "R.m", file: "src/Repository.ts", thenable: `${QUERY}|X\\Lazy` },
+    { method: "R.n", file: "src/Repository.ts", thenable: `${QUERY}|X\\Lazy` },
+  ]);
 
   // The tag must be the nearest JSDoc with only whitespace between; a line comment or a plain block comment is not one.
   expect(surface("/** @asyncRoot callback */\nexport declare function a(): void;\nexport declare function f(): Promise<void>;\n").errors.map((e) => e.method)).toEqual(["a", "f"]);
@@ -397,14 +474,20 @@ export declare let l: () => Promise<void>;
   expect(exports.errors).toEqual([]);
   expect(exports.entries.map((e) => e.method)).toEqual(["Contract.get", "Contract.put", "Public.run", "Public.static make", "c"]);
 
-  // tsc's inferred cross-module return type `import("./Builder").Builder` is a reference by its qualifier's last segment.
-  expect(surface('export declare function f(): import("./Builder").Builder;\nexport declare function g(): import("./x").ns.Promise<void>;\n').errors.map((e) => e.method)).toEqual(["f", "g"]);
+  // tsc's inferred cross-module return type `import("./Builder").Builder` resolves through its specifier; a qualified
+  // `import("./x").ns.Promise` is a Promise by its last segment.
+  const imported = surface('export declare function f(): import("./Builder").Builder;\nexport declare function g(): import("./x").ns.Promise<void>;\n');
+  expect(imported.entries).toEqual([{ method: "f", file: "src/Repository.ts", thenable: QUERY }]);
+  expect(imported.errors.map((e) => e.method)).toEqual(["g"]);
   // Only `readonly` is unwrapped: `keyof Promise<T>` is not async.
   expect(surface("export declare function f(): keyof Promise<void>;\nexport declare function g(): unique symbol;\n")).toEqual({ entries: [], errors: [] });
   // A nullable callback field or const (AD-9's shape) is listed through its function member.
-  const nullable = surface("export declare class R {\n    /** @asyncRoot callback */\n    run: (() => Promise<void>) | null;\n    sync: (() => void) | null;\n}\nexport declare const c: ((() => Builder)) | null;\n");
-  expect(nullable.entries.map((e) => e.method)).toEqual(["R.run"]);
-  expect(nullable.errors.map((e) => e.method)).toEqual(["c"]);
+  const nullable = surface('import { Builder } from "./Builder";\nexport declare class R {\n    /** @asyncRoot callback */\n    run: (() => Promise<void>) | null;\n    sync: (() => void) | null;\n}\nexport declare const c: ((() => Builder)) | null;\n');
+  expect(nullable.errors).toEqual([]);
+  expect(nullable.entries).toEqual([
+    { method: "R.run", file: "src/Repository.ts", root: "callback" },
+    { method: "c", file: "src/Repository.ts", thenable: QUERY },
+  ]);
   // A declaration that does not parse fails naming the file, instead of yielding a partial surface.
   const broken = surface("export declare class R {\n    x(: void;\n}\n");
   expect(broken.entries).toEqual([]);
@@ -419,8 +502,11 @@ export declare let l: () => Promise<void>;
   expect(abstract.entries).toEqual([{ method: "Q.pop", file: "src/Repository.ts", root: "Queue\\Queue.pop" }]);
 
   // The contracts list replaces the fallback: `Lazy` listed, `Builder` not.
-  const contracts = shortNames(["X\\Lazy"]);
-  expect(surface("/** @asyncRoot callback */\nexport declare function a(): Lazy;\nexport declare function b(): Builder;\n", contracts)).toEqual({ entries: [{ method: "a", file: "src/Repository.ts", root: "callback" }], errors: [] });
+  const contracts = ["X\\Lazy"];
+  expect(surface('import { Builder } from "./Builder";\nimport { Lazy } from "./Lazy";\nexport declare function a(): Lazy;\nexport declare function b(): Builder;\n', contracts)).toEqual({ entries: [{ method: "a", file: "src/Repository.ts", thenable: "X\\Lazy" }], errors: [] });
+
+  // Without a resolver nothing is a thenable; only Promises count.
+  expect(surfaceOf([{ file: "src/Repository.ts", text: 'import { Builder } from "./Builder";\nexport declare function f(): Builder;\n' }], FALLBACK)).toEqual({ entries: [], errors: [] });
 
   // Sorted by file, then method.
   const sorted = surfaceOf(
@@ -431,4 +517,61 @@ export declare let l: () => Promise<void>;
     FALLBACK,
   );
   expect(sorted.entries.map((e) => `${e.file}#${e.method}`)).toEqual(["src/a.ts#y", "src/a.ts#z", "src/b.ts#a"]);
+}
+
+/** `registeredFqcn` and `isThenableFqcn` over temp source files: every resolution path of the I/O matrix (part of XT-conformance-134). */
+function resolverCases(): void {
+  const dir = tempDir("xaravel-async-surface-resolve-");
+  const stand = "function registerClass(fqcn: string, value: object): void {\n  void fqcn;\n  void value;\n}\n";
+  write(dir, {
+    "src/Query/Builder.ts": `export class Builder {}\n${stand}registerClass("Illuminate\\\\Database\\\\Query\\\\Builder", Builder);\n`,
+    "src/Schema/Builder.ts": `export class Builder {}\n${stand}registerClass("Illuminate\\\\Database\\\\Schema\\\\Builder", Builder);\n`,
+    // A local class registered and exported later under another name; an unregistered one.
+    "src/Local.ts": `class Pending {}\nclass Plain {}\n${stand}registerClass("\\\\Illuminate\\\\Http\\\\Client\\\\PendingRequest", Pending);\nexport { Pending as PendingRequest, Plain };\n`,
+    // Re-exports: renamed `export {} from`, an imported-then-exported binding, an `export *` chain, an index file.
+    "src/Renamed.ts": 'export { Builder as QueryBuilder } from "./Query/Builder";\n',
+    "src/Imported.ts": 'import { QueryBuilder } from "./Renamed.js";\nexport { QueryBuilder };\n',
+    "src/barrel/index.ts": 'export * from "../Schema/Other";\nexport * from "../Imported";\n',
+    "src/Schema/Other.ts": "export class Other {}\n",
+    // A cycle of `export *`.
+    "src/CycleA.ts": 'export * from "./CycleB";\n',
+    "src/CycleB.ts": 'export * from "./CycleA";\n',
+    // A bare specifier, resolved like Bun does from the file's directory.
+    "node_modules/@demo/db/package.json": JSON.stringify({ name: "@demo/db", type: "module", exports: { ".": "./index.ts" } }),
+    "node_modules/@demo/db/index.ts": 'export { Builder } from "./Builder";\n',
+    "node_modules/@demo/db/Builder.ts": `export class Builder {}\n${stand}registerClass("Illuminate\\\\Database\\\\Query\\\\Builder", Builder);\n`,
+    "src/Use.ts": 'import { Builder } from "./Query/Builder";\nexport class Same {}\n',
+  });
+  const from = join(dir, "src", "Use.ts");
+  const query = "Illuminate\\Database\\Query\\Builder";
+  expect(registeredFqcn(from, "./Query/Builder", "Builder")).toBe(query);
+  expect(registeredFqcn(from, "./Query/Builder.js", "Builder")).toBe(query);
+  expect(registeredFqcn(from, "./Query/Builder.ts", "Builder")).toBe(query);
+  expect(registeredFqcn(from, "./Schema/Builder", "Builder")).toBe("Illuminate\\Database\\Schema\\Builder");
+  expect(registeredFqcn(from, "./Renamed", "QueryBuilder")).toBe(query);
+  expect(registeredFqcn(from, "./Imported", "QueryBuilder")).toBe(query);
+  expect(registeredFqcn(from, "./barrel", "QueryBuilder")).toBe(query);
+  expect(registeredFqcn(from, "@demo/db", "Builder")).toBe(query);
+  expect(registeredFqcn(from, "./Local", "PendingRequest")).toBe("Illuminate\\Http\\Client\\PendingRequest");
+  // The file's own bindings: an import, followed; a local unregistered class.
+  expect(registeredFqcn(from, null, "Builder")).toBe(query);
+  expect(registeredFqcn(from, null, "Same")).toBeNull();
+  // Unresolvable: no such export, an unregistered export, a cycle, a missing module, a missing package.
+  expect(registeredFqcn(from, "./Query/Builder", "Nope")).toBeNull();
+  expect(registeredFqcn(from, "./Local", "Plain")).toBeNull();
+  expect(registeredFqcn(from, "./barrel", "Other")).toBeNull();
+  expect(registeredFqcn(from, "./CycleA", "Builder")).toBeNull();
+  expect(registeredFqcn(from, "./Missing", "Builder")).toBeNull();
+  expect(registeredFqcn(from, "@demo/missing", "Builder")).toBeNull();
+  // The cache follows the file's mtime.
+  const local = join(dir, "src", "Query", "Builder.ts");
+  writeFileSync(local, `export class Builder {}\n${stand}registerClass("App\\\\Builder", Builder);\n`);
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(local, later, later);
+  expect(registeredFqcn(from, "./Query/Builder", "Builder")).toBe("App\\Builder");
+
+  // The list comparison: without a leading `\`, case-insensitively, printed as the list spells it.
+  expect(isThenableFqcn("\\illuminate\\database\\query\\BUILDER", THENABLE_TYPES)).toBe(query);
+  expect(isThenableFqcn("Illuminate\\Database\\Schema\\Builder", THENABLE_TYPES)).toBeNull();
+  expect(isThenableFqcn(null, THENABLE_TYPES)).toBeNull();
 }

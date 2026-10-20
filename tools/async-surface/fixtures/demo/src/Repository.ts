@@ -1,5 +1,6 @@
 // Story 6.4 passing fixture: every listed and unlisted shape of the I/O matrix.
 import { Builder, Lazy } from "./Builder";
+import { Builder as SchemaBuilder } from "./Schema/Builder";
 
 /** Stands in for a cache store contract. */
 export interface Store {
@@ -21,9 +22,14 @@ export class Repository {
     return Promise.resolve(key === "" ? null : key);
   }
 
-  /** @asyncRoot callback */
+  /** A sync thenable (the Query Builder): listed as a `thenable` line, untagged. */
   where(table: string): Builder {
     return new Builder(table);
+  }
+
+  /** The Schema Builder shares the short name but not the FQCN: not a thenable, not listed. */
+  getSchemaBuilder(connection: string): SchemaBuilder {
+    return new SchemaBuilder(connection);
   }
 
   /** The prefix (sync, untagged). */
