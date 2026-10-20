@@ -47,3 +47,4 @@ epic-6:
   waiting_on_maintainer:
     - epic-6-retro-item-6-thenable-return-call-results
     - epic-6-retro-item-7-async-surface-thenable-returns
+    - epic-6-retro-item-8-api-surface-gate-enforcement
