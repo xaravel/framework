@@ -43,3 +43,29 @@ A TypeScript port of Laravel 13 (`laravel/framework` v13.37.0) to Bun, server-re
 - Ported Tests use only `portedTest(...)` and `@xaravel/assert`, never `expect` from `bun:test`; mark each changed assertion `// adapted:DIV-<n>.<clause>` (AD-15).
 
 <!-- /bmad:context -->
+
+## Story loop and stop rules
+
+Work a Story in this order (FR-114, UJ-4):
+
+1. Read the Story manifest `stories/<story-id>.md`, `PORTING.md`, and the Divergence Records (`decisions/DIV-<n>.md`) that its Test IDs touch.
+2. Translate the Upstream tests named by the manifest's `test_ids` into Ported Tests, following `PORTING.md`.
+3. Run `bun run harness --fast --story <story-id>` to see where you start.
+4. Implement in `packages/<component>/**` only.
+5. Update your own Expectations lines, and no one else's.
+6. Run the full Story tests: `bun run harness --story <story-id>`, then `bun run story:check <story-id>`. A fast run never counts.
+7. Open the PR from `story/<story-id>`.
+
+Stop work on a Test ID and raise an Escalation in `conformance/escalations/` instead of guessing when:
+
+- a new Intentional Divergence, or a change to one, seems needed (`divergence`);
+- the work would change a Protected Path (`protected-path`);
+- an Upstream test looks wrong but the Oracle passes it (`upstream-test-wrong`);
+- a test is inconsistent across 3 repeated runs; it is Quarantined (`flaky`);
+- you would propose a `php-only` Skip Reason (`php-only`);
+- an open question in PRD §9 blocks the work (`open-question`);
+- a Contract you need is missing, or differs, after Phase 1 (`contract`).
+
+An Escalation stops work on its own Test IDs only. Carry on with the Story's other Test IDs.
+
+Never stub, fake or partially implement another Component to make a test pass. A test that needs a Component from a later Phase is marked `blocked-by:<component>` and left for that Component's Story.
