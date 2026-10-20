@@ -46,3 +46,4 @@ epic-6:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-6-retro-item-6-thenable-return-call-results
+    - epic-6-retro-item-7-async-surface-thenable-returns
