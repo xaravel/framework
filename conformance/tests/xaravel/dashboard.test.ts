@@ -480,26 +480,59 @@ xaravelTest("XT-conformance-148", "the Epic review view shows the Epic's Compone
   // A Divergence Record added since the Epic began and deleted again before HEAD is not listed.
   writeFileSync(join(repo, "decisions", "DIV-2.md"), "# DIV-2\n");
   commitAll(repo, "planning: x");
+  // A retrospective added before the Epic's newest Story commit never cuts the range short.
+  mkdirSync(join(repo, "_bmad-output", "implementation-artifacts"), { recursive: true });
+  writeFileSync(join(repo, "_bmad-output", "implementation-artifacts", "epic-1-retro-2026-10-18.md"), "# Early Epic 1 retro\n");
+  commitAll(repo, "planning: early epic 1 retro");
   const escText = escalation([S("testB"), S("testD")], "divergence");
   writeFileSync(join(repo, "decisions", "DIV-1.md"), "# DIV-1\nRecord.\n");
   writeFileSync(join(repo, "conformance", "escalations", "ESC-1.2-1.md"), escText);
   writeFileSync(join(repo, "src", "a.txt"), "one\nTWO\nthree\n");
-  commitAll(repo, "1.2: b");
+  const last = commitAll(repo, "1.2: b");
   rmSync(join(repo, "decisions", "DIV-2.md"));
   commitAll(repo, "planning: y");
+  // Added after the Epic's last Story commit, with no retrospective yet: outside the range.
+  writeFileSync(join(repo, "conformance", "escalations", "ESC-9.9-2.md"), escalation([S("testA")]));
+  commitAll(repo, "planning: z");
+  // Another Epic's retrospective: `epic-1-` never matches `epic-10-`.
+  writeFileSync(join(repo, "_bmad-output", "implementation-artifacts", "epic-10-retro-2026-10-20.md"), "# Epic 10 retro\n");
+  commitAll(repo, "planning: epic 10 retro");
+  const earlyReport = computeReport(repo);
+  const early = epicReview(repo, 1, earlyReport);
+  expect(early.ended).toEqual({ sha: last, by: "last Story commit" });
+  expect(early.escalations.map((entry) => entry.id)).toEqual(["ESC-1.2-1"]);
+  const earlyHtml = buildSite({ report: earlyReport, history: [], repo: null, divRecords: new Set(), escalations: [], quarantined: [], apiSurface: [], epics: [early] }).get("epics/1.html")!;
+  expect(earlyHtml).toContain(`<p>Ended at: ${last} (last Story commit)</p>`);
+  // The retrospective commit ends the range: ESC-9.9-2 and ESC-9.9-3 are listed.
+  writeFileSync(join(repo, "_bmad-output", "implementation-artifacts", "epic-1-retro-2026-10-20.md"), "# Epic 1 retro\n");
+  writeFileSync(join(repo, "conformance", "escalations", "ESC-9.9-3.md"), escalation([S("testA")]));
+  const retro = commitAll(repo, "planning: epic 1 retro");
+  // Added after the retrospective: not listed; editing the retrospective later does not move the end.
+  writeFileSync(join(repo, "conformance", "escalations", "ESC-9.9-4.md"), escalation([S("testA")]));
+  commitAll(repo, "planning: after");
+  writeFileSync(join(repo, "_bmad-output", "implementation-artifacts", "epic-1-retro-2026-10-20.md"), "# Epic 1 retro\nEdited.\n");
+  commitAll(repo, "planning: edit retro");
+  // A rename within the directory is not an add (`-M`): it does not move the end.
+  git(repo, ["mv", "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-20.md", "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-21.md"]);
+  commitAll(repo, "planning: rename retro");
   const escLines = escText.split("\n").length - 1;
   const report = computeReport(repo);
 
   const review = epicReview(repo, 1, report);
   expect(review.epic).toBe(1);
   expect(review.began).toBe(base);
+  expect(review.ended).toEqual({ sha: retro, by: "retrospective" });
   expect(review.components).toEqual([
     { component: "support", bucket: report.components["support"]! },
     { component: "widgets", bucket: null },
   ]);
-  // Added in began..HEAD: DIV-1 and ESC-1.2-1; ESC-9.9-1 (added before 1.1) is not.
+  // Added in began..ended: DIV-1, ESC-1.2-1, ESC-9.9-2 and ESC-9.9-3; ESC-9.9-1 (added before 1.1) and ESC-9.9-4 (after the retrospective) are not.
   expect(review.divergences).toEqual([{ id: "DIV-1", file: "decisions/DIV-1.md" }]);
-  expect(review.escalations).toEqual([{ id: "ESC-1.2-1", file: "conformance/escalations/ESC-1.2-1.md", trigger: "divergence", testIds: [S("testB"), S("testD")], status: "open" }]);
+  expect(review.escalations).toEqual([
+    { id: "ESC-1.2-1", file: "conformance/escalations/ESC-1.2-1.md", trigger: "divergence", testIds: [S("testB"), S("testD")], status: "open" },
+    { id: "ESC-9.9-2", file: "conformance/escalations/ESC-9.9-2.md", trigger: "flaky", testIds: [S("testA")], status: "open" },
+    { id: "ESC-9.9-3", file: "conformance/escalations/ESC-9.9-3.md", trigger: "flaky", testIds: [S("testA")], status: "open" },
+  ]);
   expect(review.stories).toEqual([
     { id: "1.1", status: "done", commits: 1, files: 1, added: 3, deleted: 0 },
     { id: "1.2", status: "review", commits: 1, files: 3, added: 2 + escLines + 1, deleted: 1 },
@@ -515,6 +548,7 @@ xaravelTest("XT-conformance-148", "the Epic review view shows the Epic's Compone
     epic: 2,
     components: [{ component: "support", bucket: report.components["support"]! }],
     began: null,
+    ended: null,
     divergences: [],
     escalations: [],
     blocking: [{ id: "ESC-2.1-1", file: "conformance/escalations/ESC-2.1-1.md", trigger: "flaky", testIds: [S("testF")], status: "open" }],
@@ -545,15 +579,19 @@ xaravelTest("XT-conformance-148", "the Epic review view shows the Epic's Compone
   expect(components).toContain(`<h3>widgets</h3>\n<p class="empty">no Test IDs in the Inventory</p>`);
   const since = section(html, "since");
   expect(since).toContain(`Began at: ${base}`);
+  expect(since).toContain(`<p>Ended at: ${retro} (retrospective)</p>`);
   expect(since).toContain(`<tr><td>DIV-1</td><td><a href="https://github.com/xaravel/framework/blob/${report.commit}/decisions/DIV-1.md">decisions/DIV-1.md</a></td></tr>`);
   expect(since).toContain(`>ESC-1.2-1</a></td><td>divergence</td><td>${S("testB")}, ${S("testD")}</td><td>open</td></tr>`);
   expect(since).not.toContain("ESC-9.9-1");
+  expect(since).toContain(">ESC-9.9-3</a>");
+  expect(since).not.toContain("ESC-9.9-4");
   expect(since).not.toContain("DIV-2");
   const stories = section(html, "stories");
   expect(stories).toContain("<tr><td>1.1</td><td>done</td><td>1</td><td>1</td><td>+3</td><td>-0</td></tr>");
   expect(stories).toContain(`<tr><td>1.2</td><td>review</td><td>1</td><td>3</td><td>+${3 + escLines}</td><td>-1</td></tr>`);
   const notBegun = readFileSync(join(out, "epics", "2.html"), "utf8");
   expect(notBegun).toContain("Began at: not begun (no Story commit)");
+  expect(notBegun).toContain("Ended at: not begun (no Story commit)");
   expect(section(notBegun, "blocking")).toContain(`<p id="open-escalations">open Escalations concerning this Epic: <strong>1</strong> (blocks acceptance)</p>`);
   expect(section(notBegun, "blocking")).toContain(">ESC-2.1-1</a>");
   expect(section(notBegun, "stories")).toContain("<tr><td>2.1</td><td>backlog</td><td>0</td><td>0</td><td>+0</td><td>-0</td></tr>");

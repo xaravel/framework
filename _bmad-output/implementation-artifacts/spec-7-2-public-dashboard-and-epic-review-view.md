@@ -46,7 +46,8 @@ GitHub Pages serves the `gh-pages` branch ("Deploy from a branch"). The job's ex
 - **Epic review view (UJ-5).** `epicReview(root, epic, report)` covers the Epic's Stories, which are the manifests with `epic: <N>` (`readManifests` + `applySprintStatus`). It returns:
   - its Components (sorted), each with its `report.components` bucket, or null, rendered as `no Test IDs in the Inventory`;
   - `began`: the parent of the oldest commit reachable from HEAD whose subject starts with `<story-id>: ` for one of its Stories, or null when no such commit exists;
-  - the Divergence Records (`decisions/DIV-*.md`) and Escalations (`conformance/escalations/ESC-*.md`) added in `began..HEAD` (`git log --diff-filter=A`), each Escalation with its Test IDs and status. When `began` is null, both lists are empty;
+  - `ended`: the later, in the `--topo-order` commit list, of the Epic's newest Story commit and the newest commit that added the Epic's retrospective document (`_bmad-output/implementation-artifacts/epic-<N>-retro-*.md`, `git log -M --diff-filter=A`); null exactly when `began` is null (corrected from `began..HEAD` by Epic 7 retro item 5, `spec-retro-7-bound-review-range`);
+  - the Divergence Records (`decisions/DIV-*.md`) and Escalations (`conformance/escalations/ESC-*.md`) added in `began..ended` (`git log --diff-filter=A`) and still present at HEAD, each Escalation with its Test IDs and status. When `began` is null, both lists are empty;
   - per Story: id, status, commit count, distinct files changed, and lines added and deleted. These are summed with `--numstat` over the Story's commits (subject prefix `<story-id>: `).
   - Its page puts the `fail-known` count and the open Escalations first, flagged as blocking acceptance.
 - **CLI conventions.** Follow 7.1: a header usage comment, `main(argv)`, `--root`, exit 0/1/2, and HTML-escape every interpolated string.
@@ -81,7 +82,7 @@ GitHub Pages serves the `gh-pages` branch ("Deploy from a branch"). The job's ex
 | Escaping | a Test ID containing `<b>` | rendered as `&lt;b&gt;` | — |
 | Pin change | 3 records on pin A, 2 on B, 1 on A | 3 series (3, 2, 1 points), 2 markers labelled B and A | — |
 | Empty history | no `--history` | chart says `no history yet` | — |
-| Epic review | fixture git repo: `1.1: a`, `planning: x`, `1.2: b` adding `decisions/DIV-1.md` and an ESC; an earlier ESC before `1.1` | began = parent of `1.1`; DIV-1 and the later ESC listed, the earlier ESC not; per-Story files and +/- lines exact | — |
+| Epic review | fixture git repo: `1.1: a`, `planning: x`, `1.2: b` adding `decisions/DIV-1.md` and an ESC; an earlier ESC before `1.1` | began = parent of `1.1`; ended = the later of `1.2: b` and the newest `epic-1-retro-*.md` add; DIV-1 and the later ESC listed, the earlier ESC and any added after `ended` not (retro 7 item 5); per-Story files and +/- lines exact | — |
 | Epic not begun | Epic whose Stories have no commits | began null, empty lists, Stories listed with 0 commits | — |
 | Publish new | bare remote without `gh-pages` | orphan commit; tree equals the dir | exit 0, `created` |
 | Publish same | same dir again | no new commit | exit 0, `unchanged` |
@@ -146,6 +147,10 @@ GitHub Pages serves the `gh-pages` branch ("Deploy from a branch"). The job's ex
 
 ## Spec Change Log
 
+### 2026-10-20 — Epic review range bounded at the Epic end (Epic 7 retro item 5, S5/L7)
+- Changed: the Divergence Records and Escalations are those added in `began..ended`, not `began..HEAD`. `ended` is the later of the Epic's newest Story commit and the newest commit that added `epic-<N>-retro-*.md`, and it is null when `began` is null. The page shows `Ended at`.
+- Why: under `began..HEAD`, every finished Epic's page also listed everything later Epics added (Epic 1's and Epic 2's pages each listed all 31 Escalations; retro S5). The per-Story commit matching and rename counting were undocumented (retro L7). They are now documented in `docs/ops/conformance-report.md`, and the counting itself is unchanged. See `spec-retro-7-bound-review-range`.
+
 ## Review Triage Log
 
 ### 2026-10-19 — Review pass
@@ -196,7 +201,7 @@ GitHub Pages serves the `gh-pages` branch ("Deploy from a branch"). The job's ex
 
 **Why a branch, not `deploy-pages`.** AD-18 keeps `id-token: write` to the release job, and XT-conformance-38 enforces that. A `gh-pages` branch push needs only the `contents: write` the job already holds (spine l.374). The `dashboard-data` branch stays data-only.
 
-**"Since the Epic began"** is read from `main`'s squash-merge subjects (`7.1: Conformance aggregator (#209)`). This is the only per-Story marker git has on `main`. A Story with no merged commit adds nothing.
+**"Since the Epic began"** is read from `main`'s squash-merge subjects (`7.1: Conformance aggregator (#209)`). This is the only per-Story marker git has on `main`. A Story with no merged commit adds nothing. The range ends at the Epic's retrospective commit, or its last Story commit, not at HEAD (Epic 7 retro item 5).
 
 ## Verification
 
