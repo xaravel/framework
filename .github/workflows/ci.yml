@@ -11,7 +11,10 @@
 # (decisions/MAINT-2026-10-18-epic-3-items.md, Epic 3 retro S2): a forged
 # fixture cannot merge. `check` runs the other repository gates: `bun test`,
 # the typecheck, the lint, `scaffold:check` and `graph:check` (Epic 1 retro
-# R1), plus the assert and Mockery coverage reports. After the typecheck it
+# R1), plus the assert and Mockery coverage reports. After the Skip Reasons it
+# runs `divergence:check` (Story 8.1, FR-8, AD-15): a malformed Divergence
+# Record DIV-1..12, or an `adapted` marker in the Expectations File or a Ported
+# Test that names no existing clause, fails. After the typecheck it
 # runs `async-surface --all --check` (Story 6.4, AD-6, AD-28): an async public
 # method without an `@asyncRoot` tag, or a committed async-surface.json that
 # differs from the regenerated one, fails; in the merge queue this catches two
@@ -128,6 +131,8 @@ jobs:
         run: bun run expectations:check
       - name: Check the Skip Reasons
         run: bun run expectations:reasons
+      - name: Check the Divergence Records and adapted markers
+        run: bun run divergence:check
       - name: Typecheck
         run: bun run typecheck
       - name: Check the async surface
