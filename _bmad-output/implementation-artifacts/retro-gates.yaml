@@ -45,3 +45,10 @@ epic-6:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer: []
+epic-7:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer: []

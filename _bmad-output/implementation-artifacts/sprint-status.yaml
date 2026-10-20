@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-19-2026 23:09
+last_updated: 10-19-2026 23:28
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -105,7 +105,7 @@ development_status:
   7-2-public-dashboard-and-epic-review-view: done
   7-3-boost-framework-mode-mcp-server: done
   7-4-framework-mode-is-read-only: done  # ESC-7.4-1 (protected-path) waits on the Maintainer
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   epic-8: backlog
   8-1-divergence-records-div-1-to-div-12: backlog
@@ -1195,3 +1195,74 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "decisions/MAINT-2026-10-19-epic-6-items.md"
+  - id: "epic-7-retro-item-1-lockdown-gaps"
+    epic: 7
+    action: "Close the framework-mode lockdown gaps: refuse Bun.fetch, Archive, FileSystemRouter,
+      secrets, redis/RedisClient, WebView, Terminal and node:sqlite (prefer a Bun
+      allowlist), scope out-of-scope text imports and require where possible, list
+      what stays open in docs/framework-mode.md, correct spec-7-4:171, add the probes
+      to XT-boost-5 (L1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-2-linear-glob-matching"
+    epic: 7
+    action: "Make globToRegExp linear (or cap glob length and * count) in tools/boost-framework
+      and the harness --id, with a pathological-glob test (L2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-3-boost-tool-tests"
+    epic: 7
+    action: "XT-boost-6 asserts every tool has a successful call; add a test running
+      divergence.get over every real decisions/DIV-*.md requiring at least one clause
+      (L3, S6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-4-one-definition-docs-alpha-exclusions"
+    epic: 7
+    action: "Correct the never-derives-a-number claims in report.ts and docs/ops/conformance-report.md
+      (Boost mirror, chart division); document and count Phase 1-8 Test IDs with no
+      alpha-Variant line in report.json (S2, S4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-5-bound-epic-review-range"
+    epic: 7
+    action: "Bound the Epic review view range at the Epic last Story commit (or retro
+      commit), not HEAD; update spec-7-2, docs and XT-conformance-148; document per-Story
+      commit matching and rename counting (S5, L7)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-6-harden-dashboard-workflow"
+    epic: 7
+    action: "dashboard.yml runs expectations:check before conformance:report; history
+      and publish refuse a source commit that is not the origin/main tip or a descendant
+      of the last published commit (L4, L5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-7-sm1-none-remaining-ruling"
+    epic: 7
+    action: "Rule whether SM-1 no not-ported-yet or blocked-by remaining covers every
+      Variant or only alpha Variants as report.ts:264-270 reads it (S1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-8-sm1-target-covering-story"
+    epic: 7
+    action: "Give SM-1 target a covering Story: history with phase and Inventory hash,
+      a never-decreases check between Phase boundaries under one Pin, and the Test
+      Inventory diff between Pin series (S3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
+  - id: "epic-7-retro-item-9-clear-followup-review-flags"
+    epic: 7
+    action: "Clear followup_review_recommended in spec-7-2, spec-7-3 and spec-7-4,
+      citing the Epic 7 retrospective as the follow-up review (P6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-7-retro-2026-10-19.md"
