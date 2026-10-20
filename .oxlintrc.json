@@ -30,5 +30,13 @@
     ".claude/**",
     "node_modules/**",
     "tools/lint-rules/fixtures/**"
+  ],
+  "overrides": [
+    {
+      "files": ["packages/**"],
+      "rules": {
+        "typescript/return-await": ["error", "always"]
+      }
+    }
   ]
 }

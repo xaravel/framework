@@ -133,7 +133,8 @@ xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule f
     expect(config.rules[`xaravel/${name}`]).toBe("error");
     expect(SPINE_RULES).toContain(name);
   }
-  expect(config.overrides).toBeUndefined();
+  // The one override is return-await for packages (Retro 6 item 11); none touches the xaravel rules.
+  expect(config.overrides).toEqual([{ files: ["packages/**"], rules: { "typescript/return-await": ["error", "always"] } }]);
   expect(checkConfig(root, CONFIG)).toEqual([]);
 
   // Each failing fixture fails naming exactly its rule at every placement; each other passing placement is clean

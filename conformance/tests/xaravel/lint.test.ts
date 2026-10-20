@@ -1,4 +1,4 @@
-// Xaravel Tests for Story 6.1 and 6.6 (the type-aware async-safety lint:
+// Xaravel Tests for Story 6.1, Story 6.6 and Retro 6 item 11 (the type-aware async-safety lint:
 // `.oxlintrc.json` and `tools/lint-rules/disables.ts`; NFR-3, AD-6, AD-16,
 // AD-28).
 //
@@ -12,7 +12,7 @@ import { afterAll, expect } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { checkConfig, checkGitignore, comments, findDisables, formatViolation, GITIGNORE_PROBES, ignoreMatches, IGNORE_PROBES, parseDirective, scanSource, SPINE_RULE_OPTIONS, SPINE_RULES } from "../../../tools/lint-rules/disables";
+import { checkConfig, checkGitignore, comments, findDisables, formatViolation, GITIGNORE_PROBES, ignoreMatches, IGNORE_PROBES, PACKAGE_PROBES, PACKAGE_RULES, parseDirective, RULE_MODES, ruleShortfall, scanSource, SPINE_RULE_OPTIONS, SPINE_RULES } from "../../../tools/lint-rules/disables";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -24,6 +24,8 @@ const FAILING: Readonly<Record<string, string>> = {
   "await-plain.ts": "await-thenable",
   "misused-void-callback.ts": "no-misused-promises",
 };
+/** What a nested config under `packages/` must set itself, since it replaces the root's overrides (Retro 6 item 11). */
+const PACKAGE_CONFIG_RULES = { "typescript/return-await": ["error", "always"] };
 const dirs: string[] = [];
 afterAll(() => {
   for (const dir of dirs) {
@@ -110,7 +112,8 @@ xaravelTest("XT-conformance-129", "the root .oxlintrc.json holds no-floating-pro
   expect(config.rules["typescript/await-thenable"]).toBe("error");
   expect(config.rules["typescript/no-misused-promises"]).toEqual(["error", { checksVoidReturn: true, checksConditionals: true }]);
   expect(config.rules["unicorn/no-thenable"]).toBe("off");
-  expect(config.overrides).toBeUndefined();
+  // The one override: return-await (always) for framework packages and Ported Tests only (Retro 6 item 11).
+  expect(config.overrides).toEqual([{ files: ["packages/**"], rules: { "typescript/return-await": ["error", "always"] } }]);
   expect(config.ignorePatterns).toContain("tools/lint-rules/fixtures/**");
   for (const probe of [...IGNORE_PROBES, "packages/demo/src/Sub/Deep.ts", "skeleton/routes/web.ts"]) {
     expect(config.ignorePatterns.filter((pattern) => ignoreMatches(pattern, probe))).toEqual([]);
@@ -247,6 +250,154 @@ xaravelTest("XT-conformance-254", "no-misused-promises is pinned with checksCond
   expect(real.stdout.toString()).toMatch(/lint disables: ok \(\d+ files\)\n$/);
 }, 60_000);
 
+// XT-conformance-255
+
+xaravelTest("XT-conformance-255", "framework packages and Ported Tests hold typescript/return-await (always), which fails an async function returning a thenable from a call; the Skeleton does not; lint:disables fails a root config, override, nested package config or package directive that drops or weakens it (Retro 6 item 11, NFR-3, AD-6, AD-16.4)", () => {
+  // The pins: the root keeps the syntactic rule at the top level for the Skeleton; return-await is package-only.
+  const config = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; jsPlugins: string[]; overrides: unknown[] };
+  expect(config.rules["xaravel/no-async-thenable-return"]).toBe("error");
+  expect(config.rules["typescript/return-await"]).toBeUndefined();
+  expect(config.overrides).toEqual([{ files: ["packages/**"], rules: { "typescript/return-await": ["error", "always"] } }]);
+  expect(PACKAGE_RULES).toEqual(["return-await"]);
+  expect(RULE_MODES).toEqual({ "return-await": "always" });
+  expect(PACKAGE_PROBES).toEqual(["packages/demo/src/Demo.ts", "packages/demo/tests/ported/DemoTest.ts"]);
+  expect(checkConfig(root, CONFIG)).toEqual([]);
+
+  // oxlint, with a temp copy of the real config (override globs resolve against the config's directory): the
+  // call-result thenable fails exactly return-await in a package and a Ported Test, and passes in the Skeleton.
+  const dir = tempDir("xaravel-lint-255-");
+  writeFileSync(join(dir, CONFIG), JSON.stringify({ ...config, jsPlugins: config.jsPlugins.map((plugin) => join(root, plugin)) }));
+  const placements = ["packages/demo/src", "packages/demo/tests/ported", "skeleton/app"];
+  for (const placement of placements) {
+    placeFixtures(join(dir, placement), ["return-call-result.ts"]);
+  }
+  const run = oxlint(join(dir, CONFIG), [dir]);
+  expect(run.exitCode).toBe(1);
+  // Two per package placement: the annotated `find()` and the unannotated `findAll()`; the awaited `first()` is clean.
+  const packageFiles = [join(dir, "packages/demo/src/return-call-result.ts"), join(dir, "packages/demo/tests/ported/return-call-result.ts")];
+  expect(run.diagnostics.toSorted(([a], [b]) => a.localeCompare(b))).toEqual(packageFiles.flatMap((file) => [[file, "return-await"], [file, "return-await"]]));
+  const fixtureLines = readFileSync(join(FIXTURES, "return-call-result.ts"), "utf8").split("\n");
+  const unawaited = fixtureLines.flatMap((line, index) => (line.includes("return this.query();") ? [index + 1] : []));
+  expect(unawaited).toHaveLength(2);
+  expect(fixtureLines.some((line) => line.includes("return await this.query();"))).toBe(true);
+  for (const file of packageFiles) {
+    const lines = run.output.split("\n").flatMap((line) => (line.startsWith(`${file}:`) ? [Number(line.slice(file.length + 1).split(":")[0])] : []));
+    expect(lines.toSorted((a, b) => a - b)).toEqual(unawaited);
+  }
+  const skeleton = oxlint(join(dir, CONFIG), [join(dir, "skeleton")]);
+  expect(skeleton.diagnostics).toEqual([]);
+  expect(skeleton.exitCode).toBe(0);
+
+  // lint:disables on temp git roots.
+  const { overrides: _overrides, ...withoutOverride } = config;
+  const violationsWith = (files: Record<string, string>): string[] => {
+    const temp = gitRoot("xaravel-lint-255-config-");
+    write(temp, { "src/a.ts": "export const a = 1;\n", ...files });
+    return findDisables(temp).violations.map((violation) => `${violation.path}: ${violation.message}`);
+  };
+  const rootWith = (rootConfig: Record<string, unknown>): string[] => violationsWith({ [CONFIG]: JSON.stringify(rootConfig, null, 2) });
+  expect(violationsWith({})).toEqual([]);
+
+  // Override removed: exit 1, naming each probe.
+  const removed = gitRoot("xaravel-lint-255-removed-");
+  write(removed, { [CONFIG]: JSON.stringify(withoutOverride, null, 2), "src/a.ts": "export const a = 1;\n" });
+  const removedRun = runDisables(removed);
+  expect(removedRun.exitCode).toBe(1);
+  expect(removedRun.stderr).toBe(PACKAGE_PROBES.map((probe) => `.oxlintrc.json:1:1: does not set return-await (a spine rule must be "error") for ${probe} (AD-16)\n`).join(""));
+
+  // Wrong mode, and a bare severity.
+  const mode = (setting: unknown): Record<string, unknown> => ({ ...config, overrides: [{ files: ["packages/**"], rules: { "typescript/return-await": setting } }] });
+  for (const setting of [["error", "in-try-catch"], "error", ["error"]]) {
+    expect(rootWith(mode(setting))).toEqual([
+      ...PACKAGE_PROBES.map((probe) => `.oxlintrc.json: sets return-await without "always" for ${probe}`),
+      '.oxlintrc.json: overrides[0] sets return-await without "always"',
+    ]);
+  }
+  expect(rootWith(mode(["warn", "always"]))).toEqual([
+    ...PACKAGE_PROBES.map((probe) => `.oxlintrc.json: sets return-await to "warn" (a spine rule must be "error") for ${probe}`),
+    '.oxlintrc.json: overrides[0] sets return-await to "warn" (a spine rule must be "error")',
+  ]);
+  expect(ruleShortfall("return-await", ["error", "always"])).toBeNull();
+  expect(ruleShortfall("return-await", ["deny", "always"])).toBeNull();
+
+  // An override that does not reach the probes does not count; a later one that lowers it does.
+  expect(rootWith({ ...config, overrides: [{ files: ["skeleton/**"], rules: { "typescript/return-await": ["error", "always"] } }] })).toEqual(
+    PACKAGE_PROBES.map((probe) => `.oxlintrc.json: does not set return-await (a spine rule must be "error") for ${probe}`),
+  );
+  const lowered = gitRoot("xaravel-lint-255-lowered-");
+  write(lowered, { [CONFIG]: JSON.stringify({ ...config, overrides: [...config.overrides, { files: ["packages/demo/**"], rules: { "typescript/return-await": "off" } }] }, null, 2), "src/a.ts": "export const a = 1;\n" });
+  const loweredRun = runDisables(lowered);
+  expect(loweredRun.exitCode).toBe(1);
+  expect(loweredRun.stderr.trim().split("\n").map((line) => line.replace(/^\.oxlintrc\.json:\d+:\d+: /, ""))).toEqual([
+    ...PACKAGE_PROBES.map((probe) => `sets return-await to "off" (a spine rule must be "error") for ${probe} (AD-16)`),
+    'overrides[1] sets return-await to "off" (a spine rule must be "error") (AD-16)',
+  ]);
+  // One that lowers it only for one probe names only that probe; top-level settings count before overrides.
+  expect(rootWith({ ...config, overrides: [...config.overrides, { files: ["packages/*/tests/ported/**"], rules: { "@typescript-eslint/return-await": ["error", "never"] } }] })).toEqual([
+    '.oxlintrc.json: sets return-await without "always" for packages/demo/tests/ported/DemoTest.ts',
+    '.oxlintrc.json: overrides[1] sets return-await without "always"',
+  ]);
+  expect(rootWith({ ...withoutOverride, rules: { ...config.rules, "typescript/return-await": ["error", "always"] } })).toEqual([]);
+  // A narrowed override passes the probes but not the listed package paths it misses: the first one is named.
+  const narrowed = (files: string[], listed: string): string[] => {
+    const temp = gitRoot("xaravel-lint-255-narrowed-");
+    writeFileSync(join(temp, CONFIG), JSON.stringify({ ...config, overrides: [{ files, rules: { "typescript/return-await": ["error", "always"] } }] }, null, 2));
+    return checkConfig(temp, CONFIG, [...PACKAGE_PROBES, "skeleton/app/Demo.ts", listed]).map((violation) => violation.message);
+  };
+  expect(narrowed(["packages/demo/**"], "packages/other/src/B.ts")).toEqual(['does not set return-await (a spine rule must be "error") for packages/other/src/B.ts']);
+  expect(narrowed(["packages/**/*.ts"], "packages/demo/src/C.tsx")).toEqual(['does not set return-await (a spine rule must be "error") for packages/demo/src/C.tsx']);
+  expect(narrowed(["packages/**"], "packages/other/src/B.ts")).toEqual([]);
+  // Through findDisables the protected paths include the fixed probes, so the first a narrowed glob misses is named.
+  expect(violationsWith({ "packages/other/src/B.ts": "export const b = 1;\n", [CONFIG]: JSON.stringify({ ...config, overrides: [{ files: ["packages/demo/**"], rules: { "typescript/return-await": ["error", "always"] } }] }) })).toEqual([
+    '.oxlintrc.json: does not set return-await (a spine rule must be "error") for packages/view/tests/__snapshots__/demo.ts',
+  ]);
+  expect(violationsWith({ "packages/demo/src/C.tsx": "export const c = 1;\n", [CONFIG]: JSON.stringify({ ...config, overrides: [{ files: ["packages/**/*.ts"], rules: { "typescript/return-await": ["error", "always"] } }] }) })).toEqual([
+    '.oxlintrc.json: does not set return-await (a spine rule must be "error") for packages/demo/src/Demo.tsx',
+  ]);
+
+  // The Skeleton-only and tools-only overrides of a different rule are untouched.
+  expect(rootWith({ ...config, overrides: [...config.overrides, { files: ["tools/**"], rules: { "no-console": "off" } }] })).toEqual([]);
+
+  // Nested package configs: one without the rule fails, even when it extends the root (whose override it replaces).
+  // A copy of the root config placed there drops it too: `packages/**` in the copy resolves against `packages/demo/`.
+  for (const nested of [{ extends: ["../../.oxlintrc.json"] }, config]) {
+    expect(violationsWith({ "packages/demo/src/A.ts": "export const a = 1;\n", "packages/demo/.oxlintrc.json": JSON.stringify(nested) })).toEqual([
+      'packages/demo/.oxlintrc.json: does not set return-await (a spine rule must be "error")',
+    ]);
+  }
+  expect(violationsWith({ "packages/demo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], rules: PACKAGE_CONFIG_RULES }) })).toEqual([]);
+  expect(violationsWith({ "packages/.oxlintrc.json": JSON.stringify({ extends: ["../.oxlintrc.json"] }) })).toEqual(['packages/.oxlintrc.json: does not set return-await (a spine rule must be "error")']);
+  expect(violationsWith({ "packages/demo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], rules: { "typescript/return-await": ["error", "in-try-catch"] } }) })).toEqual([
+    'packages/demo/.oxlintrc.json: sets return-await without "always"',
+  ]);
+  expect(violationsWith({ "skeleton/.oxlintrc.json": JSON.stringify({ extends: ["../.oxlintrc.json"] }), "tools/.oxlintrc.json": JSON.stringify({ extends: ["../.oxlintrc.json"] }) })).toEqual([]);
+  expect(violationsWith({ "skeleton/.oxlintrc.json": JSON.stringify({ extends: ["../.oxlintrc.json"], overrides: [{ files: ["**"], rules: { "typescript/return-await": "off" } }] }) })).toEqual([
+    'skeleton/.oxlintrc.json: overrides[0] sets return-await to "off" (a spine rule must be "error")',
+  ]);
+
+  // Directives: in a package file a return-await disable fails; outside packages it does not.
+  const directive = "export const a = 1;\n// oxlint-disable-next-line typescript/return-await\n";
+  const directives = gitRoot("xaravel-lint-255-directive-");
+  write(directives, { "packages/demo/src/A.ts": directive, "tools/a.ts": directive, "skeleton/app/a.ts": directive, "conformance/a.ts": directive });
+  const directiveRun = runDisables(directives);
+  expect(directiveRun.exitCode).toBe(1);
+  expect(directiveRun.stderr).toBe("packages/demo/src/A.ts:2:1: `oxlint-disable-next-line` disables return-await (AD-16)\n");
+  expect(scanSource("packages/demo/tests/ported/T.ts", "/* eslint-disable @typescript-eslint/return-await */\n").map((violation) => violation.message)).toEqual(["`eslint-disable` disables return-await"]);
+  expect(scanSource("packages/demo/src/A.ts", "/* oxlint-disable */\n").map((violation) => violation.message)).toEqual([
+    `\`oxlint-disable\` with no rule list disables every rule, including ${[...SPINE_RULES, ...PACKAGE_RULES].join(", ")}`,
+  ]);
+  expect(scanSource("conformance/packages/demo/src/A.ts", directive)).toEqual([]);
+  expect(scanSource("tools/a.ts", directive)).toEqual([]);
+  // A file directly under packages/ is covered by the packages/** override, so its directive counts.
+  expect(scanSource("packages/index.ts", directive).map((violation) => violation.message)).toEqual(["`oxlint-disable-next-line` disables return-await"]);
+
+  // The real repository passes bun run lint:disables.
+  const real = runDisables(root);
+  expect(real.stderr).toBe("");
+  expect(real.exitCode).toBe(0);
+  expect(real.stdout).toMatch(/^lint disables: ok \(\d+ files\)\n$/);
+}, 120_000);
+
 /** Disable directives: spellings, rule-name forms, blanket disables and descriptions; directives in strings, templates and regexes do not count. */
 function directiveCases(): void {
   const rules = (source: string): string[] => scanSource("f.ts", source).map((violation) => violation.message);
@@ -276,7 +427,7 @@ function directiveCases(): void {
 
 /** A root or nested lint config that drops, lowers or weakens a spine rule, or whose ignorePatterns exclude packages/ or skeleton/, fails naming the config file and rule. */
 function configCases(): void {
-  const base = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; ignorePatterns: string[] };
+  const base = readJson(join(root, CONFIG)) as { rules: Record<string, unknown>; ignorePatterns: string[]; overrides: unknown[] };
   const violationsWith = (files: Record<string, string>): string[] => {
     const dir = gitRoot("xaravel-lint-131-config-");
     write(dir, { "src/a.ts": "export const a = 1;\n", ...files });
@@ -306,7 +457,7 @@ function configCases(): void {
   expect(rootWith({ ...base, rules: { ...base.rules, "typescript/no-floating-promises": "error" } })).toEqual([".oxlintrc.json: sets no-floating-promises without checkThenables: true"]);
   expect(rootWith({ ...base, rules: { ...base.rules, "typescript/no-misused-promises": ["error", { checksVoidReturn: false }] } })).toEqual([".oxlintrc.json: sets no-misused-promises without checksVoidReturn: true"]);
   expect(rootWith({ ...base, rules: { ...base.rules, "typescript/await-thenable": "warn" } })).toEqual(['.oxlintrc.json: sets await-thenable to "warn" (a spine rule must be "error")']);
-  expect(rootWith({ ...base, overrides: [{ files: ["skeleton/**"], rules: { "typescript/no-floating-promises": "off" } }] })).toEqual(['.oxlintrc.json: overrides[0] sets no-floating-promises to "off" (a spine rule must be "error")']);
+  expect(rootWith({ ...base, overrides: [{ files: ["skeleton/**"], rules: { "typescript/no-floating-promises": "off" } }, ...base.overrides] })).toEqual(['.oxlintrc.json: overrides[0] sets no-floating-promises to "off" (a spine rule must be "error")']);
   expect(rootWith({ ...base, plugins: ["unicorn"] })).toEqual([".oxlintrc.json: sets plugins without typescript, which turns the type-aware spine rules off"]);
   expect(rootWith({ ...base, ignorePatterns: [...base.ignorePatterns, "skeleton/**"] })).toEqual(['.oxlintrc.json: ignorePatterns entry "skeleton/**" excludes skeleton/app/Demo.ts from the spine rules']);
   expect(rootWith({ ...base, ignorePatterns: [...base.ignorePatterns, "__snapshots__"] })).toEqual(['.oxlintrc.json: ignorePatterns entry "__snapshots__" excludes packages/view/tests/__snapshots__/demo.ts from the spine rules']);
@@ -319,12 +470,12 @@ function configCases(): void {
 
   // A nested config's ignorePatterns, relative to its directory.
   expect(
-    violationsWith({ "packages/foo/src/A.ts": "export const a = 1;\n", "packages/foo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], ignorePatterns: ["src/**"] }) }),
+    violationsWith({ "packages/foo/src/A.ts": "export const a = 1;\n", "packages/foo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], rules: PACKAGE_CONFIG_RULES, ignorePatterns: ["src/**"] }) }),
   ).toEqual(['packages/foo/.oxlintrc.json: ignorePatterns entry "src/**" excludes packages/foo/src/A.ts from the spine rules']);
   expect(
     violationsWith({ "skeleton/app/A.ts": "export const a = 1;\n", "skeleton/.oxlintrc.json": JSON.stringify({ extends: ["../.oxlintrc.json"], ignorePatterns: ["**"] }) }),
   ).toEqual(['skeleton/.oxlintrc.json: ignorePatterns entry "**" excludes skeleton/app/Demo.ts from the spine rules']);
-  expect(violationsWith({ "packages/foo/src/A.ts": "export const a = 1;\n", "packages/foo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], ignorePatterns: ["dist/**"] }) })).toEqual([]);
+  expect(violationsWith({ "packages/foo/src/A.ts": "export const a = 1;\n", "packages/foo/.oxlintrc.json": JSON.stringify({ extends: ["../../.oxlintrc.json"], rules: PACKAGE_CONFIG_RULES, ignorePatterns: ["dist/**"] }) })).toEqual([]);
 
   // A root .eslintignore, which oxlint honours by default.
   expect(violationsWith({ ".eslintignore": "# generated\n\ndist/\npackages/demo/**\n" })).toEqual(['.eslintignore: entry "packages/demo/**" excludes packages/demo/src/Demo.ts from the spine rules']);
