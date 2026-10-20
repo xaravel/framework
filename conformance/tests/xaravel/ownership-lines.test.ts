@@ -13,6 +13,7 @@ import { BOT_LOGIN, type ContentSide, evaluatePr } from "../../../tools/ownershi
 import { scanPortedBlocks } from "../../../tools/ownership/ported-blocks";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { writeGateInputs } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "ownership", "ownership.ts");
@@ -55,9 +56,11 @@ function decision(escalationText: string, verdict = "approved"): string {
   return `---\ndecision: ${verdict}\nescalation_sha256: "${escalationDigest(escalationText)}"\n---\n\nRuled.\n`;
 }
 
+/** A base checkout with Story 11.1's manifest and `files`; it also holds the Phase 1 gate's inputs (Story 8.8), since 11.1 is in Phase 1. */
 function baseRoot(files: Record<string, string> = {}): string {
   const dir = mkdtempSync(join(tmpdir(), "xt-ownership-lines-"));
   dirs.push(dir);
+  writeGateInputs(dir);
   for (const [path, text] of Object.entries({ "stories/11.1.md": manifest("11.1", [A, X, `${Z}#1`]), ...files })) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);

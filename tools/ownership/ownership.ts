@@ -20,7 +20,8 @@
 //       reads the PR's head branch and files from the GitHub API
 //       (`GITHUB_API_URL`, default https://api.github.com; token from
 //       `GH_TOKEN`) as data, and judges a `story/<id>` PR against the manifest
-//       in the root (the base checkout), never the PR's copy
+//       in the root (the base checkout), never the PR's copy. A Story in
+//       Phase 1 or later also passes the Phase 1 gate (./phase-gate.ts)
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 // Every violation kind the check reports, one line each, on stderr:
@@ -74,6 +75,28 @@
 //                        Expectations line; fails closed
 //   unparsable ported test file: a changed Ported Test file does not lex or
 //                        its brackets do not balance; fails closed
+//   phase gate:          a `story/<id>` PR whose base manifest's `epic` is in
+//                        Phase 1 or later (above `PHASE_0_LAST_EPIC`, 8), while
+//                        the base checkout lacks one of FR-8's inputs: naming
+//                        the Story, its epic, the input and its problem, and
+//                        ending `(FR-8, Story 8.8)` (Story 8.8)
+//
+// The Phase 1 gate (Story 8.8, FR-8; ./phase-gate.ts). Only `pr` (the CLI path, not
+// the synchronous `evaluatePr`) runs it: it re-reads the base manifest's
+// `epic` and checks a
+// Phase 1 or later Story against the base checkout, never the PR head: it
+// needs `PORTING.md` passing `checkPorting`, `decisions/DIV-1.md`..`DIV-12.md`,
+// `docs/porting/pilot-report.md` (not blank) and a Maintainer-signed
+// `decisions/PHASE-0-EXIT.md` (`decision: approved`, `decided_by: Maintainer`,
+// `date: YYYY-MM-DD`, a body line that is not a heading). Every unmet
+// condition is one line. The gate has no state: it passes for every later PR
+// while `main` keeps those files. `PORTING.md` and `decisions/` are
+// Protected, and the required `check` job's `porting:check` and
+// `divergence:check` keep them valid; the pilot report is not Protected, so
+// removing or blanking it re-closes the gate for later Phase 1 PRs.
+// `planning/*`, `bot/*`, other branches and Phase 0 Stories are never gated.
+// `checkPorting` is loaded with a dynamic `import()` only then, so the tools
+// that import this file never need `oxc-parser`.
 //
 // Line rules (Story 5.6, AD-16). They diff the PR head against its merge base
 // (the compare API's `merge_base_commit`), over the changed files and, for a
@@ -138,6 +161,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { decisionStatus, DECISIONS_DIR, ESCALATIONS_DIR, parseEscalation } from "../escalations/escalations";
 import { GitHub, type PrFile } from "../protected-paths/protected-paths";
+import { PHASE_0_LAST_EPIC, phaseGateViolations } from "./phase-gate";
 import { scanPortedBlocks } from "./ported-blocks";
 
 export const STORIES_DIR = "stories";
@@ -1250,6 +1274,16 @@ function manifests(options: Options): number {
   return 0;
 }
 
+/** The `epic` of Story `storyId`'s valid manifest on the base checkout at `root`, or null when there is none (Story 8.8). */
+function baseManifestEpic(root: string, storyId: string | null): number | null {
+  if (storyId === null || !STORY_ID.test(storyId)) {
+    return null;
+  }
+  const file = `${STORIES_DIR}/${storyId}.md`;
+  const path = join(root, file);
+  return existsSync(path) ? (parseManifest(file, readFileSync(path, "utf8")).manifest?.epic ?? null) : null;
+}
+
 async function pr(options: Options): Promise<number> {
   if (options.repo === null || options.pr === null) {
     throw new UsageError("pr needs --repo <owner/name> and --pr <n>");
@@ -1308,6 +1342,11 @@ async function pr(options: Options): Promise<number> {
   const user = pull.user ?? null;
   const author = user !== null && typeof user.login === "string" && typeof user.type === "string" ? { login: user.login, type: user.type } : null;
   const result = evaluatePr(options.root, { headRef, files, changedFiles: pull.changed_files, content, mergeBase, headSha, author });
+  // The Phase 1 gate (Story 8.8) reads the base checkout only, whatever the PR head holds.
+  const epic = baseManifestEpic(options.root, result.storyId);
+  if (result.storyId !== null && epic !== null && epic > PHASE_0_LAST_EPIC) {
+    result.violations.push(...(await phaseGateViolations(options.root, result.storyId, epic)));
+  }
 
   if (result.violations.length > 0) {
     report(result.violations);

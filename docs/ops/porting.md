@@ -54,3 +54,32 @@ The fixture comes first. To change or extend the rule:
 2. Change `PORTING.md`'s rule table, then `tools/porting/translate.ts`, until `bun run porting:check` passes and XT-conformance-154 covers the change.
 
 A rule that no source states is not added locally: it goes through an Escalation (FR-114).
+
+## Phase 1 gate
+
+FR-8 requires `PORTING.md`, DIV-1..12 and the pilot to be on `main` before any Phase 1 Story starts (Story 8.8). The required `ownership` check enforces it (`tools/ownership/phase-gate.ts`, called by `bun tools/ownership/ownership.ts pr`; [ci.md](ci.md)). For a `story/<id>` PR whose base manifest has `epic` above 8 (Phase 0 is epics 1..8, `PHASE_0_LAST_EPIC`), it reads the base checkout, never the PR head, and fails unless it holds all of:
+
+- `PORTING.md`, passing `checkPorting` (the rules above);
+- `decisions/DIV-1.md` .. `decisions/DIV-12.md`;
+- `docs/porting/pilot-report.md`, not blank;
+- `decisions/PHASE-0-EXIT.md`, signed by the Maintainer.
+
+Each unmet condition is one `phase gate:` line naming the Story, its epic, the input and its problem, ending `(FR-8, Story 8.8)`. A failing `PORTING.md` quotes its first 3 `porting:check` violations and their count. `planning/*` and `bot/*` PRs and Phase 0 Stories are never gated.
+
+The gate holds no state. It passes for every later Phase 1 PR while `main` keeps those files. `PORTING.md` and `decisions/` are Protected Paths, and the required `check` job's `porting:check` and `divergence:check` stop a merged PR from breaking them. `docs/porting/pilot-report.md` is not Protected: a PR that removes or blanks it re-closes the gate, with a `phase gate:` line, for every later Phase 1 PR.
+
+**Signing the Phase 0 exit.** Only the Maintainer writes `decisions/PHASE-0-EXIT.md`, at the Epic 8 checkpoint, through a `planning/*` PR. It takes the form of the `MAINT-*` rulings:
+
+```markdown
+---
+decision: approved
+decided_by: Maintainer
+date: 2026-10-20
+---
+
+# Phase 0 exit
+
+The Maintainer accepts Phase 0 (Epics 1 to 8) as complete; Phase 1 Stories may start.
+```
+
+The check needs `decision: approved`, `decided_by: Maintainer` (exactly), a real `date: YYYY-MM-DD`, and at least one non-blank body line that is not a heading. It checks the form of the signature, not who committed it: the orchestrator commits as the Maintainer, so the rule that only the Maintainer writes this file is a process rule.

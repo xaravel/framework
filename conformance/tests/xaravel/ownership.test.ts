@@ -23,6 +23,7 @@ import {
 } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { writeGateInputs } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "ownership", "ownership.ts");
@@ -55,10 +56,12 @@ const EPICS_TEXT = "# Epics\n\n### Story 9.1: One\n\n**Then** it works.\n\n### S
 
 /**
  * A hermetic root holding `stories/<id>.md` for each manifest, plus sprint status when `sprintStatus` is given, and
- * `epics.md` (`EPICS_TEXT` unless `epics` is given; none when it is null).
+ * `epics.md` (`EPICS_TEXT` unless `epics` is given; none when it is null). It also holds the Phase 1 gate's inputs
+ * (Story 8.8), so a `pr` run on a Phase 1 Story is judged by the other rules alone.
  */
 function fixtureRoot(stories: Record<string, ManifestFields | string> = {}, sprintStatus: string | null = null, epics: string | null = EPICS_TEXT): string {
   const tmp = mkdtempSync(join(tmpdir(), "xaravel-ownership-"));
+  writeGateInputs(tmp);
   mkdirSync(join(tmp, STORIES_DIR), { recursive: true });
   if (epics !== null) {
     mkdirSync(dirname(join(tmp, EPICS)), { recursive: true });
@@ -544,7 +547,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
         if?: string;
         permissions?: Record<string, string>;
         "continue-on-error"?: unknown;
-        steps: { id?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
+        steps: { id?: string; name?: string; uses?: string; with?: Record<string, unknown>; run?: string; env?: Record<string, string>; "continue-on-error"?: unknown }[];
       }
     >;
   };
@@ -569,7 +572,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
     { uses: checkout.uses, with: { ref: "${{ github.event.merge_group.base_sha || github.sha }}", "persist-credentials": false } },
     setupBun,
   ]);
-  expect(job.steps).toHaveLength(4);
+  expect(job.steps).toHaveLength(5);
   expect(job.steps[2]!.id).toBe("pr");
   expect(job.steps[2]!.env).toEqual({
     EVENT_NAME: "${{ github.event_name }}",
@@ -594,10 +597,13 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
   expect(direct).toEqual({ code: 0, output: "number=34\n" });
   // A queue ref that names no PR fails the step rather than passing an empty number on.
   expect(await runStep(job.steps[2]!.run!, { EVENT_NAME: "merge_group", QUEUE_REF: "refs/heads/main", EVENT_PR: "" })).toEqual({ code: 1, output: "" });
+  // Story 8.8: the Phase 1 gate's `porting:check` needs `oxc-parser`, so the base checkout's locked dependencies are
+  // installed, with no lifecycle scripts, before the check step.
+  expect(job.steps[3]).toEqual({ name: "Install from the lockfile", run: "bun install --frozen-lockfile --ignore-scripts" });
   const outputKey = queued.output.slice(0, queued.output.indexOf("="));
-  expect(job.steps[3]!.env!["PR_NUMBER"]).toBe(`\${{ steps.${job.steps[2]!.id}.outputs.${outputKey} }}`);
-  expect(job.steps[3]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
-  expect(job.steps[3]!.env).toEqual({
+  expect(job.steps[4]!.env!["PR_NUMBER"]).toBe(`\${{ steps.${job.steps[2]!.id}.outputs.${outputKey} }}`);
+  expect(job.steps[4]!.run).toBe('bun tools/ownership/ownership.ts pr --repo "$REPO" --pr "$PR_NUMBER"');
+  expect(job.steps[4]!.env).toEqual({
     GH_TOKEN: "${{ github.token }}",
     REPO: "${{ github.repository }}",
     PR_NUMBER: "${{ steps.pr.outputs.number }}",
@@ -608,7 +614,7 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
   expect(manifestsJob.steps.slice(0, 2)).toEqual([checkout, setupBun]);
   expect(manifestsJob.steps).toHaveLength(3);
   expect(manifestsJob.steps[2]!.run).toBe("bun tools/ownership/ownership.ts manifests");
-  for (const step of [...job.steps.slice(1), ...manifestsJob.steps]) {
+  for (const step of [...job.steps.slice(1).filter((step) => step !== job.steps[3]), ...manifestsJob.steps]) {
     expect(step.with?.["ref"]).toBeUndefined();
     expect(step.run ?? "").not.toContain("${{");
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);

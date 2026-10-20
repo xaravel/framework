@@ -16,6 +16,13 @@
 # number from the queue ref with `merge-group-pr` on that base checkout, and
 # runs the same `pr` command for that PR.
 #
+# The Phase 1 gate (Story 8.8, FR-8): for a Story in Phase 1 or later, `pr`
+# also needs the base checkout to hold `PORTING.md` passing `porting:check`,
+# DIV-1..12, the pilot report and a Maintainer-signed
+# `decisions/PHASE-0-EXIT.md`. `porting:check` needs `oxc-parser`, so the job
+# installs the base checkout's locked dependencies, with no lifecycle scripts,
+# before the check; it never installs PR code.
+#
 # `manifests` validates every committed manifest and the duplicate Test ID
 # rule on the checked-out commit: the base for PRs, and main after each push.
 name: ownership
@@ -60,6 +67,8 @@ jobs:
             number="$EVENT_PR"
           fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Install from the lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Check edit ownership
         env:
           GH_TOKEN: ${{ github.token }}
