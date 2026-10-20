@@ -1,5 +1,5 @@
 // Boost framework mode: a read-only MCP server over Xaravel's conformance data
-// (Story 7.3; FR-109, UJ-4).
+// (Stories 7.3 and 7.4; FR-109, UJ-4).
 //
 //   bun --no-env-file tools/boost-framework/src/server.ts [--root <dir>]
 //       serves the six tools of src/tools.ts (`conformance.rate`,
@@ -10,59 +10,20 @@
 //       repo's `.mcp.json` registers it as `boost-framework`.
 //
 // Nothing but JSON-RPC goes to stdout. A bad flag prints the usage to stderr
-// and exits 2. The server never writes files, runs commands or touches git;
-// every read goes through `dataPath` (src/data.ts). docs/framework-mode.md
-// documents the tools, the data scope and the mirrored rules.
-import { existsSync, statSync } from "node:fs";
+// and exits 2. docs/framework-mode.md documents the tools, the data scope,
+// the lockdown and the mirrored rules.
+//
+// Entry order (Story 7.4). This file statically imports only ./lockdown (and,
+// through it, ./scope) and node:path, so no `node:fs` named import is bound
+// yet. `main` parses the arguments, calls `lockdown(root)` (every write, spawn
+// and out-of-scope read now throws), and only then imports ./mcp, whose data
+// layer binds to the locked-down `node:fs`. createServer, callTool and the
+// server constants live in src/mcp.ts.
+import { isDirectory, lockdown } from "./lockdown";
 import { resolve } from "node:path";
-import { fromJsonSchema, McpServer, type CallToolResult } from "@modelcontextprotocol/server";
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { TOOL_DEFINITIONS, ToolError, type ToolArgs, type ToolDefinition } from "./tools";
-import { DataError, DataScopeError } from "./data";
-
-export const SERVER_NAME = "boost-framework";
-export const SERVER_VERSION = "0.0.0";
-
-/** Every tool's annotations: read-only, idempotent, closed-world. */
-export const TOOL_ANNOTATIONS = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 
 /** The repository holding this file. */
 export const DEFAULT_ROOT = resolve(import.meta.dir, "..", "..", "..");
-
-function message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/** Runs one tool call: the value as text and structured content, or a tool error. */
-export function callTool(definition: ToolDefinition, root: string, args: ToolArgs): CallToolResult {
-  try {
-    const value = definition.handler(root, args);
-    return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value };
-  } catch (error) {
-    const prefix = error instanceof ToolError || error instanceof DataError || error instanceof DataScopeError ? "" : "internal error: ";
-    return { content: [{ type: "text", text: `${prefix}${message(error)}` }], isError: true };
-  }
-}
-
-/** An MCP server with every tool registered, reading the repository at `root`. */
-export function createServer(root: string = DEFAULT_ROOT): McpServer {
-  const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
-  for (const definition of TOOL_DEFINITIONS) {
-    server.registerTool(
-      definition.name,
-      {
-        description: definition.description,
-        inputSchema: fromJsonSchema<ToolArgs>(definition.inputSchema),
-        annotations: { ...TOOL_ANNOTATIONS },
-      },
-      (args: ToolArgs) => callTool(definition, root, args ?? {}),
-    );
-  }
-  return server;
-}
-
-// ---------------------------------------------------------------------------
-// CLI
 
 class UsageError extends Error {}
 
@@ -80,14 +41,14 @@ export function parseArgs(argv: readonly string[]): { root: string } {
       throw new UsageError(`${arg} needs a value`);
     }
     root = resolve(value);
-    if (!existsSync(root) || !statSync(root).isDirectory()) {
+    if (!isDirectory(root)) {
       throw new UsageError(`--root ${value} is not a directory`);
     }
   }
   return { root };
 }
 
-/** Starts the stdio server; returns 2 on a usage error, otherwise 0 once connected. */
+/** Locks the process down, then starts the stdio server; returns 2 on a usage error, otherwise 0 once connected. */
 export async function main(argv: readonly string[]): Promise<number> {
   let root: string;
   try {
@@ -99,7 +60,9 @@ export async function main(argv: readonly string[]): Promise<number> {
     }
     throw error;
   }
-  await createServer(root).connect(new StdioServerTransport());
+  lockdown(root);
+  const { connectStdio } = await import("./mcp");
+  await connectStdio(root);
   return 0;
 }
 

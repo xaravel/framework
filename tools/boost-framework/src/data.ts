@@ -2,8 +2,9 @@
 //
 // Every data file the server reads goes through `dataPath`, which resolves a
 // repo-relative path under `<root>` and throws `DataScopeError` unless it lies
-// inside one of `DATA_DIRS` (`conformance/`, `stories/`, `decisions/`). Story
-// 7.4 hardens and proves the refusal; here every read is routed through it.
+// inside one of `DATA_DIRS` (`conformance/`, `stories/`, `decisions/`), first
+// lexically and then on its real path (`inScope`, src/scope.ts, Story 7.4), so
+// a symlink cannot lead a read out of the data scope.
 //
 // Nothing is cached: each reader reads the files again, so edits made in the
 // worktree show up at once. Nothing here writes, spawns or touches git.
@@ -22,9 +23,9 @@
 // its source on the real repository and on a fixture.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { DATA_DIRS, DataScopeError, inScope } from "./scope";
 
-/** The only top-level directories framework mode reads (spine l.106). */
-export const DATA_DIRS = ["conformance", "stories", "decisions"] as const;
+export { DATA_DIRS, DataScopeError };
 
 export const INVENTORY_DIR = "conformance/inventory";
 export const NONDETERMINISM_FILE = "oracle-nondeterminism.jsonl";
@@ -33,14 +34,6 @@ export const ESCALATIONS_DIR = "conformance/escalations";
 export const DECISIONS_DIR = "decisions";
 export const STORIES_DIR = "stories";
 export const UPSTREAM_DIR = "conformance/upstream";
-
-/** A read outside `DATA_DIRS` was refused. */
-export class DataScopeError extends Error {
-  constructor(path: string) {
-    super(`refused: ${JSON.stringify(path)} is outside the framework-mode data scope (${DATA_DIRS.map((dir) => `${dir}/`).join(", ")})`);
-    this.name = "DataScopeError";
-  }
-}
 
 /** A data file could not be read or parsed. */
 export class DataError extends Error {
@@ -57,7 +50,8 @@ export function compareUnits(a: string, b: string): number {
 
 /**
  * The absolute path of the repo-relative `rel` under `root`. Throws DataScopeError unless it resolves inside
- * `<root>/conformance/`, `<root>/stories/` or `<root>/decisions/` (or is one of those directories).
+ * `<root>/conformance/`, `<root>/stories/` or `<root>/decisions/` (or is one of those directories), both lexically
+ * and on its real path, so a symlink (or a dangling one) that leads elsewhere is refused.
  */
 export function dataPath(root: string, rel: string): string {
   if (typeof rel !== "string" || rel === "" || rel.includes("\0") || isAbsolute(rel)) {
@@ -71,6 +65,9 @@ export function dataPath(root: string, rel: string): string {
   }
   const top = inside.split(sep)[0]!;
   if (!(DATA_DIRS as readonly string[]).includes(top)) {
+    throw new DataScopeError(rel);
+  }
+  if (!inScope(base, abs)) {
     throw new DataScopeError(rel);
   }
   return abs;

@@ -1,6 +1,13 @@
-// Xaravel Tests for Story 7.3 (Boost framework mode: the read-only MCP server
-// `tools/boost-framework/src/server.ts` and its `.mcp.json` registration;
-// FR-109, UJ-4).
+// Xaravel Tests for Stories 7.3 and 7.4 (Boost framework mode: the read-only
+// MCP server `tools/boost-framework/src/server.ts` and its `.mcp.json`
+// registration; FR-109, UJ-4).
+//
+// XT-boost-1..3 (Story 7.3) cover the tools, `inventory.get`'s source and
+// assertions, and the registration. XT-boost-4..6 (Story 7.4) prove framework
+// mode is read-only: the tool list and a static guard over src/ (with evasion
+// probes it must flag); the real-path data scope, symlinks over stdio, a
+// locked-down subprocess probe and a `--preload` recorder of every open; and
+// a worktree snapshot before and after every tool is called.
 //
 // The server is driven over stdio by a raw newline-delimited JSON-RPC client
 // (spawn, initialize, calls matched by id, kill). Fixture roots are hermetic
@@ -8,7 +15,8 @@
 // another tool's rule (it cannot import tools/*), the test compares it with
 // that tool on the fixture and on the real repository.
 import { afterAll, expect } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { computeReport } from "../../../tools/conformance-report/report";
@@ -16,7 +24,7 @@ import { escalationDigest, escalationStatus } from "../../../tools/escalations/e
 import { readManifests } from "../../../tools/ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../../../tools/pin-bump/pin-bump";
 import { globToRegExp as harnessGlob } from "../../harness/select";
-import { computeBuckets, globToRegExp, parseSource, storyTests } from "../../../tools/boost-framework/src/index";
+import { callTool, computeBuckets, DataScopeError, dataPath, globToRegExp, inScope, parseSource, ReadOnlyError, storyTests, type ToolDefinition } from "../../../tools/boost-framework/src/index";
 import { readExpectationShards } from "../../../tools/boost-framework/src/data";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -161,9 +169,10 @@ class StdioClient {
   }
 }
 
-async function withServer<T>(serverRoot: string | null, fn: (client: StdioClient) => Promise<T>): Promise<T> {
+async function withServer<T>(serverRoot: string | null, fn: (client: StdioClient) => Promise<T>, options: { cwd?: string; preload?: string } = {}): Promise<T> {
   const args = serverRoot === null ? [] : ["--root", serverRoot];
-  const { client } = await StdioClient.start(["bun", "--no-env-file", SERVER, ...args]);
+  const preload = options.preload === undefined ? [] : ["--preload", options.preload];
+  const { client } = await StdioClient.start(["bun", ...preload, "--no-env-file", SERVER, ...args], options.cwd ?? root);
   try {
     return await fn(client);
   } finally {
@@ -566,6 +575,627 @@ xaravelTest(
     } finally {
       await client.close();
     }
+  },
+  TIMEOUT,
+);
+
+// ---------------------------------------------------------------------------
+// XT-boost-4: the tool list and the static guard
+
+const SRC = join(root, "tools", "boost-framework", "src");
+const FS_READS = ["readFileSync", "readdirSync", "statSync", "lstatSync", "existsSync", "realpathSync"];
+const ALLOWED_SPECIFIERS = ["@modelcontextprotocol/server", "@modelcontextprotocol/server/stdio", "node:path", "node:crypto"];
+const transpiler = new Bun.Transpiler({ loader: "ts" });
+/** Every entry under src/, recursively: exactly these files, and no directory. */
+const SRC_FILES = ["data.ts", "index.ts", "lockdown.ts", "mcp.ts", "scope.ts", "server.ts", "tools.ts"];
+/** The relative specifiers allowed: `./<name>` (or `./<name>.ts`) naming a src file. */
+const SRC_SPECIFIER = /^\.\/([A-Za-z0-9_-]+)(?:\.ts)?$/;
+
+function srcEntries(dir: string, prefix: string = ""): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const rel = `${prefix}${entry.name}`;
+    return entry.isDirectory() ? [`${rel}/`, ...srcEntries(join(dir, entry.name), `${rel}/`)] : [rel];
+  });
+}
+
+function relativeAllowed(spec: string): boolean {
+  const match = SRC_SPECIFIER.exec(spec);
+  return match !== null && SRC_FILES.includes(`${match[1]!}.ts`);
+}
+
+/**
+ * The static guard's violations in the source of src/<name> (Story 7.4). It scans Bun.Transpiler output, so
+ * comments are gone: only code can pass or fail it.
+ */
+function guardViolations(name: string, source: string): string[] {
+  const code = transpiler.transformSync(source);
+  const found: string[] = [];
+  const specifier = (spec: string, clause: string | null): void => {
+    if (relativeAllowed(spec) || ALLOWED_SPECIFIERS.includes(spec)) {
+      return;
+    }
+    if (spec === "node:fs" && name === "data.ts" && clause !== null) {
+      const named = /^\s*\{([^}]*)\}\s*$/.exec(clause);
+      const names = named === null ? null : named[1]!.split(",").map((item) => item.trim()).filter((item) => item !== "").map((item) => item.split(/\s+as\s+/)[0]!.trim());
+      if (names !== null && /^\s*import\b/.test(clause) === false && names.every((item) => FS_READS.includes(item))) {
+        return;
+      }
+      found.push(`node:fs imported as ${JSON.stringify(clause.trim())}`);
+      return;
+    }
+    found.push(`specifier ${spec}`);
+  };
+  for (const match of code.matchAll(/\b(import|export)\b([^;"'`]*?)\bfrom\s*["']([^"']+)["']/g)) {
+    specifier(match[3]!, match[1] === "import" ? match[2]! : `export ${match[2]!}`);
+  }
+  for (const match of code.matchAll(/\bimport\s*["']([^"']+)["']/g)) {
+    specifier(match[1]!, null);
+  }
+  for (const match of code.matchAll(/\bimport\s*\(([^)]*)\)/g)) {
+    const literal = /^\s*["']([^"']*)["']\s*$/.exec(match[1]!);
+    if (literal === null || !relativeAllowed(literal[1]!)) {
+      found.push(`import(${match[1]!.trim()})`);
+    }
+  }
+  for (const match of code.matchAll(/\bBun\b/g)) {
+    if (!code.startsWith("Bun.YAML.parse(", match.index)) {
+      found.push(`Bun: ${code.slice(match.index, match.index + 24)}`);
+    }
+  }
+  for (const match of code.matchAll(/\bprocess\b/g)) {
+    const rest = code.slice(match.index);
+    if (!/^process\.argv\b/.test(rest) && !rest.startsWith("process.stderr.write(") && !rest.startsWith("process.exit(")) {
+      found.push(`process: ${rest.slice(0, 24)}`);
+    }
+  }
+  for (const banned of [
+    /\brequire\b/,
+    /\bglobalThis\b/,
+    /\bself\b/,
+    /\bglobal\b/,
+    /\bwindow\b/,
+    /\bReflect\b/,
+    /\bWorker\b/,
+    /\bfetch\b/,
+    /\bWebSocket\b/,
+    /\beval\b/,
+    /\bFunction\b/,
+    /getBuiltinModule/,
+    /import\.meta\.require/,
+    // A computed member built from pieces, such as `x["constr" + "uctor"]`.
+    /\[\s*["'`][^"'`]*["'`]\s*\+/,
+  ]) {
+    if (banned.test(code)) {
+      found.push(`banned ${banned.source}`);
+    }
+  }
+  // `constructor` only as a class constructor declaration, never as a member (`(() => {}).constructor(...)`).
+  const constructors = [...code.matchAll(/\bconstructor\b/g)].length - [...code.matchAll(/^[ \t]*constructor\s*\(/gm)].length;
+  if (constructors !== 0) {
+    found.push("constructor used as a member");
+  }
+  return found;
+}
+
+/** The static import and export specifiers of a source file (after transpiling). */
+function staticSpecifiers(source: string): string[] {
+  const code = transpiler.transformSync(source);
+  return [...[...code.matchAll(/\b(?:import|export)\b[^;"'`]*?\bfrom\s*["']([^"']+)["']/g)].map((match) => match[1]!), ...[...code.matchAll(/\bimport\s*["']([^"']+)["']/g)].map((match) => match[1]!)].sort();
+}
+
+const EVASION_PROBES: readonly (readonly [string, string])[] = [
+  ["tools.ts", 'Bun["spawn"](["touch", "x"]);'],
+  ["tools.ts", 'const B = Bun;\nB.spawn(["touch", "x"]);'],
+  ["tools.ts", 'globalThis.Bun.write("x", "y");'],
+  ["tools.ts", 'const cp = require("child_process");\ncp.execSync("x");'],
+  ["tools.ts", 'const cp = await import("node:child_process");\ncp.execSync("x");'],
+  ["tools.ts", 'import cp from "child_process";\ncp.execSync("x");'],
+  ["data.ts", 'import { writeFileSync } from "node:fs";\nwriteFileSync("x", "y");'],
+  ["data.ts", 'import * as fs from "node:fs";\nfs.readFileSync("x");'],
+  ["data.ts", 'import fs from "node:fs";\nfs.readFileSync("x");'],
+  ["tools.ts", 'import { readFileSync } from "node:fs";\nreadFileSync("x");'],
+  ["data.ts", 'import { readFileSync as r, writeFileSync as w } from "node:fs";\nr("x");\nw("x", "y");'],
+  ["tools.ts", 'const fs = process.getBuiltinModule("node:fs");\nfs.writeFileSync("x", "y");'],
+  ["tools.ts", 'const b = process["binding"];\nb("fs");'],
+  ["tools.ts", 'eval("1");'],
+  ["tools.ts", 'new Function("return 1")();'],
+  ["tools.ts", 'import.meta.require("node:fs").writeFileSync("x", "y");'],
+  ["tools.ts", 'const name = "./x";\nawait import(name);'],
+  ["tools.ts", 'self["pro" + "cess"].binding("fs");'],
+  ["tools.ts", 'self["B" + "un"].write("x", "y");'],
+  ["tools.ts", 'self.Bun.write("x", "y");'],
+  ["tools.ts", 'global.x = 1;'],
+  ["tools.ts", 'window.Bun.write("x", "y");'],
+  ["tools.ts", '(() => {}).constructor("return 1")();'],
+  ["tools.ts", '(() => {})["constr" + "uctor"]("return 1")();'],
+  ["tools.ts", 'Reflect.get(self, "Bun");'],
+  ["tools.ts", 'new Worker("./w.ts");'],
+  ["tools.ts", 'await fetch("file:///etc/hosts");'],
+  ["tools.ts", 'new WebSocket("ws://x");'],
+  ["tools.ts", 'await import("../../../package.json");'],
+  ["tools.ts", 'import pkg from "../package.json";\nvoid pkg;'],
+  ["tools.ts", 'import { x } from "./sub/x";\nvoid x;'],
+  ["tools.ts", 'import { x } from "./nope";\nvoid x;'],
+  ["tools.ts", 'import { x } from "./data.js";\nvoid x;'],
+];
+
+xaravelTest(
+  "XT-boost-4",
+  "given the server's tool list, no tool writes files, runs commands or changes git state: every tool is annotated read-only and closed-world, and a static guard over src/ admits no write, spawn or module escape (FR-109)",
+  async () => {
+    // The tool list over stdio: exactly the six, read-only, non-destructive, closed-world; tools are the only capability.
+    const fix = fixture();
+    const { client, init } = await StdioClient.start(["bun", "--no-env-file", SERVER, "--root", fix]);
+    try {
+      expect(Object.keys(init["capabilities"] as Record<string, unknown>)).toEqual(["tools"]);
+      const listed = (await client.request("tools/list")) as { tools: { name: string; annotations: Record<string, unknown> }[] };
+      expect(listed.tools.map((tool) => tool.name)).toEqual(TOOL_NAMES);
+      for (const tool of listed.tools) {
+        expect(`${tool.name}: ${JSON.stringify([tool.annotations["readOnlyHint"], tool.annotations["destructiveHint"], tool.annotations["openWorldHint"]])}`).toBe(`${tool.name}: [true,false,false]`);
+      }
+    } finally {
+      await client.close();
+    }
+
+    // The static guard: the real src/ is clean.
+    const files = srcEntries(SRC).sort();
+    expect(files).toEqual(SRC_FILES);
+    for (const file of files.filter((item) => item !== "scope.ts" && item !== "lockdown.ts")) {
+      expect(`${file}: ${JSON.stringify(guardViolations(file, readFileSync(join(SRC, file), "utf8")))}`).toBe(`${file}: []`);
+    }
+    // The entry order: server.ts links only ./lockdown and node:path; lockdown.ts only ./scope; scope.ts only node:path.
+    expect(staticSpecifiers(readFileSync(join(SRC, "server.ts"), "utf8"))).toEqual(["./lockdown", "node:path"]);
+    expect(staticSpecifiers(readFileSync(join(SRC, "lockdown.ts"), "utf8"))).toEqual(["./scope", "./scope"]);
+    expect(staticSpecifiers(readFileSync(join(SRC, "scope.ts"), "utf8"))).toEqual(["node:path"]);
+    expect(transpiler.transformSync(readFileSync(join(SRC, "server.ts"), "utf8"))).toContain('await import("./mcp")');
+
+    // Every evasion probe is flagged.
+    for (const [file, probe] of EVASION_PROBES) {
+      expect(`${JSON.stringify(probe)}: ${guardViolations(file, probe).length > 0 ? "flagged" : "clean"}`).toBe(`${JSON.stringify(probe)}: flagged`);
+    }
+    // And the allowed forms pass.
+    for (const [file, ok] of [
+      ["data.ts", 'import { readFileSync, existsSync as e } from "node:fs";\nreadFileSync("x");\ne("x");'],
+      ["data.ts", 'const v = Bun.YAML.parse("a: 1");'],
+      ["tools.ts", 'import { createHash } from "node:crypto";\ncreateHash("sha256");'],
+      ["server.ts", 'const m = await import("./mcp");\nprocess.stderr.write("x");\nprocess.exit(process.argv.length);'],
+    ] as const) {
+      expect(`${JSON.stringify(ok)}: ${JSON.stringify(guardViolations(file, ok))}`).toBe(`${JSON.stringify(ok)}: []`);
+    }
+  },
+  TIMEOUT,
+);
+
+// ---------------------------------------------------------------------------
+// XT-boost-5: the server process reads only the data scope
+
+const STORY_9_7 = ["---", 'story_id: "9.7"', "epic: 9", "component: support", "status: backlog", 'title: "Linked Story"', "test_ids: []", "xaravel_test_ids: []", "---", "", "# Story 9.7", ""].join("\n");
+
+/** The fixture, plus symlinks out of the data scope (and one inside it); returns the root and the outside directory. */
+function symlinkFixture(): { fix: string; outside: string } {
+  const fix = fixture();
+  const outside = tempDir("boost-outside");
+  writeFileSync(join(outside, "story.md"), FILES["stories/9.9.md"]!.replace('story_id: "9.9"', 'story_id: "9.8"'));
+  rmSync(join(fix, "stories", "9.8.md"));
+  symlinkSync(join(outside, "story.md"), join(fix, "stories", "9.8.md"));
+  mkdirSync(join(outside, "escalations"));
+  renameSync(join(fix, "conformance", "escalations"), join(outside, "escalations", "moved"));
+  symlinkSync(join(outside, "escalations", "moved"), join(fix, "conformance", "escalations"));
+  mkdirSync(join(fix, "tools"), { recursive: true });
+  writeFileSync(join(fix, "tools", "x"), FILES["conformance/inventory/cache.jsonl"]!);
+  symlinkSync(join(fix, "tools", "x"), join(fix, "conformance", "inventory", "z.jsonl"));
+  symlinkSync(join(fix, "nowhere.md"), join(fix, "decisions", "DIV-7.md"));
+  writeFileSync(join(fix, "conformance", "m.md"), STORY_9_7);
+  symlinkSync(join(fix, "conformance", "m.md"), join(fix, "stories", "9.7.md"));
+  writeFileSync(join(fix, "AGENTS.md"), "outside the data scope\n");
+  return { fix, outside };
+}
+
+function refusedBy(fn: () => unknown): string {
+  try {
+    fn();
+    return "allowed";
+  } catch (error) {
+    return error instanceof DataScopeError ? "DataScopeError" : `other: ${String(error)}`;
+  }
+}
+
+const PROBE = `
+import { lockdown } from ${JSON.stringify(join(SRC, "lockdown.ts"))};
+const [fix, outside] = process.argv.slice(2);
+lockdown(fix);
+const fs = process.getBuiltinModule("node:fs");
+const cp = process.getBuiltinModule("node:child_process");
+const target = fix + "/conformance/w.txt";
+// A stream opens asynchronously: it resolves on "open" and rejects with the error it emits.
+const settle = (stream) => new Promise((resolve, reject) => {
+  stream.on("open", () => resolve(null));
+  stream.on("error", reject);
+});
+const ops = {
+  "fs.writeFileSync": () => fs.writeFileSync(target, "x"),
+  "fs.writeFileSync outside": () => fs.writeFileSync(outside + "/w.txt", "x"),
+  "fs.appendFileSync": () => fs.appendFileSync(target, "x"),
+  "fs.mkdirSync": () => fs.mkdirSync(fix + "/conformance/newdir"),
+  "fs.rmSync": () => fs.rmSync(fix + "/stories/9.9.md"),
+  "fs.renameSync": () => fs.renameSync(fix + "/stories/9.9.md", fix + "/stories/9.9b.md"),
+  "fs.copyFileSync": () => fs.copyFileSync(fix + "/stories/9.9.md", target),
+  "fs.symlinkSync": () => fs.symlinkSync(fix + "/stories/9.9.md", target),
+  "fs.openSync": () => fs.openSync(target, "w"),
+  "fs.openSync read": () => fs.openSync(fix + "/stories/9.9.md", "r"),
+  "fs.createWriteStream": () => fs.createWriteStream(target),
+  "fs.promises.writeFile": () => fs.promises.writeFile(target, "x"),
+  "fs.writeFile": () => fs.writeFile(target, "x", () => {}),
+  "fs.readFile": () => fs.readFile(fix + "/stories/9.9.md", () => {}),
+  "child_process.execSync": () => cp.execSync("touch " + target),
+  "child_process.spawn": () => cp.spawn("touch", [target]),
+  "Bun.spawn": () => Bun.spawn(["touch", target]),
+  "Bun.spawnSync": () => Bun.spawnSync(["touch", target]),
+  "Bun.$": () => Bun.$\`touch \${target}\`,
+  "Bun.write": () => Bun.write(target, "x"),
+  "Bun.file": () => Bun.file(target),
+  "import(node:fs).writeFileSync": async () => (await import("node:fs")).writeFileSync(target, "x"),
+  "import(node:fs).default.writeFileSync": async () => (await import("node:fs")).default.writeFileSync(target, "x"),
+  "read AGENTS.md": () => fs.readFileSync(fix + "/AGENTS.md", "utf8"),
+  "read /etc/hosts": () => fs.readFileSync("/etc/hosts", "utf8"),
+  "read relative": () => fs.readFileSync("conformance/baseline-pin", "utf8"),
+  "read fd 0": () => fs.readFileSync(0),
+  "read outside symlink": () => fs.readFileSync(fix + "/stories/9.8.md", "utf8"),
+  "readdir root": () => fs.readdirSync(fix),
+  "exists outside": () => fs.existsSync(outside),
+  "realpath.native outside": () => fs.realpathSync.native(outside),
+  "lockdown twice": () => lockdown(fix),
+  "readFileSync flag w": () => fs.readFileSync(fix + "/stories/9.9.md", { flag: "w" }),
+  "readFileSync flag a+": () => fs.readFileSync(target, { flag: "a+" }),
+  "readFileSync flag wx": () => fs.readFileSync(target, { encoding: "utf8", flag: "wx" }),
+  "statSync outside": () => fs.statSync(outside),
+  "lstatSync outside": () => fs.lstatSync(fix + "/AGENTS.md"),
+  "realpathSync outside": () => fs.realpathSync(outside),
+  "fs.promises.readFile outside": () => fs.promises.readFile("/etc/hosts"),
+  "import(fs).writeFileSync": async () => (await import("fs")).writeFileSync(target, "x"),
+  "import.meta.require(fs).writeFileSync": () => import.meta.require("fs").writeFileSync(target, "x"),
+  "new fs.WriteStream": () => settle(new fs.WriteStream(target)),
+  "new fs.ReadStream outside": () => settle(new fs.ReadStream("/etc/hosts")),
+  "new Worker": () => new Worker(outside + "/worker.ts"),
+  "worker_threads.Worker": () => new (process.getBuiltinModule("node:worker_threads").Worker)(outside + "/worker.ts"),
+  "fetch file://": async () => (await fetch("file:///etc/hosts")).text(),
+  "WebSocket": () => new WebSocket("ws://127.0.0.1:9"),
+  "Bun.Glob": () => [...new Bun.Glob("*").scanSync("/etc")],
+  "bun:sqlite Database": async () => new (await import("bun:sqlite")).Database(fix + "/conformance/x.db"),
+  "bun:sqlite default": async () => new (await import("bun:sqlite")).default(fix + "/conformance/y.db"),
+  "bun:ffi dlopen": async () => (await import("bun:ffi")).dlopen("libc.dylib", {}),
+  "Bun.build": () => Bun.build({ entrypoints: [outside + "/worker.ts"], outdir: fix + "/conformance/built" }),
+};
+const results = {};
+for (const [name, op] of Object.entries(ops)) {
+  try {
+    await op();
+    results[name] = "allowed";
+  } catch (error) {
+    results[name] = error instanceof Error ? error.name : String(error);
+  }
+}
+results["in-scope read"] = fs.readFileSync(fix + "/stories/9.9.md", "utf8").startsWith("---") ? "read" : "wrong";
+results["in-scope readdir"] = fs.readdirSync(fix + "/stories").includes("9.9.md") ? "read" : "wrong";
+console.log(JSON.stringify(results));
+`;
+
+// A --preload recorder. It runs before the server's lockdown and turns every function export lockdown replaces
+// (node:fs, node:fs/promises, node:child_process, node:worker_threads, bun:sqlite, bun:ffi, and globalThis
+// Worker/fetch/WebSocket) into
+// an accessor. The getter returns a logger of calls that reach the original; the setter, which lockdown's
+// assignment triggers, wraps lockdown's replacement in a logger of calls that throw. So both the reads that pass
+// and every refusal, by lockdown or below it, are recorded. (Bun's members are not configurable, so refusals of
+// Bun.* are not observable here; the static guard keeps Bun out of src/ but for Bun.YAML.parse.)
+const RECORDER = String.raw`
+const fs = process.getBuiltinModule("node:fs");
+const append = fs.appendFileSync;
+const log = import.meta.dir + "/opens.log";
+const canary = import.meta.dir + "/canary.txt";
+const describe = (arg) => (typeof arg === "string" ? arg : "<" + typeof arg + ">");
+const record = (fields) => append(log, fields.join("\t") + "\n");
+const invoke = (fn, self, args, target) => (target ? Reflect.construct(fn, args) : fn.apply(self, args));
+let checked = false;
+// On the first data read of a .jsonl file (a tool call, so after the server's lockdown), a write must be refused.
+function checkLocked() {
+  if (checked) return;
+  checked = true;
+  try {
+    fs.writeFileSync(canary, "x");
+    record(["canary", "unlocked"]);
+  } catch (error) {
+    record(["canary", error.name]);
+  }
+}
+function intercept(label, mod, name) {
+  const original = mod[name];
+  const full = label + "." + name;
+  let current = function (...args) {
+    if (name === "readFileSync" && typeof args[0] === "string" && args[0].endsWith(".jsonl")) checkLocked();
+    record(["call", full, describe(args[0])]);
+    return invoke(original, this, args, new.target);
+  };
+  if (typeof original.native === "function") current.native = original.native;
+  Object.defineProperty(mod, name, {
+    configurable: true,
+    enumerable: true,
+    get: () => current,
+    set: (replacement) => {
+      current = function (...args) {
+        try {
+          return invoke(replacement, this, args, new.target);
+        } catch (error) {
+          record(["refused", full, error && error.name, describe(args[0])]);
+          throw error;
+        }
+      };
+      if (typeof replacement.native === "function") current.native = replacement.native;
+    },
+  });
+}
+for (const [label, mod, lowercaseOnly] of [
+  ["node:fs", fs, true],
+  ["node:fs/promises", fs.promises, true],
+  ["node:child_process", process.getBuiltinModule("node:child_process"), false],
+  ["node:worker_threads", process.getBuiltinModule("node:worker_threads"), false],
+]) {
+  for (const name of Object.keys(mod)) {
+    if (typeof mod[name] === "function" && (!lowercaseOnly || /^[a-z]/.test(name))) intercept(label, mod, name);
+  }
+}
+for (const name of ["Worker", "fetch", "WebSocket"]) intercept("globalThis", globalThis, name);
+for (const label of ["bun:sqlite", "bun:ffi"]) {
+  const mod = process.getBuiltinModule(label);
+  for (const name of Object.keys(mod)) if (typeof mod[name] === "function") intercept(label, mod, name);
+}
+`;
+
+/** The recorder's log: the calls that reached a read, the refusals (canary's excluded), and the canary outcome. */
+function readRecorder(dir: string): { calls: [string, string][]; refusals: string[]; canary: string[] } {
+  const lines = readFileSync(join(dir, "opens.log"), "utf8")
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => line.split("\t"));
+  return {
+    calls: lines.filter((fields) => fields[0] === "call").map((fields) => [fields[1]!, fields[2]!]),
+    refusals: lines.filter((fields) => fields[0] === "refused" && fields[3] !== join(dir, "canary.txt")).map((fields) => fields.slice(1).join(" ")),
+    canary: lines.filter((fields) => fields[0] === "canary").map((fields) => fields[1]!),
+  };
+}
+
+const OPENS = ["node:fs.readFileSync", "node:fs.readdirSync"];
+const READ_CALLS = FS_READS.map((name) => `node:fs.${name}`);
+
+function insideData(fix: string, path: string): boolean {
+  return ["conformance", "stories", "decisions"].some((dir) => path === join(fix, dir) || path.startsWith(`${join(fix, dir)}/`));
+}
+
+xaravelTest(
+  "XT-boost-5",
+  "given the server process, it opens only paths under conformance/, stories/ and decisions/, read-only, and attempts outside those paths (symlinks included) are refused (FR-109)",
+  async () => {
+    const { fix, outside } = symlinkFixture();
+
+    // dataPath: the lexical checks.
+    for (const rel of ["../x", "/etc/hosts", "conformance/../AGENTS.md", "tools/x", "conformance-x/a", "a\0b", ".", ""]) {
+      expect(`${JSON.stringify(rel)}: ${refusedBy(() => dataPath(fix, rel))}`).toBe(`${JSON.stringify(rel)}: DataScopeError`);
+    }
+    // dataPath: the real-path check.
+    for (const rel of ["stories/9.8.md", "conformance/escalations", "conformance/escalations/ESC-9.9-1.md", "conformance/inventory/z.jsonl", "decisions/DIV-7.md", "stories/missing/../../AGENTS.md"]) {
+      expect(`${rel}: ${refusedBy(() => dataPath(fix, rel))}`).toBe(`${rel}: DataScopeError`);
+    }
+    expect(dataPath(fix, "stories/9.7.md")).toBe(join(fix, "stories", "9.7.md"));
+    expect(dataPath(fix, "stories/not-yet.md")).toBe(join(fix, "stories", "not-yet.md"));
+    expect(dataPath(fix, "conformance")).toBe(join(fix, "conformance"));
+    // inScope: the rule itself.
+    expect(inScope(fix, join(fix, "stories", "9.9.md"))).toBe(true);
+    expect(inScope(fix, join(fix, "decisions"))).toBe(true);
+    expect(inScope(fix, join(fix, "stories", "9.7.md"))).toBe(true);
+    expect(inScope(fix, join(fix, "stories", "new", "deeper.md"))).toBe(true);
+    for (const value of ["stories/9.9.md", 0, null, join(fix, "AGENTS.md"), join(fix, "decisions", "DIV-7.md"), join(fix, "stories", "9.8.md"), join(fix, "stories", "..", "AGENTS.md"), join(outside, "story.md"), fix]) {
+      expect(`${String(value)}: ${inScope(fix, value)}`).toBe(`${String(value)}: false`);
+    }
+
+    // The tools over the symlinks, over stdio: refused, and the in-scope symlink is read. The recorder shows the
+    // refusals come from dataPath (no fs call is made, so nothing reaches lockdown), not from lockdown.
+    const symlinkRecorder = tempDir("boost-recorder");
+    writeFileSync(join(symlinkRecorder, "recorder.ts"), RECORDER);
+    await withServer(fix, async (client) => {
+      for (const [name, args] of [
+        ["story.tests", { story: "9.8" }],
+        ["divergence.get", { id: "DIV-7" }],
+        ["escalations.open", {}],
+        ["inventory.get", { glob: "*" }],
+        ["inventory.get", { id: B1 }],
+      ] as const) {
+        const text = errorText(await client.call(name, args));
+        expect(`${name}: ${text.slice(0, 8)}`).toBe(`${name}: refused:`);
+      }
+      expect(await client.value("story.tests", { story: "9.7" })).toMatchObject({ story: "9.7", title: "Linked Story", testIds: [] });
+      expect((await client.value("story.tests", { story: "9.9" }))["testIds"]).toEqual([B1, B2]);
+    }, { preload: join(symlinkRecorder, "recorder.ts") });
+    const symlinkLog = readRecorder(symlinkRecorder);
+    expect(symlinkLog.refusals).toEqual([]);
+    expect(symlinkLog.calls.some(([name, path]) => name === "node:fs.readFileSync" && path === join(fix, "stories", "9.7.md"))).toBe(true);
+    for (const [name, path] of symlinkLog.calls) {
+      expect(`${name} ${path}: ${READ_CALLS.includes(name) ? "a read" : "not a read"}`).toBe(`${name} ${path}: a read`);
+    }
+
+    // A locked-down subprocess: every write, spawn and out-of-scope read is refused, and nothing is created.
+    const scripts = tempDir("boost-scripts");
+    writeFileSync(join(scripts, "probe.ts"), PROBE);
+    // A worker that would write if it ever ran (a fresh realm has an unpatched node:fs).
+    writeFileSync(join(outside, "worker.ts"), `require("node:fs").writeFileSync(${JSON.stringify(join(outside, "from-worker.txt"))}, "x");\n`);
+    const run = Bun.spawnSync(["bun", "--no-env-file", join(scripts, "probe.ts"), fix, outside], { cwd: fix, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+    expect(`${run.exitCode} ${run.stderr.toString()}`).toBe("0 ");
+    const results = JSON.parse(run.stdout.toString()) as Record<string, string>;
+    const refusedReads = ["read AGENTS.md", "read /etc/hosts", "read relative", "read fd 0", "read outside symlink", "readdir root", "exists outside", "realpath.native outside", "statSync outside", "lstatSync outside", "realpathSync outside"];
+    for (const [name, outcome] of Object.entries(results)) {
+      const expected = name.startsWith("in-scope") ? "read" : name === "lockdown twice" ? "Error" : refusedReads.includes(name) ? "DataScopeError" : "ReadOnlyError";
+      expect(`${name}: ${outcome}`).toBe(`${name}: ${expected}`);
+    }
+    expect(Object.keys(results).length).toBe(54);
+    await Bun.sleep(200);
+    for (const path of [join(fix, "conformance", "w.txt"), join(outside, "w.txt"), join(fix, "conformance", "newdir"), join(fix, "stories", "9.9b.md"), join(outside, "from-worker.txt"), join(fix, "conformance", "built"), join(fix, "conformance", "x.db"), join(fix, "conformance", "y.db")]) {
+      expect(`${path}: ${existsSync(path)}`).toBe(`${path}: false`);
+    }
+    expect(readFileSync(join(fix, "stories", "9.9.md"), "utf8")).toBe(FILES["stories/9.9.md"]!);
+
+    // The recorder on a clean fixture: every call is one of the six reads, each open is inside the data scope.
+    const clean = fixture();
+    const recorder = tempDir("boost-recorder");
+    writeFileSync(join(recorder, "recorder.ts"), RECORDER);
+    await withServer(
+      clean,
+      async (client) => {
+        await callEveryTool(client, { story: "9.9", id: B1, div: "DIV-3" });
+      },
+      { preload: join(recorder, "recorder.ts") },
+    );
+    const { calls, refusals, canary } = readRecorder(recorder);
+    // The server process was locked down before its first data read, and a full tool run hits no refusal.
+    expect(canary).toEqual(["ReadOnlyError"]);
+    expect(existsSync(join(recorder, "canary.txt"))).toBe(false);
+    expect(refusals).toEqual([]);
+    // The canary's own write is the one refusal, and the recorder saw it at lockdown's layer.
+    expect(readFileSync(join(recorder, "opens.log"), "utf8")).toContain(`refused\tnode:fs.writeFileSync\tReadOnlyError\t${join(recorder, "canary.txt")}\n`);
+    const opens = calls.filter(([name]) => OPENS.includes(name));
+    expect(opens.length).toBeGreaterThan(10);
+    expect(opens.some(([name, path]) => name === "node:fs.readFileSync" && path === join(clean, "stories", "9.9.md"))).toBe(true);
+    for (const [name, path] of calls) {
+      expect(`${name}: ${READ_CALLS.includes(name) ? "a read" : "not a read"}`).toBe(`${name}: a read`);
+      if (OPENS.includes(name)) {
+        expect(`${name} ${path}: ${insideData(clean, path) ? "inside" : "outside"}`).toBe(`${name} ${path}: inside`);
+      }
+    }
+
+    // A ReadOnlyError is a known tool error: `refused: ...`, never "internal error:".
+    const refusing: ToolDefinition = {
+      name: "probe.refuse",
+      description: "throws ReadOnlyError",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      handler: () => {
+        throw new ReadOnlyError("node:fs.writeFileSync");
+      },
+    };
+    const refusal = callTool(refusing, clean, {});
+    expect(refusal.isError).toBe(true);
+    expect((refusal.content[0] as { text: string }).text).toBe("refused: node:fs.writeFileSync (framework mode is read-only)");
+  },
+  TIMEOUT,
+);
+
+// ---------------------------------------------------------------------------
+// XT-boost-6: the worktree is unchanged
+
+/** Calls every tool with valid and invalid arguments (and the refused ones the fixture can raise). */
+async function callEveryTool(client: StdioClient, ids: { story: string; id: string; div: string }, refused: boolean = false): Promise<number> {
+  const calls: [string, Record<string, Json>][] = [
+    ["inventory.get", { id: ids.id }],
+    ["inventory.get", { glob: "*", limit: 5 }],
+    ["inventory.get", {}],
+    ["inventory.get", { nope: 1 }],
+    ["expectations.status", { id: ids.id }],
+    ["expectations.status", { id: ids.id, variant: "sqlite" }],
+    ["expectations.status", {}],
+    ["conformance.rate", {}],
+    ["conformance.rate", { component: "support" }],
+    ["conformance.rate", { component: 7 }],
+    ["story.tests", { story: ids.story }],
+    ["story.tests", { story: "../../AGENTS" }],
+    ["story.tests", { story: "0.0" }],
+    ["divergence.get", { id: ids.div }],
+    ["divergence.get", { id: `${ids.div}.1` }],
+    ["divergence.get", { id: "../x" }],
+    ["escalations.open", {}],
+    ["escalations.open", { story: ids.story }],
+    ["escalations.open", { story: 1 }],
+  ];
+  if (refused) {
+    calls.push(["story.tests", { story: "9.8" }], ["divergence.get", { id: "DIV-7" }]);
+  }
+  let errors = 0;
+  for (const [name, args] of calls) {
+    const result = await client.call(name, args);
+    expect(result.content.length).toBeGreaterThan(0);
+    errors += result.isError === true ? 1 : 0;
+  }
+  // Each tool was called successfully at least once, and some calls failed.
+  expect(errors).toBeGreaterThan(0);
+  expect(errors).toBeLessThan(calls.length);
+  return errors;
+}
+
+/** A stat snapshot of every entry under `dir` (lstat; symlinks not followed); `hash` adds file digests and link targets. */
+function snapshot(dir: string, hash: boolean, skip: (rel: string) => boolean = () => false): string[] {
+  const out: string[] = [];
+  const walk = (rel: string): void => {
+    const path = rel === "" ? dir : join(dir, rel);
+    const stat = lstatSync(path);
+    const kind = stat.isSymbolicLink() ? "link" : stat.isDirectory() ? "dir" : stat.isFile() ? "file" : "other";
+    let detail = "";
+    if (hash && kind === "file") {
+      detail = createHash("sha256").update(readFileSync(path)).digest("hex");
+    } else if (hash && kind === "link") {
+      detail = readlinkSync(path);
+    }
+    out.push(`${rel}\t${kind}\t${stat.mode}\t${stat.size}\t${stat.mtimeMs}\t${detail}`);
+    if (kind === "dir") {
+      for (const name of readdirSync(path).sort()) {
+        const child = rel === "" ? name : `${rel}/${name}`;
+        if (!skip(child)) {
+          walk(child);
+        }
+      }
+    }
+  };
+  walk("");
+  return out;
+}
+
+function git(cwd: string, ...args: string[]): string {
+  const result = Bun.spawnSync(["git", "-c", "user.name=XT", "-c", "user.email=xt@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+  if (result.exitCode !== 0) {
+    throw new Error(`git ${args.join(" ")}: ${result.stderr.toString()}`);
+  }
+  return result.stdout.toString();
+}
+
+xaravelTest(
+  "XT-boost-6",
+  "given a test that calls every tool, the worktree is unchanged afterwards: a git fixture's every file, link and directory (.git/ included) and the real repository's git state and data directories (FR-109)",
+  async () => {
+    // A git fixture with a commit, one modified and one untracked file, and a dangling symlink to refuse.
+    const fix = fixture();
+    const outside = tempDir("boost-outside");
+    writeFileSync(join(outside, "story.md"), "outside\n");
+    rmSync(join(fix, "stories", "9.8.md"));
+    symlinkSync(join(outside, "story.md"), join(fix, "stories", "9.8.md"));
+    symlinkSync(join(fix, "nowhere.md"), join(fix, "decisions", "DIV-7.md"));
+    git(fix, "init", "-q");
+    git(fix, "add", "-A");
+    git(fix, "commit", "-q", "-m", "fixture");
+    writeFileSync(join(fix, "stories", "9.9.md"), `${FILES["stories/9.9.md"]!}\nModified.\n`);
+    writeFileSync(join(fix, "conformance", "untracked.txt"), "untracked\n");
+    const skipIndex = (rel: string): boolean => rel === ".git/index";
+    const before = snapshot(fix, true, skipIndex);
+    expect(before.some((line) => line.startsWith(".git/HEAD\t"))).toBe(true);
+    await withServer(fix, (client) => callEveryTool(client, { story: "9.9", id: B1, div: "DIV-3" }, true), { cwd: fix });
+    expect(snapshot(fix, true, skipIndex)).toEqual(before);
+    expect(git(fix, "status", "--porcelain", "-uall")).toBe(" M stories/9.9.md\n?? conformance/untracked.txt\n");
+
+    // The real repository, at its default root.
+    const state = (): string[] => [
+      git(root, "status", "--porcelain", "-uall"),
+      git(root, "rev-parse", "HEAD"),
+      git(root, "for-each-ref"),
+      git(root, "stash", "list"),
+      ...["conformance", "stories", "decisions"].flatMap((dir) => (existsSync(join(root, dir)) ? snapshot(join(root, dir), false).map((line) => `${dir}/${line}`) : [])),
+    ];
+    const repoBefore = state();
+    const inventoryId = readWorkingInventory(root)[0]!.id;
+    await withServer(null, (client) => callEveryTool(client, { story: "7.4", id: inventoryId, div: "DIV-1" }));
+    expect(state()).toEqual(repoBefore);
   },
   TIMEOUT,
 );

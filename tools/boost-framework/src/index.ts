@@ -1,5 +1,8 @@
-// The public surface of Boost framework mode (Story 7.3).
-export { callTool, createServer, DEFAULT_ROOT, main, SERVER_NAME, TOOL_ANNOTATIONS } from "./server";
+// The public surface of Boost framework mode (Stories 7.3 and 7.4).
+export { DEFAULT_ROOT, main } from "./server";
+export { callTool, createServer, SERVER_NAME, TOOL_ANNOTATIONS } from "./mcp";
+export { lockdown, ReadOnlyError } from "./lockdown";
+export { inScope } from "./scope";
 export {
   computeBuckets,
   conformanceRate,
