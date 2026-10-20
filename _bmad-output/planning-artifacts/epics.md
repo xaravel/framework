@@ -2588,8 +2588,9 @@ So that async-ness is decided by AD-6's rule, not by each agent (DIV-1, AD-6).
 
 **Given** a package's emitted `.d.ts` and its `@asyncRoot` JSDoc tags
 **When** `bun run async-surface <pkg>` runs
-**Then** it walks the declarations with `oxc-parser` and writes `async-surface.json`, with one line per Promise- or thenable-returning public method and the root named in its tag
-**And** the thenable type list comes from `@xaravel/contracts/async` when installed, and otherwise from the tool's fixture list.
+**Then** it walks the declarations with `oxc-parser` and writes `async-surface.json`, with one line per Promise-returning public method and the root named in its tag, and one `thenable` line per public method that returns a thenable type, which needs no tag (Epic 6 retro S1, Maintainer ruling on item 7)
+**And** the thenable type list comes from `@xaravel/contracts/async` when installed, and otherwise from the tool's fixture list
+**And** a return type matches a thenable by its qualified name, resolved through its import, never by its short name alone, so `Schema\Builder` is not taken for `Query\Builder`.
 
 **Given** a Promise-returning public method with no `@asyncRoot` tag
 **When** the check runs
@@ -2619,7 +2620,8 @@ So that parity gaps are visible as they arise, and gate a Component's last Epic 
 **Given** any PR
 **When** the diff runs
 **Then** it posts a per-Component summary and never fails the PR
-**And** `bun run api-surface:gate <component>` fails while any unexplained member remains. That command is what a Component's last Epic is accepted against.
+**And** `bun run api-surface:gate <component>` fails while any unexplained member remains. That command is what a Component's last Epic is accepted against
+**And** a Story manifest whose acceptance criteria say "`api-surface:gate <c>` passes" carries `api_surface_gate: <c>`; `story:check` then runs the gate for `<c>` and fails on any unexplained member, and a check fails when such an acceptance criterion in `epics.md` has no manifest carrying the field (Epic 6 retro S4, Maintainer ruling on item 8).
 
 **Given** the API-surface export (`conformance/api-surface/*.jsonl`)
 **When** it is generated
@@ -3061,6 +3063,15 @@ So that morph maps, queue payloads and configuration can name classes as Laravel
 **Then** it throws
 **And** `registerTestClass(fqcn, X)` inside a test frame registers into that frame's overlay only.
 
+**Given** a class already registered under one FQCN
+**When** `registerClass` registers the same class under a different FQCN
+**Then** it throws, naming both FQCNs, so `fqcn(X)` always has one answer
+**And** `registration:check` fails on a `registerClass` call whose class is not declared in the same file, so each class has one owner (AD-22; Epic 6 retro R3, Maintainer ruling on item 9).
+
+**Given** the first real `registerClass` calls in `packages/runtime`
+**When** `registration:check` runs
+**Then** it counts them, and the FQCN shape rule, the duplicate key and the registration recogniser are re-checked against these real files; any mismatch with the fixtures' behaviour raises an Escalation (Epic 6 retro V1, Maintainer ruling on item 9).
+
 **Given** a PSR-4 map from `package.json` (`"xaravel": { "autoload": { "psr-4": {...} } }`)
 **When** an async resolve misses
 **Then** the registry maps the FQCN to a file, `await import()`s it, and returns the class that file registered
@@ -3373,7 +3384,8 @@ So that later Phases can't change a shared interface without an Escalation (FR-1
 
 **Given** `packages/contracts`
 **When** its Epic closes
-**Then** `api-surface:gate contracts` passes, `docs/` lists every contract with its Upstream FQCN, and `async-surface.json` is committed.
+**Then** `api-surface:gate contracts` passes, `docs/` lists every contract with its Upstream FQCN, and `async-surface.json` is committed
+**And** because this is the first Component gate on real code, the API-surface mappings (camelCase, AD-26 options objects, DIV-12 renames, defaults and nullability) are re-checked against the gate's matched and extra members; any mapping that misreads real code raises an Escalation instead of an `additions.jsonl` or `exceptions.jsonl` line (Epic 6 retro V1, Maintainer ruling on item 9).
 
 **Given** the Phase 1 acceptance decision `decisions/PHASE-1-EXIT.md`
 **When** it is merged
@@ -3897,6 +3909,15 @@ So that concurrent requests never share container state (FR-19, NFR-4, AD-5).
 **Given** a base singleton whose constructor resolves a frame-owned binding (a request-like fixture)
 **When** dev mode is on
 **Then** resolution throws, naming both bindings (AD-5).
+
+**Given** a registered singleton class
+**When** lint runs
+**Then** `xaravel/no-singleton-field-write` also reports writes into a field's contents after boot (`this.f.set(…)`, `.push(…)`, `this.f[k] = v`, `Object.assign(this, …)`, and writes through an alias of `this`)
+**And** a field that holds a process-wide cache, such as a manager's `drivers` or `customCreators`, is exempt only when `singletons.json` lists it with a citation of the Upstream member it mirrors; per-request state is never exempt (AD-5; Epic 6 retro L4, Maintainer ruling on item 9).
+
+**Given** a singleton bound through a closure (`view`, `session.store`, `cache.store`, `queue.connection`, …)
+**When** `singletons.json` is generated
+**Then** its `classes` entry names the concrete class the closure returns instead of `null`, found by booting Upstream through the Oracle and recording `get_class(app(<abstract>))` for each binding the static scan left `null`, so `Illuminate\View\Factory` and the others are checked (Epic 6 retro L5, Maintainer ruling on item 9).
 
 **Given** the package
 **When** the Epic closes
@@ -6500,6 +6521,11 @@ So that templates render fast and identically to Laravel (FR-47, AD-11).
 **Given** `{{ $user.name }}` with data `{ user }`
 **When** it renders
 **Then** `$user` is destructured from the data. An undeclared `$name` is `undefined`, so `@isset` stays safe (AD-11).
+
+**Given** the compiler's TypeScript output for the templates in the test scope
+**When** the package's tests run
+**Then** that output is kept as `.ts` snapshot files under `packages/view/tests/__snapshots__/`, not Bun `.snap` files, so the type-aware lint rules run over it (AD-6's compiled-view snapshots)
+**And** `lint:disables` and XT-conformance-129 point at those real files instead of the Story 6.1 placeholder (Epic 6 retro S5, Maintainer ruling on item 9).
 
 **Given** `tests/View/ViewPhpEngineTest.php`
 **When** it is classified
