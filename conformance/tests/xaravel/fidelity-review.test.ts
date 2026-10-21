@@ -45,6 +45,7 @@ import {
   reviewTree,
   runFidelity,
   runReviewer,
+  sourceSurface,
   standingRejects,
   testUnits,
   verdictSchema,
@@ -424,6 +425,9 @@ xaravelTest(
     // (e): the change edits only packages/support/src/, so no Xaravel Test is touched.
     expect(user).toContain("### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
     expect(user).toContain("No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
+    // (g): the changed packages/support/src/ file's declaration-and-tag listing; the removed Base.ts has none (ESC-9.3-2).
+    expect(user).toContain(`### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)\n\n#### ${CHANGED}\n\n\`\`\`ts\n@asyncRoot tags: none.\nDeclarations: 1.\n\n1| export const added = 1; // FR-111.1\n\`\`\``);
+    expect(user).not.toContain("#### packages/support/src/Base.ts");
 
     // status: current for the working tree. Committed unchanged, the head tree is the reviewed tree: approvals passes.
     expect(await status(repo.dir)).toEqual({ code: 0, out: [`current: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`], err: [] });
@@ -725,6 +729,70 @@ xaravelTest(
     ]);
     expect(gatherEvidence(root, changed("packages/runtime/tests/xaravel/scope.test.ts"), none).asyncRoot).toEqual([]);
     expect(gatherEvidence(root, changed("tools/graph/graph.ts"), none).asyncRoot).toEqual([]);
+    // ESC-9.3-2: (g) lists every declaration and @asyncRoot tag of each added or modified packages/*/src/ file, the
+    // parts the diff's hunks leave out included; a test file, a file elsewhere and a removed file get none.
+    const surface = gatherEvidence(root, changed("packages/runtime/src/scope/interleave.ts"), none).sourceSurface;
+    expect(surface.map((entry) => entry.label)).toEqual(["packages/runtime/src/scope/interleave.ts"]);
+    const interleave = readFileSync(join(root, "packages", "runtime", "src", "scope", "interleave.ts"), "utf8").split("\n");
+    const tagLine = interleave.findIndex((line) => line.includes("@asyncRoot callback")) + 1;
+    expect(surface[0]!.text).toStartWith(`@asyncRoot tags: line ${tagLine} (\`@asyncRoot callback\`).`);
+    expect(surface[0]!.text).toContain(`${tagLine}| ${interleave[tagLine - 1]}`);
+    expect(surface[0]!.text).toContain("| export async function interleave<T>(");
+    expect(gatherEvidence(root, changed("packages/runtime/tests/xaravel/scope.test.ts"), none).sourceSurface).toEqual([]);
+    expect(gatherEvidence(root, changed("tools/graph/graph.ts"), none).sourceSurface).toEqual([]);
+    expect(gatherEvidence(root, [{ filename: "packages/runtime/src/scope/interleave.ts", status: "removed", patch: null }], none).sourceSurface).toEqual([]);
+    expect(gatherEvidence(root, changed("packages/runtime/src/Missing.ts"), none).sourceSurface).toEqual([
+      { label: "packages/runtime/src/Missing.ts", text: null, unavailable: "packages/runtime/src/Missing.ts does not exist" },
+    ]);
+    // Top-level declarations with or without a docblock, documented members, a one-line body and a multi-line signature.
+    expect(
+      sourceSurface(
+        [
+          "// header",
+          "import { x } from './x';",
+          "/**",
+          " * Runs it.",
+          " * @asyncRoot callback",
+          " */",
+          "export async function run(",
+          "  fn: () => Promise<void>,",
+          "): Promise<void> {",
+          "  await fn();",
+          "}",
+          "function noop(): void {}",
+          "export class Box {",
+          "  /** The value. */",
+          "  get(): number {",
+          "    return 1;",
+          "  }",
+          "  untagged(): void {}",
+          "}",
+          "export { x };",
+        ].join("\n"),
+      ),
+    ).toBe(
+      [
+        "@asyncRoot tags: line 5 (`@asyncRoot callback`).",
+        "Declarations: 5.",
+        "",
+        "3| /**",
+        "4|  * Runs it.",
+        "5|  * @asyncRoot callback",
+        "6|  */",
+        "7| export async function run(",
+        "8|   fn: () => Promise<void>,",
+        "9| ): Promise<void> {",
+        "",
+        "12| function noop(): void {}",
+        "",
+        "13| export class Box {",
+        "",
+        "14|   /** The value. */",
+        "15|   get(): number {",
+        "",
+        "20| export { x };",
+      ].join("\n"),
+    );
     // Every citation form, each once; a DIV path, a partial id and a longer token are not decision citations.
     const cited = decisionEvidence(root, [
       "MAINT-2026-10-16-unattended-orchestrator and OQ-12, then PHASE-0-EXIT",

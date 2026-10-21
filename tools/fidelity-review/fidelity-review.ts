@@ -45,8 +45,12 @@
 // test file's top-level setup changes (a heuristic top-level-unit scanner,
 // `testUnits`); (f) every decision record an added line cites (`ESC-<id>`,
 // `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a `decisions/<name>.md`
-// path), in full (ESC-9.2-1). Everything is read from the working tree. A
-// missing evidence file is named ("unavailable: <why>"), never dropped.
+// path), in full (ESC-9.2-1); (g) for each `packages/*/src/` file the change
+// adds or modifies, every top-level declaration and every documented one, with
+// its line, full docblock and signature, and the line of each `@asyncRoot` tag
+// (a heuristic line scanner, `sourceSurface`; ESC-9.3-2). Everything is read
+// from the working tree. A missing evidence file is named ("unavailable:
+// <why>"), never dropped.
 //
 // A standing reject (ESC-8.8-1). A `reject` recorded for the reviewed tree
 // stands until the tree changes: `review` refuses to run on that tree (exit 1,
@@ -210,9 +214,11 @@ export interface Evidence {
   readonly xaravelTests: readonly XaravelTestEntry[];
   /** (f) Each decision record an added line cites, in full; DIV records are (a) (ESC-9.2-1). */
   readonly decisions: readonly EvidenceEntry[];
+  /** (g) Each `packages/<name>/src/` file the change adds or modifies, as its declaration-and-tag listing (`sourceSurface`, F-9, ESC-9.3-2). */
+  readonly sourceSurface: readonly EvidenceEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -379,6 +385,7 @@ export function buildPrompt(input: PromptInput): Prompt {
     }
   }
   evidenceSection(sections, "### (f) Decision records cited on added lines (any item, ESC-9.2-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
+  evidenceSection(sections, "### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)", evidence.sourceSurface, "The change adds or modifies no `packages/*/src/` file.", "ts");
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
     sections.push(NO_PRIOR);
@@ -468,6 +475,66 @@ function asyncRootEvidence(root: string): EvidenceEntry[] {
     );
   }
   return entries;
+}
+
+/** A top-level declaration at the start of a line, after its modifiers, or an `export {…}`/`export *` re-export. */
+const TOP_DECLARATION = /^(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\b|class\b|interface\b|type\b|const\b|let\b|var\b|enum\b|namespace\b)|^export\s*(?:\{|\*|default\b)/;
+
+/** The most lines of one declaration's signature the listing shows. */
+const SIGNATURE_CAP = 12;
+
+/**
+ * The declaration-and-tag listing of one source text (evidence (g), ESC-9.3-2): a header naming the line of each
+ * `@asyncRoot` tag, then every top-level declaration and every declaration a docblock precedes (so each documented
+ * class member), in line order, each with its full docblock and its signature up to the line that ends in `{`, `}` or
+ * `;` (before a `//` comment) or comes before a blank line, every line numbered. A heuristic line scanner, like
+ * `testUnits`.
+ */
+export function sourceSurface(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const numbered = (from: number, to: number): string[] => lines.slice(from, to + 1).map((line, k) => `${from + k + 1}| ${line}`);
+  const blocks = new Map<number, number | null>();
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
+    if (trimmed.startsWith("/**")) {
+      let end = i;
+      while (end < lines.length - 1 && !lines[end]!.includes("*/", end === i ? 3 : 0)) {
+        end++;
+      }
+      let decl = end + 1;
+      while (decl < lines.length && lines[decl]!.trim() === "") {
+        decl++;
+      }
+      if (decl < lines.length && !blocks.has(decl)) {
+        blocks.set(decl, i);
+      }
+      i = end;
+      continue;
+    }
+    if (TOP_DECLARATION.test(lines[i]!) && !blocks.has(i)) {
+      blocks.set(i, null);
+    }
+  }
+  const tags = lines.flatMap((line, k) => (line.includes("@asyncRoot") ? [`line ${k + 1} (\`${line.trim().replace(/^\*\s*/, "")}\`)`] : []));
+  const out = [`@asyncRoot tags: ${tags.length === 0 ? "none" : tags.join(", ")}.`, `Declarations: ${blocks.size}.`];
+  for (const [decl, doc] of [...blocks].sort((a, b) => a[0] - b[0])) {
+    let end = decl;
+    while (end < lines.length - 1 && end - decl < SIGNATURE_CAP - 1 && !/[{};]\s*$/.test(lines[end]!.replace(/\s+\/\/.*$/, "")) && lines[end + 1]!.trim() !== "") {
+      end++;
+    }
+    out.push("", ...numbered(doc ?? decl, end));
+  }
+  return out.join("\n");
+}
+
+/** Evidence (g): the `sourceSurface` listing of each `packages/<name>/src/` file the change adds or modifies, read from `root` (F-9, ESC-9.3-2). */
+export function sourceSurfaceEvidence(root: string, files: readonly ChangedFile[]): EvidenceEntry[] {
+  return files
+    .filter((file) => FRAMEWORK_SRC.test(file.filename) && !file.status.startsWith("removed"))
+    .map((file) => {
+      const entry = readEvidenceFile(root, file.filename);
+      return entry.text === null ? entry : { ...entry, text: sourceSurface(entry.text) };
+    });
 }
 
 const CONSEQUENCES_DIR = "conformance/xaravel-consequences";
@@ -576,7 +643,7 @@ export function headErrorFixtures(fixtures: readonly { readonly path: string; re
   return out;
 }
 
-/** The evidence (a)-(d) for the patches' added lines and the manifest's assigned ids, read from `root`; (e) is `xaravelTestEvidence`. */
+/** The evidence (a)-(d), (f) and (g) for the patches' added lines and the manifest's assigned ids, read from `root`; (e) is `xaravelTestEvidence`. */
 export function gatherEvidence(root: string, files: readonly ChangedFile[], manifest: Pick<Manifest, "testIds" | "xaravelTestIds">): Evidence {
   const added = addedLines(files);
   const divs = new Set<number>();
@@ -613,6 +680,8 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
     xaravelTests: [],
     decisions: decisionEvidence(root, added),
+    // F-9 judges the tags a touched file keeps outside the diff's hunks too, so the listing shows the whole file's (ESC-9.3-2).
+    sourceSurface: sourceSurfaceEvidence(root, files),
   };
 }
 
