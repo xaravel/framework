@@ -616,6 +616,9 @@
     "packages/runtime": {
       "name": "@xaravel/runtime",
       "version": "0.0.0",
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+      },
     },
     "packages/serializable-closure": {
       "name": "@xaravel/serializable-closure",
