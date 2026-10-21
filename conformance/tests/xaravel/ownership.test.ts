@@ -11,6 +11,7 @@ import {
   botAllowedPath,
   checkApiSurfaceGates,
   checkDuplicates,
+  contentReads,
   EPICS,
   evaluatePr,
   gateCriteria,
@@ -19,6 +20,7 @@ import {
   readManifests,
   SPRINT_STATUS,
   STORIES_DIR,
+  type ContentRead,
   type Manifest,
 } from "../../../tools/ownership/ownership";
 import type { PrFile } from "../../../tools/protected-paths/protected-paths";
@@ -620,6 +622,171 @@ xaravelTest("XT-conformance-24", "a Story PR changing files outside its four all
     expect(step.run ?? "").not.toMatch(/\b(install|bun i|bun x|bunx|bun run)\b/);
   }
   expect(text).not.toMatch(/pull_request_review|\bpull_request:|github\.event\.pull_request\.head|github\.head_ref|merge_group\.head_sha|id-token/);
+});
+
+xaravelTest("XT-conformance-259", "a story/<id> PR may change its own manifest's status: line to a Story status, modified in place, and add or change its own spec-<id>-*.md; any other manifest edit, another Story's manifest or spec, and an unreadable manifest stay out of scope (Epic 8 retro item 11, MAINT-2026-10-20 item 2, AD-16)", async () => {
+  const support = { storyId: "9.1", component: "support" };
+  const SPEC = "_bmad-output/implementation-artifacts/spec-9-1-scope-frame.md";
+  expect(allowedPath(support, SPEC)).toBe(true);
+  expect(allowedPath(support, "_bmad-output/implementation-artifacts/spec-9-1-0-x.md")).toBe(true);
+  expect(allowedPath({ storyId: "9.10", component: "support" }, "_bmad-output/implementation-artifacts/spec-9-10-x.md")).toBe(true);
+  for (const path of [
+    "_bmad-output/implementation-artifacts/spec-9-2-x.md",
+    "_bmad-output/implementation-artifacts/spec-9-10-x.md",
+    "_bmad-output/implementation-artifacts/spec-9-1.md",
+    "_bmad-output/implementation-artifacts/spec-9-1-.md",
+    "_bmad-output/implementation-artifacts/sub/spec-9-1-x.md",
+    "_bmad-output/implementation-artifacts/spec-9-1-x.txt",
+    "_bmad-output/implementation-artifacts/spec-9.1-x.md",
+    "_bmad-output/implementation-artifacts/spec-901-x.md",
+    "_bmad-output/implementation-artifacts//spec-9-1-x.md",
+    "_bmad-output/planning-artifacts/spec-9-1-x.md",
+    "_bmad-output/implementation-artifacts/sprint-status.yaml",
+    "stories/9.1.md",
+  ]) {
+    expect([path, allowedPath(support, path)]).toEqual([path, false]);
+  }
+
+  const OWN = "stories/9.1.md";
+  const baseText = manifestText(story("9.1"));
+  const withStatus = (text: string, status: string): string => text.replace('status: "backlog"', `status: ${status}`);
+  const modified = (filename: string): PrFile => ({ filename, status: "modified" });
+  const scopeLine = (path: string): string => `out of scope: ${path} is outside Story 9.1's allowed paths (component support) (AD-16)`;
+
+  await withRoots([fixtureRoot({ "9.1": story("9.1"), "9.2": story("9.2") })], async ([dir]) => {
+    const judge = (files: PrFile[], head: Record<string, string>, base: Record<string, string> = { [OWN]: baseText, "stories/9.2.md": manifestText(story("9.2")) }) =>
+      evaluatePr(dir!, {
+        headRef: "story/9.1",
+        files,
+        changedFiles: files.length,
+        content: (path, side) => (side === "base" ? base : head)[path] ?? null,
+        mergeBase: "b".repeat(40),
+        headSha: "a".repeat(40),
+      });
+    const refused = (result: ReturnType<typeof evaluatePr>, path: string): void => {
+      expect(result.outOfScope).toContain(path);
+      expect(result.violations).toContain(scopeLine(path));
+    };
+
+    // Allowed: the own status line alone, to each Story status, quoted or not; the own spec added or modified; both together.
+    for (const status of ["done", '"done"', "review", "in-progress", "ready-for-dev", "blocked"]) {
+      expect([status, judge([modified(OWN)], { [OWN]: withStatus(baseText, status) })]).toEqual([status, { storyId: "9.1", outOfScope: [], violations: [] }]);
+    }
+    expect(judge([file(SPEC)], {})).toEqual({ storyId: "9.1", outOfScope: [], violations: [] });
+    expect(judge([modified(SPEC)], {})).toEqual({ storyId: "9.1", outOfScope: [], violations: [] });
+    expect(judge([{ filename: "_bmad-output/implementation-artifacts/spec-9-1-x.md", status: "removed" }], {})).toEqual({ storyId: "9.1", outOfScope: [], violations: [] });
+    expect(judge([modified(OWN), file(SPEC), file("packages/support/src/A.ts")], { [OWN]: withStatus(baseText, "done") })).toEqual({ storyId: "9.1", outOfScope: [], violations: [] });
+
+    // Refused: another field or the body, with or without the status line.
+    const edits = [
+      baseText.replace('test_ids: ["T-9.1"]', 'test_ids: ["T-9.1", "T-other"]'),
+      baseText.replace('component: "support"', 'component: "container"'),
+      baseText.replace("# Story", "# Story renamed"),
+      `${baseText}More body.\n`,
+      withStatus(baseText.replace('test_ids: ["T-9.1"]', 'test_ids: ["T-other"]'), "done"),
+      withStatus(baseText.replace("# Story", "# Done"), "done"),
+      withStatus(baseText, "done").replace('status: done', 'status: done\nsprint_key: "9-1-x"'),
+      withStatus(baseText, "done").replace("---\nstory_id", "---\n#\nstory_id"),
+      withStatus(baseText, "done").replace(/\n/g, "\r\n"),
+      baseText,
+    ];
+    for (const head of edits) {
+      refused(judge([modified(OWN)], { [OWN]: head }), OWN);
+    }
+    // The fixture really carries the status line withStatus rewrites, so no refused case passes vacuously.
+    expect(withStatus(baseText, "done")).not.toBe(baseText);
+    // Refused: a status: line in the body, or an indented status: inside the frontmatter, changing alone.
+    const bodyStatus = `${baseText}status: draft\n`;
+    refused(judge([modified(OWN)], { [OWN]: bodyStatus.replace("status: draft", "status: done") }, { [OWN]: bodyStatus }), OWN);
+    const nested = baseText.replace('test_ids: ["T-9.1"]', 'test_ids: ["T-9.1"]\nmeta:\n  status: backlog');
+    refused(judge([modified(OWN)], { [OWN]: nested.replace("  status: backlog", "  status: done") }, { [OWN]: nested }), OWN);
+    // Refused: a status outside the Story statuses, or a status: line that is not the top-level field.
+    for (const head of [withStatus(baseText, "finished"), withStatus(baseText, "[done]"), withStatus(baseText, "")]) {
+      refused(judge([modified(OWN)], { [OWN]: head }), OWN);
+    }
+    // Refused: the own manifest added, removed, renamed (either way) or copied, or listed twice.
+    const done = { [OWN]: withStatus(baseText, "done") };
+    refused(judge([{ filename: OWN, status: "added" }], done), OWN);
+    refused(judge([{ filename: OWN, status: "removed" }], done), OWN);
+    refused(judge([{ filename: OWN, status: "changed" }], done), OWN);
+    refused(judge([{ filename: OWN }], done), OWN);
+    refused(judge([{ filename: OWN, previous_filename: "stories/9.3.md", status: "renamed" }], done), OWN);
+    refused(judge([{ filename: "stories/9.3.md", previous_filename: OWN, status: "renamed" }], done), OWN);
+    refused(judge([{ filename: OWN, previous_filename: "stories/9.2.md", status: "copied" }], done), OWN);
+    refused(judge([modified(OWN), { filename: "stories/9.3.md", previous_filename: OWN, status: "copied" }], done), OWN);
+    // Refused: another Story's manifest (a status-only change) and other Stories' or misplaced specs.
+    refused(judge([modified("stories/9.2.md")], { "stories/9.2.md": withStatus(manifestText(story("9.2")), "done") }), "stories/9.2.md");
+    for (const path of [
+      "_bmad-output/implementation-artifacts/spec-9-2-x.md",
+      "_bmad-output/implementation-artifacts/spec-9-10-x.md",
+      "_bmad-output/implementation-artifacts/spec-9-1.md",
+      "_bmad-output/implementation-artifacts/sub/spec-9-1-x.md",
+      "_bmad-output/implementation-artifacts/spec-9-1-x.txt",
+    ]) {
+      refused(judge([file(path)], {}), path);
+    }
+
+    // Unreadable: no content, a read that throws, or a side that is null; out of scope and unreadable content.
+    const noContent = evaluatePr(dir!, { headRef: "story/9.1", files: [modified(OWN)], changedFiles: 1 });
+    refused(noContent, OWN);
+    expect(noContent.violations).toContain(`unreadable content: ${OWN} at the merge base could not be read; failing closed (AD-16)`);
+    const throwing = evaluatePr(dir!, {
+      headRef: "story/9.1",
+      files: [modified(OWN)],
+      changedFiles: 1,
+      content: (_path, side) => {
+        if (side === "head") {
+          throw new Error("HTTP 500");
+        }
+        return baseText;
+      },
+      mergeBase: "b".repeat(40),
+      headSha: "a".repeat(40),
+    });
+    refused(throwing, OWN);
+    expect(throwing.violations).toContain(`unreadable content: ${OWN} at ${"a".repeat(40)} could not be read; failing closed (AD-16)`);
+    const nullBase = judge([modified(OWN)], done, {});
+    refused(nullBase, OWN);
+    expect(nullBase.violations).toContain(`unreadable content: ${OWN} at ${"b".repeat(40)} could not be read; failing closed (AD-16)`);
+    const nullHead = judge([modified(OWN)], {});
+    refused(nullHead, OWN);
+    expect(nullHead.violations).toContain(`unreadable content: ${OWN} at ${"a".repeat(40)} could not be read; failing closed (AD-16)`);
+  });
+
+  // The pr command prefetches both sides of the own manifest, and only when it is modified in place on its own branch.
+  const both: ContentRead[] = [
+    { path: OWN, side: "base" },
+    { path: OWN, side: "head" },
+  ];
+  expect(contentReads("story/9.1", [{ filename: OWN, status: "modified" }])).toEqual(both);
+  expect(contentReads("story/9.1", [{ filename: OWN, status: "modified" }, file(SPEC)])).toEqual(both);
+  for (const [ref, files] of [
+    ["story/9.1", [file(OWN)]],
+    ["story/9.1", [{ filename: OWN, status: "removed" }]],
+    ["story/9.1", [file(OWN, "stories/9.3.md")]],
+    ["story/9.1", [{ filename: OWN }]],
+    ["story/9.2", [{ filename: OWN, status: "modified" }]],
+    ["story/9.x", [{ filename: "stories/9.x.md", status: "modified" }]],
+    ["planning/x", [{ filename: OWN, status: "modified" }]],
+    ["feature/x", [{ filename: OWN, status: "modified" }]],
+  ] as [string, PrFile[]][]) {
+    expect([ref, files, contentReads(ref, files)]).toEqual([ref, files, []]);
+  }
+
+  // Through the CLI: a status-only own manifest change and the own spec pass; another field fails with the waiver's line.
+  await withRoots([fixtureRoot({ "9.1": story("9.1") })], async ([dir]) => {
+    const files: PrFile[] = [{ filename: OWN, status: "modified" }, file(SPEC)];
+    const ok = await runPr({ ref: "story/9.1", files, base: { [OWN]: baseText }, head: { [OWN]: withStatus(baseText, "done") } }, dir!);
+    expect(ok).toMatchObject({ code: 0, stdout: "Ownership OK: PR #7: every file is within Story 9.1's allowed paths.\n", stderr: "" });
+    expect(ok.paths).toContain(`/repos/xaravel/framework/contents/${OWN}`);
+    const other = await runPr({ ref: "story/9.1", files, base: { [OWN]: baseText }, head: { [OWN]: withStatus(baseText.replace('component: "support"', 'component: "http"'), "done") } }, dir!);
+    expect(other.code).toBe(1);
+    expect(other.stderr).toBe(`Ownership violations (AD-16):\n  ${scopeLine(OWN)}\n`);
+    const unreadable = await runPr({ ref: "story/9.1", files, base: { [OWN]: baseText }, head: {} }, dir!);
+    expect(unreadable.code).toBe(1);
+    expect(unreadable.stderr).toContain(`  unreadable content: ${OWN} at ${"a".repeat(40)} could not be read; failing closed (AD-16)\n`);
+    expect(unreadable.stderr).toContain(`  ${scopeLine(OWN)}\n`);
+  });
 });
 
 xaravelTest("XT-conformance-180", "a planning/* PR may not change packages/** or conformance/expectations/**, in any letter case or through a rename; a truncated list fails closed (AD-16.7, MAINT-2026-10-17 item 15)", async () => {
