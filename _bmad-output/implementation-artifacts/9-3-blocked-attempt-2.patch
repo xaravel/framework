@@ -83,7 +83,7 @@ index c0847bf..bb07f6b 100644
    // Every unit settles before interleave does, so no sibling of a failed unit keeps running past it.
    const settled = await Promise.allSettled(started);
 diff --git a/packages/runtime/src/scope/scope.ts b/packages/runtime/src/scope/scope.ts
-index d74b192..061135c 100644
+index d74b192..224f1ea 100644
 --- a/packages/runtime/src/scope/scope.ts
 +++ b/packages/runtime/src/scope/scope.ts
 @@ -18,7 +18,15 @@
@@ -146,18 +146,18 @@ index d74b192..061135c 100644
    return storage.getStore()?.frame ?? null;
  }
  
-+// No `@asyncRoot` tag on runInFrame, runInRootFrame or runInNarrowFrame, though each accepts an async body. Each
-+// returns its body's own type `T` (generic), never a declared Promise type: AD-6.5's dual-helper shape ("return `T` for
-+// a sync callback and `Promise<T>` for an async one"). And tools/async-surface/async-surface.ts reports as an error a
-+// method that "has an @asyncRoot tag but returns neither a Promise nor a thenable" (AD-6), so
-+// `async-surface --all --check` would fail with the tag.
++// No `@asyncRoot` tag on runInFrame, runInRootFrame or runInNarrowFrame, though each accepts an async body: each is a
++// generic Scope Frame runner, which returns its body's own type `T` (generic), never a declared Promise type. That is
++// AD-6.5's dual-helper shape ("return `T` for a sync callback and `Promise<T>` for an async one"), and
++// decisions/ESC-9.3-1.md (orchestrator ruling, Option 1) records that such runners "carry no `@asyncRoot` tag, and
++// `async-surface.json` lists no line for them".
 +
  /**
   * Runs `fn` in a unit frame of `kind`: a child of the active frame, or a root unit when there is none. A non-Promise
   * result is returned unchanged (AD-6); a Promise result becomes a Promise that settles with it only after the unit's
 - * defer list has drained (AD-5.9).
 + * defer list has drained (AD-5.9). The frame runs for `app` when given (`null`: for no Application); omitted, for the
-+ * active frame's Application. Untagged: see the note above.
++ * active frame's Application. Untagged, as a generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above.
   */
 -export function runInFrame<T>(kind: string, fn: () => T): T {
 +export function runInFrame<T>(kind: string, fn: () => T, app?: object | null): T {
@@ -172,8 +172,8 @@ index d74b192..061135c 100644
 -export function runInRootFrame<T>(kind: string, fn: () => T): T {
 +/**
 + * Runs `fn` in a root unit frame of `kind`, which sees no enclosing frame's slots; otherwise as `runInFrame`. The frame
-+ * runs for `app` when given (`null`: for no Application); omitted, for no Application (null). Untagged: see the note
-+ * above `runInFrame`.
++ * runs for `app` when given (`null`: for no Application); omitted, for no Application (null). Untagged, as a generic
++ * Scope Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
 + */
 +export function runInRootFrame<T>(kind: string, fn: () => T, app?: object | null): T {
    checkRun("runInRootFrame", kind, fn);
@@ -255,8 +255,8 @@ index d74b192..061135c 100644
  /**
   * Runs `fn` in a narrow frame of `kind` that overrides only the `slots` it declares; every other read and write
 - * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged.
-+ * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged. Untagged: see the note above
-+ * `runInFrame`.
++ * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged. Untagged, as a generic Scope
++ * Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
   */
  export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>, fn: () => T): T {
    checkRun("runInNarrowFrame", kind, fn);
@@ -388,10 +388,10 @@ index d74b192..061135c 100644
    return result
 diff --git a/packages/runtime/tests/xaravel/overlays.test.ts b/packages/runtime/tests/xaravel/overlays.test.ts
 new file mode 100644
-index 0000000..1d4e24d
+index 0000000..605f592
 --- /dev/null
 +++ b/packages/runtime/tests/xaravel/overlays.test.ts
-@@ -0,0 +1,353 @@
+@@ -0,0 +1,363 @@
 +// Xaravel Tests for Story 9.3: per-Application overlays, `frameStatic` and the frame's Application (AD-5.3, AD-5.5,
 +// AD-5.8). One test per acceptance criterion, in order. `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each body
 +// starts outside any Scope Frame.
@@ -627,6 +627,16 @@ index 0000000..1d4e24d
 +      },
 +    ]);
 +    Assert.assertTrue(list.get() !== list.get(), "with no frame, init() is not stored");
++    // After a unit ended, a bound read gets init() unstored: the ended unit keeps no default.
++    let endedListRead: (() => string[]) | null = null;
++    runInFrame("unit", () => {
++      endedListRead = bindToFrame(() => list.get());
++    });
++    const firstEnded = (endedListRead as unknown as () => string[])();
++    firstEnded.push("stale");
++    const secondEnded = (endedListRead as unknown as () => string[])();
++    Assert.assertSame(0, secondEnded.length, "an ended unit does not store init()");
++    Assert.assertTrue(firstEnded !== secondEnded, "each read after the unit ended is a fresh init()");
 +    await runInFrame("test", async () => {
 +      await runInFrame("unit", async () => {
 +        list.get().push("x");
