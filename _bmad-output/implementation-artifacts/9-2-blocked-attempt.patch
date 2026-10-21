@@ -1,0 +1,1063 @@
+diff --git a/packages/runtime/src/index.ts b/packages/runtime/src/index.ts
+index 7034bcf..fb62552 100644
+--- a/packages/runtime/src/index.ts
++++ b/packages/runtime/src/index.ts
+@@ -1 +1,19 @@
+-export { currentFrame, type Frame, type FrameSlot, type FrameSlotKey, frameSlot, interleave, runInFrame, ScopeFrameException } from "./scope/index";
++export {
++  bindToFrame,
++  CSP_NONCE_SLOT,
++  currentFrame,
++  type Frame,
++  type FrameSlot,
++  type FrameSlotKey,
++  frameAsyncGenerator,
++  frameDefer,
++  frameSlot,
++  frameStreamSource,
++  interleave,
++  REQUEST_SLOT,
++  ROUTE_SLOT,
++  runInFrame,
++  runInNarrowFrame,
++  runInRootFrame,
++  ScopeFrameException,
++} from "./scope/index";
+diff --git a/packages/runtime/src/scope/index.ts b/packages/runtime/src/scope/index.ts
+index 06b0b59..bb1901f 100644
+--- a/packages/runtime/src/scope/index.ts
++++ b/packages/runtime/src/scope/index.ts
+@@ -1,3 +1,17 @@
+ export { interleave } from "./interleave";
+-export { currentFrame, type Frame, type FrameSlot, type FrameSlotKey, frameSlot, runInFrame } from "./scope";
++export { bindToFrame, frameAsyncGenerator, frameStreamSource } from "./propagate";
++export {
++  CSP_NONCE_SLOT,
++  currentFrame,
++  type Frame,
++  type FrameSlot,
++  type FrameSlotKey,
++  frameDefer,
++  frameSlot,
++  REQUEST_SLOT,
++  ROUTE_SLOT,
++  runInFrame,
++  runInNarrowFrame,
++  runInRootFrame,
++} from "./scope";
+ export { ScopeFrameException } from "./ScopeFrameException";
+diff --git a/packages/runtime/src/scope/interleave.ts b/packages/runtime/src/scope/interleave.ts
+index 5057bd7..17baaf3 100644
+--- a/packages/runtime/src/scope/interleave.ts
++++ b/packages/runtime/src/scope/interleave.ts
+@@ -1,12 +1,12 @@
+ // `interleave(units)`: the dev-only helper every concurrency test uses (AD-5, NFR-4).
+ //
+-// Every unit starts synchronously, in array order, each in its own fresh `unit` frame. Started in one tick, units
+-// that await settled promises resume in FIFO microtask order, so the units take turns at every `await` (a, b, a,
+-// b, …) in the same order on every run.
+-import { runInFrame } from "./scope";
++// Every unit starts synchronously, in array order, each in its own fresh root `unit` frame, which sees no enclosing
++// frame's slots. Started in one tick, units that await settled promises resume in FIFO microtask order, so the units
++// take turns at every `await` (a, b, a, b, …) in the same order on every run. Each unit ends after its defer list.
++import { runInRootFrame } from "./scope";
+ 
+ /**
+- * Runs `units` concurrently, each in its own `unit` frame, and resolves with their results in order; rejects with
++ * Runs `units` concurrently, each in its own root `unit` frame, and resolves with their results in order; rejects with
+  * the first rejection in array order, once every unit has settled.
+  * Its asyncRoot tag `callback` is AD-6's callback clause (it returns its callbacks' promises), as the spine § AD-6 Async-surface rule (the `callback` tag "for the callback clause") and ESC-6.4-1 define it; it reaches no Driver-contract IO root.
+  * @asyncRoot callback
+@@ -22,7 +22,7 @@ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Pro
+     }
+   }
+   for (const unit of units) {
+-    started.push(runInFrame("unit", () => startUnit(unit)));
++    started.push(runInRootFrame("unit", () => startUnit(unit)));
+   }
+   // Every unit settles before interleave does, so no sibling of a failed unit keeps running past it.
+   const settled = await Promise.allSettled(started);
+diff --git a/packages/runtime/src/scope/propagate.ts b/packages/runtime/src/scope/propagate.ts
+new file mode 100644
+index 0000000..92e10b0
+--- /dev/null
++++ b/packages/runtime/src/scope/propagate.ts
+@@ -0,0 +1,70 @@
++// Frame propagation into callbacks, stream sources and async generators (AD-5.1, ESC-8.3-1).
++//
++// Bun 1.4.3 drops the `AsyncLocalStorage` store in async-generator bodies and `type: "direct"` stream sources (the
++// OQ-11 probes `als.async-generator` and `als.direct-stream`); AD-5.1 wraps those, stream bodies and timers created in
++// a frame. Each wrapper takes one `AsyncLocalStorage.snapshot()` when it is called and runs the wrapped code inside
++// it, so `currentFrame()` there is the creating frame; outside any frame the snapshot restores "no frame". The
++// runtime patches no global: a timer is `setTimeout(bindToFrame(callback), ms)`.
++import { AsyncLocalStorage } from "node:async_hooks";
++
++/** `fn`, bound to the frame active now: each call runs in that frame, with the caller's `this` and arguments. */
++export function bindToFrame<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
++  if (typeof fn !== "function") {
++    throw new TypeError("bindToFrame(): fn must be a function");
++  }
++  const snapshot = AsyncLocalStorage.snapshot();
++  return function (this: unknown, ...args: A): R {
++    return snapshot(() => fn.apply(this, args));
++  };
++}
++
++const SOURCE_METHODS = ["start", "pull", "cancel"] as const;
++const SOURCE_OPTIONS = ["type", "autoAllocateChunkSize"] as const;
++
++/**
++ * A plain-object copy of the stream source `source` (a default or `type: "direct"` underlying source) whose `start`,
++ * `pull` and `cancel` run in the frame active now, each called with `source` as `this`. It copies `source`'s own
++ * enumerable properties, plus `type` and `autoAllocateChunkSize` read through `source` (so an inherited one counts)
++ * when they are not undefined.
++ */
++export function frameStreamSource<S extends object>(source: S): S {
++  if (typeof source !== "object" || source === null) {
++    throw new TypeError("frameStreamSource(): source must be an object");
++  }
++  const snapshot = AsyncLocalStorage.snapshot();
++  const wrapped: Record<PropertyKey, unknown> = { ...(source as Record<PropertyKey, unknown>) };
++  for (const name of SOURCE_OPTIONS) {
++    const option: unknown = (source as Record<string, unknown>)[name];
++    if (option !== undefined) {
++      wrapped[name] = option;
++    }
++  }
++  for (const name of SOURCE_METHODS) {
++    const method: unknown = (source as Record<string, unknown>)[name];
++    if (typeof method === "function") {
++      wrapped[name] = (...args: unknown[]): unknown => snapshot(() => (method as (...a: unknown[]) => unknown).apply(source, args));
++    }
++  }
++  return wrapped as S;
++}
++
++/**
++ * `generator`, with each `next`, `return` and `throw` run in the frame active now, so its body sees that frame
++ * wherever it is iterated (ESC-8.3-1).
++ */
++export function frameAsyncGenerator<T, TReturn, TNext>(generator: AsyncGenerator<T, TReturn, TNext>): AsyncGenerator<T, TReturn, TNext> {
++  if (typeof generator !== "object" || generator === null || typeof generator.next !== "function") {
++    throw new TypeError("frameAsyncGenerator(): generator must be an async generator");
++  }
++  const snapshot = AsyncLocalStorage.snapshot();
++  const wrapped: AsyncGenerator<T, TReturn, TNext> = {
++    next: (...args: [] | [TNext]) => snapshot(() => generator.next(...args)),
++    return: (value: TReturn | PromiseLike<TReturn>) => snapshot(() => generator.return(value)),
++    throw: (error: unknown) => snapshot(() => generator.throw(error)),
++    [Symbol.asyncIterator]() {
++      return wrapped;
++    },
++    [Symbol.asyncDispose]: () => snapshot(() => generator[Symbol.asyncDispose]()),
++  };
++  return wrapped;
++}
+diff --git a/packages/runtime/src/scope/scope.ts b/packages/runtime/src/scope/scope.ts
+index 7fcc1b8..9b5a76b 100644
+--- a/packages/runtime/src/scope/scope.ts
++++ b/packages/runtime/src/scope/scope.ts
+@@ -1,39 +1,66 @@
+ // The Scope Frame primitive (AD-5, NFR-4): the only framework `AsyncLocalStorage`.
+ //
+-// `runInFrame(kind, fn)` runs `fn` in a fresh frame; `currentFrame()` is the active frame or null; `frameSlot(key,
+-// init)` is a per-frame value, initialised lazily once per frame. Writing a slot with no active frame throws
+-// `ScopeFrameException`; reading one returns `init()` without storing it.
++// `runInFrame(kind, fn)` runs `fn` in a unit frame; `currentFrame()` is the active frame or null; `frameSlot(key,
++// init)` is a per-frame value, initialised lazily. Writing a slot with no active frame throws `ScopeFrameException`;
++// reading one returns `init()` without storing it.
++//
++// Frame kinds (AD-5.8, Story 9.2). Frames form a parent chain. `runInFrame` opens a unit frame: a child of the active
++// frame, else a root unit. `runInRootFrame` always opens a root unit (production kernels,
++// `interleave`). `runInNarrowFrame` opens a narrow frame that overrides only the slots it declares. A child of a `test`
++// unit keeps only the request, route and CSP nonce slots; its other writes land in the test frame. A child of any
++// other unit keeps its own writes and reads its parent's values until it writes them.
++//
++// End of a unit (AD-5.9). `frameDefer(promise)` adds to the innermost unit's defer list; a unit whose body returns a
++// Promise settles only after the list drains. A sync body that leaves deferred promises throws.
+ //
+ // On load this module installs `globalThis[Symbol.for('xaravel.scope.run')]`, which is `runInFrame` itself, so the
+ // grader opens a test frame without importing the runtime (ESC-4.2-1 item 2). The property is non-writable,
+ // non-configurable and non-enumerable (item 4). `XARAVEL_NO_SCOPE_GLOBAL=1`, read once at load, skips the install.
+ // A property already there with another value throws: a second copy of this module would mean a second store.
+ //
+-// Frame kinds beyond the bare `kind` label, narrow and child frames, the defer list and stream/timer wrapping are
+-// Story 9.2's; overlays and `frameStatic` are Story 9.3's.
++// Stream, async-generator and timer wrapping is in propagate.ts; overlays and `frameStatic` are Story 9.3's.
+ import { AsyncLocalStorage } from "node:async_hooks";
+ import { ScopeFrameException } from "./ScopeFrameException";
+ 
+ /** An active Scope Frame. */
+ export interface Frame {
+-  /** The frame's kind, as passed to `runInFrame` (`test`, `unit`, …). */
++  /** The frame's kind, as passed to `runInFrame`, `runInRootFrame` or `runInNarrowFrame` (`test`, `unit`, …). */
+   readonly kind: string;
+ }
+ 
+ /** A per-frame value: `frameSlot(key, init)`. */
+ export interface FrameSlot<T> {
+-  /** The value in the active frame, initialised with `init()` on first read; `init()` (unstored) outside a frame. */
++  /**
++   * The value seen from the active frame: the nearest frame up the chain that holds the key, else `init()`, stored in
++   * the frame a write would go to; `init()` (unstored) when there is none.
++   */
+   get(): T;
+-  /** Sets the value in the active frame; throws `ScopeFrameException` outside a frame. */
++  /** Sets the value in the frame that owns the key from the active frame; throws `ScopeFrameException` when none does. */
+   set(value: T): void;
+ }
+ 
+ /** A slot key: slots with the same key share storage in a frame. */
+ export type FrameSlotKey = string | symbol;
+ 
++/** The request slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
++export const REQUEST_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.request");
++/** The current route slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
++export const ROUTE_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.route");
++/** The CSP nonce slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
++export const CSP_NONCE_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.csp-nonce");
++
++const CHILD_OF_TEST_SLOTS: ReadonlySet<FrameSlotKey> = new Set<FrameSlotKey>([REQUEST_SLOT, ROUTE_SLOT, CSP_NONCE_SLOT]);
++
+ interface Store {
+   readonly frame: Frame;
+   readonly slots: Map<FrameSlotKey, unknown>;
++  readonly parent: Store | null;
++  readonly type: "unit" | "narrow";
++  /** The declared slots of a narrow frame; null for a unit. */
++  readonly declared: ReadonlySet<FrameSlotKey> | null;
++  /** A unit's defer list; null for a narrow frame. */
++  readonly defers: Promise<unknown>[] | null;
++  ended: boolean;
+ }
+ 
+ const storage = new AsyncLocalStorage<Store>();
+@@ -43,19 +70,65 @@ export function currentFrame(): Frame | null {
+   return storage.getStore()?.frame ?? null;
+ }
+ 
+-/** Runs `fn` in a fresh frame of `kind` and returns its result unchanged (a Promise stays a Promise, AD-6). */
++/**
++ * Runs `fn` in a unit frame of `kind`: a child of the active frame, or a root unit when there is none. A non-Promise
++ * result is returned unchanged (AD-6); a Promise result becomes a Promise that settles with it only after the unit's
++ * defer list has drained (AD-5.9).
++ */
+ export function runInFrame<T>(kind: string, fn: () => T): T {
+-  if (typeof kind !== "string" || kind === "") {
+-    throw new TypeError("runInFrame(): kind must be a non-empty string");
++  checkRun("runInFrame", kind, fn);
++  const current = storage.getStore() ?? null;
++  return runUnit(kind, current, fn);
++}
++
++/** Runs `fn` in a root unit frame of `kind`, which sees no enclosing frame's slots; otherwise as `runInFrame`. */
++export function runInRootFrame<T>(kind: string, fn: () => T): T {
++  checkRun("runInRootFrame", kind, fn);
++  return runUnit(kind, null, fn);
++}
++
++/**
++ * Runs `fn` in a narrow frame of `kind` that overrides only the `slots` it declares; every other read and write
++ * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged.
++ */
++export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>, fn: () => T): T {
++  checkRun("runInNarrowFrame", kind, fn);
++  if (slots === null || typeof slots !== "object" || typeof (slots as Partial<Iterable<FrameSlotKey>>)[Symbol.iterator] !== "function") {
++    throw new TypeError(`runInNarrowFrame(): the ${kind} frame needs an iterable of slot keys`);
+   }
+-  if (typeof fn !== "function") {
+-    throw new TypeError(`runInFrame(): the ${kind} frame needs a function`);
++  const declared = new Set<FrameSlotKey>();
++  for (const key of slots) {
++    if (typeof key !== "string" && typeof key !== "symbol") {
++      throw new TypeError(`runInNarrowFrame(): the ${kind} frame's slot keys must be strings or symbols`);
++    }
++    declared.add(key);
+   }
+-  const store: Store = { frame: Object.freeze({ kind }), slots: new Map() };
++  const store: Store = { frame: Object.freeze({ kind }), slots: new Map(), parent: storage.getStore() ?? null, type: "narrow", declared, defers: null, ended: false };
+   return storage.run(store, fn);
+ }
+ 
+-/** The per-frame value `key`, initialised by `init()` lazily, once per frame. */
++/**
++ * Adds `promise` to the defer list of the innermost unit frame, which ends only after it settles (AD-5.9). Throws
++ * `ScopeFrameException` with no enclosing unit frame, or once that unit has ended.
++ */
++export function frameDefer(promise: PromiseLike<unknown>): void {
++  if ((typeof promise !== "object" && typeof promise !== "function") || promise === null || typeof promise.then !== "function") {
++    throw new TypeError("frameDefer(): promise must be a Promise or thenable");
++  }
++  const unit = nearestUnit(storage.getStore() ?? null);
++  if (unit === null) {
++    throw new ScopeFrameException("Cannot defer a promise with no active unit frame; run the code inside runInFrame()");
++  }
++  if (unit.ended) {
++    throw new ScopeFrameException(`Cannot defer a promise to the ${unit.frame.kind} frame after it has ended`);
++  }
++  const settled = Promise.resolve(promise);
++  // Handled at registration, so a rejection is never unhandled; the drain still sees it.
++  settled.then(noop, noop);
++  (unit.defers as Promise<unknown>[]).push(settled);
++}
++
++/** The per-frame value `key`, initialised by `init()` lazily, once per owning frame. */
+ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
+   if (typeof key !== "string" && typeof key !== "symbol") {
+     throw new TypeError("frameSlot(): key must be a string or a symbol");
+@@ -69,11 +142,13 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
+       if (store === undefined) {
+         return init();
+       }
+-      if (store.slots.has(key)) {
+-        return store.slots.get(key) as T;
++      for (let frame: Store | null = store; frame !== null; frame = frame.parent) {
++        if (frame.slots.has(key)) {
++          return frame.slots.get(key) as T;
++        }
+       }
+       const value = init();
+-      store.slots.set(key, value);
++      ownerOf(store, key)?.slots.set(key, value);
+       return value;
+     },
+     set(value: T): void {
+@@ -81,11 +156,110 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
+       if (store === undefined) {
+         throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} with no active Scope Frame; run the code inside runInFrame()`);
+       }
+-      store.slots.set(key, value);
++      const owner = ownerOf(store, key);
++      if (owner === null) {
++        throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} from the ${store.frame.kind} frame: it does not declare the slot and no unit frame encloses it`);
++      }
++      owner.slots.set(key, value);
+     },
+   });
+ }
+ 
++function noop(): void {}
++
++function checkRun(name: string, kind: unknown, fn: unknown): asserts kind is string {
++  if (typeof kind !== "string" || kind === "") {
++    throw new TypeError(`${name}(): kind must be a non-empty string`);
++  }
++  if (typeof fn !== "function") {
++    throw new TypeError(`${name}(): the ${kind} frame needs a function`);
++  }
++}
++
++/** The nearest unit frame from `store` up the chain (`store` itself included), or null. */
++function nearestUnit(store: Store | null): Store | null {
++  let frame = store;
++  while (frame !== null && frame.type !== "unit") {
++    frame = frame.parent;
++  }
++  return frame;
++}
++
++/** The frame a write of `key` from `store` goes to (Design Notes: owner frame), or null when none takes it. */
++function ownerOf(store: Store, key: FrameSlotKey): Store | null {
++  for (let frame: Store | null = store; frame !== null; frame = frame.parent) {
++    if (frame.type === "narrow") {
++      if (frame.declared?.has(key) === true) {
++        return frame;
++      }
++      continue;
++    }
++    if (nearestUnit(frame.parent)?.frame.kind === "test" && !CHILD_OF_TEST_SLOTS.has(key)) {
++      continue;
++    }
++    return frame;
++  }
++  return null;
++}
++
++function runUnit<T>(kind: string, parent: Store | null, fn: () => T): T {
++  const store: Store = { frame: Object.freeze({ kind }), slots: new Map(), parent, type: "unit", declared: null, defers: [], ended: false };
++  let result: T;
++  try {
++    result = storage.run(store, fn);
++  } catch (error) {
++    store.ended = true;
++    throw error;
++  }
++  if (result instanceof Promise) {
++    // A Promise body's unit ends after its defer list drains; the caller gets a Promise of the same value. Any other
++    // value, a non-native thenable (AD-6.9) included, is returned unchanged and never has its `then` called.
++    return drain(store, result) as T;
++  }
++  store.ended = true;
++  const pending = (store.defers as Promise<unknown>[]).length;
++  if (pending > 0) {
++    throw new ScopeFrameException(`The ${kind} frame's body returned synchronously with ${pending} deferred promise(s) pending; return a promise from the body so the unit can drain its defer list`);
++  }
++  return result;
++}
++
++/**
++ * Awaits the body, then every deferred promise in registration order (a deferred promise may defer more), then ends
++ * the unit. Settles with the body's value; rejects with the body's error, else the first deferred rejection.
++ * Its asyncRoot tag `callback` is AD-6.2's callback clause: it is async only because it awaits the body callback's
++ * promise and the deferred promises, and reaches no Driver-contract IO root. ESC-9.1-4 (decisions/ESC-9.1-4.md,
++ * Maintainer-approved) accepts the `callback` tag, as on `interleave`.
++ * @asyncRoot callback
++ */
++async function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
++  const defers = store.defers as Promise<unknown>[];
++  let failed = false;
++  let failure: unknown = null;
++  let value: unknown = null;
++  try {
++    value = await result;
++  } catch (error) {
++    failed = true;
++    failure = error;
++  }
++  for (let index = 0; index < defers.length; index++) {
++    try {
++      await defers[index];
++    } catch (error) {
++      if (!failed) {
++        failed = true;
++        failure = error;
++      }
++    }
++  }
++  store.ended = true;
++  if (failed) {
++    throw failure;
++  }
++  return value;
++}
++
+ const SCOPE_RUN = Symbol.for("xaravel.scope.run");
+ 
+ function installGlobal(): void {
+diff --git a/packages/runtime/tests/xaravel/frames.test.ts b/packages/runtime/tests/xaravel/frames.test.ts
+new file mode 100644
+index 0000000..addcc2d
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/frames.test.ts
+@@ -0,0 +1,522 @@
++// Xaravel Tests for Story 9.2: frame kinds, the defer list and frame propagation (AD-5.1, AD-5.8, AD-5.9;
++// ESC-8.3-1). One test per acceptance criterion, in order. `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each
++// body starts outside any Scope Frame.
++import { Assert, xaravelTest } from "@xaravel/assert";
++import {
++  bindToFrame,
++  CSP_NONCE_SLOT,
++  currentFrame,
++  type Frame,
++  frameAsyncGenerator,
++  frameDefer,
++  frameSlot,
++  frameStreamSource,
++  interleave,
++  REQUEST_SLOT,
++  ROUTE_SLOT,
++  runInFrame,
++  runInNarrowFrame,
++  runInRootFrame,
++  ScopeFrameException,
++} from "@xaravel/runtime/scope";
++
++/** The value `fn` throws, or null when it returns. */
++function thrownBy(fn: () => unknown): unknown {
++  try {
++    fn();
++  } catch (error) {
++    return error;
++  }
++  return null;
++}
++
++/** The value `promise` rejects with, or null when it fulfils. */
++async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
++  try {
++    await promise;
++  } catch (error) {
++    return error;
++  }
++  return null;
++}
++
++/** Settles after `n` turns of the microtask queue. */
++async function ticks(n: number): Promise<void> {
++  for (let i = 0; i < n; i++) {
++    await Promise.resolve();
++  }
++}
++
++/** A promise that runs `fn` after `ms` milliseconds and settles with its result. */
++function after<T>(ms: number, fn: () => T): Promise<T> {
++  return new Promise<T>((resolve, reject) => {
++    setTimeout(() => {
++      try {
++        resolve(fn());
++      } catch (error) {
++        reject(error);
++      }
++    }, ms);
++  });
++}
++
++xaravelTest(
++  "XT-runtime-5",
++  "a narrow frame that declares slots x and y overrides only those: a read or write of any other slot inside it passes through to the enclosing unit frame (AD-5.8)",
++  async () => {
++    const x = frameSlot<string>("xt-runtime-5.x", () => "init-x");
++    const y = frameSlot<object>("xt-runtime-5.y", () => ({}));
++    const z = frameSlot<string>("xt-runtime-5.z", () => "init-z");
++    const w = frameSlot<string[]>("xt-runtime-5.w", () => []);
++
++    await runInFrame("unit", async () => {
++      const unit = currentFrame();
++      x.set("unit-x");
++      z.set("unit-z");
++      let unitY: object | null = null;
++      const returned = await runInNarrowFrame("transaction", ["xt-runtime-5.x", "xt-runtime-5.y"], async () => {
++        Assert.assertSame("transaction", currentFrame()?.kind);
++        Assert.assertTrue(currentFrame() !== unit, "the narrow frame is its own frame");
++        // Declared: the unit's value until the narrow frame writes its own.
++        Assert.assertSame("unit-x", x.get());
++        x.set("narrow-x");
++        await ticks(2);
++        Assert.assertSame("narrow-x", x.get());
++        unitY = y.get();
++        Assert.assertSame(unitY, y.get(), "a declared slot's init value is stored in the narrow frame");
++        // Undeclared: reads and writes pass through to the unit.
++        Assert.assertSame("unit-z", z.get());
++        z.set("narrow-z");
++        await ticks(2);
++        Assert.assertSame("narrow-z", z.get());
++        w.get().push("from-narrow");
++        return "narrow-done";
++      });
++      Assert.assertSame("narrow-done", returned);
++      Assert.assertSame(unit, currentFrame());
++      Assert.assertSame("unit-x", x.get(), "the narrow frame's write to a declared slot stays in it");
++      Assert.assertTrue(y.get() !== unitY, "a declared slot's init value lives in the narrow frame only");
++      Assert.assertSame("narrow-z", z.get(), "a write to an undeclared slot lands in the unit");
++      Assert.assertSame("from-narrow", w.get().join(","), "an undeclared slot's init value lives in the unit");
++
++      // A sync narrow frame returns its result unchanged; its kind is a label.
++      Assert.assertSame(7, runInNarrowFrame("context-scope", [], () => 7));
++    });
++
++    // With no enclosing unit: a declared slot is the narrow frame's own; any other write throws, a read returns init().
++    Assert.assertNull(currentFrame());
++    runInNarrowFrame("concurrency-task", new Set(["xt-runtime-5.x"]), () => {
++      Assert.assertSame("init-x", x.get());
++      x.set("alone-x");
++      Assert.assertSame("alone-x", x.get());
++      const thrown = thrownBy(() => z.set("alone-z"));
++      Assert.assertInstanceOf(ScopeFrameException, thrown);
++      Assert.assertSame(
++        "Cannot write the frame slot xt-runtime-5.z from the concurrency-task frame: it does not declare the slot and no unit frame encloses it",
++        (thrown as Error).message,
++      );
++      Assert.assertSame("init-z", z.get());
++      Assert.assertTrue(w.get() !== w.get(), "with no owner frame, init() is not stored");
++    });
++    Assert.assertNull(currentFrame());
++
++    Assert.assertInstanceOf(TypeError, thrownBy(() => runInNarrowFrame("transaction", null as unknown as string[], () => 1)));
++    Assert.assertInstanceOf(TypeError, thrownBy(() => runInNarrowFrame("transaction", [1 as unknown as string], () => 1)));
++    Assert.assertInstanceOf(TypeError, thrownBy(() => runInNarrowFrame("", [], () => 1)));
++  },
++);
++
++xaravelTest(
++  "XT-runtime-6",
++  "a child unit opened inside a test frame holds only the request, route and CSP nonce, and its other writes land in the test frame; a child unit inside a non-test frame keeps its own writes; runInRootFrame, and interleave, open a root unit that sees no enclosing frame's slots (AD-5.8)",
++  async () => {
++    const request = frameSlot<string | null>(REQUEST_SLOT, () => null);
++    const route = frameSlot<string | null>(ROUTE_SLOT, () => null);
++    const nonce = frameSlot<string | null>(CSP_NONCE_SLOT, () => null);
++    const auth = frameSlot<string | null>("xt-runtime-6.auth", () => null);
++    const session = frameSlot<Map<string, string>>("xt-runtime-6.session", () => new Map());
++
++    Assert.assertSame(Symbol.for("xaravel.scope.slot.request"), REQUEST_SLOT);
++    Assert.assertSame(Symbol.for("xaravel.scope.slot.route"), ROUTE_SLOT);
++    Assert.assertSame(Symbol.for("xaravel.scope.slot.csp-nonce"), CSP_NONCE_SLOT);
++
++    // Child of a test frame (the embedded kernel of this.get()).
++    await runInFrame("test", async () => {
++      const test = currentFrame();
++      request.set("test-request");
++      auth.set("guest");
++      const result = await runInFrame("unit", async () => {
++        Assert.assertSame("unit", currentFrame()?.kind);
++        Assert.assertTrue(currentFrame() !== test, "the child is its own frame");
++        Assert.assertSame("test-request", request.get(), "the child reads the test frame's request until it sets its own");
++        Assert.assertSame("guest", auth.get());
++        request.set("child-request");
++        route.set("child-route");
++        nonce.set("child-nonce");
++        auth.set("user-1");
++        session.get().set("flash", "saved");
++        await ticks(3);
++        Assert.assertSame("child-request", request.get());
++        Assert.assertSame("user-1", auth.get());
++        return "response";
++      });
++      Assert.assertSame("response", result);
++      Assert.assertSame(test, currentFrame());
++      Assert.assertSame("user-1", auth.get(), "auth lands in the test frame");
++      Assert.assertSame("saved", session.get().get("flash") ?? null, "the session's init value lives in the test frame");
++      Assert.assertSame("test-request", request.get(), "the test frame's request is unchanged");
++      Assert.assertNull(route.get(), "the route stays in the child");
++      Assert.assertNull(nonce.get(), "the CSP nonce stays in the child");
++    });
++
++    // Child of a non-test frame: its own writes stay in it; it reads the parent's values it has not written.
++    for (const kind of ["unit", "job"]) {
++      runInFrame(kind, () => {
++        auth.set("parent");
++        request.set("parent-request");
++        runInFrame("unit", () => {
++          Assert.assertSame("parent", auth.get());
++          auth.set("child");
++          request.set("child-request");
++          Assert.assertSame("child", auth.get());
++          Assert.assertSame("child-request", request.get());
++          session.get().set("k", "child");
++        });
++        Assert.assertSame("parent", auth.get(), `the ${kind} parent reads its own value`);
++        Assert.assertSame("parent-request", request.get());
++        Assert.assertSame(null, session.get().get("k") ?? null, "the child's init value stays in the child");
++      });
++    }
++
++    // A root frame inside a test frame sees none of its slots, and its writes stay in it; interleave opens root frames.
++    await runInFrame("test", async () => {
++      auth.set("test-user");
++      request.set("test-request");
++      runInRootFrame("unit", () => {
++        Assert.assertSame("unit", currentFrame()?.kind);
++        Assert.assertNull(auth.get());
++        Assert.assertNull(request.get());
++        auth.set("root-user");
++        Assert.assertSame("root-user", auth.get());
++      });
++      const seen = await interleave([
++        async () => {
++          await ticks(1);
++          const value = auth.get();
++          auth.set("unit-a");
++          return value;
++        },
++        async () => {
++          await ticks(1);
++          const value = request.get();
++          request.set("unit-b");
++          return value;
++        },
++      ]);
++      Assert.assertSame("null,null", seen.map(String).join(","));
++      Assert.assertSame("test-user", auth.get());
++      Assert.assertSame("test-request", request.get());
++    });
++    Assert.assertInstanceOf(TypeError, thrownBy(() => runInRootFrame("unit", null as unknown as () => void)));
++  },
++);
++
++xaravelTest(
++  "XT-runtime-7",
++  "a unit whose defer list holds pending Promises ends only after every deferred Promise settles, and deferring with no active unit frame, or after the unit ended, throws (AD-5.9)",
++  async () => {
++    // Deferred promises that settle after the body returns, one deferring another; the root frame drains too.
++    for (const open of [runInFrame, runInRootFrame]) {
++      const log: string[] = [];
++      const value = await open("unit", async () => {
++        frameDefer(
++          after(5, () => {
++            log.push("d1");
++            frameDefer(after(5, () => log.push("d2")));
++          }),
++        );
++        await ticks(1);
++        log.push("body");
++        return "value";
++      });
++      log.push("end");
++      Assert.assertSame("value", value);
++      Assert.assertSame("body,d1,d2,end", log.join(","));
++    }
++
++    // A narrow frame defers to its unit.
++    const narrowLog: string[] = [];
++    await runInFrame("unit", async () => {
++      runInNarrowFrame("transaction", [], () => {
++        frameDefer(after(5, () => narrowLog.push("deferred")));
++      });
++      return null;
++    });
++    narrowLog.push("end");
++    Assert.assertSame("deferred,end", narrowLog.join(","));
++
++    // The body's rejection wins, after the drain.
++    const e0 = new Error("body");
++    const e1 = new Error("deferred 1");
++    const e2 = new Error("deferred 2");
++    const drained: string[] = [];
++    Assert.assertSame(
++      e0,
++      await rejectionOf(
++        runInFrame("unit", async () => {
++          frameDefer(
++            after(5, () => {
++              drained.push("d1");
++              throw e1;
++            }),
++          );
++          throw e0;
++        }),
++      ),
++    );
++    Assert.assertSame("d1", drained.join(","), "the body's rejection waits for the drain");
++
++    // Else the first deferred rejection in registration order, not in time; each is handled at registration.
++    Assert.assertSame(
++      e1,
++      await rejectionOf(
++        runInFrame("unit", async () => {
++          frameDefer(
++            after(10, () => {
++              throw e1;
++            }),
++          );
++          frameDefer(Promise.reject(e2));
++          frameDefer({ then: (resolve: (value: string) => void) => resolve("thenable") } as unknown as PromiseLike<string>);
++          return "value";
++        }),
++      ),
++    );
++
++    // A sync body that leaves deferred promises throws; one that leaves none stays sync.
++    const sync = thrownBy(() =>
++      runInFrame("job", () => {
++        frameDefer(Promise.resolve());
++        return 1;
++      }),
++    );
++    Assert.assertInstanceOf(ScopeFrameException, sync);
++    Assert.assertSame(
++      "The job frame's body returned synchronously with 1 deferred promise(s) pending; return a promise from the body so the unit can drain its defer list",
++      (sync as Error).message,
++    );
++    Assert.assertSame(2, runInFrame("unit", () => 2));
++
++    // No frame, or a unit that has ended.
++    Assert.assertNull(currentFrame());
++    const outside = thrownBy(() => frameDefer(Promise.resolve()));
++    Assert.assertInstanceOf(ScopeFrameException, outside);
++    Assert.assertSame("Cannot defer a promise with no active unit frame; run the code inside runInFrame()", (outside as Error).message);
++    Assert.assertInstanceOf(
++      ScopeFrameException,
++      thrownBy(() => runInNarrowFrame("transaction", [], () => frameDefer(Promise.resolve()))),
++    );
++    const endedMessage = "Cannot defer a promise to the unit frame after it has ended";
++    // A sync unit: a continuation of the unit runs after it returned.
++    let late: unknown = null;
++    runInFrame("unit", () => {
++      void ticks(2).then(() => {
++        late = thrownBy(() => frameDefer(Promise.resolve()));
++      });
++    });
++    await ticks(4);
++    Assert.assertInstanceOf(ScopeFrameException, late);
++    Assert.assertSame(endedMessage, (late as Error).message);
++    // An async unit: a callback captured in it runs, in its frame, after the unit's promise settled.
++    const asyncGate = Promise.withResolvers<void>();
++    let asyncLate: unknown = null;
++    let asyncLateRan = false;
++    await runInFrame("unit", async () => {
++      void asyncGate.promise.then(() => {
++        asyncLateRan = true;
++        asyncLate = thrownBy(() => frameDefer(Promise.resolve()));
++      });
++      await ticks(1);
++      return null;
++    });
++    asyncGate.resolve();
++    await ticks(2);
++    Assert.assertTrue(asyncLateRan, "the captured callback ran after the async unit settled");
++    Assert.assertInstanceOf(ScopeFrameException, asyncLate);
++    Assert.assertSame(endedMessage, (asyncLate as Error).message);
++    // A unit whose sync body throws has ended too.
++    const throwGate = Promise.withResolvers<void>();
++    let throwLate: unknown = null;
++    const bodyError = new Error("sync body failed");
++    Assert.assertSame(
++      bodyError,
++      thrownBy(() =>
++        runInFrame("unit", () => {
++          void throwGate.promise.then(() => {
++            throwLate = thrownBy(() => frameDefer(Promise.resolve()));
++          });
++          throw bodyError;
++        }),
++      ),
++    );
++    throwGate.resolve();
++    await ticks(2);
++    Assert.assertInstanceOf(ScopeFrameException, throwLate);
++    Assert.assertSame(endedMessage, (throwLate as Error).message);
++    Assert.assertInstanceOf(TypeError, thrownBy(() => frameDefer(42 as unknown as Promise<unknown>)));
++  },
++);
++
++xaravelTest(
++  "XT-runtime-8",
++  "a stream body, an async-generator body, a type: \"direct\" stream or a timer created in a frame through the runtime's wrappers sees that frame when it later runs, through AsyncLocalStorage bind/snapshot (AD-5.1)",
++  async () => {
++    const seen: Record<string, Frame | null> = {};
++    let creator: Frame | null = null;
++    let timerDone: Promise<void> = Promise.resolve();
++    let defaultStream: ReadableStream<string> | null = null;
++    let directStream: ReadableStream<string> | null = null;
++    let generator: AsyncGenerator<string, void, undefined> | null = null;
++    let boundThis: unknown = null;
++    let sourceThis: boolean | null = null;
++    let defaultSourceRef: object | null = null;
++    let cancelStream: ReadableStream<string> | null = null;
++
++    runInFrame("unit", () => {
++      creator = currentFrame();
++      timerDone = new Promise<void>((done) => {
++        setTimeout(
++          bindToFrame(() => {
++            seen["timer"] = currentFrame();
++            done();
++          }),
++          5,
++        );
++      });
++      const defaultSource = {
++        async pull(controller: ReadableStreamDefaultController<string>): Promise<void> {
++          await Bun.sleep(1);
++          seen["stream"] = currentFrame();
++          sourceThis = this === defaultSourceRef;
++          controller.enqueue("stream");
++          controller.close();
++        },
++      };
++      defaultSourceRef = defaultSource;
++      cancelStream = new ReadableStream<string>(
++        frameStreamSource({
++          start(): void {
++            seen["start"] = currentFrame();
++          },
++          cancel(): void {
++            seen["cancel"] = currentFrame();
++          },
++        }),
++      );
++      defaultStream = new ReadableStream<string>(frameStreamSource(defaultSource));
++      directStream = new ReadableStream<string>(
++        frameStreamSource({
++          type: "direct" as const,
++          pull(controller: { write: (chunk: string) => unknown; close: () => unknown }): void {
++            seen["direct"] = currentFrame();
++            controller.write("direct");
++            controller.close();
++          },
++        }),
++      );
++      generator = frameAsyncGenerator(
++        (async function* (): AsyncGenerator<string, void, undefined> {
++          await Bun.sleep(1);
++          seen["generator"] = currentFrame();
++          yield "generator";
++          seen["generator-end"] = currentFrame();
++        })(),
++      );
++      const target = { name: "target" };
++      boundThis = bindToFrame(function (this: unknown): unknown {
++        return this;
++      }).call(target);
++      Assert.assertSame(target, boundThis, "bindToFrame keeps this");
++    });
++
++    // Every body runs after its frame returned, from outside any frame.
++    Assert.assertNull(currentFrame());
++    Assert.assertNotNull(creator);
++    await timerDone;
++    Assert.assertSame("stream", await new Response(defaultStream as unknown as ReadableStream<string>).text());
++    Assert.assertSame(true, sourceThis, "a wrapped source method runs with the original source as this");
++    Assert.assertSame("direct", await new Response(directStream as unknown as ReadableStream<string>).text());
++    Assert.assertSame("generator", await new Response(generator as unknown as ReadableStream<string>).text());
++    await (cancelStream as unknown as ReadableStream<string>).cancel("done");
++    for (const point of ["timer", "start", "stream", "cancel", "direct", "generator", "generator-end"]) {
++      Assert.assertSame(creator, seen[point] ?? null, `the ${point} body sees the creating frame`);
++    }
++
++    // for await, return() and throw() run in the creating frame too.
++    const steps: Array<Frame | null> = [];
++    const ownFrame = await runInFrame("job", async () => {
++      const frame = currentFrame();
++      const wrapped = frameAsyncGenerator(
++        (async function* (): AsyncGenerator<number, string, undefined> {
++          try {
++            steps.push(currentFrame());
++            yield 1;
++            steps.push(currentFrame());
++            yield 2;
++          } finally {
++            steps.push(currentFrame());
++          }
++          return "never";
++        })(),
++      );
++      return { frame, wrapped };
++    });
++    for await (const step of ownFrame.wrapped) {
++      Assert.assertSame(1, step);
++      break;
++    }
++    Assert.assertSame(2, steps.length);
++    for (const frame of steps) {
++      Assert.assertSame(ownFrame.frame, frame);
++    }
++    const thrown = frameAsyncGenerator(
++      (async function* (): AsyncGenerator<number, void, undefined> {
++        yield 1;
++      })(),
++    );
++    const failure = new Error("thrown in");
++    Assert.assertSame(failure, await rejectionOf(thrown.throw(failure)));
++
++    // throw() into a started generator paused at a yield: its catch runs in the creating frame.
++    let caughtIn: Frame | null = null;
++    let caughtError: unknown = null;
++    const paused = await runInFrame("job", async () => {
++      const frame = currentFrame();
++      const wrapped = frameAsyncGenerator(
++        (async function* (): AsyncGenerator<number, string, undefined> {
++          try {
++            yield 1;
++          } catch (error) {
++            caughtIn = currentFrame();
++            caughtError = error;
++          }
++          return "caught";
++        })(),
++      );
++      Assert.assertSame(1, (await wrapped.next()).value);
++      return { frame, wrapped };
++    });
++    Assert.assertNull(currentFrame());
++    const resumed = await paused.wrapped.throw(failure);
++    Assert.assertSame("caught", resumed.value);
++    Assert.assertSame(failure, caughtError);
++    Assert.assertSame(paused.frame, caughtIn, "the catch block sees the creating frame");
++
++    // Created outside any frame, a wrapper runs outside any frame, wherever it is called.
++    const unbound = bindToFrame(() => currentFrame());
++    Assert.assertNull(runInFrame("unit", () => unbound()));
++    Assert.assertInstanceOf(TypeError, thrownBy(() => bindToFrame(null as unknown as () => void)));
++    Assert.assertInstanceOf(TypeError, thrownBy(() => frameStreamSource(null as unknown as object)));
++    Assert.assertInstanceOf(TypeError, thrownBy(() => frameAsyncGenerator({} as unknown as AsyncGenerator)));
++  },
++);
+diff --git a/packages/runtime/tests/xaravel/scope.test.ts b/packages/runtime/tests/xaravel/scope.test.ts
+index 57e7b60..e950631 100644
+--- a/packages/runtime/tests/xaravel/scope.test.ts
++++ b/packages/runtime/tests/xaravel/scope.test.ts
+@@ -1,12 +1,13 @@
+ // Xaravel Tests for Story 9.1: the Scope Frame primitive and `interleave` (AD-5, AD-6, AD-9, AD-10, NFR-4;
+-// ESC-4.2-1, ESC-9.1-1, ESC-9.1-2). One test per acceptance criterion, in order. `xaravelTest` opens no frame
++// ESC-4.2-1, ESC-9.1-1, ESC-9.1-2), as Story 9.2 extends it (frame kinds and the defer drain; its own tests are in
++// frames.test.ts). One test per acceptance criterion, in order. `xaravelTest` opens no frame
+ // (ESC-4.2-1 item 7), so each body starts outside any Scope Frame.
+ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+ import { tmpdir } from "node:os";
+ import { join, resolve } from "node:path";
+ import { Assert, xaravelTest } from "@xaravel/assert";
+ import * as scope from "@xaravel/runtime/scope";
+-import { currentFrame, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
++import { currentFrame, frameDefer, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
+ import * as root from "../../src/index";
+ import { fqcn, registerClass } from "../../src/registry/registry";
+ 
+@@ -58,10 +59,15 @@ xaravelTest(
+   "XT-runtime-1",
+   "@xaravel/runtime/scope exports currentFrame(), runInFrame(kind, fn) and frameSlot(key, init) and installs globalThis[Symbol.for('xaravel.scope.run')] on load, which the grader calls without importing anything (AD-5.1)",
+   async () => {
+-    for (const name of ["currentFrame", "runInFrame", "frameSlot", "interleave", "ScopeFrameException"] as const) {
++    const functions = ["currentFrame", "runInFrame", "runInRootFrame", "runInNarrowFrame", "frameSlot", "frameDefer", "bindToFrame", "frameStreamSource", "frameAsyncGenerator", "interleave", "ScopeFrameException"] as const;
++    for (const name of functions) {
+       Assert.assertSame("function", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
+       Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);
+     }
++    for (const name of ["REQUEST_SLOT", "ROUTE_SLOT", "CSP_NONCE_SLOT"] as const) {
++      Assert.assertSame("symbol", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
++      Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);
++    }
+     const manifest = JSON.parse(readFileSync(resolve(PACKAGE_DIR, "package.json"), "utf8")) as { exports: Record<string, string> };
+     Assert.assertSame("./src/scope/index.ts", manifest.exports["./scope"]);
+ 
+@@ -76,7 +82,19 @@ xaravelTest(
+     // No frame read: null, never undefined (AD-9).
+     Assert.assertNull(currentFrame());
+ 
+-    // Grader call: run('test', inner) returns inner's own promise, with the test frame active across every await.
++    // Grader call. The recorded decision is decisions/ESC-4.2-1.md (decision: approved, decided_by: Maintainer,
++    // 2026-10-18), which reads: "Every item is approved exactly as the Escalation's `proposed` text states: - **(1)-(3)**
++    // The reporter, scope and case contracts are adopted. Stories 5.3, 9.1 and 57 build to them." The adopted item (2)
++    // in conformance/escalations/ESC-4.2-1.md reads: "(2) Scope call shape, for Story 9.1. When
++    // `globalThis[Symbol.for('xaravel.scope.run')]` is a function, `portedTest` calls it as `run('test', inner)` and
++    // awaits its result; `inner` returns a promise and must run with the `test` frame active for its whole duration
++    // (case construction, `setUp`, body, `tearDown`), mirroring AD-5's `runInFrame(kind, fn)`." It does not require run
++    // to return inner's own promise. AD-5.9 ("A unit ends only after ... the frame's `defer` list has drained") makes
++    // run return a promise that settles with inner's value after inner, and after every promise inner deferred. The
++    // two reads below check both quotations against the files, so the citation cannot drift from the record.
++    const flat = (path: string): string => readFileSync(resolve(REPO_ROOT, path), "utf8").replace(/\s+/g, " ");
++    Assert.assertStringContainsString("The reporter, scope and case contracts are adopted.", flat("decisions/ESC-4.2-1.md"));
++    Assert.assertStringContainsString("`portedTest` calls it as `run('test', inner)` and awaits its result;", flat("conformance/escalations/ESC-4.2-1.md"));
+     const run = (globalThis as Record<symbol, unknown>)[SCOPE_RUN] as <T>(kind: string, fn: () => T) => T;
+     const kinds: Array<string | null> = [];
+     const inner = async (): Promise<string> => {
+@@ -85,15 +103,36 @@ xaravelTest(
+       kinds.push(currentFrame()?.kind ?? null);
+       await new Promise((done) => setTimeout(done, 1));
+       kinds.push(currentFrame()?.kind ?? null);
++      frameDefer(
++        new Promise<void>((done) =>
++          setTimeout(() => {
++            deferredSettled = true;
++            done();
++          }, 5),
++        ),
++      );
+       return "done";
+     };
+-    let innerPromise: Promise<string> | null = null;
++    let deferredSettled = false;
++    let innerSettled = false;
+     const returned = run("test", () => {
+-      innerPromise = inner();
++      const innerPromise = inner();
++      void innerPromise.then(() => {
++        innerSettled = true;
++      });
+       return innerPromise;
+     });
+-    Assert.assertSame(innerPromise, returned, "run returns inner's promise unchanged");
+-    Assert.assertSame("done", await returned);
++    Assert.assertTrue(returned instanceof Promise, "run returns a promise");
++    let settledFirst: boolean | null = null;
++    let deferredFirst: boolean | null = null;
++    const value = await returned.then((done) => {
++      settledFirst = innerSettled;
++      deferredFirst = deferredSettled;
++      return done;
++    });
++    Assert.assertSame("done", value);
++    Assert.assertSame(true, settledFirst, "run's promise settles after inner's");
++    Assert.assertSame(true, deferredFirst, "run's promise settles after the promise inner deferred");
+     Assert.assertSame("test,test,test", kinds.join(","));
+     Assert.assertNull(currentFrame());
+ 
