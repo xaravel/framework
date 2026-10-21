@@ -55,9 +55,9 @@
 # instead of skipping (Epic 2 retro R5); oracle-fixtures.test.ts and
 # oracle-story.test.ts also fail on a PHP other than 8.5.11, one without
 # pcntl, or a missing install, and oracle-extract.test.ts needs only php on
-# PATH. setup-php takes only major.minor, so a newer 8.5 patch on the runner
-# fails these tests until PHP_VERSION in tools/oracle/oracle.ts moves. It is its own job
-# because ubuntu-latest's PHP 8.3 cannot run PHPUnit 13. It is advisory
+# PATH. It runs in the Oracle image's own PHP base image, pinned by digest, so
+# its PHP is exactly PHP_VERSION in tools/oracle/oracle.ts (ESC-9.3-1); the
+# two move together. It is advisory
 # until it is added to the required checks in .github/rulesets/main.json. All
 # jobs also run in the merge queue (`merge_group`), so the queue never stalls
 # on a required check. The Ratchet runs in ratchet.yml (Stories 5.6 and 5.7:
@@ -238,7 +238,24 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    # The Oracle image's own PHP base (conformance/oracle/Dockerfile), so the
+    # real-PHP tests run on exactly PHP_VERSION, never the runner's newer 8.5
+    # patch (ESC-9.3-1).
+    container:
+      image: php:8.5.11-cli-trixie@sha256:01a109229f4465bc9ef042d9198f09a4d9da7775a825dbd8572dcdbd8756c4d3
+    env:
+      COMPOSER_ALLOW_SUPERUSER: '1'
     steps:
+      - name: Install git, pcntl and Composer
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends git unzip $PHPIZE_DEPS
+          docker-php-ext-install pcntl
+          curl -fsSLo /usr/local/bin/composer https://getcomposer.org/download/2.10.3/composer.phar
+          echo "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6  /usr/local/bin/composer" | sha256sum -c -
+          chmod +x /usr/local/bin/composer
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -249,11 +266,6 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
-      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
-        with:
-          php-version: '8.5'
-          extensions: dom, mbstring, pcntl, tokenizer, xml
-          coverage: none
       - name: Install the PHP fixtures
         run: bun run php-fixtures:install
       - name: Sync the Upstream snapshot
