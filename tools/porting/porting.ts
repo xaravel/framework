@@ -17,6 +17,14 @@
 //   - Its `##` headings, outside code fences, are exactly REQUIRED_SECTIONS in
 //     that order (`PORTING.md: missing section "## <name>"`, or
 //     `PORTING.md: unexpected section "## <name>"`).
+//   - SECTION_CONTENT: each of `## Idiom table`, `## Test-adaptation rules`,
+//     `## Mechanical expression rule`, `## By-reference parameters` and
+//     `## Exceptions` that is present holds, from its heading to the next
+//     `#`/`##` heading and outside code fences, at least one line of its kind
+//     (a table data row, a `- ` rule line, or a prose line) and its anchor
+//     phrase (`PORTING.md: section "<h>" has no <table row|rule line|prose
+//     line>`, `PORTING.md: section "<h>" lacks "<anchor>"`). A missing section
+//     is reported only as `missing section`.
 //   - Every row of the spine's AD-26 table (the first cell of each row under
 //     `### AD-26`) has a row in the `## Construct mapping (AD-26)` table with a
 //     character-identical first cell and the last cell `decided`
@@ -67,6 +75,23 @@ export const REQUIRED_SECTIONS = [
   "## PCRE conversion (DIV-10)",
   "## DIV-12 pair list",
 ] as const;
+
+/** The kind of content line a section is written in. */
+export type SectionContentKind = "table" | "rule" | "prose";
+
+/**
+ * Per-section content rule (Epic 8 retro S5): each section must hold at least
+ * one line of its kind and its anchor phrase, both outside code fences.
+ */
+export const SECTION_CONTENT: Readonly<Record<string, { kind: SectionContentKind; anchor: string }>> = {
+  "## Idiom table": { kind: "table", anchor: "The parity rule" },
+  "## Test-adaptation rules": { kind: "rule", anchor: "Never weaken an expected value" },
+  "## Mechanical expression rule": { kind: "table", anchor: "syntax-directed" },
+  "## By-reference parameters": { kind: "prose", anchor: "`Ref<T>`" },
+  "## Exceptions": { kind: "rule", anchor: "`registerClass('<FQCN>', X)`" },
+};
+
+const KIND_NAMES: Readonly<Record<SectionContentKind, string>> = { table: "table row", rule: "rule line", prose: "prose line" };
 
 /** AD-7's Model configuration properties (spine AD-7, "Configuration properties"), without `casts`, which AD-7 makes an option pair. */
 export const AD7_CONFIGURATION: ReadonlySet<string> = new Set([
@@ -232,6 +257,53 @@ function headings(lines: readonly string[]): { text: string; index: number }[] {
     }
   });
   return found;
+}
+
+const FENCE = /^\s*(```|~~~)/;
+
+/** The lines of the section whose heading is at `start`, up to the next `#`/`##` heading, with code-fence lines and their contents dropped. */
+function sectionBody(lines: readonly string[], start: number): string[] {
+  const body: string[] = [];
+  let fence = false;
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (FENCE.test(line)) {
+      fence = !fence;
+      continue;
+    }
+    if (fence) {
+      continue;
+    }
+    if (/^#{1,2} /.test(line)) {
+      break;
+    }
+    body.push(line);
+  }
+  return body;
+}
+
+/** The number of lines of `kind` in a fence-free section body. */
+function countKind(body: readonly string[], kind: SectionContentKind): number {
+  let count = 0;
+  body.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (kind === "rule") {
+      count += trimmed.startsWith("- ") ? 1 : 0;
+      return;
+    }
+    const cells = tableCells(line);
+    if (kind === "table") {
+      if (cells === null || isSeparator(cells)) {
+        return;
+      }
+      // A row followed by a separator row is its table's header.
+      const next = index + 1 < body.length ? tableCells(body[index + 1]!) : null;
+      count += next !== null && isSeparator(next) ? 0 : 1;
+      return;
+    }
+    count += trimmed !== "" && cells === null && !/^([-*+]|\d+[.)])\s/.test(trimmed) && !trimmed.startsWith("#") ? 1 : 0;
+  });
+  return count;
 }
 
 interface Request {
@@ -451,6 +523,21 @@ export function checkPorting(root: string): PortingReport {
         violations.push(`${PORTING_FILE}: duplicate section "${heading.text}"`);
       }
       counted.add(heading.text);
+    }
+
+    // Section content: a line of the section's kind and its anchor, outside code fences.
+    for (const [section, rule] of Object.entries(SECTION_CONTENT)) {
+      const start = located.get(section);
+      if (start === undefined) {
+        continue;
+      }
+      const body = sectionBody(lines, start);
+      if (countKind(body, rule.kind) === 0) {
+        violations.push(`${PORTING_FILE}: section "${section}" has no ${KIND_NAMES[rule.kind]}`);
+      }
+      if (!body.join("\n").includes(rule.anchor)) {
+        violations.push(`${PORTING_FILE}: section "${section}" lacks "${rule.anchor}"`);
+      }
     }
 
     // The construct table: rows from the AD-26 section to the next heading.
