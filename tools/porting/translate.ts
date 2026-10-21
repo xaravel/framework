@@ -15,7 +15,12 @@
 // adaptation under a DIV clause, applied after this rule. Anything outside
 // the rule table throws `UntranslatableExpression`, whose message names the
 // construct, so a translation is either the rule's output or a failure,
-// never a guess.
+// never a guess. Arithmetic, bitwise and `< > <= >=` operators are kept
+// unchanged, so the rule also refuses the operands it can see break that:
+// a string literal, interpolation, concatenation or `(string)` cast under an
+// arithmetic or bitwise operator, a float literal under `%`, a string
+// compared with a number, boolean or null literal, and two numeric string
+// literals compared (`refuseOperands`).
 //
 // Exit codes: 0 printed, 1 untranslatable or any failure, 2 usage error.
 import { ScanError, tokenize, type Token } from "../scans/php";
@@ -1183,7 +1188,61 @@ function nullsafe(node: Node, blade: boolean): Code {
   return emit(node, blade);
 }
 
+/** A node that is a string in PHP by syntax alone: a string literal, an interpolated string, a concatenation or a `(string)`/`(binary)` cast. */
+function isStringOperand(node: Node): boolean {
+  return node.t === "str" || node.t === "interp" || node.t === "concat" || (node.t === "cast" && node.fn === "toPhpString");
+}
+
+/** A `num` node, optionally under unary `-`/`+`. */
+function isNumberLiteral(node: Node): boolean {
+  return node.t === "num" || (node.t === "unary" && (node.op === "-" || node.op === "+") && isNumberLiteral(node.operand));
+}
+
+/** A number literal whose PHP type is float. */
+function isFloatLiteral(node: Node): boolean {
+  if (node.t === "num") {
+    return node.int === null;
+  }
+  return node.t === "unary" && (node.op === "-" || node.op === "+") && isFloatLiteral(node.operand);
+}
+
+/** PHP 8 `is_numeric` on a string: optional leading whitespace, sign, digits with optional `.` and exponent, optional trailing whitespace. */
+function isPhpNumericString(value: string): boolean {
+  return /^[ \t\n\r\v\f]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[ \t\n\r\v\f]*$/.test(value);
+}
+
+const ARITHMETIC_OPS = new Set(["+", "-", "*", "/", "%", "**", "&", "|", "^", "<<", ">>"]);
+const RELATIONAL_OPS = new Set(["<", ">", "<=", ">="]);
+
+/**
+ * Throws for a binary operator whose operands are visibly of a type for which
+ * the unchanged JavaScript operator gives a different result from PHP's.
+ * Only literal and cast operands are inspected, never variables or calls.
+ */
+function refuseOperands(op: string, left: Node, right: Node): void {
+  if (ARITHMETIC_OPS.has(op)) {
+    if (isStringOperand(left) || isStringOperand(right)) {
+      throw new UntranslatableExpression(`string operand of \`${op}\``);
+    }
+    if (op === "%" && (isFloatLiteral(left) || isFloatLiteral(right))) {
+      throw new UntranslatableExpression("float operand of `%`");
+    }
+    return;
+  }
+  if (!RELATIONAL_OPS.has(op)) {
+    return;
+  }
+  const nonString = (node: Node): boolean => isNumberLiteral(node) || node.t === "bool" || node.t === "null";
+  if ((isStringOperand(left) && nonString(right)) || (isStringOperand(right) && nonString(left))) {
+    throw new UntranslatableExpression("comparison of a string with a non-string literal");
+  }
+  if (left.t === "str" && right.t === "str" && isPhpNumericString(left.value) && isPhpNumericString(right.value)) {
+    throw new UntranslatableExpression("comparison of two numeric strings");
+  }
+}
+
 function emitBinary(op: string, left: Node, right: Node, blade: boolean): Code {
+  refuseOperands(op, left, right);
   let l = emit(left, blade);
   const r = emit(right, blade);
   if (op === "==") {
