@@ -4,7 +4,7 @@
 //   bun conformance/probes/probes.ts run [--json] [--root <dir>]
 //       (`bun run probes:run`) runs every probe in PROBES on this Bun and
 //       prints `<id>: <status>: <evidence>` per probe (or, with --json, one
-//       JSON object of `{ "<id>": { "status", "evidence" } }`). Exit 0, or 1
+//       JSON object of `{ "<id>": { "status", "evidence", "workaround" } }`). Exit 0, or 1
 //       when the running Bun is not the `.bun-version` pin.
 //   bun conformance/probes/probes.ts check [--require-backends] [--root <dir>]
 //       (`bun run probes:check`) re-runs the probes and compares them with
@@ -26,7 +26,10 @@
 // reads only its XARAVEL_PROBE_* variable (PROBE_ENV) and returns `not-run`
 // when it is unset; it never falls back to a default host. A probe that
 // throws, or runs past PROBE_TIMEOUT_MS, is `unsupported` with the error as
-// evidence. The `bun test` probes run committed `*.probe.ts` fixtures (never
+// evidence. A probe may declare a `workaround` (the AD-5 or ESC-8.3
+// workaround an unsupported result rests on); its live result then carries the workaround's
+// outcome (`true` restores, `false` fails, `null` not tried, which includes a
+// probe that threw or timed out), and `run --json` prints it. The `bun test` probes run committed `*.probe.ts` fixtures (never
 // `*.test.ts`, so `bun run test` never collects them) in a `bun test`
 // subprocess and read its junit report; the fixtures are found next to this
 // file, not under `--root`.
@@ -38,9 +41,16 @@
 //   - `<id>: not run (<VARIABLE> unset)`, under --require-backends only;
 //   - `<id>: unsupported with no Escalation` (escalation null, or its file
 //     conformance/escalations/<ESC>.md missing);
+//   - `<id>: unsupported and its workaround (<workaround>) does not hold:
+//     <evidence>` (a probe with a workaround is live unsupported and its
+//     workaround outcome is not `true`; fails closed on `null`);
 //   - `<id>: <ESC> ...` for an Escalation that does not parse, whose
 //     `test_ids` lack XT-conformance-156, or whose `proposed` names neither
 //     `deferred:` nor `workaround`;
+//   - `<id>: <ESC> has no decision (decisions/<ESC>.md does not exist)` or
+//     `(decisions/<ESC>.md does not decide it)` (the decision is invalid,
+//     stale, or for another id): an unsupported probe's Escalation must be
+//     ruled;
 //   - `<id>: supported but names Escalation <ESC>`;
 //   - `running Bun <Bun.version>, .bun-version <pin>` (the Bun running the
 //     probes is not the pinned one; `run` reports it too and exits 1, and
@@ -56,7 +66,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { deflateSync, inflateSync } from "node:zlib";
 import { UsageError } from "../../tools/expectations/expectations";
-import { parseEscalation } from "../../tools/escalations/escalations";
+import { decisionStatus, parseEscalation } from "../../tools/escalations/escalations";
 
 export const RESULTS_FILE = "conformance/probes/results.json";
 export const REPORT_FILE = "conformance/probes/REPORT.md";
@@ -88,6 +98,15 @@ export type Env = Readonly<Record<string, string | undefined>>;
 export interface LiveResult {
   readonly status: ProbeStatus;
   readonly evidence: string;
+  /** Whether the probe's workaround restored what the plain run lacked: `true` restores, `false` fails, `null` not tried (no workaround, supported, not-run, threw or timed out). */
+  readonly workaround: boolean | null;
+}
+
+/** What a probe's `run` returns; `workaround` is the workaround's outcome when it was tried (absent means not tried). */
+export interface ProbeOutcome {
+  readonly supported: boolean;
+  readonly evidence: string;
+  readonly workaround?: boolean | null;
 }
 
 export interface Probe {
@@ -97,8 +116,10 @@ export interface Probe {
   readonly checks: string;
   /** The XARAVEL_PROBE_* variable a backend probe needs, or null. */
   readonly backend: string | null;
+  /** The workaround an unsupported result rests on (AD-5's bind/snapshot wrapping, or an ESC-8.3 ruling), or null; `check` requires it to hold while the probe is unsupported. */
+  readonly workaround: string | null;
   /** Runs the probe; `value` is the backend variable's value (`""` for a backend-free probe). */
-  readonly run: (value: string) => Promise<{ supported: boolean; evidence: string }>;
+  readonly run: (value: string) => Promise<ProbeOutcome>;
 }
 
 export interface RecordEntry {
@@ -781,14 +802,14 @@ async function serveOnce(scenario: Scenario, wrap: boolean): Promise<{ same: boo
   return { same: seen === frame, seen: seen === "nothing" ? "nothing (the probe point never ran)" : seen === undefined ? "undefined" : seen === frame ? "the frame" : "another store" };
 }
 
-/** Runs a scenario plain and, when the store is lost, with AD-5's bind/snapshot workaround. */
-async function alsProbe(point: string, workaround: string, scenario: Scenario): Promise<{ supported: boolean; evidence: string }> {
+/** Runs a scenario plain and, when the store is lost, with AD-5's bind/snapshot workaround, reporting whether it restored the frame. */
+async function alsProbe(point: string, workaround: string, scenario: Scenario): Promise<ProbeOutcome> {
   const plain = await serveOnce(scenario, false);
   if (plain.same) {
     return { supported: true, evidence: `the store ${point} is the frame` };
   }
   const wrapped = await serveOnce(scenario, true);
-  return { supported: false, evidence: `the store ${point} is ${plain.seen}, not the frame; ${workaround} restores the frame: ${wrapped.same ? "yes" : `no (${wrapped.seen})`}` };
+  return { supported: false, evidence: `the store ${point} is ${plain.seen}, not the frame; ${workaround} restores the frame: ${wrapped.same ? "yes" : `no (${wrapped.seen})`}`, workaround: wrapped.same };
 }
 
 const ALS_AWAIT: Scenario = async (als, seen, wrap) => {
@@ -846,80 +867,94 @@ const ALS_DIRECT_STREAM: Scenario = (als, seen, wrap) => {
   return new Response(new ReadableStream(source as unknown as StreamSource));
 };
 
-const SNAPSHOT = Symbol("xaravel.probe.snapshot");
+/** Two concurrent requests whose awaits interleave each see their own frame after every await. */
+async function probeConcurrentRequests(): Promise<ProbeOutcome> {
+  const als = new AsyncLocalStorage<Frame>();
+  const order: string[] = [];
+  let started = 0;
+  let bothStarted: () => void = () => undefined;
+  const barrier = new Promise<void>((resolve) => {
+    bothStarted = resolve;
+  });
+  const server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch: (request) => {
+      const path = new URL(request.url).pathname;
+      const frame: Frame = { name: path };
+      return als.run(frame, async () => {
+        const seen: boolean[] = [];
+        if (++started === 2) {
+          bothStarted();
+        }
+        await Promise.race([barrier, Bun.sleep(1000)]);
+        for (let i = 0; i < 3; i++) {
+          await Bun.sleep(path === "/a" ? 2 : 3);
+          order.push(`${path.slice(1)}${i}`);
+          seen.push(als.getStore() === frame);
+        }
+        return new Response(JSON.stringify(seen));
+      });
+    },
+  });
+  try {
+    const [a, b] = await Promise.all([fetch(new URL("/a", server.url)), fetch(new URL("/b", server.url))]);
+    const concurrent = `/a ${await a.text()}, /b ${await b.text()}`;
+    // The awaits overlap when each request's first resume comes before the other's last.
+    const interleaved = order.indexOf("a0") !== -1 && order.indexOf("b0") !== -1 && order.indexOf("a0") < order.indexOf("b2") && order.indexOf("b0") < order.indexOf("a2");
+    return {
+      supported: interleaved && concurrent === "/a [true,true,true], /b [true,true,true]",
+      evidence: `two concurrent requests see their own frame after each await: ${concurrent}; resume order ${order.join(" ")} (interleaved: ${interleaved ? "yes" : "no"})`,
+    };
+  } finally {
+    void server.stop(true);
+  }
+}
 
-/** Two concurrent interleaved requests each keep their frame, and the `error` callback sees the frame of the request that threw. */
-async function probeServeCallbacks(): Promise<{ supported: boolean; evidence: string }> {
-  const run = async (wrap: boolean): Promise<{ concurrent: string; error: string; ok: boolean }> => {
+const SNAPSHOT = Symbol("xaravel.probe.snapshot");
+const ERROR_WORKAROUND = "an AsyncLocalStorage.snapshot() taken in the frame and carried on the error";
+
+/** The `error` callback sees the frame of the request that threw. */
+async function probeServeCallbacks(): Promise<ProbeOutcome> {
+  const run = async (wrap: boolean): Promise<{ error: string; ok: boolean }> => {
     const als = new AsyncLocalStorage<Frame>();
-    const frames = new Map<string, Frame>();
-    const order: string[] = [];
-    let started = 0;
-    let bothStarted: () => void = () => undefined;
-    const barrier = new Promise<void>((resolve) => {
-      bothStarted = resolve;
-    });
+    const frame: Frame = { name: "/error" };
     let errorSeen: string = "nothing (the error callback never ran)";
     const server = Bun.serve({
       port: 0,
       hostname: "127.0.0.1",
-      fetch: (request) => {
-        const path = new URL(request.url).pathname;
-        const frame: Frame = { name: path };
-        frames.set(path, frame);
-        return als.run(frame, async () => {
-          if (path === "/error") {
-            await Bun.sleep(1);
-            const error = new Error("probe");
-            if (wrap) {
-              // AD-5's workaround: a snapshot taken in the frame travels with the error.
-              Object.defineProperty(error, SNAPSHOT, { value: AsyncLocalStorage.snapshot() });
-            }
-            throw error;
+      fetch: () =>
+        als.run(frame, async () => {
+          await Bun.sleep(1);
+          const error = new Error("probe");
+          if (wrap) {
+            // AD-5's workaround: a snapshot taken in the frame travels with the error.
+            Object.defineProperty(error, SNAPSHOT, { value: AsyncLocalStorage.snapshot() });
           }
-          const seen: boolean[] = [];
-          if (++started === 2) {
-            bothStarted();
-          }
-          await Promise.race([barrier, Bun.sleep(1000)]);
-          for (let i = 0; i < 3; i++) {
-            await Bun.sleep(path === "/a" ? 2 : 3);
-            order.push(`${path.slice(1)}${i}`);
-            seen.push(als.getStore() === frame);
-          }
-          return new Response(JSON.stringify(seen));
-        });
-      },
+          throw error;
+        }),
       error: (error) => {
         const snapshot = (error as unknown as Record<symbol, (<R>(fn: () => R) => R) | undefined>)[SNAPSHOT];
         const store = snapshot === undefined ? als.getStore() : snapshot(() => als.getStore());
-        errorSeen = store === frames.get("/error") ? "the frame" : store === undefined ? "undefined" : "another store";
+        errorSeen = store === frame ? "the frame" : store === undefined ? "undefined" : "another store";
         return new Response("error", { status: 500 });
       },
     });
     try {
-      const [a, b] = await Promise.all([fetch(new URL("/a", server.url)), fetch(new URL("/b", server.url))]);
-      const concurrent = `/a ${await a.text()}, /b ${await b.text()}`;
-      // The awaits overlap when each request's first resume comes before the other's last.
-      const interleaved = order.indexOf("a0") !== -1 && order.indexOf("b0") !== -1 && order.indexOf("a0") < order.indexOf("b2") && order.indexOf("b0") < order.indexOf("a2");
       const failed = await fetch(new URL("/error", server.url));
       await failed.text();
-      return {
-        concurrent: `${concurrent}; resume order ${order.join(" ")} (interleaved: ${interleaved ? "yes" : "no"})`,
-        error: errorSeen,
-        ok: interleaved && concurrent === "/a [true,true,true], /b [true,true,true]" && errorSeen === "the frame" && failed.status === 500,
-      };
+      return { error: errorSeen, ok: errorSeen === "the frame" && failed.status === 500 };
     } finally {
       void server.stop(true);
     }
   };
   const plain = await run(false);
-  const head = `two concurrent requests see their own frame after each await: ${plain.concurrent}; the error callback sees ${plain.error}`;
+  const head = `the error callback sees ${plain.error}`;
   if (plain.ok) {
     return { supported: true, evidence: head };
   }
   const wrapped = await run(true);
-  return { supported: false, evidence: `${head}; an AsyncLocalStorage.snapshot() taken in the frame and carried on the error restores the frame: ${wrapped.ok ? "yes" : `no (${wrapped.error})`}` };
+  return { supported: false, evidence: `${head}; ${ERROR_WORKAROUND} restores the frame: ${wrapped.ok ? "yes" : `no (${wrapped.error})`}`, workaround: wrapped.ok };
 }
 
 // ---------------------------------------------------------------------------
@@ -935,8 +970,10 @@ const ALS = "AsyncLocalStorage";
 /** The groups, in report order: one per OQ-11 bullet. */
 export const GROUPS = [BUN_TEST, SQL, REDIS, S3, IMAGE, ALS] as const;
 
-const backendFree = (id: string, group: string, checks: string, run: () => Promise<{ supported: boolean; evidence: string }>): Probe => ({ id, group, checks, backend: null, run: () => run() });
-const backend = (id: string, group: string, checks: string, variable: string, run: (value: string) => Promise<{ supported: boolean; evidence: string }>): Probe => ({ id, group, checks, backend: variable, run });
+const backendFree = (id: string, group: string, checks: string, run: () => Promise<ProbeOutcome>, workaround: string | null = null): Probe => ({ id, group, checks, backend: null, workaround, run: () => run() });
+const backend = (id: string, group: string, checks: string, variable: string, run: (value: string) => Promise<ProbeOutcome>): Probe => ({ id, group, checks, backend: variable, workaround: null, run });
+/** An AsyncLocalStorage scenario probe whose workaround is `workaround`. */
+const alsScenario = (id: string, checks: string, point: string, workaround: string, scenario: Scenario): Probe => backendFree(id, ALS, checks, () => alsProbe(point, workaround, scenario), workaround);
 
 /** Every probe, in report order. */
 export const PROBES: readonly Probe[] = [
@@ -954,21 +991,22 @@ export const PROBES: readonly Probe[] = [
   backend("bun-redis.pubsub", REDIS, "A `subscribe` listener receives a message published from a `duplicate()`; `unsubscribe` stops delivery.", PROBE_ENV.redis, probeRedisPubsub),
   backend("bun-s3.client", S3, "`write`, `file().text()`, `exists`, `size`, `list`, `delete`, a streamed read, and a `presign()` URL the service serves.", PROBE_ENV.s3, probeS3),
   backendFree("bun-image.laravel-api", IMAGE, "Each operation of Upstream `Image.php` (cover … dominantColor) on a raw RGBA image, by output dimensions or format.", probeImage),
-  backendFree("als.await", ALS, "Inside `als.run(frame, …)` in a `Bun.serve` fetch, the store after `await Bun.sleep(1)`.", () => alsProbe("after `await Bun.sleep(1)`", "AsyncLocalStorage.snapshot()", ALS_AWAIT)),
-  backendFree("als.timers", ALS, "The store in a `setTimeout` scheduled in the frame, firing after the handler returned.", () => alsProbe("in the setTimeout callback", "AsyncLocalStorage.bind on the callback", ALS_TIMERS)),
-  backendFree("als.stream-body", ALS, "The store in a `ReadableStream` body's `pull`, after an `await`.", () => alsProbe("in the ReadableStream pull after an await", "AsyncLocalStorage.bind on pull", ALS_STREAM_BODY)),
-  backendFree("als.async-generator", ALS, "The store in an async generator response body, after an `await`.", () => alsProbe("in the async generator body after an await", "an AsyncLocalStorage.snapshot() taken in the frame around next(), return() and throw()", ALS_ASYNC_GENERATOR)),
-  backendFree("als.direct-stream", ALS, 'The store in a `type: "direct"` body\'s `pull`.', () => alsProbe('in the type: "direct" pull', "AsyncLocalStorage.bind on pull", ALS_DIRECT_STREAM)),
-  backendFree("als.serve-callbacks", ALS, "Two concurrent interleaved requests each see their own frame; the `error` callback sees the frame of the request that threw.", probeServeCallbacks),
+  alsScenario("als.await", "Inside `als.run(frame, …)` in a `Bun.serve` fetch, the store after `await Bun.sleep(1)`.", "after `await Bun.sleep(1)`", "AsyncLocalStorage.snapshot()", ALS_AWAIT),
+  alsScenario("als.timers", "The store in a `setTimeout` scheduled in the frame, firing after the handler returned.", "in the setTimeout callback", "AsyncLocalStorage.bind on the callback", ALS_TIMERS),
+  alsScenario("als.stream-body", "The store in a `ReadableStream` body's `pull`, after an `await`.", "in the ReadableStream pull after an await", "AsyncLocalStorage.bind on pull", ALS_STREAM_BODY),
+  alsScenario("als.async-generator", "The store in an async generator response body, after an `await`.", "in the async generator body after an await", "an AsyncLocalStorage.snapshot() taken in the frame around next(), return() and throw()", ALS_ASYNC_GENERATOR),
+  alsScenario("als.direct-stream", 'The store in a `type: "direct"` body\'s `pull`.', 'in the type: "direct" pull', "AsyncLocalStorage.bind on pull", ALS_DIRECT_STREAM),
+  backendFree("als.concurrent-requests", ALS, "Two concurrent requests whose awaits interleave each see their own frame after every `await`.", probeConcurrentRequests),
+  backendFree("als.serve-callbacks", ALS, "The `error` callback sees the frame of the request that threw.", probeServeCallbacks, ERROR_WORKAROUND),
 ];
 
-/** Runs one probe: not-run without its backend variable, unsupported when it throws or times out. */
+/** Runs one probe: not-run without its backend variable, unsupported when it throws or times out; the workaround outcome is null unless the probe tried it. */
 export async function runProbe(probe: Probe, env: Env): Promise<LiveResult> {
   let value = "";
   if (probe.backend !== null) {
     const configured = env[probe.backend];
     if (configured === undefined || configured === "") {
-      return { status: "not-run", evidence: `${probe.backend} unset` };
+      return { status: "not-run", evidence: `${probe.backend} unset`, workaround: null };
     }
     value = configured;
   }
@@ -978,9 +1016,9 @@ export async function runProbe(probe: Probe, env: Env): Promise<LiveResult> {
       timer = setTimeout(() => reject(new Error(`timed out after ${PROBE_TIMEOUT_MS} ms`)), PROBE_TIMEOUT_MS);
     });
     const result = await Promise.race([probe.run(value), timeout]);
-    return { status: result.supported ? "supported" : "unsupported", evidence: result.evidence };
+    return { status: result.supported ? "supported" : "unsupported", evidence: result.evidence, workaround: result.workaround ?? null };
   } catch (error) {
-    return { status: "unsupported", evidence: `the probe threw ${message(error)}` };
+    return { status: "unsupported", evidence: `the probe threw ${message(error)}`, workaround: null };
   } finally {
     if (timer !== null) {
       clearTimeout(timer);
@@ -1059,7 +1097,7 @@ export function renderReport(registry: readonly Probe[], record: ProbeRecord): s
     "",
     "<!-- Generated by bun run probes:generate from conformance/probes/probes.ts and results.json; do not edit. -->",
     "",
-    `Results on Bun ${record.bun}: ${counts.supported} supported, ${counts.unsupported} unsupported, ${counts.unrecorded} not recorded, of ${registry.length} probes (Story 8.3, PRD OQ-11). \`bun run probes:check\` re-runs the probes and fails on any difference; docs/ops/probes.md explains how to run and re-record them. Each unsupported probe names its Escalation and the path of its decision, which exists once the Escalation is ruled on.`,
+    `Results on Bun ${record.bun}: ${counts.supported} supported, ${counts.unsupported} unsupported, ${counts.unrecorded} not recorded, of ${registry.length} probes (Story 8.3, PRD OQ-11). \`bun run probes:check\` re-runs the probes and fails on any difference; docs/ops/probes.md explains how to run and re-record them. Each unsupported probe names its Escalation and its decision; \`probes:check\` fails until that decision rules on the Escalation.`,
     "",
     "| Group | Probe | What it checks | Result | Escalation | Decision |",
     "| --- | --- | --- | --- | --- | --- |",
@@ -1081,7 +1119,7 @@ export function readRecord(root: string): ProbeRecord {
   }
 }
 
-/** The problems with an unsupported probe's Escalation; empty when it is a valid Story 8.3 Escalation. */
+/** The problems with an unsupported probe's Escalation; empty when it is a valid Story 8.3 Escalation that `decisions/<ESC>.md` decides. */
 function escalationProblems(root: string, id: string, escalation: string | null): string[] {
   if (escalation === null) {
     return [`${id}: unsupported with no Escalation`];
@@ -1100,6 +1138,12 @@ function escalationProblems(root: string, id: string, escalation: string | null)
   }
   if (!parsed.escalation.proposed.includes("deferred:") && !/workaround/i.test(parsed.escalation.proposed)) {
     problems.push(`${id}: ${escalation} proposed names neither a deferred: item nor a workaround`);
+  }
+  const decision = `${DECISIONS_DIR}/${escalation}.md`;
+  if (!existsSync(join(root, decision))) {
+    problems.push(`${id}: ${escalation} has no decision (${decision} does not exist)`);
+  } else if (decisionStatus(escalation, readFileSync(join(root, file), "utf8"), readFileSync(join(root, decision), "utf8")) === "open") {
+    problems.push(`${id}: ${escalation} has no decision (${decision} does not decide it)`);
   }
   return problems;
 }
@@ -1153,7 +1197,7 @@ export function checkProbes(root: string, live: ReadonlyMap<string, LiveResult>,
     }
   }
   for (const probe of registry) {
-    const result = live.get(probe.id) ?? { status: "not-run", evidence: "no live result" };
+    const result: LiveResult = live.get(probe.id) ?? { status: "not-run", evidence: "no live result", workaround: null };
     const entry = record.probes[probe.id];
     if (result.status === "not-run" && options.requireBackends) {
       violations.push(`${probe.id}: not run (${result.evidence})`);
@@ -1164,6 +1208,9 @@ export function checkProbes(root: string, live: ReadonlyMap<string, LiveResult>,
     }
     if (result.status !== "not-run" && result.status !== entry.status) {
       violations.push(`${probe.id}: live ${result.status}, recorded ${entry.status}: ${result.evidence}`);
+    }
+    if (probe.workaround !== null && result.status === "unsupported" && result.workaround !== true) {
+      violations.push(`${probe.id}: unsupported and its workaround (${probe.workaround}) does not hold: ${result.evidence}`);
     }
     if (entry.status === "unsupported") {
       violations.push(...escalationProblems(root, probe.id, entry.escalation));

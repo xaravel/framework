@@ -4,7 +4,7 @@
 // temp directories holding copies of the record, the report, `.bun-version`
 // and the Story's Escalations; the real repository is only read.
 import { afterAll, expect } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseEscalation } from "../../tools/escalations/escalations";
@@ -13,6 +13,7 @@ import {
   BUN_VERSION_FILE,
   IMAGE_OPERATIONS,
   checkProbes,
+  DECISIONS_DIR,
   ESCALATIONS_DIR,
   GROUPS,
   type LiveResult,
@@ -21,6 +22,7 @@ import {
   type ProbeRecord,
   readRecord,
   renderReport,
+  runProbe,
   REPORT_FILE,
   RESULTS_FILE,
   runProbes,
@@ -60,6 +62,7 @@ const EXPECTED_IDS = [
   "als.stream-body",
   "als.async-generator",
   "als.direct-stream",
+  "als.concurrent-requests",
   "als.serve-callbacks",
 ];
 
@@ -82,9 +85,8 @@ function unsupportedEvidenceHolds(id: string, evidence: string): boolean {
   switch (id) {
     case "als.async-generator":
     case "als.direct-stream":
-      return evidence.endsWith("restores the frame: yes");
     case "als.serve-callbacks":
-      return evidence.includes("/a [true,true,true], /b [true,true,true]") && evidence.includes("(interleaved: yes)") && evidence.endsWith("restores the frame: yes");
+      return evidence.endsWith("restores the frame: yes");
     case "bun-image.laravel-api": {
       const list = /; supported \((\d+)\): (.*)$/.exec(evidence);
       return list !== null && list[2] === IMAGE_SUPPORTED.join(", ") && Number(list[1]) === IMAGE_SUPPORTED.length && IMAGE_SUPPORTED.every((operation) => operation in IMAGE_OPERATIONS);
@@ -112,14 +114,18 @@ function completeRecord(): ProbeRecord {
   return record;
 }
 
-/** A fixture root: a record (default `completeRecord()`), its rendered REPORT.md, `.bun-version` and the Story's Escalations. */
+/** A fixture root: a record (default `completeRecord()`), its rendered REPORT.md, `.bun-version` and the Story's Escalations and their decisions. */
 function fixture(record: ProbeRecord = completeRecord(), files: Record<string, string> = {}): string {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-probes-"));
   roots.push(dir);
   mkdirSync(join(dir, "conformance", "probes"), { recursive: true });
   mkdirSync(join(dir, ESCALATIONS_DIR), { recursive: true });
+  mkdirSync(join(dir, DECISIONS_DIR), { recursive: true });
   for (const name of readdirSync(join(root, ESCALATIONS_DIR)).filter((file) => file.startsWith("ESC-8.3-"))) {
     cpSync(join(root, ESCALATIONS_DIR, name), join(dir, ESCALATIONS_DIR, name));
+  }
+  for (const name of readdirSync(join(root, DECISIONS_DIR)).filter((file) => file.startsWith("ESC-8.3-"))) {
+    cpSync(join(root, DECISIONS_DIR, name), join(dir, DECISIONS_DIR, name));
   }
   cpSync(join(root, BUN_VERSION_FILE), join(dir, BUN_VERSION_FILE));
   writeFileSync(join(dir, RESULTS_FILE), serializeRecord(record));
@@ -175,6 +181,14 @@ xaravelTest(
         if (result.status === "unsupported") {
           // An unsupported record must not hide a sub-check that regressed: its evidence is pinned too.
           expect([probe.id, unsupportedEvidenceHolds(probe.id, result.evidence)]).toEqual([probe.id, true]);
+          // A declared workaround that an unsupported result rests on holds live.
+          if (probe.workaround !== null) {
+            expect([probe.id, result.workaround]).toEqual([probe.id, true]);
+          }
+        }
+        if (probe.workaround === null || result.status === "supported") {
+          // No workaround declared, or nothing to work around: the workaround is not tried.
+          expect([probe.id, result.workaround]).toEqual([probe.id, null]);
         }
       } else {
         expect([probe.id, result.status, result.evidence]).toEqual([probe.id, "not-run", `${probe.backend} unset`]);
@@ -235,9 +249,10 @@ xaravelTest(
       }
     }
     const okLines = ok.stdout.split("\n");
-    expect(okLines.slice(0, 20).map((line) => line.split(": ")[0])).toEqual(EXPECTED_IDS);
-    expect(okLines.slice(0, 20).map((line) => line.split(": ")[1])).toEqual(EXPECTED_IDS.map((id) => results.get(id)!.status));
-    expect(okLines.slice(20)).toEqual([`PROBES OK: ${counts.supported} supported, ${counts.unsupported} unsupported, 8 not run (of 20).`, ""]);
+    const total = EXPECTED_IDS.length;
+    expect(okLines.slice(0, total).map((line) => line.split(": ")[0])).toEqual(EXPECTED_IDS);
+    expect(okLines.slice(0, total).map((line) => line.split(": ")[1])).toEqual(EXPECTED_IDS.map((id) => results.get(id)!.status));
+    expect(okLines.slice(total)).toEqual([`PROBES OK: ${counts.supported} supported, ${counts.unsupported} unsupported, 8 not run (of ${total}).`, ""]);
     expect(ok.code).toBe(0);
 
     // Drift: live unsupported, recorded supported.
@@ -246,6 +261,35 @@ xaravelTest(
     const drift = run(["check", "--root", fixture(drifted)]);
     expect(drift.code).toBe(1);
     expect(drift.stderr).toContain(`als.direct-stream: live unsupported, recorded supported: ${results.get("als.direct-stream")!.evidence}\n`);
+
+    // The workarounds. Which probes declare one: each ESC-8.3 ruling's workaround, and none for the image probe or the concurrent-requests probe.
+    expect(PROBES.filter((probe) => probe.workaround !== null).map((probe) => probe.id)).toEqual(["als.await", "als.timers", "als.stream-body", "als.async-generator", "als.direct-stream", "als.serve-callbacks"]);
+    expect(PROBES.find((probe) => probe.id === "bun-image.laravel-api")!.workaround).toBeNull();
+    expect(PROBES.find((probe) => probe.id === "als.concurrent-requests")!.workaround).toBeNull();
+    expect(results.get("als.concurrent-requests")!.status).toBe("supported");
+    expect(readRecord(root).probes["als.concurrent-requests"]).toEqual({ status: "supported", escalation: null });
+    // A workaround that fails, or a probe that threw (outcome null), while unsupported is a violation; no workaround declared is none.
+    const workaroundRoot = fixture();
+    const held = new Map(results);
+    held.set("als.direct-stream", { ...results.get("als.direct-stream")!, workaround: true });
+    held.set("bun-image.laravel-api", { ...results.get("bun-image.laravel-api")!, status: "unsupported", workaround: null });
+    expect(checkProbes(workaroundRoot, held, { requireBackends: false }).violations).toEqual([]);
+    const broken = new Map(results);
+    broken.set("als.direct-stream", { ...results.get("als.direct-stream")!, workaround: false });
+    broken.set("als.async-generator", { status: "unsupported", evidence: "the probe threw Error: boom", workaround: null });
+    expect(checkProbes(workaroundRoot, broken, { requireBackends: false }).violations).toEqual([
+      `als.async-generator: unsupported and its workaround (an AsyncLocalStorage.snapshot() taken in the frame around next(), return() and throw()) does not hold: the probe threw Error: boom`,
+      `als.direct-stream: unsupported and its workaround (AsyncLocalStorage.bind on pull) does not hold: ${results.get("als.direct-stream")!.evidence}`,
+    ]);
+    // A probe that throws or times out reports its workaround as not tried.
+    const threw = await runProbe({ id: "als.thrower", group: "AsyncLocalStorage", checks: "throws", backend: null, workaround: "a workaround", run: () => Promise.reject(new Error("boom")) }, {});
+    expect(threw).toEqual({ status: "unsupported", evidence: "the probe threw Error: boom", workaround: null });
+    // A concurrent-request leak is drift from the supported record.
+    const leaked = new Map(results);
+    leaked.set("als.concurrent-requests", { status: "unsupported", evidence: "two concurrent requests see their own frame after each await: /a [true,false,false]", workaround: null });
+    expect(checkProbes(workaroundRoot, leaked, { requireBackends: false }).violations).toEqual([
+      "als.concurrent-requests: live unsupported, recorded supported: two concurrent requests see their own frame after each await: /a [true,false,false]",
+    ]);
 
     // A missing backend under --require-backends.
     const missing = run(["check", "--require-backends", "--root", fixture()]);
@@ -348,7 +392,27 @@ xaravelTest(
       "als.await: supported but names Escalation ESC-8.3-1",
       "als.async-generator: ESC-8.3-8 test_ids do not include XT-conformance-156",
       "als.async-generator: ESC-8.3-8 proposed names neither a deferred: item nor a workaround",
+      `als.async-generator: ESC-8.3-8 has no decision (${DECISIONS_DIR}/ESC-8.3-8.md does not exist)`,
       `als.direct-stream: unsupported with no Escalation (${ESCALATIONS_DIR}/ESC-8.3-9.md does not exist)`,
+    ]);
+
+    // Every unsupported probe's Escalation is ruled: its decision exists and decides it.
+    for (const [id, entry] of unsupported) {
+      expect([id, existsSync(join(root, DECISIONS_DIR, `${entry.escalation}.md`))]).toEqual([id, true]);
+    }
+    // A missing decision.
+    const undecidedRoot = fixture();
+    rmSync(join(undecidedRoot, DECISIONS_DIR, "ESC-8.3-3.md"));
+    expect(checkProbes(undecidedRoot, results, { requireBackends: false }).violations).toEqual([`bun-image.laravel-api: ESC-8.3-3 has no decision (${DECISIONS_DIR}/ESC-8.3-3.md does not exist)`]);
+    // A stale decision (bound to other Escalation text) and an invalid one do not decide.
+    const decision1 = readFileSync(join(root, DECISIONS_DIR, "ESC-8.3-1.md"), "utf8");
+    const stale = decision1.replace(/escalation_sha256: "[0-9a-f]{64}"/, `escalation_sha256: "${"0".repeat(64)}"`);
+    expect(stale).not.toBe(decision1);
+    const staleRoot = fixture(completeRecord(), { [`${DECISIONS_DIR}/ESC-8.3-1.md`]: stale, [`${DECISIONS_DIR}/ESC-8.3-2.md`]: "not a decision\n" });
+    expect(checkProbes(staleRoot, results, { requireBackends: false }).violations).toEqual([
+      `als.async-generator: ESC-8.3-1 has no decision (${DECISIONS_DIR}/ESC-8.3-1.md does not decide it)`,
+      `als.direct-stream: ESC-8.3-1 has no decision (${DECISIONS_DIR}/ESC-8.3-1.md does not decide it)`,
+      `als.serve-callbacks: ESC-8.3-2 has no decision (${DECISIONS_DIR}/ESC-8.3-2.md does not decide it)`,
     ]);
   },
   TIMEOUT,
