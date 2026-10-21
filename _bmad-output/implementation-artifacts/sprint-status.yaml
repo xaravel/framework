@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 20:56
+last_updated: 10-20-2026 23:40
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1313,7 +1313,7 @@ action_items:
       date, a body line) at the Epic 8 checkpoint alongside the go; until it is on
       main the phase gate fails every Epic 9 Story PR (finding S1)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
   - id: "epic-8-retro-item-2-story-bookkeeping-scope"
     epic: 8
@@ -1323,7 +1323,7 @@ action_items:
       status-only manifest edit, sprint-status line) or amend the ruling (finding
       S2)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
   - id: "epic-8-retro-item-3-fidelity-md-in-loop"
     epic: 8
@@ -1393,3 +1393,13 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-11-ownership-story-bookkeeping"
+    epic: 8
+    action: "Extend allowedPath (tools/ownership/ownership.ts) so a story/<id> PR
+      may change only the status: line of its own stories/<id>.md and its own spec
+      _bmad-output/implementation-artifacts/spec-<id>-*.md; any other manifest or
+      spec edit stays out of scope; tests for each allowed and refused case; lands
+      before Story 9.1 merges (decisions/MAINT-2026-10-20-epic-8-items.md item 2)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-20-epic-8-items.md"
