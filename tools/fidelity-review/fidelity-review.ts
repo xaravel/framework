@@ -42,8 +42,10 @@
 // (ESC-9.1-4); (e) the full body and cited consequences of every Xaravel
 // Test whose lines the diff changes, that uses a test helper or fixture the
 // diff changes, or whose test file's top-level setup changes (a heuristic
-// top-level-unit scanner, `testUnits`). Everything is read from the working
-// tree. A missing evidence file is named ("unavailable: <why>"), never dropped.
+// top-level-unit scanner, `testUnits`); (f) every decision record an added
+// line cites (`ESC-<id>`, `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a
+// `decisions/<name>.md` path), in full (ESC-9.2-1). Everything is read from the
+// working tree. A missing evidence file is named ("unavailable: <why>"), never dropped.
 //
 // A standing reject (ESC-8.8-1). A `reject` recorded for the reviewed tree
 // stands until the tree changes: `review` refuses to run on that tree (exit 1,
@@ -205,9 +207,11 @@ export interface Evidence {
   readonly asyncRoot: readonly EvidenceEntry[];
   /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
   readonly xaravelTests: readonly XaravelTestEntry[];
+  /** (f) Each decision record an added line cites, in full; DIV records are (a) (ESC-9.2-1). */
+  readonly decisions: readonly EvidenceEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -373,6 +377,7 @@ export function buildPrompt(input: PromptInput): Prompt {
       sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, "jsonl"));
     }
   }
+  evidenceSection(sections, "### (f) Decision records cited on added lines (any item, ESC-9.2-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
     sections.push(NO_PRIOR);
@@ -423,6 +428,23 @@ function readEvidenceFile(root: string, rel: string): EvidenceEntry {
   } catch (error) {
     return { label: rel, text: null, unavailable: `${rel} is unreadable: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+/**
+ * A decision record cited on a line: a `decisions/<name>.md` path (group 1), or an `ESC-<id>`, `MAINT-<date>[-<slug>]`,
+ * `OQ-<n>` or `PHASE-0-EXIT` id (group 2). DIV records are evidence (a), so a `DIV-<n>` id is not one.
+ */
+const DECISION_CITATION = /\bdecisions\/((?!DIV-)[A-Za-z0-9][A-Za-z0-9.-]*)\.md\b|(?<![\w./-])(ESC-\d+(?:\.\d+)*-\d+|MAINT-\d{4}-\d{2}-\d{2}(?:-[a-z0-9]+)*|OQ-\d+|PHASE-0-EXIT)(?![\w-])/g;
+
+/** Evidence (f): every decision record `texts` cite, once each, in name order, read in full from `root`. */
+export function decisionEvidence(root: string, texts: readonly string[]): EvidenceEntry[] {
+  const names = new Set<string>();
+  for (const text of texts) {
+    for (const match of text.matchAll(DECISION_CITATION)) {
+      names.add(match[1] ?? match[2]!);
+    }
+  }
+  return [...names].sort().map((name) => readEvidenceFile(root, `decisions/${name}.md`));
 }
 
 /** The AD-6 rule bullets that define the two `@asyncRoot` tags (ESC-9.1-4). */
@@ -585,6 +607,7 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     headErrorFixtures: [],
     asyncRoot: asyncRoot ? asyncRootEvidence(root) : [],
     xaravelTests: [],
+    decisions: decisionEvidence(root, added),
   };
 }
 
@@ -2463,6 +2486,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   const readmePath = join(root, "conformance", "README.md");
   const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
+  const xaravelTests = xaravelTestEvidence(root, diff.files);
   const promptInput: PromptInput = {
     checklistText,
     items,
@@ -2474,7 +2498,13 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     inventory: inventoryContext(root, manifest.testIds),
     oracleRequests,
     files: diff.files,
-    evidence: { ...gatherEvidence(root, diff.files, manifest), headErrorFixtures: headErrorFixtures(fixtures, requestIds), xaravelTests: xaravelTestEvidence(root, diff.files) },
+    evidence: {
+      ...gatherEvidence(root, diff.files, manifest),
+      headErrorFixtures: headErrorFixtures(fixtures, requestIds),
+      xaravelTests,
+      // (f) also takes the decisions a touched Xaravel Test cites on an unchanged line (ESC-9.2-1).
+      decisions: decisionEvidence(root, [...addedLines(diff.files), ...xaravelTests.map((entry) => entry.body ?? "")]),
+    },
     prior,
   };
   const prompt = buildPrompt(promptInput);
