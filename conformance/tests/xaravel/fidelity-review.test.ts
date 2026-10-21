@@ -23,6 +23,7 @@ import {
   decisionEvidence,
   EXCERPT_CAP,
   fidelityVerdicts,
+  gatherEvidence,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
   normaliseManifestStatus,
@@ -417,7 +418,9 @@ xaravelTest(
     expect(user).toContain('"exprs":["1 + 2"]');
     expect(user).not.toContain(SPEC);
     expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker.");
-    expect(user).toContain("No added line contains `@asyncRoot`.");
+    // (d): no added line has `@asyncRoot`, but the change edits packages/support/src/, so the rules come anyway (ESC-9.2-2).
+    expect(user).toContain("### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)\n\n#### decisions/DIV-1.md");
+    expect(user).not.toContain("No added line contains `@asyncRoot`");
     // (e): the change edits only packages/support/src/, so no Xaravel Test is touched.
     expect(user).toContain("### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
     expect(user).toContain("No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
@@ -711,6 +714,17 @@ xaravelTest(
     expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
     expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
     expect(sectionF).not.toContain("#### decisions/DIV-9.md");
+    // ESC-9.2-2: (d) comes with any packages/*/src/ change, tagged or not, and not with an untagged change elsewhere.
+    const changed = (filename: string) => [{ filename, status: "modified", patch: "@@ -1 +1 @@\n-a\n+b\n" }];
+    const none = { testIds: [], xaravelTestIds: [] };
+    expect(gatherEvidence(root, changed("packages/runtime/src/scope/scope.ts"), none).asyncRoot.map((entry) => entry.label.split(" ")[0])).toEqual([
+      "decisions/DIV-1.md",
+      "decisions/ESC-6.4-1.md",
+      SPINE_FILE,
+      SPINE_FILE,
+    ]);
+    expect(gatherEvidence(root, changed("packages/runtime/tests/xaravel/scope.test.ts"), none).asyncRoot).toEqual([]);
+    expect(gatherEvidence(root, changed("tools/graph/graph.ts"), none).asyncRoot).toEqual([]);
     // Every citation form, each once; a DIV path, a partial id and a longer token are not decision citations.
     const cited = decisionEvidence(root, [
       "MAINT-2026-10-16-unattended-orchestrator and OQ-12, then PHASE-0-EXIT",
