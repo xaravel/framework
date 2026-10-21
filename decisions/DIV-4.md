@@ -1,7 +1,7 @@
 ---
 div: 4
 title: "Closure serialization"
-cites: ["AD-14"]
+cites: ["AD-14", "AD-24"]
 sources: []
 fewer_assertions: []
 ---

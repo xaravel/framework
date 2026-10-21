@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 19:04
+last_updated: 10-20-2026 19:17
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1358,7 +1358,7 @@ action_items:
       derive divergence.test.ts expected cites from the spine; change no clause or
       behaviour section (finding S6)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
   - id: "epic-8-retro-item-7-divergence-tooling"
     epic: 8

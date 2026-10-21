@@ -1,7 +1,7 @@
 ---
 div: 5
 title: "Generated code is TypeScript"
-cites: []
+cites: ["AD-11"]
 sources: []
 fewer_assertions: []
 ---

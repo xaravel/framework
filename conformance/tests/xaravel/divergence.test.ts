@@ -2,6 +2,8 @@
 // `adapted` marker check; FR-8, FR-113, AD-15, ESC-5.3-2). Fixture roots are
 // hermetic temp directories holding twelve minimal records, an Expectations
 // shard and a Ported Test; the real repository is only read, never written.
+// XT-conformance-149 reads each record's expected AD cites from the architecture
+// spine's `Binds:` lines, so a spine edit can fail it (Epic 8 retro item 6).
 import { afterAll, expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,6 +16,7 @@ import { xaravelTest } from "../../../packages/assert/src/index";
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "divergence", "divergence.ts");
 const PRD = "_bmad-output/planning-artifacts/prds/prd-xaravel-2026-10-15/prd.md";
+const SPINE = "_bmad-output/planning-artifacts/architecture/architecture-xaravel-2026-10-16/ARCHITECTURE-SPINE.md";
 const roots: string[] = [];
 afterAll(() => {
   for (const dir of roots) {
@@ -70,20 +73,65 @@ function skipLine(adapted: string): string {
 // ---------------------------------------------------------------------------
 // The real records
 
-const EXPECTED_CITES: Record<number, string[]> = {
-  1: ["AD-6"],
-  2: ["AD-8"],
-  3: ["AD-4"],
-  4: ["AD-14"],
-  5: [],
-  6: [],
-  7: [],
-  8: [],
-  9: ["AD-9"],
-  10: [],
-  11: ["AD-5", "AD-25", "AD-13"],
-  12: ["AD-26"],
-};
+/** What one spine AD section says about the DIVs: the ones its `Binds:` line binds, and every one its text names. */
+interface AdSection {
+  hasBinds: boolean;
+  binds: Set<number>;
+  names: Set<number>;
+}
+
+/** DIV numbers in `text` (`DIV-11` is 11, never 1; `DIV-11.3` is 11). */
+function divNumbers(text: string): Set<number> {
+  return new Set([...text.matchAll(/\bDIV-([1-9]\d*)(?!\d)/g)].map((match) => Number(match[1])));
+}
+
+/** Parses the spine's `### AD-<n>` sections, each ending at the next `### ` or `## ` heading; throws on a duplicate AD heading or a DIV range in a Binds line. */
+function spineBindings(spine: string): Map<string, AdSection> {
+  const sections = new Map<string, AdSection>();
+  const headings = [...spine.matchAll(/^#{2,3} .*$/gm)];
+  headings.forEach((heading, i) => {
+    const ad = /^### (AD-[1-9]\d*) /.exec(heading[0]);
+    if (ad === null) {
+      return;
+    }
+    if (sections.has(ad[1]!)) {
+      throw new Error(`spine: duplicate heading ${ad[1]}`);
+    }
+    const end = i + 1 < headings.length ? headings[i + 1]!.index : spine.length;
+    const text = spine.slice(heading.index, end);
+    const binds = /^- \*\*Binds:\*\* (.*)$/m.exec(text);
+    if (binds !== null && /DIV-\d+\.\./.test(binds[1]!)) {
+      throw new Error(`spine: ${ad[1]} Binds line has a DIV range: ${binds[1]}`);
+    }
+    sections.set(ad[1]!, { hasBinds: binds !== null, binds: divNumbers(binds?.[1] ?? ""), names: divNumbers(text) });
+  });
+  return sections;
+}
+
+/** Why DIV-`n`'s `cites` disagrees with the spine: an AD binding it is missing, a cite whose AD section never names it, or a duplicate. */
+function citeProblems(n: number, cites: string[], bindings: Map<string, AdSection>): string[] {
+  const problems: string[] = [];
+  for (const [ad, section] of bindings) {
+    if (section.binds.has(n) && !cites.includes(ad)) {
+      problems.push(`DIV-${n}: missing ${ad}, whose Binds line binds DIV-${n}`);
+    }
+  }
+  const seen = new Set<string>();
+  for (const cite of cites) {
+    if (seen.has(cite)) {
+      problems.push(`DIV-${n}: duplicate cite ${cite}`);
+      continue;
+    }
+    seen.add(cite);
+    const section = bindings.get(cite);
+    if (section === undefined) {
+      problems.push(`DIV-${n}: cites ${cite}, which is no AD section of the spine`);
+    } else if (!section.names.has(n)) {
+      problems.push(`DIV-${n}: cites ${cite}, whose section never names DIV-${n}`);
+    }
+  }
+  return problems;
+}
 
 interface RealRecord {
   fields: Record<string, unknown>;
@@ -115,6 +163,33 @@ xaravelTest("XT-conformance-149", "decisions/DIV-1.md to DIV-12.md exist with PR
   expect(report.violations).toEqual([]);
   expect(report.records).toBe(12);
 
+  // The AD cites come from the spine: sanity-check the parse, then the comparison on synthetic inputs.
+  const bindings = spineBindings(readFileSync(join(root, SPINE), "utf8"));
+  expect([...bindings.keys()]).toEqual(Array.from({ length: 28 }, (_, i) => `AD-${i + 1}`));
+  expect([...bindings.values()].every((section) => section.hasBinds)).toBe(true);
+  expect([...bindings.values()].some((section) => section.binds.size > 0)).toBe(true);
+  const synthetic = new Map<string, AdSection>([
+    ["AD-1", { hasBinds: true, binds: new Set([5]), names: new Set([5]) }],
+    ["AD-2", { hasBinds: true, binds: new Set(), names: new Set([5]) }],
+    ["AD-3", { hasBinds: true, binds: new Set(), names: new Set([6]) }],
+  ]);
+  expect(citeProblems(5, ["AD-1"], synthetic)).toEqual([]);
+  expect(citeProblems(5, [], synthetic)).toEqual(["DIV-5: missing AD-1, whose Binds line binds DIV-5"]);
+  expect(citeProblems(5, ["AD-1", "AD-2"], synthetic)).toEqual([]);
+  expect(citeProblems(5, ["AD-1", "AD-3"], synthetic)).toEqual(["DIV-5: cites AD-3, whose section never names DIV-5"]);
+  expect(citeProblems(5, ["AD-1", "AD-9"], synthetic)).toEqual(["DIV-5: cites AD-9, which is no AD section of the spine"]);
+  expect(citeProblems(5, ["AD-1", "AD-1"], synthetic)).toEqual(["DIV-5: duplicate cite AD-1"]);
+  expect(citeProblems(5, ["AD-1", "AD-9", "AD-9"], synthetic)).toEqual(["DIV-5: cites AD-9, which is no AD section of the spine", "DIV-5: duplicate cite AD-9"]);
+  expect(citeProblems(6, [], synthetic)).toEqual([]);
+  // A DIV bound by two ADs that cites only one (the DIV-1 / DIV-4 pattern).
+  const twice = new Map(synthetic).set("AD-4", { hasBinds: true, binds: new Set([5]), names: new Set([5]) });
+  expect(citeProblems(5, ["AD-1"], twice)).toEqual(["DIV-5: missing AD-4, whose Binds line binds DIV-5"]);
+  expect(citeProblems(5, ["AD-1", "AD-4"], twice)).toEqual([]);
+  // A duplicate AD heading or a DIV range in a Binds line fails loudly instead of being under-read.
+  expect(() => spineBindings("### AD-1 — A\n\n- **Binds:** DIV-1\n\n### AD-1 — B\n\n- **Binds:** DIV-2\n")).toThrow("spine: duplicate heading AD-1");
+  expect(() => spineBindings("### AD-1 — A\n\n- **Binds:** DIV-5..DIV-7\n")).toThrow("spine: AD-1 Binds line has a DIV range");
+  expect([...divNumbers("DIV-11, DIV-1.2; xDIV-3")]).toEqual([11, 1]);
+
   const titles = prdTitles();
   const owed: Record<6 | 9, string[]> = { 6: [], 9: [] };
   for (let n = 1; n <= 12; n++) {
@@ -122,7 +197,8 @@ xaravelTest("XT-conformance-149", "decisions/DIV-1.md to DIV-12.md exist with PR
     expect(fields["div"]).toBe(n);
     expect(titles.get(n)).toBeDefined();
     expect(fields["title"]).toBe(titles.get(n)!);
-    expect(fields["cites"]).toEqual(EXPECTED_CITES[n]!);
+    expect(Array.isArray(fields["cites"])).toBe(true);
+    expect(citeProblems(n, fields["cites"] as string[], bindings)).toEqual([]);
     expect(Array.isArray(fields["sources"])).toBe(true);
     for (const source of fields["sources"] as string[]) {
       expect(source).toMatch(/^decisions\/ESC-[\d.-]+\.md$/);

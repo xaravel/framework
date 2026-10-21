@@ -1,7 +1,7 @@
 ---
 div: 8
 title: "Async test bodies"
-cites: []
+cites: ["AD-6"]
 sources: []
 fewer_assertions: []
 ---

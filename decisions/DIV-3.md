@@ -1,7 +1,7 @@
 ---
 div: 3
 title: "Explicit injection tokens"
-cites: ["AD-4"]
+cites: ["AD-4", "AD-1"]
 sources: []
 fewer_assertions: []
 ---
