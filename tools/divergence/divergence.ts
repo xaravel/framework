@@ -23,7 +23,8 @@
 //     duplicate `<k>`, and are numbered 1..m in file order.
 //   - `fewer_assertions` (the ESC-5.3-2 floor waiver) is absent or a list; each
 //     item is a quoted string `<k>` naming an existing clause. An unquoted
-//     number is a violation: YAML reads `2.10` as `2.1`.
+//     number is a violation: YAML reads `2.10` as `2.1`. Boost's
+//     `fewerAssertions` reads it; the harness waives only the items it accepts.
 //
 // Marker rules (a marker names a clause `DIV-<n>.<k>` of an existing record,
 // matching /^DIV-([1-9]\d*)\.([1-9]\d*)$/):
@@ -35,21 +36,24 @@
 //   - Ported Tests (`packages/*/tests/ported/**/*.test.ts`): every `adapted:`
 //     in a `//` or `/* */` comment, that is every match of
 //     /\badapted:[ \t]*(\S*)/g in the text from the line's first `//` or `/*`
-//     on; a trailing `*/` is stripped from the token, and the token (empty
-//     when nothing follows) must strictly match the marker regex.
+//     on, or in the whole line when it starts inside a `/* */` block opened on
+//     an earlier line (`scannedTail` carries the block state across lines; a
+//     `/*` after a `//` opens no block); a trailing `*/` is stripped from the
+//     token, and the token (empty when nothing follows) must strictly match
+//     the marker regex.
 //     `<file>:<line>: adapted:<token>: not DIV-<n>.<k>` or
 //     `...: clause does not exist`.
 //
-// The frontmatter and clause parsers are imported from Boost, never copied,
-// so "clause exists" means one thing across Boost, this check and the
-// dashboard.
+// The frontmatter, clause and `fewer_assertions` parsers are imported from
+// Boost, never copied, so "clause exists" means one thing across Boost, this
+// check and the dashboard.
 //
 // Exit codes: 0 pass, 1 violations or any failure (fail closed), 2 usage error.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { portedTestFiles } from "../../conformance/harness/harness";
 import { parseFrontmatter } from "../boost-framework/src/data";
-import { divergenceClauses } from "../boost-framework/src/tools";
+import { divergenceClauses, fewerAssertions } from "../boost-framework/src/tools";
 import { UsageError } from "../expectations/expectations";
 import { readExpectations, type Shard } from "../pin-bump/pin-bump";
 
@@ -64,8 +68,9 @@ export const COMMENT_START = /\/[/*]/;
 export const COMMENT_MARKER = /\badapted:[ \t]*(\S*)/g;
 export const REQUIRED_SECTIONS = ["## Rationale", "## Behaviour", "## Adaptation clauses"] as const;
 
+/** What the block-state walk stops at outside a block: a comment start or a string quote. */
+const WALK_TOKEN = /\/[/*]|['"`]/;
 const RECORD_NAME = /^DIV-([1-9]|1[0-2])\.md$/;
-const ITEM = /^[1-9]\d*$/;
 
 export interface DivergenceReport {
   violations: string[];
@@ -138,21 +143,8 @@ function checkRecord(root: string, n: number, file: string, text: string, violat
   if (!order.every((k, index) => k === String(index + 1))) {
     violations.push(`${file}: clauses must be numbered 1..${order.length} in order, got ${order.join(", ")}`);
   }
-  const waiver = fields["fewer_assertions"];
-  if (waiver !== undefined && waiver !== null) {
-    if (!Array.isArray(waiver)) {
-      violations.push(`${file}: fewer_assertions must be a list, got ${JSON.stringify(waiver)}`);
-    } else {
-      for (const item of waiver as unknown[]) {
-        if (typeof item !== "string") {
-          violations.push(`${file}: fewer_assertions item ${JSON.stringify(item)} must be a quoted string, e.g. ["2"]`);
-        } else if (!ITEM.test(item) || !clauseSet.has(item)) {
-          violations.push(`${file}: fewer_assertions item ${JSON.stringify(item)} names no clause DIV-${n}.<k>`);
-        }
-      }
-    }
-  } else if (waiver === null) {
-    violations.push(`${file}: fewer_assertions must be a list, got null`);
+  for (const problem of fewerAssertions(String(n), fields, body).problems) {
+    violations.push(`${file}: ${problem}`);
   }
   return clauseSet;
 }
@@ -164,6 +156,59 @@ function markerProblem(value: string, clauses: ReadonlyMap<string, ReadonlySet<s
     return "not DIV-<n>.<k>";
   }
   return clauses.get(match[1]!)?.has(match[2]!) === true ? null : "clause does not exist";
+}
+
+/**
+ * The part of a Ported Test `line` the marker scan reads, and whether a `/* … *\/` block is still open after it.
+ * `inBlock` says whether a block opened on an earlier line is open at the line's start. The tail is the whole line
+ * when it starts inside a block, else the text from the line's first `//` or `/*` on (null when there is neither).
+ * Walking the line, an open block ends at the next `*\/`; outside one, a `//` makes the rest of the line a line
+ * comment (which opens no block) and a `/*` opens a block. The walk skips '…', "…" and `…` string literals on the
+ * line (with backslash escapes); an unterminated quote runs to the end of the line and opens no block. The tail start
+ * does not skip them, so every text read before block tracking is still read. Regex literals and template literals
+ * spanning lines are not parsed: a `//` or `/*` in one can still end the walk early or open a false block.
+ */
+export function scannedTail(line: string, inBlock: boolean): { tail: string | null; inBlock: boolean } {
+  let tail: string | null = null;
+  if (inBlock) {
+    tail = line;
+  } else {
+    const start = COMMENT_START.exec(line);
+    tail = start === null ? null : line.slice(start.index);
+  }
+  let open = inBlock;
+  let i = 0;
+  while (i < line.length) {
+    if (open) {
+      const close = line.indexOf("*/", i);
+      if (close === -1) {
+        break;
+      }
+      open = false;
+      i = close + 2;
+      continue;
+    }
+    const start = WALK_TOKEN.exec(line.slice(i));
+    if (start === null || start[0] === "//") {
+      break;
+    }
+    i += start.index;
+    if (start[0] === "/*") {
+      open = true;
+      i += 2;
+      continue;
+    }
+    const quote = start[0];
+    let j = i + 1;
+    while (j < line.length && line[j] !== quote) {
+      j += line[j] === "\\" ? 2 : 1;
+    }
+    if (j >= line.length) {
+      break;
+    }
+    i = j + 1;
+  }
+  return { tail, inBlock: open };
 }
 
 /** Checks the records, the Expectations `adapted` fields and the Ported Test comment markers under `root`. */
@@ -230,12 +275,14 @@ export function checkDivergence(root: string): DivergenceReport {
       violations.push(`${file}: unreadable: ${message(error)}`);
       continue;
     }
+    let inBlock = false;
     text.split("\n").forEach((line, index) => {
-      const start = COMMENT_START.exec(line);
-      if (start === null) {
+      const scan = scannedTail(line, inBlock);
+      inBlock = scan.inBlock;
+      if (scan.tail === null) {
         return;
       }
-      for (const match of line.slice(start.index).matchAll(COMMENT_MARKER)) {
+      for (const match of scan.tail.matchAll(COMMENT_MARKER)) {
         assertionMarkers++;
         const token = match[1]!.endsWith("*/") ? match[1]!.slice(0, -2) : match[1]!;
         const problem = markerProblem(token, clauses);

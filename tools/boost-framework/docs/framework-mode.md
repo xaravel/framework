@@ -82,7 +82,7 @@ A clause is the form Story 8.1 writes the records in:
 - it runs until the next clause start or the next heading;
 - it is returned as `{id, text}`, with trailing blank lines dropped.
 
-With `DIV-<n>.<k>`, `clauses` holds only that clause. A record that does not exist yet gives `exists: false`, `frontmatter: null`, `clauses: []` and a `note` that Story 8.1 writes the records.
+With `DIV-<n>.<k>`, `clauses` holds only that clause. A record that does not exist yet gives `exists: false`, `frontmatter: null`, `clauses: []` and a `note` that Story 8.1 writes the records. A record that exists but has no clause `<k>` gives `exists: false`, the record's `frontmatter`, `clauses: []` and a `note` naming the missing clause.
 
 ### `escalations.open {story?}`
 
@@ -206,7 +206,7 @@ A change to either side of a mirror then fails CI.
 - No alpha-gate figure (see `conformance.rate`).
 - `story.tests` does not validate a manifest as strictly as `ownership:check`; it checks the fields it returns. `ownership:check` stays the authority.
 - `escalations.open` does not validate the Escalation as `escalations:check` does; an Escalation that fails that check shows `trigger: null` but is still listed while open.
-- `divergence.get` reads only the clause form above. Records Story 8.1 writes in another form give their `text` but no `clauses`.
+- `divergence.get` reads only the clause form above. Records Story 8.1 writes in another form give their `text` but no `clauses`, and with `DIV-<n>.<k>` such a record gives `exists: false` and the missing-clause `note`.
 - A clause ends at any heading-shaped line (`#` to `######` then a space, up to 3 spaces of indent), even one inside a fenced code block, so a record must not put `#` lines inside a clause.
 - Any line whose first token (after the optional marker) is a `DIV-<n>.<k>` ends the current clause: a new clause starts when `<n>` is the record's own number, and a line citing another record's clause (such as `DIV-4.1 …` in `DIV-3.md`) ends it without starting one. Cite another clause mid-line, never at a line start.
 - Lockdown is defence in depth inside one Bun process, not a sandbox. It leaves these open:

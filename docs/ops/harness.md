@@ -119,7 +119,7 @@ For each Expectations line on a run Variant, the harness takes the junit testcas
 
 An id with more than one Ported Test report (another test forged one) is `fail`. `fail`, `late`, `no-report` and `blocked-by:*` are failures.
 
-**Assertion floor (FR-113).** A `pass` is below the floor when, for some kind, its report records fewer assertions than the Inventory's `assertions`. `null` Inventory assertions never fail the floor. A below-floor pass counts as a failure. The floor is waived when the line's `adapted` is `DIV-<n>.<clause>`, `decisions/DIV-<n>.md` exists, and its frontmatter `fewer_assertions` list contains `<clause>` ([ESC-5.3-2](../../conformance/escalations/ESC-5.3-2.md)).
+**Assertion floor (FR-113).** A `pass` is below the floor when, for some kind, its report records fewer assertions than the Inventory's `assertions`. `null` Inventory assertions never fail the floor. A below-floor pass counts as a failure. The floor is waived when the line's `adapted` is `DIV-<n>.<clause>`, `decisions/DIV-<n>.md` exists, and its frontmatter `fewer_assertions` list contains `<clause>` as an item `bun run divergence:check` accepts: a quoted string (`["2"]`, not `[2]`) naming an existing clause `DIV-<n>.<clause>` of that record ([ESC-5.3-2](../../conformance/escalations/ESC-5.3-2.md)). Both read the list with Boost's `fewerAssertions`; an unquoted number, or an item naming no clause, waives nothing ([divergence.md](divergence.md)).
 
 **Matching.**
 

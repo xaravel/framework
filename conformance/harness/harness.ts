@@ -151,7 +151,10 @@
 //
 // Assertion-floor waiver (ESC-5.3-2): a below-floor pass is waived when the
 // line's `adapted` is `DIV-<n>.<clause>`, `decisions/DIV-<n>.md` exists, and its
-// YAML frontmatter `fewer_assertions` list contains `<clause>`.
+// YAML frontmatter `fewer_assertions` list holds `<clause>` as an item Boost's
+// `fewerAssertions` accepts: a quoted string naming an existing clause
+// DIV-<n>.<clause>, as `bun run divergence:check` requires. An unquoted number,
+// or an item naming no clause, waives nothing.
 //
 // Exit codes: 0 when no line differs, 1 on a difference or a failed
 // precondition, 2 on a usage error.
@@ -159,6 +162,8 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import { parseFrontmatter } from "../../tools/boost-framework/src/data";
+import { fewerAssertions } from "../../tools/boost-framework/src/tools";
 import { UsageError, readVariants } from "../../tools/expectations/expectations";
 import { ALPHA_VARIANTS, compareUnits } from "../../tools/inventory/inventory";
 import { coveringIds, parseManifest } from "../../tools/ownership/ownership";
@@ -283,27 +288,12 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-/** The YAML frontmatter mapping of `text`, or null. */
-function frontmatterOf(text: string): Record<string, unknown> | null {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  if (lines[0] !== "---") {
-    return null;
-  }
-  const end = lines.indexOf("---", 1);
-  if (end === -1) {
-    return null;
-  }
-  try {
-    const data: unknown = Bun.YAML.parse(lines.slice(1, end).join("\n"));
-    return isRecord(data) ? data : null;
-  } catch {
-    return null;
-  }
-}
-
-/** The floor waiver (ESC-5.3-2): whether `adapted` names a DIV clause listed in that record's `fewer_assertions`. */
+/**
+ * The floor waiver (ESC-5.3-2): whether `adapted` names a DIV clause that Boost's `fewerAssertions` accepts in that
+ * record's `fewer_assertions`, the items `bun run divergence:check` accepts.
+ */
 export function waiverFor(root: string): (line: HarnessLine) => boolean {
-  const clauses = new Map<string, Set<string> | null>();
+  const clauses = new Map<string, Set<string>>();
   return (line: HarnessLine): boolean => {
     const match = line.adapted === null ? null : /^DIV-([1-9][0-9]*)\.([^\s.][^\s]*)$/.exec(line.adapted);
     if (match === null) {
@@ -312,11 +302,10 @@ export function waiverFor(root: string): (line: HarnessLine) => boolean {
     const n = match[1]!;
     if (!clauses.has(n)) {
       const path = join(root, "decisions", `DIV-${n}.md`);
-      const fields = existsSync(path) ? frontmatterOf(readFileSync(path, "utf8")) : null;
-      const list = fields?.["fewer_assertions"];
-      clauses.set(n, Array.isArray(list) ? new Set(list.filter((item) => typeof item === "string" || typeof item === "number").map(String)) : null);
+      const parsed = existsSync(path) ? parseFrontmatter(readFileSync(path, "utf8")) : null;
+      clauses.set(n, parsed === null || typeof parsed === "string" ? new Set() : fewerAssertions(n, parsed.fields, parsed.body).clauses);
     }
-    return clauses.get(n)?.has(match[2]!) ?? false;
+    return clauses.get(n)!.has(match[2]!);
   };
 }
 

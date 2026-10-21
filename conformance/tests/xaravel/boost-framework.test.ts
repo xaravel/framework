@@ -417,6 +417,13 @@ xaravelTest(
       const clause = await client.value("divergence.get", { id: "DIV-3.2" });
       expect(clause["clauses"]).toEqual([{ id: "DIV-3.2", text: "- DIV-3.2: The second clause." }]);
       expect("text" in clause).toBe(false);
+      expect(clause["exists"]).toBe(true);
+      expect("note" in clause).toBe(false);
+      // A clause the existing record does not have (Epic 8 retro item 7).
+      const noClause = await client.value("divergence.get", { id: "DIV-3.99" });
+      expect(noClause).toMatchObject({ id: "DIV-3.99", path: "decisions/DIV-3.md", exists: false, frontmatter: { id: "DIV-3", title: "Fixture divergence" }, clauses: [] });
+      expect("text" in noClause).toBe(false);
+      expect(String(noClause["note"])).toContain("DIV-3.99");
       const missing = await client.value("divergence.get", { id: "DIV-4" });
       expect(missing).toMatchObject({ id: "DIV-4", path: "decisions/DIV-4.md", exists: false, frontmatter: null, clauses: [] });
       expect(String(missing["note"])).toContain("Story 8.1");

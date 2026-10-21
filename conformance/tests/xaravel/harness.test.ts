@@ -467,15 +467,24 @@ xaravelTest("XT-conformance-103", "a pass whose assertion kinds fall below the I
   const known = makeRoot(entries, [{ id: A, status: "fail-known" }, { id: B, status: "pass" }, { id: C, status: "pass" }], { [TEST_FILE]: body });
   expect((await runHarness(known, { env: await env() })).code).toBe(0);
 
-  // The waiver: adapted DIV-3.2, decisions/DIV-3.md listing clause 2 in fewer_assertions.
+  // The waiver: adapted DIV-3.2, decisions/DIV-3.md having clause DIV-3.2 and listing "2" in fewer_assertions.
   const waivedLines = [{ id: A, status: "pass", adapted: "DIV-3.2" }, { id: B, status: "pass" }, { id: C, status: "pass" }];
-  const waived = makeRoot(entries, waivedLines, { [TEST_FILE]: body, "decisions/DIV-3.md": "---\nfewer_assertions: [2]\n---\n\n# DIV-3\n" });
+  const clauses = "\n# DIV-3\n\n## Adaptation clauses\n\n- **DIV-3.1** One.\n- **DIV-3.2** Two.\n";
+  const waived = makeRoot(entries, waivedLines, { [TEST_FILE]: body, "decisions/DIV-3.md": `---\nfewer_assertions: ["2"]\n---\n${clauses}` });
   const ok = await runHarness(waived, { env: await env() });
   expect(ok.out).toEqual(["SUMMARY variants=1 run=1 not-run=0 checked=3 differ=0"]);
   expect(ok.code).toBe(0);
 
-  // No waiver without the record, or when the record lists another clause.
-  const unwaivedFiles: Record<string, string>[] = [{}, { "decisions/DIV-3.md": '---\nfewer_assertions: ["1"]\n---\n' }, { "decisions/DIV-3.md": "# no frontmatter\n" }];
+  // No waiver without the record, when the record lists another clause, when the item is an unquoted number
+  // (divergence:check rejects it), or when the record has no clause DIV-3.2 (Epic 8 retro item 7).
+  const unwaivedFiles: Record<string, string>[] = [
+    {},
+    { "decisions/DIV-3.md": '---\nfewer_assertions: ["1"]\n---\n' },
+    { "decisions/DIV-3.md": "# no frontmatter\n" },
+    { "decisions/DIV-3.md": `---\nfewer_assertions: [2]\n---\n${clauses}` },
+    { "decisions/DIV-3.md": '---\nfewer_assertions: ["2"]\n---\n\n# DIV-3\n\n- **DIV-3.1** One.\n' },
+    { "decisions/DIV-3.md": "---\nfewer_assertions: [2]\n---\n\n# DIV-3\n" },
+  ];
   for (const files of unwaivedFiles) {
     const unwaived = makeRoot(entries, waivedLines, { [TEST_FILE]: body, ...files });
     const run = await runHarness(unwaived, { env: await env() });

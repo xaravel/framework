@@ -241,6 +241,7 @@ xaravelTest("XT-conformance-149", "decisions/DIV-1.md to DIV-12.md exist with PR
     [{ "decisions/DIV-2.md": record(2, 2, { fewer_assertions: "[2]" }) }, 'decisions/DIV-2.md: fewer_assertions item 2 must be a quoted string'],
     [{ "decisions/DIV-2.md": record(2, 2, { fewer_assertions: '["9"]' }) }, 'decisions/DIV-2.md: fewer_assertions item "9" names no clause'],
     [{ "decisions/DIV-2.md": record(2, 2, { fewer_assertions: '"2"' }) }, "decisions/DIV-2.md: fewer_assertions must be a list"],
+    [{ "decisions/DIV-2.md": record(2, 2, { fewer_assertions: "null" }) }, "decisions/DIV-2.md: fewer_assertions must be a list, got null"],
   ];
   for (const [files, expected] of failing) {
     const result = run(["check", "--root", fixture(files)]);
@@ -296,12 +297,39 @@ xaravelTest("XT-conformance-152", "an adapted:DIV-<n>.<k> marker in an Expectati
     [{ [PORTED]: "assertSame(1, x); /* adapted:DIV-99.1*/\n" }, 1, `${PORTED}:1: adapted:DIV-99.1: clause does not exist`],
     // Every marker on a line is checked, not only the first.
     [{ [PORTED]: "assertSame(1, x); // adapted:DIV-12.1 adapted:DIV-12.99\n" }, 1, `${PORTED}:1: adapted:DIV-12.99: clause does not exist`],
+    // A continuation line of a multi-line block comment is scanned (Epic 8 retro item 7).
+    [{ [PORTED]: "/*\n * adapted:DIV-13.2\n */\n" }, 1, `${PORTED}:2: adapted:DIV-13.2: clause does not exist`],
+    [{ [PORTED]: "/**\n * Text.\n * adapted:DIV-3.9 */ assertSame(1, x);\n" }, 1, `${PORTED}:3: adapted:DIV-3.9: clause does not exist`],
+    // A `//` inside a string does not stop the walk; a block reopened after a close, on the same or a later line, is tracked.
+    [{ [PORTED]: 'const u = "http://x"; /*\n * adapted:DIV-13.2\n */\n' }, 1, `${PORTED}:2: adapted:DIV-13.2: clause does not exist`],
+    [{ [PORTED]: "x(); /* a */ y(); /*\n adapted:DIV-13.2\n */\n" }, 1, `${PORTED}:2: adapted:DIV-13.2: clause does not exist`],
+    [{ [PORTED]: "/*\n*/ y(); /*\n adapted:DIV-13.2\n*/\n" }, 1, `${PORTED}:3: adapted:DIV-13.2: clause does not exist`],
   ];
   for (const [files, code, expected] of cases) {
     const result = run(["check", "--root", fixture(files)]);
     expect(result.code).toBe(code);
     expect(result.stderr).toContain(expected);
   }
+
+  // A block that closes mid-line: the code after it and a later `//` comment are still read.
+  const closes = run(["check", "--root", fixture({ [PORTED]: "/* x\n adapted:DIV-12.1 */ foo(); // adapted:DIV-12.99\n" })]);
+  expect(closes.code).toBe(1);
+  expect(closes.stderr).toBe(`${PORTED}:2: adapted:DIV-12.99: clause does not exist\n`);
+  // A `/*` inside a `//` comment opens no block, so the next line is code and is not scanned.
+  const lineComment = run(["check", "--root", fixture({ [PORTED]: "// see /* here\nassertSame(1, adapted:x)\n" })]);
+  expect(lineComment.stderr).toBe("");
+  expect(lineComment.code).toBe(0);
+  expect(lineComment.stdout).toContain("0 assertion marker(s) checked.");
+  // A `/*` inside a template literal opens no block.
+  const template = run(["check", "--root", fixture({ [PORTED]: "glob(`${dir}/*`);\nconst s = 'adapted:x';\n" })]);
+  expect(template.stderr).toBe("");
+  expect(template.code).toBe(0);
+  expect(template.stdout).toContain("0 assertion marker(s) checked.");
+  // Once a block closes, later lines are code again.
+  const after = run(["check", "--root", fixture({ [PORTED]: "/*\n adapted:DIV-12.1\n*/\nconst s = 'adapted:x';\n" })]);
+  expect(after.stderr).toBe("");
+  expect(after.code).toBe(0);
+  expect(after.stdout).toContain("1 assertion marker(s) checked.");
 
   const ok = run(["check", "--root", fixture({ [SHARD]: shard("DIV-3.2", null, "DIV-12.1"), [PORTED]: "assertSame(1, x); // adapted:DIV-12.1\nassertSame(2, y); /* adapted: DIV-3.2 */\nconst adapted = 'adapted:DIV-99.1';\n" })]);
   expect(ok.stderr).toBe("");
