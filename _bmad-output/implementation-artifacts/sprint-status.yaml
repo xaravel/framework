@@ -121,7 +121,7 @@ development_status:
   epic-9: in-progress
   9-1-scope-frame-primitive-and-interleave: done
   9-2-frame-kinds-defer-list-and-context-propagation: done
-  9-3-per-application-overlays-and-framestatic: in-progress  # ESC-9.3-1 approved (decisions/ESC-9.3-1.md, orchestrator ruling); re-apply 9-3-blocked-attempt.patch and re-run the Fidelity Review
+  9-3-per-application-overlays-and-framestatic: blocked  # ESC-9.3-2 (protected-path: the Fidelity Review shows F-9 only diff hunks of a changed source file); attempt saved in 9-3-blocked-attempt-2.patch
   9-4-class-registry-and-fqcn: backlog
   9-5-phparray-ref-float-marker-and-null-normalisation: backlog
   9-6-php-semantics-helpers: backlog
