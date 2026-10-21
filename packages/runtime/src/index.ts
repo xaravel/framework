@@ -22,5 +22,5 @@ export {
   setDefaultApplication,
   ScopeFrameException,
 } from "./scope/index";
-export { jsonEncode } from "./php/index";
+export { float, hasBrand, isFloat, jsonEncode, normalizeNull, PhpArray, type PhpArrayKey, PhpFloat, type PhpKeyInput, Ref } from "./php/index";
 export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";

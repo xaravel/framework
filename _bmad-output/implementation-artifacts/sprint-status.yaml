@@ -123,7 +123,7 @@ development_status:
   9-2-frame-kinds-defer-list-and-context-propagation: done
   9-3-per-application-overlays-and-framestatic: done
   9-4-class-registry-and-fqcn: done
-  9-5-phparray-ref-float-marker-and-null-normalisation: backlog
+  9-5-phparray-ref-float-marker-and-null-normalisation: done
   9-6-php-semantics-helpers: backlog
   9-7-phpserialize-phpunserialize-codec: backlog
   9-8-jsonencode-jsondecode-with-php-flag-semantics: backlog

@@ -2,14 +2,20 @@
 // flags, for the values the Class Registry's classmap needs. It encodes `null`, booleans, integers, strings, lists
 // (`Array`) and plain objects, with PHP's default escaping: `\/`, `\uXXXX` (lower-case hex) for every non-ASCII code
 // unit, surrogate pairs for characters outside the BMP, and the short escapes or `\u00XX` for control characters.
-// Every other value (a float, `bigint`, `PhpArray`, a class instance, `undefined`, a function, a symbol) throws a
-// `TypeError`. Story 9.8 adds the flags, floats, the `JsonSerializable` / `Arrayable` / `Jsonable` hooks, `bigint`
-// and the Oracle Differential tests, and removes nothing from this core.
+// A `PhpArray` (detected by its `Symbol.for('xaravel.php.array')` brand, so this file imports nothing that imports the
+// Registry) follows the list rule (AD-9.2, Story 9.5): keys exactly `0..n-1` in order encode as a list, any other
+// key set as an object with the keys as decimal strings. Every other value (a float, marked or not, `bigint`, a class
+// instance, `undefined`, a function, a symbol) throws a `TypeError`. Story 9.8 adds the flags, floats, the
+// `JsonSerializable` / `Arrayable` / `Jsonable` hooks, `bigint` and the Oracle Differential tests, and removes nothing
+// from this core.
 
 /** PHP's default `json_encode` depth (`$depth = 512`). */
 const DEPTH = 512;
 
 const HEX = "0123456789abcdef";
+
+const PHP_ARRAY = Symbol.for("xaravel.php.array");
+const PHP_FLOAT = Symbol.for("xaravel.php.float");
 
 /** PHP's short escapes for the characters `json_encode` escapes by default. */
 const SHORT: Readonly<Record<number, string>> = {
@@ -41,7 +47,7 @@ function encode(value: unknown, depth: number): string {
       return value ? "true" : "false";
     case "number":
       if (!Number.isSafeInteger(value) || Object.is(value, -0)) {
-        throw new TypeError(`jsonEncode(): cannot encode the float ${String(value)}; floats arrive with Story 9.8`);
+        throw floatError(value);
       }
       return String(value);
     case "string":
@@ -67,6 +73,12 @@ function encodeObject(value: object, depth: number): string {
     }
     return `[${parts.join(",")}]`;
   }
+  if ((value as Record<symbol, unknown>)[PHP_FLOAT] === true) {
+    throw floatError(Number(value));
+  }
+  if (PHP_ARRAY in value) {
+    return encodePhpArray(value as unknown as Iterable<readonly [unknown, unknown]>, depth);
+  }
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError("jsonEncode(): cannot encode an object that is not a plain object; its hooks arrive with Story 9.8");
@@ -74,6 +86,26 @@ function encodeObject(value: object, depth: number): string {
   const parts: string[] = [];
   for (const key of Object.keys(value)) {
     parts.push(`${encodeString(key)}:${encode((value as Record<string, unknown>)[key], depth)}`);
+  }
+  return `{${parts.join(",")}}`;
+}
+
+function floatError(value: number): TypeError {
+  return new TypeError(`jsonEncode(): cannot encode the float ${String(value)}; floats arrive with Story 9.8`);
+}
+
+/** A `PhpArray` by the list rule: a list when its keys are exactly `0..n-1` in order, else an object. */
+function encodePhpArray(value: Iterable<readonly [unknown, unknown]>, depth: number): string {
+  const entries = [...value];
+  if (entries.every(([key], index) => key === index)) {
+    return `[${entries.map(([, item]) => encode(item, depth)).join(",")}]`;
+  }
+  const parts: string[] = [];
+  for (const [key, item] of entries) {
+    if (typeof key !== "string" && typeof key !== "number" && typeof key !== "bigint") {
+      throw new TypeError(`jsonEncode(): a PhpArray key must be an int or a string, got ${typeof key}`);
+    }
+    parts.push(`${encodeString(String(key))}:${encode(item, depth)}`);
   }
   return `{${parts.join(",")}}`;
 }
