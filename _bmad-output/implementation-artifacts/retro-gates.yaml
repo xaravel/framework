@@ -52,3 +52,12 @@ epic-7:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer: []
+epic-8:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-8-retro-item-1-phase-0-exit-signature
+    - epic-8-retro-item-2-story-bookkeeping-scope
