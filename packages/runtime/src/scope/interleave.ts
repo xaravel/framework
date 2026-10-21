@@ -1,14 +1,17 @@
 // `interleave(units)`: the dev-only helper every concurrency test uses (AD-5, NFR-4).
 //
-// Every unit starts synchronously, in array order, each in its own fresh `unit` frame. Started in one tick, units
-// that await settled promises resume in FIFO microtask order, so the units take turns at every `await` (a, b, a,
-// b, …) in the same order on every run.
-import { runInFrame } from "./scope";
+// Every unit starts synchronously, in array order, each in its own fresh root `unit` frame, which sees no enclosing
+// frame's slots. Started in one tick, units that await settled promises resume in FIFO microtask order, so the units
+// take turns at every `await` (a, b, a, b, …) in the same order on every run. Each unit ends after its defer list.
+import { runInRootFrame } from "./scope";
 
 /**
- * Runs `units` concurrently, each in its own `unit` frame, and resolves with their results in order; rejects with
+ * Runs `units` concurrently, each in its own root `unit` frame, and resolves with their results in order; rejects with
  * the first rejection in array order, once every unit has settled.
- * Its asyncRoot tag `callback` is AD-6's callback clause (it returns its callbacks' promises), as the spine § AD-6 Async-surface rule (the `callback` tag "for the callback clause") and ESC-6.4-1 define it; it reaches no Driver-contract IO root.
+ * Its asyncRoot tag `callback` is AD-6's callback clause: it returns its callbacks' promises (now each unit's drained
+ * root-frame promise) and reaches no Driver-contract IO root. AD-6 Derivation: "A public method is async if and only if
+ * it reaches a root, or it accepts a callback that DIV-1 allows to be async"; AD-6 Enforcement: the tag is `callback`
+ * "for the callback clause". `decisions/DIV-1.md` (Async IO Terminals) and `decisions/ESC-6.4-1.md` define the tag.
  * @asyncRoot callback
  */
 export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Promise<T[]> {
@@ -22,7 +25,7 @@ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Pro
     }
   }
   for (const unit of units) {
-    started.push(runInFrame("unit", () => startUnit(unit)));
+    started.push(runInRootFrame("unit", () => startUnit(unit)));
   }
   // Every unit settles before interleave does, so no sibling of a failed unit keeps running past it.
   const settled = await Promise.allSettled(started);

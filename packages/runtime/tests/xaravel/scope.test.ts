@@ -1,12 +1,13 @@
 // Xaravel Tests for Story 9.1: the Scope Frame primitive and `interleave` (AD-5, AD-6, AD-9, AD-10, NFR-4;
-// ESC-4.2-1, ESC-9.1-1, ESC-9.1-2). One test per acceptance criterion, in order. `xaravelTest` opens no frame
+// ESC-4.2-1, ESC-9.1-1, ESC-9.1-2), as Story 9.2 extends it (frame kinds and the defer drain; its own tests are in
+// frames.test.ts). One test per acceptance criterion, in order. `xaravelTest` opens no frame
 // (ESC-4.2-1 item 7), so each body starts outside any Scope Frame.
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import * as scope from "@xaravel/runtime/scope";
-import { currentFrame, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
+import { currentFrame, frameDefer, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
 import * as root from "../../src/index";
 import { fqcn, registerClass } from "../../src/registry/registry";
 
@@ -58,8 +59,13 @@ xaravelTest(
   "XT-runtime-1",
   "@xaravel/runtime/scope exports currentFrame(), runInFrame(kind, fn) and frameSlot(key, init) and installs globalThis[Symbol.for('xaravel.scope.run')] on load, which the grader calls without importing anything (AD-5.1)",
   async () => {
-    for (const name of ["currentFrame", "runInFrame", "frameSlot", "interleave", "ScopeFrameException"] as const) {
+    const functions = ["currentFrame", "runInFrame", "runInRootFrame", "runInNarrowFrame", "frameSlot", "frameDefer", "bindToFrame", "frameStreamSource", "frameAsyncGenerator", "interleave", "ScopeFrameException"] as const;
+    for (const name of functions) {
       Assert.assertSame("function", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
+      Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);
+    }
+    for (const name of ["REQUEST_SLOT", "ROUTE_SLOT", "CSP_NONCE_SLOT"] as const) {
+      Assert.assertSame("symbol", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
       Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);
     }
     const manifest = JSON.parse(readFileSync(resolve(PACKAGE_DIR, "package.json"), "utf8")) as { exports: Record<string, string> };
@@ -76,7 +82,23 @@ xaravelTest(
     // No frame read: null, never undefined (AD-9).
     Assert.assertNull(currentFrame());
 
-    // Grader call: run('test', inner) returns inner's own promise, with the test frame active across every await.
+    // Grader call. The recorded decision is decisions/ESC-4.2-1.md (decision: approved, decided_by: Maintainer,
+    // 2026-10-18), which reads: "Every item is approved exactly as the Escalation's `proposed` text states: - **(1)-(3)**
+    // The reporter, scope and case contracts are adopted. Stories 5.3, 9.1 and 57 build to them." The adopted item (2)
+    // in conformance/escalations/ESC-4.2-1.md reads: "(2) Scope call shape, for Story 9.1. When
+    // `globalThis[Symbol.for('xaravel.scope.run')]` is a function, `portedTest` calls it as `run('test', inner)` and
+    // awaits its result; `inner` returns a promise and must run with the `test` frame active for its whole duration
+    // (case construction, `setUp`, body, `tearDown`), mirroring AD-5's `runInFrame(kind, fn)`." It does not require run
+    // to return inner's own promise. AD-5.9 ("A unit ends only after ... the frame's `defer` list has drained") makes
+    // run return a promise that settles with inner's value after inner, and after every promise inner deferred. The
+    // Maintainer's ruling decisions/ESC-9.2-1.md (Option 1) approves this settle-after-drain check in place of Story
+    // 9.1's identity check: run('test', inner) "may return a promise other than `inner`'s own", settling with inner's
+    // value only after the frame's defer list has drained. The three reads below check the ESC-4.2-1 decision, the
+    // adopted item (2) and the ESC-9.2-1 quotation against their files, so the citations cannot drift from the records.
+    const flat = (path: string): string => readFileSync(resolve(REPO_ROOT, path), "utf8").replace(/\s+/g, " ");
+    Assert.assertStringContainsString("The reporter, scope and case contracts are adopted.", flat("decisions/ESC-4.2-1.md"));
+    Assert.assertStringContainsString("`portedTest` calls it as `run('test', inner)` and awaits its result;", flat("conformance/escalations/ESC-4.2-1.md"));
+    Assert.assertStringContainsString("may return a promise other than `inner`'s own", flat("decisions/ESC-9.2-1.md"));
     const run = (globalThis as Record<symbol, unknown>)[SCOPE_RUN] as <T>(kind: string, fn: () => T) => T;
     const kinds: Array<string | null> = [];
     const inner = async (): Promise<string> => {
@@ -85,15 +107,36 @@ xaravelTest(
       kinds.push(currentFrame()?.kind ?? null);
       await new Promise((done) => setTimeout(done, 1));
       kinds.push(currentFrame()?.kind ?? null);
+      frameDefer(
+        new Promise<void>((done) =>
+          setTimeout(() => {
+            deferredSettled = true;
+            done();
+          }, 5),
+        ),
+      );
       return "done";
     };
-    let innerPromise: Promise<string> | null = null;
+    let deferredSettled = false;
+    let innerSettled = false;
     const returned = run("test", () => {
-      innerPromise = inner();
+      const innerPromise = inner();
+      void innerPromise.then(() => {
+        innerSettled = true;
+      });
       return innerPromise;
     });
-    Assert.assertSame(innerPromise, returned, "run returns inner's promise unchanged");
-    Assert.assertSame("done", await returned);
+    Assert.assertTrue(returned instanceof Promise, "run returns a promise");
+    let settledFirst: boolean | null = null;
+    let deferredFirst: boolean | null = null;
+    const value = await returned.then((done) => {
+      settledFirst = innerSettled;
+      deferredFirst = deferredSettled;
+      return done;
+    });
+    Assert.assertSame("done", value);
+    Assert.assertSame(true, settledFirst, "run's promise settles after inner's");
+    Assert.assertSame(true, deferredFirst, "run's promise settles after the promise inner deferred");
     Assert.assertSame("test,test,test", kinds.join(","));
     Assert.assertNull(currentFrame());
 
