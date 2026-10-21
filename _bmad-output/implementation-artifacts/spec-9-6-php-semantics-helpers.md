@@ -2,7 +2,7 @@
 title: 'Story 9.6: PHP semantics helpers'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-review'
+status: 'done'
 baseline_revision: '6c94cc20449ddd931af4324b7ce5f2ec453dc376'
 review_loop_iteration: 1
 followup_review_recommended: false
@@ -123,6 +123,10 @@ deferred:
   - `[low]` `[reject]` Intent: `valueCopy` turns a foreign branded array into a `PhpArray` — the grader's `BrandedArray` is test-only, and `PhpArray` is the runtime's kind for the same PHP array.
   - `[low]` `[patch]` Fidelity Review reviewer 1, F-7 `semantics.test.ts`: XT-runtime-23 never checks the innermost `[2, 3]` — identity and mutation assertions added. This changes the reviewed tree; the layer re-runs.
 
+### 2026-10-21 — Review pass (Fidelity Review re-run on the patched tree)
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- findings: none. Both reviewers passed tree `66b6f1132787ed7715b9eb4401ad702908d565e8`, and `fidelity:review status` prints `current: 2 pass verdicts`.
+
 ## Design Notes
 
 - **`toFloat` returns a plain `number`.** AD-9.4 makes both int and float a JS `number` and uses the marker only where Upstream depends on the distinction; a plain number keeps `===` and arithmetic working. `toPhpString(toFloat("1"))` is `"1"`, as PHP's `(string) 1.0`.
@@ -137,6 +141,35 @@ deferred:
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run async-surface --all --check`, `bun run oracle:verify-fixtures` -- expected: clean
 - Before pushing: evaluate the request's exprs with local PHP 8.5.11 and compare with the helpers (a scratch script outside the repo) -- expected: no mismatch
 - `bun run story:check 9.6` -- expected: pass, after the Fidelity Review of the final tree
+
+## Auto Run Result
+
+Status: done (2026-10-21, build)
+- **Summary:** PHP 8.5's semantics helpers in `@xaravel/runtime/php`, also exported from the package root: `looseEquals` and `spaceship` (`zend_compare` over scalars, numeric strings, arrays and objects), `isNumeric`, the casts `toInt`, `toFloat`, `toPhpString` (precision-14 float strings, half-even from the exact binary value) and `toBool`, and `valueCopy` (deep copy of every array level; objects shared by handle). `PhpArray` gains `copy()` and shares one float→int implementation with the casts.
+- **Files:**
+  - `packages/runtime/src/php/phpInt.ts`: `intKey`, `floatToInt` (moved from `PhpArray.ts`) and `capFloatToInt`.
+  - `packages/runtime/src/php/isNumeric.ts`: PHP's numeric-string reader and `isNumeric`.
+  - `packages/runtime/src/php/casts.ts`: the four casts and the shared value-model readers.
+  - `packages/runtime/src/php/looseEquals.ts`: `spaceship` and `looseEquals`.
+  - `packages/runtime/src/php/valueCopy.ts`: `valueCopy`.
+  - `packages/runtime/src/php/PhpArray.ts`: shared int module, `copy()`.
+  - `packages/runtime/src/php/index.ts`, `packages/runtime/src/index.ts`: exports.
+  - `conformance/oracle-requests/9.6.jsonl` and its fixture under `conformance/fixtures/runtime/`, signed by the `xaravel-oracle` bot on PR #280.
+  - `packages/runtime/tests/xaravel/semantics.test.ts`: XT-runtime-22 and 23.
+- **Review:** 31 findings (low 19, false 11, maybe-false 1).
+  - 13 rows patched, in 10 fixes, all low: `__proto__`-safe copy, docstring and header wording, `isNumeric` value-model checks, the port-error class name, result-length assertions, `BrandedArray`, props-recursion and non-string-port rows, and the Fidelity Review's F-7 inner-array check.
+  - 1 deferred (maybe-false, medium if true): dropped PHP warnings have no DIV clause; the Story porting a test that asserts one raises an Escalation.
+  - 17 rows rejected; each reason is in the triage log.
+  - The Fidelity Review first rejected tree `d21e5ea…` on F-7; both reviewers passed tree `66b6f1132787ed7715b9eb4401ad702908d565e8`.
+- **Follow-up review recommended: false.** Every patched entry was low.
+- **Verification:**
+  - `bun run harness --xaravel`: 313/313 pass, XT-runtime-22 against the signed fixture.
+  - Clean: `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run async-surface --all --check`, `bun run oracle:story check 9.6`, `bun run oracle:verify-fixtures`.
+  - Before pushing, the request was evaluated with local PHP 8.5.11 and matched; a fuzz run (about 3000 floats through `(string)`, 400 numeric-like strings through `<=>`, `(int)`, `(float)`, `is_numeric`) found no mismatch.
+- **Residual risks:**
+  - `toFloat` returns a plain `number`, so an integral float with |x| in [1e14, 2^53) formats as an int in `toPhpString` unless the port marks it with `float()` (AD-9.4).
+  - Objects without the props protocol compare by identity (AD-9.6), unlike PHP's property comparison.
+  - PHP's warnings and notices are not reproduced (deferred item).
 
 ## Fidelity Review
 
@@ -188,4 +221,62 @@ None.
 
 ```json
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"d21e5ea208f9ffc4322e25c869329b7f26def67f","base":"6c94cc20449ddd931af4324b7ce5f2ec453dc376","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-21T23:42:00.249Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the diff adds or changes no Ported Test. The only tests are the Xaravel Tests XT-runtime-22 and XT-runtime-23, so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test is added or changed. In XT-runtime-22 the expected values come straight from the signed Oracle fixture and are compared strictly (!== for bool and int, Object.is for float, exact string match), so nothing is loosened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test, so there is no Upstream assertion count to compare. No adapted:DIV marker is added (evidence (a)).","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No added line carries an // adapted:DIV-<n>.<k> marker and no Expectations adapted field changes (evidence (a)).","findings":[]},{"id":"F-6","result":"n/a","note":"The one added fixture (1ff7702e….json) has output.error null. Evidence (c) lists no error fixture, base or changed.","findings":[]},{"id":"F-7","result":"pass","note":"XT-runtime-22 compares looseEquals, spaceship, isNumeric, toInt, toFloat and toBool with the Oracle's ==, <=>, is_numeric and casts over all 73 values in $w (scalars, numeric and whitespace strings, \"1e3\", INF, NAN, arrays, stdClass objects). It checks toPhpString against the Oracle over $v and the float-format list $f. It also checks objects by hand: a toString() port, no port (Error with the FQCN, 'object' or 'Closure'), same-class comparison through props, different classes giving 1, identity, and casts. It covers recursion errors, bigint handling and undefined read as null. AD-9.6 (the props protocol for ==) is exercised by XtSemanticsPoint and XtSemanticsOther; AD-9 is a whole-section reference. XT-runtime-23 checks what AD-9.2 value-copy claims: each level is a new array of the same kind (Array, plain or null-prototype object, PhpArray), key order and the next free index survive, objects and Refs are shared, and mutating the copy leaves the original unchanged. Both bodies check what their consequence strings declare.","findings":[]},{"id":"F-8","result":"pass","note":"All source changes are in packages/runtime/src/php: new files casts.ts, isNumeric.ts, looseEquals.ts, phpInt.ts and valueCopy.ts; PhpArray.ts moves its int helpers into phpInt.ts and gains copy(); the index files add exports. Story 9.6's component is runtime. The test loads the grader's existing oracle-values.ts at run time and does not reimplement it. No stub, fake or hard-coded return of another Component was added.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tag in any changed runtime source file, and every new export (toInt, toFloat, toPhpString, toBool, isNumeric, looseEquals, spaceship, valueCopy, PhpArray.copy, the phpInt helpers) is synchronous. None performs IO behind a Driver contract or takes a callback, so none should be tagged and none is.","findings":[]},{"id":"F-10","result":"pass","note":"The request in conformance/oracle-requests/9.6.jsonl is keyed to the Xaravel Test XT-runtime-22. No Upstream test exists for it, which the test file's header records as the reason, citing docs/ops/oracle.md. Its setup and exprs evaluate only the PHP built-ins the acceptance criterion names (==, <=>, is_numeric and the (int), (float), (string) and (bool) casts) over literal values and stdClass objects. It contains no Laravel code, so the signed values are PHP's own behaviour rather than arbitrary PHP signed as an expected value.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 1: pass at tree 66b6f1132787ed7715b9eb4401ad702908d565e8
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `6c94cc20449ddd931af4324b7ce5f2ec453dc376`, on 2026-10-21T23:51:29.421Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and the diff adds none. |
+| F-2: No expected value is weakened | pass | The added tests compare Oracle results exactly, including float identity through Object.is; no existing expected value is weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change contains no adapted markers or Expectations adapted fields. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture has output.error null, and the evidence identifies no relied-on error fixtures. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Both test bodies check their declared consequences and relevant AD-9 behavior. XT-runtime-23 now checks distinct innermost array identities, mutates the copied inner array, and verifies the original remains [2,3], fixing P-1. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Framework changes stay within runtime PHP semantics; no other Component's behavior is stubbed or partially implemented. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared the source and declaration evidence with AD-6 and DIV-1: the helpers perform synchronous computation, require no async callback, and correctly carry no asyncRoot tags. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | The request evaluates the PHP operations and inputs exercised by XT-runtime-22. The test file records why this Xaravel differential request has no corresponding Upstream test inputs. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `packages/runtime/tests/xaravel/semantics.test.ts`: XT-runtime-23 never checks or mutates the innermost [2, 3] array under php.get("list"). An implementation that shares that array can pass despite the declared consequence. Assert distinct identities and mutate that inner copy, then verify the original contents remain unchanged. **fixed**: XT-runtime-23 asserts originalInner !== copiedInner, pushes and overwrites elements in copiedInner, and asserts the originalInner JSON remains [2,3].
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"66b6f1132787ed7715b9eb4401ad702908d565e8","base":"6c94cc20449ddd931af4324b7ce5f2ec453dc376","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-21T23:51:29.421Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and the diff adds none.","findings":[]},{"id":"F-2","result":"pass","note":"The added tests compare Oracle results exactly, including float identity through Object.is; no existing expected value is weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no adapted markers or Expectations adapted fields.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture has output.error null, and the evidence identifies no relied-on error fixtures.","findings":[]},{"id":"F-7","result":"pass","note":"Both test bodies check their declared consequences and relevant AD-9 behavior. XT-runtime-23 now checks distinct innermost array identities, mutates the copied inner array, and verifies the original remains [2,3], fixing P-1.","findings":[]},{"id":"F-8","result":"pass","note":"Framework changes stay within runtime PHP semantics; no other Component's behavior is stubbed or partially implemented.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the source and declaration evidence with AD-6 and DIV-1: the helpers perform synchronous computation, require no async callback, and correctly carry no asyncRoot tags.","findings":[]},{"id":"F-10","result":"pass","note":"The request evaluates the PHP operations and inputs exercised by XT-runtime-22. The test file records why this Xaravel differential request has no corresponding Upstream test inputs.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"packages/runtime/tests/xaravel/semantics.test.ts","detail":"XT-runtime-23 never checks or mutates the innermost [2, 3] array under php.get(\"list\"). An implementation that shares that array can pass despite the declared consequence. Assert distinct identities and mutate that inner copy, then verify the original contents remain unchanged.","fixed":true,"note":"XT-runtime-23 asserts originalInner !== copiedInner, pushes and overwrites elements in copiedInner, and asserts the originalInner JSON remains [2,3]."}]}
+```
+
+### Reviewer 2: pass at tree 66b6f1132787ed7715b9eb4401ad702908d565e8
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `6c94cc20449ddd931af4324b7ce5f2ec453dc376`, on 2026-10-21T23:51:29.421Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | Manifest test_ids is empty; the change adds or changes no Ported Test. |
+| F-2: No expected value is weakened | n/a | No Ported Test expected values exist to compare with Upstream; Xaravel Test expectations come from the signed Oracle fixture. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Tests; no assertions removed against Upstream. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip by this change. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted:DIV marker or Expectations adapted field is added (evidence (a)). |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The only relied-on fixture (1ff7702e…json) has output.error null; no error fixtures. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-runtime-22 compares all seven helpers with the signed Oracle results. These cover ==, <=>, is_numeric and the int/float/bool casts over all 73 values of $w (scalars, numeric and whitespace strings, "1e3", INF, NAN, arrays, stdClass objects), and (string) over $v and the 31 floats of $f. Local assertions cover the object rules, including the AD-9.6 props protocol and the toString port, plus recursion errors and undefined read as null, so the body matches its consequence. Spot-checked Oracle cells are PHP-8-correct (null=="0" false, "abc"==0 false, "1e3"=="1000" true). XT-runtime-23 checks AD-9.2 value copy: each level is new and of the same kind, with key order and next free index kept; objects and Refs are shared; the innermost [2,3] is now checked after mutation; the original is unchanged. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Code changes are confined to packages/runtime (new casts/isNumeric/looseEquals/phpInt/valueCopy, PhpArray.copy and helper extraction). The test imports the grader's Oracle reader at run time; no stub or fake of another component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g): no @​asyncRoot tags in any touched runtime src file, and all new exports (toInt, toFloat, toPhpString, toBool, isNumeric, looseEquals, spaceship, valueCopy, PhpArray.copy) are synchronous with no IO or async callbacks, so no tag is required. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | conformance/oracle-requests/9.6.jsonl has one request, for Xaravel Test XT-runtime-22, which has no Upstream test. The recorded reason is in the semantics.test.ts header comment (docs/ops/oracle.md per-Story requests). setup/exprs only evaluate PHP built-in ==, <=>, is_numeric and casts over listed inputs; no arbitrary PHP signed as an expected value. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `packages/runtime/tests/xaravel/semantics.test.ts`: XT-runtime-23 never checks or mutates the innermost [2, 3] array under php.get("list"). An implementation that shares that array can pass despite the declared consequence. Assert distinct identities and mutate that inner copy, then verify the original contents remain unchanged. **fixed**: XT-runtime-23 now takes originalInner/copiedInner = (php.get("list"))[1], the [2,3] array. It asserts they are distinct, mutates the copy (push(4), [0]=9, plus pop on the outer list copy) and asserts jsonEncode(originalInner) === "[2,3]" and the original outer list's length is still 2. A sharing implementation would fail.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"66b6f1132787ed7715b9eb4401ad702908d565e8","base":"6c94cc20449ddd931af4324b7ce5f2ec453dc376","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-21T23:51:29.421Z","items":[{"id":"F-1","result":"n/a","note":"Manifest test_ids is empty; the change adds or changes no Ported Test.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test expected values exist to compare with Upstream; Xaravel Test expectations come from the signed Oracle fixture.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Tests; no assertions removed against Upstream.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip by this change.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted:DIV marker or Expectations adapted field is added (evidence (a)).","findings":[]},{"id":"F-6","result":"n/a","note":"The only relied-on fixture (1ff7702e…json) has output.error null; no error fixtures.","findings":[]},{"id":"F-7","result":"pass","note":"XT-runtime-22 compares all seven helpers with the signed Oracle results. These cover ==, <=>, is_numeric and the int/float/bool casts over all 73 values of $w (scalars, numeric and whitespace strings, \"1e3\", INF, NAN, arrays, stdClass objects), and (string) over $v and the 31 floats of $f. Local assertions cover the object rules, including the AD-9.6 props protocol and the toString port, plus recursion errors and undefined read as null, so the body matches its consequence. Spot-checked Oracle cells are PHP-8-correct (null==\"0\" false, \"abc\"==0 false, \"1e3\"==\"1000\" true). XT-runtime-23 checks AD-9.2 value copy: each level is new and of the same kind, with key order and next free index kept; objects and Refs are shared; the innermost [2,3] is now checked after mutation; the original is unchanged.","findings":[]},{"id":"F-8","result":"pass","note":"Code changes are confined to packages/runtime (new casts/isNumeric/looseEquals/phpInt/valueCopy, PhpArray.copy and helper extraction). The test imports the grader's Oracle reader at run time; no stub or fake of another component.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g): no @asyncRoot tags in any touched runtime src file, and all new exports (toInt, toFloat, toPhpString, toBool, isNumeric, looseEquals, spaceship, valueCopy, PhpArray.copy) are synchronous with no IO or async callbacks, so no tag is required.","findings":[]},{"id":"F-10","result":"pass","note":"conformance/oracle-requests/9.6.jsonl has one request, for Xaravel Test XT-runtime-22, which has no Upstream test. The recorded reason is in the semantics.test.ts header comment (docs/ops/oracle.md per-Story requests). setup/exprs only evaluate PHP built-in ==, <=>, is_numeric and casts over listed inputs; no arbitrary PHP signed as an expected value.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"packages/runtime/tests/xaravel/semantics.test.ts","detail":"XT-runtime-23 never checks or mutates the innermost [2, 3] array under php.get(\"list\"). An implementation that shares that array can pass despite the declared consequence. Assert distinct identities and mutate that inner copy, then verify the original contents remain unchanged.","fixed":true,"note":"XT-runtime-23 now takes originalInner/copiedInner = (php.get(\"list\"))[1], the [2,3] array. It asserts they are distinct, mutates the copy (push(4), [0]=9, plus pop on the outer list copy) and asserts jsonEncode(originalInner) === \"[2,3]\" and the original outer list's length is still 2. A sharing implementation would fail."}]}
 ```
