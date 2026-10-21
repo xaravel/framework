@@ -217,6 +217,30 @@ xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted,
   }
 }, 60_000);
 
+/**
+ * The subpath exports the spine names for a package, beside its root `.` (ESC-9.1-1). Each maps to
+ * `./src/<sub>/index.ts` and is added by the Story that builds it; every other package is root-only.
+ */
+const SUBPATH_EXPORTS: Readonly<Record<string, readonly string[]>> = {
+  "@xaravel/runtime": ["scope", "registry", "php"],
+};
+
+/** XT-7's exports check: the root entry, plus only the package's `SUBPATH_EXPORTS`. */
+function assertExports(npm: string, exportsMap: unknown): void {
+  expect(typeof exportsMap).toBe("object");
+  const entries = exportsMap as Record<string, unknown>;
+  expect(entries["."]).toBe("./src/index.ts");
+  const allowed = SUBPATH_EXPORTS[npm] ?? [];
+  for (const [key, target] of Object.entries(entries)) {
+    if (key === ".") {
+      continue;
+    }
+    const sub = key.startsWith("./") ? key.slice(2) : key;
+    expect(allowed).toContain(sub);
+    expect(target).toBe(`./src/${sub}/index.ts`);
+  }
+}
+
 /** XT-7's per-row checks: generated files, manifest fields, README and LICENSE under `base`. */
 function assertPackagesGenerated(base: string): void {
   const rows = readJsonl(join(base, "tools", "scaffold", "packages.jsonl"));
@@ -237,7 +261,7 @@ function assertPackagesGenerated(base: string): void {
     expect(manifest.license).toBe("MIT");
     expect(manifest.type).toBe("module");
     expect(manifest.engines).toEqual({ bun: ">=1.4" });
-    expect(manifest.exports).toEqual({ ".": "./src/index.ts" });
+    assertExports(row.npm, manifest.exports);
     expect("sideEffects" in manifest).toBe(false);
     expect(manifest.private === true).toBe(row.private);
     const repository = (manifest as unknown as Record<string, unknown>)["repository"];
