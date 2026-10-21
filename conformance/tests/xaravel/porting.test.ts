@@ -187,7 +187,53 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
   const mismatched = fixtureLines.map((line, index) => (index === mismatchIndex ? JSON.stringify({ ...mismatchEntry, ts: `${mismatchEntry.ts} + 1` }) : line)).join("\n");
   const toStringRow = constructRows.find((row) => row.startsWith("| `__toString` |"))!;
   const traitsRow = constructRows.find((row) => row.startsWith("| Traits |"))!;
+  // A section's body (heading kept) removed up to the next `## ` heading.
+  const emptied = (heading: string): string => {
+    const start = portingLines.indexOf(heading);
+    expect(start).toBeGreaterThan(-1);
+    let end = start + 1;
+    while (end < portingLines.length && !portingLines[end]!.startsWith("## ")) {
+      end++;
+    }
+    return [...portingLines.slice(0, start + 1), "", ...portingLines.slice(end)].join("\n");
+  };
+  const contentRules: [string, string, string][] = [
+    ["## Idiom table", "table row", "The parity rule"],
+    ["## Test-adaptation rules", "rule line", "Never weaken an expected value"],
+    ["## Mechanical expression rule", "table row", "syntax-directed"],
+    ["## By-reference parameters", "prose line", "`Ref<T>`"],
+    ["## Exceptions", "rule line", "`registerClass('<FQCN>', X)`"],
+  ];
+  const idiomTable = section(porting, "## Idiom table").filter((line) => line.startsWith("|"));
+  // Every table's data rows removed from the Idiom table, headers and separators kept.
+  const idiomRowsRemoved = (() => {
+    const start = portingLines.indexOf("## Idiom table");
+    expect(start).toBeGreaterThan(-1);
+    let end = start + 1;
+    while (end < portingLines.length && !portingLines[end]!.startsWith("## ")) {
+      end++;
+    }
+    const kept = portingLines.slice(start + 1, end).filter((line, index, all) => !line.startsWith("|") || /^\|(?:\s*:?-{3,}:?\s*\|)+$/.test(line) || /^\|(?:\s*:?-{3,}:?\s*\|)+$/.test(all[index + 1] ?? ""));
+    return [...portingLines.slice(0, start + 1), ...kept, ...portingLines.slice(end)].join("\n");
+  })();
+  expect(idiomTable.length).toBeGreaterThan(2);
+  expect(idiomRowsRemoved).toContain(idiomTable.slice(0, 2).join("\n"));
+  const mechanicalStart = porting.indexOf("\n## Mechanical expression rule\n");
+  const mechanicalEnd = porting.indexOf("\n## By-reference parameters\n");
+  expect(mechanicalStart).toBeGreaterThan(-1);
+  expect(mechanicalEnd).toBeGreaterThan(-1);
+  const mechanicalBody = porting.slice(mechanicalStart, mechanicalEnd);
+  const anchorReworded = porting.slice(0, mechanicalStart) + mechanicalBody.replaceAll("syntax-directed", "syntax-led") + porting.slice(mechanicalEnd);
+  // The By-reference body replaced by a prose line with the anchor only inside a code fence.
+  const byRefStart = porting.indexOf("\n## By-reference parameters\n") + "\n## By-reference parameters\n".length;
+  const byRefEnd = porting.indexOf("\n## Exceptions\n");
+  expect(byRefStart).toBeGreaterThan("\n## By-reference parameters\n".length - 1);
+  expect(byRefEnd).toBeGreaterThan(-1);
+  const anchorInFence = `${porting.slice(0, byRefStart)}\nA by-reference parameter takes a box.\n\n\`\`\`ts\nconst box: \`Ref<T>\`;\n\`\`\`\n${porting.slice(byRefEnd)}`;
   const failing: [Record<string, string | null>, string][] = [
+    [{ [PORTING_FILE]: idiomRowsRemoved }, 'PORTING.md: section "## Idiom table" has no table row'],
+    [{ [PORTING_FILE]: anchorReworded }, 'PORTING.md: section "## Mechanical expression rule" lacks "syntax-directed"'],
+    [{ [PORTING_FILE]: anchorInFence }, 'PORTING.md: section "## By-reference parameters" lacks "`Ref<T>`"'],
     [{ [PORTING_FILE]: null }, "PORTING.md: missing"],
     [{ [PORTING_FILE]: porting.replace("\n## Idiom table\n", "\n## Idioms\n") }, 'PORTING.md: missing section "## Idiom table"'],
     [{ [PORTING_FILE]: porting.replace("\n## Exceptions\n", "\n## Exceptionz\n") }, 'PORTING.md: missing section "## Exceptions"'],
@@ -213,6 +259,37 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(expected);
   }
+  // Each content section emptied: exit 1 with both its `has no` and `lacks` messages.
+  for (const [heading, kind, anchor] of contentRules) {
+    const result = run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: emptied(heading) })]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(`PORTING.md: section "${heading}" has no ${kind}\n`);
+    expect(result.stderr).toContain(`PORTING.md: section "${heading}" lacks "${anchor}"\n`);
+  }
+  // Idiom rows removed: no table row, but the anchor is still there.
+  expect(run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: idiomRowsRemoved })]).stderr).not.toContain('section "## Idiom table" lacks');
+  // Mechanical anchor reworded: the table rows still count.
+  expect(run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: anchorReworded })]).stderr).not.toContain('section "## Mechanical expression rule" has no table row');
+  // A By-reference body of only a bullet and a table has no prose line, though it holds the anchor.
+  const byRefNoProse = run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: `${porting.slice(0, byRefStart)}\n- \`Ref<T>\` box\n\n| A | B |\n| --- | --- |\n| a | b |\n${porting.slice(byRefEnd)}` })]);
+  expect(byRefNoProse.code).toBe(1);
+  expect(byRefNoProse.stderr).toContain('PORTING.md: section "## By-reference parameters" has no prose line');
+  expect(byRefNoProse.stderr).not.toContain('section "## By-reference parameters" lacks');
+  // The Exceptions body inside a code fence: its rule lines do not count.
+  const exceptionsStart = porting.indexOf("\n## Exceptions\n") + "\n## Exceptions\n".length;
+  const exceptionsEnd = porting.indexOf("\n## Frame slots (AD-5)\n");
+  expect(exceptionsStart).toBeGreaterThan("\n## Exceptions\n".length - 1);
+  expect(exceptionsEnd).toBeGreaterThan(-1);
+  const exceptionsFenced = run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: `${porting.slice(0, exceptionsStart)}\n\`\`\`\n${porting.slice(exceptionsStart, exceptionsEnd)}\n\`\`\`\n${porting.slice(exceptionsEnd)}` })]);
+  expect(exceptionsFenced.code).toBe(1);
+  expect(exceptionsFenced.stderr).toContain('PORTING.md: section "## Exceptions" has no rule line');
+  // The fenced case fails only on the anchor: its prose line counts.
+  expect(run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: anchorInFence })]).stderr).not.toContain('section "## By-reference parameters" has no prose line');
+  // A missing section is reported only as missing, with no content violations.
+  const renamed = run(CLI, ["check", "--root", fixture({ [PORTING_FILE]: porting.replace("\n## Idiom table\n", "\n## Idioms\n") })]);
+  expect(renamed.stderr).toContain('PORTING.md: missing section "## Idiom table"');
+  expect(renamed.stderr).not.toContain('section "## Idiom table" has no');
+  expect(renamed.stderr).not.toContain('section "## Idiom table" lacks');
 
   // generate repairs the drift fixture, leaving the rest of the file byte-identical; check then passes.
   const repairRoot = fixture({ [PORTING_FILE]: drifted });
