@@ -23,6 +23,11 @@ import {
   EXCERPT_CAP,
   fidelityVerdicts,
   findStorySpec,
+  MANIFEST_STATUS_PLACEHOLDER,
+  normaliseManifestStatus,
+  NO_PRIOR,
+  PRIOR_HEADING,
+  priorFindings,
   NO_EVIDENCE,
   noMention,
   parseChecklist,
@@ -43,6 +48,7 @@ import {
   verdictSchema,
   xaravelTestEvidence,
   type ChecklistItem,
+  type PriorFinding,
   type VerdictRecord,
 } from "../../../tools/fidelity-review/fidelity-review";
 import { approvalsClause, renderClause } from "../../../tools/story-check/story-check";
@@ -75,6 +81,10 @@ const ERROR_FIXTURE = "conformance/fixtures/view/02cb543f0363e6d73c44b9b5d52589d
 const SPEC = "_bmad-output/implementation-artifacts/spec-9-1-fidelity.md";
 const CHANGED = "packages/support/src/Str.ts";
 const REQUESTS = "conformance/oracle-requests/9.1.jsonl";
+const EPICS = "_bmad-output/planning-artifacts/epics.md";
+const SPRINT = "_bmad-output/implementation-artifacts/sprint-status.yaml";
+const OTHER_SPEC = "_bmad-output/implementation-artifacts/spec-9-2-other.md";
+const OTHER_MANIFEST = "stories/9.2.md";
 
 function git(dir: string, ...args: string[]): string {
   const result = Bun.spawnSync(["git", "-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", ...args], { stdout: "pipe", stderr: "pipe" });
@@ -115,6 +125,10 @@ function makeRepo(options: { oracle?: boolean; change?: boolean } = {}): { dir: 
     ].join("\n"),
     "conformance/upstream/framework/tests/Support/SupportFidelityTest.php": "<?php\nclass SupportFidelityTest {\n  public function testA() {\n    $this->assertSame(3, sum(1, 2));\n  }\n  public static function rows() { return [\n    'a' => [$this->assertSame('row-a', rowA())],\n    'b' => [$this->assertSame('row-b', rowB())],\n  ]; }\n}\n",
     "packages/support/src/Base.ts": "export const base = 0;\n",
+    [EPICS]: "# Epics\n\n### Story 9.1: Fidelity\n",
+    // A second Story's spec and manifest: the binding leaves out only Story 9.1's spec, and every manifest's status.
+    [OTHER_SPEC]: "---\ntitle: 'Story 9.2'\n---\n\n# Story 9.2\n",
+    [OTHER_MANIFEST]: '---\nstory_id: "9.2"\nepic: 9\ncomponent: support\nstatus: backlog\ntest_ids: []\nxaravel_test_ids: []\n---\n\n# Story 9.2\n',
   };
   for (const [path, text] of Object.entries(files)) {
     write(dir, path, text);
@@ -216,6 +230,11 @@ function fakes(plans: { claude?: Step[]; codex?: Step[] }, missing: ("claude" | 
 
 function answers(results: Record<string, "pass" | "fail" | "n/a"> = {}, findings: Record<string, { path: string; detail: string }[]> = {}): Record<string, unknown>[] {
   return IDS.map((id) => ({ id, result: results[id] ?? "pass", note: `checked ${id}`, findings: findings[id] ?? [] }));
+}
+
+/** An `addressed` answer for each prior finding id, fixed unless named in `unfixed`. */
+function addressed(ids: string[], unfixed: string[] = []): { id: string; fixed: boolean; note: string }[] {
+  return ids.map((id) => ({ id, fixed: !unfixed.includes(id), note: `checked ${id}` }));
 }
 
 function pass(model?: string): Step {
@@ -323,7 +342,7 @@ xaravelTest(
 
     // Both pass, cross-model: a claude loop puts reviewer 1 on codex and reviewer 2 on claude.
     const repo = makeRepo();
-    const tree = reviewTree(repo.dir, "worktree");
+    const tree = reviewTree(repo.dir, "worktree", SPEC);
     const both = fakes({ codex: [pass("gpt-fake-1")], claude: [pass("claude-fake-1")] }, [], { GH_TOKEN: "ghp-parent-secret", LC_ALL: "C" });
     const run = await review(repo.dir, both.env, "--loop-cli", "claude");
     expect(run.err).toEqual([]);
@@ -404,7 +423,7 @@ xaravelTest(
     // status: current for the working tree. Committed unchanged, the head tree is the reviewed tree: approvals passes.
     expect(await status(repo.dir)).toEqual({ code: 0, out: [`current: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`], err: [] });
     commitAll(repo.dir);
-    expect(reviewTree(repo.dir, "head")).toBe(tree);
+    expect(reviewTree(repo.dir, "head", SPEC)).toBe(tree);
     expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`PASS approvals: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`]);
     // Bookkeeping only: the spec and sprint status change and are committed; the verdicts stay current.
     writeFileSync(repo.spec, `${readFileSync(repo.spec, "utf8")}\nFinalized.\n`);
@@ -415,13 +434,72 @@ xaravelTest(
     // A manifest status edit is bookkeeping too (ESC-8.8-1): stories/ is outside the binding tree, before and after a commit.
     const manifestPath = join(repo.dir, "stories", "9.1.md");
     writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("status: in-progress", "status: done"));
-    expect(reviewTree(repo.dir, "worktree")).toBe(tree);
+    expect(reviewTree(repo.dir, "worktree", SPEC)).toBe(tree);
     expect((await status(repo.dir)).out[0]).toStartWith("current: ");
     commitAll(repo.dir, "story done");
-    expect(reviewTree(repo.dir, "head")).toBe(tree);
+    expect(reviewTree(repo.dir, "head", SPEC)).toBe(tree);
     expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`PASS approvals: 2 pass verdicts for tree ${tree} (reviewer 1: codex/gpt-fake-1, reviewer 2: claude/claude-fake-1)`]);
     // The diff still shows a stories/ change; only the binding tree leaves it out.
     expect(reviewDiff(repo.dir, repo.base).files.map((file) => file.filename)).toContain("stories/9.1.md");
+    // The binding leaves out the bookkeeping set ESC-8.8-1 names, as Epic 8 action item 4 narrows it: sprint status, the
+    // Story's own spec and each manifest's status line. Named or not (the tool and story:check name it), the Story's spec
+    // is left out; a named spec must be a .md under _bmad-output/implementation-artifacts/.
+    expect(reviewTree(repo.dir, "worktree", SPEC)).toBe(tree);
+    expect(reviewTree(repo.dir, "worktree", repo.spec)).toBe(tree);
+    expect(reviewTree(repo.dir, "head", SPEC)).toBe(tree);
+    const manifestText = readFileSync(manifestPath, "utf8");
+    expect(normaliseManifestStatus(manifestText)).toBe(manifestText.replace("status: done", MANIFEST_STATUS_PLACEHOLDER));
+    expect(normaliseManifestStatus("---\nstory_id: x\n---\nstatus: body, not frontmatter\n")).toBe("---\nstory_id: x\n---\nstatus: body, not frontmatter\n");
+    expect(normaliseManifestStatus("no frontmatter\nstatus: x\n")).toBe("no frontmatter\nstatus: x\n");
+    const bound = async (edit: () => void, undo: () => void): Promise<string[]> => {
+      edit();
+      const result = [reviewTree(repo.dir, "worktree", SPEC) === tree ? "same tree" : "new tree", (await status(repo.dir)).out[0]!.split(":")[0]!];
+      undo();
+      return result;
+    };
+    const restore = (path: string): (() => void) => {
+      const text = readFileSync(join(repo.dir, path), "utf8");
+      return () => writeFileSync(join(repo.dir, path), text);
+    };
+    // A manifest's test_ids edit, added or removed, is bound: the verdicts are stale.
+    expect(await bound(() => writeFileSync(manifestPath, manifestText.replace("test_ids:\n", `test_ids:\n  - ${JSON.stringify(`${TEST_ID}B`)}\n`)), restore("stories/9.1.md"))).toEqual(["new tree", "stale"]);
+    expect(await bound(() => writeFileSync(manifestPath, manifestText.replace(`  - ${JSON.stringify(MISSING_ID)}\n`, "")), restore("stories/9.1.md"))).toEqual(["new tree", "stale"]);
+    expect(manifestText).toContain(`  - ${JSON.stringify(MISSING_ID)}\n`);
+    // Planning artifacts and other specs are bound too; sprint status and the Story's own spec are not.
+    expect(await bound(() => writeFileSync(join(repo.dir, EPICS), `${readFileSync(join(repo.dir, EPICS), "utf8")}- a new criterion\n`), restore(EPICS))).toEqual(["new tree", "stale"]);
+    expect(() => reviewTree(repo.dir, "worktree", "packages/support/src/Base.ts")).toThrow("the spec packages/support/src/Base.ts is not a file under _bmad-output/implementation-artifacts/");
+    expect(() => reviewTree(repo.dir, "worktree", "../elsewhere/spec-9-1-x.md")).toThrow("is not a file under _bmad-output/implementation-artifacts/");
+    expect(await bound(() => write(repo.dir, OTHER_SPEC, "# Story 9.2\n\nEdited.\n"), restore(OTHER_SPEC))).toEqual(["new tree", "stale"]);
+    // Another manifest's status line is bookkeeping too: two manifests' blobs are normalised in one batch.
+    const otherManifest = readFileSync(join(repo.dir, OTHER_MANIFEST), "utf8");
+    expect(await bound(() => write(repo.dir, OTHER_MANIFEST, otherManifest.replace("status: backlog", "status: ready-for-dev")), restore(OTHER_MANIFEST))).toEqual(["same tree", "current"]);
+    expect(await bound(() => write(repo.dir, SPRINT, "development_status:\n  9-1-fidelity: rewritten\n"), restore(SPRINT))).toEqual(["same tree", "current"]);
+    expect(await bound(() => writeFileSync(repo.spec, `${readFileSync(repo.spec, "utf8")}\nFinalized again.\n`), restore(SPEC))).toEqual(["same tree", "current"]);
+    // Committed: a test_ids edit after two passes fails approvals; status and spec edits keep it passing.
+    expect(reviewTree(repo.dir, "worktree", SPEC)).toBe(tree);
+    writeFileSync(manifestPath, manifestText.replace(`  - ${JSON.stringify(MISSING_ID)}\n`, ""));
+    commitAll(repo.dir, "drop a test id");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("FAIL approvals: 0 of 2 pass verdicts for tree ");
+    writeFileSync(manifestPath, manifestText);
+    commitAll(repo.dir, "restore the test id");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
+    // Committed: another Story's spec edit fails approvals; another manifest's status edit keeps both modes' tree.
+    const otherSpecText = readFileSync(join(repo.dir, OTHER_SPEC), "utf8");
+    write(repo.dir, OTHER_SPEC, "# Story 9.2\n\nEdited.\n");
+    commitAll(repo.dir, "other spec edit");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("FAIL approvals: 0 of 2 pass verdicts for tree ");
+    write(repo.dir, OTHER_SPEC, otherSpecText);
+    commitAll(repo.dir, "other spec restored");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
+    write(repo.dir, OTHER_MANIFEST, otherManifest.replace("status: backlog", "status: in-progress"));
+    expect(reviewTree(repo.dir, "worktree", SPEC)).toBe(tree);
+    commitAll(repo.dir, "other story started");
+    expect(reviewTree(repo.dir, "head", SPEC)).toBe(tree);
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("PASS approvals: 2 pass verdicts for tree ");
+    write(repo.dir, `${EPICS}`, `${readFileSync(join(repo.dir, EPICS), "utf8")}- a new criterion\n`);
+    commitAll(repo.dir, "epics edit");
+    expect(renderClause(approvalsClause(repo.dir, "9.1"))[0]).toStartWith("FAIL approvals: 0 of 2 pass verdicts for tree ");
+    expect((await status(repo.dir)).out[0]).toStartWith("stale: ");
 
     // The other CLI not installed: reviewer 1 falls back to claude, recording why; approvals still passes.
     const noCodex = makeRepo();
@@ -560,7 +638,7 @@ xaravelTest(
     write(diffRepo.dir, SPEC, `${readFileSync(diffRepo.spec, "utf8")}\nEdited again.\n`);
     git(diffRepo.dir, "add", CHANGED);
     const index = git(diffRepo.dir, "ls-files", "--stage");
-    const diff = reviewDiff(diffRepo.dir, specBase);
+    const diff = reviewDiff(diffRepo.dir, specBase, SPEC);
     // A symbolic base is resolved and recorded as its commit sha.
     expect(reviewDiff(diffRepo.dir, "HEAD").base).toBe(git(diffRepo.dir, "rev-parse", "HEAD"));
     expect(diff.base).toBe(specBase);
@@ -568,7 +646,7 @@ xaravelTest(
       [REQUESTS, "added"],
       [CHANGED, "added"],
     ]);
-    expect(diff.tree).toBe(reviewTree(diffRepo.dir, "worktree"));
+    expect(diff.tree).toBe(reviewTree(diffRepo.dir, "worktree", SPEC));
     expect(git(diffRepo.dir, "ls-files", "--stage")).toBe(index);
     expect(git(diffRepo.dir, "diff", "--cached", "--name-only")).toBe(CHANGED);
     // A removal, a modification and a binary file each show; the removed file's lines are not "added" evidence.
@@ -828,11 +906,11 @@ xaravelTest(
     const racySecond = 1_700_000_000;
     utimesSync(join(racy, "a.txt"), racySecond, racySecond);
     git(racy, "add", "a.txt");
-    const racyBefore = reviewTree(racy, "worktree");
+    const racyBefore = reviewTree(racy, "worktree", SPEC);
     write(racy, "a.txt", "value 2\n");
     utimesSync(join(racy, "a.txt"), racySecond, racySecond);
     utimesSync(join(racy, ".git", "index"), racySecond, racySecond);
-    expect(reviewTree(racy, "worktree")).not.toBe(racyBefore);
+    expect(reviewTree(racy, "worktree", SPEC)).not.toBe(racyBefore);
 
     // A removed Oracle request file is not read; the review still records its verdicts.
     const removedRepo = makeRepo({ change: false });
@@ -856,7 +934,7 @@ xaravelTest(
     // Reject: reviewer 1 fails F-2 with a finding.
     const finding = { path: "conformance/tests/support/SupportStrTest.test.ts", detail: "assertSame(3, …) became assertEquals('3', …)" };
     const repo = makeRepo();
-    const tree = reviewTree(repo.dir, "worktree");
+    const tree = reviewTree(repo.dir, "worktree", SPEC);
     const rejecting = fakes({ codex: [{ kind: "answer", answer: { items: answers({ "F-2": "fail", "F-9": "n/a" }, { "F-2": [finding] }) } }] });
     const run = await review(repo.dir, rejecting.env, "--loop-cli", "claude");
     expect(run.code).toBe(1);
@@ -879,7 +957,7 @@ xaravelTest(
     const manifestPath = join(repo.dir, "stories", "9.1.md");
     writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("status: in-progress", "status: review"));
     write(repo.dir, "_bmad-output/implementation-artifacts/sprint-status.yaml", "development_status:\n  9-1-fidelity: review\n");
-    expect(reviewTree(repo.dir, "worktree")).toBe(tree);
+    expect(reviewTree(repo.dir, "worktree", SPEC)).toBe(tree);
     const rerunSpec = readFileSync(repo.spec, "utf8");
     const rerunFakes = fakes({});
     const rerun = await review(repo.dir, rerunFakes.env, "--loop-cli", "claude", "--base", repo.base);
@@ -896,7 +974,7 @@ xaravelTest(
     commitAll(repo.dir, "bookkeeping");
     // Rejects standing in both slots: both are printed, a finding's path is one line, and stderr speaks of both.
     const bothRepo = makeRepo();
-    const bothTree = reviewTree(bothRepo.dir, "worktree");
+    const bothTree = reviewTree(bothRepo.dir, "worktree", SPEC);
     const twoLine = { path: "a.ts\nb.ts", detail: "two\nlines" };
     const rejectBoth: Step = { kind: "answer", answer: { items: answers({ "F-2": "fail" }, { "F-2": [twoLine] }) } };
     expect((await review(bothRepo.dir, fakes({ codex: [rejectBoth], claude: [rejectBoth] }).env, "--loop-cli", "claude")).code).toBe(1);
@@ -908,24 +986,98 @@ xaravelTest(
       `fidelity-review: reviewer 1's and reviewer 2's rejects at tree ${bothTree} stand (ESC-8.8-1): fix their findings, which changes the reviewed tree, or supply the evidence they ask for, then review again; a re-run on the same tree is not allowed and runs no reviewer; nothing recorded`,
     ]);
     expect([bothFakes.calls("claude").length, bothFakes.calls("codex").length]).toEqual([0, 0]);
-    // A later review of the fixed tree appends; the earlier records are never edited.
+    // A later review of the fixed tree appends; the earlier records are never edited. It carries the latest reject's
+    // findings (ESC-8.8-1 item 3): both reviewers see each as P-<k>, their schema requires `addressed`, and the records
+    // hold `prior` with each answer.
     write(repo.dir, CHANGED, "export const added = 2;\n");
-    const fixedTree = reviewTree(repo.dir, "worktree");
+    const fixedTree = reviewTree(repo.dir, "worktree", SPEC);
     const before = readFileSync(repo.spec, "utf8");
-    expect((await review(repo.dir, fakes({}).env, "--loop-cli", "claude", "--base", repo.base)).code).toBe(0);
+    const expectedPrior: PriorFinding[] = [{ id: "P-1", reviewer: 1, item: "F-2", path: finding.path, detail: finding.detail }];
+    expect(priorFindings(parseRecords(before), fixedTree)).toEqual(expectedPrior);
+    expect(priorFindings(parseRecords(before), tree)).toEqual([]);
+    const addressing: Step = { kind: "answer", answer: { items: answers(), addressed: addressed(["P-1"]) } };
+    const fixedFakes = fakes({ codex: [addressing], claude: [addressing] });
+    expect((await review(repo.dir, fixedFakes.env, "--loop-cli", "claude", "--base", repo.base)).code).toBe(0);
+    for (const call of [fixedFakes.calls("codex")[0]!, fixedFakes.calls("claude")[0]!]) {
+      expect(call.stdin).toContain(`${PRIOR_HEADING}\n\nAddress each in \`addressed\`; one that is not fixed makes its item fail.\n\n- P-1 (reviewer 1, F-2) ${finding.path}: ${finding.detail}\n`);
+    }
+    const fixedArgv = fixedFakes.calls("claude")[0]!.argv;
+    for (const system of [fixedFakes.calls("codex")[0]!.stdin, fixedArgv[fixedArgv.indexOf("--system-prompt") + 1]!]) {
+      expect(system).toContain('Your answer must also hold "addressed": exactly one entry per P id');
+      expect(system).toContain("A finding that is not fixed makes its checklist item fail");
+    }
+    const firstArgv = rejecting.calls("claude")[0]!.argv;
+    expect(firstArgv[firstArgv.indexOf("--system-prompt") + 1]).not.toContain("addressed");
+    const priorSchema = JSON.parse(fixedArgv[fixedArgv.indexOf("--json-schema") + 1]!) as { required: string[]; properties: { addressed: { items: { required: string[]; properties: { id: { enum: string[] } } } } } };
+    expect(priorSchema.required).toEqual(["items", "addressed"]);
+    expect(priorSchema.properties.addressed.items.required).toEqual(["id", "fixed", "note"]);
+    expect(priorSchema.properties.addressed.items.properties.id.enum).toEqual(["P-1"]);
+    expect(priorSchema as unknown).toEqual(verdictSchema(ITEMS, expectedPrior));
     const after = readFileSync(repo.spec, "utf8");
     expect(after.startsWith(before.trimEnd())).toBe(true);
-    expect(records(repo.spec).map((record) => [record.reviewer, record.verdict, record.tree])).toEqual([
-      [1, "reject", tree],
-      [2, "pass", tree],
-      [1, "pass", fixedTree],
-      [2, "pass", fixedTree],
+    expect(records(repo.spec).map((record) => [record.reviewer, record.verdict, record.tree, record.prior ?? null])).toEqual([
+      [1, "reject", tree, []],
+      [2, "pass", tree, []],
+      [1, "pass", fixedTree, [{ ...expectedPrior[0], fixed: true, note: "checked P-1" }]],
+      [2, "pass", fixedTree, [{ ...expectedPrior[0], fixed: true, note: "checked P-1" }]],
     ]);
+    expect(after).toContain(`- **P-1** (reviewer 1, F-2) \`${finding.path}\`: ${finding.detail} **fixed**: checked P-1`);
     expect((await status(repo.dir)).out[0]).toStartWith("current: ");
+    // With no earlier reject the prompt says so, and the schema is today's: no `addressed`.
+    expect(fixedFakes.calls("claude")[0]!.stdin).not.toContain(NO_PRIOR);
+    expect(JSON.parse(rejecting.calls("claude")[0]!.argv[rejecting.calls("claude")[0]!.argv.indexOf("--json-schema") + 1]!)).toEqual(verdictSchema(ITEMS));
+    expect(rejecting.calls("claude")[0]!.stdin).toContain(`${PRIOR_HEADING}\n\n${NO_PRIOR}\n`);
+    expect(verdictSchema(ITEMS)).not.toHaveProperty("properties.addressed");
+
+    // After rejects in both slots, a changed tree carries both slots' findings. An answer without `addressed`, or one
+    // that leaves a finding unfixed while its item passes, is malformed: retried once, then no verdict, nothing recorded.
+    write(bothRepo.dir, CHANGED, "export const added = 4;\n");
+    const bothPrior: PriorFinding[] = [
+      { id: "P-1", reviewer: 1, item: "F-2", path: twoLine.path, detail: twoLine.detail },
+      { id: "P-2", reviewer: 2, item: "F-2", path: twoLine.path, detail: twoLine.detail },
+    ];
+    expect(priorFindings(parseRecords(readFileSync(bothRepo.spec, "utf8")), reviewTree(bothRepo.dir, "worktree", SPEC))).toEqual(bothPrior);
+    const unaddressed = fakes({ codex: [pass()], claude: [{ kind: "answer", answer: { items: answers(), addressed: addressed(["P-1", "P-2"], ["P-1"]) } }] });
+    const unaddressedRun = await review(bothRepo.dir, unaddressed.env, "--loop-cli", "claude");
+    expect(unaddressedRun.code).toBe(1);
+    expect([unaddressed.calls("codex").length, unaddressed.calls("claude").length]).toEqual([2, 2]);
+    expect(unaddressed.calls("codex")[0]!.stdin).toContain("- P-1 (reviewer 1, F-2) a.ts b.ts: two lines\n- P-2 (reviewer 2, F-2) a.ts b.ts: two lines\n");
+    expect(unaddressedRun.err).toEqual([
+      "fidelity-review: reviewer 1: codex attempt 1 of 2: malformed verdict: addressed is missing: the answer must address each finding of the latest reject (P-1, P-2)",
+      "fidelity-review: reviewer 1: codex attempt 2 of 2: malformed verdict: addressed is missing: the answer must address each finding of the latest reject (P-1, P-2)",
+      "fidelity-review: reviewer 1: no verdict from codex after 2 attempts",
+      "fidelity-review: reviewer 2: claude attempt 1 of 2: malformed verdict: P-1 is not fixed, so F-2 must fail",
+      "fidelity-review: reviewer 2: claude attempt 2 of 2: malformed verdict: P-1 is not fixed, so F-2 must fail",
+      "fidelity-review: reviewer 2: no verdict from claude after 2 attempts",
+    ]);
+    expect(records(bothRepo.spec)).toHaveLength(2);
+    // An unfixed finding answered with its item failing is a reject, recorded with its answers.
+    const unfixed: Step = { kind: "answer", answer: { items: answers({ "F-2": "fail" }, { "F-2": [{ path: "a.ts", detail: "still two lines" }] }), addressed: addressed(["P-2", "P-1"], ["P-2"]) } };
+    const unfixedRun = await review(bothRepo.dir, fakes({ codex: [unfixed], claude: [{ kind: "answer", answer: { items: answers(), addressed: addressed(["P-1", "P-2"]) } }] }).env, "--loop-cli", "claude");
+    expect(unfixedRun.code).toBe(1);
+    expect(unfixedRun.out).toContain("F-2 a.ts: still two lines");
+    expect(records(bothRepo.spec).slice(2).map((entry) => [entry.reviewer, entry.verdict, entry.prior!.map((answer) => [answer.id, answer.reviewer, answer.fixed])])).toEqual([
+      [1, "reject", [["P-1", 1, true], ["P-2", 2, false]]],
+      [2, "pass", [["P-1", 1, true], ["P-2", 2, true]]],
+    ]);
+    // The pure rules: missing, extra and duplicate P ids, a missing note, and `addressed` with no prior finding.
+    const priorBad = (answer: Record<string, unknown>, prior: PriorFinding[] = bothPrior): string[] => {
+      const result = parseVerdict(ITEMS, { items: answers(), ...answer }, prior);
+      return result.ok ? [] : result.errors;
+    };
+    expect(priorBad({ addressed: addressed(["P-1", "P-2"]) })).toEqual([]);
+    expect(priorBad({ addressed: addressed(["P-1"]) })).toEqual(["missing prior finding id P-2"]);
+    expect(priorBad({ addressed: addressed(["P-1", "P-2", "P-3"]) })).toEqual(["addressed[2]: extra prior finding id P-3"]);
+    expect(priorBad({ addressed: addressed(["P-1", "P-2", "P-1"]) })).toEqual(["addressed[2]: duplicate prior finding id P-1"]);
+    expect(priorBad({ addressed: [{ id: "P-1", fixed: true, note: " " }, ...addressed(["P-2"])] })).toEqual(["P-1: note is missing or empty"]);
+    expect(priorBad({ addressed: [{ id: "P-1", fixed: "yes", note: "x" }, ...addressed(["P-2"])] })).toEqual(["P-1: fixed is not true or false"]);
+    expect(priorBad({ addressed: addressed(["P-1"]) }, [])).toEqual(["addressed[0]: extra prior finding id P-1"]);
+    expect(priorBad({ addressed: [] }, [])).toEqual([]);
+    expect(priorBad({})).toEqual(["addressed is missing: the answer must address each finding of the latest reject (P-1, P-2)"]);
 
     // Stale: a reviewed file changes after the verdicts; status says stale, and once committed approvals finds none.
     write(repo.dir, CHANGED, "export const added = 3;\n");
-    const staleTree = reviewTree(repo.dir, "worktree");
+    const staleTree = reviewTree(repo.dir, "worktree", SPEC);
     expect(await status(repo.dir)).toEqual({ code: 1, out: [`stale: 0 of 2 pass verdicts for tree ${staleTree}`, `  reviewer 1: none for tree ${staleTree}`, `  reviewer 2: none for tree ${staleTree}`], err: [] });
     commitAll(repo.dir);
     expect(renderClause(approvalsClause(repo.dir, "9.1"))).toEqual([`FAIL approvals: 0 of 2 pass verdicts for tree ${staleTree}`, `  reviewer 1: none for tree ${staleTree}`, `  reviewer 2: none for tree ${staleTree}`]);
@@ -1031,7 +1183,44 @@ xaravelTest(
       `reviewer 1: the later pass at tree ${t} (record at line ${laterLine}) does not count: the reject at line ${rejectLine} stands until the reviewed tree changes (ESC-8.8-1)`,
     ]);
     // A reject on another tree does not stand on this one, and a reject in one slot leaves the other slot's count alone.
-    expect(count([record(1, "codex", { ...rejectRecord, tree: "f".repeat(40) }), record(1, "codex"), record(2, "claude")]).pass).toBe(true);
+    // The records after it must address its findings (`prior`, ESC-8.8-1 item 3); one that omits them is malformed.
+    const p1 = { id: "P-1", reviewer: 1 as const, item: "F-2", path: finding.path, detail: finding.detail, fixed: true, note: "fixed" };
+    const earlier = record(1, "codex", { ...rejectRecord, tree: "f".repeat(40), date: "2026-10-19T00:00:00.000Z" });
+    expect(count([earlier, record(1, "codex", { prior: [p1] }), record(2, "claude", { prior: [p1] })]).pass).toBe(true);
+    const omits = count([earlier, record(1, "codex", { prior: [p1] }), record(2, "claude")]);
+    expect(omits.pass).toBe(false);
+    expect(omits.detail).toBe("1 malformed Fidelity Review record(s)");
+    expect(omits.items).toEqual([expect.stringMatching(new RegExp(`^record at line \\d+ does not address the findings of the latest reject before its run \\(ESC-8\\.8-1\\): it omits P-1 \\(reviewer 1, F-2\\) ${finding.path.replace(/[.]/g, "\\.")}: `))]);
+    const malformedPrior = (prior: VerdictRecord["prior"], items?: VerdictRecord["items"]): string => count([earlier, record(1, "codex", { prior, ...(items === undefined ? {} : { items, verdict: "reject" }) }), record(2, "claude", { prior: [p1] })]).items.join("\n");
+    expect(malformedPrior([{ ...p1, fixed: false }])).toContain("P-1 is not fixed, so F-2 must fail");
+    expect(count([earlier, record(1, "codex", { prior: [{ ...p1, fixed: false }], verdict: "reject", items: rejectRecord.items }), record(2, "claude", { prior: [p1] })]).items[0]).toBe(`reviewer 1: reject at tree ${t}`);
+    expect(malformedPrior([{ ...p1, detail: "another finding" }])).toContain("its P-1 is not P-1 (reviewer 1, F-2)");
+    expect(malformedPrior([p1, { ...p1, id: "P-2" }])).toContain("extra prior finding id P-2");
+    // A prior without an earlier reject is an extra; a record before the reject, or in the reject's own run, needs none.
+    expect(count([record(1, "codex", { prior: [p1] }), record(2, "claude")]).items[0]).toContain("extra prior finding id P-1");
+    expect(count([record(1, "codex"), record(2, "claude"), earlier]).pass).toBe(true);
+    expect(count([record(1, "codex", { ...rejectRecord, tree: "f".repeat(40) }), record(2, "claude", { tree: "f".repeat(40) })], "f".repeat(40)).items[0]).toBe(`reviewer 1: reject at tree ${"f".repeat(40)}`);
+    // A malformed prior shape is a malformed record, and a record with prior round-trips.
+    expect(parseRecords(appendRecords("# s\n", [renderRecord(record(1, "codex", { prior: [{ ...p1, id: "Q-1" }] }), ITEMS)]))[0]!.problem).toBe('prior[0] is not a {id: "P-<k>", reviewer, item, path, detail, fixed, note} answer');
+    expect(parseRecords(appendRecords("# s\n", [renderRecord(record(1, "codex", { prior: [p1] }), ITEMS)]))[0]!.record).toEqual(record(1, "codex", { prior: [p1] }));
+    // A finding answered `fixed: false` is carried on even when its item failed with another finding: the next review
+    // gets the reject's own finding and the unfixed one.
+    const g = "a".repeat(40);
+    const other = { path: "packages/support/src/Other.ts", detail: "another problem" };
+    const stillFailing = record(1, "codex", { tree: g, date: "2026-10-19T12:00:00.000Z", verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [other] }) as unknown as VerdictRecord["items"], prior: [{ ...p1, fixed: false }] });
+    const carriedOn = [earlier, stillFailing, record(2, "claude", { tree: g, date: "2026-10-19T12:00:00.000Z", prior: [p1] })];
+    const carried = priorFindings(parseRecords(appendRecords("# spec\n", carriedOn.map((entry) => renderRecord(entry, ITEMS)))), t);
+    expect(carried).toEqual([
+      { id: "P-1", reviewer: 1, item: "F-2", path: other.path, detail: other.detail },
+      { id: "P-2", reviewer: 1, item: "F-2", path: finding.path, detail: finding.detail },
+    ]);
+    // The same finding listed again by the item is not carried twice.
+    const relisted = record(1, "codex", { ...stillFailing, items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] });
+    expect(priorFindings(parseRecords(appendRecords("# spec\n", [earlier, relisted].map((entry) => renderRecord(entry, ITEMS)))), t).map((entry) => entry.id)).toEqual(["P-1"]);
+    const answering = carried.map((entry) => ({ ...entry, fixed: true, note: "fixed" }));
+    expect(count([...carriedOn, record(1, "codex", { prior: answering }), record(2, "claude", { prior: answering })]).pass).toBe(true);
+    const dropsCarried = count([...carriedOn, record(1, "codex", { prior: answering.slice(0, 1) }), record(2, "claude", { prior: answering })]);
+    expect(dropsCarried.items.join("\n")).toContain(`it omits P-2 (reviewer 1, F-2) ${finding.path}: ${finding.detail}`);
     expect(count([record(2, "claude", { verdict: "reject", items: rejectRecord.items }), record(1, "codex"), record(2, "claude")]).items[0]).toBe(`reviewer 1: pass at tree ${t}`);
 
     // Records live only in the `## Fidelity Review` section, and appending keeps the sections after it in place.

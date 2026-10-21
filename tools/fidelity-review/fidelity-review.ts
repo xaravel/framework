@@ -12,16 +12,18 @@
 //       prints `current` when two `pass` verdicts are recorded for the working
 //       tree, else `stale` or `missing` with the reason.
 //
-// The reviewed tree. `reviewTree(root, mode)` is the git tree id a verdict is
-// bound to: the repository with the bookkeeping directories `_bmad-output/`
-// and `stories/` removed (ESC-8.8-1), written through a temporary index
+// The reviewed tree. `reviewTree(root, mode, spec)` is the git tree id a
+// verdict is bound to: the repository without the bookkeeping set ESC-8.8-1
+// names, as Epic 8 action item 4 narrows it: sprint status, the Story's own spec (its
+// verdict records and every Finalize edit) and the frontmatter `status:` line
+// of every `stories/*.md` manifest (normalised, not removed). Everything else
+// is bound: the rest of `_bmad-output/` (planning artifacts, other specs) and
+// of each manifest (`test_ids`, …). It is written through a temporary index
 // (`GIT_INDEX_FILE`), so the real index is never touched. Mode `worktree` is
 // HEAD plus every tracked change and every untracked, non-ignored file; mode
-// `head` is the HEAD commit. The spec, its verdict records and sprint status
-// live under `_bmad-output/`, and a manifest's status under `stories/`, so
-// recording a verdict, a status edit or finishing the Story never makes a
-// verdict stale, and a reviewed working tree committed unchanged has the same
-// id as its head.
+// `head` is the HEAD commit. Recording a verdict, a status edit or finishing
+// the Story never makes a verdict stale, and a reviewed working tree committed
+// unchanged has the same id as its head.
 //
 // The diff is `git diff-tree -p` between the `_bmad-output/`-less trees of
 // `--base` (default: the spec's `baseline_revision`) and the working tree; it
@@ -46,7 +48,12 @@
 // stands until the tree changes: `review` refuses to run on that tree (exit 1,
 // no reviewer, nothing recorded, the reject's findings printed), and
 // `fidelityVerdicts` counts it even when a later `pass` for the same slot and
-// tree follows.
+// tree follows. On a changed tree the reject's findings are carried into the
+// next review (`priorFindings`): for each slot whose last record is a reject
+// on another tree, its fail findings are listed as `P-1..P-n`, the answer must
+// address each (`addressed`: `fixed`, `note`), and one not fixed must make its
+// item fail. The answers are recorded as the record's `prior`, which counting
+// re-checks.
 //
 // The reviewers. The loop's CLI is `--loop-cli`, else `XARAVEL_LOOP_CLI`,
 // else `claude` when `CLAUDECODE` is set. Reviewer 1 runs on the other CLI
@@ -77,15 +84,18 @@ import { readUpstream } from "../upstream/upstream";
 
 export const CHECKLIST_FILE = "conformance/review/fidelity.md";
 export const ORACLE_REQUESTS_DIR = "conformance/oracle-requests";
-/** The directory left out of every tree, the diff's included: specs and sprint status are bookkeeping, not the reviewed work. */
+/** The directory the reviewers' diff leaves out: specs, planning artifacts and sprint status are not the reviewed work. */
 export const EXCLUDED_DIR = "_bmad-output";
-/**
- * The directories left out of the binding tree a verdict is recorded for (ESC-8.8-1): `_bmad-output/` (the spec, its
- * verdict records, sprint status) and `stories/` (the manifests' status edits). The diff still shows `stories/`.
- */
-export const BOOKKEEPING = [EXCLUDED_DIR, "stories"] as const;
 /** Where Story specs live (`spec-<a>-<b>-*.md`). */
 export const SPECS_DIR = "_bmad-output/implementation-artifacts";
+/**
+ * Sprint status, one of the bookkeeping paths the binding tree leaves out (ESC-8.8-1 item 2). The others are the Story's
+ * own spec (where its verdict records live) and the frontmatter `status:` line of every `stories/*.md` manifest, which
+ * is normalised to MANIFEST_STATUS_PLACEHOLDER rather than removed.
+ */
+export const SPRINT_STATUS = `${SPECS_DIR}/sprint-status.yaml`;
+/** The line every manifest's frontmatter `status:` line becomes in the binding tree. */
+export const MANIFEST_STATUS_PLACEHOLDER = "status: (bookkeeping)";
 /** The heading of the spec section that holds the verdict records. */
 export const RECORDS_HEADING = "## Fidelity Review";
 /** The `kind` of a verdict record's JSON. */
@@ -213,6 +223,39 @@ export interface PromptInput {
   readonly oracleRequests: readonly { readonly path: string; readonly text: string }[];
   readonly files: readonly ChangedFile[];
   readonly evidence: Evidence;
+  /** The findings of the latest reject the review must address (`priorFindings`, ESC-8.8-1 item 3); absent or empty: none. */
+  readonly prior?: readonly PriorFinding[];
+}
+
+/** One finding of the latest reject on another tree, which the next review must address (ESC-8.8-1 item 3). */
+export interface PriorFinding {
+  /** `P-<k>`, numbered from 1 across both slots, slot 1's first. */
+  readonly id: string;
+  /** The slot whose reject it is. */
+  readonly reviewer: 1 | 2;
+  /** The checklist item (`F-<n>`) that failed with it. */
+  readonly item: string;
+  readonly path: string;
+  readonly detail: string;
+}
+
+/** A reviewer's answer to one prior finding: whether the change fixes it, and what was checked. */
+export interface AddressedFinding {
+  readonly id: string;
+  readonly fixed: boolean;
+  readonly note: string;
+}
+
+/** A prior finding with its answer, as a verdict record holds it (`prior`). */
+export interface PriorAnswer extends PriorFinding {
+  readonly fixed: boolean;
+  readonly note: string;
+}
+
+/** The prompt line of a prior finding, `P-<k> (reviewer <n>, F-<m>) <path>: <detail>`, on one line. */
+export function priorLine(finding: PriorFinding): string {
+  const flat = (text: string): string => text.replace(/\r?\n/g, " ");
+  return `${finding.id} (reviewer ${finding.reviewer}, ${finding.item}) ${flat(finding.path)}: ${flat(finding.detail)}`;
 }
 
 export interface Prompt {
@@ -223,6 +266,10 @@ export interface Prompt {
 }
 
 export const NO_TEXTUAL_CHANGE = "(no textual change)";
+/** The user-text section that lists the latest reject's findings. */
+export const PRIOR_HEADING = "## Findings of the latest reject (ESC-8.8-1)";
+/** That section's text when there is none. */
+export const NO_PRIOR = "No earlier reject's findings to address: no reviewer slot's latest record is a reject on another tree.";
 
 function fence(text: string, lang = ""): string {
   let ticks = "```";
@@ -245,7 +292,7 @@ function evidenceSection(sections: string[], heading: string, entries: readonly 
 /** The system text (the checklist, the Precedence section and the answering rules) and the user text (the change's evidence). */
 export function buildPrompt(input: PromptInput): Prompt {
   const ids = input.items.map((item) => item.id).join(", ");
-  const system = [
+  const systemLines = [
     "You are a Fidelity Reviewer for Xaravel, a TypeScript port of Laravel. You review one Story's change against Upstream (Laravel) and the checklist below. You are independent of the implementer. Do not use any tool, command or file: judge only the material given in this prompt.",
     "",
     'Answer with one JSON object matching the given schema, {"items": [...]}, holding exactly one answer for every checklist item. The items are: ' + ids + ".",
@@ -260,7 +307,17 @@ export function buildPrompt(input: PromptInput): Prompt {
     "The Skip Reason precedence F-4 cites (the `## Precedence` section of conformance/README.md):",
     "",
     input.precedence === null ? "unavailable: conformance/README.md has no ## Precedence section" : input.precedence.trim(),
-  ].join("\n");
+  ];
+  const prior = input.prior ?? [];
+  if (prior.length > 0) {
+    systemLines.push(
+      "",
+      `The latest review rejected an earlier tree. Its findings are listed at the end of the user text as ${prior.length === 1 ? "P-1" : `P-1..P-${prior.length}`} (ESC-8.8-1): a reject stands until its findings are fixed.`,
+      'Your answer must also hold "addressed": exactly one entry per P id, each {"id", "fixed", "note"}. fixed is true only when this change fixes the finding, or supplies the evidence it asks for; otherwise false. The note says what you checked.',
+      "A finding that is not fixed makes its checklist item fail: answer that item fail, with a finding.",
+    );
+  }
+  const system = systemLines.join("\n");
   const sections: string[] = [`# Story ${input.storyId}: tree ${input.tree} against base ${input.base}`, "", "## Manifest", "", fence(input.manifestText, "markdown")];
   sections.push("", "## Inventory rows and Upstream source");
   if (input.inventory.length === 0) {
@@ -319,6 +376,12 @@ export function buildPrompt(input: PromptInput): Prompt {
     for (const consequence of entry.consequences) {
       sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, "jsonl"));
     }
+  }
+  sections.push("", PRIOR_HEADING, "");
+  if (prior.length === 0) {
+    sections.push(NO_PRIOR);
+  } else {
+    sections.push("Address each in `addressed`; one that is not fixed makes its item fail.", "", ...prior.map((finding) => `- ${priorLine(finding)}`));
   }
   const user = sections.join("\n") + "\n";
   return { system, user, length: system.length + user.length };
@@ -1077,12 +1140,34 @@ export function xaravelTestEvidence(root: string, files: readonly ChangedFile[])
 // ---------------------------------------------------------------------------
 // Verdict
 
-/** The JSON schema a reviewer's answer must satisfy: one answer per item id, the ids enumerated. */
-export function verdictSchema(items: readonly ChecklistItem[]): Record<string, unknown> {
+/**
+ * The JSON schema a reviewer's answer must satisfy: one answer per item id, the ids enumerated. With prior findings
+ * (ESC-8.8-1 item 3) it also requires `addressed`, one `{id, fixed, note}` per `P-<k>`; without, it is unchanged.
+ */
+export function verdictSchema(items: readonly ChecklistItem[], prior: readonly PriorFinding[] = []): Record<string, unknown> {
+  const addressed =
+    prior.length === 0
+      ? {}
+      : {
+          addressed: {
+            type: "array",
+            description: "One answer per finding of the latest reject, each P id exactly once.",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["id", "fixed", "note"],
+              properties: {
+                id: { type: "string", enum: prior.map((finding) => finding.id) },
+                fixed: { type: "boolean", description: "True only when this change fixes the finding or supplies the evidence it asks for." },
+                note: { type: "string", description: "What was checked. A finding that is not fixed makes its item fail." },
+              },
+            },
+          },
+        };
   return {
     type: "object",
     additionalProperties: false,
-    required: ["items"],
+    required: prior.length === 0 ? ["items"] : ["items", "addressed"],
     properties: {
       items: {
         type: "array",
@@ -1108,6 +1193,7 @@ export function verdictSchema(items: readonly ChecklistItem[]): Record<string, u
           },
         },
       },
+      ...addressed,
     },
   };
 }
@@ -1124,7 +1210,7 @@ export interface ItemVerdict {
   readonly findings: readonly Finding[];
 }
 
-export type VerdictResult = { readonly ok: true; readonly verdict: ItemVerdict[] } | { readonly ok: false; readonly errors: string[] };
+export type VerdictResult = { readonly ok: true; readonly verdict: ItemVerdict[]; readonly addressed: AddressedFinding[] } | { readonly ok: false; readonly errors: string[] };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -1136,9 +1222,12 @@ function nonEmpty(value: unknown): value is string {
 
 /**
  * Validates an answer against the checklist: every item id exactly once, each answer well-formed, a `fail` with at
- * least one finding. Returns the answers in checklist order, or every problem found.
+ * least one finding. With `prior` findings (ESC-8.8-1 item 3), `addressed` must hold exactly one `{id, fixed, note}`
+ * per P id, with a non-empty note, and a finding answered `fixed: false` must make its item `fail`; without, a
+ * non-empty `addressed` is an extra. Returns the answers in checklist order and the addressed answers in `prior` order,
+ * or every problem found.
  */
-export function parseVerdict(items: readonly ChecklistItem[], answer: unknown): VerdictResult {
+export function parseVerdict(items: readonly ChecklistItem[], answer: unknown, prior: readonly PriorFinding[] = []): VerdictResult {
   const errors: string[] = [];
   if (!isRecord(answer) || !Array.isArray(answer["items"])) {
     return { ok: false, errors: ["the verdict is not an object with an items array"] };
@@ -1202,10 +1291,72 @@ export function parseVerdict(items: readonly ChecklistItem[], answer: unknown): 
       errors.push(`missing item id ${item.id}`);
     }
   }
+  const addressed = addressedAnswers(answer["addressed"], prior, seen, errors);
   if (errors.length > 0) {
     return { ok: false, errors };
   }
-  return { ok: true, verdict: items.map((item) => seen.get(item.id)!) };
+  return { ok: true, verdict: items.map((item) => seen.get(item.id)!), addressed };
+}
+
+/** The `addressed` answers in `prior` order, pushing each problem onto `errors` (see `parseVerdict`). */
+function addressedAnswers(raw: unknown, prior: readonly PriorFinding[], seen: ReadonlyMap<string, ItemVerdict>, errors: string[]): AddressedFinding[] {
+  if (raw === undefined || raw === null) {
+    if (prior.length > 0) {
+      errors.push(`addressed is missing: the answer must address each finding of the latest reject (${prior.map((finding) => finding.id).join(", ")})`);
+    }
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    errors.push("addressed is not an array");
+    return [];
+  }
+  const byId = new Map(prior.map((finding) => [finding.id, finding]));
+  const answered = new Map<string, AddressedFinding>();
+  const flagged = new Set<string>();
+  for (const [index, entry] of (raw as unknown[]).entries()) {
+    const where = `addressed[${index}]`;
+    if (!isRecord(entry) || typeof entry["id"] !== "string") {
+      errors.push(`${where} has no string id`);
+      continue;
+    }
+    const id = entry["id"];
+    if (!byId.has(id)) {
+      errors.push(`${where}: extra prior finding id ${id}`);
+      continue;
+    }
+    if (answered.has(id) || flagged.has(id)) {
+      errors.push(`${where}: duplicate prior finding id ${id}`);
+      continue;
+    }
+    if (typeof entry["fixed"] !== "boolean") {
+      errors.push(`${id}: fixed is not true or false`);
+      flagged.add(id);
+      continue;
+    }
+    if (!nonEmpty(entry["note"])) {
+      errors.push(`${id}: note is missing or empty`);
+      flagged.add(id);
+      continue;
+    }
+    answered.set(id, { id, fixed: entry["fixed"], note: entry["note"] });
+  }
+  for (const finding of prior) {
+    const answer = answered.get(finding.id);
+    if (answer === undefined) {
+      if (!flagged.has(finding.id)) {
+        errors.push(`missing prior finding id ${finding.id}`);
+      }
+      continue;
+    }
+    const item = seen.get(finding.item);
+    if (!answer.fixed && item !== undefined && item.result !== "fail") {
+      errors.push(`${finding.id} is not fixed, so ${finding.item} must fail`);
+    }
+  }
+  return prior.flatMap((finding) => {
+    const answer = answered.get(finding.id);
+    return answer === undefined ? [] : [answer];
+  });
 }
 
 /** `pass` only when no item is `fail`. */
@@ -1232,16 +1383,100 @@ function inline(text: string): string {
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-function git(root: string, args: readonly string[], extraEnv: Record<string, string> = {}): string {
-  const result = Bun.spawnSync(["git", "-c", "core.quotePath=false", "-C", root, ...args], { env: { ...process.env, ...extraEnv }, stdout: "pipe", stderr: "pipe" });
+/** Runs git in `root`, with `input` on stdin when given; returns its stdout bytes, or throws with its stderr. */
+function gitBytes(root: string, args: readonly string[], extraEnv: Record<string, string> = {}, input: string | null = null): Buffer {
+  const result = Bun.spawnSync(["git", "-c", "core.quotePath=false", "-C", root, ...args], {
+    env: { ...process.env, ...extraEnv },
+    stdin: input === null ? "ignore" : new TextEncoder().encode(input),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   if (result.exitCode !== 0) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr.toString().trim() || `exit ${result.exitCode}`}`);
   }
-  return result.stdout.toString();
+  return result.stdout;
 }
 
-/** The tree id of `rev` (null: HEAD plus the working tree's tracked changes and untracked, non-ignored files) without the `excluded` directories. */
-function treeWithout(root: string, rev: string | null, excluded: readonly string[]): string {
+function git(root: string, args: readonly string[], extraEnv: Record<string, string> = {}, input: string | null = null): string {
+  return gitBytes(root, args, extraEnv, input).toString();
+}
+
+/**
+ * A manifest's text with its frontmatter `status:` line replaced by MANIFEST_STATUS_PLACEHOLDER (ESC-8.8-1 item 2: a
+ * status edit is bookkeeping); text with no frontmatter, or no top-level `status:` key in it, is returned unchanged.
+ */
+export function normaliseManifestStatus(text: string): string {
+  const match = /^(---\r?\n)([\s\S]*?\r?\n)(---[ \t]*(?:\r?\n|$))/.exec(text);
+  if (match === null) {
+    return text;
+  }
+  const body = match[2]!.replace(/^status:[^\r\n]*/m, MANIFEST_STATUS_PLACEHOLDER);
+  return `${match[1]}${body}${text.slice(match[1]!.length + match[2]!.length)}`;
+}
+
+/** The stage-0 entries of the temporary index under `prefix`: mode, blob id and path. */
+function indexEntries(root: string, env: Record<string, string>, prefix: string): { mode: string; sha: string; path: string }[] {
+  const out: { mode: string; sha: string; path: string }[] = [];
+  for (const line of git(root, ["ls-files", "-s", "-z", "--", prefix], env).split("\0")) {
+    const match = /^(\d{6}) ([0-9a-f]+) (\d)\t([\s\S]+)$/.exec(line);
+    if (match !== null && match[3] === "0") {
+      out.push({ mode: match[1]!, sha: match[2]!, path: match[4]! });
+    }
+  }
+  return out;
+}
+
+/** Rewrites each `stories/*.md` blob in the temporary index to `normaliseManifestStatus` of it; the real index is never written. */
+function normaliseManifests(root: string, env: Record<string, string>, dir: string): void {
+  const manifests = indexEntries(root, env, `${STORIES_DIR}/`).filter((entry) => /^stories\/[^/]+\.md$/.test(entry.path) && entry.mode !== "120000" && entry.mode !== "160000");
+  if (manifests.length === 0) {
+    return;
+  }
+  const batch = gitBytes(root, ["cat-file", "--batch"], env, manifests.map((entry) => `${entry.sha}\n`).join(""));
+  const changed: { mode: string; path: string; file: string }[] = [];
+  let at = 0;
+  for (const [index, entry] of manifests.entries()) {
+    const eol = batch.indexOf(0x0a, at);
+    const header = batch.subarray(at, eol).toString();
+    const size = /^[0-9a-f]+ blob (\d+)$/.exec(header);
+    if (eol === -1 || size === null) {
+      throw new Error(`git cat-file --batch: unexpected header ${JSON.stringify(header)} for ${entry.path}`);
+    }
+    const text = batch.subarray(eol + 1, eol + 1 + Number(size[1])).toString("utf8");
+    at = eol + 1 + Number(size[1]) + 1;
+    const normalised = normaliseManifestStatus(text);
+    if (normalised !== text) {
+      const file = join(dir, `manifest-${index}`);
+      writeFileSync(file, normalised);
+      changed.push({ mode: entry.mode, path: entry.path, file });
+    }
+  }
+  if (changed.length === 0) {
+    return;
+  }
+  const shas = git(root, ["hash-object", "-w", "--no-filters", "--stdin-paths"], env, changed.map((entry) => `${entry.file}\n`).join("")).trim().split("\n");
+  if (shas.length !== changed.length) {
+    throw new Error(`git hash-object wrote ${shas.length} object(s) for ${changed.length} manifest(s)`);
+  }
+  git(root, ["update-index", "-z", "--index-info"], env, changed.map((entry, index) => `${entry.mode} ${shas[index]}\t${entry.path}\0`).join(""));
+}
+
+/** The Story specs left out when no spec is named: each `spec-<a>-<b>-*.md` directly under SPECS_DIR in the temporary index. */
+function storySpecs(root: string, env: Record<string, string>): string[] {
+  return indexEntries(root, env, `${SPECS_DIR}/`)
+    .map((entry) => entry.path)
+    .filter((path) => /^_bmad-output\/implementation-artifacts\/spec-[1-9]\d*-[1-9]\d*-[^/]*\.md$/.test(path));
+}
+
+/** What a tree leaves out: whole paths (`exclude`), and, for a binding tree, the bookkeeping of ESC-8.8-1 item 2. */
+interface TreeFilter {
+  readonly exclude: readonly string[];
+  /** Normalise every manifest's `status:` line, and leave out sprint status and `spec` (null: none; undefined: `storySpecs`). */
+  readonly bookkeeping: { readonly spec: string | null | undefined } | null;
+}
+
+/** The tree id of `rev` (null: HEAD plus the working tree's tracked changes and untracked, non-ignored files), filtered. */
+function treeWithout(root: string, rev: string | null, filter: TreeFilter): string {
   const dir = mkdtempSync(join(tmpdir(), "xaravel-fidelity-index-"));
   const index = join(dir, "index");
   const env = { GIT_INDEX_FILE: index };
@@ -1260,8 +1495,18 @@ function treeWithout(root: string, rev: string | null, excluded: readonly string
     } else {
       git(root, ["read-tree", `${rev}^{tree}`], env);
     }
-    // `--force`: an index read from an older commit differs from both HEAD and the working tree; it is a temporary index.
-    git(root, ["rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", ...excluded], env);
+    const excluded = [...filter.exclude];
+    if (filter.bookkeeping !== null) {
+      const spec = filter.bookkeeping.spec;
+      excluded.push(SPRINT_STATUS, ...(spec === undefined ? storySpecs(root, env) : spec === null ? [] : [spec]));
+    }
+    if (excluded.length > 0) {
+      // `--force`: an index read from an older commit differs from both HEAD and the working tree; it is a temporary index.
+      git(root, ["--literal-pathspecs", "rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", ...excluded], env);
+    }
+    if (filter.bookkeeping !== null) {
+      normaliseManifests(root, env, dir);
+    }
     return git(root, ["write-tree"], env).trim();
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -1269,12 +1514,42 @@ function treeWithout(root: string, rev: string | null, excluded: readonly string
 }
 
 /**
- * The reviewed tree a verdict is bound to: the git tree id of the repository state with the BOOKKEEPING directories
- * (`_bmad-output/`, `stories/`) removed. Mode `worktree` is HEAD plus every tracked change and untracked, non-ignored
- * file (what the reviewers see); mode `head` is the HEAD commit.
+ * `spec` (absolute, or relative to `root`) as a repository path with `/` separators; throws unless it is a `.md` file
+ * path under SPECS_DIR, so a named spec can only leave a spec out of the binding.
  */
-export function reviewTree(root: string, mode: "worktree" | "head"): string {
-  return treeWithout(root, mode === "head" ? "HEAD" : null, BOOKKEEPING);
+function specRepoPath(root: string, spec: string): string {
+  const base = resolve(root);
+  const path = resolve(base, spec);
+  const inside = (from: string, to: string): string | null => {
+    const rel = relative(from, to);
+    return rel === "" || rel.startsWith("..") || isAbsolute(rel) ? null : rel.split("\\").join("/");
+  };
+  let rel = inside(base, path);
+  if (rel === null) {
+    try {
+      rel = inside(realpathSync(base), realpathSync(path));
+    } catch {
+      rel = null;
+    }
+  }
+  if (rel === null || !rel.startsWith(`${SPECS_DIR}/`) || !rel.endsWith(".md")) {
+    throw new Error(`the spec ${spec} is not a file under ${SPECS_DIR}/`);
+  }
+  return rel;
+}
+
+/**
+ * The reviewed tree a verdict is bound to: the git tree id of the repository state without the bookkeeping set
+ * ESC-8.8-1 names, as Epic 8 action item 4 narrows it (only each manifest's `status:` line, the whole Story spec): sprint
+ * status (SPRINT_STATUS), the Story's own spec `spec` (absolute or relative to `root`, a `.md` under SPECS_DIR, else
+ * this throws; its verdict records and every later Finalize edit live there), and the frontmatter `status:` line of
+ * every `stories/*.md` manifest, normalised to MANIFEST_STATUS_PLACEHOLDER. Everything else, the rest of `_bmad-output/` and
+ * of each manifest included, is bound. Mode `worktree` is HEAD plus every tracked change and untracked, non-ignored file
+ * (what the reviewers see); mode `head` is the HEAD commit. `review`, `status` and `story:check` always name the spec;
+ * without one, every Story spec (`spec-<a>-<b>-*.md` under SPECS_DIR) is left out.
+ */
+export function reviewTree(root: string, mode: "worktree" | "head", spec?: string): string {
+  return treeWithout(root, mode === "head" ? "HEAD" : null, { exclude: [], bookkeeping: { spec: spec === undefined ? undefined : specRepoPath(root, spec) } });
 }
 
 export interface ReviewDiff {
@@ -1289,18 +1564,18 @@ const STATUS_NAMES: Readonly<Record<string, string>> = { A: "added", D: "removed
 
 /**
  * The per-file changes between the `_bmad-output/`-less trees of `base` and the working tree (`git diff-tree -p`); a
- * change under `stories/` is shown. `tree` is the binding tree, `reviewTree(root, "worktree")`.
+ * change under `stories/` is shown in full. `tree` is the binding tree, `reviewTree(root, "worktree", spec)`.
  */
-export function reviewDiff(root: string, base: string): ReviewDiff {
+export function reviewDiff(root: string, base: string, spec?: string): ReviewDiff {
   let sha: string;
   try {
     sha = git(root, ["rev-parse", "--verify", "--quiet", `${base}^{commit}`]).trim();
   } catch {
     throw new Error(`the base ${base} is not a commit of ${root}`);
   }
-  const from = treeWithout(root, sha, [EXCLUDED_DIR]);
-  const to = treeWithout(root, null, [EXCLUDED_DIR]);
-  const tree = reviewTree(root, "worktree");
+  const from = treeWithout(root, sha, { exclude: [EXCLUDED_DIR], bookkeeping: null });
+  const to = treeWithout(root, null, { exclude: [EXCLUDED_DIR], bookkeeping: null });
+  const tree = reviewTree(root, "worktree", spec);
   const names = git(root, ["diff-tree", "-r", "-z", "--no-renames", "--name-status", from, to]).split("\0");
   const entries: { status: string; path: string }[] = [];
   for (let i = 0; i + 1 < names.length; i += 2) {
@@ -1377,6 +1652,11 @@ export interface VerdictRecord {
   readonly fallback: string | null;
   readonly date: string;
   readonly items: readonly ItemVerdict[];
+  /**
+   * The findings of the latest reject this review had to address, each with the reviewer's answer (ESC-8.8-1 item 3):
+   * `priorFindings` of the records before its run. `review` always writes it; absent on older records, it means none.
+   */
+  readonly prior?: readonly PriorAnswer[];
 }
 
 /** One parsed record: the record, or the problem that makes it malformed, with the spec line its JSON block starts on. */
@@ -1408,6 +1688,13 @@ export function renderRecord(record: VerdictRecord, items: readonly ChecklistIte
   for (const entry of failed) {
     for (const finding of entry.findings) {
       lines.push(`- **${entry.id}** \`${inline(finding.path)}\`: ${inline(finding.detail)}`);
+    }
+  }
+  const prior = record.prior ?? [];
+  if (prior.length > 0) {
+    lines.push("", "Findings of the latest reject, addressed (ESC-8.8-1):", "");
+    for (const answer of prior) {
+      lines.push(`- **${answer.id}** (reviewer ${answer.reviewer}, ${answer.item}) \`${inline(answer.path)}\`: ${inline(answer.detail)} **${answer.fixed ? "fixed" : "not fixed"}**: ${inline(answer.note)}`);
     }
   }
   lines.push("", fence(JSON.stringify(record), "json"));
@@ -1521,6 +1808,26 @@ function recordProblem(value: unknown): string | null {
   if ((value["verdict"] === "pass") === failed) {
     return `verdict ${value["verdict"]} disagrees with its items (${failed ? "an item fails" : "no item fails"})`;
   }
+  if (value["prior"] !== undefined) {
+    if (!Array.isArray(value["prior"])) {
+      return "prior is not an array";
+    }
+    for (const [index, answer] of (value["prior"] as unknown[]).entries()) {
+      if (
+        !isRecord(answer) ||
+        typeof answer["id"] !== "string" ||
+        !/^P-[1-9]\d*$/.test(answer["id"]) ||
+        (answer["reviewer"] !== 1 && answer["reviewer"] !== 2) ||
+        !nonEmpty(answer["item"]) ||
+        !nonEmpty(answer["path"]) ||
+        !nonEmpty(answer["detail"]) ||
+        typeof answer["fixed"] !== "boolean" ||
+        typeof answer["note"] !== "string"
+      ) {
+        return `prior[${index}] is not a {id: "P-<k>", reviewer, item, path, detail, fixed, note} answer`;
+      }
+    }
+  }
   return null;
 }
 
@@ -1591,9 +1898,77 @@ export function standingRejects(entries: readonly RecordEntry[], tree: string): 
 }
 
 /**
+ * The findings the next review of `tree` must address (ESC-8.8-1 item 3): for each reviewer slot, 1 then 2, whose last
+ * well-formed record in `entries` is a `reject` on another tree, that reject's findings, item by item in its order,
+ * then the prior findings it answered `fixed: false` that its items do not list again (same item, path and detail),
+ * numbered `P-1..P-n` across both slots. A carried finding is listed as that slot's, with its item, path and detail. A reject on `tree` itself stands instead (`standingRejects`) and is not listed.
+ */
+export function priorFindings(entries: readonly RecordEntry[], tree: string): PriorFinding[] {
+  const out: PriorFinding[] = [];
+  for (const reviewer of [1, 2] as const) {
+    const last = entries.filter((entry) => entry.record !== null && entry.record.reviewer === reviewer).at(-1)?.record ?? null;
+    if (last === null || last.verdict !== "reject" || last.tree === tree) {
+      continue;
+    }
+    for (const item of last.items) {
+      if (item.result !== "fail") {
+        continue;
+      }
+      for (const finding of item.findings) {
+        out.push({ id: `P-${out.length + 1}`, reviewer, item: item.id, path: finding.path, detail: finding.detail });
+      }
+    }
+    // A finding that reject answered `fixed: false` is carried on, unless its item lists it again.
+    const listed = new Set(out.filter((finding) => finding.reviewer === reviewer).map((finding) => JSON.stringify([finding.item, finding.path, finding.detail])));
+    for (const answer of last.prior ?? []) {
+      const key = JSON.stringify([answer.item, answer.path, answer.detail]);
+      if (!answer.fixed && !listed.has(key)) {
+        listed.add(key);
+        out.push({ id: `P-${out.length + 1}`, reviewer, item: answer.item, path: answer.path, detail: answer.detail });
+      }
+    }
+  }
+  return out;
+}
+
+/** Why a counted record's `prior` is not the answers to `expected` it should hold, or null when it is (see `fidelityVerdicts`). */
+function priorProblem(record: VerdictRecord, expected: readonly PriorFinding[], checklist: readonly ChecklistItem[]): string | null {
+  const recorded = record.prior ?? [];
+  const problems: string[] = [];
+  const byId = new Map(recorded.map((answer) => [answer.id, answer]));
+  for (const finding of expected) {
+    const answer = byId.get(finding.id);
+    if (answer === undefined) {
+      problems.push(`it omits ${priorLine(finding)}`);
+    } else if (answer.reviewer !== finding.reviewer || answer.item !== finding.item || answer.path !== finding.path || answer.detail !== finding.detail) {
+      problems.push(`its ${answer.id} is not ${priorLine(finding)}`);
+    }
+  }
+  if (problems.length === 0) {
+    const verdict = parseVerdict(checklist, { items: record.items, addressed: recorded.map(({ id, fixed, note }) => ({ id, fixed, note })) }, expected);
+    if (!verdict.ok) {
+      problems.push(...verdict.errors);
+    }
+  }
+  return problems.length === 0 ? null : `does not address the findings of the latest reject before its run (ESC-8.8-1): ${problems.join("; ")}`;
+}
+
+/** The index in `entries` (all well-formed) where the run of `index` starts: the contiguous records with its tree and date. */
+function runStart(entries: readonly RecordEntry[], index: number): number {
+  const { tree, date } = entries[index]!.record!;
+  let start = index;
+  while (start > 0 && entries[start - 1]!.record!.tree === tree && entries[start - 1]!.record!.date === date) {
+    start--;
+  }
+  return start;
+}
+
+/**
  * The counting rule: per reviewer slot, its standing reject on `tree` when it has one (a later `pass` on the same tree
  * never overrides it, ESC-8.8-1), else the last record whose `tree` is `tree`. It passes when slots 1 and 2 are both
- * `pass`, and slot 1 ran on another CLI than the loop's or recorded why it fell back. A malformed record fails it.
+ * `pass`, and slot 1 ran on another CLI than the loop's or recorded why it fell back. A malformed record fails it, and
+ * so does a counted record whose items do not answer the checklist or decide its verdict, or whose `prior` is not the
+ * answers to `priorFindings` of the records before its run (the contiguous records with its tree and date).
  */
 export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, checklist: readonly ChecklistItem[]): VerdictCount {
   const malformedResult = (bad: readonly { line: number; problem: string }[]): VerdictCount => ({ pass: false, detail: `${bad.length} malformed Fidelity Review record(s)`, items: bad.map((entry) => `record at line ${entry.line} ${entry.problem}`), slots: [null, null] });
@@ -1613,8 +1988,17 @@ export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, 
     const verdict = parseVerdict(checklist, { items: entry.record!.items });
     if (!verdict.ok) {
       invalid.push({ line: entry.line, problem: `does not answer the checklist: ${verdict.errors.join("; ")}` });
-    } else if (decideVerdict(verdict.verdict) !== entry.record!.verdict) {
+      continue;
+    }
+    if (decideVerdict(verdict.verdict) !== entry.record!.verdict) {
       invalid.push({ line: entry.line, problem: `verdict ${entry.record!.verdict} is not the verdict its items decide` });
+      continue;
+    }
+    // Its `prior` must answer exactly the findings `review` had to carry into its run (ESC-8.8-1 item 3).
+    const expected = priorFindings(entries.slice(0, runStart(entries, entries.indexOf(entry))), entry.record!.tree);
+    const problem = priorProblem(entry.record!, expected, checklist);
+    if (problem !== null) {
+      invalid.push({ line: entry.line, problem });
     }
   }
   if (invalid.length > 0) {
@@ -1700,12 +2084,14 @@ export interface ReviewerOptions {
   readonly env: Env;
   readonly prompt: Prompt;
   readonly items: readonly ChecklistItem[];
+  /** The findings of the latest reject the answer must address (`priorFindings`); absent: none, today's schema. */
+  readonly prior?: readonly PriorFinding[];
   /** Each attempt's timeout; default REVIEWER_TIMEOUT_MS. */
   readonly timeoutMs?: number;
 }
 
 export type ReviewerOutcome =
-  | { readonly kind: "verdict"; readonly cli: Cli; readonly model: string; readonly verdict: ItemVerdict[]; readonly log: string[] }
+  | { readonly kind: "verdict"; readonly cli: Cli; readonly model: string; readonly verdict: ItemVerdict[]; readonly addressed: AddressedFinding[]; readonly log: string[] }
   | { readonly kind: "unavailable"; readonly cli: Cli; readonly reason: UnavailableReason; readonly excerpt: string; readonly log: string[] }
   | { readonly kind: "failed"; readonly cli: Cli; readonly log: string[] };
 
@@ -1766,7 +2152,7 @@ async function attempt(options: ReviewerOptions): Promise<Attempt> {
   const cwd = realpathSync(mkdtempSync(join(tmpdir(), "xaravel-fidelity-reviewer-")));
   const io = mkdtempSync(join(tmpdir(), "xaravel-fidelity-io-"));
   try {
-    const schema = verdictSchema(items);
+    const schema = verdictSchema(items, options.prior ?? []);
     let argv: string[];
     let stdin: string;
     const outputFile = join(io, "answer.json");
@@ -1884,9 +2270,9 @@ export async function runReviewer(options: ReviewerOptions): Promise<ReviewerOut
       log.push(`${options.cli} attempt ${n} of ${REVIEWER_ATTEMPTS}: ${result.message}`);
       continue;
     }
-    const verdict = parseVerdict(options.items, result.answer);
+    const verdict = parseVerdict(options.items, result.answer, options.prior ?? []);
     if (verdict.ok) {
-      return { kind: "verdict", cli: options.cli, model: result.model, verdict: verdict.verdict, log };
+      return { kind: "verdict", cli: options.cli, model: result.model, verdict: verdict.verdict, addressed: verdict.addressed, log };
     }
     log.push(`${options.cli} attempt ${n} of ${REVIEWER_ATTEMPTS}: malformed verdict: ${verdict.errors.join("; ")}`);
   }
@@ -2009,7 +2395,9 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     return stop(`${display(root, spec)} has no baseline_revision; pass --base`);
   }
   // A reject on the unchanged reviewed tree stands (ESC-8.8-1): no reviewer runs, nothing is recorded.
-  const standing = standingRejects(parseRecords(readFileSync(spec, "utf8")), reviewTree(root, "worktree"));
+  const entries = parseRecords(readFileSync(spec, "utf8"));
+  const reviewed = reviewTree(root, "worktree", spec);
+  const standing = standingRejects(entries, reviewed);
   if (standing.length > 0) {
     for (const { reviewer, entry } of standing) {
       out.push(`STANDING reviewer ${reviewer}: reject at tree ${entry.record!.tree}`);
@@ -2026,7 +2414,9 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     const their = standing.length === 1 ? { findings: "its findings", asks: "it asks" } : { findings: "their findings", asks: "they ask" };
     return stop(`${what} (ESC-8.8-1): fix ${their.findings}, which changes the reviewed tree, or supply the evidence ${their.asks} for, then review again; a re-run on the same tree is not allowed and runs no reviewer`);
   }
-  const diff = reviewDiff(root, base);
+  const diff = reviewDiff(root, base, spec);
+  // The latest reject on another tree: its findings are carried into this review, which must address each (ESC-8.8-1).
+  const prior = priorFindings(entries, diff.tree);
   if (diff.files.length === 0) {
     return stop(`the diff from ${diff.base} to tree ${diff.tree} is empty`);
   }
@@ -2070,6 +2460,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     oracleRequests,
     files: diff.files,
     evidence: { ...gatherEvidence(root, diff.files, manifest), headErrorFixtures: headErrorFixtures(fixtures, requestIds), xaravelTests: xaravelTestEvidence(root, diff.files) },
+    prior,
   };
   const prompt = buildPrompt(promptInput);
   if (prompt.length > PROMPT_CAP) {
@@ -2078,7 +2469,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
 
   const other: Cli = cli === "claude" ? "codex" : "claude";
-  const run = (on: Cli): Promise<ReviewerOutcome> => runReviewer({ cli: on, env, prompt, items });
+  const run = (on: Cli): Promise<ReviewerOutcome> => runReviewer({ cli: on, env, prompt, items, prior });
   const first = (async (): Promise<{ outcome: ReviewerOutcome; fallback: string | null }> => {
     const outcome = await run(other);
     if (outcome.kind !== "unavailable") {
@@ -2095,7 +2486,9 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   for (const [index, { outcome, fallback }] of [one, two].entries()) {
     const reviewer = (index + 1) as 1 | 2;
     if (outcome.kind === "verdict") {
-      records.push({ kind: RECORD_KIND, reviewer, verdict: decideVerdict(outcome.verdict), tree: diff.tree, base: diff.base, cli: outcome.cli, model: outcome.model, loop_cli: cli, fallback, date, items: outcome.verdict });
+      const answers = new Map(outcome.addressed.map((answer) => [answer.id, answer]));
+      const addressed = prior.map((finding): PriorAnswer => ({ ...finding, fixed: answers.get(finding.id)!.fixed, note: answers.get(finding.id)!.note }));
+      records.push({ kind: RECORD_KIND, reviewer, verdict: decideVerdict(outcome.verdict), tree: diff.tree, base: diff.base, cli: outcome.cli, model: outcome.model, loop_cli: cli, fallback, date, items: outcome.verdict, prior: addressed });
       err.push(...outcome.log.map((line) => `fidelity-review: reviewer ${reviewer}: ${line}`));
       continue;
     }
@@ -2128,7 +2521,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
 function status(args: Args): RunResult {
   const spec = specPath(args.root, args.spec, args.storyId);
   const entries = parseRecords(readFileSync(spec, "utf8"));
-  const tree = reviewTree(args.root, "worktree");
+  const tree = reviewTree(args.root, "worktree", spec);
   const count = fidelityVerdicts(entries, tree, parseChecklist(readFileSync(join(args.root, CHECKLIST_FILE), "utf8")));
   if (count.pass) {
     return { code: 0, out: [`current: ${count.detail}`], err: [] };

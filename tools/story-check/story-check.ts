@@ -49,8 +49,9 @@
 //   approvals      (ESC-8.5-1) the Story's spec (the one
 //                  `_bmad-output/implementation-artifacts/spec-<a>-<b>-*.md`,
 //                  `findStorySpec`) holds two `pass` Fidelity Review
-//                  verdicts for the head tree (`reviewTree(root, "head")`,
-//                  HEAD without `_bmad-output/`): per reviewer slot the last
+//                  verdicts for the head tree (`reviewTree(root, "head",
+//                  spec)`, HEAD without its bookkeeping: sprint status, the
+//                  spec, each manifest's `status:` line): per reviewer slot the last
 //                  record for that tree counts, and reviewer 1 ran on the
 //                  other CLI from the loop's or recorded why it fell back
 //                  (`fidelityVerdicts`, tools/fidelity-review). It reads no
@@ -381,7 +382,8 @@ export const runApiSurfaceGate: ApiSurfaceGate = (root, component, env) => {
 
 /**
  * `approvals` (ESC-8.5-1): two `pass` Fidelity Review verdicts recorded in the Story's spec for the head tree (HEAD
- * without `_bmad-output/`), counted by `fidelityVerdicts`.
+ * without its bookkeeping, ESC-8.8-1: sprint status, this spec, each manifest's `status:` line; `reviewTree` is the
+ * one binding `fidelity:review` records), counted by `fidelityVerdicts`.
  */
 export function approvalsClause(root: string, storyId: string): ClauseResult {
   let spec: string;
@@ -392,7 +394,7 @@ export function approvalsClause(root: string, storyId: string): ClauseResult {
   }
   let tree: string;
   try {
-    tree = reviewTree(root, "head");
+    tree = reviewTree(root, "head", spec);
   } catch (error) {
     return fail("approvals", `cannot check: no head tree: ${error instanceof Error ? error.message : String(error)}`);
   }
