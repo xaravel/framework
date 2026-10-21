@@ -2,7 +2,7 @@
 title: 'Story 9.1: Scope Frame primitive and `interleave`'
 type: 'feature'
 created: '2026-10-21'
-status: 'blocked'
+status: 'draft'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -80,5 +80,5 @@ deferred: []
 
 ## Auto Run Result
 
-Status: blocked
+Status: resumed 2026-10-21 after ESC-9.1-1 (Maintainer, approved option 1: `./scope` subpath, SUBPATH_EXPORTS in XT-conformance-7) and ESC-9.1-2 (approved option 1: Registry core in `src/registry/`, FQCN `Xaravel\\Runtime\\Scope\\ScopeFrameException`) were ruled; re-plan from the rulings.
 Blocking condition: two contract conflicts found while planning, before any code. ESC-9.1-1 (protected-path, XT-runtime-1): `@xaravel/runtime/scope` needs an `"./scope"` subpath export, which the Protected test XT-conformance-7 forbids. ESC-9.1-2 (contract, XT-runtime-3): `ScopeFrameException` must end with `registerClass(...)` (AD-10, `registration:check`), but the Class Registry is Story 9.4's and no FQCN is specified. XT-runtime-2 and XT-runtime-4 share the module whose import path and failure mode these rulings decide, so no code lands until both are ruled; resume from this spec's Execution list.
