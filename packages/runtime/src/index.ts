@@ -1,1 +1,19 @@
-export { currentFrame, type Frame, type FrameSlot, type FrameSlotKey, frameSlot, interleave, runInFrame, ScopeFrameException } from "./scope/index";
+export {
+  bindToFrame,
+  CSP_NONCE_SLOT,
+  currentFrame,
+  type Frame,
+  type FrameSlot,
+  type FrameSlotKey,
+  frameAsyncGenerator,
+  frameDefer,
+  frameSlot,
+  frameStreamSource,
+  interleave,
+  REQUEST_SLOT,
+  ROUTE_SLOT,
+  runInFrame,
+  runInNarrowFrame,
+  runInRootFrame,
+  ScopeFrameException,
+} from "./scope/index";

@@ -120,7 +120,7 @@ development_status:
 
   epic-9: in-progress
   9-1-scope-frame-primitive-and-interleave: done
-  9-2-frame-kinds-defer-list-and-context-propagation: blocked  # ESC-9.2-2 (protected-path: the Fidelity Review supplies no @asyncRoot evidence (d) when no added line has the tag, so both reviewers reject F-9) waits for the Maintainer; implementation saved in 9-2-blocked-attempt-2.patch
+  9-2-frame-kinds-defer-list-and-context-propagation: done
   9-3-per-application-overlays-and-framestatic: backlog
   9-4-class-registry-and-fqcn: backlog
   9-5-phparray-ref-float-marker-and-null-normalisation: backlog
