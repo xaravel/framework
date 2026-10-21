@@ -1,0 +1,582 @@
+diff --git a/packages/runtime/async-surface.json b/packages/runtime/async-surface.json
+new file mode 100644
+index 0000000..d9bc3a2
+--- /dev/null
++++ b/packages/runtime/async-surface.json
+@@ -0,0 +1,3 @@
++[
++{"method":"interleave","file":"src/scope/interleave.ts","root":"callback"}
++]
+diff --git a/packages/runtime/package.json b/packages/runtime/package.json
+index f4468cd..5b6a78d 100644
+--- a/packages/runtime/package.json
++++ b/packages/runtime/package.json
+@@ -13,6 +13,10 @@
+     "bun": ">=1.4"
+   },
+   "exports": {
+-    ".": "./src/index.ts"
++    ".": "./src/index.ts",
++    "./scope": "./src/scope/index.ts"
++  },
++  "devDependencies": {
++    "@xaravel/assert": "workspace:*"
+   }
+ }
+diff --git a/packages/runtime/src/index.ts b/packages/runtime/src/index.ts
+index cb0ff5c..7034bcf 100644
+--- a/packages/runtime/src/index.ts
++++ b/packages/runtime/src/index.ts
+@@ -1 +1 @@
+-export {};
++export { currentFrame, type Frame, type FrameSlot, type FrameSlotKey, frameSlot, interleave, runInFrame, ScopeFrameException } from "./scope/index";
+diff --git a/packages/runtime/src/registry/index.ts b/packages/runtime/src/registry/index.ts
+new file mode 100644
+index 0000000..1992de9
+--- /dev/null
++++ b/packages/runtime/src/registry/index.ts
+@@ -0,0 +1 @@
++export { fqcn, type RegisteredClass, registerClass } from "./registry";
+diff --git a/packages/runtime/src/registry/registry.ts b/packages/runtime/src/registry/registry.ts
+new file mode 100644
+index 0000000..7fa8042
+--- /dev/null
++++ b/packages/runtime/src/registry/registry.ts
+@@ -0,0 +1,59 @@
++// The Class Registry core (AD-10; ESC-9.1-2): one process-wide map from PHP FQCN to class.
++//
++// Classes register when their module loads, so this map is boot state, not per-unit state (AD-5). Story 9.4
++// builds the rest of the Registry on this core (`resolveClass`, `registerTestClass` overlays, PSR-4 autoload, the
++// classmap, the grader brand) and removes nothing from it.
++
++/** Any class: the Registry stores constructors, never instances. */
++export type RegisteredClass = abstract new (...args: never[]) => unknown;
++
++/** Registered classes by lower-cased FQCN (PHP class names are case-insensitive). */
++const byKey = new Map<string, { readonly fqcn: string; readonly klass: RegisteredClass }>();
++/** The FQCN each registered class was registered under. */
++const byClass = new WeakMap<RegisteredClass, string>();
++
++/** `\Foo\Bar` and `Foo\Bar` name the same class. */
++function normalise(fqcn: string): string {
++  return fqcn.startsWith("\\") ? fqcn.slice(1) : fqcn;
++}
++
++/**
++ * Registers `klass` under the PHP FQCN `fqcn`. Registering the same class under the same FQCN again is a no-op;
++ * a different class under a taken FQCN, or a registered class under a second FQCN, throws.
++ */
++export function registerClass(fqcn: string, klass: RegisteredClass): void {
++  if (typeof fqcn !== "string" || normalise(fqcn) === "") {
++    throw new TypeError("registerClass(): the FQCN must be a non-empty string");
++  }
++  if (typeof klass !== "function") {
++    throw new TypeError(`registerClass(): ${fqcn} must be registered with a class`);
++  }
++  const name = normalise(fqcn);
++  const key = name.toLowerCase();
++  const taken = byKey.get(key);
++  const previous = byClass.get(klass);
++  if (taken !== undefined && taken.klass === klass) {
++    return;
++  }
++  if (taken !== undefined) {
++    throw new TypeError(`registerClass(): ${name} is already registered to another class`);
++  }
++  if (previous !== undefined) {
++    throw new TypeError(`registerClass(): the class registered as ${previous} cannot also be registered as ${name}`);
++  }
++  byKey.set(key, { fqcn: name, klass });
++  byClass.set(klass, name);
++}
++
++/** The FQCN `classOrInstance`'s class was registered under; throws when that class is not registered. */
++export function fqcn(classOrInstance: object): string {
++  if ((typeof classOrInstance !== "object" && typeof classOrInstance !== "function") || classOrInstance === null) {
++    throw new TypeError("fqcn(): the value is not a class or an object");
++  }
++  const klass: unknown = typeof classOrInstance === "function" ? classOrInstance : Object.getPrototypeOf(classOrInstance)?.constructor;
++  const name = typeof klass === "function" ? byClass.get(klass as RegisteredClass) : undefined;
++  if (name === undefined) {
++    throw new TypeError("fqcn(): the class is not registered; end its file with registerClass('<FQCN>', <Class>)");
++  }
++  return name;
++}
+diff --git a/packages/runtime/src/scope/ScopeFrameException.ts b/packages/runtime/src/scope/ScopeFrameException.ts
+new file mode 100644
+index 0000000..81d4d2e
+--- /dev/null
++++ b/packages/runtime/src/scope/ScopeFrameException.ts
+@@ -0,0 +1,9 @@
++// Thrown for a Scope Frame write with no active frame (AD-5, DIV-11). Story 9.10 re-parents it on PHP's
++// `RuntimeException`, keeping the FQCN (ESC-9.1-2).
++import { registerClass } from "../registry/registry";
++
++export class ScopeFrameException extends Error {
++  override name = "ScopeFrameException";
++}
++
++registerClass("Xaravel\\Runtime\\Scope\\ScopeFrameException", ScopeFrameException);
+diff --git a/packages/runtime/src/scope/index.ts b/packages/runtime/src/scope/index.ts
+new file mode 100644
+index 0000000..06b0b59
+--- /dev/null
++++ b/packages/runtime/src/scope/index.ts
+@@ -0,0 +1,3 @@
++export { interleave } from "./interleave";
++export { currentFrame, type Frame, type FrameSlot, type FrameSlotKey, frameSlot, runInFrame } from "./scope";
++export { ScopeFrameException } from "./ScopeFrameException";
+diff --git a/packages/runtime/src/scope/interleave.ts b/packages/runtime/src/scope/interleave.ts
+new file mode 100644
+index 0000000..5057bd7
+--- /dev/null
++++ b/packages/runtime/src/scope/interleave.ts
+@@ -0,0 +1,46 @@
++// `interleave(units)`: the dev-only helper every concurrency test uses (AD-5, NFR-4).
++//
++// Every unit starts synchronously, in array order, each in its own fresh `unit` frame. Started in one tick, units
++// that await settled promises resume in FIFO microtask order, so the units take turns at every `await` (a, b, a,
++// b, …) in the same order on every run.
++import { runInFrame } from "./scope";
++
++/**
++ * Runs `units` concurrently, each in its own `unit` frame, and resolves with their results in order; rejects with
++ * the first rejection in array order, once every unit has settled.
++ * Its asyncRoot tag `callback` is AD-6's callback clause (it returns its callbacks' promises), as the spine § AD-6 Async-surface rule (the `callback` tag "for the callback clause") and ESC-6.4-1 define it; it reaches no Driver-contract IO root.
++ * @asyncRoot callback
++ */
++export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Promise<T[]> {
++  if (!Array.isArray(units)) {
++    throw new TypeError("interleave(): units must be an array of functions");
++  }
++  const started: Promise<T>[] = [];
++  for (const [index, unit] of units.entries()) {
++    if (typeof unit !== "function") {
++      throw new TypeError(`interleave(): unit ${index} is not a function`);
++    }
++  }
++  for (const unit of units) {
++    started.push(runInFrame("unit", () => startUnit(unit)));
++  }
++  // Every unit settles before interleave does, so no sibling of a failed unit keeps running past it.
++  const settled = await Promise.allSettled(started);
++  const values: T[] = [];
++  for (const outcome of settled) {
++    if (outcome.status === "rejected") {
++      throw outcome.reason;
++    }
++    values.push(outcome.value);
++  }
++  return values;
++}
++
++/** `unit()`, with a synchronous throw turned into a rejection. */
++function startUnit<T>(unit: () => Promise<T>): Promise<T> {
++  try {
++    return Promise.resolve(unit());
++  } catch (error) {
++    return Promise.reject(error);
++  }
++}
+diff --git a/packages/runtime/src/scope/scope.ts b/packages/runtime/src/scope/scope.ts
+new file mode 100644
+index 0000000..7fcc1b8
+--- /dev/null
++++ b/packages/runtime/src/scope/scope.ts
+@@ -0,0 +1,104 @@
++// The Scope Frame primitive (AD-5, NFR-4): the only framework `AsyncLocalStorage`.
++//
++// `runInFrame(kind, fn)` runs `fn` in a fresh frame; `currentFrame()` is the active frame or null; `frameSlot(key,
++// init)` is a per-frame value, initialised lazily once per frame. Writing a slot with no active frame throws
++// `ScopeFrameException`; reading one returns `init()` without storing it.
++//
++// On load this module installs `globalThis[Symbol.for('xaravel.scope.run')]`, which is `runInFrame` itself, so the
++// grader opens a test frame without importing the runtime (ESC-4.2-1 item 2). The property is non-writable,
++// non-configurable and non-enumerable (item 4). `XARAVEL_NO_SCOPE_GLOBAL=1`, read once at load, skips the install.
++// A property already there with another value throws: a second copy of this module would mean a second store.
++//
++// Frame kinds beyond the bare `kind` label, narrow and child frames, the defer list and stream/timer wrapping are
++// Story 9.2's; overlays and `frameStatic` are Story 9.3's.
++import { AsyncLocalStorage } from "node:async_hooks";
++import { ScopeFrameException } from "./ScopeFrameException";
++
++/** An active Scope Frame. */
++export interface Frame {
++  /** The frame's kind, as passed to `runInFrame` (`test`, `unit`, …). */
++  readonly kind: string;
++}
++
++/** A per-frame value: `frameSlot(key, init)`. */
++export interface FrameSlot<T> {
++  /** The value in the active frame, initialised with `init()` on first read; `init()` (unstored) outside a frame. */
++  get(): T;
++  /** Sets the value in the active frame; throws `ScopeFrameException` outside a frame. */
++  set(value: T): void;
++}
++
++/** A slot key: slots with the same key share storage in a frame. */
++export type FrameSlotKey = string | symbol;
++
++interface Store {
++  readonly frame: Frame;
++  readonly slots: Map<FrameSlotKey, unknown>;
++}
++
++const storage = new AsyncLocalStorage<Store>();
++
++/** The active Scope Frame, or null outside any frame. */
++export function currentFrame(): Frame | null {
++  return storage.getStore()?.frame ?? null;
++}
++
++/** Runs `fn` in a fresh frame of `kind` and returns its result unchanged (a Promise stays a Promise, AD-6). */
++export function runInFrame<T>(kind: string, fn: () => T): T {
++  if (typeof kind !== "string" || kind === "") {
++    throw new TypeError("runInFrame(): kind must be a non-empty string");
++  }
++  if (typeof fn !== "function") {
++    throw new TypeError(`runInFrame(): the ${kind} frame needs a function`);
++  }
++  const store: Store = { frame: Object.freeze({ kind }), slots: new Map() };
++  return storage.run(store, fn);
++}
++
++/** The per-frame value `key`, initialised by `init()` lazily, once per frame. */
++export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
++  if (typeof key !== "string" && typeof key !== "symbol") {
++    throw new TypeError("frameSlot(): key must be a string or a symbol");
++  }
++  if (typeof init !== "function") {
++    throw new TypeError(`frameSlot(): ${String(key)} needs an init function`);
++  }
++  return Object.freeze({
++    get(): T {
++      const store = storage.getStore();
++      if (store === undefined) {
++        return init();
++      }
++      if (store.slots.has(key)) {
++        return store.slots.get(key) as T;
++      }
++      const value = init();
++      store.slots.set(key, value);
++      return value;
++    },
++    set(value: T): void {
++      const store = storage.getStore();
++      if (store === undefined) {
++        throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} with no active Scope Frame; run the code inside runInFrame()`);
++      }
++      store.slots.set(key, value);
++    },
++  });
++}
++
++const SCOPE_RUN = Symbol.for("xaravel.scope.run");
++
++function installGlobal(): void {
++  if (process.env["XARAVEL_NO_SCOPE_GLOBAL"] === "1") {
++    return;
++  }
++  const descriptor = Object.getOwnPropertyDescriptor(globalThis, SCOPE_RUN);
++  if (descriptor === undefined) {
++    Object.defineProperty(globalThis, SCOPE_RUN, { value: runInFrame, writable: false, configurable: false, enumerable: false });
++  } else if (!("value" in descriptor) || descriptor.value !== runInFrame) {
++    throw new ScopeFrameException("Symbol.for('xaravel.scope.run') was already defined by other code or another copy of @xaravel/runtime; @xaravel/runtime will not install over it");
++  }
++}
++
++Object.freeze(runInFrame);
++installGlobal();
+diff --git a/packages/runtime/tests/xaravel/scope.test.ts b/packages/runtime/tests/xaravel/scope.test.ts
+new file mode 100644
+index 0000000..19e00f9
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/scope.test.ts
+@@ -0,0 +1,286 @@
++// Xaravel Tests for Story 9.1: the Scope Frame primitive and `interleave` (AD-5, AD-6, AD-9, AD-10, NFR-4;
++// ESC-4.2-1, ESC-9.1-1, ESC-9.1-2). One test per acceptance criterion, in order. `xaravelTest` opens no frame
++// (ESC-4.2-1 item 7), so each body starts outside any Scope Frame.
++import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import { Assert, xaravelTest } from "@xaravel/assert";
++import * as scope from "@xaravel/runtime/scope";
++import { currentFrame, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
++import * as root from "../../src/index";
++import { fqcn, registerClass } from "../../src/registry/registry";
++
++const PACKAGE_DIR = resolve(import.meta.dir, "..", "..");
++const REPO_ROOT = resolve(PACKAGE_DIR, "..", "..");
++const SCOPE_RUN = Symbol.for("xaravel.scope.run");
++/**
++ * `checkGraph(root)` from tools/graph/graph.ts, run in a child process: the package's generated tsconfig.json keeps
++ * its `rootDir`, so this project must not import tools/.
++ */
++async function checkGraph(root: string): Promise<string[]> {
++  const tool = resolve(REPO_ROOT, "tools", "graph", "graph.ts");
++  const run = await child("const { checkGraph } = await import(process.env.GRAPH_TOOL); console.log(JSON.stringify(checkGraph(process.env.GRAPH_ROOT)));", { GRAPH_TOOL: tool, GRAPH_ROOT: root });
++  Assert.assertSame(0, run.code, run.out);
++  return JSON.parse(run.out) as string[];
++}
++
++/** Runs `code` in a fresh `bun -e` (no harness preload) with `env` added; its exit code and output. */
++async function child(code: string, env: Record<string, string> = {}): Promise<{ code: number; out: string }> {
++  const proc = Bun.spawn([process.execPath, "--no-env-file", "-e", code], { cwd: PACKAGE_DIR, env: { ...inherited(), ...env }, stdout: "pipe", stderr: "pipe" });
++  const [exit, stdout, stderr] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
++  return { code: exit, out: `${stdout}${stderr}` };
++}
++
++/** This process's env without the scope-global opt-out, so a child installs the global unless a test opts out. */
++function inherited(): Record<string, string | undefined> {
++  const { XARAVEL_NO_SCOPE_GLOBAL: _optOut, ...rest } = process.env;
++  return rest;
++}
++
++/** The value `fn` throws, or null when it returns. */
++function thrownBy(fn: () => unknown): unknown {
++  try {
++    fn();
++  } catch (error) {
++    return error;
++  }
++  return null;
++}
++
++/** Settles after `n` turns of the microtask queue. */
++async function ticks(n: number): Promise<void> {
++  for (let i = 0; i < n; i++) {
++    await Promise.resolve();
++  }
++}
++
++xaravelTest(
++  "XT-runtime-1",
++  "@xaravel/runtime/scope exports currentFrame(), runInFrame(kind, fn) and frameSlot(key, init) and installs globalThis[Symbol.for('xaravel.scope.run')] on load",
++  async () => {
++    for (const name of ["currentFrame", "runInFrame", "frameSlot", "interleave", "ScopeFrameException"] as const) {
++      Assert.assertSame("function", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
++      Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);
++    }
++    const manifest = JSON.parse(readFileSync(resolve(PACKAGE_DIR, "package.json"), "utf8")) as { exports: Record<string, string> };
++    Assert.assertSame("./src/scope/index.ts", manifest.exports["./scope"]);
++
++    // The global is runInFrame itself, locked in place (ESC-4.2-1 items 2 and 4).
++    const descriptor = Object.getOwnPropertyDescriptor(globalThis, SCOPE_RUN);
++    Assert.assertTrue(descriptor !== undefined, "the global is installed");
++    Assert.assertSame(runInFrame, descriptor?.value);
++    Assert.assertSame(false, descriptor?.writable);
++    Assert.assertSame(false, descriptor?.configurable);
++    Assert.assertSame(false, descriptor?.enumerable);
++
++    // No frame read: null, never undefined (AD-9).
++    Assert.assertNull(currentFrame());
++
++    // Grader call: run('test', inner) returns inner's own promise, with the test frame active across every await.
++    const run = (globalThis as Record<symbol, unknown>)[SCOPE_RUN] as <T>(kind: string, fn: () => T) => T;
++    const kinds: Array<string | null> = [];
++    const inner = async (): Promise<string> => {
++      kinds.push(currentFrame()?.kind ?? null);
++      await ticks(3);
++      kinds.push(currentFrame()?.kind ?? null);
++      await new Promise((done) => setTimeout(done, 1));
++      kinds.push(currentFrame()?.kind ?? null);
++      return "done";
++    };
++    let innerPromise: Promise<string> | null = null;
++    const returned = run("test", () => {
++      innerPromise = inner();
++      return innerPromise;
++    });
++    Assert.assertSame(innerPromise, returned, "run returns inner's promise unchanged");
++    Assert.assertSame("done", await returned);
++    Assert.assertSame("test,test,test", kinds.join(","));
++    Assert.assertNull(currentFrame());
++
++    // Sync stays sync (AD-6).
++    Assert.assertSame(42, runInFrame("test", () => 42));
++
++    // A rejection propagates.
++    const failure = new Error("inner failed");
++    let caught: unknown = null;
++    try {
++      await run("test", async () => {
++        await ticks(1);
++        throw failure;
++      });
++    } catch (error) {
++      caught = error;
++    }
++    Assert.assertSame(failure, caught);
++
++    // The env opt-out skips the install; a global already defined by other code throws.
++    const probe = `const s = Symbol.for("xaravel.scope.run"); await import("@xaravel/runtime/scope"); console.log(typeof globalThis[s]);`;
++    const installed = await child(probe);
++    Assert.assertSame(0, installed.code, installed.out);
++    Assert.assertSame("function", installed.out.trim());
++    const optedOut = await child(probe, { XARAVEL_NO_SCOPE_GLOBAL: "1" });
++    Assert.assertSame(0, optedOut.code, optedOut.out);
++    Assert.assertSame("undefined", optedOut.out.trim());
++    const taken = await child(
++      `Object.defineProperty(globalThis, Symbol.for("xaravel.scope.run"), { value: () => null }); try { await import("@xaravel/runtime/scope"); console.log("installed"); } catch (e) { console.log(e.name + ": " + e.message); }`,
++    );
++    Assert.assertSame(0, taken.code, taken.out);
++    Assert.assertSame(
++      "ScopeFrameException: Symbol.for('xaravel.scope.run') was already defined by other code or another copy of @xaravel/runtime; @xaravel/runtime will not install over it",
++      taken.out.trim(),
++    );
++  },
++  30_000,
++);
++
++xaravelTest(
++  "XT-runtime-2",
++  "two units started with interleave([a, b]) each read only their own frameSlot value across several awaits, and switch in the same order on every run",
++  async () => {
++    const slot = frameSlot<string | null>("xt-runtime-2.owner", () => null);
++    const STEPS = 4;
++
++    async function once(): Promise<string[]> {
++      const log: string[] = [];
++      const unit = (name: string) => async (): Promise<string> => {
++        const frame = currentFrame();
++        Assert.assertSame("unit", frame?.kind);
++        Assert.assertNull(slot.get(), `${name} starts with the slot's init value`);
++        slot.set(name);
++        log.push(`${name}:set`);
++        for (let step = 1; step <= STEPS; step++) {
++          await Promise.resolve();
++          Assert.assertSame(frame, currentFrame(), `${name} keeps its own frame at step ${step}`);
++          Assert.assertSame(name, slot.get(), `${name} reads its own value at step ${step}`);
++          log.push(`${name}:${step}`);
++        }
++        return name;
++      };
++      const results = await interleave([unit("a"), unit("b")]);
++      Assert.assertSame("a,b", results.join(","));
++      Assert.assertNull(currentFrame());
++      return log;
++    }
++
++    const expected = ["a:set", "b:set", "a:1", "b:1", "a:2", "b:2", "a:3", "b:3", "a:4", "b:4"].join(",");
++    for (let run = 1; run <= 3; run++) {
++      Assert.assertSame(expected, (await once()).join(","), `the switch order of run ${run}`);
++    }
++
++    // A unit's failure rejects interleave, a synchronous throw included, only after its siblings have finished.
++    const failure = new Error("unit failed");
++    const siblingLog: string[] = [];
++    let caught: unknown = null;
++    try {
++      await interleave([
++        async () => {
++          for (let step = 1; step <= STEPS; step++) {
++            await Promise.resolve();
++            siblingLog.push(`sibling:${step}`);
++          }
++          return "ok";
++        },
++        () => {
++          throw failure;
++        },
++      ]);
++    } catch (error) {
++      caught = error;
++    }
++    Assert.assertSame(failure, caught);
++    Assert.assertSame(`sibling:${STEPS}`, siblingLog.at(-1) ?? null, "the failed unit's sibling finished before interleave rejected");
++  },
++);
++
++xaravelTest("XT-runtime-3", "code with no active frame that writes a frame slot throws ScopeFrameException, and the Registry core it relies on rejects conflicting registrations", () => {
++  Assert.assertNull(currentFrame());
++  let inits = 0;
++  const slot = frameSlot("xt-runtime-3.value", () => ++inits);
++
++  const thrown = thrownBy(() => slot.set(7));
++  Assert.assertInstanceOf(ScopeFrameException, thrown);
++  Assert.assertInstanceOf(Error, thrown);
++  Assert.assertSame("ScopeFrameException", (thrown as Error).name);
++  Assert.assertSame("Cannot write the frame slot xt-runtime-3.value with no active Scope Frame; run the code inside runInFrame()", (thrown as Error).message);
++  Assert.assertSame("Xaravel\\Runtime\\Scope\\ScopeFrameException", fqcn(ScopeFrameException));
++  Assert.assertSame("Xaravel\\Runtime\\Scope\\ScopeFrameException", fqcn(thrown as object));
++
++  // A read outside a frame returns init() without storing it.
++  Assert.assertSame(1, slot.get());
++  Assert.assertSame(2, slot.get());
++
++  // Inside a frame, init runs once and the same key shares storage; a new frame starts fresh.
++  runInFrame("unit", () => {
++    Assert.assertSame(3, slot.get());
++    Assert.assertSame(3, slot.get());
++    slot.set(10);
++    Assert.assertSame(10, frameSlot("xt-runtime-3.value", () => -1).get());
++  });
++  runInFrame("unit", () => {
++    Assert.assertSame(4, slot.get());
++  });
++  Assert.assertInstanceOf(ScopeFrameException, thrownBy(() => slot.set(8)));
++
++  // The Registry core (ESC-9.1-2), on throwaway classes under unique FQCNs.
++  class Registered {}
++  class Other {}
++  class Unregistered {}
++  class UnregisteredChild extends Registered {}
++  const name = "Xaravel\\Runtime\\Tests\\Scope\\Registered";
++  registerClass(name, Registered);
++  registerClass(name, Registered);
++  Assert.assertSame(name, fqcn(Registered));
++  Assert.assertSame(name, fqcn(new Registered()));
++  for (const taken of [`\\${name}`, name.toLowerCase()]) {
++    const conflict = thrownBy(() => registerClass(taken, Other));
++    Assert.assertInstanceOf(TypeError, conflict);
++    const shown = taken.startsWith("\\") ? taken.slice(1) : taken;
++    Assert.assertSame(`registerClass(): ${shown} is already registered to another class`, (conflict as Error).message);
++  }
++  const second = thrownBy(() => registerClass("Xaravel\\Runtime\\Tests\\Scope\\SecondName", Registered));
++  Assert.assertInstanceOf(TypeError, second);
++  Assert.assertSame(`registerClass(): the class registered as ${name} cannot also be registered as Xaravel\\Runtime\\Tests\\Scope\\SecondName`, (second as Error).message);
++  for (const value of [Unregistered, new UnregisteredChild(), null]) {
++    Assert.assertInstanceOf(TypeError, thrownBy(() => fqcn(value as object)));
++  }
++});
++
++xaravelTest(
++  "XT-runtime-4",
++  "the @xaravel/runtime package lists no workspace dependencies, peerDependencies or optionalDependencies, and the graph check rejects one if added",
++  async () => {
++    const manifest = JSON.parse(readFileSync(resolve(PACKAGE_DIR, "package.json"), "utf8")) as Record<string, unknown>;
++    for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
++      Assert.assertTrue(!(field in manifest), `@xaravel/runtime has no ${field}`);
++    }
++    const namesRuntime = (lines: readonly string[]): string => lines.filter((line) => line.includes("@xaravel/runtime")).join("\n");
++    Assert.assertSame("", namesRuntime(await checkGraph(REPO_ROOT)), "the graph check reports nothing for @xaravel/runtime");
++
++    // A temp root with the real runtime, support and assert rows and manifests (assert is runtime's devDependency).
++    const table = readFileSync(resolve(REPO_ROOT, "tools/scaffold/packages.jsonl"), "utf8").split("\n");
++    const rows = ["runtime", "support", "assert"].map((name) => table.find((line) => line.includes(`"name":"${name}"`)) ?? null);
++    const tmp = mkdtempSync(join(tmpdir(), "xt-runtime-4-"));
++    try {
++      mkdirSync(join(tmp, "tools", "scaffold"), { recursive: true });
++      writeFileSync(join(tmp, "tools", "scaffold", "packages.jsonl"), `${rows.join("\n")}\n`);
++      for (const name of ["runtime", "support", "assert"]) {
++        mkdirSync(join(tmp, "packages", name), { recursive: true });
++        cpSync(resolve(REPO_ROOT, "packages", name, "package.json"), join(tmp, "packages", name, "package.json"));
++      }
++      Assert.assertSame("", namesRuntime(await checkGraph(tmp)), "the unmodified copy reports nothing for @xaravel/runtime");
++
++      writeFileSync(join(tmp, "packages", "runtime", "package.json"), `${JSON.stringify({ ...manifest, dependencies: { "@xaravel/support": "workspace:*" } }, null, 2)}\n`);
++      // support already depends on runtime, so the added edge is also a cycle.
++      Assert.assertSame(
++        [
++          "cycle: @xaravel/runtime -> @xaravel/support -> @xaravel/runtime",
++          "layer edge: @xaravel/runtime lists @xaravel/support in dependencies; @xaravel/runtime may depend on no workspace package (AD-2)",
++        ].join("\n"),
++        namesRuntime(await checkGraph(tmp)),
++      );
++    } finally {
++      rmSync(tmp, { recursive: true, force: true });
++    }
++  },
++  60_000,
++);
