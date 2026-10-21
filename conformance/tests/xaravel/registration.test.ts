@@ -9,7 +9,7 @@ import { afterAll, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { ALIAS_MESSAGE, formatViolation, graderPackages, NESTED_MESSAGE, scanRegistrations, SHAPE_MESSAGE, type ScanFile } from "../../../tools/registration/registration";
+import { ALIAS_MESSAGE, formatViolation, graderPackages, NESTED_MESSAGE, sameFileMessage, scanRegistrations, SHAPE_MESSAGE, type ScanFile } from "../../../tools/registration/registration";
 import { GRADER_PACKAGES } from "../../../tools/lint-rules/plugin";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -262,6 +262,32 @@ xaravelTest("XT-conformance-141", "a framework file in packages/*/src that expor
   // Positions are UTF-16 columns.
   expect(at(P, "/* é */ export class Foo {}\n")).toEqual([`${P}:1:16: ${MISSING("Foo")} (AD-10)`]);
   expect(scanRegistrations([{ path: P, text: "export class Foo {}\nregisterClass('A\\\\Foo', Foo);\n" }], NONE)).toEqual({ violations: [], files: 1, registrations: 1 });
+
+  // Same file (Epic 6 retro R3): the registered class must be declared in the registering file, in every package.
+  const SAME = (cls: string): string => `registers ${cls}, which is not a class declared in this file; a class is registered only in the file that declares it`;
+  expect(sameFileMessage("Foo")).toBe(SAME("Foo"));
+  expect(
+    failing({
+      "packages/a/src/Foo.ts": FOO,
+      "packages/a/src/Again.ts": "import { Foo } from './Foo';\nregisterClass('A\\\\Again', Foo);\n",
+    }),
+  ).toEqual([`packages/a/src/Again.ts:2:1: ${SAME("Foo")} (AD-10)`]);
+  expect(at(P, "import Foo from './Foo';\nexport class Bar {}\nregisterClass('A\\\\Bar', Bar);\nregisterClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:4:1: ${SAME("Foo")} (AD-10)`]);
+  expect(at(P, "import * as Foo from './Foo';\nregisterClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:2:1: ${SAME("Foo")} (AD-10)`]);
+  expect(at(P, "const Foo = make();\nregisterClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:2:1: ${SAME("Foo")} (AD-10)`]);
+  expect(at(P, "declare class Foo {}\nregisterClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:2:1: ${SAME("Foo")} (AD-10)`]);
+  expect(at(P, "registerClass('A\\\\Foo', Foo);\n")).toEqual([`${P}:1:1: ${SAME("Foo")} (AD-10)`]);
+  expect(scan({ "packages/g/src/G.ts": "import { Foo } from './Foo';\nregisterClass('A\\\\Foo', Foo);\n" }, new Set(["g"]))).toEqual([`packages/g/src/G.ts:2:1: ${SAME("Foo")} (AD-10)`]);
+  // Every top-level class form declares it, exported or not.
+  for (const text of [
+    "class Foo {}\nregisterClass('A\\\\Foo', Foo);\n",
+    "export default class Foo {}\nregisterClass('A\\\\Foo', Foo);\n",
+    "export abstract class Foo {}\nregisterClass('A\\\\Foo', Foo);\n",
+    "const Foo = class {};\nregisterClass('A\\\\Foo', Foo);\n",
+    "export let Foo = (class {});\nregisterClass('A\\\\Foo', Foo);\n",
+  ]) {
+    expect(at(P, text)).toEqual([]);
+  }
 
   // Usage.
   const usage = cli(["--nope"]);
