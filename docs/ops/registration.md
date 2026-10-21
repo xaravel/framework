@@ -49,6 +49,8 @@ An anonymous `export default class {}`, and any default-exported class expressio
 
 `declare` classes, type-only exports (`export type { X }`), interfaces, type aliases, enums and functions are not classes for this rule.
 
+**Same file (AD-10).** In every package, graders included, the class a conforming `registerClass('<FQCN>', X)` names must be declared in that file at the top level: a non-`declare` `class X` (exported or not, `export default class X` included) or a `const`, `let` or `var X = class …` (exported or not, wrappers as above). Registering an imported class, a namespace import, or any other binding fails at the call: `registers <X>, which is not a class declared in this file; a class is registered only in the file that declares it` (Epic 6 retro R3, ESC-9.4-1). The registration still counts, so a duplicate FQCN is reported too.
+
 **`sideEffects` (AD-10).** A `packages/<p>/package.json` whose top-level `sideEffects` is `false` fails with `sets "sideEffects": false, which lets bundlers drop registerClass side effects`; a list fails with `sets "sideEffects" to a list, which marks every other file side-effect-free`. Both are reported at the key. Absent or `true` passes. A file that is not valid JSON, or not a JSON object, fails at 1:1.
 
 **Parse errors.** A source that does not parse cleanly fails at the first error's position (`does not parse: <parser message>`) and is not checked further: a partial AST would hide classes and registrations.
@@ -73,4 +75,4 @@ The scan is syntactic, with no type information:
 
 ## Proofs
 
-`conformance/tests/xaravel/registration.test.ts` runs the real CLI over temp git roots and over the real repository (which passes), and the I/O matrix through the pure `scanRegistrations`: XT-conformance-140 (duplicates across packages and within one), XT-conformance-141 (missing, not-last, local-export, two-class, grader, bad-call, nested, wrapped, alias, class-expression, interface, `.d.ts`/tests and parse cases, with exact stderr lines) and XT-conformance-142 (the `sideEffects` cases, the `registration:check` script and the `ci.yml` step).
+`conformance/tests/xaravel/registration.test.ts` runs the real CLI over temp git roots and over the real repository (which passes), and the I/O matrix through the pure `scanRegistrations`: XT-conformance-140 (duplicates across packages and within one), XT-conformance-141 (missing, not-last, local-export, two-class, grader, bad-call, nested, wrapped, alias, class-expression, interface, `.d.ts`/tests, parse and same-file cases, with exact stderr lines) and XT-conformance-142 (the `sideEffects` cases, the `registration:check` script and the `ci.yml` step).

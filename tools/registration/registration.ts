@@ -37,6 +37,12 @@
 //   skipped) must be the second argument of a conforming `registerClass`
 //   in the file's trailing run of top-level statements, which must hold only
 //   conforming `registerClass` calls (empty statements are skipped).
+// - Same file (AD-10, every package, graders included; Epic 6 retro R3): the
+//   class a conforming `registerClass('<FQCN>', X)` names must be declared in
+//   that file, as a top-level non-`declare` class (`class X`, exported or not,
+//   or `export default class X`) or a top-level `const`/`let`/`var X = class …`
+//   (exported or not). Registering an imported class, or any other binding,
+//   fails at the call (`sameFileMessage`).
 // - `sideEffects` (AD-10): a package `package.json` whose top-level
 //   `sideEffects` is `false` or a list fails, at the key. Invalid JSON fails.
 //
@@ -107,6 +113,11 @@ interface Registration {
 export const SHAPE_MESSAGE = "registerClass must be called as registerClass('<FQCN>', X) with a string literal FQCN";
 export const NESTED_MESSAGE = "registerClass must be called only as a top-level statement registerClass('<FQCN>', X), not nested in a block, function or namespace or wrapped in another expression";
 export const ALIAS_MESSAGE = "registerClass must not be aliased; call it by its own name as registerClass('<FQCN>', X)";
+
+/** The same-file rule's message for a registration whose class `name` is not declared in the file. */
+export function sameFileMessage(name: string): string {
+  return `registers ${name}, which is not a class declared in this file; a class is registered only in the file that declares it`;
+}
 const SOURCE = /^packages\/([^/]+)\/src\/.+\.(?:ts|tsx|mts|cts)$/;
 const DECLARATION = /\.d\.[cm]?ts$/;
 const PACKAGE_JSON = /^packages\/([^/]+)\/package\.json$/;
@@ -234,6 +245,22 @@ function classDeclarators(value: unknown): { name: string; at: Node }[] {
   return out;
 }
 
+/** The names of the classes a program body declares at the top level, exported or not (the same-file rule). */
+function declaredClasses(body: readonly Node[]): Set<string> {
+  const out = new Set<string>();
+  for (const statement of body) {
+    const inner = statement.type === "ExportNamedDeclaration" || statement.type === "ExportDefaultDeclaration" ? statement["declaration"] : statement;
+    const id = node(classOf(inner)?.["id"]);
+    if (id !== null && typeof id["name"] === "string") {
+      out.add(id["name"]);
+    }
+    for (const { name } of classDeclarators(inner)) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
 /** The exported classes of a program body: each class's local name and declaration (or declarator) node. */
 function exportedClasses(body: readonly Node[]): { name: string; at: Node }[] {
   const local = new Map<string, Node>();
@@ -311,6 +338,7 @@ function scanSource(file: ScanFile, framework: boolean): { violations: Violation
     return { violations: [{ path: file.path, ...position(file.text, offset), message: `does not parse: ${error.message}`, ad: "AD-10" }], registrations };
   }
   const body = nodes(parsed.program.body);
+  const declared = declaredClasses(body);
   const recognised = new Set<Node>();
   for (const statement of body) {
     const found = recogniseRegistration(statement);
@@ -323,6 +351,9 @@ function scanSource(file: ScanFile, framework: boolean): { violations: Violation
       violations.push({ path: file.path, ...at, message: SHAPE_MESSAGE, ad: "AD-10" });
     } else {
       registrations.push({ literal: found.registration.literal, key: found.registration.fqcn.toLowerCase(), path: file.path, pkg: packageOf(file.path), ...at });
+      if (!declared.has(found.registration.name)) {
+        violations.push({ path: file.path, ...at, message: sameFileMessage(found.registration.name), ad: "AD-10" });
+      }
     }
   }
   for (const { at, message } of strayUses(parsed.program as unknown as Node, recognised)) {
