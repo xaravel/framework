@@ -83,8 +83,8 @@
 //
 // The Phase 1 gate (Story 8.8, FR-8; ./phase-gate.ts). Only `pr` (the CLI path, not
 // the synchronous `evaluatePr`) runs it: it re-reads the base manifest's
-// `epic` and checks a
-// Phase 1 or later Story against the base checkout, never the PR head: it
+// `epic` and checks a Phase 1 or later Story against the base checkout,
+// never the PR head: it
 // needs `PORTING.md` passing `checkPorting`, `decisions/DIV-1.md`..`DIV-12.md`,
 // `docs/porting/pilot-report.md` (not blank) and a Maintainer-signed
 // `decisions/PHASE-0-EXIT.md` (`decision: approved`, `decided_by: Maintainer`,
