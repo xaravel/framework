@@ -37,8 +37,9 @@
 // `adapted:DIV-<n>.<k>` token cites; (b) the consequence line of every
 // `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line; (c) every assigned
 // committed Oracle request's fixture whose `output.error` is not null, and
-// every changed fixture whose output is an error; (d) DIV-1 when an added line
-// has `@asyncRoot`; (e) the full body and cited consequences of every Xaravel
+// every changed fixture whose output is an error; (d) DIV-1, ESC-6.4-1 and
+// AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
+// (ESC-9.1-4); (e) the full body and cited consequences of every Xaravel
 // Test whose lines the diff changes, that uses a test helper or fixture the
 // diff changes, or whose test file's top-level setup changes (a heuristic
 // top-level-unit scanner, `testUnits`). Everything is read from the working
@@ -81,6 +82,7 @@ import { committedRequests, verificationKey } from "../oracle/verify";
 import { covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { readWorkingInventory } from "../pin-bump/pin-bump";
 import { readUpstream } from "../upstream/upstream";
+import { SPINE_FILE, spineRules } from "../xt-coverage/consequences";
 
 export const CHECKLIST_FILE = "conformance/review/fidelity.md";
 export const ORACLE_REQUESTS_DIR = "conformance/oracle-requests";
@@ -199,13 +201,13 @@ export interface Evidence {
   readonly errorFixtures: readonly EvidenceEntry[];
   /** (c) Each fixture the change adds or modifies whose `output.error` is not null, or why it was not read (F-6). */
   readonly headErrorFixtures: readonly EvidenceEntry[];
-  /** (d) `decisions/DIV-1.md` when an added line has `@asyncRoot`, else null (F-9). */
-  readonly asyncRoot: EvidenceEntry | null;
+  /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot`, else empty (F-9, ESC-9.1-4). */
+  readonly asyncRoot: readonly EvidenceEntry[];
   /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
   readonly xaravelTests: readonly XaravelTestEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: null, xaravelTests: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -349,13 +351,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   evidenceSection(sections, "### (b) Consequences cited on added lines (F-7)", evidence.consequences, "No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence.", "jsonl");
   evidenceSection(sections, "### (c) Oracle fixtures whose output is an error (F-6)", evidence.errorFixtures, "No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
-  sections.push("", "### (d) DIV-1 for @asyncRoot tags (F-9)");
-  if (evidence.asyncRoot === null) {
-    sections.push("", "No added line contains `@asyncRoot`.");
-  } else {
-    const entry = evidence.asyncRoot;
-    sections.push("", `#### ${entry.label}`, "", entry.text === null ? `unavailable: ${entry.unavailable ?? "not read"}` : fence(entry.text, "markdown"));
-  }
+  evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`.", "markdown");
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
   if (evidence.xaravelTests.length === 0) {
     sections.push("", "No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
@@ -427,6 +423,25 @@ function readEvidenceFile(root: string, rel: string): EvidenceEntry {
   } catch (error) {
     return { label: rel, text: null, unavailable: `${rel} is unreadable: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+/** The AD-6 rule bullets that define the two `@asyncRoot` tags (ESC-9.1-4). */
+const ASYNC_ROOT_RULES = ["**Derivation.**", "**Enforcement.**"];
+
+/** Evidence (d): DIV-1, ESC-6.4-1 (the `callback` tag) and AD-6's Derivation and Enforcement bullets from the spine. */
+function asyncRootEvidence(root: string): EvidenceEntry[] {
+  const entries = [readEvidenceFile(root, "decisions/DIV-1.md"), readEvidenceFile(root, "decisions/ESC-6.4-1.md")];
+  const spine = readEvidenceFile(root, SPINE_FILE);
+  const bullets = spine.text === null ? null : spineRules(spine.text).get(6);
+  for (const lead of ASYNC_ROOT_RULES) {
+    const k = bullets?.findIndex((bullet) => bullet.startsWith(lead)) ?? -1;
+    entries.push(
+      k === -1
+        ? { label: `${SPINE_FILE} AD-6 ${lead}`, text: null, unavailable: spine.text === null ? spine.unavailable : `AD-6 has no ${lead} rule bullet` }
+        : { label: `${SPINE_FILE} AD-6.${k + 1}`, text: bullets![k]!, unavailable: null },
+    );
+  }
+  return entries;
 }
 
 const CONSEQUENCES_DIR = "conformance/xaravel-consequences";
@@ -568,7 +583,7 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     consequences,
     errorFixtures: errorFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]),
     headErrorFixtures: [],
-    asyncRoot: asyncRoot ? readEvidenceFile(root, "decisions/DIV-1.md") : null,
+    asyncRoot: asyncRoot ? asyncRootEvidence(root) : [],
     xaravelTests: [],
   };
 }

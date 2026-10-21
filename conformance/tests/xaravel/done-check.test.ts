@@ -73,8 +73,9 @@ xaravelTest(
     expect(scripts["xt:coverage"]).toBe("bun --no-env-file tools/xt-coverage/coverage.ts");
     const check = Bun.spawnSync([process.execPath, join(root, "tools", "xt-coverage", "consequences.ts"), "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" });
     expect([check.exitCode, check.stderr.toString()]).toEqual([0, ""]);
-    expect([...expectedFiles(root).keys()]).toEqual(["conformance/xaravel-consequences/conformance.jsonl"]);
+    expect([...expectedFiles(root).keys()]).toEqual(["conformance/xaravel-consequences/conformance.jsonl", "conformance/xaravel-consequences/runtime.jsonl"]);
     expect(CONSEQUENCE_SOURCES["conformance"]).toEqual({ frs: [1, 2, 3, 4, 5, 6, 7, 8, 9, 111, 112, 113, 114, 115, 116], ads: [15, 16, 17, 21, 28] });
+    expect(CONSEQUENCE_SOURCES["runtime"]).toEqual({ frs: [], ads: [2, 5, 6, 9, 10, 23] });
 
     // The IDs are mechanical: unique, every FR (by n, then k) before every AD (by n, then k), and each FR / AD present.
     const lines = readConsequences(root, "conformance");
