@@ -22,5 +22,24 @@ export {
   setDefaultApplication,
   ScopeFrameException,
 } from "./scope/index";
-export { float, hasBrand, isFloat, jsonEncode, normalizeNull, PhpArray, type PhpArrayKey, PhpFloat, type PhpKeyInput, Ref } from "./php/index";
+export {
+  float,
+  hasBrand,
+  isFloat,
+  isNumeric,
+  jsonEncode,
+  looseEquals,
+  normalizeNull,
+  PhpArray,
+  type PhpArrayKey,
+  PhpFloat,
+  type PhpKeyInput,
+  Ref,
+  spaceship,
+  toBool,
+  toFloat,
+  toInt,
+  toPhpString,
+  valueCopy,
+} from "./php/index";
 export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
