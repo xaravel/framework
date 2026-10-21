@@ -20,6 +20,7 @@ import {
   type PrReview,
 } from "../../../tools/protected-paths/protected-paths";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { SIGNED_EXIT } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const CLI = join(root, "tools", "protected-paths", "protected-paths.ts");
@@ -29,17 +30,24 @@ const NONE = new Set<number>();
 const PHASE_1 = new Set([1]);
 const HEAD = "a".repeat(40);
 const OLD = "b".repeat(40);
+/** A Maintainer-signed `PHASE-<n>-EXIT.md` (`SIGNED_EXIT` in Phase n's words); only a signed exit file activates Phase n. */
+function signedExit(n: number): string {
+  return SIGNED_EXIT.replaceAll("Phase 0", `Phase ${n}`);
+}
+/** An exit file without the Maintainer's signature; it activates nothing. */
+const UNSIGNED_EXIT_1 = "# Phase 1 exit\n";
+const UNSIGNED_EXIT_2 = "# Phase 2 exit\n";
 
-/** A hermetic root holding the committed list and its CODEOWNERS rendering, optionally past Phase 1. */
-function fixtureRoot(options: { phase1Exit?: boolean } = {}): string {
+/** A hermetic root holding the committed list and its CODEOWNERS rendering, optionally with a signed (past Phase 1) or unsigned `PHASE-1-EXIT.md`. */
+function fixtureRoot(options: { phase1Exit?: "signed" | "unsigned" } = {}): string {
   const tmp = mkdtempSync(join(tmpdir(), "xaravel-protected-"));
   mkdirSync(join(tmp, "conformance"), { recursive: true });
   mkdirSync(join(tmp, ".github"), { recursive: true });
   writeFileSync(join(tmp, LIST_PATH), listText);
   writeFileSync(join(tmp, CODEOWNERS_PATH), renderCodeowners(entries, NONE));
-  if (options.phase1Exit === true) {
+  if (options.phase1Exit !== undefined) {
     mkdirSync(join(tmp, "decisions"), { recursive: true });
-    writeFileSync(join(tmp, "decisions", "PHASE-1-EXIT.md"), "# Phase 1 exit\n");
+    writeFileSync(join(tmp, "decisions", "PHASE-1-EXIT.md"), options.phase1Exit === "signed" ? signedExit(1) : UNSIGNED_EXIT_1);
   }
   return tmp;
 }
@@ -297,8 +305,17 @@ xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every
   expect(checkMirror(listText, committed + "/extra/ @someone\n", phases)[0]).toContain(`line ${lineCount + 1} is "/extra/ @someone", expected end of file`);
   expect(checkMirror(listText, committed.trimEnd(), phases)[0]).toContain(`line ${lineCount} must end with exactly one newline`);
 
-  await withRoots([fixtureRoot(), fixtureRoot(), fixtureRoot({ phase1Exit: true })], async ([clean, drift, exited]) => {
+  await withRoots([fixtureRoot(), fixtureRoot(), fixtureRoot({ phase1Exit: "signed" }), fixtureRoot({ phase1Exit: "unsigned" })], async ([clean, drift, exited, unsigned]) => {
     expect(await runCli(["codeowners", "--check", "--root", clean!])).toMatchObject({ code: 0 });
+
+    // Only a Maintainer-signed exit file activates its Phase (exitSignatureProblems, the Phase 1 gate's test).
+    expect(activePhases(clean!)).toEqual(NONE);
+    expect(activePhases(exited!)).toEqual(PHASE_1);
+    expect(activePhases(unsigned!)).toEqual(NONE);
+    // Valid frontmatter with one wrong field is still unsigned.
+    writeFileSync(join(unsigned!, "decisions", "PHASE-1-EXIT.md"), signedExit(1).replace("decision: approved", "decision: pending"));
+    expect(activePhases(unsigned!)).toEqual(NONE);
+    expect(await runCli(["codeowners", "--check", "--root", unsigned!])).toMatchObject({ code: 0 });
 
     writeFileSync(join(drift!, CODEOWNERS_PATH), renderCodeowners(entries, NONE).replace("/tools/ @edanisko\n", ""));
     const failing = await runCli(["codeowners", "--check", "--root", drift!]);
@@ -322,7 +339,7 @@ xaravelTest("XT-conformance-18", ".github/CODEOWNERS mirrors the list with every
 });
 
 xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fails the check, listing each protected file it touches; allowed paths pass (FR-112.2, AD-16.2)", async () => {
-  await withRoots([fixtureRoot(), fixtureRoot({ phase1Exit: true })], async ([base, exited]) => {
+  await withRoots([fixtureRoot(), fixtureRoot({ phase1Exit: "signed" }), fixtureRoot({ phase1Exit: "unsigned" })], async ([base, exited, unsignedBase]) => {
     // Story touches the grader: only the grader file is listed.
     const grader = await runPr({ files: [file("packages/support/src/y.ts"), file("packages/assert/src/x.ts")] }, base!);
     expect(grader.code).toBe(1);
@@ -367,7 +384,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     const exitedHead = {
       [LIST_PATH]: listText,
       [CODEOWNERS_PATH]: renderCodeowners(entries, PHASE_1),
-      "decisions/PHASE-1-EXIT.md": "# Phase 1 exit\n",
+      "decisions/PHASE-1-EXIT.md": signedExit(1),
     };
     const contracts = await runPr({ files: [file("packages/contracts/src/a.ts")], head: exitedHead }, exited!);
     expect(contracts.code).toBe(1);
@@ -377,6 +394,13 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     const staleHead = await runPr({ files: [file("packages/support/src/y.ts")], head: { ...exitedHead, [CODEOWNERS_PATH]: renderCodeowners(entries, NONE) } }, exited!);
     expect(staleHead.code).toBe(1);
     expect(staleHead.stderr).toContain('codeowners drift: .github/CODEOWNERS line 17 is "/package.json @edanisko", expected "/packages/contracts/ @edanisko"');
+    // An unsigned base exit file leaves Phase 1 open: contracts stay unprotected.
+    const unsignedContracts = await runPr(
+      { files: [file("packages/contracts/src/a.ts")], head: { [LIST_PATH]: listText, [CODEOWNERS_PATH]: renderCodeowners(entries, NONE), "decisions/PHASE-1-EXIT.md": UNSIGNED_EXIT_1 } },
+      unsignedBase!,
+    );
+    expect(unsignedContracts).toMatchObject({ code: 0, stdout: "Protected Paths OK: PR #7 touches no Protected Path.\n" });
+    expect(unsignedContracts.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-1-EXIT.md");
 
     // A rename out of a protected directory lists the old name.
     const renamed = await runPr({ files: [file("packages/x/a.ts", "tools/a.ts")] }, base!);
@@ -402,7 +426,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     const phase2Head = {
       [LIST_PATH]: phase2List,
       [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([2])),
-      "decisions/PHASE-2-EXIT.md": "# Phase 2 exit\n",
+      "decisions/PHASE-2-EXIT.md": signedExit(2),
     };
     const phase2 = await runPr({ files: [file("packages/support/src/y.ts")], head: phase2Head }, base!);
     expect(phase2.stderr).not.toContain("codeowners drift");
@@ -423,7 +447,7 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     const bothPhases = await runPr(
       {
         files: [file("packages/support/src/y.ts")],
-        head: { ...phase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([1, 2])), "decisions/PHASE-1-EXIT.md": "# Phase 1 exit\n" },
+        head: { ...phase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([1, 2])), "decisions/PHASE-1-EXIT.md": signedExit(1) },
       },
       base!,
     );
@@ -431,6 +455,21 @@ xaravelTest("XT-conformance-19", "a story/* PR that modifies Protected Paths fai
     expect(bothPhases.code).toBe(0);
     expect(bothPhases.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-1-EXIT.md");
     expect(bothPhases.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-2-EXIT.md");
+    // An unsigned head exit file leaves its Phase inactive in the mirror: CODEOWNERS without `/docs/` mirrors, with it drifts.
+    const unsignedPhase2Head = { [LIST_PATH]: phase2List, "decisions/PHASE-2-EXIT.md": UNSIGNED_EXIT_2 };
+    const phase2Unsigned = await runPr(
+      { files: [file("packages/support/src/y.ts")], head: { ...unsignedPhase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, NONE) } },
+      base!,
+    );
+    expect(phase2Unsigned.stderr).not.toContain("codeowners drift");
+    expect(phase2Unsigned.code).toBe(0);
+    expect(phase2Unsigned.paths).toContain("/repos/xaravel/framework/contents/decisions/PHASE-2-EXIT.md");
+    const phase2UnsignedListed = await runPr(
+      { files: [file("packages/support/src/y.ts")], head: { ...unsignedPhase2Head, [CODEOWNERS_PATH]: renderCodeowners(phase2Entries, new Set([2])) } },
+      base!,
+    );
+    expect(phase2UnsignedListed.code).toBe(1);
+    expect(phase2UnsignedListed.stderr).toContain("codeowners drift: .github/CODEOWNERS line 30");
     // A failing exit-file probe fails closed.
     const probeFailed = await runPr({ files: [file("packages/support/src/y.ts")], head: phase2Head, fail: ["contents/decisions/PHASE-2-EXIT.md"] }, base!);
     expect(probeFailed.code).toBe(1);

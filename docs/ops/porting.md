@@ -83,4 +83,4 @@ date: 2026-10-20
 The Maintainer accepts Phase 0 (Epics 1 to 8) as complete; Phase 1 Stories may start.
 ```
 
-The check needs `decision: approved`, `decided_by: Maintainer` (exactly), a real `date: YYYY-MM-DD`, and at least one non-blank body line that is not a heading. It checks the form of the signature, not who committed it: the orchestrator commits as the Maintainer, so the rule that only the Maintainer writes this file is a process rule.
+The check needs `decision: approved`, `decided_by: Maintainer` (exactly), a real `date: YYYY-MM-DD`, and at least one non-blank body line that is not a heading. It checks the form of the signature, not who committed it: the orchestrator commits as the Maintainer, so the rule that only the Maintainer writes this file is a process rule. Every `decisions/PHASE-<n>-EXIT.md` takes this same signed form; only a signed one ends Phase n (the report's `phase`, and `after-phase:<n>` in `conformance/protected-paths`, whose `.github/CODEOWNERS` rendering the signing PR must regenerate with `codeowners`).

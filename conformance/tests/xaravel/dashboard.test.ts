@@ -27,6 +27,7 @@ import { checkAuthority } from "../../../tools/release/release";
 import { componentsOf } from "../../../tools/api-surface/api-surface";
 import { readManifests } from "../../../tools/ownership/ownership";
 import { xaravelTest } from "../../../packages/assert/src/index";
+import { SIGNED_EXIT } from "./phase-gate-fixtures";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const REPORT = join(root, "tools", "conformance-report", "report.ts");
@@ -774,14 +775,21 @@ xaravelTest("XT-conformance-257", "conformance:target fails when the Conformance
 // XT-conformance-258
 
 xaravelTest("XT-conformance-258", "each report and history record carries the Phase and the Test Inventory hash, legacy history lines stay valid and unchanged, and the dashboard shows the SM-1 target verdict and the Test Inventory diff between Pin series (PRD SM-1 target, Epic 7 retro item 10)", () => {
-  // Phase: the smallest n >= 0 with no decisions/PHASE-<n>-EXIT.md.
+  // Phase: the smallest n >= 0 with no Maintainer-signed decisions/PHASE-<n>-EXIT.md (exitSignatureProblems).
   const phase0 = fixture();
   expect(currentPhase(phase0)).toBe(0);
   const report0 = computeReport(phase0);
   expect(report0.phase).toBe(0);
-  const phase1 = fixture({ ...FILES, "decisions/PHASE-0-EXIT.md": "# Phase 0 exit\n", "decisions/PHASE-2-EXIT.md": "# Phase 2 exit\n" });
+  const phase1 = fixture({ ...FILES, "decisions/PHASE-0-EXIT.md": SIGNED_EXIT, "decisions/PHASE-2-EXIT.md": SIGNED_EXIT.replaceAll("Phase 0", "Phase 2") });
   expect(currentPhase(phase1)).toBe(1);
   expect(computeReport(phase1).phase).toBe(1);
+  // An unsigned exit file does not end its Phase.
+  const unsigned0 = fixture({ ...FILES, "decisions/PHASE-0-EXIT.md": "# Phase 0 exit\n" });
+  expect(currentPhase(unsigned0)).toBe(0);
+  expect(computeReport(unsigned0).phase).toBe(0);
+  const unsigned1 = fixture({ ...FILES, "decisions/PHASE-0-EXIT.md": SIGNED_EXIT, "decisions/PHASE-1-EXIT.md": "# Phase 1 exit\n" });
+  expect(currentPhase(unsigned1)).toBe(1);
+  expect(computeReport(unsigned1).phase).toBe(1);
 
   // Inventory hash: sha256 of the sorted (UTF-16 code units), de-duplicated Test IDs, each followed by LF.
   const ids = [S("testA"), S("testB"), S("testC"), S("testD"), S("testE"), S("testF")];
