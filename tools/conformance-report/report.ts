@@ -36,8 +36,10 @@
 //   denominator, and the field makes that exclusion visible. It changes no
 //   other alpha field.
 // - `phase` is the current Phase: the smallest n >= 0 with no
-//   `decisions/PHASE-<n>-EXIT.md` (`currentPhase`, the files
-//   `conformance/protected-paths`' `after-phase:<n>` reads). `inventory` is
+//   Maintainer-signed `decisions/PHASE-<n>-EXIT.md` (`currentPhase`, via
+//   `activePhases`: the file exists and `exitSignatureProblems` finds nothing,
+//   the test `conformance/protected-paths`' `after-phase:<n>` applies; it is
+//   the Phase 1 gate's signature test, not the whole gate). `inventory` is
 //   `{ids, sha256}`: the count of the sorted, de-duplicated Inventory Test IDs
 //   and the lowercase hex sha256 of them, each followed by LF
 //   (`inventoryHash`). The history record carries both, for the SM-1 target
@@ -201,7 +203,7 @@ function headCommit(root: string): string | null {
   }
 }
 
-/** The current Phase at `root`: the smallest n >= 0 with no `decisions/PHASE-<n>-EXIT.md` (the after-phase:<n> files). */
+/** The current Phase at `root`: the smallest n >= 0 with no Maintainer-signed `decisions/PHASE-<n>-EXIT.md` (`activePhases`, the after-phase:<n> test). */
 export function currentPhase(root: string): number {
   const exited = activePhases(root);
   let phase = 0;

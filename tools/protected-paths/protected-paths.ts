@@ -10,7 +10,8 @@
 //       decides protection from the root's own list (the base checkout); the
 //       head's CODEOWNERS must mirror the head's list, where each Phase the head
 //       list marks `after-phase:<n>` is active when `decisions/PHASE-<n>-EXIT.md`
-//       exists at the head commit
+//       exists at the head commit and is Maintainer-signed
+//       (`exitSignatureProblems`)
 //
 // Exit codes: 0 pass, 1 violations, 2 usage error. Every violation kind the
 // check reports, one line each, on stderr:
@@ -26,13 +27,15 @@
 //
 // List format: one CODEOWNERS-style pattern per line; `#` comments and blank
 // lines are ignored; `!` marks an exclusion; a trailing ` after-phase:<n>` makes
-// the entry active only once `decisions/PHASE-<n>-EXIT.md` exists. The check
+// the entry active only once `decisions/PHASE-<n>-EXIT.md` exists and is
+// Maintainer-signed (`exitSignatureProblems`, the Phase 1 gate's test). The check
 // matches inclusions in any letter case and exclusions case-sensitively, so
 // `**/CLAUDE.md` also protects `claude.md` and folding only ever adds Protected
 // paths (AD-16). CODEOWNERS, which GitHub matches case-sensitively, keeps the
 // literal pattern.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { exitSignatureProblems } from "../ownership/phase-gate";
 
 /** The Maintainer, sole Code Owner of every Protected Path (AD-16). */
 export const MAINTAINER = "@edanisko";
@@ -118,7 +121,12 @@ export function parseList(text: string): Entry[] {
   return entries;
 }
 
-/** The Phases whose `decisions/PHASE-<n>-EXIT.md` exists under `root`. */
+/** Whether `text`, a `decisions/PHASE-<n>-EXIT.md`, is Maintainer-signed (`exitSignatureProblems`). */
+export function isSignedExit(text: string): boolean {
+  return exitSignatureProblems(text).length === 0;
+}
+
+/** The Phases whose `decisions/PHASE-<n>-EXIT.md` exists under `root` and is Maintainer-signed. */
 export function activePhases(root: string): Set<number> {
   const phases = new Set<number>();
   const dir = join(root, "decisions");
@@ -127,7 +135,7 @@ export function activePhases(root: string): Set<number> {
   }
   for (const name of readdirSync(dir)) {
     const match = /^PHASE-(\d+)-EXIT\.md$/.exec(name);
-    if (match !== null) {
+    if (match !== null && isSignedExit(readFileSync(join(dir, name), "utf8"))) {
       phases.add(Number(match[1]));
     }
   }
@@ -464,7 +472,12 @@ async function pr(options: Options): Promise<number> {
     }
   }
   const exits = await Promise.all(headMarked.map((n) => github.contents(`decisions/PHASE-${n}-EXIT.md`, headSha)));
-  const headPhases = new Set(headMarked.filter((_, i) => exits[i] !== null));
+  const headPhases = new Set(
+    headMarked.filter((_, i) => {
+      const exit = exits[i] ?? null;
+      return exit !== null && isSignedExit(exit);
+    }),
+  );
 
   const result = evaluatePr(entries, phases, { files, changedFiles: pull.changed_files, reviews, headSha });
   const violations = [...result.violations];

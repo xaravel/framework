@@ -62,7 +62,7 @@ A bucket is:
 
 ## Definitions
 
-- **Phase.** The smallest `n ≥ 0` with no `decisions/PHASE-<n>-EXIT.md` (`currentPhase`; the exit decision files that `conformance/protected-paths`' `after-phase:<n>` markers read, via `activePhases`, which checks only that the file exists, not its contents; `decisions/` is a Protected Path). With no exit decision it is `0`.
+- **Phase.** The smallest `n ≥ 0` with no Maintainer-signed `decisions/PHASE-<n>-EXIT.md` (`currentPhase`; the exit decision files that `conformance/protected-paths`' `after-phase:<n>` markers read, via `activePhases`, which counts Phase `n` only when its file exists and is Maintainer-signed (`exitSignatureProblems`: frontmatter `decision: approved`, `decided_by: Maintainer`, a `YYYY-MM-DD` `date`, and body text beyond headings), the Phase 1 gate's signature test, not the whole gate; `decisions/` is a Protected Path). With no signed exit decision it is `0`.
 - **Inventory hash.** `inventory.sha256` is the lowercase hex sha256 of the Inventory's Test IDs, de-duplicated, sorted by UTF-16 code units (`compareUnits`), each followed by LF (`inventoryHash`); `inventory.ids` is their count. Equal hashes mean the same Test Inventory.
 - **Pair.** One Expectations line, `id` × `variant`. Its Component is the Inventory entry's `component` for `id`.
 - **Conformance Rate.** `rate = passing / pairs` over every pair. `not-ported-yet` stays in the denominator, which is never shrunk. Only `status: "pass"` passes. `rate` is `null` when `pairs` is 0.
