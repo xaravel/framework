@@ -1,6 +1,7 @@
 // Xaravel Tests for Story 9.1: the Scope Frame primitive and `interleave` (AD-5, AD-6, AD-9, AD-10, NFR-4;
 // ESC-4.2-1, ESC-9.1-1, ESC-9.1-2), as Story 9.2 extends it (frame kinds and the defer drain; its own tests are in
-// frames.test.ts). One test per acceptance criterion, in order. `xaravelTest` opens no frame
+// frames.test.ts) and Story 9.3 extends it (Applications, overlays and `frameStatic`; its own tests are in
+// overlays.test.ts). One test per acceptance criterion, in order. `xaravelTest` opens no frame
 // (ESC-4.2-1 item 7), so each body starts outside any Scope Frame.
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -59,7 +60,7 @@ xaravelTest(
   "XT-runtime-1",
   "@xaravel/runtime/scope exports currentFrame(), runInFrame(kind, fn) and frameSlot(key, init) and installs globalThis[Symbol.for('xaravel.scope.run')] on load, which the grader calls without importing anything (AD-5.1)",
   async () => {
-    const functions = ["currentFrame", "runInFrame", "runInRootFrame", "runInNarrowFrame", "frameSlot", "frameDefer", "bindToFrame", "frameStreamSource", "frameAsyncGenerator", "interleave", "ScopeFrameException"] as const;
+    const functions = ["currentFrame", "runInFrame", "runInRootFrame", "runInNarrowFrame", "frameSlot", "frameDefer", "bindToFrame", "frameStreamSource", "frameAsyncGenerator", "interleave", "ScopeFrameException", "currentApplication", "setDefaultApplication", "frameOverlay", "frameStatic"] as const;
     for (const name of functions) {
       Assert.assertSame("function", typeof scope[name], `@xaravel/runtime/scope exports ${name}`);
       Assert.assertSame(scope[name], root[name], `the package root re-exports ${name}`);

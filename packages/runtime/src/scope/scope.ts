@@ -18,7 +18,15 @@
 // non-configurable and non-enumerable (item 4). `XARAVEL_NO_SCOPE_GLOBAL=1`, read once at load, skips the install.
 // A property already there with another value throws: a second copy of this module would mean a second store.
 //
-// Stream, async-generator and timer wrapping is in propagate.ts; overlays and `frameStatic` are Story 9.3's.
+// Applications, overlays and statics (AD-5.3, AD-5.5, Story 9.3). A frame carries the Application it runs for
+// (`currentFrame()?.app`): the one its opener names, else its parent's, else null. `currentApplication()` falls back to
+// the process's default Application (`setDefaultApplication`). `frameOverlay(app)` is a unit's overlay for one
+// Application; `frameStatic(Class, key, init)` holds one Upstream static per unit. Both write where an undeclared slot
+// write goes (AD-5.8): through narrow frames, from a child of a `test` unit into the test frame, else into the unit.
+// Reads walk the chain up to the first unit that holds the key. A unit's overlays and statics are discarded when it
+// ends, and a write to an ended unit throws. The runtime never imports Foundation: an Application is any object.
+//
+// Stream, async-generator and timer wrapping is in propagate.ts.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { ScopeFrameException } from "./ScopeFrameException";
 
@@ -26,6 +34,18 @@ import { ScopeFrameException } from "./ScopeFrameException";
 export interface Frame {
   /** The frame's kind, as passed to `runInFrame`, `runInRootFrame` or `runInNarrowFrame` (`test`, `unit`, …). */
   readonly kind: string;
+  /** The Application the frame runs for: named by its opener, else inherited from its parent, else null (AD-5.3). */
+  readonly app: object | null;
+}
+
+/** A unit frame's overlay for one Application: `frameOverlay(app)` (AD-5.3, AD-5.5). */
+export interface FrameOverlay {
+  /** Whether the nearest unit frame up the chain that holds the key holds it for this Application. */
+  has(key: FrameSlotKey): boolean;
+  /** The value from the nearest unit frame up the chain that holds the key for this Application, else null. */
+  get(key: FrameSlotKey): unknown;
+  /** Sets the value in the unit frame an undeclared write goes to; throws `ScopeFrameException` when none does. */
+  set(key: FrameSlotKey, value: unknown): void;
 }
 
 /** A per-frame value: `frameSlot(key, init)`. */
@@ -60,8 +80,18 @@ interface Store {
   readonly declared: ReadonlySet<FrameSlotKey> | null;
   /** A unit's defer list; null for a narrow frame. */
   readonly defers: Promise<unknown>[] | null;
+  /** A unit's overlays, by Application then key; null for a narrow frame. Cleared when the unit ends. */
+  readonly overlays: Map<object, Map<FrameSlotKey, unknown>> | null;
+  /** A unit's Upstream statics, by Class then key; null for a narrow frame. Cleared when the unit ends. */
+  readonly statics: Map<object, Map<FrameSlotKey, unknown>> | null;
   ended: boolean;
 }
+
+/** A key never declared and not a child-of-test slot: `ownerOf` with it is where an undeclared write goes. */
+const OVERLAY_KEY: unique symbol = Symbol("xaravel.scope.overlay");
+
+/** The process's default Application (AD-5.3), set at boot like Laravel's `Container::setInstance`. */
+let defaultApplication: object | null = null;
 
 const storage = new AsyncLocalStorage<Store>();
 
@@ -70,26 +100,110 @@ export function currentFrame(): Frame | null {
   return storage.getStore()?.frame ?? null;
 }
 
+// No `@asyncRoot` tag on runInFrame, runInRootFrame or runInNarrowFrame, though each accepts an async body: each is a
+// generic Scope Frame runner, which returns its body's own type `T` (generic), never a declared Promise type. That is
+// AD-6.5's dual-helper shape ("return `T` for a sync callback and `Promise<T>` for an async one"), and
+// decisions/ESC-9.3-1.md (orchestrator ruling, Option 1) records that such runners "carry no `@asyncRoot` tag, and
+// `async-surface.json` lists no line for them".
+
 /**
  * Runs `fn` in a unit frame of `kind`: a child of the active frame, or a root unit when there is none. A non-Promise
  * result is returned unchanged (AD-6); a Promise result becomes a Promise that settles with it only after the unit's
- * defer list has drained (AD-5.9).
+ * defer list has drained (AD-5.9). The frame runs for `app` when given (`null`: for no Application); omitted, for the
+ * active frame's Application. Untagged, as a generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above.
  */
-export function runInFrame<T>(kind: string, fn: () => T): T {
+export function runInFrame<T>(kind: string, fn: () => T, app?: object | null): T {
   checkRun("runInFrame", kind, fn);
+  checkApp("runInFrame", app);
   const current = storage.getStore() ?? null;
-  return runUnit(kind, current, fn);
+  return runUnit(kind, current, fn, app === undefined ? (current?.frame.app ?? null) : app);
 }
 
-/** Runs `fn` in a root unit frame of `kind`, which sees no enclosing frame's slots; otherwise as `runInFrame`. */
-export function runInRootFrame<T>(kind: string, fn: () => T): T {
+/**
+ * Runs `fn` in a root unit frame of `kind`, which sees no enclosing frame's slots; otherwise as `runInFrame`. The frame
+ * runs for `app` when given (`null`: for no Application); omitted, for no Application (null). Untagged, as a generic
+ * Scope Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
+ */
+export function runInRootFrame<T>(kind: string, fn: () => T, app?: object | null): T {
   checkRun("runInRootFrame", kind, fn);
-  return runUnit(kind, null, fn);
+  checkApp("runInRootFrame", app);
+  return runUnit(kind, null, fn, app ?? null);
+}
+
+/**
+ * Sets the process's default Application (AD-5.3), which `currentApplication()` returns where no frame names one;
+ * `null` clears it.
+ */
+export function setDefaultApplication(app: object | null): void {
+  if (app !== null && typeof app !== "object") {
+    throw new TypeError("setDefaultApplication(): app must be an object or null");
+  }
+  defaultApplication = app;
+}
+
+/** The active frame's Application, else the process's default Application, else null (AD-5.3). */
+export function currentApplication(): object | null {
+  return storage.getStore()?.frame.app ?? defaultApplication;
+}
+
+/** The overlay of the active unit frame for `app` (AD-5.3, AD-5.5); see `FrameOverlay`. */
+export function frameOverlay(app: object): FrameOverlay {
+  if (typeof app !== "object" || app === null) {
+    throw new TypeError("frameOverlay(): app must be an object");
+  }
+  return Object.freeze({
+    has(key: FrameSlotKey): boolean {
+      checkKey("frameOverlay", key);
+      return lookUp("overlays", app, key) !== null;
+    },
+    get(key: FrameSlotKey): unknown {
+      checkKey("frameOverlay", key);
+      return lookUp("overlays", app, key)?.get(key) ?? null;
+    },
+    set(key: FrameSlotKey, value: unknown): void {
+      checkKey("frameOverlay", key);
+      entriesOf(writeOwner(`the frame overlay ${String(key)}`), "overlays", app).set(key, value);
+    },
+  });
+}
+
+/**
+ * One Upstream static (`Model.unguard`, `Carbon.setTestNow`, …) of `Class`, held per unit frame and discarded when the
+ * unit ends (AD-5.5). Reads see the nearest unit up the chain that holds it, else `init()`, stored where a write would
+ * go; with no frame, `init()` unstored. A write with no unit frame to take it throws `ScopeFrameException`.
+ */
+export function frameStatic<T>(Class: abstract new (...args: never[]) => unknown, key: FrameSlotKey, init: () => T): FrameSlot<T> {
+  if (typeof Class !== "function") {
+    throw new TypeError("frameStatic(): Class must be a class");
+  }
+  checkKey("frameStatic", key);
+  if (typeof init !== "function") {
+    throw new TypeError(`frameStatic(): ${String(key)} needs an init function`);
+  }
+  return Object.freeze({
+    get(): T {
+      const holder = lookUp("statics", Class, key);
+      if (holder !== null) {
+        return holder.get(key) as T;
+      }
+      const value = init();
+      const store = storage.getStore();
+      const owner = store === undefined ? null : ownerOf(store, OVERLAY_KEY);
+      if (owner !== null && !owner.ended) {
+        entriesOf(owner, "statics", Class).set(key, value);
+      }
+      return value;
+    },
+    set(value: T): void {
+      entriesOf(writeOwner(`the frame static ${String(key)}`), "statics", Class).set(key, value);
+    },
+  });
 }
 
 /**
  * Runs `fn` in a narrow frame of `kind` that overrides only the `slots` it declares; every other read and write
- * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged.
+ * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged. Untagged, as a generic Scope
+ * Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
  */
 export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>, fn: () => T): T {
   checkRun("runInNarrowFrame", kind, fn);
@@ -103,7 +217,8 @@ export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>,
     }
     declared.add(key);
   }
-  const store: Store = { frame: Object.freeze({ kind }), slots: new Map(), parent: storage.getStore() ?? null, type: "narrow", declared, defers: null, ended: false };
+  const parent = storage.getStore() ?? null;
+  const store: Store = { frame: Object.freeze({ kind, app: parent?.frame.app ?? null }), slots: new Map(), parent, type: "narrow", declared, defers: null, overlays: null, statics: null, ended: false };
   return storage.run(store, fn);
 }
 
@@ -130,9 +245,7 @@ export function frameDefer(promise: PromiseLike<unknown>): void {
 
 /** The per-frame value `key`, initialised by `init()` lazily, once per owning frame. */
 export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
-  if (typeof key !== "string" && typeof key !== "symbol") {
-    throw new TypeError("frameSlot(): key must be a string or a symbol");
-  }
+  checkKey("frameSlot", key);
   if (typeof init !== "function") {
     throw new TypeError(`frameSlot(): ${String(key)} needs an init function`);
   }
@@ -176,6 +289,69 @@ function checkRun(name: string, kind: unknown, fn: unknown): asserts kind is str
   }
 }
 
+function checkApp(name: string, app: unknown): void {
+  if (app !== undefined && app !== null && typeof app !== "object") {
+    throw new TypeError(`${name}(): app must be an object or null`);
+  }
+}
+
+function checkKey(name: string, key: unknown): asserts key is FrameSlotKey {
+  if (typeof key !== "string" && typeof key !== "symbol") {
+    throw new TypeError(`${name}(): key must be a string or a symbol`);
+  }
+}
+
+/**
+ * The entries for `owner` (an Application or a Class) in the nearest unit frame up the chain from the active frame
+ * that holds `key` for it, or null when none does. Writes go to `ownerOf(store, OVERLAY_KEY)` instead; the two
+ * agree because a child of a `test` unit never holds overlay or static entries (its writes, and the `init()` values
+ * `frameStatic` stores, all land in the test frame), so the first unit up the chain that holds a key is its owner or
+ * an ancestor the owner reads through.
+ */
+function lookUp(kind: "overlays" | "statics", owner: object, key: FrameSlotKey): Map<FrameSlotKey, unknown> | null {
+  for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = frame.parent) {
+    const entries = frame[kind]?.get(owner);
+    if (entries?.has(key) === true) {
+      return entries;
+    }
+  }
+  return null;
+}
+
+/** The entries for `owner` in `unit`'s map, created on first use. */
+function entriesOf(unit: Store, kind: "overlays" | "statics", owner: object): Map<FrameSlotKey, unknown> {
+  const map = unit[kind] as Map<object, Map<FrameSlotKey, unknown>>;
+  let entries = map.get(owner);
+  if (entries === undefined) {
+    entries = new Map();
+    map.set(owner, entries);
+  }
+  return entries;
+}
+
+/** The unit frame an overlay or static write from the active frame goes to; throws when there is none or it ended. */
+function writeOwner(what: string): Store {
+  const store = storage.getStore();
+  if (store === undefined) {
+    throw new ScopeFrameException(`Cannot write ${what} with no active Scope Frame; run the code inside runInFrame()`);
+  }
+  const owner = ownerOf(store, OVERLAY_KEY);
+  if (owner === null) {
+    throw new ScopeFrameException(`Cannot write ${what} from the ${store.frame.kind} frame: no unit frame encloses it`);
+  }
+  if (owner.ended) {
+    throw new ScopeFrameException(`Cannot write ${what} to the ${owner.frame.kind} frame after it has ended`);
+  }
+  return owner;
+}
+
+/** Marks `store` ended and discards its overlays and statics (AD-5.5). */
+function end(store: Store): void {
+  store.ended = true;
+  store.overlays?.clear();
+  store.statics?.clear();
+}
+
 /** The nearest unit frame from `store` up the chain (`store` itself included), or null. */
 function nearestUnit(store: Store | null): Store | null {
   let frame = store;
@@ -202,13 +378,13 @@ function ownerOf(store: Store, key: FrameSlotKey): Store | null {
   return null;
 }
 
-function runUnit<T>(kind: string, parent: Store | null, fn: () => T): T {
-  const store: Store = { frame: Object.freeze({ kind }), slots: new Map(), parent, type: "unit", declared: null, defers: [], ended: false };
+function runUnit<T>(kind: string, parent: Store | null, fn: () => T, app: object | null): T {
+  const store: Store = { frame: Object.freeze({ kind, app }), slots: new Map(), parent, type: "unit", declared: null, defers: [], overlays: new Map(), statics: new Map(), ended: false };
   let result: T;
   try {
     result = storage.run(store, fn);
   } catch (error) {
-    store.ended = true;
+    end(store);
     throw error;
   }
   if (result instanceof Promise) {
@@ -217,7 +393,7 @@ function runUnit<T>(kind: string, parent: Store | null, fn: () => T): T {
     // value, a non-native thenable (AD-6.9) included, is returned unchanged and never has its `then` called.
     return drain(store, result) as T;
   }
-  store.ended = true;
+  end(store);
   const pending = (store.defers as Promise<unknown>[]).length;
   if (pending > 0) {
     throw new ScopeFrameException(`The ${kind} frame's body returned synchronously with ${pending} deferred promise(s) pending; return a promise from the body so the unit can drain its defer list`);
@@ -247,7 +423,7 @@ function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
     if (index < defers.length) {
       return (defers[index] as Promise<unknown>).then(noop, fail).then(() => next(index + 1));
     }
-    store.ended = true;
+    end(store);
     return Promise.resolve();
   };
   return result
