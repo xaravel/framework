@@ -118,8 +118,8 @@ development_status:
   8-8-phase-1-gate: done  # ESC-8.8-1 rejected by the Maintainer; Fidelity Review re-run on the head tree passed (both reviewers)
   epic-8-retrospective: done
 
-  epic-9: backlog
-  9-1-scope-frame-primitive-and-interleave: backlog
+  epic-9: in-progress
+  9-1-scope-frame-primitive-and-interleave: in-progress
   9-2-frame-kinds-defer-list-and-context-propagation: backlog
   9-3-per-application-overlays-and-framestatic: backlog
   9-4-class-registry-and-fqcn: backlog
