@@ -14,7 +14,9 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./scope": "./src/scope/index.ts"
+    "./scope": "./src/scope/index.ts",
+    "./registry": "./src/registry/index.ts",
+    "./php": "./src/php/index.ts"
   },
   "devDependencies": {
     "@xaravel/assert": "workspace:*"

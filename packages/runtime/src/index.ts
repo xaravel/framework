@@ -22,3 +22,5 @@ export {
   setDefaultApplication,
   ScopeFrameException,
 } from "./scope/index";
+export { jsonEncode } from "./php/index";
+export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";

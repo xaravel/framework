@@ -28,6 +28,7 @@
 //
 // Stream, async-generator and timer wrapping is in propagate.ts.
 import { AsyncLocalStorage } from "node:async_hooks";
+import { installTestFrameAccess } from "../registry/registry";
 import { ScopeFrameException } from "./ScopeFrameException";
 
 /** An active Scope Frame. */
@@ -438,6 +439,43 @@ function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
       return value;
     });
 }
+
+/**
+ * The Class Registry's access to the `test` units (Story 9.4; AD-10.5): `registerTestClass` writes into the statics of
+ * the nearest unit of kind `test` up the chain, from wherever it is called (a nested unit, a narrow frame), so the
+ * fixture stays for the test and is discarded when the test unit ends; reads see every `test` unit up the chain,
+ * nearest first. Installed into the Registry on load, so `registry/` imports nothing from `scope/` (the scope module
+ * already imports the Registry through `ScopeFrameException`). Internal: not re-exported.
+ */
+installTestFrameAccess({
+  read(owner: object): Map<FrameSlotKey, unknown>[] {
+    const found: Map<FrameSlotKey, unknown>[] = [];
+    for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = frame.parent) {
+      const entries = frame.type === "unit" && frame.frame.kind === "test" ? frame.statics?.get(owner) : undefined;
+      if (entries !== undefined) {
+        found.push(entries);
+      }
+    }
+    return found;
+  },
+  write(owner: object, what: string): Map<FrameSlotKey, unknown> {
+    const store = storage.getStore();
+    if (store === undefined) {
+      throw new ScopeFrameException(`Cannot register ${what} with no active Scope Frame; run the code inside a test frame`);
+    }
+    let test: Store | null = store;
+    while (test !== null && !(test.type === "unit" && test.frame.kind === "test")) {
+      test = test.parent;
+    }
+    if (test === null) {
+      throw new ScopeFrameException(`Cannot register ${what} from the ${store.frame.kind} frame: no test frame encloses it`);
+    }
+    if (test.ended) {
+      throw new ScopeFrameException(`Cannot register ${what} to the test frame after it has ended`);
+    }
+    return entriesOf(test, "statics", owner);
+  },
+});
 
 const SCOPE_RUN = Symbol.for("xaravel.scope.run");
 

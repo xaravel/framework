@@ -1,3 +1,4 @@
 [
+{"method":"resolveClassAsync","file":"src/registry/registry.ts","root":"Registry.resolveClassAsync"},
 {"method":"interleave","file":"src/scope/interleave.ts","root":"callback"}
 ]
