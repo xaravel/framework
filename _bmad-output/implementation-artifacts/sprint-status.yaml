@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 17:16
+last_updated: 10-20-2026 17:51
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -116,7 +116,7 @@ development_status:
   8-6-framework-agent-operating-instructions-and-stop-rules: done
   8-7-porting-md-pilot-on-support-and-collections: done  # ESC-8.7-1 approved (decisions/ESC-8.7-1.md); pilot on pilot/porting
   8-8-phase-1-gate: done  # ESC-8.8-1 rejected by the Maintainer; Fidelity Review re-run on the head tree passed (both reviewers)
-  epic-8-retrospective: optional
+  epic-8-retrospective: done
 
   epic-9: backlog
   9-1-scope-frame-primitive-and-interleave: backlog
@@ -1307,3 +1307,89 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-20-epic-6-7-items.md"
+  - id: "epic-8-retro-item-1-phase-0-exit-signature"
+    epic: 8
+    action: "Sign decisions/PHASE-0-EXIT.md (decision: approved, decided_by: Maintainer,
+      date, a body line) at the Epic 8 checkpoint alongside the go; until it is on
+      main the phase gate fails every Epic 9 Story PR (finding S1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-2-story-bookkeeping-scope"
+    epic: 8
+    action: "Rule on Epic 9+ Story bookkeeping under ownership: stories/<id>.md status
+      edits are out of scope in allowedPath and no longer waived from Epic 9 (MAINT
+      second amendment); extend allowedPath through an Infrastructure Story (own spec,
+      status-only manifest edit, sprint-status line) or amend the ruling (finding
+      S2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-3-fidelity-md-in-loop"
+    epic: 8
+    action: "Rewrite conformance/review/fidelity.md preamble and verdict rule for
+      the in-loop review (fresh-context reviewer agents, pass/reject recorded in the
+      spec bound to the reviewed tree, cross-model rule and fallback record, a reject
+      that stands); keep F-1..F-10 (finding S3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-4-fidelity-binding-scope"
+    epic: 8
+    action: "Narrow tools/fidelity-review BOOKKEEPING to the ESC-8.8-1 set (sprint
+      status, the spec verdict records, only the status field of stories/<id>.md)
+      and carry the latest reject findings into the next review prompt, requiring
+      each to be addressed (findings S4, L7)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-5-porting-check-content"
+    epic: 8
+    action: "Make porting:check require content (rows or rule lines plus an anchor
+      phrase) in the Idiom table, Test-adaptation rules, Mechanical expression rule,
+      By-reference parameters and Exceptions sections, with an XT-153 case that empties
+      one (finding S5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-6-div-cites-from-spine"
+    epic: 8
+    action: "Fill each DIV record cites frontmatter from the spine Binds lines and
+      derive divergence.test.ts expected cites from the spine; change no clause or
+      behaviour section (finding S6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-7-divergence-tooling"
+    epic: 8
+    action: "Check adapted: markers inside multi-line block comments, give the harness
+      and divergence:check one fewer_assertions parser (quoted form in harness.test.ts),
+      and make Boost divergence.get report a missing clause as not found (findings
+      L1, L2, L3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-8-probe-workarounds"
+    epic: 8
+    action: "probes:check: an unsupported probe whose recorded workaround fails is
+      a violation; split concurrent-request isolation out of als.serve-callbacks;
+      require the linked decisions/<ESC>.md to exist (finding L4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-9-one-phase-done-definition"
+    epic: 8
+    action: "Have tools/conformance-report/report.ts and the protected-paths after-phase
+      rule use exitSignatureProblems, so Phase N is done only when PHASE-N-EXIT.md
+      is signed (finding L5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
+  - id: "epic-8-retro-item-10-translator-refusals"
+    epic: 8
+    action: "tools/porting/translate.ts: throw UntranslatableExpression for string-literal
+      operands of arithmetic, % on a non-integer literal and mixed string/number literal
+      comparisons, with fixture cases (finding L6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
