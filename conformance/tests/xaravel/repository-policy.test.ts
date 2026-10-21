@@ -16,6 +16,7 @@ import {
   type ActiveRule,
   type Json,
 } from "../../../tools/ruleset/ruleset";
+import { PHP_VERSION } from "../../../tools/inventory/inventory";
 import { ALLOWED_WRITE_JOBS, checkWorkflow, checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -742,6 +743,23 @@ xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* 
   expect(scripts["workflows:check"]).toBe("bun tools/workflow-permissions/workflow-permissions.ts check");
 });
 
+/**
+ * The `php-fixtures` step that prepares the Oracle's PHP image: git, a checksum-verified Composer and, on the line
+ * ending `PCNTL_INSTALL` (the image's own extension installer), pcntl plus the gmp and ftp extensions the locked
+ * framework install requires (ESC-9.3-1).
+ */
+const PCNTL_INSTALL = "-php-ext-install gmp ftp pcntl";
+const PHP_FIXTURES_SETUP = [
+  "set -euo pipefail",
+  "apt-get update",
+  "apt-get install -y --no-install-recommends git unzip libgmp-dev $PHPIZE_DEPS",
+  "curl -fsSLo /usr/local/bin/composer https://getcomposer.org/download/2.10.3/composer.phar",
+  'echo "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6  /usr/local/bin/composer" | sha256sum -c -',
+  "chmod +x /usr/local/bin/composer",
+  'git config --global --add safe.directory "$GITHUB_WORKSPACE"',
+  "",
+].join("\n");
+
 /** The `php-fixtures` step that builds the locked framework install the real-PHP Oracle tests need (docs/ops/inventory.md). */
 /** The awk program the install step uses to read the framework version from conformance/baseline-pin. */
 const PIN_VERSION_AWK = `$1 == "laravel/framework" { sub(/^v/, "", $2); print $2 }`;
@@ -856,15 +874,23 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     expect(node["continue-on-error"]).toBeUndefined();
     expect(node["if"]).toBeUndefined();
   }
+  // It runs in the Oracle image's own PHP base image, pinned by digest, so its PHP is exactly PHP_VERSION and the two
+  // pins move together; a newer 8.5 patch on the runner cannot reach it (ESC-9.3-1).
+  const oracleBase = /^FROM (php:\S+)/m.exec(readFileSync(join(root, "conformance", "oracle", "Dockerfile"), "utf8"))?.[1];
+  expect(oracleBase).toStartWith(`php:${PHP_VERSION}-`);
+  expect(oracleBase).toContain("@sha256:");
+  expect(phpFixtures["container"]).toEqual({ image: oracleBase });
+  expect(phpFixtures["env"]).toEqual({ COMPOSER_ALLOW_SUPERUSER: "1" });
+  // Its first step installs git (for the full-history checkout), pcntl, gmp, ftp and a checksum-verified Composer.
+  const setup = phpFixtures.steps[0]!.run!;
+  expect(setup.split("\n").filter((line) => line.endsWith(PCNTL_INSTALL)).length).toBe(1);
+  expect(setup.split("\n").filter((line) => !line.endsWith(PCNTL_INSTALL)).join("\n")).toBe(PHP_FIXTURES_SETUP);
   // Its oracle-story tests verify the real repository, whose per-Story requests are read in merge order (Story 5.6 AC5).
-  expect(phpFixtures.steps[0]).toEqual({ ...audit.steps[0]!, with: { "persist-credentials": false, "fetch-depth": 0 } });
-  expect(phpFixtures.steps[1]).toEqual(audit.steps[1]!);
-  expect(phpFixtures.steps.filter((step) => step.uses !== undefined).length).toBe(3);
-  expect(phpFixtures.steps.find((step) => step.uses?.startsWith("shivammathur/setup-php@") === true)).toEqual({
-    uses: "shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962",
-    with: { "php-version": "8.5", extensions: "dom, mbstring, pcntl, tokenizer, xml", coverage: "none" },
-  });
+  expect(phpFixtures.steps[1]).toEqual({ ...audit.steps[0]!, with: { "persist-credentials": false, "fetch-depth": 0 } });
+  expect(phpFixtures.steps[2]).toEqual(audit.steps[1]!);
+  expect(phpFixtures.steps.filter((step) => step.uses !== undefined).length).toBe(2);
   expect(phpFixtures.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
+    setup,
     "bun install --frozen-lockfile --ignore-scripts",
     "bun run php-fixtures:install",
     "bun run upstream:sync",
