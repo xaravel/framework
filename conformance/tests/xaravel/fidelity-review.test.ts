@@ -20,6 +20,7 @@ import {
   CHECKLIST_FILE,
   classifyUnavailable,
   decideVerdict,
+  decisionEvidence,
   EXCERPT_CAP,
   fidelityVerdicts,
   findStorySpec,
@@ -670,6 +671,7 @@ xaravelTest(
         '{"id":"y","variant":"none","status":"skip","reason":"intentional-divergence:DIV-66"}',
         "/** @asyncRoot */",
         "export async function get(): Promise<string> { return ''; }",
+        "// per ESC-6.4-1 and decisions/ESC-404-1.md; ESC-6.4-1 again, DIV-9.1 is evidence (a)",
         "",
       ].join("\n"),
     );
@@ -703,10 +705,29 @@ xaravelTest(
       expect(evidenceUser).toContain(`#### ${SPINE_FILE} AD-6.${k + 1}\n\n\`\`\`markdown\n${ad6[k]}`);
     }
     expect(evidenceUser).toContain("@asyncRoot callback");
+    // ESC-9.2-1: (f) carries each decision record an added line cites, once, in full, or why it is unavailable.
+    const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines (any item, ESC-9.2-1)"));
+    expect(sectionF).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
+    expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
+    expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
+    expect(sectionF).not.toContain("#### decisions/DIV-9.md");
+    // Every citation form, each once; a DIV path, a partial id and a longer token are not decision citations.
+    const cited = decisionEvidence(root, [
+      "MAINT-2026-10-16-unattended-orchestrator and OQ-12, then PHASE-0-EXIT",
+      "decisions/ESC-8.5-1.md, ESC-9.1-1 twice: ESC-9.1-1; decisions/DIV-1.md; ESC-9; xESC-9.1-1; ESC-9.1-1x",
+    ]);
+    expect(cited.map((entry) => [entry.label, entry.text !== null])).toEqual([
+      ["decisions/ESC-8.5-1.md", true],
+      ["decisions/ESC-9.1-1.md", true],
+      ["decisions/MAINT-2026-10-16-unattended-orchestrator.md", true],
+      ["decisions/OQ-12.md", true],
+      ["decisions/PHASE-0-EXIT.md", true],
+    ]);
     // With no error fixture, (c) never claims the change has none: it points to the changed-fixture list.
     const bare = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).user;
     expect(bare).toContain("No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.");
     expect(bare).toContain("No fixture the change adds or modifies is an error.");
+    expect(bare).toContain("No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).");
 
     // (c) for changed fixtures: a Story's own error fixture, added with its request, reaches the prompt.
     const fixtureRepo = makeRepo({ change: false });
