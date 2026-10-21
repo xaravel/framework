@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 19:17
+last_updated: 10-20-2026 19:47
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1367,7 +1367,7 @@ action_items:
       and make Boost divergence.get report a missing clause as not found (findings
       L1, L2, L3)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md"
   - id: "epic-8-retro-item-8-probe-workarounds"
     epic: 8

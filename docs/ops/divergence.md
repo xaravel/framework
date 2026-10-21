@@ -17,12 +17,12 @@ bun run divergence:check [--root <dir>]
 - The YAML frontmatter parses, `div` equals n, `title` is a non-empty string, `cites` and `sources` are lists of strings, and each `sources` file exists.
 - The body has `## Rationale`, `## Behaviour` and `## Adaptation clauses`.
 - There is at least one clause, no clause number repeats, and the clauses are numbered 1..m in file order.
-- `fewer_assertions` is absent or a list. Each item is a quoted string `<k>` naming an existing clause. An unquoted number fails, because YAML reads `2.10` as `2.1`.
+- `fewer_assertions` is absent or a list. Each item is a quoted string `<k>` naming an existing clause. An unquoted number fails, because YAML reads `2.10` as `2.1`. Boost's `fewerAssertions` (`tools/boost-framework/src/tools.ts`) reads the list for both this check and the harness, so the harness waives only the items this check accepts.
 
 **Marker rules.** A marker is `DIV-<n>.<k>` (`/^DIV-([1-9]\d*)\.([1-9]\d*)$/`) and names an existing clause:
 
 - Every non-null `adapted` in `conformance/expectations/`. A broken one is `<shard>:<line>: <id> × <variant>: adapted <v>: not DIV-<n>.<k>`, or `...: clause does not exist`. Only a `pass` line may carry `adapted` (conformance/README.md); on any other status it is `...: adapted <v>: only a pass line may carry adapted`. A shard that is not valid JSON is one violation pointing at `bun run expectations:check`; run that first.
-- Every `adapted:` in a `//` or `/* */` comment in a Ported Test (`packages/*/tests/ported/**/*.test.ts`), all of them on each line, from the line's first `//` or `/*` on. The token is what follows `adapted:` and any blanks, without a trailing `*/`; it must be exactly `DIV-<n>.<k>`, so `adapted: DIV-3.1` counts and an empty token fails. A broken one is `<file>:<line>: adapted:<token>: not DIV-<n>.<k>`, or `...: clause does not exist`.
+- Every `adapted:` in a `//` or `/* */` comment in a Ported Test (`packages/*/tests/ported/**/*.test.ts`), all of them on each line, from the line's first `//` or `/*` on. A line that starts inside a `/* */` block opened on an earlier line is read whole, so a marker on a continuation line of a multi-line block comment is checked; after the block's `*/`, later lines are code again. A `/*` inside a `//` comment opens no block. Tracking the block skips `'…'`, `"…"` and `` `…` `` string literals on the line, so `"http://x"` does not stop it and `` `${dir}/*` `` opens no block; an unterminated quote runs to the end of the line. Regex literals and template literals spanning lines are not parsed, so a `//` or `/*` in one can still hide a later block or open a false one. The token is what follows `adapted:` and any blanks, without a trailing `*/`; it must be exactly `DIV-<n>.<k>`, so `adapted: DIV-3.1` counts and an empty token fails. A broken one is `<file>:<line>: adapted:<token>: not DIV-<n>.<k>`, or `...: clause does not exist`.
 
 **Output.** Violations go to stderr, one per line. On success it prints `Divergence OK: <r> record(s), <c> clause(s); <e> Expectations marker(s), <p> assertion marker(s) checked.`
 
@@ -65,4 +65,4 @@ Clauses are append-only. A new clause takes the next number, m + 1. An existing 
 
 ## The assertion-floor waiver
 
-`fewer_assertions` lists the clauses whose adaptations may record fewer assertions than the Inventory (ESC-5.3-2, FR-113). The harness waives the `FLOOR` failure for an Expectations line exactly when its `adapted` is `DIV-<n>.<k>` and that record's list contains `"<k>"` ([harness.md](harness.md)). Every record ships with `fewer_assertions: []`. Adding an item weakens the grader, so it needs an approved Escalation.
+`fewer_assertions` lists the clauses whose adaptations may record fewer assertions than the Inventory (ESC-5.3-2, FR-113). The harness waives the `FLOOR` failure for an Expectations line exactly when its `adapted` is `DIV-<n>.<k>`, that record's list contains the quoted `"<k>"`, and the record has clause `DIV-<n>.<k>` ([harness.md](harness.md)). An unquoted `2`, or an item naming no clause, waives nothing. Every record ships with `fewer_assertions: []`. Adding an item weakens the grader, so it needs an approved Escalation.

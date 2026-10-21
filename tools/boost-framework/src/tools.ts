@@ -425,6 +425,39 @@ export function divergenceClauses(n: string, body: string): { id: string; text: 
   });
 }
 
+const FEWER_ITEM = /^[1-9]\d*$/;
+
+/**
+ * The `fewer_assertions` floor waiver (ESC-5.3-2) of DIV-`n`, read from its frontmatter `fields` and `body`. `clauses`
+ * holds the valid items: each a quoted string `<k>` naming a clause DIV-`n`.`<k>` that `divergenceClauses` finds in
+ * `body`. `problems` names every other item, and a value that is not a list; an absent key is no waiver and no
+ * problem. tools/divergence/divergence.ts reports `problems` and conformance/harness/harness.ts waives only `clauses`,
+ * so the check and the harness read one rule.
+ */
+export function fewerAssertions(n: string, fields: Record<string, unknown>, body: string): { clauses: Set<string>; problems: string[] } {
+  const clauses = new Set<string>();
+  const problems: string[] = [];
+  const waiver = fields["fewer_assertions"];
+  if (waiver === undefined) {
+    return { clauses, problems };
+  }
+  if (!Array.isArray(waiver)) {
+    problems.push(`fewer_assertions must be a list, got ${JSON.stringify(waiver)}`);
+    return { clauses, problems };
+  }
+  const existing = new Set(divergenceClauses(n, body).map((clause) => clause.id.slice(`DIV-${n}.`.length)));
+  for (const item of waiver as unknown[]) {
+    if (typeof item !== "string") {
+      problems.push(`fewer_assertions item ${JSON.stringify(item)} must be a quoted string, e.g. ["2"]`);
+    } else if (!FEWER_ITEM.test(item) || !existing.has(item)) {
+      problems.push(`fewer_assertions item ${JSON.stringify(item)} names no clause DIV-${n}.<k>`);
+    } else {
+      clauses.add(item);
+    }
+  }
+  return { clauses, problems };
+}
+
 export function divergenceGet(root: string, args: ToolArgs): JsonObject {
   const id = str(args, "id");
   const match = id === null ? null : DIV_ID.exec(id);
@@ -455,15 +488,18 @@ export function divergenceGet(root: string, args: ToolArgs): JsonObject {
   }
   const body = parsed === null ? text.replace(/\r\n/g, "\n") : parsed.body;
   const all = divergenceClauses(n, body);
+  const clauses = clause === null ? all : all.filter((item) => item.id === clause);
   const value: JsonObject = {
     id,
     path,
-    exists: true,
+    exists: clause === null || clauses.length > 0,
     frontmatter: parsed === null ? null : (parsed.fields as JsonValue),
-    clauses: clause === null ? all : all.filter((item) => item.id === clause),
+    clauses,
   };
   if (clause === null) {
     value["text"] = text;
+  } else if (clauses.length === 0) {
+    value["note"] = `No clause ${clause}: ${path} exists but has no clause ${clause}.`;
   }
   return value;
 }
@@ -573,7 +609,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   },
   {
     name: "divergence.get",
-    description: `A Divergence Record (${DECISIONS_DIR}/DIV-<n>.md): its frontmatter and its numbered clauses (DIV-<n>.<k>), plus the whole text when id has no clause part. exists is false while the record is not written (Story 8.1 writes them).`,
+    description: `A Divergence Record (${DECISIONS_DIR}/DIV-<n>.md): its frontmatter and its numbered clauses (DIV-<n>.<k>), plus the whole text when id has no clause part. exists is false while the record is not written (Story 8.1 writes them), and when id names a clause the record does not have (frontmatter is then the record's, clauses is empty and note names the missing clause).`,
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", description: "DIV-<n> or DIV-<n>.<k>, e.g. DIV-3 or DIV-3.2." } },
