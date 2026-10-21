@@ -41,7 +41,8 @@ function copyValue(x: unknown, path: Set<object>): unknown {
     }
     const copy = Object.create(Object.getPrototypeOf(x) as object | null) as Record<string, unknown>;
     for (const key of Object.keys(x)) {
-      copy[key] = copyValue((x as Record<string, unknown>)[key], path);
+      // defineProperty, so an own "__proto__" key stays an entry and never replaces the copy's prototype.
+      Object.defineProperty(copy, key, { value: copyValue((x as Record<string, unknown>)[key], path), enumerable: true, writable: true, configurable: true });
     }
     return copy;
   } finally {
@@ -53,8 +54,8 @@ function copyValue(x: unknown, path: Set<object>): unknown {
  * `x` copied as PHP copies a value: every array level (an `Array`, a plain object, a `PhpArray`) is a new array of
  * the same kind with the same keys in the same order, a `PhpArray` keeping its next free index; objects (`Ref`s
  * included) are shared by handle; any other value is returned as it is, `undefined` as `null`. Mutating the copy
- * leaves `x` unchanged. Throws PHP's `Error` `Nesting level too deep - recursive dependency?` for an array that
- * contains itself.
+ * leaves `x` unchanged. A JS array that contains itself (a PHP array cannot, without references) hits a Xaravel guard,
+ * which throws an `Error` with PHP's comparison message `Nesting level too deep - recursive dependency?`.
  */
 export function valueCopy<T>(x: T): Exclude<T, undefined> | (undefined extends T ? null : never) {
   return copyValue(x, new Set()) as Exclude<T, undefined> | (undefined extends T ? null : never);

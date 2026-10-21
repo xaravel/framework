@@ -1,6 +1,6 @@
 // PHP's comparison (AD-9.6, Story 9.6): `<=>` and `==` as PHP 8.5's `zend_compare` gives them over the AD-9 value
 // model (see `casts.ts`). Objects compared by their properties expose `[Symbol.for('xaravel.php.props')]()`, which
-// returns their public properties as a PHP array.
+// returns the properties PHP compares (protected and private included), as a PHP array (AD-9.6).
 import { arrayEntries, floatValue, formatFloat, isTrue, phpType, type PhpType, stringPort, toPhpString } from "./casts";
 import { parseNumeric } from "./isNumeric";
 import type { PhpArrayKey } from "./PhpArray";

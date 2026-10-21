@@ -28,12 +28,13 @@ interface OracleValues {
   decode: (encoded: unknown) => unknown;
   readRequests: (path: string) => { id: string; sha256: string }[];
   readSignedFixture: (path: string, sha256: string, publicKeyPem: string) => Output;
+  BrandedArray: new (entries: Iterable<readonly [number | bigint | string, unknown]>) => object;
 }
 
 // The runtime has no dependencies (AD-2), so its tsc project cannot reference @xaravel/assert's test files; the
 // grader's fixture reader is loaded at run time instead of being re-implemented here.
 const ORACLE_VALUES = join(REPO, "packages", "assert", "tests", "xaravel", "oracle-values.ts");
-const { decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
+const { BrandedArray, decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
 const REQUESTS = "conformance/oracle-requests/9.6.jsonl";
 const FIXTURES = "conformance/fixtures/runtime";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
@@ -145,6 +146,20 @@ registerClass("Xaravel\\Tests\\Runtime\\XtSemanticsOpaque", XtSemanticsOpaque);
 
 class XtSemanticsUnregistered {}
 
+class XtSemanticsBadPort {
+  toString(): string {
+    return 5 as unknown as string;
+  }
+}
+registerClass("Xaravel\\Tests\\Runtime\\XtSemanticsBadPort", XtSemanticsBadPort);
+
+class XtSemanticsNode {
+  [Symbol.for("xaravel.php.props")](): unknown {
+    return { self: this };
+  }
+}
+registerClass("Xaravel\\Tests\\Runtime\\XtSemanticsNode", XtSemanticsNode);
+
 xaravelTest(
   "XT-runtime-22",
   "looseEquals, spaceship, isNumeric, toInt, toFloat, toPhpString and toBool match the Oracle's ==, <=>, is_numeric, (int), (float), (string) and (bool) over scalars, numeric strings, leading-whitespace strings, \"1e3\", INF, NAN, arrays and objects, follow PHP's object and recursion rules, and read undefined as null (AD-9, AD-9.6)",
@@ -177,6 +192,10 @@ xaravelTest(
     const ints = decode(rawResult(output, 4)) as (number | bigint)[];
     const floats = decode(rawResult(output, 5)) as number[];
     const bools = decode(rawResult(output, 6)) as boolean[];
+    Assert.assertSame(w.length, numeric.length);
+    Assert.assertSame(w.length, ints.length);
+    Assert.assertSame(w.length, floats.length);
+    Assert.assertSame(w.length, bools.length);
     w.forEach((value, index) => {
       if (isNumeric(value) !== numeric[index]) {
         mismatches.push(`is_numeric(${show(raw, index)}): Oracle ${String(numeric[index])}, got ${String(isNumeric(value))}`);
@@ -194,6 +213,8 @@ xaravelTest(
 
     // (string) over $v, the values of $w before the objects, and over the float-format list $f.
     const strings = decode(rawResult(output, 7)) as string[];
+    // $v is $w without the four objects of $o.
+    Assert.assertSame(w.length - 4, strings.length);
     strings.forEach((expected, index) => {
       const actual = toPhpString(w[index]);
       if (actual !== expected) {
@@ -258,6 +279,8 @@ xaravelTest(
     assertThrows(() => looseEquals(self, other), Error, "Nesting level too deep - recursive dependency?");
     assertThrows(() => spaceship(self, other), Error, "Nesting level too deep - recursive dependency?");
     assertThrows(() => valueCopy(self), Error, "Nesting level too deep - recursive dependency?");
+    // Recursion through object props: two instances of one class whose props contain the instance itself.
+    assertThrows(() => looseEquals(new XtSemanticsNode(), new XtSemanticsNode()), Error, "Nesting level too deep - recursive dependency?");
 
     // An int beyond ±(2^53 − 1) is a bigint, in and out; a bigint outside int64 is no PHP int.
     Assert.assertSame(9223372036854775807n, toInt("9223372036854775807"));
@@ -286,6 +309,14 @@ xaravelTest(
     Assert.assertSame("1", toPhpString(toFloat("1")));
     Assert.assertTrue(isNumeric(float(1)));
     Assert.assertSame("-0", toPhpString(-0));
+    // A toString() port that returns no string: PHP's TypeError.
+    assertThrows(() => toPhpString(new XtSemanticsBadPort()), TypeError, "Xaravel\\Tests\\Runtime\\XtSemanticsBadPort::__toString(): Return value must be of type string, int returned");
+    // A brand-only array (the grader's BrandedArray) is a PHP array.
+    Assert.assertFalse(toBool(new BrandedArray([])));
+    Assert.assertSame(0, toInt(new BrandedArray([])));
+    Assert.assertTrue(toBool(new BrandedArray([[1, "a"]])));
+    Assert.assertSame(1, toInt(new BrandedArray([[1, "a"]])));
+    Assert.assertTrue(looseEquals(new BrandedArray([[1, "a"], ["k", 2]]), new PhpArray<number | string, unknown>([[1, "a"], ["k", 2]])));
 
     // Exported from the package root.
     Assert.assertSame(looseEquals, root.looseEquals);
@@ -332,6 +363,11 @@ xaravelTest(
     Assert.assertSame(ref, copy.ref);
 
     // Mutating the copy at every level leaves the original unchanged.
+    const originalInner = (nested.get("list") as unknown[])[1] as number[];
+    const copiedInner = (copy.php.get("list") as unknown[])[1] as number[];
+    Assert.assertTrue(originalInner !== copiedInner, "a new array");
+    copiedInner.push(4);
+    copiedInner[0] = 9;
     copy.list.push(3);
     (copy.list[2] as Record<string, string>)["k"] = "changed";
     copy.php.set(5, 99);
@@ -346,6 +382,7 @@ xaravelTest(
     Assert.assertSame("[1]", jsonEncode(originalMap.a));
     Assert.assertSame("x", originalMap.b.get(2));
     Assert.assertSame(2, (nested.get("list") as unknown[]).length);
+    Assert.assertSame("[2,3]", jsonEncode(originalInner));
     // A shared Ref is one box.
     copy.ref.value = 2;
     Assert.assertSame(2, ref.value);
@@ -365,6 +402,16 @@ xaravelTest(
     Assert.assertSame(9223372036854775807n, valueCopy(9223372036854775807n));
     Assert.assertNull(valueCopy(undefined));
     Assert.assertSame(point, valueCopy(point));
+    // A brand-only array (the grader's BrandedArray) is copied into a PhpArray with the same entries.
+    const branded = new BrandedArray([[1, "a"], ["k", [2]]]);
+    const brandedCopy = valueCopy(branded);
+    Assert.assertTrue(brandedCopy instanceof PhpArray, "a PhpArray");
+    Assert.assertSame('[[1,"a"],["k",[2]]]', jsonEncode([...(brandedCopy as PhpArray)]));
+    // An own "__proto__" key stays an entry and leaves the prototype alone.
+    const proto = JSON.parse('{"__proto__": [1], "a": 2}') as Record<string, unknown>;
+    const protoCopy = valueCopy(proto);
+    Assert.assertTrue(Object.getPrototypeOf(protoCopy) === Object.prototype, "the prototype is kept");
+    Assert.assertSame('["__proto__","a"]', jsonEncode(Object.keys(protoCopy)));
     Assert.assertSame(valueCopy, root.valueCopy);
   },
 );

@@ -1,5 +1,6 @@
 // PHP's numeric strings (AD-9, Story 9.6): `_is_numeric_string_ex` of PHP 8.5's `Zend/zend_operators.c`, and
 // `is_numeric`, which reads it.
+import { phpType } from "./casts";
 import { isFloat } from "./PhpFloat";
 
 /** A numeric string as `_is_numeric_string_ex` reads it. */
@@ -67,8 +68,11 @@ export function parseNumeric(s: string, allowErrors: boolean): NumericString | n
 export function isNumeric(v: unknown): boolean {
   switch (typeof v) {
     case "number":
-    case "bigint":
       return true;
+    case "bigint":
+    case "symbol":
+      // `phpType` throws its TypeError for a bigint outside int64 and for a symbol, as every helper does.
+      return phpType(v) === "int";
     case "string":
       return parseNumeric(v, false) !== null;
     default:

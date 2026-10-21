@@ -291,7 +291,7 @@ export function toPhpString(v: unknown): string {
   }
   const result: unknown = port.call(object);
   if (typeof result !== "string") {
-    throw new TypeError(`${className(object)}::__toString(): Return value must be of type string, ${phpType(result)} returned`);
+    throw new TypeError(`${className(object)}::__toString(): Return value must be of type string, ${phpType(result) === "object" ? className(result as object) : phpType(result)} returned`);
   }
   return result;
 }
