@@ -16,6 +16,11 @@
 #   review pages into .cache/conformance/site (no token);
 # - `bun run conformance:publish` commits that directory to the `gh-pages`
 #   branch, which GitHub Pages serves ("Deploy from a branch"), and pushes it.
+# - `bun run conformance:target` (tools/conformance-report/target.ts) checks
+#   SM-1's target on the history: the Conformance Rate never decreases
+#   between Phase boundaries under the same Baseline Pin. It runs last, after
+#   publish, so a violation turns the run red while the site (which shows it)
+#   is still published.
 # None of them touches main (docs/ops/conformance-report.md).
 #
 # The top level is `contents: read`. Only this job holds `contents: write`
@@ -93,3 +98,5 @@ jobs:
           GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           export GIT_CONFIG_VALUE_0
           bun run conformance:publish --dir .cache/conformance/site
+      - name: Check the SM-1 target
+        run: bun run conformance:target --history .cache/conformance/history.jsonl

@@ -12,11 +12,14 @@
 //       is when the record is already there) to `<file>`, for the dashboard
 //       site build (Story 7.2).
 //
-// A record is `{"commit","pin":{"tag","commit"},"overall":{"pairs","passing"},
-// "alpha":{"applicable","passing"},"components":{<c>:{"pairs","passing"}}}`,
-// one JSON line, keyed by (commit, pin). Appending a key already present is a
-// no-op (`already recorded`, exit 0). This is the only place the data-branch
-// mechanics live:
+// A record is `{"commit","pin":{"tag","commit"},"phase","inventory":{"ids",
+// "sha256"},"overall":{"pairs","passing"},"alpha":{"applicable","passing"},
+// "components":{<c>:{"pairs","passing"}}}`, one JSON line, keyed by (commit,
+// pin). `phase` and `inventory` (the report's current Phase and Inventory
+// hash) feed the SM-1 target check (target.ts) and the dashboard's Inventory
+// diff between Pin series; lines written before they existed lack both and
+// stay valid. Appending a key already present is a no-op (`already recorded`,
+// exit 0). This is the only place the data-branch mechanics live:
 //
 // - The branch is fetched from the remote into the local ref
 //   `refs/xaravel-history/<branch>` (FETCH_HEAD is not written); when the
@@ -58,6 +61,10 @@ export const BOT = { name: "github-actions[bot]", email: "41898599+github-action
 export interface HistoryRecord {
   commit: string;
   pin: { tag: string; commit: string };
+  /** The Phase at the commit; absent on lines written before it was recorded. */
+  phase?: number;
+  /** The Inventory's Test ID count and hash; absent on lines written before it was recorded. */
+  inventory?: { ids: number; sha256: string };
   overall: { pairs: number; passing: number };
   alpha: { applicable: number; passing: number };
   components: Record<string, { pairs: number; passing: number }>;
@@ -89,6 +96,8 @@ export function historyRecord(report: Report): HistoryRecord {
   return {
     commit: report.commit,
     pin: { tag: report.pin.tag, commit: report.pin.commit },
+    phase: report.phase,
+    inventory: { ids: report.inventory.ids, sha256: report.inventory.sha256 },
     overall: { pairs: report.overall.pairs, passing: report.overall.passing },
     alpha: { applicable: report.alpha.applicable, passing: report.alpha.passing },
     components,
@@ -341,6 +350,9 @@ export function readReport(path: string): Report {
   const report = value as Partial<Report> | null;
   if (report === null || typeof report !== "object" || report.schema !== 1 || typeof report.pin?.tag !== "string" || typeof report.overall?.pairs !== "number" || typeof report.alpha?.applicable !== "number" || typeof report.components !== "object" || report.components === null) {
     throw new HistoryError(`${path} is not a schema 1 conformance report`);
+  }
+  if (!Number.isInteger(report.phase) || report.phase! < 0 || typeof report.inventory?.ids !== "number" || typeof report.inventory.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(report.inventory.sha256)) {
+    throw new HistoryError(`${path} has no valid phase and inventory (re-run bun run conformance:report)`);
   }
   return report as Report;
 }

@@ -24,7 +24,12 @@
 // - the Escalations (`conformance/escalations/ESC-*.md`), the Divergence
 //   Records (`decisions/DIV-*.md`), the Expectations File (Quarantined tests),
 //   the Story manifests and sprint status, and git history at `--root` (the
-//   Epic review view).
+//   Epic review view, and the Inventory at each side of a Pin change).
+//
+// The `#target` section shows SM-1's target (target.ts): the verdict, the
+// reference points of every Pin series, and per Pin change the Test Inventory
+// diff between the last record of the earlier series and the first of the
+// later one. A violation is shown, never a build failure.
 //
 // Every interpolated string is HTML-escaped. docs/ops/conformance-report.md
 // documents the pages.
@@ -34,12 +39,13 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { compareUnits } from "../inventory/inventory";
-import { readExpectations } from "../pin-bump/pin-bump";
+import { readExpectations, readInventoryAt } from "../pin-bump/pin-bump";
 import { ESCALATIONS_DIR, DECISIONS_DIR, escalationStatus, parseEscalation, parseEscalationId, type EscalationStatus } from "../escalations/escalations";
 import { applySprintStatus, readManifests, STORIES_DIR, type Manifest, type Status as StoryStatus } from "../ownership/ownership";
 import { componentsOf, countsOf, diffComponents, type ComponentDiff } from "../api-surface/api-surface";
 import { DEFAULT_OUT, REASON_KINDS, serialiseReport, type Bucket, type Report } from "./report";
 import { git, readReport, serialiseRecord, type HistoryRecord } from "./history";
+import { checkedSummary, parseHistory, pinSeries, referencePoints, targetViolations, TargetError } from "./target";
 
 export const DEFAULT_SITE_OUT = ".cache/conformance/site";
 /** The Divergences always listed (DIV-1..DIV-12, PRD); any other `DIV-<n>` a reason names is added. */
@@ -84,6 +90,7 @@ const STYLE = [
   "td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px solid #cf222e;padding:.5rem 1rem;margin:1rem 0}",
   ".blocking h2{color:#cf222e}.figure{font-size:1.25rem}.chart .overall{stroke:#0969da}.chart .alpha{stroke:#bc4c00}",
   ".chart circle.overall{fill:#0969da}.chart circle.alpha{fill:#bc4c00}.chart .marker{stroke:#59636e;stroke-dasharray:4 3}.chart text{font-size:11px;fill:#59636e}",
+  ".violated{color:#cf222e;font-weight:600}",
 ].join("\n");
 
 function page(title: string, body: string): string {
@@ -116,23 +123,19 @@ export interface HistoryMarker {
 
 /** Splits `records`, in file order, into one series per run of the same Baseline Pin; each change is a marker. */
 export function historySeries(records: readonly HistoryRecord[]): { series: HistorySeries[]; markers: HistoryMarker[] } {
-  const series: HistorySeries[] = [];
-  const markers: HistoryMarker[] = [];
-  records.forEach((record, index) => {
-    const last = series.at(-1);
-    if (last === undefined || last.pin.tag !== record.pin.tag || last.pin.commit !== record.pin.commit) {
-      if (last !== undefined) {
-        markers.push({ index, tag: record.pin.tag });
-      }
-      series.push({ pin: { tag: record.pin.tag, commit: record.pin.commit }, start: index, points: [] });
-    }
-    series.at(-1)!.points.push({
-      commit: record.commit,
-      rate: record.overall.pairs === 0 ? null : record.overall.passing / record.overall.pairs,
-      alpha: record.alpha.applicable === 0 ? null : record.alpha.passing / record.alpha.applicable,
-    });
-  });
-  return { series, markers };
+  const runs = pinSeries(records);
+  return {
+    series: runs.map((run) => ({
+      pin: run.pin,
+      start: run.start,
+      points: run.records.map((record) => ({
+        commit: record.commit,
+        rate: record.overall.pairs === 0 ? null : record.overall.passing / record.overall.pairs,
+        alpha: record.alpha.applicable === 0 ? null : record.alpha.passing / record.alpha.applicable,
+      })),
+    })),
+    markers: runs.slice(1).map((run) => ({ index: run.start, tag: run.pin.tag })),
+  };
 }
 
 const CHART = { width: 800, height: 260, left: 48, right: 16, top: 24, bottom: 24 } as const;
@@ -182,40 +185,167 @@ export function renderHistoryChart(records: readonly HistoryRecord[]): string {
   return `${parts.join("\n")}\n${legend}`;
 }
 
-/** Parses a `history.jsonl` file; throws SiteError naming the line of a malformed record. */
+/** Parses a `history.jsonl` file (target.ts `parseHistory`); throws SiteError naming the line of a malformed record. */
 export function readHistory(file: string): HistoryRecord[] {
   if (!existsSync(file)) {
     throw new SiteError(`${file} does not exist`);
   }
-  const text = readFileSync(file, "utf8");
-  const records: HistoryRecord[] = [];
-  text.split("\n").forEach((line, index) => {
-    if (line === "") {
-      return;
+  try {
+    return parseHistory(readFileSync(file, "utf8"), file);
+  } catch (error) {
+    if (error instanceof TargetError) {
+      throw new SiteError(error.message);
     }
-    let value: unknown;
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SM-1 target and the Test Inventory diff between Pin series
+
+/** IDs listed per side of an Inventory diff before `… and N more`. */
+export const DIFF_ID_CAP = 200;
+
+export interface InventoryDiffEntry {
+  from: { tag: string; commit: string };
+  to: { tag: string; commit: string };
+  result:
+    | { kind: "no change" }
+    | { kind: "unavailable"; reason: string }
+    /** Per Component (sorted), the Test IDs added and removed, each sorted. */
+    | { kind: "diff"; components: { component: string; added: string[]; removed: string[] }[] };
+}
+
+/**
+ * The Test Inventory diff at every Pin change in `history`: the last record of the earlier series against the first of the
+ * later one. Equal recorded `inventory.sha256` values are `no change`; otherwise both Inventories are read at `root` with
+ * `readInventoryAt`, and one that cannot be read makes the entry `unavailable`.
+ */
+export function inventoryDiffs(root: string, history: readonly HistoryRecord[]): InventoryDiffEntry[] {
+  const series = pinSeries(history);
+  const out: InventoryDiffEntry[] = [];
+  for (let i = 1; i < series.length; i++) {
+    const before = series[i - 1]!.records.at(-1)!;
+    const after = series[i]!.records[0]!;
+    const from = { tag: before.pin.tag, commit: before.commit };
+    const to = { tag: after.pin.tag, commit: after.commit };
+    if (before.inventory?.sha256 !== undefined && before.inventory.sha256 === after.inventory?.sha256) {
+      out.push({ from, to, result: { kind: "no change" } });
+      continue;
+    }
+    // History data is read as data: a commit that is not a full id never reaches git as an argument.
+    const bad = [before.commit, after.commit].find((commit) => !/^[0-9a-f]{40,64}$/.test(commit));
+    if (bad !== undefined) {
+      out.push({ from, to, result: { kind: "unavailable", reason: `${bad} is not a commit id` } });
+      continue;
+    }
+    let oldEntries: ReturnType<typeof readInventoryAt>;
+    let newEntries: ReturnType<typeof readInventoryAt>;
     try {
-      value = JSON.parse(line);
+      oldEntries = readInventoryAt(root, before.commit);
+      newEntries = readInventoryAt(root, after.commit);
     } catch (error) {
-      throw new SiteError(`${file}:${index + 1}: malformed JSON: ${error instanceof Error ? error.message : String(error)}`);
+      out.push({ from, to, result: { kind: "unavailable", reason: (error instanceof Error ? error.message : String(error)).trim() } });
+      continue;
     }
-    const record = value as Partial<HistoryRecord> | null;
-    if (
-      record === null ||
-      typeof record !== "object" ||
-      typeof record.commit !== "string" ||
-      typeof record.pin?.tag !== "string" ||
-      typeof record.pin.commit !== "string" ||
-      typeof record.overall?.pairs !== "number" ||
-      typeof record.overall.passing !== "number" ||
-      typeof record.alpha?.applicable !== "number" ||
-      typeof record.alpha.passing !== "number"
-    ) {
-      throw new SiteError(`${file}:${index + 1}: not a history record`);
+    const oldIds = new Map(oldEntries.map((entry) => [entry.id, entry.component]));
+    const newIds = new Map(newEntries.map((entry) => [entry.id, entry.component]));
+    const byComponent = new Map<string, { added: string[]; removed: string[] }>();
+    const slot = (component: string): { added: string[]; removed: string[] } => {
+      let found = byComponent.get(component);
+      if (found === undefined) {
+        found = { added: [], removed: [] };
+        byComponent.set(component, found);
+      }
+      return found;
+    };
+    for (const [id, component] of newIds) {
+      if (!oldIds.has(id)) {
+        slot(component).added.push(id);
+      }
     }
-    records.push(record as HistoryRecord);
-  });
-  return records;
+    for (const [id, component] of oldIds) {
+      if (!newIds.has(id)) {
+        slot(component).removed.push(id);
+      }
+    }
+    const components = [...byComponent.keys()].sort(compareUnits).map((component) => {
+      const { added, removed } = byComponent.get(component)!;
+      return { component, added: added.sort(compareUnits), removed: removed.sort(compareUnits) };
+    });
+    out.push({ from, to, result: { kind: "diff", components } });
+  }
+  return out;
+}
+
+function idList(label: string, ids: readonly string[]): string {
+  if (ids.length === 0) {
+    return "";
+  }
+  const shown = ids.slice(0, DIFF_ID_CAP).map((id) => `<li>${esc(id)}</li>`);
+  if (ids.length > DIFF_ID_CAP) {
+    shown.push(`<li>… and ${esc(ids.length - DIFF_ID_CAP)} more</li>`);
+  }
+  return `<details><summary>${esc(label)} (${esc(ids.length)})</summary>\n<ul>\n${shown.join("\n")}\n</ul>\n</details>`;
+}
+
+function renderInventoryDiff(entry: InventoryDiffEntry): string {
+  const out: string[] = [];
+  out.push(`<div class="inventory-diff">\n<h4>${esc(entry.from.tag)} → ${esc(entry.to.tag)} (${esc(entry.from.commit.slice(0, 12))} → ${esc(entry.to.commit.slice(0, 12))})</h4>`);
+  const result = entry.result;
+  if (result.kind === "no change") {
+    out.push(`<p>no change</p>`);
+  } else if (result.kind === "unavailable") {
+    out.push(`<p>unavailable (${esc(result.reason)})</p>`);
+  } else {
+    const added = result.components.flatMap((one) => one.added);
+    const removed = result.components.flatMap((one) => one.removed);
+    const rows = result.components.map((one) => [esc(one.component), esc(one.added.length), esc(one.removed.length)]);
+    rows.push(["total", esc(added.length), esc(removed.length)]);
+    out.push(table(["Component", "added", "removed"], rows, ""));
+    for (const one of result.components) {
+      const lists = [idList(`${one.component}: added`, one.added), idList(`${one.component}: removed`, one.removed)].filter((part) => part !== "");
+      out.push(...lists);
+    }
+  }
+  out.push(`</div>`);
+  return out.join("\n");
+}
+
+function fraction(value: { pairs: number; passing: number }): string {
+  return `${value.passing} / ${value.pairs} (${formatRate(value.pairs === 0 ? null : value.passing / value.pairs)})`;
+}
+
+/** The `#target` section's body: the SM-1 verdict, the reference points and the Test Inventory diff per Pin change. */
+export function renderTarget(history: readonly HistoryRecord[], diffs: readonly InventoryDiffEntry[]): string {
+  const out: string[] = [];
+  out.push(`<p>SM-1: the Conformance Rate (overall and per Component) never decreases between Phase boundaries under the same Baseline Pin.</p>`);
+  if (history.length === 0) {
+    out.push(`<p class="empty">no history yet</p>`);
+    return out.join("\n");
+  }
+  const series = referencePoints(history);
+  const violations = targetViolations(history);
+  const checked = checkedSummary(series);
+  if (violations.length === 0) {
+    out.push(`<p id="target-verdict">Target held (${esc(checked)}).</p>`);
+  } else {
+    out.push(`<p id="target-verdict" class="violated">Target violated (${esc(checked)}):</p>`);
+    out.push(`<ul class="violations">\n${violations.map((line) => `<li>${esc(line)}</li>`).join("\n")}\n</ul>`);
+  }
+  out.push(`<h3>Reference points</h3>`);
+  out.push(
+    table(
+      ["Pin", "commit", "phase", "overall", "point"],
+      series.flatMap((one) =>
+        one.points.map((point) => [esc(one.pin.tag), esc(point.record.commit.slice(0, 12)), esc(point.record.phase ?? "unknown"), esc(fraction(point.record.overall)), point.boundary ? "Phase boundary" : "series start"]),
+      ),
+      "no reference points",
+    ),
+  );
+  out.push(`<h3>Test Inventory diff between Pin series</h3>`);
+  out.push(diffs.length === 0 ? `<p class="empty">no Pin change yet</p>` : diffs.map(renderInventoryDiff).join("\n"));
+  return out.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -498,6 +628,8 @@ export interface SiteInput {
   quarantined: readonly QuarantinedLine[];
   apiSurface: readonly ComponentDiff[];
   epics: readonly EpicReview[];
+  /** The Test Inventory diff at each Pin change in `history` (`inventoryDiffs`); absent means none. */
+  inventoryDiffs?: readonly InventoryDiffEntry[];
 }
 
 function refOf(report: Report): string {
@@ -600,6 +732,10 @@ function renderIndex(input: SiteInput): string {
 
   out.push(`<section id="history">\n<h2>History</h2>`);
   out.push(renderHistoryChart(input.history));
+  out.push(`</section>`);
+
+  out.push(`<section id="target">\n<h2>SM-1 target</h2>`);
+  out.push(renderTarget(input.history, input.inventoryDiffs ?? []));
   out.push(`</section>`);
 
   out.push(`<section id="epics">\n<h2>Epic review</h2>`);
@@ -706,6 +842,7 @@ export function collectSiteInput(options: { root: string; report: Report; histor
     quarantined: readQuarantined(root),
     apiSurface: options.apiSurface,
     epics: epicsOf(root).map((epic) => epicReview(root, epic, report, sources)),
+    inventoryDiffs: inventoryDiffs(root, options.history),
   };
 }
 

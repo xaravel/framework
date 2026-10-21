@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-20-2026 16:45
+last_updated: 10-20-2026 17:16
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1305,5 +1305,5 @@ action_items:
       Baseline Pin, and show the Test Inventory diff between Pin series on the dashboard,
       before Story 8.8's Phase 1 gate closes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-20-epic-6-7-items.md"
