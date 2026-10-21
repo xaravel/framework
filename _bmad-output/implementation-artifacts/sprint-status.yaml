@@ -124,7 +124,7 @@ development_status:
   9-3-per-application-overlays-and-framestatic: done
   9-4-class-registry-and-fqcn: done
   9-5-phparray-ref-float-marker-and-null-normalisation: done
-  9-6-php-semantics-helpers: backlog
+  9-6-php-semantics-helpers: in-progress
   9-7-phpserialize-phpunserialize-codec: backlog
   9-8-jsonencode-jsondecode-with-php-flag-semantics: backlog
   9-9-mixin-traits-and-inject-metadata: backlog
