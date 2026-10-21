@@ -9,6 +9,10 @@
       "status": "supported",
       "escalation": null
     },
+    "als.concurrent-requests": {
+      "status": "supported",
+      "escalation": null
+    },
     "als.direct-stream": {
       "status": "unsupported",
       "escalation": "ESC-8.3-1"
