@@ -129,6 +129,21 @@
 // Oracle workflow commits to the Story branch for its requests (Story 3.4,
 // spine "New inputs"): `conformance/fixtures/<c>/<64 hex>.json`. Those are
 // protected by signature, not by path (`bun run oracle:verify-fixtures`).
+// Two more for a Story's own bookkeeping (Epic 8 retro item 11,
+// `decisions/MAINT-2026-10-20-epic-8-items.md` item 2):
+//   - its own build spec, `_bmad-output/implementation-artifacts/spec-<id>-<name>.md`
+//     with every `.` of the id as `-` (Story 9.1 owns `spec-9-1-*.md`, not
+//     `spec-9-10-*.md`), directly in that directory: a path rule in
+//     `allowedPath`;
+//   - its own manifest `stories/<id>.md`, only when the PR modifies it in place
+//     (status `modified`, no rename or copy names it) and, read at the merge
+//     base and the head, exactly one line differs: the top-level `status:`
+//     frontmatter line, leaving a valid manifest with a Story status
+//     (`statusOnlyChange`). `evaluatePr` decides this, never `allowedPath`
+//     alone; an unreadable side keeps the manifest out of scope and adds
+//     `unreadable content:`.
+// Any other change to a manifest, and another Story's manifest or spec, stays
+// `out of scope:`.
 //
 // Non-Story branches (AD-16 as amended by MAINT-2026-10-17 item 15):
 //   - `planning/*` may change anything except `packages/**` and
@@ -604,7 +619,40 @@ export function allowedPath(manifest: Pick<Manifest, "storyId" | "component">, p
   if (component !== "generators" && new RegExp(`^conformance/fixtures/${escapeRegex(component)}/[0-9a-f]{64}\\.json$`).test(path)) {
     return true;
   }
+  // The Story's own build spec (Epic 8 retro item 11, MAINT-2026-10-20 item 2): Story 9.1 owns `spec-9-1-<name>.md`.
+  if (new RegExp(`^_bmad-output/implementation-artifacts/spec-${escapeRegex(storyId.replace(/\./g, "-"))}-[^/]+\\.md$`).test(path)) {
+    return true;
+  }
   return new RegExp(`^conformance/escalations/ESC-${escapeRegex(storyId)}-[1-9]\\d*\\.md$`).test(path);
+}
+
+/**
+ * Whether the change from `base` to `head` of Story manifest `file` touches only its top-level `status:` frontmatter
+ * line, and leaves a valid manifest with a valid Story status (Epic 8 retro item 11, MAINT-2026-10-20 item 2). Exactly
+ * one line differs; every other line, the fences included, is byte-for-byte the same.
+ */
+export function statusOnlyChange(file: string, base: string, head: string): boolean {
+  const before = base.split("\n");
+  const after = head.split("\n");
+  if (before.length !== after.length || before[0] !== "---" || after[0] !== "---" || frontmatter(base) === null || frontmatter(head) === null) {
+    return false;
+  }
+  const changed = before.flatMap((line, index) => (line === after[index] ? [] : [index]));
+  if (changed.length !== 1) {
+    return false;
+  }
+  const index = changed[0]!;
+  // Inside the frontmatter: after the opening fence and before the closing one, the same on both sides.
+  const end = before.indexOf("---", 1);
+  if (end === -1 || end !== after.indexOf("---", 1) || index <= 0 || index >= end) {
+    return false;
+  }
+  const field = /^status:/;
+  if (!field.test(before[index]!) || !field.test(after[index]!)) {
+    return false;
+  }
+  const parsed = parseManifest(file, head).manifest;
+  return parsed !== null && (STATUSES as readonly string[]).includes(parsed.status);
 }
 
 /**
@@ -674,6 +722,23 @@ function sidesOf(prFile: PrFile): { base: string | null; head: string | null } {
   return { base, head };
 }
 
+/**
+ * `stories/<id>.md` when `headRef` is `story/<id>` with a valid id and `files` modify that manifest in place: one
+ * entry, status `modified`, and no other entry (a rename's previous name included) naming it. Else null.
+ */
+function ownManifestFile(headRef: string, files: readonly PrFile[]): string | null {
+  if (!headRef.startsWith(STORY_BRANCH)) {
+    return null;
+  }
+  const storyId = headRef.slice(STORY_BRANCH.length);
+  if (!STORY_ID.test(storyId)) {
+    return null;
+  }
+  const own = `${STORIES_DIR}/${storyId}.md`;
+  const entries = files.filter((prFile) => prFile.filename === own || prFile.previous_filename === own);
+  return entries.length === 1 && entries[0]!.filename === own && entries[0]!.status === "modified" ? own : null;
+}
+
 /** The reads `evaluatePr`'s line rules need for `headRef` and `files`, in a stable order (the `pr` command prefetches them). */
 export function contentReads(headRef: string, files: readonly PrFile[]): ContentRead[] {
   if (headRef.startsWith(PLANNING_BRANCH)) {
@@ -705,6 +770,12 @@ export function contentReads(headRef: string, files: readonly PrFile[]): Content
     add(base, "base");
     add(head, "head");
     expectations ||= [base, head].some((path) => path !== null && EXPECTATIONS_FILE.test(path));
+  }
+  // The Story's own manifest, modified in place, may change its status line (Epic 8 retro item 11); both sides decide.
+  const own = ownManifestFile(headRef, files);
+  if (own !== null) {
+    reads.set(`base\0${own}`, { path: own, side: "base" });
+    reads.set(`head\0${own}`, { path: own, side: "head" });
   }
   // An Escalation the PR adds or changes can approve a demotion; its head text decides.
   if (expectations) {
@@ -1199,7 +1270,22 @@ export function evaluatePr(root: string, pr: OwnershipPrInput): OwnershipPrResul
     return { storyId, outOfScope: [], violations };
   }
   const manifest = parsed.manifest;
-  const outOfScope = disallowed(pr.files, (candidate) => allowedPath(manifest, candidate));
+  let outOfScope = disallowed(pr.files, (candidate) => allowedPath(manifest, candidate));
+  // Its own manifest, modified in place, may change only its status line (Epic 8 retro item 11, MAINT-2026-10-20
+  // item 2). Judged on the merge base and head texts; an unreadable side keeps it out of scope (fail closed).
+  const own = ownManifestFile(pr.headRef, pr.files);
+  if (own !== null && outOfScope.includes(own)) {
+    const read = reader(pr, violations);
+    try {
+      if (statusOnlyChange(own, read(own, "base")!, read(own, "head")!)) {
+        outOfScope = outOfScope.filter((candidate) => candidate !== own);
+      }
+    } catch (error) {
+      if (!(error instanceof Unreadable)) {
+        throw error;
+      }
+    }
+  }
   for (const candidate of outOfScope) {
     violations.push(`out of scope: ${candidate} is outside Story ${storyId}'s allowed paths (component ${manifest.component}) (AD-16)`);
   }
