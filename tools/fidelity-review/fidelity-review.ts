@@ -39,13 +39,14 @@
 // committed Oracle request's fixture whose `output.error` is not null, and
 // every changed fixture whose output is an error; (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
-// (ESC-9.1-4); (e) the full body and cited consequences of every Xaravel
-// Test whose lines the diff changes, that uses a test helper or fixture the
-// diff changes, or whose test file's top-level setup changes (a heuristic
-// top-level-unit scanner, `testUnits`); (f) every decision record an added
-// line cites (`ESC-<id>`, `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a
-// `decisions/<name>.md` path), in full (ESC-9.2-1). Everything is read from the
-// working tree. A missing evidence file is named ("unavailable: <why>"), never dropped.
+// or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
+// the full body and cited consequences of every Xaravel Test whose lines the
+// diff changes, that uses a test helper or fixture the diff changes, or whose
+// test file's top-level setup changes (a heuristic top-level-unit scanner,
+// `testUnits`); (f) every decision record an added line cites (`ESC-<id>`,
+// `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a `decisions/<name>.md`
+// path), in full (ESC-9.2-1). Everything is read from the working tree. A
+// missing evidence file is named ("unavailable: <why>"), never dropped.
 //
 // A standing reject (ESC-8.8-1). A `reject` recorded for the reviewed tree
 // stands until the tree changes: `review` refuses to run on that tree (exit 1,
@@ -203,7 +204,7 @@ export interface Evidence {
   readonly errorFixtures: readonly EvidenceEntry[];
   /** (c) Each fixture the change adds or modifies whose `output.error` is not null, or why it was not read (F-6). */
   readonly headErrorFixtures: readonly EvidenceEntry[];
-  /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot`, else empty (F-9, ESC-9.1-4). */
+  /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot` or a `packages/<name>/src/` file changes, else empty (F-9, ESC-9.1-4, ESC-9.2-2). */
   readonly asyncRoot: readonly EvidenceEntry[];
   /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
   readonly xaravelTests: readonly XaravelTestEntry[];
@@ -355,7 +356,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   evidenceSection(sections, "### (b) Consequences cited on added lines (F-7)", evidence.consequences, "No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence.", "jsonl");
   evidenceSection(sections, "### (c) Oracle fixtures whose output is an error (F-6)", evidence.errorFixtures, "No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
-  evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`.", "markdown");
+  evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`, and the change touches no `packages/*/src/` file.", "markdown");
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
   if (evidence.xaravelTests.length === 0) {
     sections.push("", "No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
@@ -446,6 +447,9 @@ export function decisionEvidence(root: string, texts: readonly string[]): Eviden
   }
   return [...names].sort().map((name) => readEvidenceFile(root, `decisions/${name}.md`));
 }
+
+/** A framework package's source file, whose async surface F-9 judges (ESC-9.2-2). */
+const FRAMEWORK_SRC = /^packages\/[^/]+\/src\//;
 
 /** The AD-6 rule bullets that define the two `@asyncRoot` tags (ESC-9.1-4). */
 const ASYNC_ROOT_RULES = ["**Derivation.**", "**Enforcement.**"];
@@ -605,7 +609,8 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     consequences,
     errorFixtures: errorFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]),
     headErrorFixtures: [],
-    asyncRoot: asyncRoot ? asyncRootEvidence(root) : [],
+    // F-9 also judges kept tags and untagged new exports, so any framework source change gets the rules (ESC-9.2-2).
+    asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
     xaravelTests: [],
     decisions: decisionEvidence(root, added),
   };

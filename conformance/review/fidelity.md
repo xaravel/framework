@@ -46,7 +46,7 @@ An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a P
 - `@asyncRoot <Contract.method>` is true when the method really performs IO behind that async-root Driver contract method.
 - `@asyncRoot callback` is true when the method is async only because it accepts a callback that DIV-1 allows to be async (AD-6's callback clause), as with `runCounted` and `runWithMockery` ([ESC-6.4-1](../escalations/ESC-6.4-1.md)).
 
-It fails when a tagged method neither does such IO nor accepts such a callback, when it only calls other async code it could have kept sync, or when a method that does such IO, or is async because of such a callback, has no tag.
+It fails when a tagged method neither does such IO nor accepts such a callback, when it only calls other async code it could have kept sync, or when a method that does such IO, or is async because of such a callback, has no tag. The check covers the tags the change keeps on the files it touches and the new exports it leaves untagged, not only the tags it adds; the prompt carries these rules (evidence (d)) whenever the change touches a `packages/<name>/src/` file ([ESC-9.2-2](../escalations/ESC-9.2-2.md)).
 
 ### F-10: Oracle requests match the Upstream test's inputs
 

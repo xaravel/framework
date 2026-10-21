@@ -52,6 +52,15 @@ The `ownership` check (Story 1.5) allows a Story to edit only `packages/<compone
 - A `planning scope:` violation for `conformance/expectations/**` still blocks on every branch: no retrospective fix may change grader data.
 - From Epic 9 on (N ≥ 9) the rule stays strict. The Maintainer decides the route for code-changing retrospective items at the Epic 8 checkpoint.
 
+## Amendment 2026-10-21: missing Fidelity Review evidence
+
+Three Stories in a row (ESC-9.1-4, ESC-9.2-1, ESC-9.2-2) stopped because the Fidelity Review rejected a correct change for evidence its tool never gave the reviewers. This is my approval for the orchestrator to fix that kind of gap itself, under section G, without waiting for me.
+
+- **When.** A Fidelity Review `reject` whose findings ask for evidence that exists in the repository (a rule, a decision record, a file the change relies on) but that `tools/fidelity-review/fidelity-review.ts` does not put in the prompt. The orchestrator raises the Escalation as usual, rules on it itself, and records `decided_by: orchestrator (MAINT-2026-10-16, amendment 2026-10-21)`.
+- **What it may change.** Only what the prompt shows the reviewers: it may add an evidence item, or supply an existing item in more cases, in `tools/fidelity-review/fidelity-review.ts`, with tests in `conformance/tests/xaravel/fidelity-review.test.ts` for each new case, and it may update the matching wording in `conformance/review/fidelity.md` and `docs/ops/fidelity-review.md` so they say what the prompt now carries.
+- **What it may never change.** A checklist item's check (F-1..F-10), the verdict rule, the verdict schema, the standing-reject rule (ESC-8.8-1), how reviewers or their CLIs are chosen, the `story:check` approvals clause, or any evidence it would remove or narrow. A gap that needs one of those is mine.
+- **How it merges.** On a `planning/esc-<id>` branch, merged like the orchestrator's other planning PRs: an expected `protected-paths` failure merges with `--admin` under the first amendment. The PR body names the reject's tree and the finding it answers, and ISSUE reports it. The Story then re-runs its Fidelity Review on a changed tree, as the standing-reject rule requires.
+
 ## Revoking
 
 Delete this file, or create `~/.xaravel-orchestrator/STOP` on the M1.
