@@ -138,7 +138,7 @@ xaravelTest("XT-conformance-143", "the report counts every Test ID × Backend Va
   expect([...REASON_KINDS]).toEqual(["not-ported-yet", "blocked-by", "intentional-divergence", "php-only", "upstream-skip", "deferred", "out-of-scope"]);
   const dir = fixture(MIXED);
   const report = computeReport(dir);
-  expect(Object.keys(report)).toEqual(["schema", "commit", "pin", "overall", "components", "alpha"]);
+  expect(Object.keys(report)).toEqual(["schema", "commit", "pin", "phase", "inventory", "overall", "components", "alpha"]);
   expect(report.schema).toBe(1);
   expect(report.commit).toBeNull();
   expect(report.pin).toEqual({ tag: "v13.37.0", commit: "a".repeat(40) });
@@ -349,7 +349,7 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(report.commit).toBe(head);
   const record = historyRecord(report);
   expect(serialiseRecord(record)).toBe(
-    `{"commit":"${head}","pin":{"tag":"v13.37.0","commit":"${"a".repeat(40)}"},"overall":{"pairs":19,"passing":7},"alpha":{"applicable":8,"passing":2},"components":{"database":{"pairs":7,"passing":5},"later":{"pairs":1,"passing":1},"support":{"pairs":11,"passing":1}}}\n`,
+    `{"commit":"${head}","pin":{"tag":"v13.37.0","commit":"${"a".repeat(40)}"},"phase":0,"inventory":{"ids":${report.inventory.ids},"sha256":"${report.inventory.sha256}"},"overall":{"pairs":19,"passing":7},"alpha":{"applicable":8,"passing":2},"components":{"database":{"pairs":7,"passing":5},"later":{"pairs":1,"passing":1},"support":{"pairs":11,"passing":1}}}\n`,
   );
   const history = (): string => git(remote, ["show", "dashboard-data:history.jsonl"]);
   const tip = (): string => git(remote, ["rev-parse", "refs/heads/dashboard-data"]).trim();
@@ -514,7 +514,7 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   const runs = job.steps.map((step) => step.run).filter((run): run is string => run !== undefined);
   // The Expectations File is checked after the install and before the report, so a failing check stops the job first.
   expect(runs.slice(0, 3)).toEqual(["bun install --frozen-lockfile --ignore-scripts", "bun run expectations:check", "bun run conformance:report"]);
-  expect(runs.length).toBe(6);
+  expect(runs.length).toBe(7);
   const checkStep = job.steps.find((step) => step.run === runs[1])!;
   expect(checkStep.name).toBe("Check the Expectations File");
   // Nothing lets a failing check pass: no condition on the job or the check step, no continue-on-error anywhere.

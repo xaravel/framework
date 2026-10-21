@@ -29,6 +29,7 @@
     "conformance:history": "bun --no-env-file tools/conformance-report/history.ts",
     "conformance:site": "bun --no-env-file tools/conformance-report/site.ts",
     "conformance:publish": "bun --no-env-file tools/conformance-report/publish.ts",
+    "conformance:target": "bun --no-env-file tools/conformance-report/target.ts",
     "scaffold:table": "bun tools/scaffold/table.ts",
     "graph:check": "bun tools/graph/graph.ts",
     "protected-paths:codeowners": "bun tools/protected-paths/protected-paths.ts codeowners",

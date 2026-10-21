@@ -9,6 +9,7 @@ import { expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { regenerationSteps } from "../../../tools/pin-bump/pin-bump";
 import { UPSTREAM_REPOS } from "../../../tools/upstream/upstream";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -603,5 +604,222 @@ xaravelTest("XT-conformance-67", "while any epic-<N> is in-progress in sprint st
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("does not exist");
     expect(tree(nostatus.root)).toEqual(snapshot);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// XT-conformance-256
+
+/** A security-release decision (decisions/OQ-12.md); `fields` override the valid defaults, and a null value drops the field. */
+function securityDecision(fields: Record<string, string | null> = {}, body = "\nv1.1.0 fixes the advisory above; move the Pin mid-Phase per decisions/OQ-12.md.\n"): string {
+  const all: Record<string, string | null> = { decision: "approved", decided_by: "Maintainer", date: "2026-11-02", tag: "v1.1.0", advisory: "GHSA-abcd-1234-wxyz", ...fields };
+  const lines = Object.entries(all)
+    .filter((entry): entry is [string, string] => entry[1] !== null)
+    .map(([key, value]) => `${key}: ${value}`);
+  return `---\n${lines.join("\n")}\n---\n${body}`;
+}
+
+function commitAll(fx: Fixture, files: Record<string, string>, subject: string): void {
+  write(fx.root, files);
+  git(fx.root, fx.home, "add", "-A");
+  git(fx.root, fx.home, "commit", "--quiet", "-m", subject);
+}
+
+xaravelTest("XT-conformance-256", "--security-override <decision> lifts the freeze-point refusal only for a committed, Maintainer-signed decisions/PIN-SECURITY-*.md naming <tag> and a well-formed advisory, and records the advisory in the printed steps, the report and the bump record header (FR-7.4, OQ-12)", async () => {
+  const DECISION = "decisions/PIN-SECURITY-x.md";
+  const OVERRIDE = { advisory: "GHSA-abcd-1234-wxyz", decision: DECISION };
+  const NOTE = `, security override GHSA-abcd-1234-wxyz (${DECISION})`;
+  const NOTICE = `pin:bump: freeze point overridden for a security release, GHSA-abcd-1234-wxyz (${DECISION}); in progress: epic-3, epic-5, epic-10\n`;
+
+  // regenerationSteps: unchanged without an override; with one, both commit messages and the last line carry it.
+  const rev = "f".repeat(40);
+  const plain = [
+    "bun run oracle:lock",
+    'tag="$(bun run --silent oracle:tag)" && bun run oracle:build "xaravel-oracle:$tag"',
+    "bun run inventory",
+    'b="$(git branch --show-current)" && test -n "$b" && test "$b" != main && git add conformance/baseline-pin conformance/oracle/locks conformance/inventory && git commit -m "pin bump: laravel/framework v1.1.0, regenerated locks and Inventory" && git push -u origin HEAD && gh workflow run baseline.yml --ref "$b"',
+    `sleep 15 && run="$(gh run list --workflow baseline.yml --event workflow_dispatch --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId --jq '.[0].databaseId')" && test -n "$run" && gh run watch "$run"`,
+    'test -n "$run" && dl="$(mktemp -d)" && gh run download "$run" --name inventory --dir "$dl" && rm -rf conformance/inventory && mv "$dl" conformance/inventory',
+    'git add conformance/inventory && git commit -m "pin bump: laravel/framework v1.1.0, baselined Inventory" && git push',
+    `bun run pin:bump v1.1.0 --from ${rev}`,
+  ];
+  expect(regenerationSteps("v1.1.0", rev)).toEqual(plain);
+  expect(regenerationSteps("v1.1.0", rev, null)).toEqual(plain);
+  const overridden = plain.map((step) => step.replace("regenerated locks and Inventory", `regenerated locks and Inventory${NOTE}`).replace("baselined Inventory", `baselined Inventory${NOTE}`));
+  overridden[7] = `${plain[7]} --security-override ${DECISION}`;
+  expect(regenerationSteps("v1.1.0", rev, OVERRIDE)).toEqual(overridden);
+  // A URL advisory's shell-special characters stay literal inside the double-quoted commit message.
+  const url = "https://example.com/a$b`c";
+  const urlSteps = regenerationSteps("v1.1.0", rev, { advisory: url, decision: DECISION });
+  const echoed = Bun.spawnSync(["sh", "-c", urlSteps[6]!.replace(/^git add .* && git commit -m (".*") && git push$/, "printf %s $1")], { stdout: "pipe", stderr: "pipe" });
+  expect(echoed.stdout.toString()).toBe(`pin bump: laravel/framework v1.1.0, baselined Inventory, security override ${url} (${DECISION})`);
+  expect(Bun.spawnSync(["sh", "-n", "-c", urlSteps.join("\n")]).exitCode).toBe(0);
+
+  // Move mode, an Epic in flight, a valid override: the Pin moves and the printed steps carry the advisory.
+  const mv = moveFixture(SPRINT_IN_FLIGHT);
+  await withFixture(mv, async () => {
+    commitAll(mv, { [DECISION]: securityDecision() }, "security decision");
+    const fromRev = git(mv.root, mv.home, "rev-parse", "HEAD");
+    const moved = await bump(mv, "v1.1.0", "--remote", `file://${mv.base}`, "--security-override", DECISION);
+    expect(moved.stderr).toBe(NOTICE);
+    expect(moved.code).toBe(0);
+    expect(read(mv, "conformance/baseline-pin")).toContain(`laravel/framework v1.1.0 ${mv.commits["v1.1.0"]} ${mv.trees["v1.1.0"]}`);
+    const steps = regenerationSteps("v1.1.0", fromRev, OVERRIDE);
+    expect(moved.stdout).toEndWith(`by running these lines in order in one shell at the repository root:\n\n${steps.map((step) => `${step}\n`).join("")}`);
+    expect(steps[7]).toBe(`bun run pin:bump v1.1.0 --from ${fromRev} --security-override ${DECISION}`);
+    expect(existsSync(join(mv.root, "conformance", "pin-bumps"))).toBe(false);
+  });
+
+  // Diff mode, an Epic in flight: invalid decisions fail closed; a valid one reports and applies with the record header naming it.
+  const before = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "1"), entry(`${SUPPORT}::testC`, "support", "3")]) };
+  const after = { "support.jsonl": inventory([entry(`${SUPPORT}::testA`, "support", "2")]) };
+  const fx = diffFixture(before, after, {}, SPRINT_IN_FLIGHT);
+  await withFixture(fx, async () => {
+    const fromRev = git(fx.root, fx.home, "rev-parse", "HEAD~1");
+    const deleted = "decisions/PIN-SECURITY-deleted.md";
+    commitAll(
+      fx,
+      {
+        [DECISION]: securityDecision(),
+        [deleted]: securityDecision(),
+        "decisions/PIN-SECURITY-unsigned.md": securityDecision({ decided_by: "Agent", decision: "proposed" }),
+        "decisions/PIN-SECURITY-undated.md": securityDecision({ date: null }, "\n# Heading only\n"),
+        "decisions/PIN-SECURITY-other-tag.md": securityDecision({ tag: "v1.2.0" }),
+        "decisions/PIN-SECURITY-ghsa-case.md": securityDecision({ advisory: "GHSA-ABCD-1234-wxyz" }),
+        "decisions/PIN-SECURITY-cve-short.md": securityDecision({ advisory: "CVE-2026-123" }),
+        "decisions/PIN-SECURITY-http.md": securityDecision({ advisory: "http://example.com/advisory" }),
+        "decisions/PIN-SECURITY-noadvisory.md": securityDecision({ advisory: null }),
+        "decisions/PIN-SECURITY-bang.md": securityDecision({ advisory: "https://example.com/a!b" }),
+        "decisions/PIN-SECURITY-escape.md": securityDecision({ advisory: '"https://example.com/a\\eb"' }),
+        "decisions/PIN-SECURITY-cve.md": securityDecision({ advisory: "CVE-2026-12345" }),
+        "decisions/PIN-SECURITY-url.md": securityDecision({ advisory: "https://github.com/advisories/GHSA-abcd-1234-wxyz" }),
+        "decisions/PIN-SECURITY-dirty.md": securityDecision(),
+        "decisions/OQ-99.md": securityDecision(),
+      },
+      "decisions",
+    );
+    write(fx.root, {
+      "decisions/PIN-SECURITY-dirty.md": securityDecision({ advisory: "CVE-2026-12345" }),
+      "decisions/PIN-SECURITY-uncommitted.md": securityDecision(),
+      [SHARD_STR]: `${expectation(`${SUPPORT}::testA`, "none", "pass", null)}\n${expectation(`${SUPPORT}::testC`, "none", "pass", null)}\n`,
+    });
+    rmSync(join(fx.root, deleted));
+
+    const snapshot = tree(fx.root);
+    const invalid: [string, string[]][] = [
+      ["decisions/PIN-SECURITY-unsigned.md", ['decision is "proposed", not "approved"', 'decided_by is "Agent", not "Maintainer"']],
+      ["decisions/PIN-SECURITY-undated.md", ["date is null, not a YYYY-MM-DD date", "body has no text beyond headings"]],
+      ["decisions/PIN-SECURITY-other-tag.md", ['tag is "v1.2.0", not "v1.1.0"']],
+      ["decisions/PIN-SECURITY-ghsa-case.md", ['advisory is "GHSA-ABCD-1234-wxyz", not a GHSA']],
+      ["decisions/PIN-SECURITY-cve-short.md", ['advisory is "CVE-2026-123", not a GHSA']],
+      ["decisions/PIN-SECURITY-http.md", ['advisory is "http://example.com/advisory", not a GHSA']],
+      ["decisions/PIN-SECURITY-noadvisory.md", ["advisory is null, not a GHSA"]],
+      ["decisions/PIN-SECURITY-bang.md", ['advisory is "https://example.com/a!b", not a GHSA']],
+      ["decisions/PIN-SECURITY-escape.md", ['advisory is "https://example.com/a\\u001bb", not a GHSA']],
+      ["decisions/PIN-SECURITY-dirty.md", ["decisions/PIN-SECURITY-dirty.md differs from its committed copy at HEAD"]],
+      ["decisions/PIN-SECURITY-uncommitted.md", ["decisions/PIN-SECURITY-uncommitted.md is not committed at HEAD"]],
+      [deleted, [`${deleted} is missing from the working tree`]],
+      ["decisions/PIN-SECURITY-absent.md", ["decisions/PIN-SECURITY-absent.md is not committed at HEAD", "decisions/PIN-SECURITY-absent.md is missing from the working tree"]],
+      ["decisions/OQ-99.md", ['"decisions/OQ-99.md" is not a decisions/PIN-SECURITY-<name>.md path']],
+      ["decisions/PIN-SECURITY-.md", ["is not a decisions/PIN-SECURITY-<name>.md path"]],
+      [`./${DECISION}`, ["is not a decisions/PIN-SECURITY-<name>.md path"]],
+      [join(fx.root, DECISION), ["is not a decisions/PIN-SECURITY-<name>.md path"]],
+    ];
+    for (const [path, problems] of invalid) {
+      const result = await bump(fx, "v1.1.0", "--from", fromRev, "--apply", "--security-override", path);
+      expect([path, result.code]).toEqual([path, 1]);
+      expect(result.stderr).toStartWith(`pin:bump refused: --security-override ${path} is not a valid security-release decision`);
+      for (const problem of problems) {
+        expect([path, result.stderr]).toEqual([path, expect.stringContaining(problem)]);
+      }
+      expect(result.stderr).not.toContain("freeze point overridden");
+      expect(result.stdout).toBe("");
+      expect(tree(fx.root)).toEqual(snapshot);
+    }
+    // A decision for v1.1.0 cannot override the freeze point for another tag.
+    const otherTag = await bump(fx, "v1.2.0", "--security-override", DECISION);
+    expect(otherTag.code).toBe(1);
+    expect(otherTag.stderr).toContain('tag is "v1.1.0", not "v1.2.0"');
+    expect(tree(fx.root)).toEqual(snapshot);
+
+    // In flight with no flag: refused as before.
+    const refused = await bump(fx, "v1.1.0", "--from", fromRev, "--apply");
+    expect(refused.code).toBe(1);
+    expect(refused.stderr).toContain("pin:bump refused: the Pin moves only at a freeze point");
+    expect(tree(fx.root)).toEqual(snapshot);
+
+    // Usage errors: the flag twice, or with no value.
+    for (const args of [["--security-override", DECISION, "--security-override", DECISION], ["--security-override"], ["--security-override", "--apply"]]) {
+      const usage = await bump(fx, "v1.1.0", "--from", fromRev, ...args);
+      expect([args, usage.code]).toEqual([args, 2]);
+      expect(usage.stderr).toContain("Usage:");
+      expect(usage.stderr).toContain("[--security-override <decision-file>]");
+    }
+    expect(tree(fx.root)).toEqual(snapshot);
+
+    // A CVE ID and an https URL are accepted advisories too.
+    for (const [path, advisory] of [
+      ["decisions/PIN-SECURITY-cve.md", "CVE-2026-12345"],
+      ["decisions/PIN-SECURITY-url.md", "https://github.com/advisories/GHSA-abcd-1234-wxyz"],
+    ] as const) {
+      const result = await bump(fx, "v1.1.0", "--from", fromRev, "--security-override", path);
+      expect([path, result.code]).toEqual([path, 0]);
+      expect(result.stdout).toContain(`\nSecurity override: ${advisory} (${path})\n`);
+      expect(records(read(fx, RECORD))[0]!["security_override"]).toEqual({ advisory, decision: path });
+      rmSync(join(fx.root, RECORD));
+    }
+    expect(tree(fx.root)).toEqual(snapshot);
+
+    // Report, then apply.
+    const report = await bump(fx, "v1.1.0", "--from", fromRev, "--security-override", DECISION);
+    expect(report.stderr).toBe(NOTICE);
+    expect(report.code).toBe(0);
+    expect(report.stdout).toStartWith(`Pin bump v1.0.0 -> v1.1.0 (from ${fromRev})\nSecurity override: GHSA-abcd-1234-wxyz (${DECISION})\nAdded (0)\n`);
+    const header = { from: "v1.0.0", to: "v1.1.0", from_rev: fromRev, applied: false, security_override: OVERRIDE };
+    expect(read(fx, RECORD).split("\n")[0]).toBe(JSON.stringify(header));
+
+    // A later run with another override cannot rewrite a record reported under this one.
+    const reported = read(fx, RECORD);
+    const other = await bump(fx, "v1.1.0", "--from", fromRev, "--apply", "--security-override", "decisions/PIN-SECURITY-cve.md");
+    expect(other.code).toBe(1);
+    expect(other.stderr).toContain(`${RECORD} was reported with --security-override ${DECISION} (advisory GHSA-abcd-1234-wxyz), but this run has --security-override decisions/PIN-SECURITY-cve.md (advisory CVE-2026-12345)`);
+    expect(read(fx, RECORD)).toBe(reported);
+    expect(read(fx, SHARD_STR)).toBe(`${expectation(`${SUPPORT}::testA`, "none", "pass", null)}\n${expectation(`${SUPPORT}::testC`, "none", "pass", null)}\n`);
+
+    const applied = await bump(fx, "v1.1.0", "--from", fromRev, "--apply", "--security-override", DECISION);
+    expect(applied.stderr).toBe(NOTICE);
+    expect(applied.code).toBe(0);
+    expect(applied.stdout).toContain(`Security override: GHSA-abcd-1234-wxyz (${DECISION})\n`);
+    expect(read(fx, RECORD).split("\n")[0]).toBe(JSON.stringify({ ...header, applied: true }));
+    expect(read(fx, SHARD_STR)).toBe(`${expectation(`${SUPPORT}::testA`, "none", "skip", "not-ported-yet")}\n`);
+    expect(applied.stdout).toContain(`edited ${SHARD_STR}\n`);
+    // The tool never writes the decision.
+    expect(read(fx, DECISION)).toBe(securityDecision());
+  });
+
+  // No Epic in flight: the flag is still validated, and recorded when valid.
+  const idle = diffFixture(before, after);
+  await withFixture(idle, async () => {
+    const fromRev = git(idle.root, idle.home, "rev-parse", "HEAD~1");
+    commitAll(idle, { [DECISION]: securityDecision(), "decisions/PIN-SECURITY-unsigned.md": securityDecision({ decided_by: "Agent" }) }, "decisions");
+    const snapshot = tree(idle.root);
+    const bad = await bump(idle, "v1.1.0", "--from", fromRev, "--security-override", "decisions/PIN-SECURITY-unsigned.md");
+    expect(bad.code).toBe(1);
+    expect(bad.stderr).toContain('decided_by is "Agent", not "Maintainer"');
+    expect(tree(idle.root)).toEqual(snapshot);
+    const good = await bump(idle, "v1.1.0", "--from", fromRev, "--security-override", DECISION);
+    expect(good.stderr).toBe("");
+    expect(good.code).toBe(0);
+    expect(good.stdout).toContain(`Security override: GHSA-abcd-1234-wxyz (${DECISION})\n`);
+    expect(records(read(idle, RECORD))[0]).toEqual({ from: "v1.0.0", to: "v1.1.0", from_rev: fromRev, applied: false, security_override: OVERRIDE });
+    // Once reported under an override, a run without it (report or apply) fails and writes nothing.
+    const reported = tree(idle.root);
+    for (const extra of [[], ["--apply"]]) {
+      const dropped = await bump(idle, "v1.1.0", "--from", fromRev, ...extra);
+      expect([extra, dropped.code]).toEqual([extra, 1]);
+      expect(dropped.stderr).toContain(`${RECORD} was reported with --security-override ${DECISION} (advisory GHSA-abcd-1234-wxyz), but this run has no --security-override`);
+      expect(dropped.stdout).toBe("");
+      expect(tree(idle.root)).toEqual(reported);
+    }
   });
 });

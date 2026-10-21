@@ -35,13 +35,22 @@
 //   MariaDB-, SQL Server- or Beanstalkd-only): they are outside the alpha
 //   denominator, and the field makes that exclusion visible. It changes no
 //   other alpha field.
+// - `phase` is the current Phase: the smallest n >= 0 with no
+//   `decisions/PHASE-<n>-EXIT.md` (`currentPhase`, the files
+//   `conformance/protected-paths`' `after-phase:<n>` reads). `inventory` is
+//   `{ids, sha256}`: the count of the sorted, de-duplicated Inventory Test IDs
+//   and the lowercase hex sha256 of them, each followed by LF
+//   (`inventoryHash`). The history record carries both, for the SM-1 target
+//   check and the Inventory diff between Pin series (target.ts, site.ts).
 //
 // Exit codes: 0 ok, 1 data error (an unknown Test ID, status or reason kind, a
 // duplicate pair, an unreadable input), 2 usage error.
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { ALPHA_VARIANTS, compareUnits } from "../inventory/inventory";
 import { readExpectations, readWorkingInventory } from "../pin-bump/pin-bump";
+import { activePhases } from "../protected-paths/protected-paths";
 import { STATUSES } from "../expectations/reasons";
 import { TABLE_PATH } from "../scaffold/scaffold";
 import { readTable } from "../scaffold/table";
@@ -86,10 +95,19 @@ export interface AlphaGate {
   met: boolean;
 }
 
+/** The Test Inventory's identity: its Test ID count and the sha256 of its sorted, de-duplicated Test IDs (`inventoryHash`). */
+export interface InventoryHash {
+  ids: number;
+  sha256: string;
+}
+
 export interface Report {
   schema: 1;
   commit: string | null;
   pin: { tag: string; commit: string };
+  /** The current Phase (`currentPhase`). */
+  phase: number;
+  inventory: InventoryHash;
   overall: Bucket;
   components: Record<string, Bucket>;
   alpha: AlphaGate;
@@ -183,6 +201,26 @@ function headCommit(root: string): string | null {
   }
 }
 
+/** The current Phase at `root`: the smallest n >= 0 with no `decisions/PHASE-<n>-EXIT.md` (the after-phase:<n> files). */
+export function currentPhase(root: string): number {
+  const exited = activePhases(root);
+  let phase = 0;
+  while (exited.has(phase)) {
+    phase++;
+  }
+  return phase;
+}
+
+/** The count and lowercase hex sha256 of the sorted (`compareUnits`), de-duplicated Test IDs `ids`, each followed by LF. */
+export function inventoryHash(ids: Iterable<string>): InventoryHash {
+  const sorted = [...new Set(ids)].sort(compareUnits);
+  const hash = createHash("sha256");
+  for (const id of sorted) {
+    hash.update(`${id}\n`);
+  }
+  return { ids: sorted.length, sha256: hash.digest("hex") };
+}
+
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -193,6 +231,7 @@ export function computeReport(root: string): Report {
   let phases: Map<string, number>;
   let pinTag: string;
   let pinCommit: string;
+  let phase: number;
   let shards: ReturnType<typeof readExpectations>;
   try {
     componentOf = new Map(readWorkingInventory(root).map((entry) => [entry.id, entry.component]));
@@ -204,6 +243,7 @@ export function computeReport(root: string): Report {
     pinTag = pin.tag;
     pinCommit = pin.commit;
     shards = readExpectations(root);
+    phase = currentPhase(root);
   } catch (error) {
     throw new DataError(message(error));
   }
@@ -316,7 +356,16 @@ export function computeReport(root: string): Report {
     met: alphaRate !== null && alphaRate >= ALPHA_TARGET && remaining["not-ported-yet"] === 0 && remaining["blocked-by"] === 0,
   };
 
-  return { schema: 1, commit: headCommit(root), pin: { tag: pinTag, commit: pinCommit }, overall: finish(overall), components, alpha };
+  return {
+    schema: 1,
+    commit: headCommit(root),
+    pin: { tag: pinTag, commit: pinCommit },
+    phase,
+    inventory: inventoryHash(componentOf.keys()),
+    overall: finish(overall),
+    components,
+    alpha,
+  };
 }
 
 /** The report as written: two-space JSON with a final LF. */

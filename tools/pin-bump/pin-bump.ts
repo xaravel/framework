@@ -1,11 +1,22 @@
 // The Baseline Pin bump tool (Story 2.8, FR-7, UJ-7; decisions/ESC-2.8-1.md).
 //
 //   bun tools/pin-bump/pin-bump.ts <tag> [--from <rev>] [--apply] [--remote <base>] [--root <dir>]
+//                                  [--security-override <decision-file>]
 //
 // It refuses first, in every mode, while any `epic-<N>` key under
 // `development_status` in sprint status is `in-progress`: the Pin moves only
-// at a freeze point. It then works in one of two modes, picked by comparing
-// <tag> with the working tree's `laravel/framework` line of
+// at a freeze point. The one exception is a security release
+// (decisions/OQ-12.md): `--security-override decisions/PIN-SECURITY-<name>.md`
+// names a Maintainer-signed decision, committed at HEAD and unchanged in the
+// working tree, whose frontmatter `tag` is <tag> and whose `advisory` is a
+// GHSA ID, a CVE ID or an https URL (`securityOverrideProblems`). Whenever the
+// flag is given it is validated first, before any other file or network work,
+// and an invalid decision fails closed. A valid one lifts the freeze-point
+// refusal for that tag only (a stderr notice lists the in-flight Epics), and
+// is recorded: move mode's printed commit messages and last step carry it,
+// and diff mode's report and record header name the advisory and decision.
+// Every other step is unchanged. It then works in one of two modes, picked by
+// comparing <tag> with the working tree's `laravel/framework` line of
 // `conformance/baseline-pin`:
 //
 //   move mode (the line names another tag)
@@ -51,7 +62,9 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { compareUnits, FOREIGN_COMPONENTS, INVENTORY_DIR, NONDETERMINISM_FILE, parseInventory, UsageError, type InventoryEntry, type Suite } from "../inventory/inventory";
+import { parseFrontmatter } from "../boost-framework/src/data";
 import { SPRINT_STATUS } from "../ownership/ownership";
+import { exitSignatureProblems } from "../ownership/phase-gate";
 import { parsePin, readPin, sync, UPSTREAM_PIN_FILE, type PinEntry } from "../upstream/upstream";
 
 export const EXPECTATIONS_DIR = "conformance/expectations";
@@ -70,16 +83,19 @@ export const EXPECTATION_KEYS = ["id", "variant", "status", "reason", "adapted",
  * artifact exists even when that check fails on the not-yet-baselined
  * Inventory. The last step passes `--from`, because HEAD then pins <tag>.
  */
-export function regenerationSteps(tag: string, fromRev: string): string[] {
+export function regenerationSteps(tag: string, fromRev: string, override: SecurityOverride | null = null): string[] {
+  // The advisory sits inside a double-quoted commit message, so the characters the shell expands there are escaped.
+  const note = override === null ? "" : `, security override ${override.advisory.replace(/[\\"$`]/g, "\\$&")} (${override.decision})`;
+  const flag = override === null ? "" : ` --security-override ${override.decision}`;
   return [
     "bun run oracle:lock",
     'tag="$(bun run --silent oracle:tag)" && bun run oracle:build "xaravel-oracle:$tag"',
     "bun run inventory",
-    `b="$(git branch --show-current)" && test -n "$b" && test "$b" != main && git add conformance/baseline-pin conformance/oracle/locks conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, regenerated locks and Inventory" && git push -u origin HEAD && gh workflow run baseline.yml --ref "$b"`,
+    `b="$(git branch --show-current)" && test -n "$b" && test "$b" != main && git add conformance/baseline-pin conformance/oracle/locks conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, regenerated locks and Inventory${note}" && git push -u origin HEAD && gh workflow run baseline.yml --ref "$b"`,
     `sleep 15 && run="$(gh run list --workflow baseline.yml --event workflow_dispatch --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId --jq '.[0].databaseId')" && test -n "$run" && gh run watch "$run"`,
     'test -n "$run" && dl="$(mktemp -d)" && gh run download "$run" --name inventory --dir "$dl" && rm -rf conformance/inventory && mv "$dl" conformance/inventory',
-    `git add conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, baselined Inventory" && git push`,
-    `bun run pin:bump ${tag} --from ${fromRev}`,
+    `git add conformance/inventory && git commit -m "pin bump: laravel/framework ${tag}, baselined Inventory${note}" && git push`,
+    `bun run pin:bump ${tag} --from ${fromRev}${flag}`,
   ];
 }
 /** The tag form upstream.ts's pin parser accepts. */
@@ -156,6 +172,69 @@ export function inFlightEpics(root: string): string[] {
   return Object.keys(development)
     .filter((key) => /^epic-[0-9]+$/.test(key) && development[key] === "in-progress")
     .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)) || compareUnits(a, b));
+}
+
+// ---------------------------------------------------------------------------
+// Security override (decisions/OQ-12.md)
+
+/** The path form of a security-release decision. */
+export const SECURITY_DECISION = /^decisions\/PIN-SECURITY-[A-Za-z0-9][A-Za-z0-9._-]*\.md$/;
+/** A GitHub Security Advisory ID, a CVE ID, or an https URL of printable ASCII with no space, `!` or `"`. */
+const ADVISORY = /^(?:GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}|CVE-[0-9]{4}-[0-9]{4,}|https:\/\/[\x23-\x7e]+)$/;
+
+/** A validated `--security-override`: the advisory its decision names and the decision's repo-relative path. */
+export interface SecurityOverride {
+  advisory: string;
+  decision: string;
+}
+
+/**
+ * Validates the `--security-override` decision `path` (repo-relative) for `tag`: the path form, committed at HEAD
+ * (`git show HEAD:<path>`), the working-tree copy present and equal to HEAD's, the Maintainer signature
+ * (`exitSignatureProblems`), `tag` exactly <tag> and a well-formed `advisory`. Returns the override when there are
+ * no problems, else null and every problem.
+ */
+export function securityOverrideProblems(root: string, path: string, tag: string): { override: SecurityOverride | null; problems: string[] } {
+  if (!SECURITY_DECISION.test(path)) {
+    return { override: null, problems: [`${JSON.stringify(path)} is not a decisions/PIN-SECURITY-<name>.md path`] };
+  }
+  const problems: string[] = [];
+  let committed: string | null = null;
+  try {
+    committed = gitRaw(["show", `HEAD:${path}`], root);
+  } catch {
+    problems.push(`${path} is not committed at HEAD`);
+  }
+  const file = join(root, path);
+  if (!existsSync(file)) {
+    problems.push(`${path} is missing from the working tree`);
+  } else if (committed !== null && readFileSync(file, "utf8") !== committed) {
+    problems.push(`${path} differs from its committed copy at HEAD`);
+  }
+  if (committed === null) {
+    return { override: null, problems };
+  }
+  problems.push(...exitSignatureProblems(committed).map((problem) => `${path}: ${problem}`));
+  const parsed = parseFrontmatter(committed);
+  if (parsed === null || typeof parsed === "string") {
+    return { override: null, problems };
+  }
+  const { fields } = parsed;
+  if (fields["tag"] !== tag) {
+    problems.push(`${path}: tag is ${JSON.stringify(fields["tag"] ?? null)}, not ${JSON.stringify(tag)}`);
+  }
+  const advisory = fields["advisory"];
+  if (typeof advisory !== "string" || !ADVISORY.test(advisory)) {
+    problems.push(`${path}: advisory is ${JSON.stringify(advisory ?? null)}, not a GHSA-xxxx-xxxx-xxxx ID, a CVE-YYYY-NNNN ID or an https:// URL`);
+  }
+  if (problems.length > 0 || typeof advisory !== "string") {
+    return { override: null, problems };
+  }
+  return { override: { advisory, decision: path }, problems: [] };
+}
+
+function describeOverride(override: SecurityOverride): string {
+  return `${override.advisory} (${override.decision})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -468,6 +547,8 @@ export interface BumpHeader {
   to: string;
   fromRev: string;
   applied: boolean;
+  /** The `--security-override`, or null without the flag. */
+  securityOverride: SecurityOverride | null;
 }
 
 /** The repo-relative path of the bump record. */
@@ -480,6 +561,7 @@ export function renderReport(header: BumpHeader, diff: InventoryDiff): string {
   const section = (title: string, lines: readonly string[]): string => `${title} (${lines.length})\n${lines.map((line) => `  ${line}\n`).join("")}`;
   return [
     `Pin bump ${header.from} -> ${header.to} (from ${header.fromRev})\n`,
+    header.securityOverride !== null ? `Security override: ${describeOverride(header.securityOverride)}\n` : "",
     section("Added", diff.added.map((item) => item.id)),
     section("Changed", diff.changed.map((item) => item.id)),
     section("Removed", diff.removed.map((item) => item.id)),
@@ -489,7 +571,11 @@ export function renderReport(header: BumpHeader, diff: InventoryDiff): string {
 
 /** The bump record: a header line, then one line per ID sorted by change, component and id. */
 export function renderRecord(header: BumpHeader, diff: InventoryDiff, shards: readonly Shard[]): string {
-  const lines = [JSON.stringify({ from: header.from, to: header.to, from_rev: header.fromRev, applied: header.applied })];
+  const first: Record<string, unknown> = { from: header.from, to: header.to, from_rev: header.fromRev, applied: header.applied };
+  if (header.securityOverride !== null) {
+    first["security_override"] = { advisory: header.securityOverride.advisory, decision: header.securityOverride.decision };
+  }
+  const lines = [JSON.stringify(first)];
   for (const item of diff.added) {
     lines.push(JSON.stringify({ change: "added", id: item.id, component: item.component, hash: item.hash }));
   }
@@ -540,7 +626,7 @@ function frameworkEntry(pin: readonly PinEntry[]): PinEntry {
   return pin.find((entry) => entry.repo === FRAMEWORK_REPO)!;
 }
 
-function moveMode(root: string, tag: string, remoteBase: string): number {
+function moveMode(root: string, tag: string, remoteBase: string, override: SecurityOverride | null): number {
   const { commit, tree } = resolveTag(remoteBase, tag);
   const file = join(root, UPSTREAM_PIN_FILE);
   const before = frameworkEntry(readPin(root)).tag;
@@ -553,11 +639,11 @@ function moveMode(root: string, tag: string, remoteBase: string): number {
     process.stderr.write(`Upstream sync failed (the Pin was moved; re-run bun run upstream:sync):\n${result.failures.map((line) => `  ${line}\n`).join("")}`);
     return 1;
   }
-  process.stdout.write(`\nThe Pin moved. Regenerate, then report the diff, by running these lines in order in one shell at the repository root:\n\n${regenerationSteps(tag, fromRev).map((step) => `${step}\n`).join("")}`);
+  process.stdout.write(`\nThe Pin moved. Regenerate, then report the diff, by running these lines in order in one shell at the repository root:\n\n${regenerationSteps(tag, fromRev, override).map((step) => `${step}\n`).join("")}`);
   return 0;
 }
 
-function diffMode(root: string, tag: string, from: string, apply: boolean): number {
+function diffMode(root: string, tag: string, from: string, apply: boolean, override: SecurityOverride | null): number {
   const fromRev = git(["rev-parse", "--verify", "--end-of-options", `${from}^{commit}`], root);
   const oldPin = parsePin(gitRaw(["show", `${fromRev}:${UPSTREAM_PIN_FILE}`], root), `${from}:${UPSTREAM_PIN_FILE}`);
   const oldTag = frameworkEntry(oldPin).tag;
@@ -574,18 +660,25 @@ function diffMode(root: string, tag: string, from: string, apply: boolean): numb
   const record = recordPath(oldTag, tag);
   const recordFile = join(root, record);
   if (existsSync(recordFile)) {
-    let applied: unknown;
+    let existing: Record<string, unknown>;
     try {
-      applied = (JSON.parse(readFileSync(recordFile, "utf8").split("\n")[0]!) as Record<string, unknown>)["applied"];
+      existing = JSON.parse(readFileSync(recordFile, "utf8").split("\n")[0]!) as Record<string, unknown>;
     } catch (error) {
       throw new Error(`${record}: unreadable header: ${message(error)}`);
     }
-    if (applied !== false) {
+    if (existing["applied"] !== false) {
       process.stderr.write(`${record} is already applied; nothing was changed\n`);
       return 1;
     }
+    const recorded = existing["security_override"];
+    if (isRecord(recorded) && (override === null || recorded["advisory"] !== override.advisory || recorded["decision"] !== override.decision)) {
+      const was = `--security-override ${String(recorded["decision"])} (advisory ${String(recorded["advisory"])})`;
+      const now = override === null ? "no --security-override" : `--security-override ${override.decision} (advisory ${override.advisory})`;
+      process.stderr.write(`${record} was reported with ${was}, but this run has ${now}; pass the same override; nothing was changed\n`);
+      return 1;
+    }
   }
-  const header: BumpHeader = { from: oldTag, to: tag, fromRev, applied: apply };
+  const header: BumpHeader = { from: oldTag, to: tag, fromRev, applied: apply, securityOverride: override };
   process.stdout.write(renderReport(header, diff));
   const recordText = renderRecord(header, diff, shards);
   const written: string[] = [];
@@ -615,7 +708,7 @@ function diffMode(root: string, tag: string, from: string, apply: boolean): numb
 // ---------------------------------------------------------------------------
 // CLI
 
-const USAGE = ["Usage:", "  bun tools/pin-bump/pin-bump.ts <tag> [--from <rev>] [--apply] [--remote <base>] [--root <dir>]"].join("\n");
+const USAGE = ["Usage:", "  bun tools/pin-bump/pin-bump.ts <tag> [--from <rev>] [--apply] [--remote <base>] [--root <dir>] [--security-override <decision-file>]"].join("\n");
 
 interface Options {
   tag: string;
@@ -623,6 +716,8 @@ interface Options {
   apply: boolean;
   remote: string;
   root: string;
+  /** The `--security-override` decision path, as given; null without the flag. */
+  securityOverride: string | null;
 }
 
 export function parseOptions(argv: readonly string[]): Options {
@@ -638,7 +733,7 @@ export function parseOptions(argv: readonly string[]): Options {
       options.tag = arg;
       continue;
     }
-    if (!["--from", "--apply", "--remote", "--root"].includes(arg)) {
+    if (!["--from", "--apply", "--remote", "--root", "--security-override"].includes(arg)) {
       throw new UsageError(`Unknown argument: ${arg}`);
     }
     if (seen.has(arg)) {
@@ -657,6 +752,8 @@ export function parseOptions(argv: readonly string[]): Options {
       options.from = value;
     } else if (arg === "--remote") {
       options.remote = value;
+    } else if (arg === "--security-override") {
+      options.securityOverride = value;
     } else {
       options.root = resolve(value);
     }
@@ -670,19 +767,32 @@ export function parseOptions(argv: readonly string[]): Options {
     apply: options.apply,
     remote: options.remote ?? "https://github.com",
     root: options.root ?? resolve(import.meta.dir, "..", ".."),
+    securityOverride: options.securityOverride ?? null,
   };
 }
 
 export function main(argv: readonly string[]): number {
   try {
     const options = parseOptions(argv);
+    let override: SecurityOverride | null = null;
+    if (options.securityOverride !== null) {
+      const checked = securityOverrideProblems(options.root, options.securityOverride, options.tag);
+      if (checked.override === null) {
+        process.stderr.write(`pin:bump refused: --security-override ${options.securityOverride} is not a valid security-release decision (decisions/OQ-12.md):\n${checked.problems.map((problem) => `  ${problem}\n`).join("")}`);
+        return 1;
+      }
+      override = checked.override;
+    }
     const epics = inFlightEpics(options.root);
     if (epics.length > 0) {
-      process.stderr.write(`pin:bump refused: the Pin moves only at a freeze point, and these Epics are in progress (${SPRINT_STATUS}):\n${epics.map((epic) => `  ${epic}\n`).join("")}`);
-      return 1;
+      if (override === null) {
+        process.stderr.write(`pin:bump refused: the Pin moves only at a freeze point, and these Epics are in progress (${SPRINT_STATUS}):\n${epics.map((epic) => `  ${epic}\n`).join("")}`);
+        return 1;
+      }
+      process.stderr.write(`pin:bump: freeze point overridden for a security release, ${describeOverride(override)}; in progress: ${epics.join(", ")}\n`);
     }
     const current = frameworkEntry(readPin(options.root)).tag;
-    return current === options.tag ? diffMode(options.root, options.tag, options.from, options.apply) : moveMode(options.root, options.tag, options.remote);
+    return current === options.tag ? diffMode(options.root, options.tag, options.from, options.apply, override) : moveMode(options.root, options.tag, options.remote, override);
   } catch (error) {
     if (error instanceof UsageError) {
       process.stderr.write(`${error.message}\n${USAGE}\n`);

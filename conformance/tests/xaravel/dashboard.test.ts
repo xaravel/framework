@@ -1,18 +1,25 @@
 // Xaravel Tests for Story 7.2 (the public dashboard and the Epic review view:
 // `tools/conformance-report/{site,publish}.ts`, `bun run conformance:site` /
-// `conformance:publish`, and `.github/workflows/dashboard.yml`; FR-5, UJ-5).
+// `conformance:publish`, and `.github/workflows/dashboard.yml`; FR-5, UJ-5),
+// and for Epic 7 retro item 10 (SM-1's target: the Phase and Inventory hash
+// in each history record, `tools/conformance-report/target.ts` /
+// `bun run conformance:target`, and the dashboard's `#target` section with
+// the Test Inventory diff between Pin series; XT-conformance-257 and -258).
 //
 // Fixture roots are hermetic temp directories holding a package table, an
 // Inventory, the Baseline Pin, Expectations shards, Escalations, decisions and
 // Story manifests; the publish and Epic tests add a temp git work tree and a
 // bare remote. The real repository is only read.
 import { afterAll, expect } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { computeReport, serialiseReport, type Report } from "../../../tools/conformance-report/report";
-import { serialiseRecord, type HistoryRecord } from "../../../tools/conformance-report/history";
-import { buildSite, epicReview, historySeries, readHistory, renderHistoryChart, SiteError } from "../../../tools/conformance-report/site";
+import { computeReport, currentPhase, inventoryHash, serialiseReport, type Report } from "../../../tools/conformance-report/report";
+import { HistoryError, historyRecord, readReport, serialiseRecord, type HistoryRecord } from "../../../tools/conformance-report/history";
+import { buildSite, collectSiteInput, DIFF_ID_CAP, epicReview, historySeries, inventoryDiffs, readHistory, renderHistoryChart, renderTarget, SiteError } from "../../../tools/conformance-report/site";
+import { boundaryCount, referencePoints, targetViolations } from "../../../tools/conformance-report/target";
+import { compareUnits } from "../../../tools/inventory/inventory";
 import { publishSite } from "../../../tools/conformance-report/publish";
 import { escalationDigest } from "../../../tools/escalations/escalations";
 import { checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
@@ -25,6 +32,7 @@ const root = resolve(import.meta.dir, "..", "..", "..");
 const REPORT = join(root, "tools", "conformance-report", "report.ts");
 const SITE = join(root, "tools", "conformance-report", "site.ts");
 const PUBLISH = join(root, "tools", "conformance-report", "publish.ts");
+const TARGET = join(root, "tools", "conformance-report", "target.ts");
 const dirs: string[] = [];
 afterAll(() => {
   for (const dir of dirs) {
@@ -457,6 +465,7 @@ xaravelTest("XT-conformance-146", "on every push to main the dashboard job publi
     "bun run conformance:history --history-out .cache/conformance/history.jsonl",
     'bun run conformance:site --history .cache/conformance/history.jsonl --repo "$GITHUB_REPOSITORY"',
     "bun run conformance:publish --dir .cache/conformance/site",
+    "bun run conformance:target --history .cache/conformance/history.jsonl",
   ]);
   const withToken = job.steps.filter((step) => JSON.stringify(step).includes("github.token")).map((step) => step.run!.trimEnd().split("\n").at(-1));
   expect(withToken).toEqual([lastLines[3], lastLines[5]]);
@@ -664,4 +673,234 @@ xaravelTest("XT-conformance-148", "the Epic review view shows the Epic's Compone
   expect(section(notBegun, "blocking")).toContain(`<p id="open-escalations">open Escalations concerning this Epic: <strong>1</strong> (blocks acceptance)</p>`);
   expect(section(notBegun, "blocking")).toContain(">ESC-2.1-1</a>");
   expect(section(notBegun, "stories")).toContain("<tr><td>2.1</td><td>backlog</td><td>0</td><td>0</td><td>+0</td><td>-0</td></tr>");
+}, 60_000);
+
+// XT-conformance-257
+
+/** A history record with a phase (undefined: a legacy line without one) and per-Component counts as [passing, pairs]. */
+function phased(commit: string, tag: string, phase: number | undefined, overall: [number, number], components: Record<string, [number, number]> = {}): HistoryRecord {
+  const base = record(commit, tag, tag === "v13.37.0" ? "a".repeat(40) : "b".repeat(40), overall, [0, 0]);
+  const counts = Object.fromEntries(Object.entries(components).map(([name, [passing, pairs]]) => [name, { pairs, passing }]));
+  return phase === undefined ? { ...base, components: counts } : { commit: base.commit, pin: base.pin, phase, overall: base.overall, alpha: base.alpha, components: counts };
+}
+
+xaravelTest("XT-conformance-257", "conformance:target fails when the Conformance Rate, overall or of a Component, decreases between Phase boundaries under the same Baseline Pin, and passes otherwise (PRD SM-1 target, Epic 7 retro item 10)", () => {
+  const sha = (n: number): string => String(n).repeat(40).slice(0, 40);
+  const short = (n: number): string => sha(n).slice(0, 12);
+
+  // Rate held: phases 0,0,1,1,2; the reference points are the series start and the two boundary records.
+  const held = [phased(sha(1), "v13.37.0", 0, [1, 10]), phased(sha(2), "v13.37.0", 0, [2, 10]), phased(sha(3), "v13.37.0", 1, [3, 10]), phased(sha(4), "v13.37.0", 1, [2, 10]), phased(sha(5), "v13.37.0", 2, [4, 10])];
+  expect(targetViolations(held)).toEqual([]);
+  const points = referencePoints(held);
+  expect(points.map((one) => one.points.map((point) => [point.index, point.boundary]))).toEqual([[[0, false], [2, true], [4, true]]]);
+  expect(boundaryCount(points)).toBe(2);
+
+  // A decrease at a boundary names the Pin, both commits (12 chars), the phases and both rates.
+  expect(targetViolations([phased(sha(1), "v13.37.0", 0, [5, 10]), phased(sha(2), "v13.37.0", 1, [4, 10])])).toEqual([`v13.37.0: ${short(1)} (phase 0) → ${short(2)} (phase 1): overall 5/10 → 4/10`]);
+  // Exact comparison: 1/3 then 2/6 is no decrease; 2/6 then 33/100 is.
+  expect(targetViolations([phased(sha(1), "v13.37.0", 0, [1, 3]), phased(sha(2), "v13.37.0", 1, [2, 6])])).toEqual([]);
+  expect(targetViolations([phased(sha(1), "v13.37.0", 0, [2, 6]), phased(sha(2), "v13.37.0", 1, [33, 100])])).toEqual([`v13.37.0: ${short(1)} (phase 0) → ${short(2)} (phase 1): overall 2/6 → 33/100`]);
+  // A decrease between two non-boundary records of one Phase is not checked.
+  expect(targetViolations([phased(sha(1), "v13.37.0", 1, [5, 10]), phased(sha(2), "v13.37.0", 1, [1, 10])])).toEqual([]);
+
+  // A Component decrease while overall rises; a Component with no pairs at one point, or absent at one, is skipped.
+  const component = [
+    phased(sha(1), "v13.37.0", 0, [5, 10], { support: [3, 4], empty: [0, 0], gone: [2, 2], zeroed: [1, 1] }),
+    phased(sha(2), "v13.37.0", 1, [7, 10], { support: [2, 4], empty: [0, 3], zeroed: [0, 0], fresh: [0, 5] }),
+  ];
+  expect(targetViolations(component)).toEqual([`v13.37.0: ${short(1)} (phase 0) → ${short(2)} (phase 1): component support 3/4 → 2/4`]);
+
+  // A Pin change starts a new series: no violation across it.
+  const pinChange = [phased(sha(1), "v13.37.0", 1, [9, 10]), phased(sha(2), "v13.38.0", 1, [1, 10])];
+  expect(targetViolations(pinChange)).toEqual([]);
+  expect(referencePoints(pinChange).map((one) => [one.pin.tag, one.points.length])).toEqual([["v13.37.0", 1], ["v13.38.0", 1]]);
+
+  // Legacy lines (no phase) then phase 0: the unknown → 0 step is no boundary; a later 0 → 1 step is.
+  expect(targetViolations([phased(sha(1), "v13.37.0", undefined, [9, 10]), phased(sha(2), "v13.37.0", 0, [1, 10])])).toEqual([]);
+  expect(boundaryCount(referencePoints([phased(sha(1), "v13.37.0", undefined, [9, 10]), phased(sha(2), "v13.37.0", 0, [1, 10])]))).toBe(0);
+  const legacyThenBoundary = [phased(sha(1), "v13.37.0", undefined, [9, 10]), phased(sha(2), "v13.37.0", 0, [1, 10]), phased(sha(3), "v13.37.0", undefined, [1, 10]), phased(sha(4), "v13.37.0", 1, [5, 10])];
+  expect(referencePoints(legacyThenBoundary)[0]!.points.map((point) => [point.index, point.boundary])).toEqual([[0, false], [3, true]]);
+  // The series' first record is a reference point: 9/10 (unknown phase) → 5/10 at the first boundary is a decrease.
+  expect(targetViolations(legacyThenBoundary)).toEqual([`v13.37.0: ${short(1)} (phase unknown) → ${short(4)} (phase 1): overall 9/10 → 5/10`]);
+
+  // Phase going back is a violation.
+  expect(targetViolations([phased(sha(1), "v13.37.0", 1, [1, 10]), phased(sha(2), "v13.37.0", 0, [1, 10])])).toEqual([`v13.37.0: ${short(1)} (phase 1) → ${short(2)} (phase 0): phase went back`]);
+  // After a phase goes back, a boundary is a phase higher than the nearest earlier phased record's (1, 0, 1), not the highest so far.
+  const back = [phased(sha(1), "v13.37.0", 1, [5, 10]), phased(sha(2), "v13.37.0", 0, [5, 10]), phased(sha(3), "v13.37.0", 1, [4, 10])];
+  expect(referencePoints(back)[0]!.points.map((point) => [point.index, point.boundary])).toEqual([[0, false], [2, true]]);
+  expect(targetViolations(back)).toEqual([`v13.37.0: ${short(1)} (phase 1) → ${short(2)} (phase 0): phase went back`, `v13.37.0: ${short(1)} (phase 1) → ${short(3)} (phase 1): overall 5/10 → 4/10`]);
+  // Records with no pairs are skipped for the overall rate: the next point compares with the last earlier point that had pairs.
+  expect(targetViolations([phased(sha(1), "v13.37.0", 0, [5, 10]), phased(sha(2), "v13.37.0", 1, [0, 0]), phased(sha(3), "v13.37.0", 2, [6, 10])])).toEqual([]);
+  expect(targetViolations([phased(sha(1), "v13.37.0", 0, [5, 10]), phased(sha(2), "v13.37.0", 1, [0, 0]), phased(sha(3), "v13.37.0", 2, [4, 10])])).toEqual([`v13.37.0: ${short(1)} (phase 0) → ${short(3)} (phase 2): overall 5/10 → 4/10`]);
+  // Likewise a Component absent (or with no pairs) at a middle point.
+  expect(
+    targetViolations([
+      phased(sha(1), "v13.37.0", 0, [5, 10], { support: [3, 4] }),
+      phased(sha(2), "v13.37.0", 1, [6, 10], {}),
+      phased(sha(3), "v13.37.0", 2, [7, 10], { support: [0, 0] }),
+      phased(sha(4), "v13.37.0", 3, [8, 10], { support: [2, 4] }),
+    ]),
+  ).toEqual([`v13.37.0: ${short(1)} (phase 0) → ${short(4)} (phase 3): component support 3/4 → 2/4`]);
+  expect(targetViolations([])).toEqual([]);
+
+  // The CLI: ok with counts and exit 0; violations on stderr and exit 1; a missing or malformed history exits 1; bad usage exits 2.
+  const dir = tempDir("target");
+  const write = (name: string, records: readonly HistoryRecord[]): string => {
+    const file = join(dir, name);
+    writeFileSync(file, records.map(serialiseRecord).join(""));
+    return file;
+  };
+  expect(cli(TARGET, ["--history", write("held.jsonl", [...pinChange, ...held])])).toEqual({ exitCode: 0, stdout: "conformance:target: ok (2 Phase boundaries checked across 3 Pin series)\n", stderr: "" });
+  expect(cli(TARGET, ["--history", write("one.jsonl", [phased(sha(1), "v13.37.0", 0, [1, 10]), phased(sha(2), "v13.37.0", 1, [1, 10])])])).toEqual({ exitCode: 0, stdout: "conformance:target: ok (1 Phase boundary checked across 1 Pin series)\n", stderr: "" });
+  expect(cli(TARGET, ["--history", write("empty.jsonl", [])])).toEqual({ exitCode: 0, stdout: "conformance:target: ok (0 Phase boundaries checked across 0 Pin series)\n", stderr: "" });
+  expect(cli(TARGET, ["--history", write("decrease.jsonl", component)])).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:target: v13.37.0: ${short(1)} (phase 0) → ${short(2)} (phase 1): component support 3/4 → 2/4\n` });
+  const missing = join(dir, "nowhere.jsonl");
+  expect(cli(TARGET, ["--history", missing])).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:target: ${missing} does not exist\n` });
+  const malformed = join(dir, "malformed.jsonl");
+  writeFileSync(malformed, `${serialiseRecord(held[0]!)}{"commit":"x","pin":{"tag":"v","commit":"c"},"phase":-1,"overall":{"pairs":1,"passing":1},"alpha":{"applicable":0,"passing":0},"components":{}}\n`);
+  expect(cli(TARGET, ["--history", malformed])).toEqual({ exitCode: 1, stdout: "", stderr: `conformance:target: ${malformed}:2: not a history record\n` });
+  for (const args of [[], ["--nope"], ["--history"]]) {
+    const run = cli(TARGET, args);
+    expect([args, run.exitCode, run.stdout, run.stderr.split("\n")[1]!.startsWith("Usage: ")]).toEqual([args, 2, "", true]);
+  }
+  const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
+  expect(scripts["conformance:target"]).toBe("bun --no-env-file tools/conformance-report/target.ts");
+  // The workflow runs it last, after publish, under the name the spec gives it.
+  const flow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "dashboard.yml"), "utf8")) as Workflow;
+  const last = flow.jobs["dashboard"]!.steps.at(-1)!;
+  expect([last.name, last.run?.trim()]).toEqual(["Check the SM-1 target", "bun run conformance:target --history .cache/conformance/history.jsonl"]);
+}, 60_000);
+
+// XT-conformance-258
+
+xaravelTest("XT-conformance-258", "each report and history record carries the Phase and the Test Inventory hash, legacy history lines stay valid and unchanged, and the dashboard shows the SM-1 target verdict and the Test Inventory diff between Pin series (PRD SM-1 target, Epic 7 retro item 10)", () => {
+  // Phase: the smallest n >= 0 with no decisions/PHASE-<n>-EXIT.md.
+  const phase0 = fixture();
+  expect(currentPhase(phase0)).toBe(0);
+  const report0 = computeReport(phase0);
+  expect(report0.phase).toBe(0);
+  const phase1 = fixture({ ...FILES, "decisions/PHASE-0-EXIT.md": "# Phase 0 exit\n", "decisions/PHASE-2-EXIT.md": "# Phase 2 exit\n" });
+  expect(currentPhase(phase1)).toBe(1);
+  expect(computeReport(phase1).phase).toBe(1);
+
+  // Inventory hash: sha256 of the sorted (UTF-16 code units), de-duplicated Test IDs, each followed by LF.
+  const ids = [S("testA"), S("testB"), S("testC"), S("testD"), S("testE"), S("testF")];
+  expect(report0.inventory).toEqual({ ids: 6, sha256: createHash("sha256").update(ids.map((id) => `${id}\n`).join("")).digest("hex") });
+  expect(inventoryHash(["b", "B", "a", "b"])).toEqual({ ids: 3, sha256: createHash("sha256").update("B\na\nb\n").digest("hex") });
+  expect(inventoryHash([])).toEqual({ ids: 0, sha256: createHash("sha256").update("").digest("hex") });
+
+  // The record carries both, in the fixed key order.
+  const rec = historyRecord({ ...report0, commit: "c".repeat(40) });
+  expect(Object.keys(rec)).toEqual(["commit", "pin", "phase", "inventory", "overall", "alpha", "components"]);
+  expect(serialiseRecord(rec)).toStartWith(`{"commit":"${"c".repeat(40)}","pin":{"tag":"v13.37.0","commit":"${"a".repeat(40)}"},"phase":0,"inventory":{"ids":6,"sha256":"${report0.inventory.sha256}"},"overall":`);
+  // readReport requires a valid phase and inventory.
+  const reports = tempDir("target-reports");
+  const good = join(reports, "good.json");
+  writeFileSync(good, serialiseReport(report0));
+  expect(readReport(good)).toEqual(report0);
+  for (const [name, bad] of [
+    ["no-phase", { ...report0, phase: undefined }],
+    ["negative", { ...report0, phase: -1 }],
+    ["fraction", { ...report0, phase: 0.5 }],
+    ["no-inventory", { ...report0, inventory: undefined }],
+    ["bad-hash", { ...report0, inventory: { ids: 6, sha256: "X".repeat(64) } }],
+  ] as const) {
+    const file = join(reports, `${name}.json`);
+    writeFileSync(file, `${JSON.stringify(bad)}\n`);
+    expect(() => readReport(file)).toThrow(new HistoryError(`${file} has no valid phase and inventory (re-run bun run conformance:report)`));
+  }
+
+  // A legacy line (no phase, no inventory) is still valid and is re-serialised byte-for-byte.
+  const legacy = `{"commit":"${"1".repeat(40)}","pin":{"tag":"v13.37.0","commit":"${"a".repeat(40)}"},"overall":{"pairs":10,"passing":4},"alpha":{"applicable":2,"passing":1},"components":{"support":{"pairs":10,"passing":4}}}\n`;
+  const historyFile = join(tempDir("target-history"), "history.jsonl");
+  writeFileSync(historyFile, legacy + serialiseRecord(rec));
+  const parsed = readHistory(historyFile);
+  expect(parsed.map(serialiseRecord).join("")).toBe(legacy + serialiseRecord(rec));
+  expect(buildSite({ report: report0, history: parsed, repo: null, divRecords: new Set(), escalations: [], quarantined: [], apiSurface: [], epics: [] }).get("history.jsonl")).toBe(legacy + serialiseRecord(rec));
+  // A present but malformed phase or inventory is not a history record.
+  writeFileSync(historyFile, `${legacy.slice(0, -2)},"inventory":{"ids":1,"sha256":"no"}}\n`);
+  expect(() => readHistory(historyFile)).toThrow(new SiteError(`${historyFile}:1: not a history record`));
+
+  // The site: a git fixture with two Inventories, and four Pin series.
+  const repo = fixture();
+  git(repo, ["init", "-q", "-b", "main", "."]);
+  const c1 = commitAll(repo, "init");
+  // The report is computed before the Inventory changes (the fixture's Expectations name testF).
+  const report = computeReport(repo);
+  // c2: support loses testF and gains testG and test<b>; a new Component, bulk, has DIFF_ID_CAP + 1 Test IDs.
+  const supportIds = [S("testA"), S("testB"), S("testC"), S("testD"), S("testE"), S("testG"), WEIRD].sort(compareUnits);
+  const bulkIds = Array.from({ length: DIFF_ID_CAP + 1 }, (_, i) => `Illuminate\\Tests\\Bulk\\BulkTest::test${String(i).padStart(3, "0")}`);
+  writeFileSync(join(repo, "conformance", "inventory", "support.jsonl"), inventory("support", supportIds));
+  writeFileSync(join(repo, "conformance", "inventory", "bulk.jsonl"), inventory("bulk", bulkIds));
+  const c2 = commitAll(repo, "bump");
+  const hash1 = inventoryHash(ids);
+  const hash2 = inventoryHash([...supportIds, ...bulkIds]);
+  const withInventory = (commit: string, tag: string, pinCommit: string, inv: { ids: number; sha256: string } | null, overall: [number, number], phase = 0): HistoryRecord => {
+    const base = record(commit, tag, pinCommit, overall, [0, 0]);
+    return inv === null ? base : { commit, pin: base.pin, phase, inventory: inv, overall: base.overall, alpha: base.alpha, components: {} };
+  };
+  const unknown = "9".repeat(40);
+  const history = [
+    withInventory(c1, "v13.37.0", "a".repeat(40), hash1, [1, 10]),
+    withInventory(c1, "v13.37.0", "a".repeat(40), hash1, [2, 10]),
+    withInventory(c2, "v13.38.0", "b".repeat(40), hash2, [1, 10]),
+    withInventory(c2, "<v14>", "c".repeat(40), hash2, [1, 10]),
+    withInventory(unknown, "v15", "d".repeat(40), null, [1, 10]),
+  ];
+  const diffs = inventoryDiffs(repo, history);
+  expect(diffs.map((entry) => [entry.from, entry.to, entry.result.kind])).toEqual([
+    [{ tag: "v13.37.0", commit: c1 }, { tag: "v13.38.0", commit: c2 }, "diff"],
+    [{ tag: "v13.38.0", commit: c2 }, { tag: "<v14>", commit: c2 }, "no change"],
+    [{ tag: "<v14>", commit: c2 }, { tag: "v15", commit: unknown }, "unavailable"],
+  ]);
+  expect(diffs[0]!.result).toEqual({
+    kind: "diff",
+    components: [
+      { component: "bulk", added: bulkIds, removed: [] },
+      { component: "support", added: [S("testG"), WEIRD].sort(compareUnits), removed: [S("testF")] },
+    ],
+  });
+  // Differing (or missing) recorded hashes over readable, equal Inventories diff to no IDs.
+  expect(inventoryDiffs(repo, [withInventory(c1, "v1", "a".repeat(40), null, [1, 1]), withInventory(c1, "v2", "b".repeat(40), hash1, [1, 1])])[0]!.result).toEqual({ kind: "diff", components: [] });
+
+  const html = buildSite(collectSiteInput({ root: repo, report, history, repo: null, apiSurface: [] })).get("index.html")!;
+  expect(html.indexOf('<section id="history">')).toBeLessThan(html.indexOf('<section id="target">'));
+  const target = section(html, "target");
+  expect(target).toContain(`<p id="target-verdict">Target held (0 Phase boundaries checked across 4 Pin series).</p>`);
+  // The reference points: Pin, commit, phase, overall rate.
+  expect(target).toContain(`<tr><td>v13.37.0</td><td>${c1.slice(0, 12)}</td><td>0</td><td>1 / 10 (10.00%)</td><td>series start</td></tr>`);
+  expect(target).toContain(`<tr><td>v15</td><td>${unknown.slice(0, 12)}</td><td>unknown</td><td>1 / 10 (10.00%)</td><td>series start</td></tr>`);
+  expect(target).not.toContain(`<td>2 / 10 (20.00%)</td>`);
+  // The Inventory diff per Pin change: counts per Component and total, the IDs (escaped, capped) in <details>.
+  expect(target).toContain(`<h4>v13.37.0 → v13.38.0 (${c1.slice(0, 12)} → ${c2.slice(0, 12)})</h4>`);
+  expect(target).toContain("<tr><td>bulk</td><td>201</td><td>0</td></tr>");
+  expect(target).toContain("<tr><td>support</td><td>2</td><td>1</td></tr>");
+  expect(target).toContain("<tr><td>total</td><td>203</td><td>1</td></tr>");
+  expect(target).toContain(`<details><summary>bulk: added (201)</summary>`);
+  expect(target).toContain(`<li>${bulkIds[DIFF_ID_CAP - 1]}</li>\n<li>… and 1 more</li>`);
+  expect(target).not.toContain(`<li>${bulkIds[DIFF_ID_CAP]}</li>`);
+  expect(target).toContain(`<details><summary>support: removed (1)</summary>\n<ul>\n<li>${S("testF")}</li>\n</ul>\n</details>`);
+  expect(target).toContain("<li>Illuminate\\Tests\\Support\\SupportTest::test&lt;b&gt;</li>");
+  expect(target).not.toContain("test<b>");
+  expect(target).toContain(`<h4>v13.38.0 → &lt;v14&gt; (${c2.slice(0, 12)} → ${c2.slice(0, 12)})</h4>\n<p>no change</p>`);
+  expect(target).toMatch(/<h4>&lt;v14&gt; → v15 \([0-9a-f]{12} → 999999999999\)<\/h4>\n<p>unavailable \([^<]+\)<\/p>/);
+
+  // The verdict when the target is violated lists each violation; with no history or no Pin change, it says so.
+  const violated = renderTarget([phased("1".repeat(40), "v13.37.0", 0, [5, 10]), phased("2".repeat(40), "v13.37.0", 1, [4, 10])], []);
+  expect(violated).toContain(`<p id="target-verdict" class="violated">Target violated (1 Phase boundary checked across 1 Pin series):</p>`);
+  expect(violated).toContain(`<li>v13.37.0: 111111111111 (phase 0) → 222222222222 (phase 1): overall 5/10 → 4/10</li>`);
+  expect(violated).toContain(`<td>Phase boundary</td>`);
+  expect(violated).toContain(`<p class="empty">no Pin change yet</p>`);
+  expect(renderTarget([], [])).toContain(`<p class="empty">no history yet</p>`);
+  // A violation never fails the site build.
+  const out = join(tempDir("target-site"), "site");
+  const reportPath = join(tempDir("target-site-report"), "report.json");
+  writeFileSync(reportPath, serialiseReport(report));
+  const violatingHistory = join(tempDir("target-site-history"), "history.jsonl");
+  writeFileSync(violatingHistory, [withInventory(c1, "v13.37.0", "a".repeat(40), hash1, [5, 10], 0), withInventory(c2, "v13.37.0", "a".repeat(40), hash2, [4, 10], 1)].map(serialiseRecord).join(""));
+  const apiPath = join(tempDir("target-site-api"), "api.json");
+  writeFileSync(apiPath, "[]");
+  const run = cli(SITE, ["--root", repo, "--report", reportPath, "--history", violatingHistory, "--out", out, "--api-surface", apiPath]);
+  expect([run.exitCode, run.stderr]).toEqual([0, ""]);
+  expect(section(readFileSync(join(out, "index.html"), "utf8"), "target")).toContain(`class="violated"`);
 }, 60_000);
