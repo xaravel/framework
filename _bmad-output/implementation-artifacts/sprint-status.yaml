@@ -122,7 +122,7 @@ development_status:
   9-1-scope-frame-primitive-and-interleave: done
   9-2-frame-kinds-defer-list-and-context-propagation: done
   9-3-per-application-overlays-and-framestatic: done
-  9-4-class-registry-and-fqcn: backlog
+  9-4-class-registry-and-fqcn: blocked  # ESC-9.4-1 (contract: AD-10.4 async miss vs AD-6 roots, classmap JSON vs AD-23, scan tests scope); spec planned, no code
   9-5-phparray-ref-float-marker-and-null-normalisation: backlog
   9-6-php-semantics-helpers: backlog
   9-7-phpserialize-phpunserialize-codec: backlog
