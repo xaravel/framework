@@ -40,7 +40,11 @@ An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a P
 
 ### F-9: Every `@asyncRoot` tag is true
 
-**Check.** Every `@asyncRoot` tag the PR adds or keeps marks a method that really performs IO behind an async-root Driver contract (AD-6, DIV-1). It fails when a tagged method does no IO, or only calls other async code it could have kept sync, and when a method that does such IO is async without the tag.
+**Check.** Every `@asyncRoot` tag the PR adds or keeps is true, under AD-6's Derivation and Enforcement rules and DIV-1 ([ESC-9.1-4](../escalations/ESC-9.1-4.md)). AD-6 has two kinds of async method, each with its own tag:
+- `@asyncRoot <Contract.method>` is true when the method really performs IO behind that async-root Driver contract method.
+- `@asyncRoot callback` is true when the method is async only because it accepts a callback that DIV-1 allows to be async (AD-6's callback clause), as with `runCounted` and `runWithMockery` ([ESC-6.4-1](../escalations/ESC-6.4-1.md)).
+
+It fails when a tagged method neither does such IO nor accepts such a callback, when it only calls other async code it could have kept sync, or when a method that does such IO, or is async because of such a callback, has no tag.
 
 ### F-10: Oracle requests match the Upstream test's inputs
 

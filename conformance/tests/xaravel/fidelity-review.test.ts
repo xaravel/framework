@@ -52,6 +52,7 @@ import {
   type VerdictRecord,
 } from "../../../tools/fidelity-review/fidelity-review";
 import { approvalsClause, renderClause } from "../../../tools/story-check/story-check";
+import { SPINE_FILE, spineRules } from "../../../tools/xt-coverage/consequences";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -133,7 +134,7 @@ function makeRepo(options: { oracle?: boolean; change?: boolean } = {}): { dir: 
   for (const [path, text] of Object.entries(files)) {
     write(dir, path, text);
   }
-  for (const rel of ["conformance/README.md", "decisions/DIV-1.md", "decisions/DIV-9.md", "conformance/xaravel-consequences/conformance.jsonl", ...(options.oracle === true ? ["conformance/oracle", ERROR_FIXTURE] : [])]) {
+  for (const rel of ["conformance/README.md", "decisions/DIV-1.md", "decisions/DIV-9.md", "decisions/ESC-6.4-1.md", SPINE_FILE, "conformance/xaravel-consequences/conformance.jsonl", ...(options.oracle === true ? ["conformance/oracle", ERROR_FIXTURE] : [])]) {
     cpSync(join(root, rel), join(dir, rel), { recursive: true });
   }
   git(dir, "init", "-q");
@@ -656,7 +657,7 @@ xaravelTest(
     const statuses = Object.fromEntries(reviewDiff(diffRepo.dir, diffRepo.base).files.map((file) => [file.filename, [file.status, file.patch === null]]));
     expect(statuses).toEqual({ [REQUESTS]: ["added", false], [CHANGED]: ["added", false], "conformance/README.md": ["modified", false], "logo.bin": ["added, binary", true], "packages/support/src/Base.ts": ["removed", false] });
 
-    // The evidence (a)-(d): DIV records cited by adapted markers, consequence lines, error fixtures, DIV-1 for @asyncRoot.
+    // The evidence (a)-(d): DIV records cited by adapted markers, consequence lines, error fixtures, the @asyncRoot rules.
     const evidenceRepo = makeRepo({ oracle: true, change: false });
     write(
       evidenceRepo.dir,
@@ -691,8 +692,17 @@ xaravelTest(
     expect(evidenceUser).toContain("### (c) Oracle fixtures whose output is an error (F-6)");
     expect(evidenceUser).toContain(`#### ${ERROR_REQUEST_ID} (${ERROR_FIXTURE})`);
     expect(evidenceUser).toContain("Cannot 'continue' 2 levels");
-    expect(evidenceUser).toContain("### (d) DIV-1 for @asyncRoot tags (F-9)");
+    expect(evidenceUser).toContain("### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)");
     expect(evidenceUser).toContain(`#### decisions/DIV-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "DIV-1.md"), "utf8")}`);
+    // ESC-9.1-4: the `@asyncRoot callback` tag's ruling and AD-6's Derivation and Enforcement bullets come with DIV-1.
+    expect(evidenceUser).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
+    const ad6 = spineRules(readFileSync(join(root, SPINE_FILE), "utf8")).get(6)!;
+    for (const lead of ["**Derivation.**", "**Enforcement.**"]) {
+      const k = ad6.findIndex((bullet) => bullet.startsWith(lead));
+      expect(k).toBeGreaterThan(-1);
+      expect(evidenceUser).toContain(`#### ${SPINE_FILE} AD-6.${k + 1}\n\n\`\`\`markdown\n${ad6[k]}`);
+    }
+    expect(evidenceUser).toContain("@asyncRoot callback");
     // With no error fixture, (c) never claims the change has none: it points to the changed-fixture list.
     const bare = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).user;
     expect(bare).toContain("No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.");
