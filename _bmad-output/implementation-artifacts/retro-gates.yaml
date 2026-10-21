@@ -57,5 +57,5 @@ epic-8:
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-8-retro-2026-10-20.md
   blocked: false
-  checkpoint_approved: false
+  checkpoint_approved: true
   waiting_on_maintainer: []
