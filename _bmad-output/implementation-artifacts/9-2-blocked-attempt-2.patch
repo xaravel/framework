@@ -47,10 +47,10 @@ index 06b0b59..bb1901f 100644
 +} from "./scope";
  export { ScopeFrameException } from "./ScopeFrameException";
 diff --git a/packages/runtime/src/scope/interleave.ts b/packages/runtime/src/scope/interleave.ts
-index 5057bd7..17baaf3 100644
+index 5057bd7..c0847bf 100644
 --- a/packages/runtime/src/scope/interleave.ts
 +++ b/packages/runtime/src/scope/interleave.ts
-@@ -1,12 +1,12 @@
+@@ -1,14 +1,17 @@
  // `interleave(units)`: the dev-only helper every concurrency test uses (AD-5, NFR-4).
  //
 -// Every unit starts synchronously, in array order, each in its own fresh `unit` frame. Started in one tick, units
@@ -66,9 +66,15 @@ index 5057bd7..17baaf3 100644
 - * Runs `units` concurrently, each in its own `unit` frame, and resolves with their results in order; rejects with
 + * Runs `units` concurrently, each in its own root `unit` frame, and resolves with their results in order; rejects with
   * the first rejection in array order, once every unit has settled.
-  * Its asyncRoot tag `callback` is AD-6's callback clause (it returns its callbacks' promises), as the spine § AD-6 Async-surface rule (the `callback` tag "for the callback clause") and ESC-6.4-1 define it; it reaches no Driver-contract IO root.
+- * Its asyncRoot tag `callback` is AD-6's callback clause (it returns its callbacks' promises), as the spine § AD-6 Async-surface rule (the `callback` tag "for the callback clause") and ESC-6.4-1 define it; it reaches no Driver-contract IO root.
++ * Its asyncRoot tag `callback` is AD-6's callback clause: it returns its callbacks' promises (now each unit's drained
++ * root-frame promise) and reaches no Driver-contract IO root. AD-6 Derivation: "A public method is async if and only if
++ * it reaches a root, or it accepts a callback that DIV-1 allows to be async"; AD-6 Enforcement: the tag is `callback`
++ * "for the callback clause". `decisions/DIV-1.md` (Async IO Terminals) and `decisions/ESC-6.4-1.md` define the tag.
   * @asyncRoot callback
-@@ -22,7 +22,7 @@ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Pro
+  */
+ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Promise<T[]> {
+@@ -22,7 +25,7 @@ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Pro
      }
    }
    for (const unit of units) {
@@ -154,7 +160,7 @@ index 0000000..92e10b0
 +  return wrapped;
 +}
 diff --git a/packages/runtime/src/scope/scope.ts b/packages/runtime/src/scope/scope.ts
-index 7fcc1b8..9b5a76b 100644
+index 7fcc1b8..d74b192 100644
 --- a/packages/runtime/src/scope/scope.ts
 +++ b/packages/runtime/src/scope/scope.ts
 @@ -1,39 +1,66 @@
@@ -322,7 +328,7 @@ index 7fcc1b8..9b5a76b 100644
        return value;
      },
      set(value: T): void {
-@@ -81,11 +156,110 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
+@@ -81,11 +156,113 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
        if (store === undefined) {
          throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} with no active Scope Frame; run the code inside runInFrame()`);
        }
@@ -383,7 +389,8 @@ index 7fcc1b8..9b5a76b 100644
 +    throw error;
 +  }
 +  if (result instanceof Promise) {
-+    // A Promise body's unit ends after its defer list drains; the caller gets a Promise of the same value. Any other
++    // A Promise body's unit ends after its defer list drains; the caller gets a Promise of the same value, not the
++    // body's own Promise object (decisions/ESC-9.2-1.md, Maintainer, Option 1). Any other
 +    // value, a non-native thenable (AD-6.9) included, is returned unchanged and never has its `then` called.
 +    return drain(store, result) as T;
 +  }
@@ -396,39 +403,41 @@ index 7fcc1b8..9b5a76b 100644
 +}
 +
 +/**
-+ * Awaits the body, then every deferred promise in registration order (a deferred promise may defer more), then ends
-+ * the unit. Settles with the body's value; rejects with the body's error, else the first deferred rejection.
-+ * Its asyncRoot tag `callback` is AD-6.2's callback clause: it is async only because it awaits the body callback's
-+ * promise and the deferred promises, and reaches no Driver-contract IO root. ESC-9.1-4 (decisions/ESC-9.1-4.md,
-+ * Maintainer-approved) accepts the `callback` tag, as on `interleave`.
-+ * @asyncRoot callback
++ * Waits for the body, then every deferred promise in registration order (a deferred promise may defer more), then
++ * ends the unit. Settles with the body's value; rejects with the body's error, else the first deferred rejection.
++ * Not `async` and untagged: a private helper, not a public method, so AD-6.13's tags do not apply
++ * (decisions/ESC-9.2-1.md).
 + */
-+async function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
++function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
 +  const defers = store.defers as Promise<unknown>[];
 +  let failed = false;
 +  let failure: unknown = null;
 +  let value: unknown = null;
-+  try {
-+    value = await result;
-+  } catch (error) {
-+    failed = true;
-+    failure = error;
-+  }
-+  for (let index = 0; index < defers.length; index++) {
-+    try {
-+      await defers[index];
-+    } catch (error) {
-+      if (!failed) {
-+        failed = true;
-+        failure = error;
-+      }
++  const fail = (error: unknown): void => {
++    if (!failed) {
++      failed = true;
++      failure = error;
 +    }
-+  }
-+  store.ended = true;
-+  if (failed) {
-+    throw failure;
-+  }
-+  return value;
++  };
++  // The unit ends in the same callback that finds the list exhausted, so a later frameDefer throws.
++  const next = (index: number): Promise<void> => {
++    if (index < defers.length) {
++      return (defers[index] as Promise<unknown>).then(noop, fail).then(() => next(index + 1));
++    }
++    store.ended = true;
++    return Promise.resolve();
++  };
++  return result
++    .then((settled) => {
++      value = settled;
++    }, fail)
++    .then(() => next(0))
++    .then(() => {
++      if (failed) {
++        throw failure;
++      }
++      return value;
++    });
 +}
 +
  const SCOPE_RUN = Symbol.for("xaravel.scope.run");
@@ -436,10 +445,10 @@ index 7fcc1b8..9b5a76b 100644
  function installGlobal(): void {
 diff --git a/packages/runtime/tests/xaravel/frames.test.ts b/packages/runtime/tests/xaravel/frames.test.ts
 new file mode 100644
-index 0000000..addcc2d
+index 0000000..bb857ea
 --- /dev/null
 +++ b/packages/runtime/tests/xaravel/frames.test.ts
-@@ -0,0 +1,522 @@
+@@ -0,0 +1,601 @@
 +// Xaravel Tests for Story 9.2: frame kinds, the defer list and frame propagation (AD-5.1, AD-5.8, AD-5.9;
 +// ESC-8.3-1). One test per acceptance criterion, in order. `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each
 +// body starts outside any Scope Frame.
@@ -667,6 +676,7 @@ index 0000000..addcc2d
 +  "XT-runtime-7",
 +  "a unit whose defer list holds pending Promises ends only after every deferred Promise settles, and deferring with no active unit frame, or after the unit ended, throws (AD-5.9)",
 +  async () => {
++    // runInFrame's result settles after the drain, not as the body's own promise (decisions/ESC-9.2-1.md, Option 1).
 +    // Deferred promises that settle after the body returns, one deferring another; the root frame drains too.
 +    for (const open of [runInFrame, runInRootFrame]) {
 +      const log: string[] = [];
@@ -806,6 +816,51 @@ index 0000000..addcc2d
 +    Assert.assertInstanceOf(ScopeFrameException, throwLate);
 +    Assert.assertSame(endedMessage, (throwLate as Error).message);
 +    Assert.assertInstanceOf(TypeError, thrownBy(() => frameDefer(42 as unknown as Promise<unknown>)));
++
++    // A defer registered k microtasks after the last deferred promise settles, during the drain's tail: it is either
++    // awaited before the unit's promise settles, or it throws, never accepted and dropped.
++    for (let k = 0; k <= 12; k++) {
++      const gate = Promise.withResolvers<void>();
++      let tail: unknown = "pending";
++      let tailSettled = false;
++      const unit = runInFrame("unit", async () => {
++        frameDefer(gate.promise);
++        void gate.promise
++          .then(() => ticks(k))
++          .then(() => {
++            tail = thrownBy(() =>
++              frameDefer(
++                ticks(1).then(() => {
++                  tailSettled = true;
++                }),
++              ),
++            );
++          });
++        return null;
++      });
++      gate.resolve();
++      const settledAtEnd = await unit.then(() => tailSettled);
++      await ticks(20);
++      Assert.assertNotSame("pending", tail, `the k=${k} continuation ran`);
++      if (tail === null) {
++        Assert.assertTrue(settledAtEnd, `the k=${k} defer accepted during the tail is awaited before the unit settles`);
++      } else {
++        Assert.assertInstanceOf(ScopeFrameException, tail, `the k=${k} defer after the unit ended throws`);
++      }
++    }
++
++    // A body returning a non-native thenable (AD-6.9) gets the same object back; its then is never called.
++    for (const open of [runInFrame, runInRootFrame]) {
++      let thenCalled = false;
++      const thenable = {
++        then(): void {
++          thenCalled = true;
++        },
++      };
++      Assert.assertSame(thenable, open("unit", () => thenable));
++      await ticks(2);
++      Assert.assertFalse(thenCalled, "the thenable's then is never called");
++    }
 +  },
 +);
 +
@@ -823,6 +878,7 @@ index 0000000..addcc2d
 +    let sourceThis: boolean | null = null;
 +    let defaultSourceRef: object | null = null;
 +    let cancelStream: ReadableStream<string> | null = null;
++    let classStream: ReadableStream<string> | null = null;
 +
 +    runInFrame("unit", () => {
 +      creator = currentFrame();
@@ -866,6 +922,17 @@ index 0000000..addcc2d
 +          },
 +        }),
 +      );
++      class DirectSource {
++        get type(): "direct" {
++          return "direct";
++        }
++        pull(controller: { write: (chunk: string) => unknown; close: () => unknown }): void {
++          seen["class-direct"] = currentFrame();
++          controller.write("class");
++          controller.close();
++        }
++      }
++      classStream = new ReadableStream<string>(frameStreamSource(new DirectSource()));
 +      generator = frameAsyncGenerator(
 +        (async function* (): AsyncGenerator<string, void, undefined> {
 +          await Bun.sleep(1);
@@ -889,8 +956,9 @@ index 0000000..addcc2d
 +    Assert.assertSame(true, sourceThis, "a wrapped source method runs with the original source as this");
 +    Assert.assertSame("direct", await new Response(directStream as unknown as ReadableStream<string>).text());
 +    Assert.assertSame("generator", await new Response(generator as unknown as ReadableStream<string>).text());
++    Assert.assertSame("class", await new Response(classStream as unknown as ReadableStream<string>).text());
 +    await (cancelStream as unknown as ReadableStream<string>).cancel("done");
-+    for (const point of ["timer", "start", "stream", "cancel", "direct", "generator", "generator-end"]) {
++    for (const point of ["timer", "start", "stream", "cancel", "direct", "class-direct", "generator", "generator-end"]) {
 +      Assert.assertSame(creator, seen[point] ?? null, `the ${point} body sees the creating frame`);
 +    }
 +
@@ -921,6 +989,26 @@ index 0000000..addcc2d
 +    for (const frame of steps) {
 +      Assert.assertSame(ownFrame.frame, frame);
 +    }
++    // Symbol.asyncDispose of a started generator runs its finally in the creating frame.
++    let disposedIn: Frame | null = null;
++    const disposable = await runInFrame("job", async () => {
++      const frame = currentFrame();
++      const wrapped = frameAsyncGenerator(
++        (async function* (): AsyncGenerator<number, void, undefined> {
++          try {
++            yield 1;
++          } finally {
++            disposedIn = currentFrame();
++          }
++        })(),
++      );
++      Assert.assertSame(1, (await wrapped.next()).value);
++      return { frame, wrapped };
++    });
++    Assert.assertNull(currentFrame());
++    await disposable.wrapped[Symbol.asyncDispose]();
++    Assert.assertSame(disposable.frame, disposedIn, "the finally block run by asyncDispose sees the creating frame");
++
 +    const thrown = frameAsyncGenerator(
 +      (async function* (): AsyncGenerator<number, void, undefined> {
 +        yield 1;
@@ -963,7 +1051,7 @@ index 0000000..addcc2d
 +  },
 +);
 diff --git a/packages/runtime/tests/xaravel/scope.test.ts b/packages/runtime/tests/xaravel/scope.test.ts
-index 57e7b60..e950631 100644
+index 57e7b60..d530bb0 100644
 --- a/packages/runtime/tests/xaravel/scope.test.ts
 +++ b/packages/runtime/tests/xaravel/scope.test.ts
 @@ -1,12 +1,13 @@
@@ -999,7 +1087,7 @@ index 57e7b60..e950631 100644
      const manifest = JSON.parse(readFileSync(resolve(PACKAGE_DIR, "package.json"), "utf8")) as { exports: Record<string, string> };
      Assert.assertSame("./src/scope/index.ts", manifest.exports["./scope"]);
  
-@@ -76,7 +82,19 @@ xaravelTest(
+@@ -76,7 +82,23 @@ xaravelTest(
      // No frame read: null, never undefined (AD-9).
      Assert.assertNull(currentFrame());
  
@@ -1013,14 +1101,18 @@ index 57e7b60..e950631 100644
 +    // (case construction, `setUp`, body, `tearDown`), mirroring AD-5's `runInFrame(kind, fn)`." It does not require run
 +    // to return inner's own promise. AD-5.9 ("A unit ends only after ... the frame's `defer` list has drained") makes
 +    // run return a promise that settles with inner's value after inner, and after every promise inner deferred. The
-+    // two reads below check both quotations against the files, so the citation cannot drift from the record.
++    // Maintainer's ruling decisions/ESC-9.2-1.md (Option 1) approves this settle-after-drain check in place of Story
++    // 9.1's identity check: run('test', inner) "may return a promise other than `inner`'s own", settling with inner's
++    // value only after the frame's defer list has drained. The three reads below check the ESC-4.2-1 decision, the
++    // adopted item (2) and the ESC-9.2-1 quotation against their files, so the citations cannot drift from the records.
 +    const flat = (path: string): string => readFileSync(resolve(REPO_ROOT, path), "utf8").replace(/\s+/g, " ");
 +    Assert.assertStringContainsString("The reporter, scope and case contracts are adopted.", flat("decisions/ESC-4.2-1.md"));
 +    Assert.assertStringContainsString("`portedTest` calls it as `run('test', inner)` and awaits its result;", flat("conformance/escalations/ESC-4.2-1.md"));
++    Assert.assertStringContainsString("may return a promise other than `inner`'s own", flat("decisions/ESC-9.2-1.md"));
      const run = (globalThis as Record<symbol, unknown>)[SCOPE_RUN] as <T>(kind: string, fn: () => T) => T;
      const kinds: Array<string | null> = [];
      const inner = async (): Promise<string> => {
-@@ -85,15 +103,36 @@ xaravelTest(
+@@ -85,15 +107,36 @@ xaravelTest(
        kinds.push(currentFrame()?.kind ?? null);
        await new Promise((done) => setTimeout(done, 1));
        kinds.push(currentFrame()?.kind ?? null);
