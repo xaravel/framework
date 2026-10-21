@@ -745,13 +745,14 @@ xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* 
 
 /**
  * The `php-fixtures` step that prepares the Oracle's PHP image: git, a checksum-verified Composer and, on the line
- * ending `PCNTL_INSTALL` (the image's own extension installer), pcntl (ESC-9.3-1).
+ * ending `PCNTL_INSTALL` (the image's own extension installer), pcntl plus the gmp and ftp extensions the locked
+ * framework install requires (ESC-9.3-1).
  */
-const PCNTL_INSTALL = "-php-ext-install pcntl";
+const PCNTL_INSTALL = "-php-ext-install gmp ftp pcntl";
 const PHP_FIXTURES_SETUP = [
   "set -euo pipefail",
   "apt-get update",
-  "apt-get install -y --no-install-recommends git unzip $PHPIZE_DEPS",
+  "apt-get install -y --no-install-recommends git unzip libgmp-dev $PHPIZE_DEPS",
   "curl -fsSLo /usr/local/bin/composer https://getcomposer.org/download/2.10.3/composer.phar",
   'echo "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6  /usr/local/bin/composer" | sha256sum -c -',
   "chmod +x /usr/local/bin/composer",
@@ -880,7 +881,7 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
   expect(oracleBase).toContain("@sha256:");
   expect(phpFixtures["container"]).toEqual({ image: oracleBase });
   expect(phpFixtures["env"]).toEqual({ COMPOSER_ALLOW_SUPERUSER: "1" });
-  // Its first step installs git (for the full-history checkout), pcntl and a checksum-verified Composer in the image.
+  // Its first step installs git (for the full-history checkout), pcntl, gmp, ftp and a checksum-verified Composer.
   const setup = phpFixtures.steps[0]!.run!;
   expect(setup.split("\n").filter((line) => line.endsWith(PCNTL_INSTALL)).length).toBe(1);
   expect(setup.split("\n").filter((line) => !line.endsWith(PCNTL_INSTALL)).join("\n")).toBe(PHP_FIXTURES_SETUP);
