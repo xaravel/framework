@@ -1,7 +1,7 @@
 ---
 div: 12
 title: "PHP member namespaces and magic members"
-cites: ["AD-26"]
+cites: ["AD-26", "AD-7"]
 sources: []
 fewer_assertions: []
 ---

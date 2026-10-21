@@ -1,7 +1,7 @@
 ---
 div: 7
 title: "Discovery without reflection"
-cites: []
+cites: ["AD-10"]
 sources: []
 fewer_assertions: []
 ---
