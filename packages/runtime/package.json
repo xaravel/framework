@@ -13,6 +13,10 @@
     "bun": ">=1.4"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./scope": "./src/scope/index.ts"
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*"
   }
 }
