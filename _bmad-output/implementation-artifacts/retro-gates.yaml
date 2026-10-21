@@ -59,3 +59,11 @@ epic-8:
   blocked: false
   checkpoint_approved: true
   waiting_on_maintainer: []
+epic-9:
+  verdict: null
+  attempts: 0
+  doc: null
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-9-item-1-consequence-rows
