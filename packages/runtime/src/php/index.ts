@@ -1,6 +1,10 @@
+export { toBool, toFloat, toInt, toPhpString } from "./casts";
 export { float, isFloat, PhpFloat } from "./PhpFloat";
 export { hasBrand } from "./hasBrand";
+export { isNumeric } from "./isNumeric";
 export { jsonEncode } from "./jsonEncode";
+export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
 export { PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 export { Ref } from "./Ref";
+export { valueCopy } from "./valueCopy";

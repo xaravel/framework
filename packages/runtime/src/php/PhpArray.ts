@@ -6,6 +6,7 @@
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
 import { normalizeNull } from "./normalizeNull";
+import { floatToInt, INT_MAX, INT_MIN, intKey } from "./phpInt";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const PHP_FLOAT = Symbol.for("xaravel.php.float");
@@ -16,35 +17,8 @@ export type PhpArrayKey = number | bigint | string;
 /** A value PHP accepts as an array key before normalisation (a marked float included). */
 export type PhpKeyInput = PhpArrayKey | boolean | null | PhpFloat;
 
-const INT_MAX = 9223372036854775807n;
-const INT_MIN = -9223372036854775808n;
-const SAFE_MAX = BigInt(Number.MAX_SAFE_INTEGER);
-const SAFE_MIN = BigInt(Number.MIN_SAFE_INTEGER);
-const TWO_64 = 1n << 64n;
-const TWO_63 = 1n << 63n;
 /** A string PHP stores as an int key: canonical decimal (the int range is checked separately). */
 const INTEGER_KEY = /^(?:0|-?[1-9]\d*)$/;
-
-/** An int key: a `number` when safe, else a `bigint`. */
-function intKey(value: bigint): PhpArrayKey {
-  return value >= SAFE_MIN && value <= SAFE_MAX ? Number(value) : value;
-}
-
-/** PHP's float to int key conversion: truncation, 0 for a non-finite float, modulo 2^64 out of range. */
-function floatKey(value: number): PhpArrayKey {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  const truncated = Math.trunc(value);
-  if (Number.isSafeInteger(truncated)) {
-    return truncated === 0 ? 0 : truncated;
-  }
-  let wrapped = BigInt(truncated) % TWO_64;
-  if (wrapped < 0n) {
-    wrapped += TWO_64;
-  }
-  return intKey(wrapped >= TWO_63 ? wrapped - TWO_64 : wrapped);
-}
 
 function isMarkedFloat(value: object): boolean {
   return (value as Record<symbol, unknown>)[PHP_FLOAT] === true;
@@ -82,9 +56,10 @@ function offsetType(key: unknown): string {
 /**
  * `key` normalised as PHP normalises an array key: a canonical decimal string in the int64 range is an int, a bool
  * is 0 or 1, `null` is `""`, and a float (a marked one included) truncates. Throws PHP's `TypeError` for any other
- * value, and for a `bigint` outside the int64 range, which is no PHP int.
+ * value, and for a `bigint` outside the int64 range, which is no PHP int. Internal: the casts read a plain object's keys
+ * through it; the package does not export it.
  */
-function normalizeKey(key: unknown): PhpArrayKey {
+export function normalizeKey(key: unknown): PhpArrayKey {
   switch (typeof key) {
     case "string":
       if (INTEGER_KEY.test(key)) {
@@ -95,7 +70,7 @@ function normalizeKey(key: unknown): PhpArrayKey {
       }
       return key;
     case "number":
-      return floatKey(key);
+      return floatToInt(key);
     case "bigint":
       if (key >= INT_MIN && key <= INT_MAX) {
         return intKey(key);
@@ -108,7 +83,7 @@ function normalizeKey(key: unknown): PhpArrayKey {
         return "";
       }
       if (isMarkedFloat(key)) {
-        return floatKey(Number(key));
+        return floatToInt(Number(key));
       }
       break;
     default:
@@ -179,6 +154,19 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
     this.#entries.set(key, normalizeNull(value) as V);
     this.#advance(key);
     return key;
+  }
+
+  /**
+   * A copy of this array as PHP's `$b = $a` makes it: the same entries in the same order and the same next free index,
+   * so `[5 => 1]`, unset 5, copy, push gives key 6. The values are shared; `valueCopy` copies nested arrays.
+   */
+  copy(): PhpArray<K, V> {
+    const copy = new PhpArray<K, V>();
+    for (const [key, value] of this.#entries) {
+      copy.#entries.set(key, value);
+    }
+    copy.#nextFree = this.#nextFree;
+    return copy;
   }
 
   /** The keys, in insertion order. */
