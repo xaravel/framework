@@ -1,6 +1,17 @@
 // Xaravel Tests for Story 9.5: `PhpArray`, `Ref`, the float marker, `normalizeNull` and `hasBrand` (AD-9.1, AD-9.2,
 // AD-9.4, AD-9.5). One test per acceptance-criterion row of the manifest, in order. XT-runtime-16, 17 and 19 compare
 // with the signed Oracle fixtures of `conformance/oracle-requests/9.5.jsonl`; a missing fixture fails the test.
+//
+// F-10 recorded reason: XT-runtime-16, 17 and 19 are Xaravel Tests (stories/9.5.md has no test_ids), so no Upstream
+// test exists whose inputs these requests could take. Per docs/ops/oracle.md § Per-Story requests ("A Story that needs
+// expected values for other inputs (an Xaravel Differential suite …) commits
+// conformance/oracle-requests/<story-id>.jsonl"; an Xaravel Test ID runs bound to a bare PHPUnit TestCase) and
+// epics.md (Epic 9: "verified by Oracle Differential Tests"), each request evaluates only the PHP construct its
+// acceptance criterion names, and contains no Laravel code and no Upstream fixture:
+//   - XT-runtime-16: the AC's literal `["1" => …, "01" => …, 1.7 => …, true => …, null => …]` plus
+//     `array_key_first([$k => 0])` over PHP's key edge cases;
+//   - XT-runtime-17: `json_encode` of the matrix arrays;
+//   - XT-runtime-19: `is_float` over the listed values.
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -136,6 +147,11 @@ xaravelTest(
     // An int beyond ±(2^53 − 1) is a bigint key; the marked float truncates like a float.
     Assert.assertSame(9223372036854775807n, keyOf("9223372036854775807"));
     Assert.assertSame(1, keyOf(float(1)));
+    Assert.assertSame(1, keyOf(float(1.7)));
+    Assert.assertSame("-9223372036854775809", keyOf("-9223372036854775809"));
+    // A bigint outside the int64 range is no PHP int.
+    assertThrows(() => new PhpArray([[2n ** 63n, 1]]), TypeError, "Cannot access offset of type int on array");
+    assertThrows(() => new PhpArray([[-(2n ** 63n) - 1n, 1]]), TypeError, "Cannot access offset of type int on array");
 
     // Illegal keys: PHP 8.5's message, the type as PHP names it.
     assertThrows(() => new PhpArray([[[] as unknown as string, 1]]), TypeError, "Cannot access offset of type array on array");
@@ -174,6 +190,8 @@ xaravelTest(
     // A stored undefined reads back as null.
     map.set("u", undefined as unknown as string);
     Assert.assertNull(map.get("u"));
+    const pushed = map.push(undefined as unknown as string);
+    Assert.assertNull(map.get(pushed));
 
     // A negative key is followed by key + 1 (PHP >= 8.3), and delete never lowers the next free index.
     const negative = new PhpArray([[-5, "a"]]);
@@ -284,6 +302,12 @@ xaravelTest(
       const plain = decode(encoded) as number;
       const value = "float" in encoded ? float(plain) : plain;
       Assert.assertSame(isFloats[index], isFloat(value), `is_float #${index}`);
+      if ("float" in encoded) {
+        // Unmarked, a float is seen only when it is no int: true for 1.5, NAN, -0.0 and 2^53, false for the integral
+        // 1.0, which is why the marker exists.
+        const noInt = !Number.isFinite(plain) || !Number.isInteger(plain) || Object.is(plain, -0) || Math.abs(plain) > Number.MAX_SAFE_INTEGER;
+        Assert.assertSame(noInt, isFloat(plain), `unmarked is_float #${index}`);
+      }
     });
 
     const one = float(1);

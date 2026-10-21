@@ -5,6 +5,7 @@
 // ±(2^53 − 1), or a `string`. `jsonEncode` encodes it by the list rule.
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
+import { normalizeNull } from "./normalizeNull";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const PHP_FLOAT = Symbol.for("xaravel.php.float");
@@ -144,13 +145,13 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   /** The value at `key`, or null when the key is missing. */
   get(key: K | PhpKeyInput): V | null {
     const normal = normalizeKey(key);
-    return this.#entries.has(normal) ? (this.#entries.get(normal) as V) : null;
+    return this.#entries.get(normal) ?? null;
   }
 
   /** `$a[$key] = $value`. A rewritten key keeps its first position. Returns this array. */
   set(key: K | PhpKeyInput, value: V): this {
     const normal = normalizeKey(key);
-    this.#entries.set(normal, (value === undefined ? null : value) as V);
+    this.#entries.set(normal, normalizeNull(value) as V);
     this.#advance(normal);
     return this;
   }
@@ -175,7 +176,7 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
     if (this.#entries.has(key)) {
       throw new Error("Cannot add element to the array as the next element is already occupied");
     }
-    this.#entries.set(key, (value === undefined ? null : value) as V);
+    this.#entries.set(key, normalizeNull(value) as V);
     this.#advance(key);
     return key;
   }

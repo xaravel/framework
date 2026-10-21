@@ -1,11 +1,11 @@
 // The float marker (AD-9.4, DIV-9.4). PHP's int and float are both a JS `number`, so a float with an integral value
 // (`1.0`) is indistinguishable from the int `1`. Where Upstream depends on the distinction, `float(n)` marks the value:
 // it returns a frozen `PhpFloat`, a `Number` subclass branded `Symbol.for('xaravel.php.float')` on the prototype
-// (AD-9.5), so arithmetic, `+v`, `Number(v)` and comparisons still see the plain number. `isFloat(v)` reads the brand.
+// (AD-9.5), so arithmetic and relational operators, `+v` and `Number(v)` still see the plain number. `===`,
+// `Object.is`, `Map`/`Set` keys and `assertSame` see an object: unwrap with `Number(v)`. `isFloat(v)` reads the brand.
 import { registerClass } from "../registry/registry";
 
 const PHP_FLOAT = Symbol.for("xaravel.php.float");
-
 
 function isMarked(value: unknown): value is PhpFloat {
   return typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[PHP_FLOAT] === true;
@@ -33,10 +33,7 @@ export function float(n: number | PhpFloat): PhpFloat {
   if (isMarked(n)) {
     return n;
   }
-  if (typeof n !== "number") {
-    throw new TypeError(`float(): Argument #1 ($n) must be of type float, ${typeName(n)} given`);
-  }
-  return Object.freeze(new PhpFloat(n));
+  return new PhpFloat(n);
 }
 
 /**
@@ -51,6 +48,15 @@ export function isFloat(v: unknown): boolean {
 }
 
 export class PhpFloat extends Number {
+  /** `n` marked as a PHP float, frozen; throws a `TypeError` for anything that is not a `number`. */
+  constructor(n: number) {
+    if (typeof n !== "number") {
+      throw new TypeError(`float(): Argument #1 ($n) must be of type float, ${typeName(n)} given`);
+    }
+    super(n);
+    Object.freeze(this);
+  }
+
   get [PHP_FLOAT](): true {
     return true;
   }

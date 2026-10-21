@@ -22,7 +22,8 @@ function brandKey(token: unknown): symbol {
 
 /**
  * Whether `classOrInstance` carries the brand `token`: for a class, its prototype's `[key]` is `true`, read without
- * a constructor call; for any other object, its own `[key]` is `true`. Any other value has no brand.
+ * a constructor call; for any other object, its `[key]`, read through its prototype chain, is
+ * `true`. Any other value has no brand.
  */
 export function hasBrand(classOrInstance: unknown, token: unknown): boolean {
   const key = brandKey(token);

@@ -5,8 +5,9 @@
 // A `PhpArray` (detected by its `Symbol.for('xaravel.php.array')` brand, so this file imports nothing that imports the
 // Registry) follows the list rule (AD-9.2, Story 9.5): keys exactly `0..n-1` in order encode as a list, any other
 // key set as an object with the keys as decimal strings. Every other value (a float, marked or not, `bigint`, a class
-// instance, `undefined`, a function, a symbol) throws a `TypeError`. Story 9.8 adds the flags, floats, the `JsonSerializable` / `Arrayable` / `Jsonable` hooks, `bigint`
-// and the Oracle Differential tests, and removes nothing from this core.
+// instance, `undefined`, a function, a symbol) throws a `TypeError`. Story 9.8 adds the flags, floats, the
+// `JsonSerializable` / `Arrayable` / `Jsonable` hooks, `bigint` and the Oracle Differential tests, and removes nothing
+// from this core.
 
 /** PHP's default `json_encode` depth (`$depth = 512`). */
 const DEPTH = 512;
