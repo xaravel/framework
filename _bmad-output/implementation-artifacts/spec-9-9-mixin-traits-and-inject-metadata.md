@@ -2,7 +2,7 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'blocked'
+status: 'in-review'
 baseline_revision: 'a5ecf3905763930a6d18c518924c7e12afa3e303'
 review_loop_iteration: 0
 followup_review_recommended: false
