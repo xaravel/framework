@@ -32,6 +32,7 @@ import { InvalidArgumentException as PhpInvalidArgumentException } from "../php/
 import { LogicException } from "../php/LogicException";
 import { OutOfBoundsException } from "../php/OutOfBoundsException";
 import { RuntimeException as PhpRuntimeException } from "../php/RuntimeException";
+import { linkSplParents } from "../php/SplParent";
 import { UnexpectedValueException } from "../php/UnexpectedValueException";
 import { classNameOf } from "./values";
 
@@ -47,6 +48,9 @@ function normalise(name: string): string {
 
 /** The grader's own exception class named `name`, or null. */
 export function graderExceptionClass(name: string): AnyClass | null {
+  // Links the SPL copies first once the runtime's class map is published (Story 9.12), so a class resolved here
+  // already extends the runtime's SPL classes.
+  linkSplParents();
   exceptionClasses ??= new Map(
     [
       BadFunctionCallException,

@@ -19,6 +19,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
 - Story 9.9: `mixin`, traits and `inject` metadata
 - Story 9.10: PHP exception hierarchy
 - Story 9.11: Grader follow-ups to the runtime value model
+- Story 9.12: Mockery exceptions on the runtime's SPL classes
 
 ## Requirements & Constraints
 
@@ -74,10 +75,12 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
 
 - Stories 9.2 and 9.3 build on 9.1. Story 9.4's `registerTestClass` needs 9.3's overlays.
 - Stories 9.7 and 9.8 need 9.4 (objects by FQCN) and 9.5 (`PhpArray`, float marker). Story 9.10 needs 9.4.
-- Story 9.11 is component `assert` (`@xaravel/assert` / `@xaravel/mockery`) and needs 9.5 and 9.10. It must keep grader isolation: it reads brands and protocols only and never imports `@xaravel/runtime`. It closes these items:
+- Story 9.11 is component `assert` (`@xaravel/assert` only) and needs 9.5 and 9.10. It must keep grader isolation: it reads brands and protocols only and never imports `@xaravel/runtime`. It closes these items:
   - the int/float `===` gap, plus a `===` matrix in `oracle-requests/4.1.jsonl` (ESC-4.1-1);
-  - DIV-9.8 and the message-rewrite API (ESC-4.3-1 items 10 and 11);
+  - the grader's half of DIV-9.8 (its exceptions extend the runtime's SPL classes; `ExceptionComparator` takes only `\Exception`s) and the message-rewrite API (ESC-4.3-1 items 10 and 11);
   - PHPUnit double return types and defaults from surface rows (ESC-4.7-1 item 2);
   - late assertions reported to `xaravel.harness.late` (ESC-5.3-3).
+- Story 9.12 is component `mockery` (split out of 9.11 by ESC-9.11-1) and needs 9.10 and 9.11. Mockery's exceptions (its copies in `packages/mockery/src/php/`) extend the runtime's SPL classes when the runtime's class map is published, and keep today's chain when it is absent (ESC-4.5-1 item 2).
+- DIV-9.8 closes only after both 9.11 and 9.12 land: a planning change then records the closure in `decisions/DIV-9.md`, naming both Stories, and updates the `PORTING.md` line that cites it.
 - Epic 10 (`@xaravel/contracts`) depends on the runtime and supplies the interface tokens whose brands 9.5 and 9.8 detect.
 - Every later Component depends on the runtime.
