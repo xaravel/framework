@@ -27,7 +27,8 @@ import { exportValue, shortenedExport } from "../../src/exporter/Exporter";
 import { serialize, varExport } from "../../src/exporter/VarExport";
 import { Assert, AssertionFailedError, Exception, ExpectationFailedException, phpLooseEquals, phpStrictEquals, TestCase, xaravelTest } from "../../src/index";
 import { runCase47 } from "./double-cells";
-import { BrandedFloat, matrixMismatches, readRequests, readSignedFixture } from "./oracle-values";
+import { BrandedFloat, brandedMatrixMismatches } from "./branded-floats";
+import { readRequests, readSignedFixture } from "./oracle-values";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
 const REQUESTS = "conformance/oracle-requests/9.11.jsonl";
@@ -186,7 +187,7 @@ xaravelTest("XT-assert-17", "given Story 9.5's float marker, phpStrictEquals(1, 
     const path = `${FIXTURES}/${request.sha256}.json`;
     try {
       const output = readSignedFixture(join(root, path), request.sha256, publicKey);
-      const result = matrixMismatches(path, request, output, { loose: phpLooseEquals, strict: phpStrictEquals }, { floats: "branded" });
+      const result = brandedMatrixMismatches(path, request, output, { loose: phpLooseEquals, strict: phpStrictEquals });
       pairs += result.pairs;
       problems.push(...result.mismatches);
     } catch (error) {
