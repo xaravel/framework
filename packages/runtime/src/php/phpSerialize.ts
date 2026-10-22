@@ -18,7 +18,7 @@
 //     property, and otherwise its props (`[Symbol.for('xaravel.php.props')]()`, else the own enumerable string keys),
 //     always as `s:` keys.
 //   `__PHP_Incomplete_Class` writes its original name and raw entries back. A function is a `Closure`, which PHP
-//   refuses: `Serialization of 'Closure' is not allowed` (an `Error` until Story 9.10 ports PHP's `Exception`).
+//   refuses: `Serialization of 'Closure' is not allowed` (PHP's `Exception`, ESC-9.7-1 part 4).
 // - Back-references as `php_add_var_hash` numbers them: every serialized value takes the next slot (an emitted `r:`
 //   included), map keys and the array `__serialize()` returns take none, and a repeated object is `r:<slot>;`.
 //
@@ -26,9 +26,11 @@
 // `phpSerialize`. Enums, `Serializable` and PHP references have no AD-9 value, so `E:`, `C:` and `R:` are never written.
 import { fqcn } from "../registry/registry";
 import { arrayEntries, floatValue, phpType } from "./casts";
+import { Exception } from "./Exception";
 import { gcvt } from "./gcvt";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 import { declaredProps, LONE_SURROGATE, objectProps, objectTable, unmangle, utf8 } from "./mangle";
+import { TypeError as PhpTypeError } from "./TypeError";
 
 const RECURSION = "Nesting level too deep - recursive dependency?";
 
@@ -63,7 +65,7 @@ function serializeMembers(name: string, members: readonly (readonly [number | bi
 
 function serializeObject(o: object, state: State): string {
   if (typeof o === "function") {
-    throw new Error("Serialization of 'Closure' is not allowed");
+    throw new Exception("Serialization of 'Closure' is not allowed");
   }
   if (o instanceof __PHP_Incomplete_Class) {
     return serializeMembers(o.__PHP_Incomplete_Class_Name, o.entries(), state);
@@ -74,7 +76,7 @@ function serializeObject(o: object, state: State): string {
   if (typeof serialize === "function") {
     const data: unknown = (serialize as () => unknown).call(o);
     if (phpType(data) !== "array") {
-      throw new TypeError(`${name}::__serialize() must return an array`);
+      throw new PhpTypeError(`${name}::__serialize() must return an array`);
     }
     return serializeMembers(name, arrayEntries(data as object), state);
   }
@@ -158,8 +160,8 @@ function serializeValue(v: unknown, state: State): string {
 
 /**
  * PHP's `serialize($value)`: the bytes PHP writes for the same value, as a JS string (its UTF-8 encoding is the
- * payload). `undefined` reads as `null`. Throws `fqcn()`'s `TypeError` for an object of an unregistered class, an
- * `Error` `Serialization of 'Closure' is not allowed` for a function, PHP's `TypeError`
+ * payload). `undefined` reads as `null`. Throws `fqcn()`'s `TypeError` for an object of an unregistered class, PHP's
+ * `Exception` `Serialization of 'Closure' is not allowed` for a function, PHP's `TypeError`
  * `<FQCN>::__serialize() must return an array`, a `TypeError` for a lone surrogate, and an `Error`
  * `Nesting level too deep - recursive dependency?` for a JS array that contains itself.
  */

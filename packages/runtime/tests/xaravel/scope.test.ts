@@ -9,6 +9,7 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import * as scope from "@xaravel/runtime/scope";
 import { currentFrame, frameDefer, frameSlot, interleave, runInFrame, ScopeFrameException } from "@xaravel/runtime/scope";
+import { Exception, RuntimeException } from "@xaravel/runtime/php";
 import * as root from "../../src/index";
 import { fqcn, registerClass } from "../../src/registry/registry";
 
@@ -169,8 +170,9 @@ xaravelTest(
       `Object.defineProperty(globalThis, Symbol.for("xaravel.scope.run"), { value: () => null }); try { await import("@xaravel/runtime/scope"); console.log("installed"); } catch (e) { console.log(e.name + ": " + e.message); }`,
     );
     Assert.assertSame(0, taken.code, taken.err);
+    // The name is the FQCN brand PHP's throwables carry (Story 9.10).
     Assert.assertSame(
-      "ScopeFrameException: Symbol.for('xaravel.scope.run') was already defined by other code or another copy of @xaravel/runtime; @xaravel/runtime will not install over it",
+      "Xaravel\\Runtime\\Scope\\ScopeFrameException: Symbol.for('xaravel.scope.run') was already defined by other code or another copy of @xaravel/runtime; @xaravel/runtime will not install over it",
       taken.out.trim(),
       taken.err,
     );
@@ -282,7 +284,10 @@ xaravelTest("XT-runtime-3", "code with no active frame that writes a frame slot 
   const thrown = thrownBy(() => slot.set(7));
   Assert.assertInstanceOf(ScopeFrameException, thrown);
   Assert.assertInstanceOf(Error, thrown);
-  Assert.assertSame("ScopeFrameException", (thrown as Error).name);
+  // A PHP RuntimeException since Story 9.10 (ESC-9.1-2), named by its FQCN brand.
+  Assert.assertInstanceOf(RuntimeException, thrown);
+  Assert.assertInstanceOf(Exception, thrown);
+  Assert.assertSame("Xaravel\\Runtime\\Scope\\ScopeFrameException", (thrown as Error).name);
   Assert.assertSame("Cannot write the frame slot xt-runtime-3.value with no active Scope Frame; run the code inside runInFrame()", (thrown as Error).message);
   Assert.assertSame("Xaravel\\Runtime\\Scope\\ScopeFrameException", fqcn(ScopeFrameException));
   Assert.assertSame("Xaravel\\Runtime\\Scope\\ScopeFrameException", fqcn(thrown as object));

@@ -14,8 +14,8 @@
 // `JsnSerial`, implementing PHP's `JsonSerializable` and Laravel's `Arrayable` / `Jsonable` contracts), and contain no
 // Upstream fixture.
 //
-// ESC-9.8-1 part 1: until Story 9.10 ports `JsonException` and `ValueError`, a JSON error throws an `Error` with PHP's
-// message and code, so these rows assert the Oracle's message and code and record its class.
+// ESC-9.8-1 part 1: a JSON error throws PHP's `JsonException` (or `ValueError` for a bad depth) with PHP's message and
+// code, ported by Story 9.10, so these rows assert the Oracle's class (as `fqcn()`), message and code.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -46,6 +46,7 @@ import {
   JSON_UNESCAPED_LINE_TERMINATORS,
   JSON_UNESCAPED_SLASHES,
   JSON_UNESCAPED_UNICODE,
+  JsonException,
   jsonDecode,
   jsonEncode,
   jsonLastError,
@@ -53,6 +54,7 @@ import {
   PhpArray,
   PhpFloat,
   stdClass,
+  ValueError,
 } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
 import { fqcn, registerClass } from "@xaravel/runtime/registry";
@@ -118,12 +120,17 @@ function thrownBy(fn: () => unknown): unknown {
   return null;
 }
 
-/** Asserts `fn` throws an `Error` with `message` and the numeric `code` (ESC-9.8-1 part 1). */
-function assertJsonError(fn: () => unknown, message: string, code: number, at: string): void {
+/**
+ * Asserts `fn` throws the PHP class `phpClass` (`JsonException` unless given; its `fqcn()`) with `message` and the
+ * numeric `code`, read as a property and through `getCode()` (ESC-9.8-1 part 1, Story 9.10).
+ */
+function assertJsonError(fn: () => unknown, message: string, code: number, at: string, phpClass = "JsonException"): void {
   const error = thrownBy(fn);
-  Assert.assertTrue(error instanceof Error, `${at}: expected an Error: ${String(error)}`);
+  Assert.assertTrue(error instanceof (phpClass === "ValueError" ? ValueError : JsonException), `${at}: expected a ${phpClass}: ${String(error)}`);
+  Assert.assertSame(phpClass, fqcn(error as Error), at);
   Assert.assertSame(message, (error as Error).message, at);
   Assert.assertSame(code, (error as { code?: unknown }).code, at);
+  Assert.assertSame(code, (error as JsonException).getCode(), at);
 }
 
 /** The `[key, value]` pairs of a JS PHP array (a list, a plain object or a branded array), or null for no array. */
@@ -417,9 +424,9 @@ xaravelTest(
         const expected = results[i]![j];
         const at = `case #${j}, mode ${mode}`;
         if (Array.isArray(expected)) {
-          // ESC-9.8-1 part 1: PHP throws a JsonException; the port throws an Error with its message and code.
+          // ESC-9.8-1 part 1: the Oracle's class, message and code.
           Assert.assertSame("JsonException", expected[0], at);
-          assertJsonError(() => jsonEncode(value, mode, depth), expected[1] as string, expected[2] as number, at);
+          assertJsonError(() => jsonEncode(value, mode, depth), expected[1] as string, expected[2] as number, at, expected[0] as string);
         } else {
           Assert.assertSame(expected, jsonEncode(value, mode, depth), at);
         }
@@ -714,7 +721,7 @@ xaravelTest(
     Assert.assertSame(null, jsonDecode(null));
     Assert.assertSame(null, jsonDecode(undefined));
     assertJsonError(() => jsonDecode(null, true, 512, JSON_THROW_ON_ERROR), "Syntax error", JSON_ERROR_SYNTAX, "null");
-    assertJsonError(() => jsonDecode("1", true, 2147483648), "json_decode(): Argument #3 ($depth) must be less than 2147483647", 0, "depth 2^31");
+    assertJsonError(() => jsonDecode("1", true, 2147483648), "json_decode(): Argument #3 ($depth) must be less than 2147483647", 0, "depth 2^31", "ValueError");
 
     // The error rows.
     const errors = oracle("XT-runtime-30", "$bad");
@@ -734,7 +741,7 @@ xaravelTest(
           assertSamePhpValue(expected.value, jsonDecode(json, assoc, depth, flags), at);
         } else {
           Assert.assertSame("JsonException", expected.throws, at);
-          assertJsonError(() => jsonDecode(json, assoc, depth, flags), expected.message, expected.code, at);
+          assertJsonError(() => jsonDecode(json, assoc, depth, flags), expected.message, expected.code, at, expected.throws);
         }
       });
     });
@@ -746,10 +753,10 @@ xaravelTest(
       if ("value" in expected) {
         assertSamePhpValue(expected.value, calls[index]!(), `edge #${index}`);
       } else {
-        assertJsonError(calls[index]!, expected.message, expected.code, `edge #${index} (${expected.throws})`);
+        assertJsonError(calls[index]!, expected.message, expected.code, `edge #${index} (${expected.throws})`, expected.throws);
       }
     });
-    assertJsonError(() => jsonDecode("1", true, 0), "json_decode(): Argument #3 ($depth) must be greater than 0", 0, "depth 0");
+    assertJsonError(() => jsonDecode("1", true, 0), "json_decode(): Argument #3 ($depth) must be greater than 0", 0, "depth 0", "ValueError");
     assertJsonError(() => jsonDecode("[", true, 512, JSON_THROW_ON_ERROR), "Syntax error", JSON_ERROR_SYNTAX, "[");
     lastErrorSequence("XT-runtime-30", DECODE_STEPS);
     lastErrorLocalRows();
@@ -905,10 +912,10 @@ function lastErrorSequence(id: string, steps: readonly Step[]): void {
       if (tag === "value") {
         assertSamePhpValue(expected[1], call(), at);
       } else {
-        // ESC-9.8-1 part 1: PHP throws a JsonException or ValueError; the port throws an Error with its message and code.
+        // ESC-9.8-1 part 1: the Oracle's class (JsonException or ValueError), message and code.
         Assert.assertSame("throws", tag, at);
         Assert.assertTrue(["JsonException", "ValueError"].includes(decode(expected[1]) as string), at);
-        assertJsonError(call, decode(expected[2]) as string, Number(decode(expected[3])), at);
+        assertJsonError(call, decode(expected[2]) as string, Number(decode(expected[3])), at, decode(expected[1]) as string);
       }
     });
   });

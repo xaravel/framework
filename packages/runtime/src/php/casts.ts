@@ -1,6 +1,6 @@
 // PHP's scalar casts over the AD-9 value model (Story 9.6): `(int)`, `(float)`, `(string)` and `(bool)` as PHP 8.5's
-// `zval_get_long`, `zval_get_double`, `zval_get_string` and `zend_is_true` give them. The internal `phpType`,
-// `isTrue`, `formatFloat` and `arrayEntries` are shared with `spaceship` and `valueCopy`.
+// `zval_get_long`, `zval_get_double`, `zval_get_string` and `zend_is_true` give them. The internal `phpType`
+// (re-exported from `phpType.ts`), `isTrue`, `formatFloat` and `arrayEntries` are shared with `spaceship` and `valueCopy`.
 //
 // Value model (AD-9): `undefined` reads as `null`; an int is a safe-integer `number` (not `-0`) or a `bigint` in the
 // int64 range; a float is any other `number` or a marked `PhpFloat`; a PHP array is an `Array`, a plain object
@@ -8,61 +8,21 @@
 // `[key, value]` iterator; any other object or a function is a PHP object. PHP's warnings and notices
 // (`Array to string conversion`, `Object of class X could not be converted to int`) are not reproduced: PHP still
 // returns the value, and so do the casts.
-import { fqcn } from "../registry/registry";
+import { Error as PhpError } from "./Error";
 import { parseNumeric } from "./isNumeric";
 import { normalizeKey, type PhpArrayKey } from "./PhpArray";
-import { capFloatToInt, floatToInt, INT_MAX, INT_MIN, intKey } from "./phpInt";
+import { capFloatToInt, floatToInt, intKey } from "./phpInt";
+import { className, phpType } from "./phpType";
+import { TypeError as PhpTypeError } from "./TypeError";
+
+export { className, phpType, type PhpType } from "./phpType";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
-const PHP_FLOAT = Symbol.for("xaravel.php.float");
-
-/** A PHP type, as `phpType` reads it from a JS value. */
-export type PhpType = "null" | "bool" | "int" | "float" | "string" | "array" | "object";
 
 /** The `toString` methods JS objects inherit, which are no `__toString` port. */
 const INTRINSIC_TO_STRING: ReadonlySet<unknown> = new Set<unknown>(
   [Object, Function, Error, Array, Number, Boolean, String, Symbol, BigInt, Date, RegExp].map((intrinsic) => Reflect.get(intrinsic.prototype as object, "toString") as unknown),
 );
-
-/**
- * The PHP type of `v`. Throws a `TypeError` for a `bigint` outside the int64 range, which is no PHP int, and for a
- * symbol, which has no PHP counterpart.
- */
-export function phpType(v: unknown): PhpType {
-  switch (typeof v) {
-    case "undefined":
-      return "null";
-    case "boolean":
-      return "bool";
-    case "number":
-      return Number.isSafeInteger(v) && !Object.is(v, -0) ? "int" : "float";
-    case "bigint":
-      if (v < INT_MIN || v > INT_MAX) {
-        throw new TypeError(`The bigint ${v} is outside the int64 range and no PHP int`);
-      }
-      return "int";
-    case "string":
-      return "string";
-    case "function":
-      return "object";
-    case "symbol":
-      throw new TypeError("A symbol is no PHP value");
-    default:
-      break;
-  }
-  if (v === null) {
-    return "null";
-  }
-  const record = v as Record<symbol, unknown>;
-  if (record[PHP_FLOAT] === true) {
-    return "float";
-  }
-  if (Array.isArray(v) || record[PHP_ARRAY] === true) {
-    return "array";
-  }
-  const prototype: unknown = Object.getPrototypeOf(v);
-  return prototype === Object.prototype || prototype === null ? "array" : "object";
-}
 
 /** The `[key, value]` pairs of a PHP array (see `phpType`), in PHP order; `undefined` values read as `null`. */
 export function arrayEntries(v: object): [PhpArrayKey, unknown][] {
@@ -107,18 +67,6 @@ export function floatValue(v: unknown): number {
 export function stringPort(o: object): (() => unknown) | null {
   const method: unknown = (o as { toString?: unknown }).toString;
   return typeof method === "function" && !INTRINSIC_TO_STRING.has(method) ? (method as () => unknown) : null;
-}
-
-/** The class name PHP's messages give an object: its Registry FQCN, `Closure` for a function, else `object`. */
-export function className(o: object): string {
-  if (typeof o === "function") {
-    return "Closure";
-  }
-  try {
-    return fqcn(o);
-  } catch {
-    return "object";
-  }
 }
 
 /** PHP's `zend_is_true`. */
@@ -287,11 +235,11 @@ export function toPhpString(v: unknown): string {
   const object = v as object;
   const port = stringPort(object);
   if (port === null) {
-    throw new Error(`Object of class ${className(object)} could not be converted to string`);
+    throw new PhpError(`Object of class ${className(object)} could not be converted to string`);
   }
   const result: unknown = port.call(object);
   if (typeof result !== "string") {
-    throw new TypeError(`${className(object)}::__toString(): Return value must be of type string, ${phpType(result) === "object" ? className(result as object) : phpType(result)} returned`);
+    throw new PhpTypeError(`${className(object)}::__toString(): Return value must be of type string, ${phpType(result) === "object" ? className(result as object) : phpType(result)} returned`);
   }
   return result;
 }

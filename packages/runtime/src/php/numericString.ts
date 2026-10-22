@@ -1,7 +1,6 @@
 // PHP's numeric strings (AD-9, Stories 9.6 and 9.8): `_is_numeric_string_ex` of PHP 8.5's `Zend/zend_operators.c`. It
-// imports nothing, so `jsonEncode` (`JSON_NUMERIC_CHECK`) may load it before the Class Registry has finished evaluating
-// (the registry imports `jsonEncode`). `isNumeric.ts` re-exports it for the casts and `looseEquals`. The package does
-// not export this module.
+// imports nothing; `jsonEncode` reads it for `JSON_NUMERIC_CHECK`, and `isNumeric.ts` re-exports it for the casts and
+// `looseEquals`. The package does not export this module.
 
 /** A numeric string as `_is_numeric_string_ex` reads it. */
 export interface NumericString {

@@ -18,15 +18,15 @@
 //   `JsonSerializable` encodes its `toArray()`.
 // - Errors, in PHP's order: a symbol (unsupported type), a lone surrogate, `INF`/`NAN`, recursion and nesting deeper
 //   than `depth` set PHP's `JSON_ERROR_*` code. The result is then `false`; with `JSON_PARTIAL_OUTPUT_ON_ERROR` the
-//   string with PHP's stand-ins; with `JSON_THROW_ON_ERROR` (and without the partial flag) an `Error` with PHP's message
-//   and code (ESC-9.8-1 part 1).
+//   string with PHP's stand-ins; with `JSON_THROW_ON_ERROR` (and without the partial flag) PHP's `JsonException` with
+//   PHP's message and code (ESC-9.8-1 part 1).
 // - `json_last_error()` (ESC-9.8-1 part 2): each call records its code through `recordJsonError`, except under
 //   `JSON_THROW_ON_ERROR` without the partial flag, as PHP does. The top-level Jsonable hook records nothing: PHP's
 //   `json_encode` never runs on that path (Laravel calls `toJson()` instead), so the record is left as it was.
 //
-// Load safety: the Class Registry imports this file (`writeClassmap`), so it imports only modules that call no Registry
-// function at load time, directly or transitively. `casts.ts`, `isNumeric.ts`, `PhpArray.ts`, `PhpFloat.ts`,
-// `stdClass.ts`, `phpSerialize.ts` and every class file are therefore out: brands are read by `Symbol.for` key.
+// Load safety: the Class Registry no longer imports this file (Story 9.10: `registry/index.ts` installs it as the
+// classmap encoder), so loading it first in a fresh process is safe; its only class file is `JsonException`, through
+// `jsonConstants.ts`. Brands are still read by `Symbol.for` key, so it needs no value-model class file.
 import { gcvt } from "./gcvt";
 import { hasBrand } from "./hasBrand";
 import {
@@ -81,7 +81,7 @@ type Key = number | bigint | string;
 /**
  * PHP's `json_encode($value, $flags, $depth)`: the JSON text PHP writes for the same value, `false` on an error
  * (the partial text under `JSON_PARTIAL_OUTPUT_ON_ERROR`). Under `JSON_THROW_ON_ERROR` without the partial flag, an
- * error throws an `Error` with PHP's message and `JSON_ERROR_*` code. An exception `jsonSerialize()`, `toJson()` or
+ * error throws PHP's `JsonException` with PHP's message and `JSON_ERROR_*` code. An exception `jsonSerialize()`, `toJson()` or
  * `toArray()` throws propagates.
  */
 export function jsonEncode(value: unknown, flags: number = 0, depth: number = 512): string | false {

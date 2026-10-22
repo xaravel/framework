@@ -5,8 +5,10 @@
 // ±(2^53 − 1), or a `string`. `jsonEncode` encodes it by the list rule.
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
+import { Error as PhpError } from "./Error";
 import { normalizeNull } from "./normalizeNull";
 import { floatToInt, INT_MAX, INT_MIN, intKey } from "./phpInt";
+import { TypeError as PhpTypeError } from "./TypeError";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const PHP_FLOAT = Symbol.for("xaravel.php.float");
@@ -89,7 +91,7 @@ export function normalizeKey(key: unknown): PhpArrayKey {
     default:
       break;
   }
-  throw new TypeError(`Cannot access offset of type ${offsetType(key)} on array`);
+  throw new PhpTypeError(`Cannot access offset of type ${offsetType(key)} on array`);
 }
 
 /** The int value of a normalised key, or null for a string key. */
@@ -149,7 +151,7 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   push(value: V): PhpArrayKey {
     const key = intKey(this.#nextFree ?? 0n);
     if (this.#entries.has(key)) {
-      throw new Error("Cannot add element to the array as the next element is already occupied");
+      throw new PhpError("Cannot add element to the array as the next element is already occupied");
     }
     this.#entries.set(key, normalizeNull(value) as V);
     this.#advance(key);

@@ -1,6 +1,5 @@
 // PHP's `zend_gcvt` at `serialize_precision = -1` (Stories 9.7 and 9.8), shared by `phpSerialize` (`d:` floats, upper-case
-// `E`) and `jsonEncode` (lower-case `e`). It imports nothing, so `jsonEncode` may load it before the Class Registry has
-// finished evaluating (the registry imports `jsonEncode`). The package does not export this module.
+// `E`) and `jsonEncode` (lower-case `e`). It imports nothing. The package does not export this module.
 
 /**
  * A float as `zend_gcvt(x, 17, '.', exponent)` writes it over the shortest round-trip digits (`serialize_precision =

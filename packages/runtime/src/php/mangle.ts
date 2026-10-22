@@ -1,8 +1,7 @@
 // Internal helpers the codecs share (Stories 9.7 and 9.8): PHP's property-name mangling, a class's PHP property table
 // (ESC-9.7-1 part 1), an object's properties as `serialize()` and `json_encode` read them, and the UTF-8 checks. The
 // package does not export this module. It calls the Registry's `fqcn` when a class with a PHP property table is first
-// read (to mangle its private properties) and on error paths, never at load time, so `jsonEncode` may import it although
-// the Registry imports `jsonEncode`.
+// read (to mangle its private properties) and on error paths, never at load time.
 import { fqcn } from "../registry/registry";
 
 /** A lone (unpaired) surrogate, which has no UTF-8 form. */

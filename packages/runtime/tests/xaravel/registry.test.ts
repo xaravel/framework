@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { jsonEncode } from "@xaravel/runtime/php";
+import { Error as PhpError, jsonEncode } from "@xaravel/runtime/php";
 import { fqcn, loadAutoload, loadClassmap, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "@xaravel/runtime/registry";
 import { bindToFrame, interleave, runInFrame, runInNarrowFrame, runInRootFrame, ScopeFrameException } from "@xaravel/runtime/scope";
 
@@ -88,6 +88,9 @@ xaravelTest(
   async () => {
     const miss = thrownBy(() => resolveClass("App\\Missing"));
     Assert.assertInstanceOf(Error, miss);
+    // PHP's Error (Story 9.10), as the Registry's comment names it.
+    Assert.assertInstanceOf(PhpError, miss);
+    Assert.assertSame("Error", fqcn(miss as object));
     Assert.assertSame('Class "App\\Missing" not found', (miss as Error).message);
     Assert.assertSame('Class "App\\Missing" not found', (thrownBy(() => resolveClass("\\App\\Missing")) as Error).message);
 
@@ -95,6 +98,8 @@ xaravelTest(
       loadAutoload(writePackageJson(null));
       const asyncMiss = await rejectionOf(resolveClassAsync("App\\Missing"));
       Assert.assertInstanceOf(Error, asyncMiss);
+      Assert.assertInstanceOf(PhpError, asyncMiss);
+      Assert.assertSame("Error", fqcn(asyncMiss as object));
       Assert.assertSame('Class "App\\Missing" not found', (asyncMiss as Error).message);
     } finally {
       reset();

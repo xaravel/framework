@@ -27,11 +27,13 @@
 //   (a PHP array that contains itself through a reference).
 import { resolveClass, type RegisteredClass } from "../registry/registry";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
-import { arrayEntries, className, phpType } from "./casts";
+import { arrayEntries, phpType } from "./casts";
 import { LONE_SURROGATE, propertyTable, unmangle, utf8 } from "./mangle";
 import { float } from "./PhpFloat";
 import { arrayFromEntries, type PhpArrayKey } from "./PhpArray";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
+import { phpTypeName } from "./phpType";
+import { TypeError as PhpTypeError } from "./TypeError";
 import { valueCopy } from "./valueCopy";
 
 /** PHP's `unserialize_max_depth` default. */
@@ -446,15 +448,6 @@ function findClass(name: string): RegisteredClass | null {
   }
 }
 
-/** PHP's name for the type of `v` in a `TypeError` message: `null`, `true`, `false`, `int`, … or the class. */
-function typeName(v: unknown): string {
-  const type = phpType(v);
-  if (type === "bool") {
-    return v === true ? "true" : "false";
-  }
-  return type === "object" ? className(v as object) : type;
-}
-
 function allowedBy(option: unknown): (name: string) => boolean {
   if (option === true) {
     return () => true;
@@ -463,12 +456,12 @@ function allowedBy(option: unknown): (name: string) => boolean {
     return () => false;
   }
   if (typeof option === "symbol" || phpType(option) !== "array") {
-    throw new TypeError(`unserialize(): Option "allowed_classes" must be of type array|bool, ${typeof option === "symbol" ? "symbol" : typeName(option)} given`);
+    throw new PhpTypeError(`unserialize(): Option "allowed_classes" must be of type array|bool, ${phpTypeName(option)} given`);
   }
   const names = new Set<string>();
   for (const [, name] of arrayEntries(option as object)) {
     if (typeof name !== "string") {
-      throw new TypeError(`unserialize(): Option "allowed_classes" must be an array of class names, ${typeName(name)} given`);
+      throw new PhpTypeError(`unserialize(): Option "allowed_classes" must be an array of class names, ${phpTypeName(name)} given`);
     }
     names.add(name.toLowerCase());
   }
@@ -485,7 +478,7 @@ function allowedBy(option: unknown): (name: string) => boolean {
 export function phpUnserialize(data: string | null | undefined, { allowedClasses = true }: PhpUnserializeOptions = {}): unknown {
   const text: unknown = data ?? "";
   if (typeof text !== "string") {
-    throw new TypeError(`unserialize(): Argument #1 ($data) must be of type string, ${typeof text === "symbol" ? "symbol" : typeName(text)} given`);
+    throw new PhpTypeError(`unserialize(): Argument #1 ($data) must be of type string, ${phpTypeName(text)} given`);
   }
   const allowed = allowedBy(allowedClasses);
   if (LONE_SURROGATE.test(text)) {

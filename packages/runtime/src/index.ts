@@ -1,5 +1,7 @@
 // Installs the Symbol.metadata polyfill before anything else loads (AD-4).
 import "./metadata/polyfill";
+// Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
+import "./php/phpClasses";
 export {
   bindToFrame,
   CSP_NONCE_SLOT,
@@ -26,6 +28,28 @@ export {
 } from "./scope/index";
 export {
   __PHP_Incomplete_Class,
+  ArgumentCountError,
+  ArithmeticError,
+  BadFunctionCallException,
+  BadMethodCallException,
+  DivisionByZeroError,
+  DomainException,
+  Error,
+  ErrorException,
+  Exception,
+  InvalidArgumentException,
+  JsonException,
+  LengthException,
+  LogicException,
+  OutOfBoundsException,
+  OutOfRangeException,
+  OverflowException,
+  RangeException,
+  RuntimeException,
+  TypeError,
+  UnderflowException,
+  UnexpectedValueException,
+  ValueError,
   float,
   hasBrand,
   isFloat,

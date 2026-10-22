@@ -18,8 +18,8 @@
 //   `stdClass` with the keys verbatim, where a key starting with `\0` is `JSON_ERROR_INVALID_PROPERTY_NAME`.
 //   A JS object lists integer-like keys first, so such a `stdClass` key is read back out of PHP's order (`phpUnserialize`
 //   builds `stdClass` the same way).
-// - Errors: the result is `null`; under `JSON_THROW_ON_ERROR`, an `Error` with PHP's message and code (ESC-9.8-1
-//   part 1). A `depth` below 1 throws PHP's `ValueError` message as an `Error`.
+// - Errors: the result is `null`; under `JSON_THROW_ON_ERROR`, PHP's `JsonException` with PHP's message and code
+//   (ESC-9.8-1 part 1). A `depth` below 1 throws PHP's `ValueError`.
 //
 // - `json_last_error()` (ESC-9.8-1 part 2): without `JSON_THROW_ON_ERROR`, each call records its code through
 //   `recordJsonError` (`JSON_ERROR_NONE` first, so a `depth` `ValueError` leaves 0, as in PHP); under it, none.
@@ -45,6 +45,7 @@ import { arrayFromEntries } from "./PhpArray";
 import { float } from "./PhpFloat";
 import { intKey } from "./phpInt";
 import { stdClass } from "./stdClass";
+import { ValueError } from "./ValueError";
 
 /** `INT_MAX`, the largest `depth` PHP accepts. */
 const DEPTH_LIMIT = 2147483647;
@@ -70,8 +71,8 @@ const EOI: Token = { type: "eoi", value: null };
 
 /**
  * PHP's `json_decode($json, $associative, $depth, $flags)`: the decoded value in AD-9 form, or `null` on an error.
- * Under `JSON_THROW_ON_ERROR` an error throws an `Error` with PHP's message and `JSON_ERROR_*` code. Throws PHP's
- * `ValueError` message when `depth` is below 1 (an empty `json` is a syntax error first, as in PHP). A `null` or
+ * Under `JSON_THROW_ON_ERROR` an error throws PHP's `JsonException` with PHP's message and `JSON_ERROR_*` code. Throws
+ * PHP's `ValueError` when `depth` is below 1 (an empty `json` is a syntax error first, as in PHP). A `null` or
  * `undefined` `json` reads as "".
  */
 export function jsonDecode(json: string | null | undefined, associative: boolean | null = null, depth: number = 512, flags: number = 0): unknown {
@@ -113,11 +114,9 @@ export function jsonDecode(json: string | null | undefined, associative: boolean
   }
 }
 
-/** PHP's `ValueError` for argument #3 (ESC-9.8-1 part 1: an `Error` with PHP's message and code 0). */
-function valueError(message: string): Error {
-  const error = new Error(`json_decode(): Argument #3 ($depth) ${message}`);
-  Object.defineProperty(error, "code", { value: 0, enumerable: true, writable: true, configurable: true });
-  return error;
+/** PHP's `ValueError` for argument #3, with code 0 (ESC-9.8-1 part 1). */
+function valueError(message: string): ValueError {
+  return new ValueError(`json_decode(): Argument #3 ($depth) ${message}`);
 }
 
 class Parser {
