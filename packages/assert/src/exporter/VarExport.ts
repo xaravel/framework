@@ -3,7 +3,7 @@
 // failure with var_export; the canonicalizing ArrayComparator orders arrays and
 // objects by their serialized form. Internal to the grader.
 import { arrayEntries, isPhpArray, type Key } from "../comparison/PhpComparison";
-import { classNameOf, formatDouble, isResource } from "../comparison/PhpValues";
+import { classNameOf, formatDouble, isMarkedFloat, isResource, unmarkFloat } from "../comparison/PhpValues";
 import { objectToArray } from "./Exporter";
 
 function exportString(value: string): string {
@@ -23,7 +23,9 @@ function key(name: Key): string {
   return typeof name === "string" ? exportString(name) : String(name);
 }
 
-function varExportAt(value: unknown, level: number): string {
+function varExportAt(given: unknown, level: number): string {
+  // A marked float exports as the float it stands for (`1.0`), as `var_export` does.
+  const value = unmarkFloat(given);
   if (value === undefined) {
     // AD-9 forbids `undefined`, so a message never disguises it as `NULL`.
     return "undefined";
@@ -35,7 +37,8 @@ function varExportAt(value: unknown, level: number): string {
     case "boolean":
       return value ? "true" : "false";
     case "number":
-      return Number.isSafeInteger(value) ? String(value) : exportFloat(value);
+      // A plain `-0` exports `0`, as before Story 9.11: XT-mockery-10 (outside the Story's paths) holds that form.
+      return Number.isSafeInteger(value) && !isMarkedFloat(given) ? String(value) : exportFloat(value);
     case "bigint":
       return value.toString();
     case "string":
@@ -80,7 +83,8 @@ function serializeKey(name: Key): string {
 }
 
 /** `serialize($value)`. A Closure is not serializable, as in PHP. */
-export function serialize(value: unknown): string {
+export function serialize(given: unknown): string {
+  const value = unmarkFloat(given);
   if (value === null || value === undefined) {
     return "N;";
   }
@@ -88,7 +92,7 @@ export function serialize(value: unknown): string {
     case "boolean":
       return `b:${value ? 1 : 0};`;
     case "number":
-      return Number.isSafeInteger(value) ? `i:${value};` : `d:${formatDouble(value, 17)};`;
+      return Number.isSafeInteger(value) && !isMarkedFloat(given) ? `i:${value};` : `d:${formatDouble(value, 17)};`;
     case "bigint":
       return `i:${value.toString()};`;
     case "string":

@@ -24,6 +24,28 @@ None at run time.
 
 `Assert` also has `assertThat(value, constraint)`, the file, directory and JSON assertions, `fail()` and `markTestSkipped()`, and the constraint factories `logicalAnd`, `greaterThanOrEqual`, `lessThanOrEqual`, `isInstanceOf` and `stringContains(string, case = true)` (PHPUnit passes `case` as the constraint's `ignoreCase`). Laravel's `assertArraySubset` records the kind `assertThat`, the PHPUnit assertion it calls (`decisions/ESC-4.3-1.md` item 8).
 
+## PHP values: ints and floats
+
+The grader reads PHP values by brand and protocol only and never imports `@xaravel/runtime` (AD-2). A number's PHP type is:
+
+- int: a `bigint`, or a safe-integer `number` other than `-0`;
+- float: any other `number` (a fraction, `-0`, `INF`, `NAN`, or beyond ±(2^53 − 1)), and any value carrying the runtime's float marker: a non-null object whose `[Symbol.for('xaravel.php.float')]` is `true` (`float(n)`, Story 9.5, DIV-9.4), whose value is `Number(v)`.
+
+`assertSame`, `IsIdentical` and `willReturnMap` rows use PHP `===`: two numbers are identical only when both are ints with equal values, or both floats with equal values (`NAN` never; `0.0 === -0.0`). So `assertSame(1, float(1))` fails with `Failed asserting that 1.0 is identical to 1.`, and two separate `float(1)` values are identical. `==`, ordering, `assertEquals`, `assertIsFloat` / `assertIsInt`, `gettype` and the exporters read a marked float as the plain number with PHP type float, so an integral float exports as `1.0`, as PHPUnit's exporter and `var_export` do. A plain `-0` still prints `0` through `phpToString` and `phpVarExport` (the forms `@xaravel/mockery` prints); PHPUnit's exporter prints it `-0.0`. The `===`/`==` matrix of integral floats is checked against the Oracle (XT-assert-17, `conformance/oracle-requests/9.11.jsonl`).
+
+## Rewriting a caught failure's message
+
+Laravel's `TestResponseAssert::appendMessageToException` rewrites a caught `ExpectationFailedException`'s message through reflection. A port calls the `Symbol.for('xaravel.assert.setMessage')` method instead, which every PHPUnit exception has (on `PHPUnit\Framework\Exception`'s prototype, non-enumerable), without importing the grader:
+
+```ts
+const setMessage = Symbol.for("xaravel.assert.setMessage");
+if (typeof e[setMessage] === "function") {
+  e[setMessage](`${e.getMessage()}\n\n${message}\n`);
+}
+```
+
+Called with a string, it makes that string what `getMessage()` returns, and sets the JS `message` to it followed by the suffix the class adds (`ExpectationFailedException`'s `--- Expected` / `+++ Actual` lines). Code, previous, cause and the comparison failure are unchanged, and it returns `null`. A non-string argument throws a JS `TypeError` naming the protocol (ESC-4.3-1 item 11, XT-assert-19).
+
 ## Test doubles
 
 `TestCase` has PHPUnit 13.4.3's test doubles (Story 4.7, `decisions/ESC-4.4-2.md` item 6). PHPUnit does not delegate to Mockery; Mockery stays reachable through `Mockery.mock()`.

@@ -20,6 +20,7 @@ import {
   isScalar,
   isTraversable,
   iterableValues,
+  toNumber,
 } from "../comparison/PhpValues";
 import { Factory } from "../comparator/Factory";
 import { exportValue, phpunitExport } from "../exporter/Exporter";
@@ -214,7 +215,7 @@ export class IsNan extends Constraint {
     return "is not nan";
   }
   protected override matches(other: unknown): boolean {
-    return typeof other === "number" && Number.isNaN(other);
+    return isFloat(other) && Number.isNaN(toNumber(other));
   }
   override failureDescription(other: unknown): string {
     return describeByTypeForContainers(other, this.toString());
@@ -506,6 +507,9 @@ export class TraversableContainsOnly extends Constraint {
 
 /** A PHP array key (an int or a string, normalised), or null for any other value. */
 function arrayKey(key: unknown): Key | null {
+  if (Object.is(key, -0)) {
+    return 0;
+  }
   if (isInt(key)) {
     return typeof key === "bigint" && key >= BigInt(Number.MIN_SAFE_INTEGER) && key <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(key) : key;
   }
