@@ -59,6 +59,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
   - `Ref<T>` is used for by-reference parameters.
   - int and float are both `number`. The float marker carries the distinction where Upstream depends on it, and `isFloat(v)` reads it.
   - Brands sit on the prototype as getters. `hasBrand` checks one without instantiating.
+  - Scalar parameters follow PHP's coercive mode, which is how Upstream and the Oracle run. Where Upstream's behaviour or a test depends on it, a ported parameter typed `int`, `float`, `string` or `bool` accepts what coercive mode accepts and converts it as PHP does. Anything else throws PHP's `TypeError` with PHP's message. `PORTING.md` § Scalar coercion lists the conversions, and the Oracle settles any doubt. Skipping a coercion that Upstream relies on needs a DIV clause first, so raise an Escalation rather than deciding it in the Story (ESC-9.10-2).
 - **Async (AD-6).** IO is async only behind async-root Driver contracts. The runtime has none, so keep it sync and never return `T | Promise<T>`.
 - **Codecs (AD-23).** `@xaravel/runtime/php` holds the only codecs and PHP builtins. `JSON.stringify` on framework values is a lint error.
 - **Decorators (AD-4).**
