@@ -168,9 +168,7 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
-      - name: Test
-        run: bun run test
-      - name: Run the Xaravel Tests under the harness
+      - name: Run every test file under the harness
         run: bun run harness --xaravel
       - name: Check the Expectations File
         run: bun run expectations:check

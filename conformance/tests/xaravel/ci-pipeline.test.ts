@@ -17,7 +17,8 @@ import { reverseClosure } from "../../../tools/graph/graph";
 import { computeScope, main as ratchetMain, readScope, runRatchet, runStoryTests } from "../../../tools/ratchet/ratchet";
 import { ACTIONS_INTEGRATION_ID, policyViolations, REQUIRED_CHECKS } from "../../../tools/ruleset/ruleset";
 import type { Difference } from "../../harness/compare";
-import type { HarnessResult } from "../../harness/harness";
+import { portedTestFiles, type HarnessResult } from "../../harness/harness";
+import { xaravelTestFiles } from "../../harness/xaravel";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -141,9 +142,18 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   const ci = workflow("ci.yml").data;
   expect(Object.keys(ci.on)).toEqual(["pull_request", "merge_group", "push"]);
   expect(ci.jobs["check"]!["runs-on"]).toBe("ubuntu-latest");
-  for (const command of ["bun run lint", "bun run typecheck", "bun run graph:check", "bun run test"]) {
+  for (const command of ["bun run lint", "bun run typecheck", "bun run graph:check", "bun run harness --xaravel"]) {
     expect([command, runsOf(ci.jobs["check"]!).includes(command)]).toEqual([command, true]);
   }
+  // Every test file runs once, under the harness: `check` has no plain `bun run test`, so no test file may lie outside
+  // the harness's Xaravel Test globs (`check`) or its Ported Test glob (the Ratchet). A file `bun test` would collect
+  // that neither covers fails here.
+  expect(runsOf(ci.jobs["check"]!)).not.toContain("bun run test");
+  const covered = new Set([...xaravelTestFiles(root), ...portedTestFiles(root)]);
+  const collected = [...new Bun.Glob("**/*{.test,_test_,.spec,_spec_}.{ts,tsx,js,jsx,mjs,cjs}").scanSync({ cwd: root, onlyFiles: true, followSymlinks: false })]
+    .map((file) => file.split("\\").join("/"))
+    .filter((file) => !file.split("/").includes("node_modules"));
+  expect(collected.filter((file) => !covered.has(file))).toEqual([]);
   expect(runsOf(ci.jobs["audit"]!)).toContain("bun audit --audit-level=high");
   // protected-paths and ownership run from the base under pull_request_target, and in the queue.
   for (const file of ["protected-paths.yml", "ownership.yml"]) {
