@@ -657,6 +657,10 @@ xaravelTest("XT-conformance-185", "under the harness, concurrent tests never mix
       `class MyError extends Error { constructor() { super("m"); this.name = "MyError"; } }`,
       `portedTest(${JSON.stringify(A)}, {}, () => {`,
       `  Assert.assertTrue(frozenAtLoad);`,
+      // ESC-9.9-1: `Symbol.metadata` is installed before `Symbol` is frozen, as the registered symbol, and stays put.
+      `  Assert.assertSame(Symbol.for("Symbol.metadata"), (Symbol as any).metadata);`,
+      `  Assert.assertFalse(Object.isExtensible(Symbol));`,
+      `  Assert.assertTrue(${patch(`(Symbol as any).metadata = Symbol("x")`)});`,
       `  Assert.assertTrue(${patch(`(Object.prototype as any).x = 1`)});`,
       `  Assert.assertTrue(${patch(`(AsyncLocalStorage.prototype as any).run = () => 1`)});`,
       `  Assert.assertTrue(${patch(`(test as any).each = () => 1`)});`,

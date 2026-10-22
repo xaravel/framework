@@ -194,7 +194,7 @@ Each of the first three kinds is one difference (`HarnessResult.differences`, Va
    - `JSON`, `Math` and `Reflect`;
    - `bun:test`'s `test`, `describe`, `it`, `expect` and the hooks.
 
-   Assigning to any of them throws a `TypeError`. `Error.stackTraceLimit` stays writable. Override taming, as in SES, turns `constructor`, `name`, `message`, `toString`, `valueOf` and `toLocaleString` on the hardened prototypes, and every data property of `Object.prototype`, into accessors. Their setters define an own property on any other receiver, so `this.name = …` and `o.toString = …` still work.
+   Assigning to any of them throws a `TypeError`. `Error.stackTraceLimit` stays writable. Override taming, as in SES, turns `constructor`, `name`, `message`, `toString`, `valueOf` and `toLocaleString` on the hardened prototypes, and every data property of `Object.prototype`, into accessors. Their setters define an own property on any other receiver, so `this.name = …` and `o.toString = …` still work. Before freezing `Symbol`, it defines `Symbol.metadata` as `Symbol.for('Symbol.metadata')` when Bun has none, as the runtime's polyfill would, so code under the harness sees the same `Symbol.metadata` as code outside it (ESC-9.9-1).
 2. **Installs two globals**, both non-writable and non-configurable (ESC-4.2-1 item 4). Each appends one JSON line to `XARAVEL_HARNESS_OUT`:
    - `Symbol.for('xaravel.harness.report')` is the ESC-4.2-1 reporter. It writes `{"report":<report>}`.
    - `Symbol.for('xaravel.harness.late')` is the late-assertion hook. It writes `{"late":{"id":…,"kind":…}}`.
