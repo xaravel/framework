@@ -274,13 +274,29 @@ class Label {
 }
 registerClass("XaravelFixture\\Exceptions\\Label", Label);
 
-/** A `__toString` port that returns an int, which PHP's `__toString` return type rejects. */
-class BadLabel {
+/** A `__toString` port that returns an int, which PHP's `__toString` return type coerces in coercive mode. */
+class IntLabel {
   toString(): unknown {
     return 5;
   }
 }
+registerClass("XaravelFixture\\Exceptions\\IntLabel", IntLabel);
+
+/** A `__toString` port that returns null, which PHP's `__toString` return type rejects. */
+class BadLabel {
+  toString(): unknown {
+    return null;
+  }
+}
 registerClass("XaravelFixture\\Exceptions\\BadLabel", BadLabel);
+
+/** A `__toString` port that returns a symbol, which has no PHP counterpart. */
+class SymbolLabel {
+  toString(): unknown {
+    return Symbol("s");
+  }
+}
+registerClass("XaravelFixture\\Exceptions\\SymbolLabel", SymbolLabel);
 
 /** An unregistered subclass: it shows its parent's brand. */
 class XtUnregisteredLogic extends php.LogicException {}
@@ -331,13 +347,18 @@ xaravelTest(
     Assert.assertSame(7, typeError.getCode());
     Assert.assertSame(previous, typeError.getPrevious());
     Assert.assertSame(previous, typeError.cause);
-    // A closure is no string, and a __toString port that returns another type throws PHP's TypeError.
+    // A closure is no string. A __toString port's return coerces as PHP's coercive mode does (PHP 8.5 gives "5" for
+    // a port returning 5), and one that returns null or a symbol throws PHP's TypeError.
     const closure = thrownBy(() => new php.Exception((() => "m") as unknown as string));
     Assert.assertInstanceOf(php.TypeError, closure);
     Assert.assertSame("Exception::__construct(): Argument #1 ($message) must be of type string, Closure given", (closure as Error).message);
     const badPort = thrownBy(() => new php.Exception(new BadLabel() as unknown as string));
     Assert.assertInstanceOf(php.TypeError, badPort);
-    Assert.assertSame("XaravelFixture\\Exceptions\\BadLabel::__toString(): Return value must be of type string, int returned", (badPort as Error).message);
+    Assert.assertSame("XaravelFixture\\Exceptions\\BadLabel::__toString(): Return value must be of type string, null returned", (badPort as Error).message);
+    Assert.assertSame("5", new php.Exception(new IntLabel() as unknown as string).getMessage());
+    const symbolPort = thrownBy(() => new php.Exception(new SymbolLabel() as unknown as string));
+    Assert.assertInstanceOf(php.TypeError, symbolPort);
+    Assert.assertSame("XaravelFixture\\Exceptions\\SymbolLabel::__toString(): Return value must be of type string, symbol returned", (symbolPort as Error).message);
 
     // An object built without the constructor (as phpUnserialize builds one) reads its defaults, never throws.
     const bareException = Object.create(php.ErrorException.prototype) as php.ErrorException;

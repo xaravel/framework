@@ -41,7 +41,7 @@ The constructors take their arguments as PHP does in coercive mode, the mode Lar
 
 | Parameter | Taken | Rejected |
 | --- | --- | --- |
-| `string` (`$message`; `?string` `$filename`) | a string; `null` as `""` (a `?string` keeps `null`); `true` / `false` as `"1"` / `""`; an int in decimal; a float as PHP's `(string)` gives it (`5.5` as `"5.5"`, `1e100` as `"1.0E+100"`); an object with a `__toString` port, through it | an array, a closure, another object |
+| `string` (`$message`; `?string` `$filename`) | a string; `null` as `""` (a `?string` keeps `null`); `true` / `false` as `"1"` / `""`; an int in decimal; a float as PHP's `(string)` gives it (`5.5` as `"5.5"`, `1e100` as `"1.0E+100"`); an object with a `__toString` port, through it, its return coerced the same way (a port returning `5` gives `"5"`; one returning `null` or an array is PHP's `TypeError` `…::__toString(): Return value must be of type string, … returned`) | an array, a closure, another object |
 | `int` (`$code`, `$severity`; `?int` `$line`) | an int; `null` as `0` (a `?int` keeps `null`); `true` / `false` as `1` / `0`; a finite float inside int64, truncated toward zero (`5.0` as `5`, `5.5` as `5`); a numeric string, whitespace around it allowed, read the same way (`"5"`, `" 5"`, `"5.5"`, `"1e3"`) | a leading-numeric (`"5abc"`), non-numeric (`"x"`, `""`) or out-of-range string, a non-finite or out-of-range float, an array, an object |
 | `?Throwable` (`$previous`) | `null`, or any JS `Error` | anything else |
 
