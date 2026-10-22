@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-10-22'
 baseline_revision: '21a0224aa648887deb8045cbe011868a3ef28a4f'
 status: 'blocked'
-review_loop_iteration: 1
+review_loop_iteration: 2
 followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
@@ -125,6 +125,9 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-22: the review pass after ESC-9.10-1 found that pass 1's `strict_types` refutation is wrong (the Oracle runs exprs through `eval()`, in coercive mode), so the Never list's "PHP's coercions are not ported" is a divergence with no DIV; it also found two intent questions and a Fidelity prompt over the cap. The intent contract is unchanged until a ruling: ESC-9.10-2 (divergence) and ESC-9.10-3 (protected-path). The next Fidelity Review runs with `--base c870bc261d2bcea7b12296896c8650f52e124573`, the `main` commit #302 was squashed onto (`c870bc2..c343592` is exactly the Story); ESC-9.10-1's `6837b06` also pulls in #301.
+- 2026-10-22: `decisions/ESC-9.10-1.md` (orchestrator, amendment 2026-10-21) rules option 1: `tools/fidelity-review/fidelity-review.ts` now shows a helper called through a spread, a test helper imported from another test module, and a decision cited in an unchanged docblock (#303). The code is unchanged, so the Story is back to `in-review`. The Fidelity Review re-runs on the changed tree with `--base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e`.
+
 ## Review Triage Log
 
 ### 2026-10-22 — Review pass
@@ -180,6 +183,43 @@ deferred:
   - `[false]` `[reject]` Fidelity F-8 (reviewer 2): `n/a: n/a` — the line names no path and no defect.
   - `[medium]` `[intent_gap]` Fidelity F-9 (reviewer 2): P-6 `decisions/ESC-9.4-1.md` — same root as reviewer 1's row; ESC-9.10-1.
 
+### 2026-10-22 — Review pass (after ESC-9.10-1: whole Story from c870bc2)
+- verdicts: 27 findings — high 0, medium 10, low 10, false 3, maybe-false 4
+- No code changed in this pass (no saved patch: nothing to revert). The intent gaps below halt it: `conformance/escalations/ESC-9.10-2.md` (divergence) and `conformance/escalations/ESC-9.10-3.md` (protected-path).
+- findings:
+  - Edge case:
+    - `[medium]` `[defer]` carried `phpSerialize` of a throwable writes `O:9:"Exception":0:{}`, dropping message and code. — Deferred in pass 1 (the codec form of throwables, Epic 9 retrospective).
+    - `[medium]` `[defer]` carried `phpUnserialize` of a PHP payload leaves `\0Exception\0previous` / `\0*\0severity` as plain properties, so `getPrevious()` / `getSeverity()` read the defaults. — Same deferred codec item.
+    - `[medium]` `[defer]` carried `toPhpString` of a throwable throws where PHP calls `Throwable::__toString`. — Deferred in pass 1.
+    - `[medium]` `[intent_gap]` A second runtime copy loaded with `XARAVEL_NO_SCOPE_GLOBAL=1` now throws `LogicException` at import: `phpClasses.ts:72-74` has no opt-out and every index imports it before `scope.ts` reads the variable. — Confirmed. The intent requires the guard and names no opt-out, so the fix adds a surface the spec does not settle: ESC-9.10-2 part (b).
+    - `[low]` `[reject]` A cross-realm `Error` passed as `previous` is rejected as `?Throwable, object given`. — PHP has no realms; a port passes its own throwables, and the failure is a loud `TypeError`.
+    - `[false]` `[reject]` A JSON error's `code` is no longer an own enumerable property. — The intent makes `code` own, writable, configurable and non-enumerable on every throwable; no reader in the repository spreads or keys an error.
+    - `[false]` `[reject]` `ScopeFrameException.name` changed from the short name to the FQCN. — The intent's `name` rule (the FQCN brand) asks for exactly that, and the two `scope.test.ts` rows were updated with it.
+    - `[maybe-false]` `[reject]` `PhpFloat` and `phpType` still throw PHP-shaped JS `TypeError`s. — Would settle: whether those throws model PHP throws the intent's switch list names; it lists the throws it switches, and these are not on it. If true it would be low, so rejected with this note.
+  - Verification gap:
+    - `[low]` `[patch]` The PHP `Error` root's `previous`, `cause` and non-zero `code` are never constructed in a test; dropping `causeOf(previous)` or the code in `Error.ts` passes every row. — Moot this pass (intent gap halts); carry to the next pass: a `new php.TypeError("m", 7, previous)` row in XT-runtime-36.
+    - `[medium]` `[intent_gap]` The `null`-message row pins a divergence from the Oracle: the port throws `TypeError` where fixture `8dea305e…` expr 20 gives `""`. — Confirmed: `evaluate.php` runs exprs through `eval()`, which starts in coercive mode, so pass 1's `strict_types` refutation was wrong. No DIV covers it: ESC-9.10-2.
+  - Blind:
+    - `[medium]` `[intent_gap]` A `null` message diverges from the Oracle with no DIV. — Same root as the Verification-gap row; ESC-9.10-2.
+    - `[maybe-false]` `[intent_gap]` No Oracle row covers the other coercions the port rejects (`'5'`, `5.0` codes). — Same root; would settle: Oracle rows for them, which ESC-9.10-2 option 1 adds.
+    - `[medium]` `[intent_gap]` `phpClasses.ts` has no opt-out, which undoes `XARAVEL_NO_SCOPE_GLOBAL`. — Same root as the Edge row; ESC-9.10-2 (b).
+    - `[low]` `[reject]` An in-range `bigint` code is kept as `5n`, and the subclass rule `code === 0` misses `0n`. — AD-9 reads a `bigint` as a PHP int; normalising adds a branch for an input ports do not write (PHP literals are `number`s in a port).
+    - `[medium]` `[defer]` carried `phpSerialize` of a throwable now writes wrong bytes instead of throwing. — Same deferred codec item as the Edge row.
+    - `[low]` `[reject]` The fallbacks to the JS `Error` / `TypeError` are silent. — Reachable only by a deep import outside the package's `exports`; recorded under Residual risk.
+    - `[false]` `[reject]` Story bookkeeping (sprint status, `stories/9.10.md`, ESC-9.10-1's pointer) is inconsistent. — The orchestrator sets the Story's status lines at `done`, and `decisions/ESC-9.10-1.md` is the ruling's record.
+    - `[low]` `[reject]` A `bigint` beyond int64 reports `int given`. — PHP cannot hold the value, so no PHP message exists; the loud `TypeError` is the point, and a new message adds a branch.
+    - `[low]` `[reject]` XT-runtime-37 passes a name on any backticked mention. — The page check is the intent's ("each export named in a page"); scoping by page adds a mapping for a docs check.
+    - `[low]` `[reject]` `writeClassmap`'s no-encoder message names only `@xaravel/runtime/registry`. — The intent fixes the message's text; the root also works, and the advice given is correct.
+    - `[low]` `[reject]` `docs/exceptions.md` omits `configurable`, the discarded `filename` / `line`, and has an ambiguous table header. — Cosmetic; carry to the next pass's docs edits if ESC-9.10-2 option 1 changes the page.
+  - Intent alignment:
+    - `[medium]` `[intent_gap]` XT-runtime-35 asserts that `registry.ts`, `jsonEncode.ts` and `scope.ts`, loaded first, publish no map, where the matrix row says every entry under Import cycles publishes the 24 names. — Confirmed: the intent's Approach and matrix disagree, and the test follows the Approach. ESC-9.10-2 part (a).
+    - `[low]` `[reject]` The `$code` check follows AD-9's int model (`bigint` accepted, unsafe integers as floats), not "an integer `number`". — AD-9 binds the value model; carried with pass 1's bigint row.
+    - `[low]` `[reject]` The shared type-name helper changes `phpUnserialize`'s messages for a symbol and an out-of-range `bigint`. — Both were a raw crash before; the intent asks for the one helper, and the new rows assert the messages.
+    - `[maybe-false]` `[reject]` `ErrorException`'s `severity`, `filename` and `line` are checked beyond the intent's list. — Matches the Oracle rows 16-19; would settle: whether the intent's list is exhaustive. Low if true.
+    - `[maybe-false]` `[reject]` Small additions (`getCode() ?? 0`, bare-object getters, `registeredBaseClass`, the subclass `$code` rule) go beyond the intent. — Each is tested and answers a pass-1 finding; low if true.
+  - Fidelity Review:
+    - `[medium]` `[intent_gap]` Fidelity Review produced no verdict: "the prompt is 649360 characters, over the 600000 cap, of which section (e), the touched Xaravel Tests, is 303089" (`--base 6837b06`, the ruling's base, which also carries #301's CI tests); with `--base c870bc2`, the commit #302 was squashed onto, 609566 characters, (e) 277874. — Fixable only in `tools/fidelity-review/` (Protected), and it changes review cost: ESC-9.10-3.
+
 ## Design Notes
 
 - **Why switch beyond the three ruled throws.** AD-26's Errors row binds each PHP exception class to the same-named JS class with Upstream's messages. The switched sites already carry PHP's exact message for a PHP throwable; leaving a JS `TypeError` there would make `catch (TypeError)` in a port miss it. Xaravel-only errors keep the JS classes.
@@ -198,11 +238,11 @@ deferred:
 ## Auto Run Result
 
 Status: blocked
-Blocking condition: `conformance/escalations/ESC-9.10-1.md` (protected-path) is open. Both Fidelity reviewers reject tree `a1d55531d1fc5231be8fe9552dfdd282519def95` only for evidence `tools/fidelity-review/fidelity-review.ts` does not put in the prompt: a helper called through a spread (`...inherited()`), a test helper bound from another test module (`BrandedArray`), and a decision record cited on an unchanged docblock line (`decisions/ESC-9.4-1.md`). The orchestrator may rule on it under the 2026-10-21 amendment (section G). The Story then re-runs its Fidelity Review on the changed tree with `--base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e` (the `main` commit the Story's PR #302 starts from), since `baseline_revision` is a branch commit the squash merge drops.
+Blocking condition: `conformance/escalations/ESC-9.10-2.md` (divergence) and `conformance/escalations/ESC-9.10-3.md` (protected-path) are open. ESC-9.10-1 is ruled (#303), but the review pass after it found that the constructors reject PHP's coercions, which the Oracle accepts (fixture `8dea305e…` expr 20: `new \Exception(null)` gives `""`), with no DIV clause. It also raised two related intent questions (which entries publish the class map, and an opt-out for a second copy). And the Fidelity Review can no longer run: its prompt is 609,566 characters with `--base c870bc261d2bcea7b12296896c8650f52e124573`, over the 600,000 cap. Superseded condition (ESC-9.10-1, ruled): both Fidelity reviewers rejected tree `a1d55531d1fc5231be8fe9552dfdd282519def95` for evidence the tool did not show.
 
 - **Summary:** PHP's 22 base, `Error` and SPL classes in `packages/runtime/src/php/`, exported from `@xaravel/runtime` and `/php`, registered under their PHP names with PHP 8.5's chains, constructor `TypeError`s (strict types, as the Oracle runs) and `getMessage` / `getCode` / `getPrevious` (`ErrorException` adds `getSeverity`). `Symbol.for('xaravel.php.classes')` publishes them, with `stdClass` and `__PHP_Incomplete_Class`, on every entry's load. The ruled throws (Closure → `Exception`, JSON → `JsonException` / `ValueError`, `ScopeFrameException` → `RuntimeException`, a Registry miss → `Error`) and the other PHP-message throws switched to the PHP classes. The Registry no longer imports `jsonEncode` (an install hook) so no load order hits a cycle. Epic-close docs: five new pages and a README index.
 - **Files:** the 22 class files, `throwableArguments.ts`, `phpType.ts`, `phpClasses.ts` under `packages/runtime/src/php/`; the four entry indexes; `registry/registry.ts`, `php/{jsonConstants,jsonDecode,phpSerialize,PhpArray,casts,phpUnserialize}.ts`, `scope/ScopeFrameException.ts`; `tests/xaravel/{exceptions,docs}.test.ts` (new) and the stricter class rows in `{codec,json,values,semantics,registry,scope}.test.ts`; `docs/*.md`, `README.md`; `conformance/oracle-requests/9.10.jsonl` and the bot's two signed fixtures; `conformance/escalations/ESC-9.10-1.md`.
-- **Review:** pass 1, 38 findings: patched 15 medium-or-lower entries (the bigint / unsafe int check, unserialized-object getters, test order behind `oracle()`, the grader-style map reader, Oracle rows for `ErrorException` #1-#5, a null message and the subclass-default `$code` rule, docs-test strictness, the AD-26 citation, small docs fixes; the missing fixtures came with the push), deferred 3 (throwable `__toString` cast, throwables in the codecs, the tool evidence gaps), rejected 13 with reasons in the triage log. Pass 2 (Fidelity re-run on the fixture tree): the three evidence gaps only, raised as ESC-9.10-1.
+- **Review:** pass 3 (after ESC-9.10-1, whole Story from c870bc2), 27 findings: no patches (the intent gaps halt the pass), 2 intent gaps escalated (ESC-9.10-2, ESC-9.10-3), 4 carried defers, 1 verification-gap patch carried to the next pass, the rest rejected with reasons in the triage log. Pass 1, 38 findings: patched 15 medium-or-lower entries (the bigint / unsafe int check, unserialized-object getters, test order behind `oracle()`, the grader-style map reader, Oracle rows for `ErrorException` #1-#5, a null message and the subclass-default `$code` rule, docs-test strictness, the AD-26 citation, small docs fixes; the missing fixtures came with the push), deferred 3 (throwable `__toString` cast, throwables in the codecs, the tool evidence gaps), rejected 13 with reasons in the triage log. Pass 2 (Fidelity re-run on the fixture tree): the three evidence gaps only, raised as ESC-9.10-1.
 - **Follow-up review recommended:** false (no high patched; pass 1 patched medium entries, but the Fidelity Review of the post-ruling tree is the remaining gate).
 - **Verification:** `bun test packages/runtime` 37/37; `bun run harness --xaravel --id 'XT-runtime-*'` 37/37; `oracle:verify-fixtures` (1955 fixtures), `tsc -b`, `lint`, `graph:check`, `registration:check` (28 registrations), `async-surface --all --check`, `escalations:check`, `oracle:story check 9.10` clean. `story:check 9.10` waits on the Fidelity pass.
 - **Residual risk:** the deferred codec and `__toString` rows; a deep import of an internal file (outside the package's `exports`) can construct a throwable before PHP's `TypeError` registers, falling back to the JS one. Observed for the Epic 9 retrospective: ESC-4.6-1 item 9 says Story 9.4's Registry installs `Symbol.for('xaravel.class.lookup')`, and no runtime file installs it.
