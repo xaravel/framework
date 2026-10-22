@@ -73,7 +73,9 @@ assign defaults after `super(...args)` returns, so it decides per key (decisions
   to its declared default. Nothing has written it, so the trait's default replaces it, as in PHP.
 - Any other value is kept: the table does not list the name, no class in the chain declares a table, or the value
   differs from the declared default. A write made in the base constructor survives, as in PHP. A private base property
-  is a separate PHP slot, so it never counts as the base's default.
+  is a separate PHP slot, so it never counts as the base's default. PHP then reads the trait's default from outside
+  and the base's from the base's own methods; one JS slot cannot hold both, and which one Xaravel keeps awaits a ruling
+  (ESC-9.9-3).
 
 Two cases differ from PHP (DIV-12.8):
 

@@ -2,7 +2,7 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-review'
+status: 'blocked'
 baseline_revision: '0aa17dff6f77a0d3176353f3bad25e6a27836e80'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -21,6 +21,13 @@ deferred:
     location: >-
       packages/runtime/src/metadata/inject.ts
     severity: medium (unverified)
+  - summary: >-
+      A host that calls initializeTraits from an ancestor constructor (Model) runs initializers before the using subclass's own JS fields ($casts, $fillable, $guarded) are set, so those fields then overwrite what an initializer merged into them.
+    evidence: |-
+      Review pass 2026-10-21 (Blind, Intent). JS class-field timing, not caused by the ESC-9.9-2 rule; the docs now state the host constraint. Story 36.1 (Model core: attributes, fill, guard) is the first host and must settle it, by Escalation if it needs a divergence.
+    location: >-
+      packages/runtime/docs/traits-and-inject.md
+    severity: medium
 ---
 
 <intent-contract>
@@ -153,6 +160,39 @@ deferred:
     - `[low]` `reject` `Mixed<B, Ts>` drops `abstract`. — Type looseness only; no runtime harm.
     - `[false]` `reject` Artifact inconsistencies. — Statuses follow the workflow. The manifest's line is its generation line. `async-surface --all --check` ran clean.
 
+### 2026-10-21 — Review pass (ESC-9.9-2 follow-up; Fidelity Review not run, see Auto Run Result)
+- verdicts: 25 findings — high 0, medium 3, low 12, false 10, maybe-false 0 (fidelity-review layer skipped: the Story blocks on ESC-9.9-3, which may change `mixin.ts`)
+- findings:
+  - Blind:
+    - `[false]` `reject` The signed fixture for the new request is missing. — The bot signed it (1300221); `bun test packages/runtime` 34/34.
+    - `[medium]` `intent_gap`→escalated A private base property against a trait's public one keeps the base's value; PHP reads the trait's default from outside (probe `/tmp/xv100/p.php`: `"named"` outside, `"parent"` from the base's method). The ESC-9.9-2 ruling directs this branch, but DIV-12.8 does not list the case. — Raised ESC-9.9-3 (`divergence`); the private-slot local row, added in this pass, was removed so XT-runtime-31 asserts neither value; the docs name it as open.
+    - `[medium]` `defer` Model calls `initializeTraits` before the subclass's own fields are set. — JS field timing, not caused by this rule; deferred to Story 36.1 (frontmatter `deferred`).
+    - `[low]` `reject` `assignDefaults` throws for a non-configurable owned key. — Only a base constructor that seals `this` reaches it, and it fails loudly; the guard adds a branch.
+    - `[low]` `reject` The request lacks the private-slot and write-equal-to-default cases. — The second is a recorded DIV-12.8 difference by definition; the first is ESC-9.9-3.
+    - `[low]` `reject` `oracle()` selects by first expr. — The same idiom as `codec.test.ts`; a mismatch fails loudly with the count.
+    - `[low]` `reject` The no-table assertion's precondition is unstated. — A table added to that chain flips it loudly; the comment cites DIV-12.8.
+    - `[low]` `reject` `checkDefaultLimits` registers per call. — The test body runs once per process.
+    - `[low]` `reject` The XT-runtime-33 comment overstates coverage. — The subprocess check above it covers the polyfill path; the in-harness assertion is what ESC-9.9-1 allows.
+  - Edge case:
+    - `[low]` `reject` Non-configurable owned key throws. — Same as the Blind row.
+    - `[false]` `reject` A subclass redeclaring a field with no table of its own. — A class that redeclares a property declares its table (generators emit one per class); an incomplete table is the no-table case of DIV-12.8.
+    - `[false]` `reject` Nested layers with A and B declaring the same property. — PHP forbids that collision within one class; across a class boundary the intermediate class's own table lists A's default, so the rule applies.
+    - `[medium]` `intent_gap`→escalated The private-slot row pins a value PHP does not give. — Same root cause as the Blind row; ESC-9.9-3.
+    - `[low]` `reject` A malformed table now throws at construction. — It fails loudly, as the codec already does for the same table.
+    - `[low]` `reject` A native `Symbol.metadata` would fail the XT-runtime-33 assertion. — Bun is pinned at 1.4.3, which has none; a bump re-runs the test.
+    - `[low]` `patch` The docs present two DIV-12.8 cases as the complete list. — The docs now name the private-slot case as open (ESC-9.9-3).
+  - Verification gap:
+    - `[false]` `reject` The protected branch is checked only by the unsigned fixture. — The fixture is signed and XT-runtime-31 passes it.
+  - Intent alignment:
+    - `[false]` `reject` The Oracle-comparison surface is not exercised. — It is now, against fixture 1300221.
+    - `[false]` `reject` The review step and Fidelity Review are missing. — This pass is the review step; the Fidelity Review waits on ESC-9.9-3.
+    - `[low]` `defer` Model-shaped hosts are not covered. — Same as the Blind deferral (Story 36.1).
+    - `[false]` `reject` Tables are hand-written. — No generator exists yet; the tables follow the codec's format.
+    - `[false]` `reject` The check is per key, not per instance. — `propertyTable` is cached per class; the `find` runs only for owned keys, as the ruling requires.
+    - `[false]` `reject` The XT-runtime-33 assertion cannot tell harness from polyfill. — ESC-9.9-1 asks only that the value be defined in the harness process.
+    - `[low]` `reject` Scope beyond the ruling (private row, host docs, selector). — The private row is removed (ESC-9.9-3); the rest is additive and needed.
+    - `[false]` `reject` No Expectations lines. — `test_ids` is empty; XT rows have no Expectations lines.
+
 ## Design Notes
 
 - **Upstream order over "trait order".** The AC says "in trait order"; AD-26 says boot/initialize "run as Upstream". Upstream's order is `ReflectionClass::getMethods()`'s: the class's own methods, its traits depth-first, then the parent's. That is what "trait order" means in PHP, and the Oracle fixture pins it. It differs from `classUsesRecursive` order whenever a parent has traits (`Comment`: `HasB` boots before `HasP`).
@@ -170,11 +210,14 @@ deferred:
 
 ## Auto Run Result
 
-Status: in-progress
-Remaining: the `xaravel-oracle` bot must sign the new XT-runtime-31 request (`bed7e992…`) after the push; until then XT-runtime-31 fails only on the missing fixture (its local rows pass, and against local `evaluate.php` output both XT-runtime-31 requests pass). Then the Fidelity Review of the final tree and `bun run story:check 9.9`.
+Status: blocked
+Blocking condition: ESC-9.9-3 (`divergence`: a private base property against a trait property of the same name; PHP keeps two slots, JS has one, and DIV-12.8 lists only two cases) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). The Fidelity Review runs on the final tree after the ruling, because option 2 would change `mixin.ts`.
 
-- **Follow-up (ESC-9.9-2, DIV-12.8):** `packages/runtime/src/traits/mixin.ts` (rule and header), `conformance/oracle-requests/9.9.jsonl` (the four-case request), `packages/runtime/tests/xaravel/traits.test.ts` (Oracle comparison, two DIV-12.8 local rows, a private-slot row), `packages/runtime/docs/traits-and-inject.md` (the rule and its two limits).
-- **Verification:** `bun test packages/runtime` 33/34 (XT-runtime-31: missing signed fixture only); `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures`, `oracle:story check 9.9` clean.
+- **Follow-up (ESC-9.9-2, DIV-12.8):** `packages/runtime/src/traits/mixin.ts` (rule and header), `conformance/oracle-requests/9.9.jsonl` (the four-case request) and its bot-signed fixture, `packages/runtime/tests/xaravel/traits.test.ts` (Oracle comparison and two DIV-12.8 local rows), `packages/runtime/docs/traits-and-inject.md` (the rule, its two limits, and the open private-slot case), XT-runtime-33's in-harness `Symbol.metadata` assertion (ESC-9.9-1), `conformance/escalations/ESC-9.9-3.md`.
+- **Review:** 25 findings. 1 patched (low: docs), 2 deferred (Model host field timing to Story 36.1; plus the earlier stacked-decorator item), 1 escalated (private slot, medium: ESC-9.9-3, with the row it would have pinned removed), the rest rejected with reasons in the triage log.
+- **Follow-up review recommended:** true. The Fidelity Review has not run on this tree.
+- **Verification:** `bun test packages/runtime` 34/34 and `bun run harness --xaravel --id 'XT-runtime-*'` 34/34 against the signed fixtures; `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures` (1953) and `oracle:story check 9.9` clean.
+- **Residual risk:** until ESC-9.9-3 is ruled, the private-slot case behaves as decisions/ESC-9.9-2.md directs (base's value kept) with no test pinning it.
 
 ### Earlier run (before the ESC-9.9-2 ruling)
 

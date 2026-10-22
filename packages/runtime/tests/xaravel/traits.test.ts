@@ -243,7 +243,7 @@ registerClass("App\\Defaults\\Flagged", Flagged);
 class Open extends mixin(DefaultsGuarded, Unguards) {}
 registerClass("App\\Defaults\\Open", Open);
 
-/** The DIV-12.8 limits of a trait default against a base property, and the private-slot rule, pinned locally. */
+/** The DIV-12.8 limits of a trait default against a base property, pinned locally. */
 function checkDefaultLimits(): void {
   // DIV-12.8, a write equal to the declared default: it looks untouched, so the trait's default replaces it, where
   // PHP keeps "parent".
@@ -257,15 +257,8 @@ function checkDefaultLimits(): void {
   class UsesWritesParent extends mixin(DefaultsNamed, WritesParent) {}
   registerClass("App\\Defaults\\XtUsesWritesParent", UsesWritesParent);
   Assert.assertSame("named", new UsesWritesParent().name, "DIV-12.8: a constructor write equal to the declared default is replaced");
-  // A private base property is a separate PHP slot: it never counts as the base's default, so its value is kept.
-  class Secret {
-    static readonly [PHP_PROPERTIES] = [{ name: "name", visibility: "private", default: "parent" }];
-    name: string = "parent";
-  }
-  registerClass("App\\Defaults\\XtSecret", Secret);
-  class UsesSecret extends mixin(Secret, SetsName) {}
-  registerClass("App\\Defaults\\XtUsesSecret", UsesSecret);
-  Assert.assertSame("parent", new UsesSecret().name);
+  // A private base property against a trait's public one is not asserted until ESC-9.9-3 is ruled: PHP reads the
+  // trait's default from outside and the base's from the base's own methods, and one JS slot cannot hold both.
 }
 
 /** The composition rules of `mixin` (the matrix's local Composition row). */
