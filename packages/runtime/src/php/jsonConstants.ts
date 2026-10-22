@@ -74,3 +74,24 @@ export function jsonError(code: number): Error {
   Object.defineProperty(error, "code", { value: code, enumerable: true, writable: true, configurable: true });
   return error;
 }
+
+/** Where a JSON call's error code goes: `jsonLastError.ts` installs it on load (ESC-9.8-1 part 2). */
+let recorder: ((code: number) => void) | null = null;
+
+/**
+ * Installs the recorder of `json_last_error()` (ESC-9.8-1 part 2). `jsonLastError.ts` calls it on load, so this
+ * load-safe module, which `jsonEncode.ts` imports, never imports the Scope Frame module (the Registry imports the
+ * encoder, and the scope module imports the Registry). Process wiring, not per-unit state: the record itself is a
+ * Scope Frame slot (AD-5). Internal.
+ */
+export function installJsonErrorRecorder(record: (code: number) => void): void {
+  if (recorder !== null) {
+    throw new TypeError("installJsonErrorRecorder(): the json_last_error() recorder is already installed");
+  }
+  recorder = record;
+}
+
+/** Records a JSON call's `JSON_ERROR_*` code, as PHP sets `JSON_G(error_code)`. Internal. */
+export function recordJsonError(code: number): void {
+  recorder?.(code);
+}

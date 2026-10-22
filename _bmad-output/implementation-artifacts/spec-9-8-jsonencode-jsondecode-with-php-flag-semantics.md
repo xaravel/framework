@@ -3,7 +3,7 @@ title: 'Story 9.8: `jsonEncode` / `jsonDecode` with PHP flag semantics'
 type: 'feature'
 created: '2026-10-21'
 status: 'in-progress'
-baseline_revision: 'f63369d9bdd259166d115062d8db3087066f066b'
+baseline_revision: '1db3072d9a4061a6172a813ab5380879aaca29b6'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
@@ -160,6 +160,11 @@ deferred:
   - `registry.test.ts:389-390` (XT-runtime-15's core rows) asserted the 9.4 core's interim `TypeError` for `jsonEncode(1.5)` and `jsonEncode(new Map())`, which the Code Map did not list. They are replaced with PHP's result for the same input, `"1.5"` and `"{}"`, as the Code Map does for `values.test.ts`: same count, exact values.
   - A plain object always encodes as a JSON object, `{}` included, as the 9.4 core did (AD-9.2: a plain object is a string-keyed map). This keeps `registry.test.ts`'s `"b":{}` row and `writeClassmap`'s bytes without `JSON_FORCE_OBJECT`.
   - A JS `stdClass` lists integer-like keys first, so a decoded `stdClass` with such keys does not keep PHP's key order (XT-runtime-30 compares properties by name, as `codec.test.ts` does).
+- **Implementation notes, follow-up (2026-10-21).**
+  - `jsonEncode.ts` must not import the Scope Frame module: `scope.ts` imports the Registry, which imports the encoder, and calls `installTestFrameAccess` at load. So `jsonConstants.ts` (load-safe) holds an internal `recordJsonError` hook, and `jsonLastError.ts` installs it on load over `frameSlot(Symbol.for('xaravel.php.json-last-error'))`, the same wiring the Registry uses for test-frame access. `php/index.ts` imports `jsonLastError.ts`, so any caller of the `./php` subpath or the root gets the recorder.
+  - PHP 8.5.11 probes: `json_decode` clears the record before its `depth` check unless it throws, so a `ValueError` without `JSON_THROW_ON_ERROR` leaves `0`; a `jsonSerialize()` exception records the encoder's code so far (`0`) before it propagates; `JSON_THROW_ON_ERROR | JSON_PARTIAL_OUTPUT_ON_ERROR` records on `json_encode` but `json_decode` ignores the partial flag (throws, record untouched). The code follows each.
+  - A root narrow frame has no unit to take a slot write, so the recorder treats it as outside a frame (records nothing) instead of throwing.
+  - Two Oracle requests (`$steps` / `$run($steps)`, one for XT-runtime-27's encode sequence and one for XT-runtime-30's decode sequence) replay calls and `json_last_error()` / `json_last_error_msg()` reads; NAN is passed as the marker `'NAN'` so `$steps` stays encodable. Checked against local unsigned `evaluate.php` output (PHP 8.5.11): all rows pass. Their fixtures are signed by `oracle.yml#story` after the push.
 
 ## Review Triage Log
 

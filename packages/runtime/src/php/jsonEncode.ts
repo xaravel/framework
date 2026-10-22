@@ -20,6 +20,9 @@
 //   than `depth` set PHP's `JSON_ERROR_*` code. The result is then `false`; with `JSON_PARTIAL_OUTPUT_ON_ERROR` the
 //   string with PHP's stand-ins; with `JSON_THROW_ON_ERROR` (and without the partial flag) an `Error` with PHP's message
 //   and code (ESC-9.8-1 part 1).
+// - `json_last_error()` (ESC-9.8-1 part 2): each call records its code through `recordJsonError`, except under
+//   `JSON_THROW_ON_ERROR` without the partial flag, as PHP does. The Jsonable hook records nothing itself: its
+//   `toJson()` calls the encoder.
 //
 // Load safety: the Class Registry imports this file (`writeClassmap`), so it imports only modules that call no Registry
 // function at load time, directly or transitively. `casts.ts`, `isNumeric.ts`, `PhpArray.ts`, `PhpFloat.ts`,
@@ -48,6 +51,7 @@ import {
   JSON_UNESCAPED_SLASHES,
   JSON_UNESCAPED_UNICODE,
   jsonError,
+  recordJsonError,
 } from "./jsonConstants";
 import { objectProps } from "./mangle";
 import { parseNumeric } from "./numericString";
@@ -96,8 +100,18 @@ export function jsonEncode(value: unknown, flags: number = 0, depth: number = 51
     }
   }
   const encoder: Encoder = { flags, maxDepth: depth, depth: 0, error: 0, out: "", path: new Set() };
-  encodeValue(data, encoder);
-  if ((flags & JSON_THROW_ON_ERROR) === 0 || (flags & JSON_PARTIAL_OUTPUT_ON_ERROR) !== 0) {
+  const records = (flags & JSON_THROW_ON_ERROR) === 0 || (flags & JSON_PARTIAL_OUTPUT_ON_ERROR) !== 0;
+  try {
+    encodeValue(data, encoder);
+  } catch (error) {
+    // PHP records the encoder's code before a `jsonSerialize()` exception propagates.
+    if (records) {
+      recordJsonError(encoder.error);
+    }
+    throw error;
+  }
+  if (records) {
+    recordJsonError(encoder.error);
     if (encoder.error !== 0 && (flags & JSON_PARTIAL_OUTPUT_ON_ERROR) === 0) {
       return false;
     }
