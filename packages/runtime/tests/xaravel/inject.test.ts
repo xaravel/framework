@@ -39,7 +39,7 @@ function entries(map: unknown): [string, unknown][] {
 
 xaravelTest(
   "XT-runtime-33",
-  "once the runtime has loaded (its root or any subpath), Symbol.metadata is defined as Symbol.for('Symbol.metadata'), non-writable and non-configurable, and a TC39-decorated class exposes its metadata as X[Symbol.metadata]; before, a fresh Bun process has none (AD-4)",
+  "once the runtime has loaded (its root or any subpath), Symbol.metadata is defined as Symbol.for('Symbol.metadata'), non-writable and non-configurable, and a TC39-decorated class exposes its metadata as X[Symbol.metadata]; before, a fresh Bun process has none; with Symbol frozen without it, loading skips the polyfill and inject reads the registered symbol (AD-4, ESC-9.9-1)",
   () => {
     const dir = mkdtempSync(join(tmpdir(), "xaravel-metadata-"));
     try {
@@ -63,6 +63,24 @@ xaravelTest(
         Assert.assertSame(0, run.exitCode, entry);
         Assert.assertSame("undefined true false false tagged", run.stdout.toString().trim(), entry);
       }
+      // A `Symbol` frozen without `Symbol.metadata`: loading the runtime skips the polyfill without throwing, and
+      // `inject` reads the registered symbol, for a class and for `inject(map, fn)`.
+      const frozen = join(dir, "probe-frozen.ts");
+      writeFileSync(
+        frozen,
+        [
+          "Object.freeze(Symbol);",
+          `const { inject, readInjectMetadata } = await import(${jsonEncode(join(PACKAGE_DIR, "src/index.ts"))});`,
+          "@inject({ a: String }) class Decorated {}",
+          "const fn = inject({ b: Number }, () => null);",
+          "console.log([typeof (Symbol as { metadata?: symbol }).metadata, Object.keys(readInjectMetadata(Decorated) ?? {}).join(','), Object.keys(readInjectMetadata(fn) ?? {}).join(',')].join(' '));",
+          "",
+        ].join("\n"),
+      );
+      const run = Bun.spawnSync([process.execPath, "--no-env-file", frozen], { cwd: PACKAGE_DIR, stdout: "pipe", stderr: "pipe" });
+      Assert.assertSame("", run.stderr.toString(), "frozen Symbol");
+      Assert.assertSame(0, run.exitCode, "frozen Symbol");
+      Assert.assertSame("undefined a b", run.stdout.toString().trim(), "frozen Symbol");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

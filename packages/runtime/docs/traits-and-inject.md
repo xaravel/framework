@@ -37,6 +37,10 @@ PHP's do: the class's own members first, then the traits' members, then `Base`'s
 - Instance property defaults are read once from a trait instance. The layer's constructor calls `super(...args)` and
   then assigns a copy of each default, by the trait-default rule below.
 - A trait's members are its own members plus those of the traits it uses. Its own members win.
+- A trait's PHP property table (`[Symbol.for('xaravel.php.properties')]`, a symbol-keyed static) is not copied. In
+  PHP a trait's properties are properties of the using class, so the using class's own table lists them, a private
+  one included: `propertyTable` then mangles it with the using class's name, as PHP does. A using class that leaves
+  them out serializes a protected or private trait property as a public one.
 
 Conflicts:
 
@@ -136,7 +140,9 @@ when `Symbol.metadata` is undefined.
 The map's keys are the parameter names, in order. It is copied once into a frozen null-prototype object. Where it is
 stored depends on the target:
 
-- For a class, it goes into `context.metadata`, so a subclass without its own `inject` inherits it.
+- For a class, it goes into `context.metadata`, so a subclass without its own `inject` inherits it, as PHP inherits
+  a constructor. A subclass that declares its own constructor declares its own `inject`, `@inject({})` when that
+  constructor takes nothing to inject; otherwise it reads its parent's map.
 - For a method or function, it goes into the function's own metadata, so an override without `inject` has none.
 
 `readInjectMetadata(target)` returns the map, or `null`.
