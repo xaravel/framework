@@ -10,7 +10,8 @@
 // epics.md (Epic 9: "verified by Oracle Differential Tests"), the requests evaluate only the PHP constructs the
 // acceptance criteria name (`class_parents` of PHP's 22 exception classes; `new InvalidArgumentException('m', 5, $p)`
 // with its getters and `instanceof`; the defaults of `Exception`, `Error` and `ErrorException`; constructions with a
-// bad argument), and contain no Laravel code and no Upstream fixture.
+// bad argument, and the arguments PHP's coercive mode coerces, decisions/ESC-9.10-2.md), and contain no Laravel code
+// and no Upstream fixture.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -84,9 +85,10 @@ function thrownBy(fn: () => unknown): unknown {
   return null;
 }
 
-/** Runs `code` as a module in a fresh `bun` process from the package directory. */
-function child(code: string): { code: number; out: string; err: string } {
-  const run = Bun.spawnSync([process.execPath, "--no-env-file", "-e", code], { cwd: PACKAGE_DIR, stdout: "pipe", stderr: "pipe" });
+/** Runs `code` as a module in a fresh `bun` process from the package directory, with `env` over the parent's (less the opt-out). */
+function child(code: string, env: Record<string, string> = {}): { code: number; out: string; err: string } {
+  const { XARAVEL_NO_SCOPE_GLOBAL: _optOut, ...inherited } = process.env;
+  const run = Bun.spawnSync([process.execPath, "--no-env-file", "-e", code], { cwd: PACKAGE_DIR, stdout: "pipe", stderr: "pipe", env: { ...inherited, ...env } });
   return { code: run.exitCode, out: run.stdout.toString().trim(), err: run.stderr.toString() };
 }
 
@@ -139,7 +141,7 @@ const ENTRIES = ["src/index.ts", "src/scope/index.ts", "src/registry/index.ts", 
 
 xaravelTest(
   "XT-runtime-35",
-  "the runtime exports PHP's Exception, Error and SPL classes as JS Error subclasses with the Oracle's class_parents chains, each registered under its PHP name and published on Symbol.for('xaravel.php.classes') when any runtime entry loads, which a module that does not import the runtime reads; resolveClass misses throw PHP's Error and ScopeFrameException is a RuntimeException (AD-19)",
+  "the runtime exports PHP's Exception, Error and SPL classes as JS Error subclasses with the Oracle's class_parents chains, each registered under its PHP name and published on Symbol.for('xaravel.php.classes') when one of the four package entries loads (not under XARAVEL_NO_SCOPE_GLOBAL=1), which a module that does not import the runtime reads; resolveClass misses throw PHP's Error and ScopeFrameException is a RuntimeException (AD-19)",
   () => {
     // Local rows first, so they run even while a fixture is missing.
     CHAINED.forEach(([name, klass]) => {
@@ -177,7 +179,7 @@ xaravelTest(
     for (const entry of ENTRIES) {
       const run = child(`await import(${JSON.stringify(join(PACKAGE_DIR, entry))}); const m = globalThis[Symbol.for("xaravel.php.classes")]; console.log(m === undefined ? "none" : Object.keys(m).length);`);
       Assert.assertSame(0, run.code, `${entry}: ${run.err}`);
-      // An index publishes the map; a module below the indexes loads without it.
+      // Only the four package indexes publish the map; a module below them loads without it (ESC-9.10-2 (a)).
       Assert.assertSame(entry.endsWith("index.ts") ? "24" : "none", run.out, entry);
     }
     // A symbol already defined by other code: loading throws PHP's LogicException naming it.
@@ -190,6 +192,18 @@ xaravelTest(
       taken.out,
       taken.err,
     );
+    // A second copy loaded with XARAVEL_NO_SCOPE_GLOBAL=1 (decisions/ESC-9.10-2.md (b)): both globals are taken by
+    // the first copy, and the import neither throws nor installs over them.
+    const second = child(
+      `const first = Object.freeze(Object.create(null)); const run = () => null; Object.defineProperty(globalThis, Symbol.for("xaravel.php.classes"), { value: first }); Object.defineProperty(globalThis, Symbol.for("xaravel.scope.run"), { value: run }); const runtime = await import("@xaravel/runtime"); console.log(globalThis[Symbol.for("xaravel.php.classes")] === first, globalThis[Symbol.for("xaravel.scope.run")] === run, new runtime.LogicException("x").getMessage());`,
+      { XARAVEL_NO_SCOPE_GLOBAL: "1" },
+    );
+    Assert.assertSame(0, second.code, second.err);
+    Assert.assertSame("true true x", second.out, second.err);
+    // Opted out in a fresh process, the map is not published.
+    const optedOut = child(`await import("@xaravel/runtime"); console.log(globalThis[Symbol.for("xaravel.php.classes")] === undefined);`, { XARAVEL_NO_SCOPE_GLOBAL: "1" });
+    Assert.assertSame(0, optedOut.code, optedOut.err);
+    Assert.assertSame("true", optedOut.out, optedOut.err);
     const dir = mkdtempSync(join(tmpdir(), "xaravel-exceptions-"));
     try {
       // The Registry alone has no classmap encoder: writeClassmap names the entry that installs it.
@@ -252,12 +266,28 @@ class NotFound extends php.RuntimeException {
 }
 registerClass("XaravelFixture\\Exceptions\\NotFound", NotFound);
 
+/** The request's `XaravelFixture\Exceptions\Label`: a `__toString` port returning `'label'`. */
+class Label {
+  toString(): string {
+    return "label";
+  }
+}
+registerClass("XaravelFixture\\Exceptions\\Label", Label);
+
+/** A `__toString` port that returns an int, which PHP's `__toString` return type rejects. */
+class BadLabel {
+  toString(): unknown {
+    return 5;
+  }
+}
+registerClass("XaravelFixture\\Exceptions\\BadLabel", BadLabel);
+
 /** An unregistered subclass: it shows its parent's brand. */
 class XtUnregisteredLogic extends php.LogicException {}
 
 xaravelTest(
   "XT-runtime-36",
-  "new InvalidArgumentException('m', 5, previous) keeps getMessage(), getCode() and getPrevious() (also the JS cause) and is instanceof LogicException, Exception and the JS Error but not PHP's Error; the defaults, a subclass's $code and $message defaults and the TypeErrors for bad arguments match the Oracle (AD-19)",
+  "new InvalidArgumentException('m', 5, previous) keeps getMessage(), getCode() and getPrevious() (also the JS cause) and is instanceof LogicException, Exception and the JS Error but not PHP's Error; the defaults, a subclass's $code and $message defaults, the coercions of PHP's coercive mode and the TypeErrors for rejected arguments match the Oracle (AD-19, decisions/ESC-9.10-2.md)",
   () => {
     // Local rows first, so they run even while a fixture is missing.
     const previous = new php.RuntimeException("prev");
@@ -287,15 +317,27 @@ xaravelTest(
     Assert.assertSame(previous, full.getPrevious());
     Assert.assertSame(3, full.getCode());
 
-    // An int is what AD-9.3 holds as one: an in-range bigint is accepted; an unsafe number or an int64-overflowing
-    // bigint is not.
+    // An int is what AD-9.3 holds as one: an in-range bigint is kept; an int64-overflowing bigint, which PHP cannot
+    // hold, is rejected. An unsafe integral number is an AD-9 float, coerced as PHP coerces a float (an Oracle row).
     Assert.assertSame(5n, new php.Exception("m", 5n).getCode());
     const overflow = thrownBy(() => new php.Exception("m", 2n ** 64n));
     Assert.assertInstanceOf(php.TypeError, overflow);
     Assert.assertSame("Exception::__construct(): Argument #2 ($code) must be of type int, int given", (overflow as Error).message);
-    const unsafe = thrownBy(() => new php.Exception("m", 2 ** 60));
-    Assert.assertInstanceOf(php.TypeError, unsafe);
-    Assert.assertSame("Exception::__construct(): Argument #2 ($code) must be of type int, float given", (unsafe as Error).message);
+    const symbol = thrownBy(() => new php.Exception(Symbol("s") as unknown as string));
+    Assert.assertInstanceOf(php.TypeError, symbol);
+    Assert.assertSame("Exception::__construct(): Argument #1 ($message) must be of type string, symbol given", (symbol as Error).message);
+    // The PHP Error root keeps a non-zero code and its previous throwable (also the JS cause).
+    const typeError = new php.TypeError("m", 7, previous);
+    Assert.assertSame(7, typeError.getCode());
+    Assert.assertSame(previous, typeError.getPrevious());
+    Assert.assertSame(previous, typeError.cause);
+    // A closure is no string, and a __toString port that returns another type throws PHP's TypeError.
+    const closure = thrownBy(() => new php.Exception((() => "m") as unknown as string));
+    Assert.assertInstanceOf(php.TypeError, closure);
+    Assert.assertSame("Exception::__construct(): Argument #1 ($message) must be of type string, Closure given", (closure as Error).message);
+    const badPort = thrownBy(() => new php.Exception(new BadLabel() as unknown as string));
+    Assert.assertInstanceOf(php.TypeError, badPort);
+    Assert.assertSame("XaravelFixture\\Exceptions\\BadLabel::__toString(): Return value must be of type string, int returned", (badPort as Error).message);
 
     // An object built without the constructor (as phpUnserialize builds one) reads its defaults, never throws.
     const bareException = Object.create(php.ErrorException.prototype) as php.ErrorException;
@@ -303,11 +345,6 @@ xaravelTest(
     Assert.assertSame(0, bareException.getCode());
     Assert.assertSame(1, bareException.getSeverity());
     Assert.assertNull((Object.create(php.Error.prototype) as php.Error).getPrevious());
-
-    // Not ported: PHP's coercions; a null message throws where PHP coerces it to "" (the Oracle row below).
-    const nullMessage = thrownBy(() => new php.Exception(null as unknown as string));
-    Assert.assertInstanceOf(php.TypeError, nullMessage);
-    Assert.assertSame("Exception::__construct(): Argument #1 ($message) must be of type string, null given", (nullMessage as Error).message);
 
     // The Oracle rows.
     const output = oracle("XT-runtime-36");
@@ -360,8 +397,8 @@ xaravelTest(
       Assert.assertSame(expectedThrow.class, fqcn(error as object), `bad #${index}`);
       Assert.assertSame(expectedThrow.message, (error as Error).message, `bad #${index}`);
     }
-    // PHP coerces a null message to "" (with a deprecation); the port throws instead (above).
-    Assert.assertSame("", valueOf(output, 20));
+    // PHP's coercive mode (decisions/ESC-9.10-2.md): a null message is "".
+    Assert.assertSame(valueOf(output, 20), new php.Exception(null as unknown as string).getMessage());
 
     // A subclass's $code / $message defaults.
     Assert.assertSame(valueOf(output, 21), new NotFound().getCode());
@@ -369,6 +406,74 @@ xaravelTest(
     Assert.assertSame(valueOf(output, 23), new NotFound("x", 0).getCode());
     Assert.assertSame(valueOf(output, 24), new NotFound("x", 7).getCode());
     Assert.assertSame(valueOf(output, 25), new NotFound("").getMessage());
-    Assert.assertSame(26, output.results.length);
+
+    // The coercions of PHP's coercive mode: each value as the Oracle gives it.
+    const coerced: readonly (readonly [number, () => unknown])[] = [
+      [26, () => new php.Exception("m", null as unknown as number).getCode()],
+      [27, () => new php.Exception("m", "5" as unknown as number).getCode()],
+      [28, () => new php.Exception("m", php.float(5) as unknown as number).getCode()],
+      [29, () => new php.Exception("m", 5.5).getCode()],
+      [30, () => new php.Exception("m", true as unknown as number).getCode()],
+      [31, () => new php.Exception("m", false as unknown as number).getCode()],
+      [32, () => new php.Exception("m", " 5 " as unknown as number).getCode()],
+      [33, () => new php.Exception("m", "5.5" as unknown as number).getCode()],
+      [34, () => new php.Exception("m", "1e3" as unknown as number).getCode()],
+      [35, () => new php.Exception("m", -0).getCode()],
+      [36, () => new php.Exception("m", 2 ** 60).getCode()],
+      [42, () => new php.Exception(5 as unknown as string).getMessage()],
+      [43, () => new php.Exception(5.5 as unknown as string).getMessage()],
+      [44, () => new php.Exception((0.1 + 0.2) as unknown as string).getMessage()],
+      [45, () => new php.Exception(1e100 as unknown as string).getMessage()],
+      [46, () => new php.Exception(true as unknown as string).getMessage()],
+      [47, () => new php.Exception(false as unknown as string).getMessage()],
+      [48, () => new php.Exception(new Label() as unknown as string).getMessage()],
+      [52, () => new php.ErrorException("m", 0, null as unknown as number).getSeverity()],
+      [53, () => new php.ErrorException("m", 0, 2.5).getSeverity()],
+      [54, () => new php.ErrorException("m", 0, 1, true as unknown as string, false as unknown as number).getMessage()],
+    ];
+    for (const [index, make] of coerced) {
+      Assert.assertSame(valueOf(output, index), make(), `coerced #${index}`);
+    }
+    const lists: readonly (readonly [number, () => unknown[]])[] = [
+      [
+        50,
+        () => {
+          const made = new php.Error(null as unknown as string, "5" as unknown as number);
+          return [made.getMessage(), made.getCode()];
+        },
+      ],
+      [
+        51,
+        () => {
+          const made = new php.ErrorException(null as unknown as string, "5" as unknown as number, "2" as unknown as number, 5 as unknown as string, "7" as unknown as number);
+          return [made.getMessage(), made.getCode(), made.getSeverity()];
+        },
+      ],
+      [57, () => [typeError.getMessage(), typeError.getCode(), typeError.getPrevious() === previous]],
+    ];
+    for (const [index, make] of lists) {
+      const expectedList = valueOf(output, index) as unknown[];
+      const made = make();
+      Assert.assertSame(expectedList.length, made.length, `list #${index}`);
+      expectedList.forEach((value, at) => Assert.assertSame(value, made[at], `list #${index}[${at}]`));
+    }
+    const rejected: readonly (readonly [number, () => unknown])[] = [
+      [37, () => new php.Exception("m", "5abc" as unknown as number)],
+      [38, () => new php.Exception("m", "" as unknown as number)],
+      [39, () => new php.Exception("m", 1e20)],
+      [40, () => new php.Exception("m", Number.NaN)],
+      [41, () => new php.Exception("m", "9223372036854775808" as unknown as number)],
+      [49, () => new php.Exception(new php.stdClass() as unknown as string)],
+      [55, () => new php.ErrorException("m", 0, 1, null, "x" as unknown as number)],
+      [56, () => new php.ErrorException("m", 0, 1, new php.stdClass() as unknown as string)],
+    ];
+    for (const [index, make] of rejected) {
+      const expectedThrow = throwsOf(output, index);
+      const error = thrownBy(make);
+      Assert.assertInstanceOf(php.TypeError, error, `rejected #${index}`);
+      Assert.assertSame(expectedThrow.class, fqcn(error as object), `rejected #${index}`);
+      Assert.assertSame(expectedThrow.message, (error as Error).message, `rejected #${index}`);
+    }
+    Assert.assertSame(58, output.results.length);
   },
 );

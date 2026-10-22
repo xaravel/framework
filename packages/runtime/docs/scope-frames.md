@@ -53,8 +53,13 @@ take an `AsyncLocalStorage.snapshot()` when they are called:
 
 On load the scope module installs `globalThis[Symbol.for('xaravel.scope.run')]`, which is `runInFrame` itself. The
 grader opens a test frame with it without importing the runtime. The property is non-writable, non-configurable and
-non-enumerable. `XARAVEL_NO_SCOPE_GLOBAL=1` skips the install. A property already there with another value throws
-`ScopeFrameException`, because a second copy of the module would mean a second store.
+non-enumerable. A property already there with another value throws `ScopeFrameException`, because a second copy of
+the module would mean a second store.
+
+`XARAVEL_NO_SCOPE_GLOBAL=1`, read once when the runtime loads, is the opt-out for a second copy of `@xaravel/runtime`. It
+skips both globals the runtime installs: `Symbol.for('xaravel.scope.run')` and the PHP class map
+`Symbol.for('xaravel.php.classes')` ([exceptions.md](exceptions.md)). A second copy loaded with it imports without
+throwing and publishes neither (`decisions/ESC-9.10-2.md` (b)).
 
 ## `interleave`
 
