@@ -418,7 +418,7 @@ xaravelTest(
     expect(user).toContain("$this->assertSame('row-b', rowB())");
     expect(user).toContain('"exprs":["1 + 2"]');
     expect(user).not.toContain(SPEC);
-    expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker.");
+    expect(user).toContain("No added line carries an `adapted:DIV-<n>.<k>` marker or cites a `DIV-<n>.<k>` clause.");
     // (d): no added line has `@asyncRoot`, but the change edits packages/support/src/, so the rules come anyway (ESC-9.2-2).
     expect(user).toContain("### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)\n\n#### decisions/DIV-1.md");
     expect(user).not.toContain("No added line contains `@asyncRoot`");
@@ -688,7 +688,7 @@ xaravelTest(
     const evidenceSystem = (({ argv }) => argv[argv.indexOf("--system-prompt") + 1]!)(evidenceFakes.calls("claude")[0]!);
     expect(evidenceSystem).toContain("When in doubt, pick the reason that counts against conformance.");
     const div9 = readFileSync(join(root, "decisions", "DIV-9.md"), "utf8");
-    expect(evidenceUser).toContain("### (a) DIV records cited by added adapted markers (F-3, F-5)");
+    expect(evidenceUser).toContain("### (a) DIV records cited by added adapted markers or DIV clauses (F-3, F-5)");
     expect(evidenceUser).toContain(`#### decisions/DIV-9.md\n\n\`\`\`markdown\n${div9}`);
     expect(evidenceUser).toContain("fewer_assertions:");
     expect(evidenceUser).toContain("unavailable: decisions/DIV-77.md does not exist");
@@ -744,6 +744,25 @@ xaravelTest(
     expect(gatherEvidence(root, changed("packages/runtime/src/Missing.ts"), none).sourceSurface).toEqual([
       { label: "packages/runtime/src/Missing.ts", text: null, unavailable: "packages/runtime/src/Missing.ts does not exist" },
     ]);
+    // ESC-9.8-2: (c) names each assigned committed request's fixture that is present, verifies and is not an error, so
+    // it never reads as missing; an error fixture stays an error entry only.
+    const presentSha256 = "0141ced17058032654212541dd1135320f1ad78662373cb6b1d3437819c8f2c4";
+    const presentFixture = `conformance/fixtures/runtime/${presentSha256}.json`;
+    const present = gatherEvidence(root, [], { testIds: [], xaravelTestIds: ["XT-runtime-29"] });
+    expect(present.errorFixtures).toEqual([]);
+    expect(present.presentFixtures).toEqual([
+      { label: `XT-runtime-29 (${presentFixture})`, text: JSON.stringify({ id: "XT-runtime-29", sha256: presentSha256, path: presentFixture, verified: true, error: null }), unavailable: null },
+    ]);
+    const errored = gatherEvidence(root, [], { testIds: [ERROR_REQUEST_ID], xaravelTestIds: [] });
+    expect(errored.errorFixtures.map((entry) => entry.label)).toEqual([`${ERROR_REQUEST_ID} (${ERROR_FIXTURE})`]);
+    expect(errored.presentFixtures).toEqual([]);
+    const presentUser = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.8", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: { ...NO_EVIDENCE, presentFixtures: present.presentFixtures } }).user;
+    expect(presentUser).toContain(`### (c) Oracle fixtures that are present, verify against oracle.pub and are not errors (F-6)\n\n#### XT-runtime-29 (${presentFixture})`);
+    // ESC-9.8-2: (a) supplies the DIV record of a `DIV-<n>.<k>` clause an added line cites outside an adapted marker; a
+    // DIV path, a bare DIV number and a longer token are not clause citations.
+    const divCited = (line: string) => gatherEvidence(root, [{ filename: "packages/runtime/tests/xaravel/json.test.ts", status: "modified", patch: `@@ -1 +1 @@\n-a\n+${line}\n` }], none).divRecords.map((entry) => [entry.label, entry.text !== null]);
+    expect(divCited("// ESC-9.8-1 part 1, DIV-9.8")).toEqual([["decisions/DIV-9.md", true]]);
+    expect(divCited("// decisions/DIV-9.md, DIV-9, xDIV-9.8, a/DIV-9.8")).toEqual([]);
     // Top-level declarations with or without a docblock, documented members, a one-line body and a multi-line signature.
     expect(
       sourceSurface(

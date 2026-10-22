@@ -34,9 +34,11 @@
 // holds the manifest, the Inventory rows with their Upstream lines, the
 // content of each changed Oracle request file, the per-file patches, and the
 // evidence the items need: (a) every DIV record an added
-// `adapted:DIV-<n>.<k>` token cites; (b) the consequence line of every
+// `adapted:DIV-<n>.<k>` token or `DIV-<n>.<k>` clause citation cites
+// (ESC-9.8-2); (b) the consequence line of every
 // `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line; (c) every assigned
-// committed Oracle request's fixture whose `output.error` is not null, and
+// committed Oracle request's fixture whose `output.error` is not null, a
+// line for each one present, verified and not an error (ESC-9.8-2), and
 // every changed fixture whose output is an error; (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
 // or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
@@ -200,12 +202,14 @@ export interface EvidenceEntry {
 
 /** The evidence the checklist items need, read from the root (see the header). */
 export interface Evidence {
-  /** (a) Each DIV record an added `adapted:DIV-<n>.<k>` token cites, in full (F-3, F-5). */
+  /** (a) Each DIV record an added `adapted:DIV-<n>.<k>` token or `DIV-<n>.<k>` clause citation cites, in full (F-3, F-5, ESC-9.8-2). */
   readonly divRecords: readonly EvidenceEntry[];
   /** (b) Each `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line, with its consequence line(s) (F-7). */
   readonly consequences: readonly EvidenceEntry[];
   /** (c) Each assigned committed Oracle request's fixture whose `output.error` is not null, or why none was read (F-6). */
   readonly errorFixtures: readonly EvidenceEntry[];
+  /** (c) Each assigned committed Oracle request's fixture that is present, verifies and is not an error, named (F-6, ESC-9.8-2). */
+  readonly presentFixtures: readonly EvidenceEntry[];
   /** (c) Each fixture the change adds or modifies whose `output.error` is not null, or why it was not read (F-6). */
   readonly headErrorFixtures: readonly EvidenceEntry[];
   /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot` or a `packages/<name>/src/` file changes, else empty (F-9, ESC-9.1-4, ESC-9.2-2). */
@@ -218,7 +222,7 @@ export interface Evidence {
   readonly sourceSurface: readonly EvidenceEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -358,9 +362,10 @@ export function buildPrompt(input: PromptInput): Prompt {
   }
   const evidence = input.evidence;
   sections.push("", "## Evidence for the checklist items");
-  evidenceSection(sections, "### (a) DIV records cited by added adapted markers (F-3, F-5)", evidence.divRecords, "No added line carries an `adapted:DIV-<n>.<k>` marker.", "markdown");
+  evidenceSection(sections, "### (a) DIV records cited by added adapted markers or DIV clauses (F-3, F-5)", evidence.divRecords, "No added line carries an `adapted:DIV-<n>.<k>` marker or cites a `DIV-<n>.<k>` clause.", "markdown");
   evidenceSection(sections, "### (b) Consequences cited on added lines (F-7)", evidence.consequences, "No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence.", "jsonl");
   evidenceSection(sections, "### (c) Oracle fixtures whose output is an error (F-6)", evidence.errorFixtures, "No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.", "json");
+  evidenceSection(sections, "### (c) Oracle fixtures that are present, verify against oracle.pub and are not errors (F-6)", evidence.presentFixtures, "No fixture of an assigned committed Oracle request is present, verified and not an error.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
   evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`, and the change touches no `packages/*/src/` file.", "markdown");
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
@@ -565,20 +570,23 @@ function consequenceLines(root: string): Map<string, string[]> | string {
   return out;
 }
 
-/** (c): the assigned committed requests' fixtures whose `output.error` is not null, or why they could not be read. */
-function errorFixtures(root: string, assigned: readonly string[]): EvidenceEntry[] {
+/**
+ * (c): the assigned committed requests' fixtures whose `output.error` is not null, or why they could not be read
+ * (`errors`), and a line naming each one that is present, verifies and is not an error (`present`, ESC-9.8-2).
+ */
+function assignedFixtures(root: string, assigned: readonly string[]): { errors: EvidenceEntry[]; present: EvidenceEntry[] } {
   if (assigned.length === 0) {
-    return [];
+    return { errors: [], present: [] };
   }
   const wanted = new Set(assigned);
   let requests: [string, { id: string; component: string }][];
   try {
     requests = [...committedRequests(root).requests].filter(([, request]) => covers(wanted, request.id)).sort(([a, x], [b, y]) => compareUnits(x.id, y.id) || compareUnits(a, b));
   } catch (error) {
-    return [{ label: "committed Oracle requests", text: null, unavailable: `cannot read the committed requests: ${error instanceof Error ? error.message : String(error)}` }];
+    return { errors: [{ label: "committed Oracle requests", text: null, unavailable: `cannot read the committed requests: ${error instanceof Error ? error.message : String(error)}` }], present: [] };
   }
   if (requests.length === 0) {
-    return [];
+    return { errors: [], present: [] };
   }
   let pem: string | null = null;
   let keyProblem: string | null = null;
@@ -588,6 +596,7 @@ function errorFixtures(root: string, assigned: readonly string[]): EvidenceEntry
     keyProblem = error instanceof Error ? error.message : String(error);
   }
   const out: EvidenceEntry[] = [];
+  const present: EvidenceEntry[] = [];
   for (const [sha256, { id, component }] of requests) {
     const rel = `${FIXTURES_DIR}/${component}/${sha256}.json`;
     const label = `${id} (${rel})`;
@@ -609,9 +618,12 @@ function errorFixtures(root: string, assigned: readonly string[]): EvidenceEntry
     const error = (JSON.parse(text) as { output?: { error?: unknown } }).output?.error;
     if (error !== null && error !== undefined) {
       out.push({ label, text: JSON.stringify({ id, sha256, error }), unavailable: null });
+    } else {
+      // Named, so a reviewer can tell a fixture that is present and not an error from a missing one (ESC-9.8-2).
+      present.push({ label, text: JSON.stringify({ id, sha256, path: rel, verified: true, error: null }), unavailable: null });
     }
   }
-  return out;
+  return { errors: out, present };
 }
 
 /**
@@ -654,6 +666,10 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     for (const match of line.matchAll(/(?:adapted:|"adapted"\s*:\s*"|intentional-divergence:)DIV-([1-9]\d*)\b/g)) {
       divs.add(Number(match[1]));
     }
+    // A `DIV-<n>.<k>` clause cited outside a marker, as a comment or a Xaravel Test relying on it does (ESC-9.8-2).
+    for (const match of line.matchAll(/(?<![\w./-])DIV-([1-9]\d*)\.[1-9]\d*\b/g)) {
+      divs.add(Number(match[1]));
+    }
     for (const match of line.matchAll(/\b(?:FR|AD)-[1-9]\d*\.[1-9]\d*\b/g)) {
       tokens.add(match[0]);
     }
@@ -671,10 +687,12 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
       return found === undefined ? { label: token, text: null, unavailable: `unknown consequence id ${token}: no line in ${CONSEQUENCES_DIR}/*.jsonl has it` } : { label: token, text: found.join("\n"), unavailable: null };
     });
   }
+  const fixtures = assignedFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]);
   return {
     divRecords,
     consequences,
-    errorFixtures: errorFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]),
+    errorFixtures: fixtures.errors,
+    presentFixtures: fixtures.present,
     headErrorFixtures: [],
     // F-9 also judges kept tags and untagged new exports, so any framework source change gets the rules (ESC-9.2-2).
     asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
