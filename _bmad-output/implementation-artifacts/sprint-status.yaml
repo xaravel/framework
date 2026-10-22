@@ -126,7 +126,7 @@ development_status:
   9-5-phparray-ref-float-marker-and-null-normalisation: done
   9-6-php-semantics-helpers: done
   9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
-  9-8-jsonencode-jsondecode-with-php-flag-semantics: in-progress  # ESC-9.8-1 ruled (decisions/ESC-9.8-1.md); part 2 (jsonLastError) lands as a follow-up
+  9-8-jsonencode-jsondecode-with-php-flag-semantics: blocked  # ESC-9.8-2 (protected-path: Fidelity Review evidence for fixtures on main and DIV-9.8); ESC-9.8-1 part 2 landed
   9-9-mixin-traits-and-inject-metadata: backlog
   9-10-php-exception-hierarchy: backlog  # also switches the codec Closure error to Exception (decisions/ESC-9.7-1.md part 4) and the JSON errors to JsonException / ValueError (decisions/ESC-9.8-1.md part 1)
   9-11-grader-follow-ups-to-the-runtime-value-model: backlog  # Epic 4 retro S4 (decisions/ESC-4.3-1.md)

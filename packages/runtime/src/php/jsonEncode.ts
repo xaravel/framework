@@ -21,8 +21,8 @@
 //   string with PHP's stand-ins; with `JSON_THROW_ON_ERROR` (and without the partial flag) an `Error` with PHP's message
 //   and code (ESC-9.8-1 part 1).
 // - `json_last_error()` (ESC-9.8-1 part 2): each call records its code through `recordJsonError`, except under
-//   `JSON_THROW_ON_ERROR` without the partial flag, as PHP does. The Jsonable hook records nothing itself: its
-//   `toJson()` calls the encoder.
+//   `JSON_THROW_ON_ERROR` without the partial flag, as PHP does. The top-level Jsonable hook records nothing: PHP's
+//   `json_encode` never runs on that path (Laravel calls `toJson()` instead), so the record is left as it was.
 //
 // Load safety: the Class Registry imports this file (`writeClassmap`), so it imports only modules that call no Registry
 // function at load time, directly or transitively. `casts.ts`, `isNumeric.ts`, `PhpArray.ts`, `PhpFloat.ts`,
