@@ -3,7 +3,7 @@ title: 'Story 9.11: Grader follow-ups to the runtime value model'
 type: 'feature'
 created: '2026-10-22'
 baseline_revision: '6a51f8b0a0306c52eba5b5af8d43e2bd624c246f'
-status: 'blocked'
+status: 'in-progress'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -93,6 +93,7 @@ deferred: []
 
 ## Spec Change Log
 
+- 2026-10-22: `decisions/ESC-9.11-1.md` (Maintainer) rules option 1: the Story keeps every acceptance criterion inside `packages/assert/**` (AC1, AC3, AC4, AC5 and the grader half of AC2), its manifest gains XT-assert-20 (AC4) and XT-assert-21 (AC5), and Mockery's half of AC2 is the new Story 9.12. `decisions/ESC-9.11-2.md` (orchestrator) ruled the `-0` rule: the grader reads only the float marker. Re-apply `spec-9-11-attempt-1.patch` under that rule, build XT-assert-18 (grader half), XT-assert-20 and XT-assert-21, then run the review step with the Fidelity Review. The integral-float `===` matrix stays in `conformance/oracle-requests/9.11.jsonl` under XT-assert-17, as the Escalation records.
 - 2026-10-22: planning found that the manifest maps Xaravel Tests to only the first three of the five ACs now in `epics.md`, and that AC2's Mockery half needs `packages/mockery/**`, outside `story/9.11`'s allowed paths (Epic 9 is strict). Raised `conformance/escalations/ESC-9.11-1.md` (`protected-path`, XT-assert-18). The Story carries on with XT-assert-17 and XT-assert-19. ESC-4.1-1 names `4.1.jsonl` for the `===` matrix, which `story/9.11` cannot write; under the MAINT ruling ("choose the recommended or best-case option") the matrix goes in `9.11.jsonl` under XT-assert-17, recorded in ESC-9.11-1 for the Maintainer.
 - 2026-10-22: implementation found that the number-type rule (`-0` is a float) conflicts, for a plain `-0`, with XT-mockery-10 (`packages/mockery/tests/xaravel/mockery.test.ts:445-451`), which pins that `phpToString(-0)` prints `0` and `phpVarExport` prints `0` ("-0 is an integral float, which reads as an int (DIV-9)"), and which this Story may neither edit nor break (AC "the mockery suite still pass"). So `phpToString`, `var_export` and `serialize` keep printing a plain `-0` as `0` / `i:0;` as before; every other reader (`===`, `gettype`, `IsType`, the comparators, PHPUnit's exporter, which prints `-0.0`) follows the rule. A marked `float(-0)` prints `-0` / `-0.0` everywhere. Recorded for the Maintainer; aligning the two needs a change to `packages/mockery/**`.
 
