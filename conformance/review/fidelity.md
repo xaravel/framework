@@ -36,7 +36,7 @@ An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a P
 
 ### F-7: Every Xaravel Test verifies the consequence it declares
 
-**Check.** For every added or changed `xaravelTest(id, consequence, …)`, the body checks what its consequence string declares, and each `FR-<n>.<k>` or `AD-<n>.<k>` token it cites names the bullet the test actually verifies ([ESC-5.9-1](../escalations/ESC-5.9-1.md)). It fails when the body checks less than the string claims, or when a cited bullet is not the one tested.
+**Check.** For every added or changed `xaravelTest(id, consequence, …)`, the body checks what its consequence string declares, and each `FR-<n>.<k>` or `AD-<n>.<k>` token it cites names the bullet the test actually verifies ([ESC-5.9-1](../escalations/ESC-5.9-1.md)). It fails when the body checks less than the string claims, or when a cited bullet is not the one tested. The prompt shows each such test in full with every declaration in its own file it uses, directly or through another: the helpers it calls and the fixtures they name ([ESC-9.9-4](../escalations/ESC-9.9-4.md)).
 
 ### F-8: No stub, fake or partial implementation of another Component
 

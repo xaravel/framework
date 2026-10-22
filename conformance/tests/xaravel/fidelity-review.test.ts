@@ -48,6 +48,7 @@ import {
   sourceSurface,
   standingRejects,
   testUnits,
+  usedDeclarations,
   verdictSchema,
   xaravelTestEvidence,
   type ChecklistItem,
@@ -1029,6 +1030,48 @@ xaravelTest(
     const [loopUnit] = testUnits(loopText);
     expect([loopUnit!.kind, loopUnit!.ids, loopUnit!.consequence]).toEqual(["xt", ["XT-loop-1"], null]);
     expect(eOnly([{ ids: ["XT-loop-1"], path: "a.test.ts", from: 1, to: 3, reasons: ["its lines change"], body: loopText, unavailable: null, consequences: [{ label: "FR-111.1", text: "x", unavailable: null }], citesFrom: "text" }])).toContain("The consequences its text (it has no literal consequence string) cites:");
+
+    // ESC-9.9-4: (e) carries every declaration in the test's own file it uses, directly or through another, to a fixed
+    // point and in file order: helpers it calls, and class fixtures they or it name. An import is not a declaration.
+    const sampleUnits = testUnits(sampleText);
+    const helpersOf = (all: ReturnType<typeof testUnits>, id: string): [string, number, number][] => usedDeclarations(all, all.find((unit) => unit.ids.includes(id))!).map((helper) => [helper.name, helper.from, helper.to]);
+    expect(helpersOf(sampleUnits, "XT-sample-1")).toEqual([]);
+    expect(helpersOf(sampleUnits, "XT-sample-2")).toEqual([["baseRoot", 4, 7], ["wrapRoot", 9, 11]]);
+    expect(helpersOf(sampleUnits, "XT-sample-3")).toEqual([]);
+    const fixtureUnits = testUnits(
+      [
+        "class SetsName {",
+        '  name = "set";',
+        "}",
+        "class Other {}",
+        "class Uses extends mixin(null, SetsName) {}",
+        'registerClass("App\\\\Uses", Uses);',
+        "function check(): void {",
+        "  new Uses();",
+        "}",
+        'xaravelTest("XT-fixture-1", "uses a fixture through a helper", () => {',
+        "  check();",
+        "});",
+      ].join("\n"),
+    );
+    expect(helpersOf(fixtureUnits, "XT-fixture-1")).toEqual([["SetsName", 1, 3], ["Uses", 5, 5], ["check", 7, 9]]);
+    // The real case: XT-runtime-31 calls checkComposition and checkDefaultLimits, which use SetsName.
+    const traitsUnits = testUnits(readFileSync(join(root, "packages", "runtime", "tests", "xaravel", "traits.test.ts"), "utf8"));
+    expect(helpersOf(traitsUnits, "XT-runtime-31").map(([name]) => name)).toEqual(expect.arrayContaining(["checkComposition", "checkDefaultLimits", "SetsName"]));
+    // A changed helper's tests carry it; a helper several tests use is shown in full once, then named.
+    write(xtRepo.dir, sampleTest, sampleText.replace("String(/}/.source)", "String(/{/.source)"));
+    const helperEntries = xaravelTestEvidence(xtRepo.dir, reviewDiff(xtRepo.dir, xtBase).files);
+    git(xtRepo.dir, "checkout", "-q", "--", ".");
+    expect(helperEntries.map((entry) => [entry.ids.join(","), (entry.helpers ?? []).map((helper) => helper.name)])).toEqual([
+      ["XT-sample-2", ["baseRoot", "wrapRoot"]],
+      ["XT-sample-4", ["baseRoot"]],
+    ]);
+    const helperUser = eOnly(helperEntries);
+    expect(helperUser).toContain(`The declarations it uses from its own file, directly or through another, in full (ESC-9.9-4):\n\n- \`baseRoot\` (${sampleTest}:4-7):\n\n\`\`\`ts\n// A helper with a brace`);
+    expect(helperUser).toContain(`- \`wrapRoot\` (${sampleTest}:9-11):\n\n\`\`\`ts\nfunction wrapRoot(): string {`);
+    expect(helperUser).toContain(`- \`baseRoot\` (${sampleTest}:4-7): shown above.`);
+    expect(helperUser.split("function baseRoot(): string {")).toHaveLength(2);
+    expect(eOnly([{ ids: ["XT-loop-1"], path: "a.test.ts", from: 1, to: 3, reasons: ["its lines change"], body: loopText, unavailable: null, consequences: [], citesFrom: "text" }])).not.toContain("The declarations it uses");
 
     // The reviewed tree sees a same-size edit made in the second the real index was written (racy git): the temporary
     // index keeps the real index's mtime.

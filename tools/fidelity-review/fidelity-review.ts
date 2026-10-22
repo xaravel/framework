@@ -45,7 +45,8 @@
 // the full body and cited consequences of every Xaravel Test whose lines the
 // diff changes, that uses a test helper or fixture the diff changes, or whose
 // test file's top-level setup changes (a heuristic top-level-unit scanner,
-// `testUnits`); (f) every decision record an added line cites (`ESC-<id>`,
+// `testUnits`), with every declaration in its own file it uses, directly or
+// through another, in full, each shown once (ESC-9.9-4); (f) every decision record an added line cites (`ESC-<id>`,
 // `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a `decisions/<name>.md`
 // path), in full (ESC-9.2-1); (g) for each `packages/*/src/` file the change
 // adds or modifies, every top-level declaration and every documented one, with
@@ -372,6 +373,8 @@ export function buildPrompt(input: PromptInput): Prompt {
   if (evidence.xaravelTests.length === 0) {
     sections.push("", "No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
   }
+  // A helper several touched tests use is shown once, at its first use (ESC-9.9-4).
+  const shownHelpers = new Set<string>();
   for (const entry of evidence.xaravelTests) {
     if (entry.body === null) {
       sections.push("", `#### unavailable (${entry.path})`, "", `unavailable: ${entry.unavailable ?? "not read"}`);
@@ -379,6 +382,21 @@ export function buildPrompt(input: PromptInput): Prompt {
     }
     sections.push("", `#### ${entry.ids.length === 0 ? "(no literal XT id)" : entry.ids.join(", ")} (${entry.path}:${entry.from}-${entry.to})`, "");
     sections.push(`Included because: ${entry.reasons.join("; ")}.`, "", fence(entry.body, "ts"), "");
+    const helpers = entry.helpers ?? [];
+    if (helpers.length > 0) {
+      sections.push("The declarations it uses from its own file, directly or through another, in full (ESC-9.9-4):");
+      for (const helper of helpers) {
+        const where = `\`${helper.name}\` (${entry.path}:${helper.from}-${helper.to})`;
+        const key = `${entry.path}\0${helper.from}`;
+        if (shownHelpers.has(key)) {
+          sections.push("", `- ${where}: shown above.`);
+          continue;
+        }
+        shownHelpers.add(key);
+        sections.push("", `- ${where}:`, "", fence(helper.text, "ts"));
+      }
+      sections.push("");
+    }
     const source = entry.citesFrom === "consequence" ? "its consequence string" : "its text (it has no literal consequence string)";
     if (entry.consequences.length === 0) {
       sections.push(`${source[0]!.toUpperCase()}${source.slice(1)} cites no \`FR-<n>.<k>\` or \`AD-<n>.<k>\` id.`);
@@ -1041,6 +1059,36 @@ export interface XaravelTestEntry {
   readonly consequences: readonly EvidenceEntry[];
   /** Where `consequences` were read from: the literal consequence string, or the unit's whole text when it has none. */
   readonly citesFrom: "consequence" | "text";
+  /** Each declaration in its own file it uses, directly or through another, in file order (`usedDeclarations`, ESC-9.9-4); absent: none. */
+  readonly helpers?: readonly TestHelper[];
+}
+
+/** A test helper or fixture declaration an Xaravel Test uses, from the test's own file (ESC-9.9-4). */
+export interface TestHelper {
+  readonly name: string;
+  readonly from: number;
+  readonly to: number;
+  readonly text: string;
+}
+
+/**
+ * The declarations of `all` (one file's units) that `unit` uses by name, and those they use, to a fixed point, in file
+ * order (ESC-9.9-4): the helpers a test calls and the class or trait fixtures they or it name.
+ */
+export function usedDeclarations(all: readonly TestUnit[], unit: TestUnit): TestHelper[] {
+  const declarations = all.filter((other) => other.kind === "declaration" && other.from !== unit.from);
+  const used = new Set<TestUnit>();
+  const pending = [unit];
+  while (pending.length > 0) {
+    const text = pending.pop()!.text;
+    for (const declaration of declarations) {
+      if (!used.has(declaration) && usesName(text, declaration.name!)) {
+        used.add(declaration);
+        pending.push(declaration);
+      }
+    }
+  }
+  return declarations.filter((declaration) => used.has(declaration)).map((declaration) => ({ name: declaration.name!, from: declaration.from, to: declaration.to, text: declaration.text }));
 }
 
 const TS_FILE = /\.[cm]?tsx?$/;
@@ -1262,7 +1310,8 @@ export function xaravelTestEvidence(root: string, files: readonly ChangedFile[])
     .sort((a, b) => compareUnits(a.path, b.path) || a.unit.from - b.unit.from)
     .map(({ path, unit, reasons: why }) => {
       const cited = [...new Set([...(unit.consequence ?? unit.text).matchAll(/\b(?:FR|AD)-[1-9]\d*(?:\.[1-9]\d*)?\b/g)].map((match) => match[0]))].sort(compareUnits);
-      return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences), citesFrom: unit.consequence === null ? "text" : "consequence" };
+      const helpers = usedDeclarations(units(path), unit);
+      return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences), citesFrom: unit.consequence === null ? "text" : "consequence", ...(helpers.length === 0 ? {} : { helpers }) };
     });
   return [...unavailable, ...out];
 }
