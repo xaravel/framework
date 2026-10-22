@@ -16,7 +16,9 @@
 //   declared default, as PHP's trait default takes the place of a parent's default; any other value is kept, so a
 //   write such as an `initialize<Trait>` called from the base constructor survives (decisions/ESC-9.9-2.md). Two
 //   cases differ from PHP (DIV-12.8): with no table listing the name the base's value is kept, and a constructor
-//   write equal to the declared default is replaced by the trait's default.
+//   write equal to the declared default is replaced by the trait's default. A private base property is a separate PHP
+//   slot, so it never counts as the base's default and its value is kept in the one JS slot, where PHP reads the
+//   trait's default from outside the base (DIV-12.9, decisions/ESC-9.9-3.md).
 // - A member reached twice from the same declaring trait (a diamond) is applied once. A method two different traits
 //   declare throws PHP's collision message when it is called, so a class that overrides it resolves the collision; a
 //   property two traits declare with different defaults makes `mixin` throw.

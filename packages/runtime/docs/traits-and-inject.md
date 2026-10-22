@@ -73,18 +73,24 @@ assign defaults after `super(...args)` returns, so it decides per key (decisions
   to its declared default. Nothing has written it, so the trait's default replaces it, as in PHP.
 - Any other value is kept: the table does not list the name, no class in the chain declares a table, or the value
   differs from the declared default. A write made in the base constructor survives, as in PHP. A private base property
-  is a separate PHP slot, so it never counts as the base's default. PHP then reads the trait's default from outside
-  and the base's from the base's own methods; one JS slot cannot hold both, and which one Xaravel keeps awaits a ruling
-  (ESC-9.9-3).
+  is a separate PHP slot, so it never counts as the base's default (see DIV-12.9 below).
 
-Two cases differ from PHP (DIV-12.8):
+Three cases differ from PHP. Two are DIV-12.8:
 
 1. **No table.** When no property table of the base chain lists the name, the layer cannot tell a base field from a
    constructor write, and keeps the base's value. PHP has the trait's default.
 2. **An unchanged-looking write.** When the base constructor writes a value PHP-identical to the declared default, the
    layer cannot tell it from the untouched default, and applies the trait's default. PHP keeps the written value.
 
-A Ported Test whose outcome depends on either case raises an Escalation (FR-114); it is not adapted.
+The third is DIV-12.9 (decisions/ESC-9.9-3.md):
+
+3. **A private base property.** When the base declares a private property and a trait declares a public or protected
+   property of the same name, PHP keeps two slots: the base's own methods read the base's value, and code outside the
+   base (the subclass's own methods included) reads the trait's default. A JS object has one slot, and Xaravel keeps
+   the base's value in it, so the base's own methods read what PHP gives them, and every other reader sees the base's
+   value where PHP has the trait's default.
+
+A Ported Test whose outcome depends on any of these cases raises an Escalation (FR-114); it is not adapted.
 
 ## `classUsesRecursive`
 

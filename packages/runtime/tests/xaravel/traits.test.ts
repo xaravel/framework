@@ -257,8 +257,27 @@ function checkDefaultLimits(): void {
   class UsesWritesParent extends mixin(DefaultsNamed, WritesParent) {}
   registerClass("App\\Defaults\\XtUsesWritesParent", UsesWritesParent);
   Assert.assertSame("named", new UsesWritesParent().name, "DIV-12.8: a constructor write equal to the declared default is replaced");
-  // A private base property against a trait's public one is not asserted until ESC-9.9-3 is ruled: PHP reads the
-  // trait's default from outside and the base's from the base's own methods, and one JS slot cannot hold both.
+  // DIV-12.9, a private base property against a trait's public one: PHP keeps two slots, reading the trait's default
+  // from outside and the base's from the base's own methods; the one JS slot holds the base's value for both
+  // (ESC-9.9-3).
+  class Secret {
+    static readonly [PHP_PROPERTIES] = [{ name: "name", visibility: "private", default: "parent" }];
+    name: string = "parent";
+    secretName(): string {
+      return this.name;
+    }
+  }
+  registerClass("App\\Defaults\\XtSecret", Secret);
+  class UsesSecret extends mixin(Secret, SetsName) {
+    ownName(): string {
+      return this.name;
+    }
+  }
+  registerClass("App\\Defaults\\XtUsesSecret", UsesSecret);
+  const secret = new UsesSecret();
+  Assert.assertSame("parent", secret.name, "DIV-12.9: an outside read sees the private base property's value, where PHP has the trait's default");
+  Assert.assertSame("parent", secret.secretName(), "DIV-12.9: the base's own method reads the base's value, as in PHP");
+  Assert.assertSame("parent", secret.ownName(), "DIV-12.9: the subclass's own method sees the private base property's value, where PHP has the trait's default");
 }
 
 /** The composition rules of `mixin` (the matrix's local Composition row). */
@@ -467,7 +486,7 @@ function checkComposition(): void {
 
 xaravelTest(
   "XT-runtime-31",
-  "class X extends mixin(Base, TraitA, TraitB), with traits registered under their Upstream FQCNs: classUsesRecursive(X) returns the trait FQCNs, traits used by traits included, in Upstream order, as the Oracle's class_uses_recursive (for a class, an instance, an FQCN and a trait); members resolve own, then traits', then the base's, statics and defaults are copied per class and instance, a diamond applies once and a collision throws PHP's message when called; a trait default replaces a base property still at its declared default, as the Oracle's, and keeps any other value, except in the two DIV-12.8 cases (no property table: the base's value is kept; a write equal to the declared default: the trait's default applies) (AD-26, ESC-9.9-2)",
+  "class X extends mixin(Base, TraitA, TraitB), with traits registered under their Upstream FQCNs: classUsesRecursive(X) returns the trait FQCNs, traits used by traits included, in Upstream order, as the Oracle's class_uses_recursive (for a class, an instance, an FQCN and a trait); members resolve own, then traits', then the base's, statics and defaults are copied per class and instance, a diamond applies once and a collision throws PHP's message when called; a trait default replaces a base property still at its declared default, as the Oracle's, and keeps any other value, except in the two DIV-12.8 cases (no property table: the base's value is kept; a write equal to the declared default: the trait's default applies) and the DIV-12.9 case (a private base property against a trait's property: the base's value is kept, for an outside read, the subclass's own method and the base's own method) (AD-26, ESC-9.9-2, ESC-9.9-3)",
   () => {
     checkComposition();
     checkDefaultLimits();
