@@ -164,14 +164,6 @@ function isMethod(descriptor: PropertyDescriptor): boolean {
   return "value" in descriptor && typeof descriptor.value === "function" && descriptor.enumerable !== true;
 }
 
-/** Whether two descriptors define the same member (the same function, accessors or identical data). */
-function sameMember(a: PropertyDescriptor, b: PropertyDescriptor): boolean {
-  if ("value" in a && "value" in b) {
-    return identical(a.value, b.value);
-  }
-  return a.get === b.get && a.set === b.set;
-}
-
 /** A method that throws PHP's trait collision message when called, as the receiver's class did not resolve it. */
 function collision(first: AnyClass, later: AnyClass, key: string | symbol): (this: object) => never {
   const name = keyName(key);
@@ -193,7 +185,7 @@ function applyMembers(target: object, side: "proto" | "static", traits: readonly
     for (const [key, member] of traitMembers(trait, side)) {
       const previous = applied.get(key);
       if (previous !== undefined) {
-        if (previous.declarer === member.declarer || sameMember(previous.descriptor, member.descriptor)) {
+        if (previous.declarer === member.declarer || sameDescriptor(previous.descriptor, member.descriptor)) {
           continue;
         }
         if (isMethod(previous.descriptor) || isMethod(member.descriptor) || !("value" in member.descriptor)) {

@@ -3,7 +3,7 @@ title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
 status: 'blocked'
-baseline_revision: '4a3cd9faa8545c39afbb1857b00c720cca58e2cf'
+baseline_revision: 'a5ecf3905763930a6d18c518924c7e12afa3e303'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -29,6 +29,13 @@ deferred:
     location: >-
       packages/runtime/docs/traits-and-inject.md
     severity: medium
+  - summary: >-
+      Over a base whose constructor returns a Proxy (Model, per DIV-12), assignDefaults writes trait defaults with Object.defineProperty, so they reach the Proxy's defineProperty trap rather than its set trap.
+    evidence: |-
+      Review pass 2026-10-22 (Blind). Untested; whether it matters depends on which traps Model's Proxy defines. Story 36.1 (Model core: attributes, fill, guard) is the first such host and settles it, by Escalation if it needs a runtime change.
+    location: >-
+      packages/runtime/src/traits/mixin.ts (assignDefaults)
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -226,6 +233,60 @@ deferred:
   - Fidelity review:
     - `[medium]` `intent_gap`→escalated F-7 (reviewer 1, tree fc517f78): supply the complete `checkComposition` and `checkDefaultLimits` helpers and their fixtures, including `SetsName`. — Evidence (e) prints only the `xaravelTest(...)` unit, never the helpers it calls; reviewer 2 passed but noted the same gap. Fixing it is a `tools/fidelity-review/` change: ESC-9.9-4 (`protected-path`). The reject stands on that tree; the review patch above has since changed the tree.
 
+### 2026-10-22 — Review pass (ESC-9.9-4 follow-up, whole Story from a5ecf39)
+- verdicts: 45 findings — high 0, medium 4, low 32, false 8, maybe-false 1
+- findings:
+  - Blind:
+    - `[low]` `patch` `stories/9.9.md` says `blocked` while sprint status says `in-progress` and ESC-9.9-4 says unblocked. — Both are set to the Story's status at the end of this pass (bookkeeping, this commit).
+    - `[medium]` `defer` carried Trait defaults are absent while a base constructor's initializers run. — Deferred to Story 36.1 (frontmatter `deferred`).
+    - `[low]` `reject` A method collision fails when called, not when the class is declared. — Laravel's source compiles, so every collision a port meets is resolved by an override; the thrower only guards code PHP would refuse, and fails loudly.
+    - `[low]` `reject` carried The property-conflict message lacks the class name; a trait property against the using class's own field is not detected. — The layer cannot know the using class; the second case is code PHP refuses at compile time, which no Laravel port contains.
+    - `[low]` `reject` carried Trait constructors run at `mixin` time.
+    - `[low]` `reject` carried NaN defaults are judged identical.
+    - `[low]` `patch` `sameDescriptor` and `sameMember` are one function. — `sameMember` deleted; its caller uses `sameDescriptor`.
+    - `[low]` `reject` carried A static `initialize<Trait>` is not recorded; Model has no hook. — The `#[Boot]` / `#[Initialize]` loop is Story 38.x's, which can ask for an export by Escalation; a hook now is public surface with no consumer.
+    - `[low]` `reject` carried Tests register classes in their bodies. — Each test body runs once per process.
+    - `[low]` `reject` carried Untested error paths. — The `TypeError` guards are simple and loud (carried); the `inject(map, fn)` re-call is now tested (verification-gap row 2).
+    - `[maybe-false]` `defer` Defaults over a Proxy-returning base go through `defineProperty`, not `set`. — Whether Model's Proxy traps `defineProperty` is Story 36.1's design; medium (unverified), deferred there (frontmatter `deferred`).
+    - `[low]` `reject` `usedDeclarations` has no size cap and its test reads a Story file. — The tool change is decisions/ESC-9.9-4.md's, not this Story's; the prompt grows only with the test file.
+    - `[low]` `reject` carried `Mixed<B, Ts>` drops `abstract`.
+  - Edge case:
+    - `[low]` `reject` carried Symbol or `#private` trait fields.
+    - `[low]` `reject` carried Trait constructors run at `mixin` time.
+    - `[low]` `reject` An uninitialized trait field becomes `null`. — An untyped PHP property with no default is `null`; a JS port cannot express a typed uninitialized property, and AD-9 bars `undefined`.
+    - `[low]` `reject` carried A trait that extends a class.
+    - `[low]` `reject` An accessor against data of one name gets the property message, not the method one. — Rare, and it still throws at `mixin` time naming both traits.
+    - `[low]` `reject` One PHP array as an `Array` in one trait and a `PhpArray` in another is judged different. — A generator emits one form per value; mixed forms are not everyday input, and the result is a loud throw.
+    - `[low]` `reject` carried NaN defaults.
+    - `[low]` `reject` carried A non-configurable owned key throws.
+    - `[low]` `reject` carried A re-entrant `clearBootedTraits` during boot.
+    - `[low]` `reject` carried A static `initialize<Trait>`.
+    - `[low]` `reject` `inject(map, A)` after a subclass `B` was decorated does not reach `B`. — `inject(map, fn)` is typed for functions, not classes (tsc refuses a class); a class uses the decorator, which runs at definition.
+    - `[low]` `reject` carried `inject` on a frozen function.
+    - `[low]` `reject` carried A class decorator context with no metadata.
+    - `[low]` `reject` carried A non-enumerable key is validated before it is skipped.
+    - `[false]` `reject` `hardenIntrinsics` throws if `Symbol` is already non-extensible. — The harness hardens intrinsics once, before anything else freezes `Symbol`; the file is decisions/ESC-9.9-1.md's, not this Story's.
+    - `[low]` `reject` `usedDeclarations` has no cap. — Same as the Blind row.
+    - `[false]` `reject` carried The spec claims Bun never attaches metadata.
+  - Verification gap:
+    - `[low]` `reject` carried The `TypeError` guards of `mixin` and the boot helpers are untested.
+    - `[low]` `patch` `ownMetadata`'s inherited branch and a second `inject(map, fn)` never run. — XT-runtime-34 now injects onto a function whose prototype carries a map (own map created, parent's kept) and re-injects `handler`.
+    - `[low]` `patch` Different `PhpArray` and plain-object defaults are untested. — `checkComposition` now asserts the property message for both.
+  - Intent alignment:
+    - `[false]` `reject` Defaults overwrite an owned key. — decisions/ESC-9.9-2.md (DIV-12.8) and ESC-9.9-3.md (DIV-12.9) amend that clause.
+    - `[false]` `reject` The polyfill's extensibility guard and the `inject` fallback. — decisions/ESC-9.9-1.md.
+    - `[false]` `reject` carried Collisions cover more than the contract names.
+    - `[low]` `defer` carried The boot order runs on a JS stand-in host. — Story 36.1.
+    - `[low]` `reject` The defaults Oracle request uses a hand-written `initialize()`. — decisions/ESC-9.9-2.md prescribes the cases, and each uses one trait, so the orders agree.
+    - `[false]` `reject` carried The in-harness polyfill assertion sees the harness's install.
+    - `[false]` `reject` `inject` details beyond the contract. — Additive and loud.
+    - `[false]` `reject` The diff edits `tools/**` and the harness. — Those are the ruling PRs #291 and #296, not Story commits.
+    - `[low]` `patch` Status lines disagree. — Same as the Blind row.
+    - `[medium]` `intent_gap`→escalated The Fidelity Review rejects F-7. — Same as the Fidelity rows.
+  - Fidelity review:
+    - `[medium]` `intent_gap`→escalated F-7 (reviewer 1, tree fc6cb97): supply the AD-4 Rule for XT-runtime-33/34. — The tool finds no `AD-4.*` consequence line and prints `unknown`; the Rule is in the spine. Showing it is a `tools/fidelity-review/` change: ESC-9.9-5 (`protected-path`).
+    - `[medium]` `intent_gap`→escalated F-7 (reviewer 1, tree fc6cb97): supply the AD-26 Traits Rule for XT-runtime-31/32. — Same root cause; ESC-9.9-5. The reject stands on that tree; this pass's patches have since changed the tree.
+
 ## Design Notes
 
 - **Upstream order over "trait order".** The AC says "in trait order"; AD-26 says boot/initialize "run as Upstream". Upstream's order is `ReflectionClass::getMethods()`'s: the class's own methods, its traits depth-first, then the parent's. That is what "trait order" means in PHP, and the Oracle fixture pins it. It differs from `classUsesRecursive` order whenever a parent has traits (`Comment`: `HasB` boots before `HasP`).
@@ -244,7 +305,23 @@ deferred:
 ## Auto Run Result
 
 Status: blocked
-Blocking condition: ESC-9.9-4 (`protected-path`): the Fidelity Review's evidence (e) gives reviewers an Xaravel Test's `xaravelTest(...)` call but not the helpers it calls or their fixtures, so reviewer 1 rejects F-7 for XT-runtime-31 (tree fc517f78). Supplying them is a `tools/fidelity-review/` change; the 2026-10-21 amendment to MAINT-2026-10-16 lets the orchestrator rule on it. After the ruling, the Story re-runs its Fidelity Review on the changed tree, against base a5ecf39 so the review covers the whole Story.
+Blocking condition: ESC-9.9-5 (`protected-path`): the Fidelity Review prints `unknown consequence id` for AD-4 (XT-runtime-33, 34) and AD-26 (XT-runtime-31, 32), because `conformance/xaravel-consequences/runtime.jsonl` has no line for either, so reviewer 1 rejects F-7 at tree fc6cb97 (reviewer 2 passes; the ESC-9.9-4 finding is marked fixed). The Rules are in the spine; showing them is a `tools/fidelity-review/` change the 2026-10-21 amendment to MAINT-2026-10-16 lets the orchestrator rule on. After the ruling, the Story re-runs its Fidelity Review on the changed tree with `--base a5ecf3905763930a6d18c518924c7e12afa3e303`.
+
+- **Summary:** the ESC-9.9-4 follow-up. The whole Story (base a5ecf39, as decisions/ESC-9.9-4.md sets; `baseline_revision` now says the same, so `fidelity:review status` reads the same base) went through all five review layers. Three low patches: `mixin.ts` loses its duplicate `sameMember`; XT-runtime-34 covers `inject(map, fn)` on a function that inherits a map and a second `inject` on one function; XT-runtime-31 covers different `PhpArray` and plain-object trait defaults.
+- **Files:**
+  - `packages/runtime/src/traits/mixin.ts`: `sameMember` removed (no behaviour change).
+  - `packages/runtime/tests/xaravel/inject.test.ts`, `packages/runtime/tests/xaravel/traits.test.ts`: the new assertions.
+  - `conformance/escalations/ESC-9.9-5.md`: the Escalation.
+- **Review:** 45 findings. 4 patched (all low, one of them bookkeeping), 1 newly deferred (Proxy base, medium unverified, Story 36.1) plus 2 carried deferrals, 1 escalated (F-7, ESC-9.9-5, three rows), the rest rejected with reasons in the triage log.
+- **Fidelity Review:** tree fc6cb97, base a5ecf39. Reviewer 1 (codex) rejects F-7 for the missing AD-4 / AD-26 Rules and marks the ESC-9.9-4 finding fixed; reviewer 2 (claude) passes every item. The patches have since changed the tree, so a re-run is due after ESC-9.9-5 is ruled.
+- **Follow-up review recommended:** false (no `high` or `medium` patched).
+- **Verification:** `bun test packages/runtime` 34/34, `bun run harness --xaravel --id 'XT-runtime-*'` 34/34, clean `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check` and `oracle:story check 9.9` (3 accepted). `story:check 9.9` is not run: its approvals clause needs two Fidelity `pass` verdicts.
+- **Residual risk:** none new in behaviour; the open deferrals name Story 36.1.
+
+### Earlier run (ESC-9.9-3 follow-up)
+
+Status (then): blocked
+Blocking condition (then): ESC-9.9-4 (`protected-path`): the Fidelity Review's evidence (e) gives reviewers an Xaravel Test's `xaravelTest(...)` call but not the helpers it calls or their fixtures, so reviewer 1 rejects F-7 for XT-runtime-31 (tree fc517f78). Supplying them is a `tools/fidelity-review/` change; the 2026-10-21 amendment to MAINT-2026-10-16 lets the orchestrator rule on it. After the ruling, the Story re-runs its Fidelity Review on the changed tree, against base a5ecf39 so the review covers the whole Story.
 
 - **Summary:** the ESC-9.9-3 follow-up (DIV-12.9). XT-runtime-31 regains the private-slot row: a private base `name` against `SetsName`'s public one keeps the base's `"parent"` for an outside read, the subclass's own method and the base's own method. The `mixin.ts` header cites DIV-12.9 (no behaviour change), and the docs record the case as DIV-12.9 instead of open.
 - **Files:**
@@ -342,4 +419,63 @@ None.
 
 ```json
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"fc517f78e9585cd0072af8c3353a9c463810b181","base":"4a3cd9faa8545c39afbb1857b00c720cca58e2cf","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T06:06:38.663Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty, and the diff adds or changes no Ported Test. The only test touched is the Xaravel Test XT-runtime-31.","findings":[]},{"id":"F-2","result":"n/a","note":"There is no Ported Test, so there is no Upstream expected value to weaken. The new XT-runtime-31 assertions pin the DIV-12.9 behaviour that ESC-9.9-3 rules on (the base's value \"parent\" for an outside read and for the base's own method). They remove or loosen no existing expected value.","findings":[]},{"id":"F-3","result":"n/a","note":"There is no Ported Test, so there is no Upstream assertion count to compare. The change adds two local assertions and removes none (it replaces a comment saying the case was not yet asserted).","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"There is no `// adapted:DIV-<n>.<k>` marker and no Expectations `adapted` field. ESC-9.9-3 says the DIV-12.9 row carries no adapted marker, and the diff adds none.","findings":[]},{"id":"F-6","result":"pass","note":"The evidence lists no error fixture, base or changed. The three XT-runtime-31/32 fixtures are present, verify against oracle.pub, and have error null.","findings":[]},{"id":"F-7","result":"pass","note":"The new part of the XT-runtime-31 consequence string claims the DIV-12.9 case: a private base property against a trait property keeps the base's value, for an outside read and for the base's own method. The body checks exactly this. `Secret` declares a PHP_PROPERTIES entry with private visibility for `name` and a method `secretName`. It is mixed with the trait `SetsName`, and the test asserts \"parent\" for both `secret.name` and `secret.secretName()`. This matches the ESC-9.9-3 instructions and the DIV-12.9 text. The prompt does not show `SetsName`, so I could not confirm that its default for `name` differs from \"parent\", which the row needs in order to test anything. Its name and the earlier DIV-12.8 rows suggest it does. AD-26 is not an FR/AD-<n>.<k> bullet token, the line already cited it before this change, and evidence (b) says no added line cites such a consequence. ESC-9.9-3, which the string newly cites, is the ruling the row implements.","findings":[]},{"id":"F-8","result":"pass","note":"Every changed file is in the runtime Component (packages/runtime docs, src comment, tests) or is the Story's own spec status. There is no stub, fake or hard-coded return for another Component, and mixin.ts changes only a comment.","findings":[]},{"id":"F-9","result":"pass","note":"The only change to mixin.ts is a header comment. Evidence (g) shows no @asyncRoot tags, and every export (mixin, classUsesRecursive, bootTraits, initializeTraits, clearBootedTraits, the types) is sync. None does IO behind a Driver contract or takes a callback DIV-1 allows to be async, so no tag is missing.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 1: reject at tree fc6cb97928c8441c840f969d6e66665c218e9ba6
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `a5ecf3905763930a6d18c518924c7e12afa3e303`, on 2026-10-22T06:36:01.078Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No actual Ported Test is added or changed; the manifest assigns no Upstream Test IDs. Generated harness tests are infrastructure fixtures. |
+| F-2: No expected value is weakened | pass | Compared changed assertions and signed Oracle values: existing expectations are retained, harness assertions are added, and local divergent values follow DIV-12.8 and DIV-12.9. |
+| F-3: No assertion is removed without a DIV clause | n/a | There are no changed Ported Tests whose assertion counts require comparison with Upstream. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No committed Expectations line is set to skip; skip lines inside infrastructure fixtures are simulated grader inputs. |
+| F-5: Every `adapted` marker matches its clause | n/a | No actual assertion adaptation marker or Expectations adapted field is introduced; marker strings in fidelity-review tests exercise evidence collection. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | All three Story Oracle fixtures are explicitly verified and have null output.error; no changed fixture contains an error. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | The supplied helpers and fixtures resolve the previous XT-runtime-31 evidence gap, and its local divergence checks match the rulings. However, the cited AD-4 and AD-26 consequences are explicitly unavailable, preventing confirmation of their architectural mappings. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Runtime implementations remain within runtime responsibilities. Harness and review-tool edits match the supplied ESC-9.9-1 and ESC-9.9-4 approvals; test hosts do not add production implementations of Model or Container. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared the changed source bodies and exhaustive declaration listings with AD-6 and DIV-1: new runtime functions are synchronous and perform no async-root IO or permitted async callback execution. No retained asyncRoot tags require correction. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | Compared all three requests with the runtime fixtures and recorded reason: these are Xaravel differential probes without corresponding Upstream tests, exercising trait enumeration, initialization and Model trait hooks. The default probes also match ESC-9.9-2's prescribed cases. |
+
+Findings:
+
+- **F-7** `packages/runtime/tests/xaravel/inject.test.ts`: Supply the relevant AD-4 architecture bullets for XT-runtime-33 and XT-runtime-34. Evidence currently reports AD-4 as unknown, so the cited requirement cannot be compared with the tests.
+- **F-7** `packages/runtime/tests/xaravel/traits.test.ts`: Supply the relevant AD-26 Traits architecture bullet for XT-runtime-31 and XT-runtime-32. Evidence currently reports AD-26 as unknown, so the cited requirement cannot be verified.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `packages/runtime/tests/xaravel/traits.test.ts`: Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified. **fixed**: The prompt now supplies complete checkComposition and checkDefaultLimits bodies and relevant fixtures, including SetsName, DefaultsNamed and Secret, allowing the previously missing comparisons.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"fc6cb97928c8441c840f969d6e66665c218e9ba6","base":"a5ecf3905763930a6d18c518924c7e12afa3e303","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-22T06:36:01.078Z","items":[{"id":"F-1","result":"n/a","note":"No actual Ported Test is added or changed; the manifest assigns no Upstream Test IDs. Generated harness tests are infrastructure fixtures.","findings":[]},{"id":"F-2","result":"pass","note":"Compared changed assertions and signed Oracle values: existing expectations are retained, harness assertions are added, and local divergent values follow DIV-12.8 and DIV-12.9.","findings":[]},{"id":"F-3","result":"n/a","note":"There are no changed Ported Tests whose assertion counts require comparison with Upstream.","findings":[]},{"id":"F-4","result":"n/a","note":"No committed Expectations line is set to skip; skip lines inside infrastructure fixtures are simulated grader inputs.","findings":[]},{"id":"F-5","result":"n/a","note":"No actual assertion adaptation marker or Expectations adapted field is introduced; marker strings in fidelity-review tests exercise evidence collection.","findings":[]},{"id":"F-6","result":"n/a","note":"All three Story Oracle fixtures are explicitly verified and have null output.error; no changed fixture contains an error.","findings":[]},{"id":"F-7","result":"fail","note":"The supplied helpers and fixtures resolve the previous XT-runtime-31 evidence gap, and its local divergence checks match the rulings. However, the cited AD-4 and AD-26 consequences are explicitly unavailable, preventing confirmation of their architectural mappings.","findings":[{"path":"packages/runtime/tests/xaravel/inject.test.ts","detail":"Supply the relevant AD-4 architecture bullets for XT-runtime-33 and XT-runtime-34. Evidence currently reports AD-4 as unknown, so the cited requirement cannot be compared with the tests."},{"path":"packages/runtime/tests/xaravel/traits.test.ts","detail":"Supply the relevant AD-26 Traits architecture bullet for XT-runtime-31 and XT-runtime-32. Evidence currently reports AD-26 as unknown, so the cited requirement cannot be verified."}]},{"id":"F-8","result":"pass","note":"Runtime implementations remain within runtime responsibilities. Harness and review-tool edits match the supplied ESC-9.9-1 and ESC-9.9-4 approvals; test hosts do not add production implementations of Model or Container.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the changed source bodies and exhaustive declaration listings with AD-6 and DIV-1: new runtime functions are synchronous and perform no async-root IO or permitted async callback execution. No retained asyncRoot tags require correction.","findings":[]},{"id":"F-10","result":"pass","note":"Compared all three requests with the runtime fixtures and recorded reason: these are Xaravel differential probes without corresponding Upstream tests, exercising trait enumeration, initialization and Model trait hooks. The default probes also match ESC-9.9-2's prescribed cases.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"packages/runtime/tests/xaravel/traits.test.ts","detail":"Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified.","fixed":true,"note":"The prompt now supplies complete checkComposition and checkDefaultLimits bodies and relevant fixtures, including SetsName, DefaultsNamed and Secret, allowing the previously missing comparisons."}]}
+```
+
+### Reviewer 2: pass at tree fc6cb97928c8441c840f969d6e66665c218e9ba6
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `a5ecf3905763930a6d18c518924c7e12afa3e303`, on 2026-10-22T06:36:01.078Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty and the diff adds or changes no Ported Test. Only Xaravel Tests and Infrastructure tests change, so there is no Upstream assertion to compare. |
+| F-2: No expected value is weakened | n/a | There is no Ported Test, so no expected value can be compared with Upstream. The Xaravel Tests compare with signed Oracle fixtures exactly: jsonEncode of each decoded result goes through assertSame. |
+| F-3: No assertion is removed without a DIV clause | n/a | There is no Ported Test whose assertions could be counted against Upstream, and DIV-12.8 and DIV-12.9 add nothing to fewer_assertions. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change adds no Expectations lines and sets no line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No added line carries an '// adapted:DIV-<n>.<k>' marker or an Expectations adapted field. DIV-12.8 and DIV-12.9 are cited only in Xaravel Test comments and consequence text, as decisions/ESC-9.9-2.md and decisions/ESC-9.9-3.md direct, with no marker. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | pass | Evidence (c) names the three fixtures (28218ee4…, bed7e992…, 1454a09b…) as present and verified against oracle.pub, each with error null. No assigned fixture is an error. The test's 'oracle()' helper throws if a fixture reports an error. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Each touched Xaravel Test checks what its consequence string declares: - **XT-runtime-31** (P-1 evidence now in (e)):   - The classUsesRecursive rows compare with the Oracle for a class, an instance, an FQCN and a trait.   - Member order: Resolves' own count and its super.greet reaching Parent; the Collides thrower shows the trait layer sits above Parent's count.   - Per-class statics (registry) and per-instance defaults (hits); the Inner diamond; collision throws for methods, getters and statics.   - Trait-default rows compare with the Oracle: UsesName 'named', UsesWrites 'written', Flagged true, Open [].   - The DIV-12.8 no-table case: describe() gives 'parent:…'. The equal-write case: UsesWritesParent gives 'named', traced through DefaultsNamed's table and initializeTraits.   - The DIV-12.9 case: SetsName's default is 'named', and all three reads (outside, subclass method, base method) give 'parent'. - **XT-runtime-32**: once per class with 'this' as the class, initializers once per instance, Oracle order for Post, Comment and Reply, and clearBootedTraits. - **XT-runtime-33**: fresh processes for all four entries check before and after load, the descriptor and decorator metadata, plus the in-process assertion. - **XT-runtime-34**: covers every claimed case, including the TypeError messages naming AD-4. - **XT-conformance-185**: its additions match ESC-9.9-1. - **XT-conformance-161**: its additions test usedDeclarations as ESC-9.9-4 describes.  The tests cite only bare AD-4 and AD-26, which are not 'AD-<n>.<k>' bullet tokens; evidence (b) confirms no bullet citations. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The new code sits in packages/runtime (mixin, inject, polyfill). The edits outside it are covered by orchestrator rulings: conformance/harness/intrinsics.ts by ESC-9.9-1, and tools/fidelity-review by ESC-9.9-4. Neither edit fakes another Component's behaviour. The test-only Host and DefaultsHost classes model a host's constructor calling initializeTraits; they are fixtures of runtime's own API, not a stub of Eloquent shipped in src. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tags in any changed src file. Every new export (mixin, classUsesRecursive, bootTraits, initializeTraits, clearBootedTraits, inject, readInjectMetadata) is synchronous, does no IO and takes no async callback, so none needs a tag. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | The 9.9.jsonl requests belong to Xaravel Tests with no Upstream test. The reason is recorded in the traits.test.ts header. The XT-runtime-31 defaults request covers the four cases decisions/ESC-9.9-2.md prescribes. The XT-runtime-32 request calls Upstream Model::bootTraits and initializeTraits on fixture classes. None of the requests signs arbitrary PHP as an expected value. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `packages/runtime/tests/xaravel/traits.test.ts`: Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified. **fixed**: Evidence (e) now carries, through usedDeclarations (ESC-9.9-4), the full checkComposition (lines 283-485), checkDefaultLimits (246-281) and SetsName (214-216). It also shows Secret and UsesSecret inside checkDefaultLimits, and DefaultsNamed and the other fixtures. With these I checked XT-runtime-31's composition, default handling and private-property claims.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"fc6cb97928c8441c840f969d6e66665c218e9ba6","base":"a5ecf3905763930a6d18c518924c7e12afa3e303","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T06:36:01.078Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the diff adds or changes no Ported Test. Only Xaravel Tests and Infrastructure tests change, so there is no Upstream assertion to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"There is no Ported Test, so no expected value can be compared with Upstream. The Xaravel Tests compare with signed Oracle fixtures exactly: jsonEncode of each decoded result goes through assertSame.","findings":[]},{"id":"F-3","result":"n/a","note":"There is no Ported Test whose assertions could be counted against Upstream, and DIV-12.8 and DIV-12.9 add nothing to fewer_assertions.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds no Expectations lines and sets no line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No added line carries an `// adapted:DIV-<n>.<k>` marker or an Expectations adapted field. DIV-12.8 and DIV-12.9 are cited only in Xaravel Test comments and consequence text, as decisions/ESC-9.9-2.md and decisions/ESC-9.9-3.md direct, with no marker.","findings":[]},{"id":"F-6","result":"pass","note":"Evidence (c) names the three fixtures (28218ee4…, bed7e992…, 1454a09b…) as present and verified against oracle.pub, each with error null. No assigned fixture is an error. The test's `oracle()` helper throws if a fixture reports an error.","findings":[]},{"id":"F-7","result":"pass","note":"Each touched Xaravel Test checks what its consequence string declares:\n- **XT-runtime-31** (P-1 evidence now in (e)):\n  - The classUsesRecursive rows compare with the Oracle for a class, an instance, an FQCN and a trait.\n  - Member order: Resolves' own count and its super.greet reaching Parent; the Collides thrower shows the trait layer sits above Parent's count.\n  - Per-class statics (registry) and per-instance defaults (hits); the Inner diamond; collision throws for methods, getters and statics.\n  - Trait-default rows compare with the Oracle: UsesName 'named', UsesWrites 'written', Flagged true, Open [].\n  - The DIV-12.8 no-table case: describe() gives 'parent:…'. The equal-write case: UsesWritesParent gives 'named', traced through DefaultsNamed's table and initializeTraits.\n  - The DIV-12.9 case: SetsName's default is 'named', and all three reads (outside, subclass method, base method) give 'parent'.\n- **XT-runtime-32**: once per class with `this` as the class, initializers once per instance, Oracle order for Post, Comment and Reply, and clearBootedTraits.\n- **XT-runtime-33**: fresh processes for all four entries check before and after load, the descriptor and decorator metadata, plus the in-process assertion.\n- **XT-runtime-34**: covers every claimed case, including the TypeError messages naming AD-4.\n- **XT-conformance-185**: its additions match ESC-9.9-1.\n- **XT-conformance-161**: its additions test usedDeclarations as ESC-9.9-4 describes.\n\nThe tests cite only bare AD-4 and AD-26, which are not `AD-<n>.<k>` bullet tokens; evidence (b) confirms no bullet citations.","findings":[]},{"id":"F-8","result":"pass","note":"The new code sits in packages/runtime (mixin, inject, polyfill). The edits outside it are covered by orchestrator rulings: conformance/harness/intrinsics.ts by ESC-9.9-1, and tools/fidelity-review by ESC-9.9-4. Neither edit fakes another Component's behaviour. The test-only Host and DefaultsHost classes model a host's constructor calling initializeTraits; they are fixtures of runtime's own API, not a stub of Eloquent shipped in src.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tags in any changed src file. Every new export (mixin, classUsesRecursive, bootTraits, initializeTraits, clearBootedTraits, inject, readInjectMetadata) is synchronous, does no IO and takes no async callback, so none needs a tag.","findings":[]},{"id":"F-10","result":"pass","note":"The 9.9.jsonl requests belong to Xaravel Tests with no Upstream test. The reason is recorded in the traits.test.ts header. The XT-runtime-31 defaults request covers the four cases decisions/ESC-9.9-2.md prescribes. The XT-runtime-32 request calls Upstream Model::bootTraits and initializeTraits on fixture classes. None of the requests signs arbitrary PHP as an expected value.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"packages/runtime/tests/xaravel/traits.test.ts","detail":"Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified.","fixed":true,"note":"Evidence (e) now carries, through usedDeclarations (ESC-9.9-4), the full checkComposition (lines 283-485), checkDefaultLimits (246-281) and SetsName (214-216). It also shows Secret and UsesSecret inside checkDefaultLimits, and DefaultsNamed and the other fixtures. With these I checked XT-runtime-31's composition, default handling and private-property claims."}]}
 ```

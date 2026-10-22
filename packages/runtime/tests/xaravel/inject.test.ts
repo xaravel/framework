@@ -145,6 +145,17 @@ xaravelTest(
     inject(original, later);
     original["d"] = String;
     Assert.assertSame(jsonEncode(["c"]), jsonEncode(entries(readInjectMetadata(later)).map(([key]) => key)));
+    // inject(map, fn) on a function that inherits a map gives fn its own map and leaves the inherited one alone.
+    const parent = inject({ b: Foo }, (b: Foo): Foo => b);
+    const parentMap = readInjectMetadata(parent);
+    const child = Object.setPrototypeOf((x: Foo): Foo => x, parent) as (x: Foo) => Foo;
+    Assert.assertSame(parentMap, readInjectMetadata(child));
+    inject({ x: Foo }, child);
+    Assert.assertSame(jsonEncode(["x"]), jsonEncode(entries(readInjectMetadata(child)).map(([key]) => key)));
+    Assert.assertSame(parentMap, readInjectMetadata(parent));
+    // A second inject(map, fn) on the same function replaces its map.
+    inject({ a: String }, handler);
+    Assert.assertSame(jsonEncode(["a"]), jsonEncode(entries(readInjectMetadata(handler)).map(([key]) => key)));
     // Nothing stored: null.
     Assert.assertNull(readInjectMetadata(Foo));
     Assert.assertNull(readInjectMetadata((): null => null));
