@@ -2,10 +2,10 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-progress'
-baseline_revision: '0aa17dff6f77a0d3176353f3bad25e6a27836e80'
+status: 'blocked'
+baseline_revision: '4a3cd9faa8545c39afbb1857b00c720cca58e2cf'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
   - '{project-root}/stories/9.9.md'
@@ -108,6 +108,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-22: the ESC-9.9-3 follow-up is implemented (the DIV-12.9 row, with a third reader, the subclass's own method, added in review; the `mixin.ts` header; the docs). The Fidelity Review of tree fc517f78 has reviewer 1 rejecting F-7 because evidence (e) omits the helpers XT-runtime-31 calls (`checkComposition`, `checkDefaultLimits`) and their fixtures. That is a gap in `tools/fidelity-review/` (Protected), raised as ESC-9.9-4, so the Story is `blocked`. The next Fidelity Review should cover the whole Story (base a5ecf39, before #290), since `baseline_revision` now points after the Story's merged code; ESC-9.9-4 asks for that.
 - 2026-10-21: `decisions/ESC-9.9-3.md` (Maintainer) rules option 1: a private base property keeps the base's value in the one JS slot, recorded as DIV-12.9. The code is unchanged; the private-slot row, a comment and the docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21: `decisions/ESC-9.9-1.md` (orchestrator) and `decisions/ESC-9.9-2.md` (Maintainer) are ruled. ESC-9.9-2 takes neither listed option: a trait default replaces a base property it finds still at its declared default (read from the PHP property table, ESC-9.7-1 part 1), and any other value is kept; DIV-12.8 records the two remaining cases. That rule, its Oracle request and its docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21, implementation. (1) XT-runtime-31's classes are `App\Plain\{Base, Post, Comment, Reply, Plain}`, not `App\Models\*`: `registry.test.ts` already registers `App\Models\Post`, and registrations are process-wide. Trait FQCNs (`App\Concerns\*`), the only names in the results, are unchanged. XT-runtime-32's classes are `App\Eloquent\*`. (2) The conformance harness freezes `Symbol` before tests load (`conformance/harness/intrinsics.ts`), so the polyfill now installs only when `Object.isExtensible(Symbol)`, and `inject` reads `Symbol.metadata ?? Symbol.for('Symbol.metadata')`. Without the guard, every runtime test file failed at import under the harness. XT-runtime-33 checks the polyfill in fresh processes. The in-harness gap is ESC-9.9-1 (`protected-path`).
@@ -196,6 +197,35 @@ deferred:
     - `[low]` `reject` Scope beyond the ruling (private row, host docs, selector). — The private row is removed (ESC-9.9-3); the rest is additive and needed.
     - `[false]` `reject` No Expectations lines. — `test_ids` is empty; XT rows have no Expectations lines.
 
+### 2026-10-22 — Review pass (ESC-9.9-3 follow-up, with the Fidelity Review)
+- verdicts: 20 findings — high 0, medium 1, low 11, false 8, maybe-false 0
+- findings:
+  - Blind:
+    - `[low]` `patch` `sprint-status.yaml`'s 9.9 comment still says the private-slot row lands as a follow-up. — The comment is rewritten with the Story's new status (bookkeeping, this commit).
+    - `[false]` `reject` The Auto Run Result still says blocked on ESC-9.9-3. — It is written at the end of this pass, as the workflow orders.
+    - `[false]` `reject` Whether the Fidelity Review ran is unrecorded. — It ran in this pass; both verdicts are under `## Fidelity Review`.
+    - `[low]` `patch` The DIV-12.9 row skips the subclass's own methods, a reader DIV-12.9 names. — `UsesSecret.ownName()` and a third `assertSame("parent", …)` added; the consequence text names it.
+    - `[low]` `reject` No row for a protected trait property. — `assignDefaults` never reads the trait's visibility, only the base table's, so a protected trait property takes the same path as `SetsName`; a row adds nothing the code can distinguish.
+    - `[false]` `reject` Nothing pins that `private` is what keeps `"parent"`. — `Secret`'s value equals its declared default, so without the private filter `holdsBaseDefault` is true and `"named"` is assigned, failing the row (the verification-gap layer traced this); the public case is the ESC-9.9-2 Oracle request.
+    - `[low]` `reject` Citations name the ruling, not `decisions/DIV-12.md`. — Each cites the clause id DIV-12.9 beside the ruling, as the DIV-12.8 lines cite ESC-9.9-2; cosmetic.
+    - `[low]` `reject` The docs' numbered list is split and its last sentence repeats. — An ordered list starting at `3.` renders as 3 in CommonMark; the wording is cosmetic.
+  - Edge case:
+    - `[low]` `reject` A protected trait property against a private base property is untested. — Same as the Blind row: the trait's visibility is not an input of the rule.
+    - `[low]` `reject` A private base property listed in the table with no JS field gets the trait's default. — A port declares a JS field for each property its table lists (the table is that field's PHP metadata); a table-only property is a malformed port, not a DIV-12.9 case.
+    - `[low]` `reject` A private and an inherited public property of one name make construction throw. — Probed: `propertyTable` throws its own `TypeError` ("more than one property $name … which one JS property cannot hold"), the codec's rule since Story 9.7 (ESC-9.7-1); pre-existing and loud.
+    - `[low]` `reject` The docs claim the base's value is kept for every private-slot case. — Same root as the table-only row; holds for every well-formed port.
+  - Verification gap:
+    - `[false]` `reject` (other) `stories/9.9.md` says `in-progress` while the spec says `in-review`. — The manifest tracks the Story's sprint status (`in-progress`), the spec its workflow step; both are now `blocked`.
+  - Intent alignment:
+    - `[false]` `reject` No review or Fidelity Review artifacts. — This pass records both.
+    - `[false]` `reject` The spec body contradicts its status. — Same as the Blind row.
+    - `[false]` `reject` Status mismatch across files. — Same as the verification-gap row.
+    - `[low]` `patch` The subclass-method reader is untested. — Same as the Blind row; patched.
+    - `[low]` `reject` No Oracle check of the PHP side of DIV-12.9. — ESC-9.9-3 prescribes a local row; the PHP side was probed (`/tmp/xv100/p.php`, earlier pass), and an Oracle request would pin a value Xaravel deliberately does not give.
+    - `[false]` `reject` `test_ids: []` leaves the Story uncheckable. — The Story's ids are `xaravel_test_ids`, as in Stories 9.1-9.8; `story:check` reads both.
+  - Fidelity review:
+    - `[medium]` `intent_gap`→escalated F-7 (reviewer 1, tree fc517f78): supply the complete `checkComposition` and `checkDefaultLimits` helpers and their fixtures, including `SetsName`. — Evidence (e) prints only the `xaravelTest(...)` unit, never the helpers it calls; reviewer 2 passed but noted the same gap. Fixing it is a `tools/fidelity-review/` change: ESC-9.9-4 (`protected-path`). The reject stands on that tree; the review patch above has since changed the tree.
+
 ## Design Notes
 
 - **Upstream order over "trait order".** The AC says "in trait order"; AD-26 says boot/initialize "run as Upstream". Upstream's order is `ReflectionClass::getMethods()`'s: the class's own methods, its traits depth-first, then the parent's. That is what "trait order" means in PHP, and the Oracle fixture pins it. It differs from `classUsesRecursive` order whenever a parent has traits (`Comment`: `HasB` boots before `HasP`).
@@ -214,7 +244,24 @@ deferred:
 ## Auto Run Result
 
 Status: blocked
-Blocking condition: ESC-9.9-3 (`divergence`: a private base property against a trait property of the same name; PHP keeps two slots, JS has one, and DIV-12.8 lists only two cases) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). The Fidelity Review runs on the final tree after the ruling, because option 2 would change `mixin.ts`.
+Blocking condition: ESC-9.9-4 (`protected-path`): the Fidelity Review's evidence (e) gives reviewers an Xaravel Test's `xaravelTest(...)` call but not the helpers it calls or their fixtures, so reviewer 1 rejects F-7 for XT-runtime-31 (tree fc517f78). Supplying them is a `tools/fidelity-review/` change; the 2026-10-21 amendment to MAINT-2026-10-16 lets the orchestrator rule on it. After the ruling, the Story re-runs its Fidelity Review on the changed tree, against base a5ecf39 so the review covers the whole Story.
+
+- **Summary:** the ESC-9.9-3 follow-up (DIV-12.9). XT-runtime-31 regains the private-slot row: a private base `name` against `SetsName`'s public one keeps the base's `"parent"` for an outside read, the subclass's own method and the base's own method. The `mixin.ts` header cites DIV-12.9 (no behaviour change), and the docs record the case as DIV-12.9 instead of open.
+- **Files:**
+  - `packages/runtime/tests/xaravel/traits.test.ts`: the DIV-12.9 row and XT-runtime-31's consequence text.
+  - `packages/runtime/src/traits/mixin.ts`: header comment only.
+  - `packages/runtime/docs/traits-and-inject.md`: the three cases that differ from PHP (DIV-12.8 ×2, DIV-12.9).
+  - `conformance/escalations/ESC-9.9-4.md`: the Escalation.
+- **Review:** 20 findings. 2 patched (low: the subclass-method reader; the stale sprint-status comment), 0 deferred, 1 escalated (medium: F-7 evidence gap, ESC-9.9-4), 17 rejected with reasons in the triage log.
+- **Fidelity Review:** tree fc517f78, base 4a3cd9f. Reviewer 1 (codex) rejects F-7 and passes or marks n/a every other item. Reviewer 2 (claude) passes every item. The reject stands on that tree (ESC-8.8-1). The review patch has since changed the tree, so a re-run is due after ESC-9.9-4 is ruled.
+- **Follow-up review recommended:** false by the counting rule (no `high` or `medium` patched). The open risk is the Fidelity Review itself: it has not passed on any tree of this Story, and #290 and #293 merged the Story's code before one ran.
+- **Verification:** `bun test packages/runtime` 34/34, `bun run harness --xaravel --id 'XT-runtime-*'` 34/34, clean `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check` and `oracle:story check 9.9` (3 accepted). `story:check 9.9` is not run: its approvals clause needs two Fidelity `pass` verdicts.
+- **Residual risk:** none in behaviour; DIV-12.9 is now pinned by a test.
+
+### Earlier run (ESC-9.9-2 follow-up)
+
+Status (then): blocked
+Blocking condition (then): ESC-9.9-3 (`divergence`: a private base property against a trait property of the same name; PHP keeps two slots, JS has one, and DIV-12.8 lists only two cases) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). The Fidelity Review runs on the final tree after the ruling, because option 2 would change `mixin.ts`.
 
 - **Follow-up (ESC-9.9-2, DIV-12.8):** `packages/runtime/src/traits/mixin.ts` (rule and header), `conformance/oracle-requests/9.9.jsonl` (the four-case request) and its bot-signed fixture, `packages/runtime/tests/xaravel/traits.test.ts` (Oracle comparison and two DIV-12.8 local rows), `packages/runtime/docs/traits-and-inject.md` (the rule, its two limits, and the open private-slot case), XT-runtime-33's in-harness `Symbol.metadata` assertion (ESC-9.9-1), `conformance/escalations/ESC-9.9-3.md`.
 - **Review:** 25 findings. 1 patched (low: docs), 2 deferred (Model host field timing to Story 36.1; plus the earlier stacked-decorator item), 1 escalated (private slot, medium: ESC-9.9-3, with the row it would have pinned removed), the rest rejected with reasons in the triage log.
@@ -244,3 +291,55 @@ Blocking condition (then): ESC-9.9-2 (`divergence`: a trait default against a ba
   - `bun run harness --xaravel --id 'XT-runtime-*'`: 34/34 pass.
   - `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures` and `oracle:story check 9.9`.
 - **Residual risk:** inside the harness process, `Symbol.metadata` is undefined (ESC-9.9-1). The runtime reads `Symbol.for('Symbol.metadata')` there directly.
+
+## Fidelity Review
+
+### Reviewer 1: reject at tree fc517f78e9585cd0072af8c3353a9c463810b181
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `4a3cd9faa8545c39afbb1857b00c720cca58e2cf`, on 2026-10-22T06:06:38.663Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Tests are assigned, added or changed. |
+| F-2: No expected value is weakened | pass | Existing expected values remain unchanged. The two added exact assertions expect the base value, as ESC-9.9-3 explicitly requires for this Xaravel Test. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted marker or Expectations adapted field is added or changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture evidence identifies no relied-on Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | The added private-property assertions match ESC-9.9-3, but the supplied test body delegates most declared consequences to helpers whose complete implementations are absent, preventing verification of the entire changed consequence. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Framework changes are confined to runtime comments; the added runtime test fixtures implement the private-slot case prescribed by ESC-9.9-3, without introducing another Component's behaviour. |
+| F-9: Every `@asyncRoot` tag is true | pass | The supplied declaration inventory contains no asyncRoot tags or Promise-returning exports. The synchronous trait composition and lifecycle signatures are consistent with the supplied async rules. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file changes. |
+
+Findings:
+
+- **F-7** `packages/runtime/tests/xaravel/traits.test.ts`: Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"fc517f78e9585cd0072af8c3353a9c463810b181","base":"4a3cd9faa8545c39afbb1857b00c720cca58e2cf","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-22T06:06:38.663Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Tests are assigned, added or changed.","findings":[]},{"id":"F-2","result":"pass","note":"Existing expected values remain unchanged. The two added exact assertions expect the base value, as ESC-9.9-3 explicitly requires for this Xaravel Test.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted marker or Expectations adapted field is added or changed.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture evidence identifies no relied-on Oracle error fixture.","findings":[]},{"id":"F-7","result":"fail","note":"The added private-property assertions match ESC-9.9-3, but the supplied test body delegates most declared consequences to helpers whose complete implementations are absent, preventing verification of the entire changed consequence.","findings":[{"path":"packages/runtime/tests/xaravel/traits.test.ts","detail":"Supply the complete checkComposition and checkDefaultLimits helpers and their relevant fixture definitions, including SetsName, so the trait composition, default handling and private-property setup claimed by XT-runtime-31 can be verified."}]},{"id":"F-8","result":"pass","note":"Framework changes are confined to runtime comments; the added runtime test fixtures implement the private-slot case prescribed by ESC-9.9-3, without introducing another Component's behaviour.","findings":[]},{"id":"F-9","result":"pass","note":"The supplied declaration inventory contains no asyncRoot tags or Promise-returning exports. The synchronous trait composition and lifecycle signatures are consistent with the supplied async rules.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree fc517f78e9585cd0072af8c3353a9c463810b181
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `4a3cd9faa8545c39afbb1857b00c720cca58e2cf`, on 2026-10-22T06:06:38.663Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty, and the diff adds or changes no Ported Test. The only test touched is the Xaravel Test XT-runtime-31. |
+| F-2: No expected value is weakened | n/a | There is no Ported Test, so there is no Upstream expected value to weaken. The new XT-runtime-31 assertions pin the DIV-12.9 behaviour that ESC-9.9-3 rules on (the base's value "parent" for an outside read and for the base's own method). They remove or loosen no existing expected value. |
+| F-3: No assertion is removed without a DIV clause | n/a | There is no Ported Test, so there is no Upstream assertion count to compare. The change adds two local assertions and removes none (it replaces a comment saying the case was not yet asserted). |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | There is no '// adapted:DIV-<n>.<k>' marker and no Expectations 'adapted' field. ESC-9.9-3 says the DIV-12.9 row carries no adapted marker, and the diff adds none. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | pass | The evidence lists no error fixture, base or changed. The three XT-runtime-31/32 fixtures are present, verify against oracle.pub, and have error null. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The new part of the XT-runtime-31 consequence string claims the DIV-12.9 case: a private base property against a trait property keeps the base's value, for an outside read and for the base's own method. The body checks exactly this. 'Secret' declares a PHP_PROPERTIES entry with private visibility for 'name' and a method 'secretName'. It is mixed with the trait 'SetsName', and the test asserts "parent" for both 'secret.name' and 'secret.secretName()'. This matches the ESC-9.9-3 instructions and the DIV-12.9 text. The prompt does not show 'SetsName', so I could not confirm that its default for 'name' differs from "parent", which the row needs in order to test anything. Its name and the earlier DIV-12.8 rows suggest it does. AD-26 is not an FR/AD-<n>.<k> bullet token, the line already cited it before this change, and evidence (b) says no added line cites such a consequence. ESC-9.9-3, which the string newly cites, is the ruling the row implements. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed file is in the runtime Component (packages/runtime docs, src comment, tests) or is the Story's own spec status. There is no stub, fake or hard-coded return for another Component, and mixin.ts changes only a comment. |
+| F-9: Every `@asyncRoot` tag is true | pass | The only change to mixin.ts is a header comment. Evidence (g) shows no @​asyncRoot tags, and every export (mixin, classUsesRecursive, bootTraits, initializeTraits, clearBootedTraits, the types) is sync. None does IO behind a Driver contract or takes a callback DIV-1 allows to be async, so no tag is missing. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"fc517f78e9585cd0072af8c3353a9c463810b181","base":"4a3cd9faa8545c39afbb1857b00c720cca58e2cf","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T06:06:38.663Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty, and the diff adds or changes no Ported Test. The only test touched is the Xaravel Test XT-runtime-31.","findings":[]},{"id":"F-2","result":"n/a","note":"There is no Ported Test, so there is no Upstream expected value to weaken. The new XT-runtime-31 assertions pin the DIV-12.9 behaviour that ESC-9.9-3 rules on (the base's value \"parent\" for an outside read and for the base's own method). They remove or loosen no existing expected value.","findings":[]},{"id":"F-3","result":"n/a","note":"There is no Ported Test, so there is no Upstream assertion count to compare. The change adds two local assertions and removes none (it replaces a comment saying the case was not yet asserted).","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"There is no `// adapted:DIV-<n>.<k>` marker and no Expectations `adapted` field. ESC-9.9-3 says the DIV-12.9 row carries no adapted marker, and the diff adds none.","findings":[]},{"id":"F-6","result":"pass","note":"The evidence lists no error fixture, base or changed. The three XT-runtime-31/32 fixtures are present, verify against oracle.pub, and have error null.","findings":[]},{"id":"F-7","result":"pass","note":"The new part of the XT-runtime-31 consequence string claims the DIV-12.9 case: a private base property against a trait property keeps the base's value, for an outside read and for the base's own method. The body checks exactly this. `Secret` declares a PHP_PROPERTIES entry with private visibility for `name` and a method `secretName`. It is mixed with the trait `SetsName`, and the test asserts \"parent\" for both `secret.name` and `secret.secretName()`. This matches the ESC-9.9-3 instructions and the DIV-12.9 text. The prompt does not show `SetsName`, so I could not confirm that its default for `name` differs from \"parent\", which the row needs in order to test anything. Its name and the earlier DIV-12.8 rows suggest it does. AD-26 is not an FR/AD-<n>.<k> bullet token, the line already cited it before this change, and evidence (b) says no added line cites such a consequence. ESC-9.9-3, which the string newly cites, is the ruling the row implements.","findings":[]},{"id":"F-8","result":"pass","note":"Every changed file is in the runtime Component (packages/runtime docs, src comment, tests) or is the Story's own spec status. There is no stub, fake or hard-coded return for another Component, and mixin.ts changes only a comment.","findings":[]},{"id":"F-9","result":"pass","note":"The only change to mixin.ts is a header comment. Evidence (g) shows no @asyncRoot tags, and every export (mixin, classUsesRecursive, bootTraits, initializeTraits, clearBootedTraits, the types) is sync. None does IO behind a Driver contract or takes a callback DIV-1 allows to be async, so no tag is missing.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
