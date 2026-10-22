@@ -128,7 +128,7 @@ development_status:
   9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
   9-8-jsonencode-jsondecode-with-php-flag-semantics: done
   9-9-mixin-traits-and-inject-metadata: done  # Fidelity Review passed at tree 3ba5b05 (base a5ecf39) after ESC-9.9-5
-  9-10-php-exception-hierarchy: in-progress  # ESC-9.10-2 and ESC-9.10-3 ruled (decisions/ESC-9.10-2.md, decisions/ESC-9.10-3.md); the coercion follow-up lands, then the Fidelity Review re-runs with --base c870bc261d2bcea7b12296896c8650f52e124573. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
+  9-10-php-exception-hierarchy: blocked  # blocked on ESC-9.10-4 (protected-path, waits on the Maintainer): the ESC-9.10-2 follow-up landed in #307, but the Fidelity Review with --base c870bc261d2bcea7b12296896c8650f52e124573 stops at 619,174 characters, over the 600,000 cap. ESC-9.10-2 and ESC-9.10-3 ruled (decisions/ESC-9.10-2.md, decisions/ESC-9.10-3.md). Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
   9-11-grader-follow-ups-to-the-runtime-value-model: backlog  # Epic 4 retro S4 (decisions/ESC-4.3-1.md)
   epic-9-retrospective: optional
 
