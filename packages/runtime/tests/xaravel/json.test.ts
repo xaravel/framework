@@ -806,23 +806,27 @@ function localRows(): void {
 }
 
 /**
- * XT-runtime-27's local row: a fresh process that imports `@xaravel/runtime/registry` (or the php subpath) first can
- * write the classmap, so jsonEncode's imports keep the Registry's import cycle load-safe.
+ * XT-runtime-27's local row: a fresh process that imports `@xaravel/runtime/registry` (or the php subpath) first, or
+ * only the package root, can write the classmap, so jsonEncode's imports keep the Registry's import cycle load-safe
+ * and every entry that exports `writeClassmap` installs its encoder.
  */
 function cycleRow(): void {
   const registry = fileURLToPath(import.meta.resolve("@xaravel/runtime/registry"));
   const php = fileURLToPath(import.meta.resolve("@xaravel/runtime/php"));
+  const packageRoot = fileURLToPath(import.meta.resolve("@xaravel/runtime"));
   const dir = mkdtempSync(join(tmpdir(), "xaravel-json-"));
   try {
     const scripts = [
       `import { writeClassmap } from ${jsonEncode(registry)};\nwriteClassmap(${jsonEncode(join(dir, "a.json"))});\nconsole.log("ok");\n`,
       `import { jsonEncode } from ${jsonEncode(php)};\nimport { writeClassmap } from ${jsonEncode(registry)};\nwriteClassmap(${jsonEncode(join(dir, "b.json"))});\nconsole.log(jsonEncode([1.5]));\n`,
+      `import { writeClassmap } from ${jsonEncode(packageRoot)};\nwriteClassmap(${jsonEncode(join(dir, "c.json"))});\nconsole.log("ok");\n`,
     ];
+    const files = ["a.json", "b.json", "c.json"];
     for (const [index, script] of scripts.entries()) {
       const run = Bun.spawnSync([process.execPath, "-e", script], { stdout: "pipe", stderr: "pipe" });
       Assert.assertSame(0, run.exitCode, `script #${index}: ${run.stderr.toString()}`);
-      Assert.assertSame(index === 0 ? "ok" : "[1.5]", run.stdout.toString().trim());
-      Assert.assertSame("{}", readFileSync(join(dir, index === 0 ? "a.json" : "b.json"), "utf8"));
+      Assert.assertSame(index === 1 ? "[1.5]" : "ok", run.stdout.toString().trim());
+      Assert.assertSame("{}", readFileSync(join(dir, files[index] as string), "utf8"));
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

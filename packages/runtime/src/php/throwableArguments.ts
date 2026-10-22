@@ -104,11 +104,14 @@ function toStringArgument(value: unknown): string | null {
   if (port === null) {
     return null;
   }
+  // `__toString`'s `string` return type coerces as an argument does: a bool, an int, a float or another port's
+  // object gives its string, and null, an array or another object is PHP's `TypeError`.
   const result: unknown = port.call(object);
-  if (typeof result !== "string") {
-    throw phpTypeError(`${className(object)}::__toString(): Return value must be of type string, ${typeOf(result) === "object" ? className(result as object) : typeOf(result)} returned`);
+  const coerced = result === null || result === undefined ? null : toStringArgument(result);
+  if (coerced === null) {
+    throw phpTypeError(`${className(object)}::__toString(): Return value must be of type string, ${phpTypeName(result)} returned`);
   }
-  return result;
+  return coerced;
 }
 
 /** Argument `position` (`$name`, declared `string`, or `?string` when `nullable`) of `<root>::__construct()`. */
