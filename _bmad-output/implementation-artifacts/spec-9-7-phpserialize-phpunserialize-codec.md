@@ -2,8 +2,8 @@
 title: 'Story 9.7: `phpSerialize` / `phpUnserialize` codec'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-progress'
-baseline_revision: 'f4ff76dd036930162c463e8acb5005ed3ed3b892'
+status: 'in-review'
+baseline_revision: 'e3a8e4d4300a1522eee6d040685d461bf02caa7a'
 review_loop_iteration: 1
 followup_review_recommended: false
 context:
@@ -41,6 +41,13 @@ deferred:
     location: >-
       packages/runtime/src/php/phpSerialize.ts
     severity: low
+  - summary: >-
+      The PHP property table cannot declare a typed property with no default; PHP leaves it uninitialized and serialize() omits it, while the codec writes and seeds null.
+    evidence: |-
+      ESC-9.7-1 part 1 defines entries as { name, visibility, default }, and an absent default reads null. No ported class has such a property yet. The first Story that ports a serialized class with one raises an Escalation for an uninitialized marker, as ESC-9.7-1 part 2 directs consumers that need byte strings.
+    location: >-
+      packages/runtime/src/php/mangle.ts
+    severity: medium
 ---
 
 <intent-contract>
@@ -158,6 +165,37 @@ deferred:
 - verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
 - findings: none. Both reviewers passed tree `e957c53f307bc0848958a2a99a79c54cae5d5c9d`.
 
+### 2026-10-21 — Review pass (follow-up: ESC-9.7-1 part 1)
+- verdicts: 27 findings — high 0, medium 10, low 13, false 4, maybe-false 0. The Fidelity Review layer runs once the bot has signed the new request's fixture, which is part of the reviewed tree.
+- findings:
+  - `[medium]` `[patch]` Blind: a parent's private property and another slot with the same JS name share one JS property, so one PHP value is lost — `propertyTable` now throws a `TypeError` naming the class and property; local row added.
+  - `[medium]` `[defer]` Blind: the table cannot express a typed property with no default, which PHP leaves uninitialized (omitted by `serialize()`); an absent `default` reads `null` — the ruling's entry shape is `{ name, visibility, default }` and no class with such a property is ported yet; an uninitialized marker is a contract extension, so the first Story that ports a serialized class with one raises its Escalation, as ESC-9.7-1 part 2 directs for byte strings.
+  - `[low]` `[reject]` Blind: table entries are not validated (visibility, name, duplicates) — tables are emitted by generators from Upstream (ESC-9.7-1 part 1); validation adds branches for no reachable caller.
+  - `[low]` `[patch]` Blind: the table is rebuilt for every object — cached per class in a module `WeakMap`.
+  - `[low]` `[reject]` Blind: the table protocol is not exported and the test redeclares its type — the props protocol (ESC-4.1-1) is the same `Symbol.for` idiom with no export; exporting adds public surface the ruling does not ask for.
+  - `[low]` `[reject]` Blind: the fixture classes state defaults both in the table and as field initializers — PORTING.md keeps Upstream's properties as fields; the Oracle checks compare both paths with PHP, so a disagreement fails a test.
+  - `[medium]` `[patch]` Blind: the `slot.default` fallback in `declaredProps` is never reached by a test — grouped with the verification-gap row below.
+  - `[low]` `[reject]` Blind: `XT-runtime-24` has two requests, selected by first expr — the request schema rejects row suffixes for XT ids and the manifest's Test IDs are fixed; the lookup fails loudly when no or two requests match.
+  - `[low]` `[patch]` Blind: missing tests (C: with a table class, malformed table, `__unserialize` on a seeded object, `allowed_classes` on a table class, dynamic or pre-mangled `__sleep` names) — the `C:` case is covered with the verification-gap row; the others exercise paths this change does not alter or would need validation the row above rejects.
+  - `[false]` `[reject]` Blind: the spec is `in-review` while XT-runtime-24/25 fail — the failure is the missing signed fixture, which `oracle.yml#story` commits on push; the Story is not `done` until the harness and `story:check` pass on it.
+  - `[low]` `[patch]` Blind: spliced header comments not re-wrapped, and the old `__sleep` sentence now covers only the no-table case — re-wrapped and qualified.
+  - `[low]` `[reject]` Edge: a declared property `delete`d from an instance serializes its default where PHP omits an `unset` one — a port cannot tell an unset slot from one never assigned without a second store; no ported class unsets a declared property yet.
+  - `[medium]` `[patch]` Edge: parent private and child property of one name collide — same root as the first Blind row; now a `TypeError`.
+  - `[medium]` `[patch]` Edge: a payload with both `\0Base\0x` and `\0Child\0x` keeps the last — same root; a table that would need both now throws.
+  - `[low]` `[reject]` Edge: a class with both a table and the props protocol ignores the props hook — no class declares both; the ruling makes the table the default path for classes that declare it.
+  - `[low]` `[reject]` Edge: a declared property implemented as a prototype accessor writes the default — ported classes keep plain fields (PORTING.md).
+  - `[false]` `[reject]` Edge: an unregistered class in the chain with a private entry throws `fqcn`'s error — every framework class is registered (AD-10.3), and a loud `TypeError` naming the unregistered class is correct.
+  - `[low]` `[reject]` Edge: an invalid entry serializes as public — same as the validation row.
+  - `[medium]` `[patch]` Verification gap: the `C:` path's defaults are never observed with a table class — the request now has a `C:` payload for `Account`, checked against the Oracle in XT-runtime-25.
+  - `[medium]` `[patch]` Verification gap: the `slot.default` fallback is never run — the request now has `serialize(new Account())`, checked against `phpSerialize(Object.create(XtAccount.prototype))`.
+  - `[medium]` `[patch]` Verification gap (other): same-name slots collide — same root as the first Blind row.
+  - `[false]` `[reject]` Verification gap (other): the tests fail until the fixture is committed — expected; see the `in-review` row.
+  - `[false]` `[reject]` Intent (a): the signed fixture is not in the diff — the bot signs it on push; the harness and Fidelity Review run on it before `done`.
+  - `[low]` `[reject]` Intent (b): a reused Test ID selected by expr text — same as the Blind row.
+  - `[medium]` `[patch]` Intent (c): the default fallback is not reached — same as the verification-gap row.
+  - `[medium]` `[patch]` Intent (d): two same-name private slots cannot coexist — same root as the first Blind row.
+  - `[low]` `[reject]` Intent (e): table versus props-protocol precedence — same as the Edge row.
+
 ## Design Notes
 
 - **Object properties and visibility.** JS has no runtime visibility, so the default path writes every property as public (`s:1:"x"`), matching PHP only for public props. A ported class whose PHP bytes carry protected or private names returns them from `__serialize()` (as Laravel's `SerializesModels` does) or names them mangled in `__sleep()`. Unserialize strips the `\0*\0` / `\0Class\0` prefix to find the JS property.
@@ -210,6 +248,16 @@ Status: done (2026-10-21, build)
   - Non-UTF-8 strings throw a `TypeError`.
   - `E:` payloads return `false`.
   - The Closure error is an `Error` until Story 9.10.
+
+### Follow-up: ESC-9.7-1 part 1 (the PHP property table)
+
+Status: implemented on `story/9.7`, awaiting the bot's fixture.
+- `packages/runtime/src/php/mangle.ts`: the internal `propertyTable(klass)`. It reads each class's own static `[Symbol.for('xaravel.php.properties')]` along the chain and returns PHP's slot order: a parent's slots come first, and a redeclared public or protected property stays at the parent's position under the child's visibility. A private slot is mangled with the FQCN of the class whose table lists it. The result is cached per class in a `WeakMap`, null included. A private slot whose JS name another declared slot shares throws a `TypeError` that names the class and the property, because one JS property cannot hold two PHP slots.
+- `phpSerialize.ts`: with a table and no `__serialize`, the codec writes the declared slots under PHP's names (an object without the own property writes the default), then the dynamic own keys. `__sleep` names are looked up as `php_var_serialize_get_sleep_props` does: the name as given, then as the object's class's private property, then as protected. A parent's private property named plainly is skipped, and each slot is written once. A class without a table behaves as before.
+- `phpUnserialize.ts`: `O:` and `C:` objects start from the table's defaults (each a `valueCopy`), and then the payload is applied, so a dropped or omitted property reads its default.
+- `conformance/oracle-requests/9.7.jsonl`: a second `XT-runtime-24` request (sha256 `a0e201f3…`, selected in the test by its first expr `serialize($a)`). It holds `Base`, `Account` and `Lazy`: protected and private defaults, a parent's private property, a widened redeclaration, and a `__sleep` that drops a defaulted property and names a parent private both plainly and mangled. Its exprs cover both directions, a partial payload, `serialize(new Account())` (every property at its default), and a `C:` payload of `Account`, which PHP rebuilds from the defaults with its data dropped, as the code does. A row id (`XT-runtime-24#…`) is rejected by the schema for XT ids, which is why the request reuses `XT-runtime-24`.
+- `codec.test.ts`: XT-runtime-24 checks the serialized bytes, and XT-runtime-25 checks the rebuilt values, the partial payload, its re-serialized bytes, that defaults are copied, the default fallback (`Object.create(XtAccount.prototype)`) and the `C:` path. A local row checks the collision `TypeError`.
+- Verified before pushing: local PHP 8.5.11 gives byte-identical output for every expr. A scratch copy of the test fed the unsigned local encoding (`evaluate.php`'s `Encoder`) passes, and it fails when the defaults are removed on either side. tsc, lint, graph, registration, async-surface, `oracle:story check 9.7` (4/4), `oracle:verify-fixtures` and `escalations:check` are clean. XT-runtime-24 and 25 fail with `missing signed fixture` until `oracle.yml#story` commits `conformance/fixtures/runtime/a0e201f3….json`.
 
 ## Fidelity Review
 
