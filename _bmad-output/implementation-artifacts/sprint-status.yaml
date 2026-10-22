@@ -125,7 +125,7 @@ development_status:
   9-4-class-registry-and-fqcn: done
   9-5-phparray-ref-float-marker-and-null-normalisation: done
   9-6-php-semantics-helpers: done
-  9-7-phpserialize-phpunserialize-codec: in-progress  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) lands as a follow-up
+  9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
   9-8-jsonencode-jsondecode-with-php-flag-semantics: backlog
   9-9-mixin-traits-and-inject-metadata: backlog
   9-10-php-exception-hierarchy: backlog  # also switches the codec Closure error to Exception (decisions/ESC-9.7-1.md part 4)

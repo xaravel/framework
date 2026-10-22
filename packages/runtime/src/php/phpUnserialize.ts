@@ -12,8 +12,10 @@
 //   `__PHP_Incomplete_Class`; an async caller loads it first with `resolveClassAsync`. A class that is not registered,
 //   or not allowed by `allowedClasses` (`true`, `false`, or a list of names compared case-insensitively), is a
 //   `__PHP_Incomplete_Class` holding the raw entries (a repeated name once, at its first position, with its last
-//   value), and no hook runs on it. Any other is created with `Object.create(Class.prototype)`, no constructor running;
-//   its data goes to `__unserialize(data)`, or else each property is defined under its unmangled name (`\0*\0x` and
+//   value), and no hook runs on it. Any other is created with `Object.create(Class.prototype)`, no constructor running.
+//   It starts from the defaults of its class's PHP property table, when the class declares one (ESC-9.7-1 part 1), as
+//   PHP's `object_init_ex` does, so a property the payload omits reads its default; this holds for `C:` too. Its data
+//   goes to `__unserialize(data)`, or else each property is defined under its unmangled name (`\0*\0x` and
 //   `\0Class\0x` are `x`) and `__wakeup()` runs. As PHP delays them, every `__unserialize` and `__wakeup` runs after
 //   the whole parse, in the order the objects' payloads complete.
 // - Back-references are numbered as PHP numbers them: every value but an `R:` takes the next slot, keys and the array
@@ -26,10 +28,11 @@
 import { resolveClass, type RegisteredClass } from "../registry/registry";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 import { arrayEntries, className, phpType } from "./casts";
-import { LONE_SURROGATE, unmangle, utf8 } from "./mangle";
+import { LONE_SURROGATE, propertyTable, unmangle, utf8 } from "./mangle";
 import { float } from "./PhpFloat";
 import { arrayFromEntries, type PhpArrayKey } from "./PhpArray";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
+import { valueCopy } from "./valueCopy";
 
 /** PHP's `unserialize_max_depth` default. */
 const MAX_DEPTH = 4096;
@@ -367,7 +370,7 @@ class Reader {
     this.#pos += length;
     this.#expect("}");
     const klass = this.#classFor(name);
-    const object = klass === null ? new __PHP_Incomplete_Class(name) : (Object.create((klass as { prototype: object }).prototype) as object);
+    const object = klass === null ? new __PHP_Incomplete_Class(name) : instantiate(klass);
     this.#slots[slot] = object;
     this.#objects.add(object);
     return object;
@@ -386,7 +389,7 @@ class Reader {
       }
       return incomplete;
     }
-    const object = Object.create((klass as { prototype: object }).prototype) as object;
+    const object = instantiate(klass);
     this.#slots[slot] = object;
     this.#objects.add(object);
     const entries = this.#entries();
@@ -420,6 +423,18 @@ class Reader {
     }
     return value;
   }
+}
+
+/**
+ * A new instance of `klass` without its constructor (`Object.create`), holding the declared defaults of its PHP
+ * property table and its parents' (ESC-9.7-1 part 1), as PHP's `object_init_ex` does, each a value copy.
+ */
+function instantiate(klass: RegisteredClass): object {
+  const object = Object.create((klass as { prototype: object }).prototype) as object;
+  for (const { name, default: value } of propertyTable(klass) ?? []) {
+    Object.defineProperty(object, name, { value: valueCopy(value), enumerable: true, writable: true, configurable: true });
+  }
+  return object;
 }
 
 /** The registered class `name` names, or null. */

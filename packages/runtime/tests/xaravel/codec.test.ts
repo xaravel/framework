@@ -26,7 +26,7 @@ interface Output {
 }
 interface OracleValues {
   decode: (encoded: unknown) => unknown;
-  readRequests: (path: string) => { id: string; sha256: string }[];
+  readRequests: (path: string) => { id: string; sha256: string; exprs: string[] }[];
   readSignedFixture: (path: string, sha256: string, publicKeyPem: string) => Output;
 }
 
@@ -40,11 +40,11 @@ const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const RECURSION = "Nesting level too deep - recursive dependency?";
 
-/** The signed Oracle output of the Story's one request for `id`. */
-function oracle(id: string): Output {
-  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+/** The signed Oracle output of the Story's one request for `id` (whose first expr is `firstExpr`, when given). */
+function oracle(id: string, firstExpr?: string): Output {
+  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id && (firstExpr === undefined || request.exprs[0] === firstExpr));
   if (requests.length !== 1) {
-    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+    throw new Error(`${REQUESTS}: expected one request for ${id}${firstExpr === undefined ? "" : ` with first expr ${firstExpr}`}, found ${requests.length}`);
   }
   const request = requests[0]!;
   const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
@@ -310,6 +310,63 @@ class XtPropsPort {
 }
 registerClass("Xaravel\\Tests\\Runtime\\XtPropsPort", XtPropsPort);
 
+// The PHP property table (ESC-9.7-1 part 1): XT-runtime-24's second request declares these three classes.
+const PHP_PROPERTIES: unique symbol = Symbol.for("xaravel.php.properties");
+type PropertyTable = readonly { name: string; visibility: "public" | "protected" | "private"; default: unknown }[];
+
+class XtBase {
+  static readonly [PHP_PROPERTIES]: PropertyTable = [
+    { name: "secret", visibility: "private", default: "base-secret" },
+    { name: "level", visibility: "protected", default: 1 },
+    { name: "tags", visibility: "public", default: [] },
+  ];
+
+  secret: unknown = "base-secret";
+  level: unknown = 1;
+  tags: unknown = [];
+}
+registerClass("XaravelFixture\\Serialize\\Base", XtBase);
+
+class XtAccount extends XtBase {
+  static override readonly [PHP_PROPERTIES]: PropertyTable = [
+    { name: "role", visibility: "protected", default: "user" },
+    { name: "token", visibility: "private", default: "tok" },
+    { name: "level", visibility: "public", default: 2 },
+    { name: "name", visibility: "public", default: "anon" },
+  ];
+
+  role: unknown = "user";
+  token: unknown = "tok";
+  override level: unknown = 2;
+  name: unknown = "anon";
+}
+registerClass("XaravelFixture\\Serialize\\Account", XtAccount);
+
+class XtLazy extends XtBase {
+  static override readonly [PHP_PROPERTIES]: PropertyTable = [
+    { name: "cache", visibility: "protected", default: { warm: true } },
+    { name: "pin", visibility: "private", default: 7 },
+    { name: "keep", visibility: "public", default: "k" },
+    { name: "dropped", visibility: "public", default: "dflt" },
+  ];
+
+  cache: unknown = { warm: true };
+  pin: unknown = 7;
+  keep: unknown = "k";
+  dropped: unknown = "dflt";
+
+  __sleep(): string[] {
+    return ["keep", "cache", "pin", "level", "secret", "\0XaravelFixture\\Serialize\\Base\0secret", "keep"];
+  }
+}
+registerClass("XaravelFixture\\Serialize\\Lazy", XtLazy);
+
+// A child public property named as its parent's private one: one JS property cannot hold both.
+class XtShadow extends XtBase {
+  static override readonly [PHP_PROPERTIES]: PropertyTable = [{ name: "secret", visibility: "public", default: "child" }];
+}
+registerClass("Xaravel\\Tests\\Runtime\\XtShadow", XtShadow);
+
 class XtUnregistered {}
 
 /** The values of the request's `$v`, built in JS as a port builds them (integral floats marked, DIV-9.4). */
@@ -383,9 +440,9 @@ function matrix(): unknown[] {
 
 xaravelTest(
   "XT-runtime-24",
-  "phpSerialize gives the bytes of the Oracle's serialize() over ints, floats, bools, null, UTF-8 strings, lists, maps and objects (stdClass, public props, __serialize, __sleep, shared and self-referencing), each value alone and the whole list, and throws PHP's Closure and __serialize messages, and Xaravel's TypeErrors for values PHP cannot hold (AD-23.1)",
+  "phpSerialize gives the bytes of the Oracle's serialize() over ints, floats, bools, null, UTF-8 strings, lists, maps and objects (stdClass, public props, a declared PHP property table with protected, private and inherited private names, __serialize, __sleep, shared and self-referencing), each value alone and the whole list, and throws PHP's Closure and __serialize messages, and Xaravel's TypeErrors for values PHP cannot hold (AD-23.1)",
   () => {
-    const output = oracle("XT-runtime-24");
+    const output = oracle("XT-runtime-24", "$v");
     const v = matrix();
     const raw = rawEntries(rawResult(output, 0));
     const serialized = decode(rawResult(output, 1)) as string[];
@@ -408,7 +465,25 @@ xaravelTest(
     if (actualWhole !== whole) {
       mismatches.push(`serialize($v): Oracle ${JSON.stringify(whole)}, got ${JSON.stringify(actualWhole)}`);
     }
+    // The PHP property table (ESC-9.7-1 part 1): protected and private names mangled (a parent's private one with the
+    // parent's FQCN), a redeclared property at the parent's position, and __sleep names looked up as PHP does.
+    const properties = oracle("XT-runtime-24", "serialize($a)");
+    const account = Object.assign(new XtAccount(), { name: "ed", tags: ["x"] });
+    const lazy = Object.assign(new XtLazy(), { keep: "kept", dropped: "changed", tags: ["t"] });
+    for (const [index, value, label] of [
+      [0, account, "serialize($a)"],
+      [1, lazy, "serialize($l)"],
+      // No own property at all: each declared property is written as its default.
+      [7, Object.create(XtAccount.prototype) as XtAccount, "serialize(new Account())"],
+    ] as const) {
+      const actual = phpSerialize(value);
+      if (actual !== decode(rawResult(properties, index))) {
+        mismatches.push(`${label}: Oracle ${JSON.stringify(decode(rawResult(properties, index)))}, got ${JSON.stringify(actual)}`);
+      }
+    }
     Assert.assertSame("", mismatches.join("\n"), `${mismatches.length} mismatch(es) with the Oracle`);
+    // A private property sharing its JS name with another declared one cannot be held: a TypeError names both.
+    assertThrows(() => phpSerialize(new XtShadow()), TypeError, "Xaravel\\Tests\\Runtime\\XtShadow: the PHP property table declares more than one property $secret (a private one included), which one JS property cannot hold");
 
     // __sleep: names verbatim, a missing name skipped, a repeated one written once; a result that is no array writes N; as PHP does.
     Assert.assertSame('O:36:"Xaravel\\Tests\\Runtime\\XtMangledSleep":3:{s:1:"a";i:1;s:4:"\0*\0b";i:2;s:1:"c";i:3;}', phpSerialize(new XtMangledSleep()));
@@ -444,9 +519,9 @@ xaravelTest(
 
 xaravelTest(
   "XT-runtime-25",
-  "phpUnserialize of each Oracle serialize() string rebuilds the Oracle's unserialize() value: AD-9 arrays, marked integral floats, registered classes without their constructor, __unserialize and __wakeup after the parse, shared and self-referencing objects identical; re-serializing gives the same bytes; malformed and lenient payloads read as the Oracle reads them (AD-23.1)",
+  "phpUnserialize of each Oracle serialize() string rebuilds the Oracle's unserialize() value: AD-9 arrays, marked integral floats, registered classes without their constructor, starting from their declared defaults, __unserialize and __wakeup after the parse, shared and self-referencing objects identical; re-serializing gives the same bytes; malformed and lenient payloads read as the Oracle reads them (AD-23.1)",
   () => {
-    const output = oracle("XT-runtime-24");
+    const output = oracle("XT-runtime-24", "$v");
     const serialized = decode(rawResult(output, 1)) as string[];
     const rebuilt = rawEntries(rawResult(output, 3));
     Assert.assertSame(serialized.length, rebuilt.length);
@@ -529,7 +604,40 @@ xaravelTest(
     const corrupt = (decode(rawResult(own, 10)) as string[])[0]!;
     const corruptValue = phpUnserialize(corrupt) as stdClass;
     check([corrupt, Object.keys(corruptValue), phpSerialize(corruptValue)], 10, "a corrupt member name");
+    // The PHP property table (ESC-9.7-1 part 1): an object starts from its class's and its parents' declared defaults,
+    // so a property __sleep dropped, or a payload omits, reads its default; the payload's mangled names are applied.
+    const properties = oracle("XT-runtime-24", "serialize($a)");
+    const checkProperties = (value: unknown, index: number, label: string): void => {
+      const difference = differs(value, rawResult(properties, index), label);
+      if (difference !== null) {
+        mismatches.push(difference);
+      }
+    };
+    const accountBack = phpUnserialize(decode(rawResult(properties, 0)) as string);
+    checkProperties(accountBack, 2, "unserialize(serialize($a))");
+    const lazyBack = phpUnserialize(decode(rawResult(properties, 1)) as string);
+    checkProperties(lazyBack, 3, "unserialize(serialize($l))");
+    const partial = decode(rawResult(properties, 4)) as string;
+    const partialBack = phpUnserialize(partial);
+    checkProperties(partialBack, 5, "unserialize($partial)");
+    const partialAgain = phpSerialize(partialBack);
+    if (partialAgain !== decode(rawResult(properties, 6))) {
+      mismatches.push(`serialize(unserialize($partial)): Oracle ${JSON.stringify(decode(rawResult(properties, 6)))}, got ${JSON.stringify(partialAgain)}`);
+    }
+    // A C: payload of a declared class: the object starts from its defaults, its data dropped, as PHP reads it.
+    const cpay = decode(rawResult(properties, 8)) as string;
+    const cpayBack = phpUnserialize(cpay);
+    checkProperties(cpayBack, 9, "unserialize($cpay)");
+    const cpayAgain = phpSerialize(cpayBack);
+    if (cpayAgain !== decode(rawResult(properties, 10))) {
+      mismatches.push(`serialize(unserialize($cpay)): Oracle ${JSON.stringify(decode(rawResult(properties, 10)))}, got ${JSON.stringify(cpayAgain)}`);
+    }
     Assert.assertSame("", mismatches.join("\n"), `${mismatches.length} mismatch(es) with the Oracle`);
+    Assert.assertTrue(accountBack instanceof XtAccount && lazyBack instanceof XtLazy, "the declared classes");
+    Assert.assertSame("dflt", (lazyBack as XtLazy).dropped);
+    // Each default is a value copy, never the table's own array.
+    const tags = (phpUnserialize(partial) as XtAccount).tags;
+    Assert.assertTrue(tags !== (partialBack as XtAccount).tags && tags !== XtBase[PHP_PROPERTIES][2]!.default, "a default is copied");
     Assert.assertTrue(rebuiltHolder instanceof XtHolder, "a Holder");
     Assert.assertSame(rebuiltHolder, ((rebuiltHolder as XtHolder).child as XtWoken[])[0]!.parent);
 

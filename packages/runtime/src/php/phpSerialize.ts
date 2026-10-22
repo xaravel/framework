@@ -8,11 +8,17 @@
 //   `s:` as normalised. A JS array that contains itself (a PHP array cannot, without references) throws PHP's
 //   comparison message `Nesting level too deep - recursive dependency?`.
 // - Objects, by Registry FQCN (`fqcn()` throws for an unregistered class): `__serialize()` (a PHP array, keys verbatim;
-//   else PHP's `TypeError` `<FQCN>::__serialize() must return an array`), else `__sleep()` (names verbatim, a repeated
-//   one written once; a name whose unmangled form is no own property is skipped, and a result that is no array writes
-//   `N;`, as PHP does after its warnings), else the props (`[Symbol.for('xaravel.php.props')]()`, else the own enumerable string keys), always as
-//   `s:` keys. `__PHP_Incomplete_Class` writes its original name and raw entries back. A function is a `Closure`, which
-//   PHP refuses: `Serialization of 'Closure' is not allowed` (an `Error` until Story 9.10 ports PHP's `Exception`).
+//   else PHP's `TypeError` `<FQCN>::__serialize() must return an array`), else `__sleep()` (a result that is no array
+//   writes `N;`, as PHP does after its warnings; a name is written once), else the object's properties.
+//   - A class that declares a PHP property table (`[Symbol.for('xaravel.php.properties')]`, ESC-9.7-1 part 1) writes
+//     its declared properties under PHP's names (`\0*\0x` protected, `\0<declaring FQCN>\0x` private) in PHP's order,
+//     a missing one as its default, then its dynamic ones. Its `__sleep()` names are looked up as PHP looks them up:
+//     as given, then as the object's class's private, then as protected.
+//   - A class without a table writes `__sleep()` names verbatim, skipping a name whose unmangled form is no own
+//     property, and otherwise its props (`[Symbol.for('xaravel.php.props')]()`, else the own enumerable string keys),
+//     always as `s:` keys.
+//   `__PHP_Incomplete_Class` writes its original name and raw entries back. A function is a `Closure`, which PHP
+//   refuses: `Serialization of 'Closure' is not allowed` (an `Error` until Story 9.10 ports PHP's `Exception`).
 // - Back-references as `php_add_var_hash` numbers them: every serialized value takes the next slot (an emitted `r:`
 //   included), map keys and the array `__serialize()` returns take none, and a repeated object is `r:<slot>;`.
 //
@@ -21,7 +27,7 @@
 import { fqcn } from "../registry/registry";
 import { arrayEntries, floatValue, phpType } from "./casts";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
-import { LONE_SURROGATE, unmangle, utf8 } from "./mangle";
+import { LONE_SURROGATE, propertyTable, type PhpPropertySlot, unmangle, utf8 } from "./mangle";
 
 const PHP_PROPS = Symbol.for("xaravel.php.props");
 const RECURSION = "Nesting level too deep - recursive dependency?";
@@ -89,6 +95,27 @@ function serializeMembers(name: string, members: readonly (readonly [number | bi
   return `${out}}`;
 }
 
+/**
+ * The properties of an object whose class declares a PHP property table, by serialized name, in PHP's order: each
+ * declared one (its JS value, or its default when the object has no such own property), then the object's other own
+ * enumerable string keys as dynamic public properties.
+ */
+function declaredProps(o: object, table: readonly PhpPropertySlot[]): Map<string, unknown> {
+  const record = o as Record<string, unknown>;
+  const props = new Map<string, unknown>();
+  const declared = new Set<string>();
+  for (const slot of table) {
+    declared.add(slot.name);
+    props.set(slot.key, Object.hasOwn(o, slot.name) ? (record[slot.name] ?? null) : slot.default);
+  }
+  for (const key of Object.keys(o)) {
+    if (!declared.has(key) && !props.has(key)) {
+      props.set(key, record[key] ?? null);
+    }
+  }
+  return props;
+}
+
 function serializeObject(o: object, state: State): string {
   if (typeof o === "function") {
     throw new Error("Serialization of 'Closure' is not allowed");
@@ -106,6 +133,7 @@ function serializeObject(o: object, state: State): string {
     }
     return serializeMembers(name, arrayEntries(data as object), state);
   }
+  const table = propertyTable(Reflect.get(Object.getPrototypeOf(o) as object, "constructor") as object);
   const sleep: unknown = record["__sleep"];
   if (typeof sleep === "function") {
     const names: unknown = (sleep as () => unknown).call(o);
@@ -114,18 +142,31 @@ function serializeObject(o: object, state: State): string {
     }
     const members: [string, unknown][] = [];
     const written = new Set<string>();
+    const lookup = table === null ? null : declaredProps(o, table);
     for (const [, entry] of arrayEntries(names as object)) {
-      // PHP skips a non-string and a repeated name.
-      if (typeof entry !== "string" || written.has(entry)) {
+      // PHP skips a non-string name, and writes a property once.
+      if (typeof entry !== "string") {
         continue;
       }
-      written.add(entry);
-      const property = unmangle(entry);
-      if (Object.hasOwn(o, property)) {
-        members.push([entry, record[property] ?? null]);
+      if (lookup === null) {
+        const property = unmangle(entry);
+        if (!written.has(entry) && Object.hasOwn(o, property)) {
+          written.add(entry);
+          members.push([entry, record[property] ?? null]);
+        }
+        continue;
+      }
+      // php_var_serialize_get_sleep_props: the name as given, then as the object's class's private, then protected.
+      const key = [entry, `\0${name}\0${entry}`, `\0*\0${entry}`].find((candidate) => lookup.has(candidate));
+      if (key !== undefined && !written.has(key)) {
+        written.add(key);
+        members.push([key, lookup.get(key)]);
       }
     }
     return serializeMembers(name, members, state);
+  }
+  if (table !== null) {
+    return serializeMembers(name, [...declaredProps(o, table)], state);
   }
   const props: unknown = record[PHP_PROPS];
   if (typeof props === "function") {
