@@ -3,7 +3,7 @@ title: 'Story 9.10: PHP exception hierarchy'
 type: 'feature'
 created: '2026-10-22'
 baseline_revision: '21a0224aa648887deb8045cbe011868a3ef28a4f'
-status: 'blocked'
+status: 'in-review'
 review_loop_iteration: 1
 followup_review_recommended: false
 context:
@@ -124,6 +124,8 @@ deferred:
 - Given the whole runtime suite, when it runs, then every earlier XT-runtime row still passes with the stricter class assertions.
 
 ## Spec Change Log
+
+- 2026-10-22: `decisions/ESC-9.10-1.md` (orchestrator, amendment 2026-10-21) rules option 1: `tools/fidelity-review/fidelity-review.ts` now shows a helper called through a spread, a test helper imported from another test module, and a decision cited in an unchanged docblock (#303). The code is unchanged, so the Story is back to `in-review`. The Fidelity Review re-runs on the changed tree with `--base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e`.
 
 ## Review Triage Log
 
