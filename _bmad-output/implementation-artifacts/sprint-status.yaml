@@ -130,7 +130,7 @@ development_status:
   9-9-mixin-traits-and-inject-metadata: done  # Fidelity Review passed at tree 3ba5b05 (base a5ecf39) after ESC-9.9-5
   9-10-php-exception-hierarchy: done  # Fidelity Review passed at tree cc8de78 (base c870bc2) after ESC-9.10-4. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
   9-11-grader-follow-ups-to-the-runtime-value-model: done  # Fidelity Review passed at tree 252e8fc (after ESC-9.11-1, ESC-9.11-2); all five ACs, XT-assert-17..21
-  9-12-mockery-exceptions-on-the-runtime-spl-classes: backlog  # ESC-9.11-1: Mockery's half of Story 9.11's AC2; then a planning change closes DIV-9.8
+  9-12-mockery-exceptions-on-the-runtime-spl-classes: in-progress  # ESC-9.11-1: Mockery's half of Story 9.11's AC2; then a planning change closes DIV-9.8
   epic-9-retrospective: optional
 
   epic-10: backlog
