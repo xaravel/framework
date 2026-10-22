@@ -1,3 +1,5 @@
+// Installs the Symbol.metadata polyfill before anything else loads (AD-4).
+import "../metadata/polyfill";
 export { interleave } from "./interleave";
 export { bindToFrame, frameAsyncGenerator, frameStreamSource } from "./propagate";
 export {
