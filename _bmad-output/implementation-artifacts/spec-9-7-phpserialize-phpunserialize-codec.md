@@ -2,7 +2,7 @@
 title: 'Story 9.7: `phpSerialize` / `phpUnserialize` codec'
 type: 'feature'
 created: '2026-10-21'
-status: 'done'
+status: 'in-progress'
 baseline_revision: 'f4ff76dd036930162c463e8acb5005ed3ed3b892'
 review_loop_iteration: 1
 followup_review_recommended: false
@@ -10,6 +10,7 @@ context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
   - '{project-root}/stories/9.7.md'
   - '{project-root}/PORTING.md'
+  - '{project-root}/decisions/ESC-9.7-1.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -103,12 +104,16 @@ deferred:
 - `conformance/oracle-requests/9.7.jsonl` -- `XT-runtime-24`: setup declares the fixture classes (`Point` public props; `Packed` with `__serialize`/`__unserialize` returning `"\0*\0…"` keys; `Sleepy` with `__sleep`/`__wakeup`) and `$v` (the matrix values); exprs `$v`, `array_map(fn ($x) => serialize($x), $v)`, `serialize($v)`, `array_map(fn ($x) => unserialize(serialize($x)), $v)`. `XT-runtime-26`: the same classes, `$s = serialize([...])`; exprs `unserialize($s, ['allowed_classes' => false])`, `… => ['xaravelfixture\serialize\point']`, `… => ['stdClass']`, `serialize(unserialize($s, ['allowed_classes' => false]))`, and `unserialize` of an unknown class. XT-runtime-25 reads XT-runtime-24's fixture.
 - `packages/runtime/tests/xaravel/codec.test.ts` -- XT-runtime-24 (each input built in JS, checked equal to the decoded `$v`, then `phpSerialize` byte-equal per row and whole), XT-runtime-25 (unserialize each Oracle string, compare with the Oracle's rebuilt value, class identity, shared-object identity and re-serialized bytes), XT-runtime-26 (allowed-classes rows), plus local rows for the error and malformed cases of the matrix.
 - `packages/runtime/async-surface.json` -- `bun run async-surface runtime` (no async methods).
+- Follow-up (`decisions/ESC-9.7-1.md` part 1): `packages/runtime/src/php/phpSerialize.ts`, `phpUnserialize.ts` -- read a class's static `[Symbol.for('xaravel.php.properties')]` table (`{ name, visibility, default }`, declaration order, parents included). With no hook, write protected as `\0*\0name` and private as `\0<declaring FQCN>\0name`; on unserialize, start the object from the declared defaults, then apply the payload. A class without the table keeps public-only behaviour.
+- Follow-up: `conformance/oracle-requests/9.7.jsonl` and `codec.test.ts` -- an Oracle request for a fixture class with protected and private defaulted properties, a parent's private property, and a `__sleep` that drops a defaulted property, checked in both directions.
 
 **Acceptance Criteria:**
 - The three ACs of Story 9.7 (`epics.md` line 3130), each verified by its XT row in `stories/9.7.md`.
 - Given the PR is pushed, when `oracle.yml#story` runs, then the bot commits the fixtures and `bun run oracle:verify-fixtures` passes.
 
 ## Spec Change Log
+
+- 2026-10-21: `decisions/ESC-9.7-1.md` ruled options 1a, 2a, 3a and 4a. Parts 2-4 match the shipped code. Part 1 (the PHP property table and defaults) is added as the two follow-up tasks, so the Story is back to `in-progress`.
 
 ## Review Triage Log
 
