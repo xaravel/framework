@@ -30,7 +30,7 @@ An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a P
 
 ### F-6: Every Oracle error fixture is the error Upstream's test expects
 
-**Check.** For every Oracle fixture the Story relies on whose output is an error (`output.error` not null), the error is the one the Upstream test expects: the same exception class and, where the test checks it, the same message. The Inventory records only whether the test passed or failed on the Oracle (Epic 5 retro item 9), so an error fixture can stand for the wrong failure. It fails when an error fixture's error differs from the error the Upstream test expects.
+**Check.** For every Oracle fixture the Story relies on whose output is an error (`output.error` not null), the error is the one the Upstream test expects: the same exception class and, where the test checks it, the same message. The Inventory records only whether the test passed or failed on the Oracle (Epic 5 retro item 9), so an error fixture can stand for the wrong failure. It fails when an error fixture's error differs from the error the Upstream test expects. The prompt lists each assigned committed request's error fixture with its error, and names each one that is present, verifies against `oracle.pub` and is not an error, so a fixture merged before the change is not missing ([ESC-9.8-2](../escalations/ESC-9.8-2.md)).
 
 ### F-7: Every Xaravel Test verifies the consequence it declares
 
