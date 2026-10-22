@@ -247,7 +247,7 @@ function reset(): void {
 /** A `package.json` in a fresh directory, with `psr4` as `xaravel.autoload.psr-4` (none when null). */
 function writePackageJson(psr4: Record<string, unknown> | null, dir: string = tempDir()): string {
   const path = join(dir, "package.json");
-  writeFileSync(path, jsonEncode(psr4 === null ? { name: "app" } : { name: "app", xaravel: { autoload: { "psr-4": psr4 } } }));
+  writeFileSync(path, jsonEncode(psr4 === null ? { name: "app" } : { name: "app", xaravel: { autoload: { "psr-4": psr4 } } }) as string);
   return path;
 }
 
@@ -317,7 +317,7 @@ xaravelTest(
       // A miss consults the classmap before PSR-4.
       loadAutoload(join(root, "package.json"));
       const custom = join(root, "bootstrap", "cache", "custom.json");
-      writeFileSync(custom, jsonEncode({ "App\\Models\\Widget": "../../other/Widget.ts" }));
+      writeFileSync(custom, jsonEncode({ "App\\Models\\Widget": "../../other/Widget.ts" }) as string);
       loadClassmap(custom);
       Assert.assertSame("classmap", ((await resolveClassAsync("App\\Models\\Widget")) as unknown as { source: string }).source);
 
@@ -332,7 +332,7 @@ xaravelTest(
       loadAutoload(writePackageJson({ "App\\": "app/", "App\\Models\\Special\\": "special/", "Database\\Factories\\": ["database/factories/", "database/more/"] }, root2));
       const gone = join(root2, "bootstrap", "cache", "gone.json");
       mkdirSync(join(root2, "bootstrap", "cache"), { recursive: true });
-      writeFileSync(gone, jsonEncode({ "App\\Models\\Fallback": "../../gone/Fallback.ts" }));
+      writeFileSync(gone, jsonEncode({ "App\\Models\\Fallback": "../../gone/Fallback.ts" }) as string);
       loadClassmap(gone);
       Assert.assertSame("psr-4", ((await resolveClassAsync("App\\Models\\Fallback")) as unknown as { source: string }).source);
       Assert.assertSame("longer", ((await resolveClassAsync("App\\Models\\Special\\Thing")) as unknown as { source: string }).source);
@@ -343,7 +343,7 @@ xaravelTest(
       loadAutoload(writePackageJson(null));
       const stale = join(root2, "bootstrap", "cache", "stale.json");
       writeModule(root2, "stale/Stale.ts", "Stale", "App\\Models\\Stale", "classmap");
-      writeFileSync(stale, jsonEncode({ "App\\Models\\Stale": "../../stale/Stale.ts" }));
+      writeFileSync(stale, jsonEncode({ "App\\Models\\Stale": "../../stale/Stale.ts" }) as string);
       loadClassmap(stale);
       rmSync(root2, { recursive: true, force: true });
       const kept = join(root, "bootstrap", "cache", "kept.json");
@@ -386,8 +386,9 @@ xaravelTest(
 
       // The default-flags jsonEncode core the classmap is written with (decisions/ESC-9.4-1.md part 2).
       Assert.assertSame('{"a":[1,true,null,"\\/\\"\\\\\\n\\u0001\\u00e9\\ud83d\\ude00"],"b":{}}', jsonEncode({ a: [1, true, null, '/"\\\n\u0001é😀'], b: {} }));
-      Assert.assertInstanceOf(TypeError, thrownBy(() => jsonEncode(1.5)));
-      Assert.assertInstanceOf(TypeError, thrownBy(() => jsonEncode(new Map())));
+      // Story 9.8 grows the core into PHP's json_encode: a float and an object without public properties encode.
+      Assert.assertSame("1.5", jsonEncode(1.5));
+      Assert.assertSame("{}", jsonEncode(new Map()));
     } finally {
       reset();
     }

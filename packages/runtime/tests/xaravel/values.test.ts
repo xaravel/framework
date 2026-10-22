@@ -256,20 +256,20 @@ xaravelTest(
     Assert.assertSame('{"1":"a"}', jsonEncode(arrays[2]));
     Assert.assertSame("[]", jsonEncode(arrays[3]));
     Assert.assertSame('{"a":1,"5":2}', jsonEncode(arrays[4]));
-    // A bigint key encodes as its digits; the 9.4 core rules still hold for the values.
+    // A bigint key encodes as its digits, and a float value as PHP writes it (Story 9.8).
     Assert.assertSame('{"9223372036854775807":null}', jsonEncode(new PhpArray([["9223372036854775807", null]])));
-    Assert.assertTrue(thrownBy(() => jsonEncode(new PhpArray([[1, 1.5]]))) instanceof TypeError);
-    // A marked float throws the core's float TypeError.
-    assertThrows(() => jsonEncode(float(1)), TypeError, "jsonEncode(): cannot encode the float 1; floats arrive with Story 9.8");
-    assertThrows(() => jsonEncode([float(1)]), TypeError, "jsonEncode(): cannot encode the float 1; floats arrive with Story 9.8");
-    // The depth rules are the core's: 512 levels encode, 513 do not.
+    Assert.assertSame('{"1":1.5}', jsonEncode(new PhpArray([[1, 1.5]])));
+    // A marked float is a float: PHP writes 1.0 as 1.
+    Assert.assertSame("1", jsonEncode(float(1)));
+    Assert.assertSame("[1]", jsonEncode([float(1)]));
+    // PHP's default depth: 512 levels encode, 513 give false (JSON_ERROR_DEPTH).
     let deep: unknown = 1;
     for (let i = 0; i < 512; i++) {
       deep = new PhpArray([[1, deep]]);
     }
-    Assert.assertStringStartsWith('{"1":{"1":', jsonEncode(deep));
+    Assert.assertStringStartsWith('{"1":{"1":', jsonEncode(deep) as string);
     const tooDeep = new PhpArray([[1, deep]]);
-    assertThrows(() => jsonEncode(tooDeep), Error, "Maximum stack depth exceeded");
+    Assert.assertSame(false, jsonEncode(tooDeep));
   },
 );
 

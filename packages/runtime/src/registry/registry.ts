@@ -19,6 +19,7 @@
 // the scope module installs the Registry's access to the test units on load (`installTestFrameAccess`).
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { JSON_THROW_ON_ERROR } from "../php/jsonConstants";
 import { jsonEncode } from "../php/jsonEncode";
 
 /** Any class: the Registry stores constructors, never instances. */
@@ -363,7 +364,8 @@ export function writeClassmap(path: string): void {
   }
   try {
     mkdirSync(base, { recursive: true });
-    writeFileSync(target, jsonEncode(out));
+    // Under JSON_THROW_ON_ERROR the encoder returns a string or throws.
+    writeFileSync(target, jsonEncode(out, JSON_THROW_ON_ERROR) as string);
   } catch (error) {
     throw new Error(`Unable to write the classmap ${path}: ${messageOf(error)}`, { cause: error });
   }
