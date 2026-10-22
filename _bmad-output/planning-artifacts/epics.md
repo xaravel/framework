@@ -3231,8 +3231,8 @@ So that `instanceof` checks and `expectException` translate one to one (AD-19, A
 ### Story 9.11: Grader follow-ups to the runtime value model
 
 As a Framework Agent,
-I want `@xaravel/assert` and `@xaravel/mockery` to read the runtime's PHP classes and float marker,
-So that equality, exception and instanceof assertions match PHP once those values exist (component `assert`; Epic 4 retro S4).
+I want `@xaravel/assert` to read the runtime's PHP classes and float marker,
+So that equality, exception and instanceof assertions match PHP once those values exist (component `assert`; Epic 4 retro S4; Mockery's half is Story 9.12, ESC-9.11-1).
 
 **Acceptance Criteria:**
 
@@ -3241,8 +3241,8 @@ So that equality, exception and instanceof assertions match PHP once those value
 **Then** they are false and fail, as in PHP (ESC-4.1-1's follow-up).
 
 **Given** Story 9.10's SPL and `\Error`/`\Exception` protocol
-**When** the grader and Mockery throw or compare exceptions
-**Then** their exceptions extend the runtime's SPL classes, `expectException(\RuntimeException::class)` matches a PHPUnit failure, and `ExceptionComparator` takes only `\Exception`s, which closes the ESC-4.3-1 item 10 divergence clause.
+**When** the grader throws or compares exceptions
+**Then** its exceptions extend the runtime's SPL classes, `expectException(\RuntimeException::class)` matches a PHPUnit failure, and `ExceptionComparator` takes only `\Exception`s (the grader's half of closing the ESC-4.3-1 item 10 divergence clause; Story 9.12 does Mockery's).
 
 **Given** a caught assertion failure
 **When** Laravel's `TestResponseAssert` appends to its message
@@ -3255,6 +3255,22 @@ So that equality, exception and instanceof assertions match PHP once those value
 **Given** an assertion that fails after its test's counts have ended (a timer or un-awaited promise the body left behind)
 **When** it fails
 **Then** it does not throw into whichever test is running then: it reports itself to the `xaravel.harness.late` hook, and the harness fails the test it belongs to (ESC-5.3-3).
+
+### Story 9.12: Mockery exceptions on the runtime's SPL classes
+
+As a Framework Agent,
+I want `@xaravel/mockery`'s exceptions to extend the runtime's PHP SPL classes,
+So that a Mockery failure is the `\Exception` subclass PHP's Mockery throws, and the ESC-4.3-1 item 10 divergence clause can close (component `mockery`; ESC-9.11-1, ESC-4.5-1 item 2).
+
+**Acceptance Criteria:**
+
+**Given** Story 9.10's SPL and `\Error`/`\Exception` protocol, and Story 9.11's grader side of it
+**When** Mockery throws or compares exceptions
+**Then** its exceptions (the copies in `packages/mockery/src/php/`) extend the runtime's SPL classes when the runtime's class map is published, and keep today's chain when it is absent; `expectException` on a Mockery failure matches as in PHP (ESC-4.5-1 item 2).
+
+**Given** Stories 9.11 and 9.12 have both landed
+**When** the Epic closes
+**Then** a planning change records in `decisions/DIV-9.md` that DIV-9.8 is closed, naming both Stories, and updates the `PORTING.md` line that cites it.
 
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 
