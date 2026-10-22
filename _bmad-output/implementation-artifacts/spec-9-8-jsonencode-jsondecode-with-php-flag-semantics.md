@@ -2,7 +2,7 @@
 title: 'Story 9.8: `jsonEncode` / `jsonDecode` with PHP flag semantics'
 type: 'feature'
 created: '2026-10-21'
-status: 'blocked'
+status: 'in-progress'
 baseline_revision: 'f63369d9bdd259166d115062d8db3087066f066b'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -11,6 +11,7 @@ context:
   - '{project-root}/stories/9.8.md'
   - '{project-root}/PORTING.md'
   - '{project-root}/decisions/ESC-9.4-1.md'
+  - '{project-root}/decisions/ESC-9.8-1.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -145,6 +146,8 @@ deferred:
   - a fresh `bun` process that imports `@xaravel/runtime/registry` first and calls `writeClassmap` (the cycle rule).
 - `packages/runtime/tests/xaravel/values.test.ts`, `registry.test.ts`: the edits named in the Code Map.
 - `packages/runtime/async-surface.json`: `bun run async-surface runtime`; it stays empty.
+- Follow-up (`decisions/ESC-9.8-1.md` part 2): `packages/runtime/src/php/jsonLastError.ts` -- `jsonLastError()` / `jsonLastErrorMsg()` over a Scope Frame slot (AD-5), exported from `./php` and the package root. `jsonEncode` / `jsonDecode` record each call's code (`JSON_ERROR_NONE` included) only when a frame is active. A `JSON_THROW_ON_ERROR` call without `JSON_PARTIAL_OUTPUT_ON_ERROR` leaves the record untouched. The reads give `0` / `No error` outside a frame or before any call.
+- Follow-up: `json.test.ts` -- local rows for the record inside and outside a frame, including a throwing call leaving the previous code; and, where a request can express it, an Oracle request `json_decode('[')`, throwing `json_decode`, `json_last_error()` / `json_last_error_msg()`.
 
 **Acceptance Criteria:**
 - The four ACs of Story 9.8 (`epics.md` line 3156), each verified by its XT row in `stories/9.8.md`.
@@ -152,6 +155,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-21: `decisions/ESC-9.8-1.md` ruled options 1a, 2a and 3a. Parts 1 and 3 match the shipped code. Part 2 (`jsonLastError()` / `jsonLastErrorMsg()`) is added as the two follow-up tasks, so the Story is back to `in-progress`.
 - **Implementation notes (2026-10-21).**
   - `registry.test.ts:389-390` (XT-runtime-15's core rows) asserted the 9.4 core's interim `TypeError` for `jsonEncode(1.5)` and `jsonEncode(new Map())`, which the Code Map did not list. They are replaced with PHP's result for the same input, `"1.5"` and `"{}"`, as the Code Map does for `values.test.ts`: same count, exact values.
   - A plain object always encodes as a JSON object, `{}` included, as the 9.4 core did (AD-9.2: a plain object is a string-keyed map). This keeps `registry.test.ts`'s `"b":{}` row and `writeClassmap`'s bytes without `JSON_FORCE_OBJECT`.
