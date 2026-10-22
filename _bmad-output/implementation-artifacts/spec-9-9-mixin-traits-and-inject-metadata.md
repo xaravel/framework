@@ -2,8 +2,8 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-progress'
-baseline_revision: 'fe7b2dfab58a9e40c91d30cb62879b11fb4f5b06'
+status: 'blocked'
+baseline_revision: '0aa17dff6f77a0d3176353f3bad25e6a27836e80'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
@@ -21,6 +21,13 @@ deferred:
     location: >-
       packages/runtime/src/metadata/inject.ts
     severity: medium (unverified)
+  - summary: >-
+      A host that calls initializeTraits from an ancestor constructor (Model) runs initializers before the using subclass's own JS fields ($casts, $fillable, $guarded) are set, so those fields then overwrite what an initializer merged into them.
+    evidence: |-
+      Review pass 2026-10-21 (Blind, Intent). JS class-field timing, not caused by the ESC-9.9-2 rule; the docs now state the host constraint. Story 36.1 (Model core: attributes, fill, guard) is the first host and must settle it, by Escalation if it needs a divergence.
+    location: >-
+      packages/runtime/docs/traits-and-inject.md
+    severity: medium
 ---
 
 <intent-contract>
@@ -101,6 +108,7 @@ deferred:
 
 - 2026-10-21: `decisions/ESC-9.9-1.md` (orchestrator) and `decisions/ESC-9.9-2.md` (Maintainer) are ruled. ESC-9.9-2 takes neither listed option: a trait default replaces a base property it finds still at its declared default (read from the PHP property table, ESC-9.7-1 part 1), and any other value is kept; DIV-12.8 records the two remaining cases. That rule, its Oracle request and its docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21, implementation. (1) XT-runtime-31's classes are `App\Plain\{Base, Post, Comment, Reply, Plain}`, not `App\Models\*`: `registry.test.ts` already registers `App\Models\Post`, and registrations are process-wide. Trait FQCNs (`App\Concerns\*`), the only names in the results, are unchanged. XT-runtime-32's classes are `App\Eloquent\*`. (2) The conformance harness freezes `Symbol` before tests load (`conformance/harness/intrinsics.ts`), so the polyfill now installs only when `Object.isExtensible(Symbol)`, and `inject` reads `Symbol.metadata ?? Symbol.for('Symbol.metadata')`. Without the guard, every runtime test file failed at import under the harness. XT-runtime-33 checks the polyfill in fresh processes. The in-harness gap is ESC-9.9-1 (`protected-path`).
+- 2026-10-21, follow-up implementation (ESC-9.9-2). (1) `assignDefaults` replaces an owned key only when `propertyTable(Base)` lists it as public or protected and the value is `identical` to its declared default (`holdsBaseDefault`). (2) The new XT-runtime-31 request (`App\Defaults\*`, traits `App\Concerns\{SetsName, WritesName, Flags, Unguards}`) gives each base its own constructor calling a namespaced `initialize()`, not an inherited `Host` constructor: a JS subclass's fields are set only after its parent's constructor returns, so the JS host that calls `initializeTraits` must be the class declaring the fields, and the request mirrors that. `oracle()` in `traits.test.ts` now selects a request by its first expr. (3) Per ESC-9.9-1's ruling, XT-runtime-33 also asserts `Symbol.metadata` in-process, and the polyfill and docs comments no longer say the harness skips it.
 
 ## Review Triage Log
 
@@ -152,6 +160,39 @@ deferred:
     - `[low]` `reject` `Mixed<B, Ts>` drops `abstract`. — Type looseness only; no runtime harm.
     - `[false]` `reject` Artifact inconsistencies. — Statuses follow the workflow. The manifest's line is its generation line. `async-surface --all --check` ran clean.
 
+### 2026-10-21 — Review pass (ESC-9.9-2 follow-up; Fidelity Review not run, see Auto Run Result)
+- verdicts: 25 findings — high 0, medium 3, low 12, false 10, maybe-false 0 (fidelity-review layer skipped: the Story blocks on ESC-9.9-3, which may change `mixin.ts`)
+- findings:
+  - Blind:
+    - `[false]` `reject` The signed fixture for the new request is missing. — The bot signed it (1300221); `bun test packages/runtime` 34/34.
+    - `[medium]` `intent_gap`→escalated A private base property against a trait's public one keeps the base's value; PHP reads the trait's default from outside (probe `/tmp/xv100/p.php`: `"named"` outside, `"parent"` from the base's method). The ESC-9.9-2 ruling directs this branch, but DIV-12.8 does not list the case. — Raised ESC-9.9-3 (`divergence`); the private-slot local row, added in this pass, was removed so XT-runtime-31 asserts neither value; the docs name it as open.
+    - `[medium]` `defer` Model calls `initializeTraits` before the subclass's own fields are set. — JS field timing, not caused by this rule; deferred to Story 36.1 (frontmatter `deferred`).
+    - `[low]` `reject` `assignDefaults` throws for a non-configurable owned key. — Only a base constructor that seals `this` reaches it, and it fails loudly; the guard adds a branch.
+    - `[low]` `reject` The request lacks the private-slot and write-equal-to-default cases. — The second is a recorded DIV-12.8 difference by definition; the first is ESC-9.9-3.
+    - `[low]` `reject` `oracle()` selects by first expr. — The same idiom as `codec.test.ts`; a mismatch fails loudly with the count.
+    - `[low]` `reject` The no-table assertion's precondition is unstated. — A table added to that chain flips it loudly; the comment cites DIV-12.8.
+    - `[low]` `reject` `checkDefaultLimits` registers per call. — The test body runs once per process.
+    - `[low]` `reject` The XT-runtime-33 comment overstates coverage. — The subprocess check above it covers the polyfill path; the in-harness assertion is what ESC-9.9-1 allows.
+  - Edge case:
+    - `[low]` `reject` Non-configurable owned key throws. — Same as the Blind row.
+    - `[false]` `reject` A subclass redeclaring a field with no table of its own. — A class that redeclares a property declares its table (generators emit one per class); an incomplete table is the no-table case of DIV-12.8.
+    - `[false]` `reject` Nested layers with A and B declaring the same property. — PHP forbids that collision within one class; across a class boundary the intermediate class's own table lists A's default, so the rule applies.
+    - `[medium]` `intent_gap`→escalated The private-slot row pins a value PHP does not give. — Same root cause as the Blind row; ESC-9.9-3.
+    - `[low]` `reject` A malformed table now throws at construction. — It fails loudly, as the codec already does for the same table.
+    - `[low]` `reject` A native `Symbol.metadata` would fail the XT-runtime-33 assertion. — Bun is pinned at 1.4.3, which has none; a bump re-runs the test.
+    - `[low]` `patch` The docs present two DIV-12.8 cases as the complete list. — The docs now name the private-slot case as open (ESC-9.9-3).
+  - Verification gap:
+    - `[false]` `reject` The protected branch is checked only by the unsigned fixture. — The fixture is signed and XT-runtime-31 passes it.
+  - Intent alignment:
+    - `[false]` `reject` The Oracle-comparison surface is not exercised. — It is now, against fixture 1300221.
+    - `[false]` `reject` The review step and Fidelity Review are missing. — This pass is the review step; the Fidelity Review waits on ESC-9.9-3.
+    - `[low]` `defer` Model-shaped hosts are not covered. — Same as the Blind deferral (Story 36.1).
+    - `[false]` `reject` Tables are hand-written. — No generator exists yet; the tables follow the codec's format.
+    - `[false]` `reject` The check is per key, not per instance. — `propertyTable` is cached per class; the `find` runs only for owned keys, as the ruling requires.
+    - `[false]` `reject` The XT-runtime-33 assertion cannot tell harness from polyfill. — ESC-9.9-1 asks only that the value be defined in the harness process.
+    - `[low]` `reject` Scope beyond the ruling (private row, host docs, selector). — The private row is removed (ESC-9.9-3); the rest is additive and needed.
+    - `[false]` `reject` No Expectations lines. — `test_ids` is empty; XT rows have no Expectations lines.
+
 ## Design Notes
 
 - **Upstream order over "trait order".** The AC says "in trait order"; AD-26 says boot/initialize "run as Upstream". Upstream's order is `ReflectionClass::getMethods()`'s: the class's own methods, its traits depth-first, then the parent's. That is what "trait order" means in PHP, and the Oracle fixture pins it. It differs from `classUsesRecursive` order whenever a parent has traits (`Comment`: `HasB` boots before `HasP`).
@@ -170,7 +211,18 @@ deferred:
 ## Auto Run Result
 
 Status: blocked
-Blocking condition: ESC-9.9-2 (`divergence`: a trait default against a base class field of the same name) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). ESC-9.9-1 (`protected-path`: the harness freezes `Symbol` before the polyfill) is open as well.
+Blocking condition: ESC-9.9-3 (`divergence`: a private base property against a trait property of the same name; PHP keeps two slots, JS has one, and DIV-12.8 lists only two cases) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). The Fidelity Review runs on the final tree after the ruling, because option 2 would change `mixin.ts`.
+
+- **Follow-up (ESC-9.9-2, DIV-12.8):** `packages/runtime/src/traits/mixin.ts` (rule and header), `conformance/oracle-requests/9.9.jsonl` (the four-case request) and its bot-signed fixture, `packages/runtime/tests/xaravel/traits.test.ts` (Oracle comparison and two DIV-12.8 local rows), `packages/runtime/docs/traits-and-inject.md` (the rule, its two limits, and the open private-slot case), XT-runtime-33's in-harness `Symbol.metadata` assertion (ESC-9.9-1), `conformance/escalations/ESC-9.9-3.md`.
+- **Review:** 25 findings. 1 patched (low: docs), 2 deferred (Model host field timing to Story 36.1; plus the earlier stacked-decorator item), 1 escalated (private slot, medium: ESC-9.9-3, with the row it would have pinned removed), the rest rejected with reasons in the triage log.
+- **Follow-up review recommended:** true. The Fidelity Review has not run on this tree.
+- **Verification:** `bun test packages/runtime` 34/34 and `bun run harness --xaravel --id 'XT-runtime-*'` 34/34 against the signed fixtures; `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures` (1953) and `oracle:story check 9.9` clean.
+- **Residual risk:** until ESC-9.9-3 is ruled, the private-slot case behaves as decisions/ESC-9.9-2.md directs (base's value kept) with no test pinning it.
+
+### Earlier run (before the ESC-9.9-2 ruling)
+
+Status (then): blocked
+Blocking condition (then): ESC-9.9-2 (`divergence`: a trait default against a base class field of the same name) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). ESC-9.9-1 (`protected-path`: the harness freezes `Symbol` before the polyfill) is open as well.
 
 - **Summary:** `mixin`, `classUsesRecursive`, `bootTraits` / `initializeTraits` / `clearBootedTraits`, the `Symbol.metadata` polyfill and `inject` / `readInjectMetadata`, exported from `@xaravel/runtime`.
 - **Files:**

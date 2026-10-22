@@ -36,11 +36,11 @@ const REQUESTS = "conformance/oracle-requests/9.9.jsonl";
 const FIXTURES = "conformance/fixtures/runtime";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 
-/** The signed Oracle output of the Story's one request for `id`. */
-function oracle(id: string): Output {
-  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+/** The signed Oracle output of the Story's one request for `id` (whose first expr is `firstExpr`, when given). */
+function oracle(id: string, firstExpr?: string): Output {
+  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id && (firstExpr === undefined || request.exprs[0] === firstExpr));
   if (requests.length !== 1) {
-    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+    throw new Error(`${REQUESTS}: expected one request for ${id}${firstExpr === undefined ? "" : ` with first expr ${firstExpr}`}, found ${requests.length}`);
   }
   const request = requests[0]!;
   const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
@@ -180,6 +180,87 @@ registerClass("App\\Eloquent\\Comment", EloquentComment);
 class EloquentReply extends mixin(EloquentComment, HasB) {}
 registerClass("App\\Eloquent\\Reply", EloquentReply);
 
+// XT-runtime-31's trait-default classes (ESC-9.9-2): each base declares its PHP property table and, as the request's
+// `App\Defaults\initialize()`, calls initializeTraits from its constructor, after its own fields are set.
+const PHP_PROPERTIES = Symbol.for("xaravel.php.properties");
+
+class DefaultsHost {
+  static readonly [PHP_PROPERTIES] = [];
+  constructor() {
+    initializeTraits(this);
+  }
+}
+registerClass("App\\Defaults\\Host", DefaultsHost);
+class DefaultsNamed {
+  static readonly [PHP_PROPERTIES] = [{ name: "name", visibility: "public", default: "parent" }];
+  name: string = "parent";
+  constructor() {
+    initializeTraits(this);
+  }
+}
+registerClass("App\\Defaults\\Named", DefaultsNamed);
+class DefaultsGuarded {
+  static readonly [PHP_PROPERTIES] = [{ name: "guarded", visibility: "protected", default: ["*"] }];
+  protected guarded: string[] = ["*"];
+  constructor() {
+    initializeTraits(this);
+  }
+  getGuarded(): string[] {
+    return this.guarded;
+  }
+}
+registerClass("App\\Defaults\\Guarded", DefaultsGuarded);
+
+class SetsName {
+  name: string = "named";
+}
+registerClass("App\\Concerns\\SetsName", SetsName);
+class WritesName {
+  name: string = "named";
+  initializeWritesName(): void {
+    this.name = "written";
+  }
+}
+registerClass("App\\Concerns\\WritesName", WritesName);
+class Flags {
+  flag = false;
+  initializeFlags(): void {
+    this.flag = true;
+  }
+}
+registerClass("App\\Concerns\\Flags", Flags);
+class Unguards {
+  protected guarded: string[] = [];
+}
+registerClass("App\\Concerns\\Unguards", Unguards);
+
+class UsesName extends mixin(DefaultsNamed, SetsName) {}
+registerClass("App\\Defaults\\UsesName", UsesName);
+class UsesWrites extends mixin(DefaultsNamed, WritesName) {}
+registerClass("App\\Defaults\\UsesWrites", UsesWrites);
+class Flagged extends mixin(DefaultsHost, Flags) {}
+registerClass("App\\Defaults\\Flagged", Flagged);
+class Open extends mixin(DefaultsGuarded, Unguards) {}
+registerClass("App\\Defaults\\Open", Open);
+
+/** The DIV-12.8 limits of a trait default against a base property, pinned locally. */
+function checkDefaultLimits(): void {
+  // DIV-12.8, a write equal to the declared default: it looks untouched, so the trait's default replaces it, where
+  // PHP keeps "parent".
+  class WritesParent {
+    name: string = "named";
+    initializeWritesParent(): void {
+      this.name = "parent";
+    }
+  }
+  registerClass("App\\Concerns\\XtWritesParent", WritesParent);
+  class UsesWritesParent extends mixin(DefaultsNamed, WritesParent) {}
+  registerClass("App\\Defaults\\XtUsesWritesParent", UsesWritesParent);
+  Assert.assertSame("named", new UsesWritesParent().name, "DIV-12.8: a constructor write equal to the declared default is replaced");
+  // A private base property against a trait's public one is not asserted until ESC-9.9-3 is ruled: PHP reads the
+  // trait's default from outside and the base's from the base's own methods, and one JS slot cannot hold both.
+}
+
 /** The composition rules of `mixin` (the matrix's local Composition row). */
 function checkComposition(): void {
   const COUNTER = Symbol("counter");
@@ -250,8 +331,9 @@ function checkComposition(): void {
   // Own members first, then the traits', then the base's; `super` in the class reaches the trait layer, then Base.
   Assert.assertSame("Resolves::greet>Parent::greet", one.greet());
   Assert.assertSame("built", one.made);
-  // Which of a base field and a trait default wins (`name`) is ESC-9.9-2.
-  Assert.assertTrue(one.describe().endsWith(":Resolves::count"));
+  // DIV-12.8, no table: Parent declares no PHP property table, so its field `name` keeps its value against Named's
+  // default, where PHP has the trait's "named" (ESC-9.9-2).
+  Assert.assertSame("parent:Resolves::count", one.describe(), "DIV-12.8: a base without a property table keeps its value");
   // Accessors, symbol-keyed methods and per-instance defaults.
   Assert.assertSame(2, one.doubled);
   Assert.assertSame("symbol", one[COUNTER]());
@@ -385,10 +467,21 @@ function checkComposition(): void {
 
 xaravelTest(
   "XT-runtime-31",
-  "class X extends mixin(Base, TraitA, TraitB), with traits registered under their Upstream FQCNs: classUsesRecursive(X) returns the trait FQCNs, traits used by traits included, in Upstream order, as the Oracle's class_uses_recursive (for a class, an instance, an FQCN and a trait); members resolve own, then traits', then the base's, statics and defaults are copied per class and instance, a diamond applies once and a collision throws PHP's message when called (AD-26)",
+  "class X extends mixin(Base, TraitA, TraitB), with traits registered under their Upstream FQCNs: classUsesRecursive(X) returns the trait FQCNs, traits used by traits included, in Upstream order, as the Oracle's class_uses_recursive (for a class, an instance, an FQCN and a trait); members resolve own, then traits', then the base's, statics and defaults are copied per class and instance, a diamond applies once and a collision throws PHP's message when called; a trait default replaces a base property still at its declared default, as the Oracle's, and keeps any other value, except in the two DIV-12.8 cases (no property table: the base's value is kept; a write equal to the declared default: the trait's default applies) (AD-26, ESC-9.9-2)",
   () => {
     checkComposition();
-    const output = oracle("XT-runtime-31");
+    checkDefaultLimits();
+    const defaults = oracle("XT-runtime-31", "(new \\App\\Defaults\\UsesName())->name");
+    const instances: [string, () => unknown][] = [
+      ["UsesName->name", () => new UsesName().name],
+      ["UsesWrites->name", () => new UsesWrites().name],
+      ["Flagged->flag", () => new Flagged().flag],
+      ["Open->getGuarded()", () => new Open().getGuarded()],
+    ];
+    for (const [index, [label, read]] of instances.entries()) {
+      Assert.assertSame(jsonEncode(result(defaults, index)), jsonEncode(read()), label);
+    }
+    const output = oracle("XT-runtime-31", "class_uses_recursive(\\App\\Plain\\Base::class)");
     const cases: [string, unknown][] = [
       ["Base", Base],
       ["Post", Post],

@@ -66,8 +66,9 @@ xaravelTest(
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-    // Not asserted in this process: under the conformance harness `Symbol` is frozen before the runtime loads, so the
-    // polyfill is skipped there (ESC-9.9-1); the runtime reads the registered symbol either way.
+    // In this process too: under the conformance harness, which freezes `Symbol` before the runtime loads, the harness
+    // installs the same `Symbol.metadata` first (ESC-9.9-1), and outside it the polyfill does.
+    Assert.assertSame(Symbol.for("Symbol.metadata"), (Symbol as { metadata?: symbol }).metadata ?? null);
   },
 );
 
