@@ -25,7 +25,9 @@
 //   `null` for the kind-less count. Its result is not awaited and its errors
 //   are swallowed, since the test that is running then may be another one.
 //   The harness preload installs it (conformance/harness/preload.ts) and fails
-//   the test as `late`.
+//   the test as `late`. A late assertion that fails (Story 9.11, ESC-5.3-3) is
+//   reported the same way and returns null: it never throws into the test that
+//   is running then.
 // - Variant membership (ESC-5.3-4): a planned test with `declare: false` is
 //   not registered with bun (it neither runs nor reports), but its Test ID is
 //   still reserved, so the FR-2 duplicate check covers every row.

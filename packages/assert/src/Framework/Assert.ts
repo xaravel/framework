@@ -26,10 +26,17 @@
 //
 // Story 4.7 adds the `stringContains` factory, and `assertArraySubset`, which
 // is Laravel's and calls PHPUnit's `assertThat`, records `assertThat`.
+//
+// Story 9.11 (ESC-5.3-3): every `assert*` method, `assertThat` and `fail`, static
+// and mirrored, is wrapped once at load. When it would throw an
+// AssertionFailedError (not a skip) after its test's counts have ended (a timer
+// or an un-awaited promise the body left behind), it makes sure the failure was
+// reported to `Symbol.for('xaravel.harness.late')` and returns null, so it never
+// throws into whichever test runs then. Argument TypeErrors still throw.
 import { readFileSync } from "node:fs";
 import { isPhpArray } from "../comparison/PhpComparison";
 import { argumentError, floatParam, intParam, isArrayAccess, isCountable, isIterable, isPhpObject, stringParam } from "../comparison/PhpValues";
-import { recordAssertion } from "../declarations/AssertionCounter";
+import { countsEnded, lateReports, recordAssertion, reportLateFailure } from "../declarations/AssertionCounter";
 import { AssertionFailedError } from "./AssertionFailedError";
 import { Constraint, LogicalAnd, LogicalNot, LogicalOr } from "./Constraint";
 import { DirectoryExists, isDir } from "./Constraint/Filesystem/DirectoryExists";
@@ -65,7 +72,7 @@ import {
   TraversableContainsOnly,
 } from "./Constraints";
 import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
-import { SkippedWithMessageException } from "./Exception/SkippedWithMessageException";
+import { isSkippedTest, SkippedWithMessageException } from "./Exception/SkippedWithMessageException";
 
 /** A class, or an interface token (an object with `Symbol.hasInstance`); see ESC-4.3-1 item 1. */
 export type ClassOrInterface = (abstract new (...args: never[]) => unknown) | { readonly [Symbol.hasInstance]: (value: unknown) => boolean };
@@ -755,6 +762,35 @@ export const ASSERTIONS_4_4: readonly string[] = Object.freeze([
 
 /** The statics that are not assertions but are mirrored onto the prototype too (`$this->fail(…)`, `$this->logicalAnd(…)`). */
 const MIRRORED = ["fail", "markTestSkipped", "logicalAnd", "greaterThanOrEqual", "lessThanOrEqual", "isInstanceOf", "stringContains"];
+
+/** An assertion that, failing in ended counts, reports itself late and returns null (Story 9.11, see the header). */
+function lateSafe(kind: string, assertion: (...args: unknown[]) => unknown): (...args: unknown[]) => unknown {
+  return {
+    [kind](this: unknown, ...args: unknown[]): unknown {
+      const reported = lateReports();
+      try {
+        return Reflect.apply(assertion, this, args);
+      } catch (error) {
+        if (error instanceof AssertionFailedError && !isSkippedTest(error) && countsEnded()) {
+          if (lateReports() === reported) {
+            reportLateFailure(kind);
+          }
+          return null;
+        }
+        throw error;
+      }
+    },
+  }[kind]!;
+}
+
+for (const name of [...Object.getOwnPropertyNames(Assert).filter((key) => key.startsWith("assert")), "fail"]) {
+  Object.defineProperty(Assert, name, {
+    value: lateSafe(name, (Assert as unknown as Record<string, (...args: unknown[]) => unknown>)[name]!),
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+}
 
 // Every static assertion, this Story's and later ones', is mirrored onto the prototype.
 for (const name of [...Object.getOwnPropertyNames(Assert).filter((key) => key.startsWith("assert")), ...MIRRORED]) {

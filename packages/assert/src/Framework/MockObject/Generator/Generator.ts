@@ -13,12 +13,25 @@
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
-//   that builds an Invocation and calls the double's InvocationHandler. Its
+//   that builds an Invocation and calls the double's InvocationHandler.
+//   Story 9.11 (ESC-4.7-1 item 2, DIV-6.4): each method knows its declaring
+//   class (the prototype, or the contract token, that has it; named by its
+//   own `Symbol.for('xaravel.class.fqcn')` brand, else its JS name). At each
+//   call the method asks the signature lookup for that class's row
+//   (Signature.ts). With a row, the parameters and their `$names` are the
+//   row's; an omitted argument (or an `undefined` one) is its declared
+//   default, a parameter without a default is not padded (PHP's generated
+//   method would have refused the call), and a default the grader cannot
+//   evaluate throws PHPUnit's `MockObject\RuntimeException`; the Invocation
+//   names the declaring class, as `DoubledMethod.php:108` does, and carries
+//   the declared return type as sebastian/type writes it (`returnTypeString`:
+//   `self` and `parent` resolved, union members sorted). With no row, the
 //   parameters are read from the method's source (`x` and `x = default` are
 //   `$x`; a trailing `...rest` is the variadic, not a declared parameter; a
-//   destructured parameter is named by its index; ESC-4.7-1 item 2). The Invocation holds every declared parameter, an
-//   omitted one as `null`, then the extra arguments, as PHPUnit's generated
-//   method collects them. A method that is not doubled stays the target's.
+//   destructured parameter is named by its index), and the Invocation holds
+//   every declared parameter, an omitted one as `null`, then the extra
+//   arguments, as PHPUnit's generated method collects them. A method that is
+//   not doubled stays the target's.
 // - API. `method()` on every double, `expects()` on mock objects only; every
 //   internal is symbol-keyed. A target with a method named `method` is
 //   refused, as PHPUnit refuses it.
@@ -27,12 +40,17 @@
 //   runs. With it, `Reflect.construct` runs the target's constructor with the
 //   arguments; a doubled method it calls returns `null`, as PHPUnit's does
 //   before the double has matchers.
+// - Generated values. An unconfigured call returns what the Invocation's
+//   ReturnValueGenerator makes of the declared return type: `static` is a new
+//   double of the same class (`newInstanceOf`), and a class name is
+//   `createStub` of it (`testDouble(type, false, [], [], false, …)`).
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
-import { ConfigurableMethod } from "../ConfigurableMethod";
+import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
 import { InvocationHandler } from "../Runtime/InvocationHandler";
+import { ReturnValueGenerator } from "../Runtime/ReturnValueGenerator";
 import { AnyInvokedCount } from "../Runtime/Rule/AnyInvokedCount";
 import { InvocationOrder } from "../Runtime/Rule/InvocationOrder";
 
@@ -164,9 +182,35 @@ function splitDefault(part: string): string {
   return (at === -1 ? part : part.slice(0, at)).trim();
 }
 
-function configurable(name: string, fn: (...args: never[]) => unknown): ConfigurableMethod {
+function configurable(name: string, fn: (...args: never[]) => unknown, declaring: DeclaringClass | null): ConfigurableMethod {
   const { count, names } = parameterInfo(fn);
-  return new ConfigurableMethod(name, count, names);
+  return new ConfigurableMethod(name, count, names, declaring);
+}
+
+/** A class's own FQCN brand, else its JS name (as Mockery's `classNameOf`); null for no class. */
+function ownClassName(ctor: unknown): string | null {
+  if (typeof ctor !== "function") {
+    return null;
+  }
+  if (Object.hasOwn(ctor, CLASS_FQCN)) {
+    const brand: unknown = (ctor as unknown as Record<symbol, unknown>)[CLASS_FQCN];
+    if (typeof brand === "string") {
+      return brand;
+    }
+  }
+  return ctor.name === "" ? null : ctor.name;
+}
+
+/** The declaring class of the members own to `prototype`: its constructor, and the constructor's parent. */
+function declaringClassOf(prototype: object): DeclaringClass | null {
+  const ctor: unknown = (prototype as { constructor?: unknown }).constructor;
+  const name = ownClassName(ctor);
+  if (name === null) {
+    return null;
+  }
+  const parent: unknown = Object.getPrototypeOf(ctor);
+  const parentName = typeof parent === "function" && parent !== Function.prototype && !isNative(parent) ? ownClassName(parent) : null;
+  return { name, type: ctor, parentName };
 }
 
 /** Reads a double target. Throws a TypeError for anything else. */
@@ -177,12 +221,13 @@ export function readTarget(type: unknown): TargetType {
       if (prototype === Object.prototype || isNative((prototype as { constructor?: unknown }).constructor)) {
         break;
       }
+      const declaring = declaringClassOf(prototype);
       for (const key of Object.getOwnPropertyNames(prototype)) {
         const descriptor = Object.getOwnPropertyDescriptor(prototype, key);
         if (key === "constructor" || methods.has(key) || descriptor === undefined || typeof descriptor.value !== "function") {
           continue;
         }
-        methods.set(key, configurable(key, descriptor.value as (...args: never[]) => unknown));
+        methods.set(key, configurable(key, descriptor.value as (...args: never[]) => unknown, declaring));
       }
     }
     return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null };
@@ -193,6 +238,7 @@ export function readTarget(type: unknown): TargetType {
   if (typeof type === "object" && type !== null && typeof (type as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
     const name = classNameOfClass(type);
     const methods = new Map<string, ConfigurableMethod>();
+    const declaring: DeclaringClass = { name, type, parentName: null };
     const declared: unknown = (type as Record<symbol, unknown>)[CONTRACT_METHODS];
     if (declared !== undefined && declared !== null) {
       if (typeof (declared as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
@@ -202,7 +248,7 @@ export function readTarget(type: unknown): TargetType {
         if (typeof method !== "string") {
           throw new TypeError(`${name}: [Symbol.for('xaravel.contract.methods')] must hold method names, got ${typeof method}`);
         }
-        methods.set(method, new ConfigurableMethod(method, 0, []));
+        methods.set(method, new ConfigurableMethod(method, 0, [], declaring));
       }
     }
     return { name, parent: null, methods, brand: Symbol.for(name) };
@@ -231,20 +277,126 @@ function setHandler(double: object, handler: InvocationHandler): void {
   Object.defineProperty(double, HANDLER, { value: handler, writable: false, enumerable: false, configurable: true });
 }
 
-function doubledMethod(className: string, method: ConfigurableMethod): (this: object, ...args: unknown[]) => unknown {
+/** A new double of `double`'s class that shares its configurable methods, with a fresh handler (`static`). */
+function newInstanceOf(double: object): object {
+  const configuration = (double as Record<symbol, DoubleConfiguration | undefined>)[DOUBLE];
+  const original = invocationHandlerOf(double);
+  if (configuration === undefined || original === null) {
+    throw new TypeError("PHPUnit\\Framework\\MockObject: not a test double");
+  }
+  const object = Object.create(Object.getPrototypeOf(double) as object) as object;
+  setHandler(object, new InvocationHandler(configuration.configurableMethods, configuration.className, configuration.isMockObject, (count) => original.addToAssertionCount(count)));
+  return object;
+}
+
+/** One named type of a declared type as sebastian/type names it: `self` and `parent` resolved, `static` kept. */
+function typeName(name: string, declaring: DeclaringClass): string {
+  const lower = name.toLowerCase();
+  if (lower === "self") {
+    return declaring.name;
+  }
+  if (lower === "parent" && declaring.parentName !== null) {
+    return declaring.parentName;
+  }
+  return name.replace(/^\\/, "");
+}
+
+/**
+ * The declared return type as PHPUnit's generated method passes it to `Invocation` (`ReflectionMapper::fromReturnType`
+ * then `Type::asString()`, sebastian/type 6): untyped is `''`; a nullable named type has a leading `?` (`mixed` and
+ * `null` never do); a union or an intersection lists its names sorted, a union's intersections in parentheses.
+ */
+export function returnTypeString(returns: string | null, nullable: boolean, declaring: DeclaringClass): string {
+  if (returns === null || returns === "") {
+    return "";
+  }
+  const text = returns.replace(/^\?/, "");
+  const sorted = (names: string[], separator: string): string => names.sort().join(separator);
+  if (text.includes("|")) {
+    const members = text.split("|").map((member) => {
+      if (member.startsWith("(") && member.endsWith(")")) {
+        return `(${sorted(
+          member
+            .slice(1, -1)
+            .split("&")
+            .map((name) => typeName(name, declaring)),
+          "&",
+        )})`;
+      }
+      return typeName(member, declaring);
+    });
+    return sorted(members, "|");
+  }
+  if (text.includes("&")) {
+    return sorted(
+      text.split("&").map((name) => typeName(name, declaring)),
+      "&",
+    );
+  }
+  const name = typeName(text, declaring);
+  const lower = name.toLowerCase();
+  if (lower === "mixed" || lower === "null") {
+    return lower;
+  }
+  return (nullable ? "?" : "") + name;
+}
+
+/** The arguments as PHPUnit's generated method collects them, with the row's defaults (see the header). */
+function collectWithRow(method: ConfigurableMethod, declared: number, args: readonly unknown[]): unknown[] {
+  const defaults = method.defaultParameterValues();
+  const parameters: unknown[] = [];
+  for (let index = 0; index < declared; index++) {
+    const omitted = index >= args.length || args[index] === undefined;
+    if (!omitted) {
+      parameters.push(args[index]);
+      continue;
+    }
+    const defaultValue = defaults.get(index);
+    if (defaultValue !== undefined) {
+      parameters.push(defaultValue());
+    } else if (index < args.length) {
+      parameters.push(null);
+    } else {
+      // No default: PHP's generated method would have refused the call; nothing is padded.
+      break;
+    }
+  }
+  for (let index = declared; index < args.length; index++) {
+    parameters.push(args[index] ?? null);
+  }
+  return parameters;
+}
+
+function doubledMethod(className: string, target: unknown, method: ConfigurableMethod): (this: object, ...args: unknown[]) => unknown {
   const name = method.name();
-  const declared = method.numberOfParameters();
-  const names = method.parameterNames();
   const fn = function (this: object, ...args: unknown[]): unknown {
     const handler = invocationHandlerOf(this);
     if (handler === null) {
       return null;
     }
-    const parameters: unknown[] = [];
-    for (let index = 0; index < Math.max(declared, args.length); index++) {
-      parameters.push(args[index] ?? null);
+    const row = method.signature();
+    const declaring = method.declaringClass();
+    if (row === null || declaring === null) {
+      const declared = method.numberOfParameters();
+      const parameters: unknown[] = [];
+      for (let index = 0; index < Math.max(declared, args.length); index++) {
+        parameters.push(args[index] ?? null);
+      }
+      return handler.invoke(new Invocation(className, name, parameters, this, method.parameterNames()));
     }
-    return handler.invoke(new Invocation(className, name, parameters, this, names));
+    const names = method.parameterNames();
+    const parameters = collectWithRow(method, row.parameters.filter((parameter) => !parameter.variadic).length, args);
+    const known = new Map<string, unknown>([
+      [className.replace(/^\\/, "").toLowerCase(), target],
+      [declaring.name.replace(/^\\/, "").toLowerCase(), declaring.type],
+    ]);
+    const generator = new ReturnValueGenerator({
+      newInstanceOf,
+      testDoubleFor: (type: unknown) => testDouble(type, false, [], [], false, () => undefined),
+      known,
+    });
+    const returnType = returnTypeString(row.returns, row.nullable, declaring);
+    return handler.invoke(new Invocation(declaring.name, name, parameters, this, names, returnType, generator));
   };
   Object.defineProperty(fn, "name", { value: name });
   return fn;
@@ -297,7 +449,7 @@ export function testDouble(
     Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: false });
   }
   for (const method of doubled) {
-    Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, method), writable: true, enumerable: false, configurable: true });
+    Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, type, method), writable: true, enumerable: false, configurable: true });
   }
   Object.defineProperty(
     prototype,

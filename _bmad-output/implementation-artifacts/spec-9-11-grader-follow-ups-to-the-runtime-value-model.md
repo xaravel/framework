@@ -2,8 +2,8 @@
 title: 'Story 9.11: Grader follow-ups to the runtime value model'
 type: 'feature'
 created: '2026-10-22'
-baseline_revision: '6a51f8b0a0306c52eba5b5af8d43e2bd624c246f'
-status: 'ready-for-dev'
+baseline_revision: 'f6108a175d3a9476875796b356a7ed7c209e9e1e'
+status: 'in-review'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -176,6 +176,18 @@ deferred: []
 
 ## Spec Change Log
 
+- 2026-10-22 (implementation, all five ACs): the attempt-1 patch is re-applied without its `-0` changes and deleted; XT-assert-17..21 are built. Points the implementation settled, for the review:
+  - **Constants:** the surface also uses `E_DEPRECATED` once as a default (`8192`), so the evaluator takes it beside the five the intent names; it is a PHP constant the surface uses, which is the rule the bullet states.
+  - **Return-type strings:** PHPUnit gets the type from sebastian/type, whose `UnionType` and `IntersectionType` sort their members, so `int|string` (PHP's `(string)` gives `string|int`) is what `toString()` prints; a nullable named type keeps its `?`, `mixed` and `null` never get one. PHP 8.5's reflection already prints `self` as the class name except in traits, so the surface's few `self` rows are the trait ones; both forms resolve.
+  - **Parameter names:** PHPUnit's `Parameters` rule names a position by reflecting the declaring class, variadic included, so a row's variadic name is used for its position; the collected arguments still skip the variadic, as PHPUnit's generated method does.
+  - **An `undefined` argument** counts as omitted (padded with its default), as a JS default parameter treats it; a parameter with no default and no argument ends the padding.
+  - **The internal SPL base** also gives `getMessage()`, `getCode()` and `getPrevious()` to the grader exceptions that had none (`EmptyStringException`, …), and a static class-name brand getter that returns the subclass's JS name, so a class without its own brand never shows the runtime parent's `RuntimeException` as its name. The runtime's own `name` and `code` properties are removed after its constructor runs, so own keys stay as without the map.
+  - **The util/Json errors:** only `InvalidJsonException` is PHPUnit's (`extends \RuntimeException`); `JsonError` and `EncodeError` are the module's internal signals, caught there, with no PHP class, so they stay on the JS `Error`.
+  - **XT-assert-17's matrix** gained the carried values (`9007199254740993`, `"-0"`, `"0.0"`, `"1e0"`, `[1]`, `[1.0]`, `[-0.0]`): 24 values, 1,152 cells.
+  - **XT-assert-20's request** also reflects the PHP twin's rows (`xt_rows20`, api-surface.php's form), and the test checks the fake lookup serves exactly those rows.
+  - **Local check:** no locked Laravel install with `vendor/` exists on this machine, so both requests were evaluated with a throwaway runner around evaluate.php's `Encoder` and the PHPUnit 13.4.3 vendor under `conformance/tests/xaravel/php-fixtures/phpunit` (PHP 8.5.11, PHPUnit's configuration registry initialised from the framework's `phpunit.xml.dist`): all 1,152 matrix cells, both row sets and all 19 double cells agree with the grader. The bot's signed fixtures are authoritative.
+  - **Not in this Story's paths:** `docs/ops/harness.md:200-207` still says a late failing assertion throws (as recorded above); DIV-9.8's closing line waits for Story 9.12 and the planning change (ESC-9.11-1).
+
 - 2026-10-22 (re-plan after the rulings): the intent contract now covers all five ACs.
   - **The number rule follows ESC-9.11-2:** an unmarked `-0` is an int everywhere, so the earlier printer carve-out is gone.
   - **Decisions taken under the MAINT ruling's "recommended option", for the Maintainer to see:**
@@ -238,6 +250,12 @@ Layers: Blind Hunter, Edge Case Hunter, Verification Gap, Intent Alignment. Fide
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run escalations:check`, `bun run ownership:check` (if present) -- expected: clean.
 
 ## Auto Run Result
+
+Status: in-review
+
+- **Attempt 2:** all five ACs built inside `packages/assert/**` and `conformance/oracle-requests/9.11.jsonl` (XT-assert-17 and XT-assert-20 requests). Verification: `bun --bun tsc -b`, `bun run lint`, `graph:check`, `registration:check`, `escalations:check`, `ownership:check`, `porting:check`, `async-surface --check assert`, `oracle:story check 9.11` clean; `bun test packages` 67/69 and `bun run harness --xaravel --id 'XT-assert-*'` 19/21, the two failures being XT-assert-17's and XT-assert-20's unsigned fixtures (every fixture-free row passes); the full `bun run harness` differs only on those two (21,817 lines checked over 4 local Variants, 7 NOT-RUN); `bun test conformance/tests/xaravel/harness.test.ts` (XT-conformance-185) passes. The review step (with the Fidelity Review) is next.
+
+### Previous run (attempt 1)
 
 Status: blocked
 

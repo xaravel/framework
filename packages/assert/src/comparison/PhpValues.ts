@@ -4,8 +4,12 @@
 // values only through these helpers and PhpComparison's, so every module agrees
 // on what a PHP int, float, array, object, resource or callable is.
 //
-//   - int: a safe-integer `number` or a `bigint` (DIV-9: an integral float reads as an int);
-//   - float: any other `number` (fractional, NAN, INF, or beyond the safe range);
+//   - int: a `bigint`, or a safe-integer `number`, `-0` included (DIV-9: an unmarked integral float reads as an int);
+//   - float: any other `number` (fractional, NAN, INF, or beyond the safe range), and a value carrying the runtime's
+//     float marker (a non-null object whose `[Symbol.for('xaravel.php.float')]` is `true`, read by brand only, never
+//     imported: AD-2, DIV-9.4), whose value is `Number(v)` whatever it is (Story 9.11, ESC-4.1-1, ESC-9.11-2). Only
+//     the marker makes an integral number a float: an unmarked `-0` is the int `0` for every reader and printer
+//     here, unlike the runtime's `isFloat(-0)`;
 //   - array: a list, a plain object or a `Symbol.for('xaravel.php.array')` value (PhpComparison);
 //   - resource: an object branded `Symbol.for('xaravel.php.resource')`, whose value is its type;
 //   - object: any other object, and a function (a PHP Closure);
@@ -16,17 +20,43 @@ import { arrayEntries, isBuiltIn, isPhpArray, numericValue } from "./PhpComparis
 
 export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
 export const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
+export const PHP_FLOAT = Symbol.for("xaravel.php.float");
 const COUNTABLE = Symbol.for("Countable");
 const ARRAY_ACCESS = Symbol.for("ArrayAccess");
 
-/** A PHP int: a safe-integer `number` (DIV-9) or a `bigint`. */
-export function isInt(value: unknown): value is number | bigint {
-  return typeof value === "bigint" || (typeof value === "number" && Number.isSafeInteger(value));
+/** A value carrying the runtime's float marker (Story 9.5): a non-null object whose float brand is `true`. */
+export function isMarkedFloat(value: unknown): value is object {
+  return typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[PHP_FLOAT] === true;
 }
 
-/** A PHP float: a `number` that is not a safe integer. */
-export function isFloat(value: unknown): value is number {
-  return typeof value === "number" && !Number.isSafeInteger(value);
+/** A marked float as the plain `number` it stands for; any other value as it is. */
+export function unmarkFloat(value: unknown): unknown {
+  return isMarkedFloat(value) ? Number(value) : value;
+}
+
+/**
+ * The PHP type of a number (ESC-9.11-2): `"int"` for a `bigint` and for a safe-integer `number` (`-0` included),
+ * `"float"` for any other `number` and for a marked float whatever its value; null for a value that is not a number.
+ */
+export function phpNumberType(value: unknown): "int" | "float" | null {
+  switch (typeof value) {
+    case "bigint":
+      return "int";
+    case "number":
+      return Number.isSafeInteger(value) ? "int" : "float";
+    default:
+      return isMarkedFloat(value) ? "float" : null;
+  }
+}
+
+/** A PHP int: a `bigint`, or an unmarked safe-integer `number` (DIV-9). */
+export function isInt(value: unknown): value is number | bigint {
+  return phpNumberType(value) === "int";
+}
+
+/** A PHP float: a `number` that is not an int, or a marked float (read its value with `toNumber`). */
+export function isFloat(value: unknown): boolean {
+  return phpNumberType(value) === "float";
 }
 
 export function isResource(value: unknown): value is object {
@@ -44,12 +74,12 @@ export function isPhpObject(value: unknown): value is object {
   if (typeof value === "function") {
     return true;
   }
-  return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value);
+  return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value) && !isMarkedFloat(value);
 }
 
 /** `is_scalar`. */
 export function isScalar(value: unknown): boolean {
-  return typeof value === "boolean" || typeof value === "number" || typeof value === "bigint" || typeof value === "string";
+  return typeof value === "boolean" || typeof value === "string" || phpNumberType(value) !== null;
 }
 
 /** `gettype`. */
@@ -63,12 +93,15 @@ export function gettype(value: unknown): string {
     case "bigint":
       return "integer";
     case "number":
-      return Number.isSafeInteger(value) ? "integer" : "double";
+      return isInt(value) ? "integer" : "double";
     case "string":
       return "string";
     case "function":
       return "object";
     case "object":
+      if (isMarkedFloat(value)) {
+        return "double";
+      }
       if (isResource(value)) {
         return "resource";
       }
@@ -80,14 +113,17 @@ export function gettype(value: unknown): string {
 
 /** `is_numeric`. */
 export function isNumeric(value: unknown): boolean {
-  if (typeof value === "number" || typeof value === "bigint") {
+  if (phpNumberType(value) !== null) {
     return true;
   }
   return typeof value === "string" && numericValue(value) !== null;
 }
 
-/** A numeric value as a JS number: a number, a bigint or a numeric string. */
+/** A numeric value as a JS number: a number, a marked float, a bigint or a numeric string. */
 export function toNumber(value: unknown): number {
+  if (isMarkedFloat(value)) {
+    return Number(value);
+  }
   if (typeof value === "number") {
     return value;
   }
@@ -256,6 +292,9 @@ export function formatDouble(value: number, precision: number): string {
 
 /** `(string)` of a PHP scalar or null (floats at `precision` 14); a Stringable object through `toString()`. */
 export function phpToString(value: unknown): string {
+  if (isMarkedFloat(value)) {
+    return formatDouble(Number(value), 14);
+  }
   if (value === null) {
     return "";
   }
@@ -267,7 +306,8 @@ export function phpToString(value: unknown): string {
     case "bigint":
       return value.toString();
     case "number":
-      return Number.isSafeInteger(value) ? String(value) : formatDouble(value, 14);
+      // An unmarked `-0` is the int `0` (ESC-9.11-2).
+      return isInt(value) ? String(value) : formatDouble(value, 14);
     default:
       if (isStringable(value)) {
         return stringOf(value);
@@ -308,7 +348,8 @@ export function stringParam(method: string, position: number, name: string, valu
 }
 
 /** An `int` parameter: an int, a bool, an integral float, or a numeric string; a fractional value is truncated. */
-export function intParam(method: string, position: number, name: string, value: unknown): number {
+export function intParam(method: string, position: number, name: string, argument: unknown): number {
+  const value = unmarkFloat(argument);
   if (typeof value === "boolean") {
     return value ? 1 : 0;
   }
@@ -319,18 +360,19 @@ export function intParam(method: string, position: number, name: string, value: 
     number = toNumber(value);
   }
   if (number === null || !Number.isFinite(number)) {
-    throw argumentError(method, position, name, "int", value);
+    throw argumentError(method, position, name, "int", argument);
   }
   return Math.trunc(number);
 }
 
 /** A `float` parameter: an int, a float, a bool or a numeric string. */
-export function floatParam(method: string, position: number, name: string, value: unknown): number {
+export function floatParam(method: string, position: number, name: string, argument: unknown): number {
+  const value = unmarkFloat(argument);
   if (typeof value === "boolean") {
     return value ? 1 : 0;
   }
   if (typeof value === "number" || typeof value === "bigint" || (typeof value === "string" && numericValue(value) !== null)) {
     return toNumber(value);
   }
-  throw argumentError(method, position, name, "float", value);
+  throw argumentError(method, position, name, "float", argument);
 }

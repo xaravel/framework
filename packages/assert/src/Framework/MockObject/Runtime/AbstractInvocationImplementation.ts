@@ -4,9 +4,10 @@
 // A method name is matched case-insensitively against the double's
 // configurable methods. `willReturnMap` rows that do not have one element per
 // declared parameter plus the return value are normalized as PHPUnit's
-// `normalizeValueMap` does, with `null` as each parameter's default
-// (ConfigurableMethod). There are no return types, so no return value is
-// type-checked (ESC-4.7-1 item 2).
+// `normalizeValueMap` does: each missing position that has a declared default
+// gets it (ConfigurableMethod: the signature row's defaults, Story 9.11; with
+// no row, `null` at every position). No return value is type-checked against
+// the declared return type (the Story 9.11 decision for ESC-4.7-1 item 2).
 import { Constraint } from "../../Constraint";
 import { isThrowable } from "../../Throwable";
 import type { ConfigurableMethod } from "../ConfigurableMethod";
@@ -128,7 +129,7 @@ export abstract class AbstractInvocationImplementation implements InvocationStub
     }
     const numberOfParameters = method.numberOfParameters();
     const defaultValues = method.defaultParameterValues();
-    const hasDefaultValues = defaultValues.length > 0;
+    const hasDefaultValues = defaultValues.size > 0;
     return [...valueMap].map((mapping) => {
       if (!Array.isArray(mapping) || mapping.length - 1 === numberOfParameters || !hasDefaultValues) {
         return mapping;
@@ -137,7 +138,12 @@ export abstract class AbstractInvocationImplementation implements InvocationStub
       const returnValue = row.pop();
       const normalized: unknown[] = [];
       for (let index = 0; index < numberOfParameters; index++) {
-        normalized.push(index < row.length ? row[index] : defaultValues[index]);
+        const defaultValue = defaultValues.get(index);
+        if (index < row.length) {
+          normalized.push(row[index]);
+        } else if (defaultValue !== undefined) {
+          normalized.push(defaultValue());
+        }
       }
       normalized.push(returnValue);
       return normalized;

@@ -3,9 +3,11 @@
 // GreaterThan and LessThan (`$a < $b` is `($a <=> $b) < 0`), and the
 // canonicalizing ArrayComparator's sort, order values through this. Two values
 // PHP cannot order (objects of different classes, an array missing a key of the
-// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does.
+// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does. A value
+// carrying the runtime's float marker orders as the plain `number` it stands
+// for (Story 9.11).
 import { arrayEntries, type Entries, isBuiltIn, isNumber, isPhpArray, type Key, numericValue, objectProps, RECURSION, truthy } from "./PhpComparison";
-import { formatDouble, isPhpObject, isStringable, sameClass, stringOf } from "./PhpValues";
+import { formatDouble, isFloat, isPhpObject, isStringable, sameClass, stringOf, unmarkFloat } from "./PhpValues";
 
 const UNCOMPARABLE = 1;
 
@@ -84,11 +86,14 @@ export function smartCompare(a: string, b: string): number {
   return compareNumbers(left.value, right.value);
 }
 
-/** `compare_longs_to_string` / `compare_doubles_to_string`. */
-function compareNumberToString(number: number | bigint, text: string): number {
+/**
+ * `compare_longs_to_string` / `compare_doubles_to_string`. `float` is the number's PHP type (a marked float arrives
+ * unmarked), so an integral float such as `float(1e15)` stringifies as PHP's float (`1.0E+15`).
+ */
+function compareNumberToString(number: number | bigint, text: string, float: boolean): number {
   const parsed = numericValue(text);
   if (parsed !== null) {
-    if (typeof number === "number" && !Number.isSafeInteger(number)) {
+    if (typeof number === "number" && float) {
       return threeway(number, Number(parsed.value));
     }
     if (parsed.int) {
@@ -96,7 +101,7 @@ function compareNumberToString(number: number | bigint, text: string): number {
     }
     return threeway(Number(number), parsed.value);
   }
-  const asString = typeof number === "number" && !Number.isSafeInteger(number) ? formatDouble(number, 14) : String(number);
+  const asString = typeof number === "number" && float ? formatDouble(number, 14) : String(number);
   return binaryCompare(asString, text);
 }
 
@@ -150,7 +155,9 @@ class Ordering {
     return objectLeft ? this.compare(casted, value) : this.compare(value, casted);
   }
 
-  compare(a: unknown, b: unknown): number {
+  compare(left: unknown, right: unknown): number {
+    const a = unmarkFloat(left);
+    const b = unmarkFloat(right);
     if (a === undefined || b === undefined || typeof a === "symbol" || typeof b === "symbol") {
       return Object.is(a, b) ? 0 : UNCOMPARABLE;
     }
@@ -174,10 +181,10 @@ class Ordering {
     }
     // A NAN against a string is uncomparable, in either order.
     if (isNumber(a) && typeof b === "string") {
-      return Number.isNaN(a) ? UNCOMPARABLE : compareNumberToString(a, b);
+      return Number.isNaN(a) ? UNCOMPARABLE : compareNumberToString(a, b, isFloat(left));
     }
     if (typeof a === "string" && isNumber(b)) {
-      return Number.isNaN(b) ? UNCOMPARABLE : -compareNumberToString(b, a);
+      return Number.isNaN(b) ? UNCOMPARABLE : -compareNumberToString(b, a, isFloat(right));
     }
     const leftObject = isPhpObject(a);
     const rightObject = isPhpObject(b);

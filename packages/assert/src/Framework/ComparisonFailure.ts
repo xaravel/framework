@@ -9,10 +9,13 @@
 // `toString()` is `getMessage()` followed by it (ESC-4.3-1 item 12).
 import { Differ } from "../diff/Differ";
 import { StrictUnifiedDiffOutputBuilder } from "../diff/StrictUnifiedDiffOutputBuilder";
+import { RuntimeExceptionParent } from "./Exception/RuntimeExceptionParent";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 
-export class ComparisonFailure extends Error {
+// PHP: `final class ComparisonFailure extends RuntimeException`, so it sits on the runtime's `RuntimeException` once
+// linked (Story 9.11).
+export class ComparisonFailure extends RuntimeExceptionParent {
   static readonly [CLASS_FQCN] = "SebastianBergmann\\Comparator\\ComparisonFailure";
 
   readonly #expected: unknown;

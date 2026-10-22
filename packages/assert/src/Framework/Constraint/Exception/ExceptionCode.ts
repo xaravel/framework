@@ -1,4 +1,5 @@
 // PHPUnit 13.4.3's `Constraint\ExceptionCode` (Story 4.4). Internal to the grader.
+import { unmarkFloat } from "../../../comparison/PhpValues";
 import { phpunitExport } from "../../../exporter/Exporter";
 import { Constraint } from "../../Constraint";
 
@@ -19,7 +20,9 @@ export class ExceptionCode extends Constraint {
     return `exception code is not ${String(this.expectedCode)}`;
   }
 
-  protected override matches(other: unknown): boolean {
+  protected override matches(given: unknown): boolean {
+    // A marked float reads as its number (Story 9.11), so an integral one matches as the int it stands for.
+    const other = unmarkFloat(given);
     if (!isIntOrString(other)) {
       return false;
     }

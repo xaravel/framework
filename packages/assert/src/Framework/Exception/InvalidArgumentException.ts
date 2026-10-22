@@ -1,7 +1,11 @@
 // Laravel's `Illuminate\Testing\Exceptions\InvalidArgumentException` (Story 4.3),
 // thrown by `assertArraySubset` for an argument that is neither an array nor
-// ArrayAccess. Internal to the grader.
-export class InvalidArgumentException extends Error {
+// ArrayAccess. Internal to the grader. PHP: `InvalidArgumentException extends
+// PHPUnit\Framework\Exception` (`extends \RuntimeException`), so it sits on the
+// runtime's `RuntimeException` once linked (Story 9.11).
+import { RuntimeExceptionParent } from "./RuntimeExceptionParent";
+
+export class InvalidArgumentException extends RuntimeExceptionParent {
   constructor(message: string) {
     super(message);
     this.name = "InvalidArgumentException";

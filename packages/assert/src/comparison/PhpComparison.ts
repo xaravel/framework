@@ -15,9 +15,15 @@
 //     `[Symbol.for('xaravel.php.props')]()` (which must return a PHP array)
 //     when present, else from its own enumerable string keys.
 //
-// int and float are both JS `number` (a `bigint` is an int), so `1 === 1.0`
-// is true here (ESC-4.1-1, DIV-9). `undefined` and `symbol` are not PHP values
-// (AD-9); each equals only itself.
+// int and float are both JS `number` (a `bigint` is an int). A safe-integer
+// `number` (an unmarked `-0` included) is an int, any other `number` a float,
+// and a value carrying the runtime's float marker
+// (`Symbol.for('xaravel.php.float')`, read by brand only) is a float whatever
+// its value, so `1 === float(1)` is false and `float(1) === float(1)` true
+// (Story 9.11, ESC-4.1-1, ESC-9.11-2, DIV-9.4; PhpValues' `phpNumberType`).
+// `==` reads a marked float as its plain `number`.
+// `undefined` and `symbol` are not PHP values (AD-9); each equals only itself.
+import { isMarkedFloat, phpNumberType, unmarkFloat } from "./PhpValues";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const PHP_PROPS = Symbol.for("xaravel.php.props");
@@ -234,7 +240,8 @@ function isNumber(value: unknown): value is number | bigint {
 }
 
 /** PHP's `(bool)` cast. */
-function truthy(value: unknown): boolean {
+function truthy(given: unknown): boolean {
+  const value = unmarkFloat(given);
   if (value === null || value === undefined) {
     return false;
   }
@@ -272,14 +279,26 @@ function numbersEqual(a: number | bigint, b: number | bigint): boolean {
   return Number.isSafeInteger(num) ? BigInt(num) === big : Number(big) === num;
 }
 
-/** PHP `===` between two numbers: as `==`, except that an int (`bigint`) never equals a float (an unsafe `number`). */
-function numbersIdentical(a: number | bigint, b: number | bigint): boolean {
-  if (typeof a === typeof b) {
-    return a === b;
+/**
+ * PHP `===` between two values of which at least one is a number (PhpValues' `phpNumberType`): identical only when
+ * both are ints with equal values, or both floats with equal values (`NAN` never; `0.0 === -0.0`, as PHP).
+ */
+function numbersIdentical(a: unknown, b: unknown): boolean {
+  const type = phpNumberType(a);
+  if (type === null || type !== phpNumberType(b)) {
+    return false;
   }
-  const big = (typeof a === "bigint" ? a : b) as bigint;
-  const num = (typeof a === "number" ? a : b) as number;
-  return Number.isSafeInteger(num) && BigInt(num) === big;
+  if (type === "float") {
+    return Number(a) === Number(b);
+  }
+  const left = a as number | bigint;
+  const right = b as number | bigint;
+  if (typeof left === typeof right) {
+    return left === right;
+  }
+  const big = (typeof left === "bigint" ? left : right) as bigint;
+  const num = (typeof left === "number" ? left : right) as number;
+  return BigInt(num) === big;
 }
 
 /** A PHP numeric string's value: an int, or a float with PHP's integer-overflow sign (`oflow`). */
@@ -378,7 +397,10 @@ class Comparison {
     }
   }
 
-  loose(a: unknown, b: unknown): boolean {
+  loose(left: unknown, right: unknown): boolean {
+    // A marked float is `==` as the plain `number` it stands for.
+    const a = unmarkFloat(left);
+    const b = unmarkFloat(right);
     if (isForeign(a) || isForeign(b)) {
       return Object.is(a, b);
     }
@@ -418,30 +440,30 @@ class Comparison {
     if (typeof b !== "object" && typeof b !== "function") {
       return false;
     }
-    const left = a as object;
-    const right = b as object;
-    if (left === right) {
+    const x = a as object;
+    const y = b as object;
+    if (x === y) {
       return true;
     }
-    const leftArray = isPhpArray(left);
-    const rightArray = isPhpArray(right);
+    const leftArray = isPhpArray(x);
+    const rightArray = isPhpArray(y);
     if (leftArray && rightArray) {
-      return this.guard(left, () => this.looseEntries(arrayEntries(left), arrayEntries(right)));
+      return this.guard(x, () => this.looseEntries(arrayEntries(x), arrayEntries(y)));
     }
     if (leftArray || rightArray) {
       return false;
     }
-    if (typeof left === "function" || typeof right === "function") {
+    if (typeof x === "function" || typeof y === "function") {
       return false;
     }
-    if (isBuiltIn(left) || isBuiltIn(right)) {
+    if (isBuiltIn(x) || isBuiltIn(y)) {
       // No PHP props form: equal only to itself, checked above.
       return false;
     }
-    if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) {
+    if (Object.getPrototypeOf(x) !== Object.getPrototypeOf(y)) {
       return false;
     }
-    return this.guard(left, () => this.looseEntries(objectProps(left), objectProps(right)));
+    return this.guard(x, () => this.looseEntries(objectProps(x), objectProps(y)));
   }
 
   private looseEntries(a: Entries, b: Entries): boolean {
@@ -467,8 +489,8 @@ class Comparison {
     if (a === null || b === null) {
       return a === b;
     }
-    if (isNumber(a) || isNumber(b)) {
-      return isNumber(a) && isNumber(b) && numbersIdentical(a, b);
+    if (isNumber(a) || isNumber(b) || isMarkedFloat(a) || isMarkedFloat(b)) {
+      return numbersIdentical(a, b);
     }
     if (typeof a !== "object" || typeof b !== "object") {
       return a === b;

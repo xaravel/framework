@@ -5,7 +5,7 @@
 // (`ksort`) first.
 import { arrayEntries, type Entries, isPhpArray, type Key } from "../comparison/PhpComparison";
 import { phpCompare, smartCompare } from "../comparison/PhpOrder";
-import { classNameOf, isFloat, isInt, isPhpObject } from "../comparison/PhpValues";
+import { classNameOf, isPhpObject, phpNumberType } from "../comparison/PhpValues";
 import { exportValue, shortenedExport } from "../exporter/Exporter";
 import { serialize } from "../exporter/VarExport";
 import { ComparisonFailure } from "../Framework/ComparisonFailure";
@@ -22,7 +22,7 @@ function typeOrder(value: unknown): number {
   if (typeof value === "boolean") {
     return 1;
   }
-  if (isInt(value) || isFloat(value)) {
+  if (phpNumberType(value) !== null) {
     return 2;
   }
   if (typeof value === "string") {

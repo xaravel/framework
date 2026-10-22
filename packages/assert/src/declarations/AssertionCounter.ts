@@ -20,8 +20,14 @@
 // harness fails the test. Without the hook it is dropped. The hook call never
 // throws: a throw here would fail whichever test happens to be running.
 // Detection is best-effort: an assertion that lands after bun has finished
-// the file's last test, or outside any test's context, is not seen. And a
-// late assertion that fails still throws into whatever test is running then.
+// the file's last test, or outside any test's context, is not seen.
+//
+// Story 9.11 (ESC-5.3-3): a late assertion that fails does not throw into
+// whichever test is running then. `Assert`'s assertions and a PHPUnit double's
+// invocation rules ask `countsEnded()` when they fail; in ended counts they
+// make sure the failure was reported (`reportLateFailure`, once per failing
+// call, since `recordAssertion` has usually reported it already) and return
+// `null` instead of throwing.
 // `Object.freeze` and `JSON.stringify` are captured at load, so a test that reassigns a global
 // cannot hide a late assertion.
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -38,6 +44,8 @@ interface Counts {
   readonly id: string | null;
   /** Set once the body has settled: anything recorded after that is late. */
   ended: boolean;
+  /** How many late reports these counts have sent (Story 9.11: a failing late call sends at least one). */
+  late: number;
 }
 
 /** Hands a late assertion to the harness hook, when one is installed; never throws. */
@@ -75,6 +83,7 @@ export function recordAssertion(kind: string): void {
     return;
   }
   if (counts.ended) {
+    counts.late++;
     reportLate(counts.id, kind);
     return;
   }
@@ -93,11 +102,31 @@ export function addToAssertionCount(count: number): void {
   }
   if (counts.ended) {
     if (count !== 0) {
+      counts.late++;
       reportLate(counts.id, null);
     }
     return;
   }
   counts.kindless += count;
+}
+
+/** Whether the current async context's counts have ended (Story 9.11); false outside a counted test. Internal. */
+export function countsEnded(): boolean {
+  return storage.getStore()?.ended === true;
+}
+
+/** How many late reports the current context's counts have sent; 0 outside a counted test. Internal. */
+export function lateReports(): number {
+  return storage.getStore()?.late ?? 0;
+}
+
+/** Reports a late failure of `kind` (null for a double's invocation rule) when the current counts have ended. Internal. */
+export function reportLateFailure(kind: string | null): void {
+  const counts = storage.getStore();
+  if (counts !== undefined && counts.ended) {
+    counts.late++;
+    reportLate(counts.id, kind);
+  }
 }
 
 /**
@@ -107,7 +136,7 @@ export function addToAssertionCount(count: number): void {
  * @asyncRoot callback
  */
 export async function runCounted(fn: () => unknown, id: string | null = null): Promise<CountedRun> {
-  const counts: Counts = { kinds: new Map<string, number>(), kindless: 0, id, ended: false };
+  const counts: Counts = { kinds: new Map<string, number>(), kindless: 0, id, ended: false, late: 0 };
   let error: { value: unknown } | null = null;
   try {
     await storage.run(counts, fn);
