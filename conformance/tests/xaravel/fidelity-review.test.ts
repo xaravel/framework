@@ -27,6 +27,7 @@ import {
   fileImports,
   gatherEvidence,
   importedDeclarations,
+  inStoryScope,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
   normaliseManifestStatus,
@@ -122,13 +123,16 @@ function write(dir: string, path: string, text: string): void {
  * base); and, uncommitted, the Story's change: `CHANGED` and its Oracle request file. With `oracle`, the base also has the
  * real `conformance/oracle/` and one real error fixture, whose request id the manifest assigns.
  */
+/** The sample Xaravel Tests the fixture Story assigns, so its review treats them as its own (ESC-9.10-3). */
+const SAMPLE_XT_IDS = ["XT-sample-1", "XT-sample-2", "XT-sample-3", "XT-sample-4"];
+
 function makeRepo(options: { oracle?: boolean; change?: boolean } = {}): { dir: string; base: string; spec: string } {
   const dir = tempDir("xt-fidelity-");
   const testIds = [TEST_ID, MISSING_ID, DATASET_ID, ...(options.oracle === true ? [ERROR_REQUEST_ID] : [])];
   const row = (id: string, source: string): string => JSON.stringify({ id, component: "support", kind: "unit", backends: ["none"], source, hash: "0".repeat(64), assertions: { assertSame: 1 }, oracle: { none: "pass" } });
   const files: Record<string, string> = {
     [CHECKLIST_FILE]: CHECKLIST,
-    "stories/9.1.md": `---\nstory_id: "9.1"\nepic: 9\ncomponent: support\nstatus: in-progress\ntest_ids:\n${testIds.map((id) => `  - ${JSON.stringify(id)}\n`).join("")}xaravel_test_ids: []\n---\n\n# Story 9.1\n`,
+    "stories/9.1.md": `---\nstory_id: "9.1"\nepic: 9\ncomponent: support\nstatus: in-progress\ntest_ids:\n${testIds.map((id) => `  - ${JSON.stringify(id)}\n`).join("")}xaravel_test_ids:\n${SAMPLE_XT_IDS.map((id) => `  - ${JSON.stringify(id)}\n`).join("")}---\n\n# Story 9.1\n`,
     "conformance/inventory/support.jsonl": [
       row(TEST_ID, "framework/tests/Support/SupportFidelityTest.php:3-5"),
       row(MISSING_ID, "framework/tests/Support/Nowhere.php:1-2"),
@@ -1340,6 +1344,32 @@ xaravelTest(
     expect(wholeUser).toContain(`#### ${registryPath} (changed)\n\n\`\`\`ts\n${read(registryPath)}`);
     expect(buildPrompt(filled).length).toBeLessThanOrEqual(PROMPT_CAP);
     expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)\n\nThe change adds or modifies no file this section shows.");
+    // (h) reserves room for every entry's heading and note, so a prompt near the cap still fits with it: many files,
+    // nearly all omitted for size, never push it over.
+    const many = [...new Bun.Glob("packages/runtime/src/**/*.ts").scanSync({ cwd: root })].sort().map((filename) => ({ filename, status: "modified", patch: "@@ -1 +1 @@\n-a\n+b" }));
+    const nearCap = { ...promptBase, files: many, manifestText: "x".repeat(PROMPT_CAP - 120_000), evidence: NO_EVIDENCE };
+    expect(buildPrompt(nearCap).length).toBeLessThan(PROMPT_CAP);
+    const nearFilled = withWholeFiles(root, nearCap);
+    expect(nearFilled.evidence.wholeFiles.some((item) => item.note?.startsWith("omitted for size:"))).toBe(true);
+    expect(buildPrompt(nearFilled).length).toBeLessThanOrEqual(PROMPT_CAP);
+
+    // ESC-9.10-3: (e) and (h) belong to the Story's own change. A path the Story may edit, or a test declaring an XT id
+    // its manifest assigns, is in scope; a file another PR in the base range changed is not.
+    const story = { storyId: "9.10", component: "runtime", xaravelTestIds: ["XT-runtime-35"] };
+    expect(inStoryScope(story, "packages/runtime/tests/xaravel/exceptions.test.ts")).toBe(true);
+    expect(inStoryScope(story, "conformance/tests/xaravel/fidelity-review.test.ts")).toBe(false);
+    expect(inStoryScope(story, "conformance/tests/xaravel/fidelity-review.test.ts", ["XT-conformance-161"])).toBe(false);
+    expect(inStoryScope(story, "conformance/tests/xaravel/other.test.ts", ["XT-runtime-35"])).toBe(true);
+    expect(inStoryScope(story, "conformance/oracle-requests/9.10.jsonl")).toBe(true);
+    // (e) names the touched tests it leaves out, never drops them silently.
+    const scopedUser = buildPrompt({ ...promptBase, evidence: { ...NO_EVIDENCE, outOfScopeTests: ["conformance/tests/xaravel/fidelity-review.test.ts"] } }).user;
+    expect(scopedUser).toContain("Left out as outside the Story's scope (ESC-9.10-3): the touched Xaravel Tests in `conformance/tests/xaravel/fidelity-review.test.ts`.");
+    expect(buildPrompt({ ...promptBase, evidence: NO_EVIDENCE }).user).not.toContain("Left out as outside the Story's scope");
+    // (h) puts a changed file outside the Story's scope last, and says so.
+    const outside = "tools/graph/graph.ts";
+    const scopedWhole = wholeFileEvidence(root, [...registryPatch(outside), ...registryPatch(registryPath)], new Map(), 400_000, (path) => inStoryScope(story, path));
+    expect(scopedWhole.at(-1)).toMatchObject({ path: outside, reason: "changed, outside the Story's scope" });
+    expect(scopedWhole.find((item) => item.path === registryPath)!.reason).toBe("changed");
   },
   180_000,
 );
