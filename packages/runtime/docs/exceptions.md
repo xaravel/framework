@@ -36,11 +36,21 @@ null)` adds `getSeverity()`, which defaults to PHP's `E_ERROR` (1).
   prints as `Xaravel\Runtime\Scope\ScopeFrameException: …`. An unregistered subclass inherits its parent's brand, so
   its `name` is the nearest registered parent's FQCN.
 
-A bad argument throws PHP's `TypeError` with PHP's message. The message names the root that declares the constructor:
+The constructors take their arguments as PHP does in coercive mode, the mode Laravel's files and the Oracle run in
+(`decisions/ESC-9.10-2.md`):
+
+| Parameter | Taken | Rejected |
+| --- | --- | --- |
+| `string` (`$message`; `?string` `$filename`) | a string; `null` as `""` (a `?string` keeps `null`); `true` / `false` as `"1"` / `""`; an int in decimal; a float as PHP's `(string)` gives it (`5.5` as `"5.5"`, `1e100` as `"1.0E+100"`); an object with a `__toString` port, through it | an array, a closure, another object |
+| `int` (`$code`, `$severity`; `?int` `$line`) | an int; `null` as `0` (a `?int` keeps `null`); `true` / `false` as `1` / `0`; a finite float inside int64, truncated toward zero (`5.0` as `5`, `5.5` as `5`); a numeric string, whitespace around it allowed, read the same way (`"5"`, `" 5"`, `"5.5"`, `"1e3"`) | a leading-numeric (`"5abc"`), non-numeric (`"x"`, `""`) or out-of-range string, a non-finite or out-of-range float, an array, an object |
+| `?Throwable` (`$previous`) | `null`, or any JS `Error` | anything else |
+
+PHP's deprecation notices for a coerced `null` or a fractional float are not reproduced. A rejected argument throws
+PHP's `TypeError` with PHP's message, which names the root that declares the constructor:
 `Exception::__construct(): Argument #2 ($code) must be of type int, string given`,
 `Exception::__construct(): Argument #3 ($previous) must be of type ?Throwable, string given`, or, for an
-`ErrorException`, `ErrorException::__construct(): … Argument #6 ($previous) …`. Any JS `Error` counts as a
-`Throwable`.
+`ErrorException`, `ErrorException::__construct(): … Argument #6 ($previous) …`. A `null` severity is `0`, as PHP
+coerces it, not the default `1`.
 
 ## Porting a subclass
 
@@ -54,7 +64,8 @@ PHP keeps them as follows, and the port does the same:
 - The message default applies only when no message is passed. `new NotFound('')` has the message `''`, so the port
   uses a default parameter, `message = 'missing'`.
 - The code default applies unless a non-zero code is passed. `new NotFound('x', 0)` has the code 404, so the port
-  passes `code === 0 ? 404 : code`.
+  passes `code === 0 ? 404 : code`. PHP compares the coerced code, so a port whose code may arrive as another type
+  (`'0'`, `null`) passes it as an int.
 
 ```ts
 export class NotFound extends RuntimeException {
@@ -86,20 +97,22 @@ deep`) stay JS `Error`s.
 
 ## The `Symbol.for('xaravel.php.classes')` protocol
 
-Loading any runtime entry (the package root, `scope`, `registry` or `php`) defines
-`globalThis[Symbol.for('xaravel.php.classes')]`. It is a frozen null-prototype object that maps each PHP built-in class
+Loading any of the four package entries (the package root, `scope`, `registry` or `php`) defines
+`globalThis[Symbol.for('xaravel.php.classes')]`; a module below them, loaded first, publishes nothing
+(`decisions/ESC-9.10-2.md` (a)). It is a frozen null-prototype object that maps each PHP built-in class
 the runtime ports, by PHP's declared name, to the class: the 22 classes above, plus `stdClass` and
 `__PHP_Incomplete_Class`. The property is non-writable, non-configurable and non-enumerable.
 
 The grader reads it without importing the runtime. It tells PHP's `\Error` from `\Exception` with
 `error instanceof map.Error` and `error instanceof map.Exception`, and folds case itself, because PHP class names are
 case-insensitive. If the symbol is already defined with another value (by other code, or by another copy of
-`@xaravel/runtime`), loading throws a `LogicException` and does not install over it.
+`@xaravel/runtime`), loading throws a `LogicException` and does not install over it. `XARAVEL_NO_SCOPE_GLOBAL=1` skips
+the install, as it skips the scope entry point ([scope-frames.md](scope-frames.md)), so a second copy loaded with it
+imports without throwing.
 
 ## Not ported
 
 - `Throwable` and `Stringable`, which are interfaces and arrive as Epic 10 tokens.
 - `getFile()`, `getLine()`, `getTrace()`, `getTraceAsString()` and `__toString()`.
-- PHP's coercion of constructor arguments: a numeric-string or float code, or a `null` message, throws the `TypeError`
-  instead.
+- PHP's deprecation notices for a coerced constructor argument (the coercion itself is ported, above).
 - A PHP property table for exceptions.

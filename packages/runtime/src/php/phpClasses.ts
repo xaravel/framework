@@ -5,10 +5,13 @@
 // `instanceof map.Exception`, and folds case itself (PHP class names are case-insensitive). The property is
 // non-writable, non-configurable and non-enumerable, as `Symbol.for('xaravel.scope.run')` is (`scope/scope.ts`).
 // When the symbol is already defined with another value (other code, or another copy of the runtime), loading throws
-// PHP's `LogicException` instead of installing over it.
+// PHP's `LogicException` instead of installing over it. `XARAVEL_NO_SCOPE_GLOBAL=1`, read once at load, skips the
+// install, as it skips `Symbol.for('xaravel.scope.run')`, so a second copy loaded with it imports without throwing
+// (`decisions/ESC-9.10-2.md` (b)).
 //
-// `src/index.ts` and every subpath index import this module right after the polyfill, so loading any runtime entry
-// publishes the map.
+// `src/index.ts` and every subpath index import this module right after the polyfill, so loading any of the four
+// package entries publishes the map; a module below them, loaded first, publishes nothing (`decisions/ESC-9.10-2.md`
+// (a)).
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { ArithmeticError } from "./ArithmeticError";
@@ -67,6 +70,9 @@ const classes: Readonly<Record<string, abstract new (...args: never[]) => unknow
 );
 
 function installGlobal(): void {
+  if (process.env["XARAVEL_NO_SCOPE_GLOBAL"] === "1") {
+    return;
+  }
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, PHP_CLASSES);
   if (descriptor === undefined) {
     Object.defineProperty(globalThis, PHP_CLASSES, { value: classes, writable: false, configurable: false, enumerable: false });

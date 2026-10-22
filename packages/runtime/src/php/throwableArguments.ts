@@ -1,54 +1,153 @@
-// The constructor checks PHP's throwables share (Story 9.10, AD-19): `Exception`, `Error` and `ErrorException` check
-// their arguments as PHP's `__construct` does under strict typing, and throw PHP's `TypeError` naming the declaring
-// root (`Exception::__construct(): Argument #2 ($code) must be of type int, string given`). PHP's coercions of
-// constructor arguments (a numeric-string or float code, a `null` message) are not ported: such an argument throws.
+// The constructor arguments PHP's throwables share (Story 9.10, AD-19): `Exception`, `Error` and `ErrorException`
+// take their arguments as PHP's `__construct` does in coercive mode, the mode Laravel's files and the Oracle run in
+// (`decisions/ESC-9.10-2.md`), and throw PHP's `TypeError` naming the declaring root for what PHP rejects
+// (`Exception::__construct(): Argument #2 ($code) must be of type int, string given`).
 //
-// Load safety: the exception classes import this file, so it imports only the Registry and `phpType.ts`, and builds
+// - A `string` parameter takes a string as it is, `null` as `""` (`?string`: null stays null), a bool, an int or a
+//   float as PHP's `(string)` gives it, and an object with a `__toString` port through it; an array, a closure or
+//   another object is rejected.
+// - An `int` parameter takes an int as it is, `null` as 0 (`?int`: null stays null), a bool as 0 / 1, a float or a
+//   numeric string (whitespace around it allowed, `"1e3"` included) truncated toward zero when it is finite and
+//   inside int64; a leading-numeric (`"5abc"`), non-numeric or out-of-range string or float, an array and an object
+//   are rejected.
+// - A `?Throwable` parameter takes null or a JS `Error`.
+// PHP's deprecation notices for a coerced `null` or a fractional float are not reproduced.
+//
+// Load safety: the exception classes import this file, so it imports only the Registry and modules that import
+// nothing that loads a PHP throwable (`phpType.ts`, `phpInt.ts`, `numericString.ts`, `scalarString.ts`), and builds
 // the `TypeError` from the class the Registry's base map holds under that name (`php/TypeError.ts` registers it),
 // falling back to the JS `TypeError` only when nothing registered it. The package does not export this module.
 import { registeredBaseClass } from "../registry/registry";
-import { phpType, phpTypeName } from "./phpType";
+import { parseNumeric } from "./numericString";
+import { intKey } from "./phpInt";
+import { className, phpType, phpTypeName } from "./phpType";
+import { formatFloat, stringPort } from "./scalarString";
 
-/** The PHP type a constructor parameter declares. */
-export type ParameterType = "string" | "int" | "?string" | "?int" | "?Throwable";
+/** 2^63: the first double above `PHP_INT_MAX`; `-2^63` is `PHP_INT_MIN` itself (`ZEND_DOUBLE_FITS_LONG`). */
+const TWO_63 = 2 ** 63;
 
-/** Whether `value` is of the PHP `type` (an int is what `phpType` reads as one, AD-9.3; a `Throwable` is any JS `Error`). */
-function accepts(type: ParameterType, value: unknown): boolean {
-  if (type.startsWith("?") && value === null) {
-    return true;
-  }
-  switch (type) {
-    case "string":
-    case "?string":
-      return typeof value === "string";
-    case "int":
-    case "?int":
-      return isPhpInt(value);
-    default:
-      return value instanceof globalThis.Error;
-  }
-}
-
-/** Whether `phpType` reads `value` as an int; a symbol or a `bigint` beyond int64 (which it throws for) is none. */
-function isPhpInt(value: unknown): boolean {
-  try {
-    return phpType(value) === "int";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Throws PHP's `TypeError` `<root>::__construct(): Argument #<position> ($<name>) must be of type <type>, <given>
- * given` when `value` is not of `type`.
- */
-export function checkArgument(root: string, position: number, name: string, type: ParameterType, value: unknown): void {
-  if (accepts(type, value)) {
-    return;
-  }
-  const message = `${root}::__construct(): Argument #${position} ($${name}) must be of type ${type}, ${phpTypeName(value)} given`;
+/** PHP's `TypeError` built with `message`: the registered class, else the JS one. */
+function phpTypeError(message: string): globalThis.Error {
   const php = registeredBaseClass("TypeError") as (new (message: string) => globalThis.Error) | null;
-  throw php === null ? new TypeError(message) : new php(message);
+  return php === null ? new TypeError(message) : new php(message);
+}
+
+/** PHP's `TypeError` for argument `position` (`$name`) of `<root>::__construct()`, declared as `type`. */
+function argumentError(root: string, position: number, name: string, type: string, value: unknown): globalThis.Error {
+  return phpTypeError(`${root}::__construct(): Argument #${position} ($${name}) must be of type ${type}, ${phpTypeName(value)} given`);
+}
+
+/** `phpType(value)`, or null for a value it throws for (a symbol, a `bigint` beyond int64), which no parameter takes. */
+function typeOf(value: unknown): ReturnType<typeof phpType> | null {
+  try {
+    return phpType(value);
+  } catch {
+    return null;
+  }
+}
+
+/** A float as an int parameter takes it: truncated when finite and inside int64, else null (rejected). */
+function floatToIntArgument(value: number): number | bigint | null {
+  if (!Number.isFinite(value) || value >= TWO_63 || value < -TWO_63) {
+    return null;
+  }
+  const truncated = Math.trunc(value);
+  if (Number.isSafeInteger(truncated)) {
+    return truncated === 0 ? 0 : truncated;
+  }
+  return BigInt(truncated);
+}
+
+/** `value` as PHP's coercive `int` parameter takes it (`zend_parse_arg_long_weak`), or null when it rejects it. */
+function toIntArgument(value: unknown): number | bigint | null {
+  switch (typeOf(value)) {
+    case "null":
+      return 0;
+    case "bool":
+      return value === true ? 1 : 0;
+    case "int":
+      return value as number | bigint;
+    case "float":
+      return floatToIntArgument(typeof value === "number" ? value : Number(value));
+    case "string": {
+      const numeric = parseNumeric(value as string, false);
+      if (numeric === null) {
+        return null;
+      }
+      return numeric.int !== null ? intKey(numeric.int) : floatToIntArgument(numeric.float);
+    }
+    default:
+      return null;
+  }
+}
+
+/** `value` as PHP's coercive `string` parameter takes it (`zend_parse_arg_str_weak`), or null when it rejects it. */
+function toStringArgument(value: unknown): string | null {
+  switch (typeOf(value)) {
+    case "null":
+      return "";
+    case "bool":
+      return value === true ? "1" : "";
+    case "int":
+      return String(value);
+    case "float":
+      return formatFloat(typeof value === "number" ? value : Number(value));
+    case "string":
+      return value as string;
+    case "object":
+      break;
+    default:
+      return null;
+  }
+  const object = value as object;
+  const port = typeof object === "function" ? null : stringPort(object);
+  if (port === null) {
+    return null;
+  }
+  const result: unknown = port.call(object);
+  if (typeof result !== "string") {
+    throw phpTypeError(`${className(object)}::__toString(): Return value must be of type string, ${typeOf(result) === "object" ? className(result as object) : typeOf(result)} returned`);
+  }
+  return result;
+}
+
+/** Argument `position` (`$name`, declared `string`, or `?string` when `nullable`) of `<root>::__construct()`. */
+export function stringArgument(root: string, position: number, name: string, value: unknown): string;
+export function stringArgument(root: string, position: number, name: string, value: unknown, nullable: true): string | null;
+export function stringArgument(root: string, position: number, name: string, value: unknown, nullable: boolean = false): string | null {
+  if (nullable && (value === null || value === undefined)) {
+    return null;
+  }
+  const coerced = toStringArgument(value);
+  if (coerced === null) {
+    throw argumentError(root, position, name, nullable ? "?string" : "string", value);
+  }
+  return coerced;
+}
+
+/** Argument `position` (`$name`, declared `int`, or `?int` when `nullable`) of `<root>::__construct()`. */
+export function intArgument(root: string, position: number, name: string, value: unknown): number | bigint;
+export function intArgument(root: string, position: number, name: string, value: unknown, nullable: true): number | bigint | null;
+export function intArgument(root: string, position: number, name: string, value: unknown, nullable: boolean = false): number | bigint | null {
+  if (nullable && (value === null || value === undefined)) {
+    return null;
+  }
+  const coerced = toIntArgument(value);
+  if (coerced === null) {
+    throw argumentError(root, position, name, nullable ? "?int" : "int", value);
+  }
+  return coerced;
+}
+
+/** Argument `position` (`$previous`, declared `?Throwable`) of `<root>::__construct()`: null or a JS `Error`. */
+export function previousArgument(root: string, position: number, value: unknown): globalThis.Error | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!(value instanceof globalThis.Error)) {
+    throw argumentError(root, position, "previous", "?Throwable", value);
+  }
+  return value;
 }
 
 /** The class-name brand `registerClass` sets (ESC-4.3-1 item 1); a subclass inherits its parent's. */

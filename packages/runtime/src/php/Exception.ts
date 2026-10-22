@@ -2,13 +2,14 @@
 // exceptions, a JS `Error` subclass, so a port can `catch (e) { if (e instanceof Exception) … }` as PHP catches
 // `\Exception`. It is never a PHP `Error`.
 //
-// `new Exception(message = "", code = 0, previous = null)` checks its arguments as PHP does (`throwableArguments.ts`)
-// and keeps them behind `getMessage()`, `getCode()` and `getPrevious()`; a non-null `previous` is also the JS `cause`.
+// `new Exception(message = "", code = 0, previous = null)` takes its arguments as PHP does in coercive mode
+// (`throwableArguments.ts`: a `null` message is `""`, a numeric-string code its int) and keeps them behind
+// `getMessage()`, `getCode()` and `getPrevious()`; a non-null `previous` is also the JS `cause`.
 // `code` is an own, writable, non-enumerable property, and `name` the class's FQCN brand, so a registered subclass
 // shows its FQCN in a JS stack. A subclass's PHP defaults (`protected $code = 404`) are ported in its constructor,
 // never as JS fields, which would be set after `super()` and override an explicit code (`docs/exceptions.md`).
 import { registerClass } from "../registry/registry";
-import { causeOf, checkArgument, initThrowable } from "./throwableArguments";
+import { causeOf, initThrowable, intArgument, previousArgument, stringArgument } from "./throwableArguments";
 
 export class Exception extends globalThis.Error {
   /** PHP's `$code`. */
@@ -16,12 +17,12 @@ export class Exception extends globalThis.Error {
   readonly #previous: globalThis.Error | null;
 
   constructor(message: string = "", code: number | bigint = 0, previous: globalThis.Error | null = null) {
-    checkArgument("Exception", 1, "message", "string", message);
-    checkArgument("Exception", 2, "code", "int", code);
-    checkArgument("Exception", 3, "previous", "?Throwable", previous);
-    super(message, causeOf(previous));
-    initThrowable(this, new.target, "Exception", code);
-    this.#previous = previous;
+    const coercedMessage = stringArgument("Exception", 1, "message", message);
+    const coercedCode = intArgument("Exception", 2, "code", code);
+    const coercedPrevious = previousArgument("Exception", 3, previous);
+    super(coercedMessage, causeOf(coercedPrevious));
+    initThrowable(this, new.target, "Exception", coercedCode);
+    this.#previous = coercedPrevious;
   }
 
   /** PHP's `getMessage()`. */
