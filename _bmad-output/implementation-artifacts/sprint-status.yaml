@@ -127,7 +127,7 @@ development_status:
   9-6-php-semantics-helpers: done
   9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
   9-8-jsonencode-jsondecode-with-php-flag-semantics: done
-  9-9-mixin-traits-and-inject-metadata: blocked  # ESC-9.9-2 (divergence: trait default vs base class field) waits on the Maintainer; ESC-9.9-1 approved (decisions/ESC-9.9-1.md); Fidelity Review after the ruling
+  9-9-mixin-traits-and-inject-metadata: in-progress  # ESC-9.9-1 and ESC-9.9-2 ruled (decisions/ESC-9.9-1.md, decisions/ESC-9.9-2.md, DIV-12.8); the trait-default rule lands as a follow-up, then the Fidelity Review
   9-10-php-exception-hierarchy: backlog  # also switches the codec Closure error to Exception (decisions/ESC-9.7-1.md part 4) and the JSON errors to JsonException / ValueError (decisions/ESC-9.8-1.md part 1)
   9-11-grader-follow-ups-to-the-runtime-value-model: backlog  # Epic 4 retro S4 (decisions/ESC-4.3-1.md)
   epic-9-retrospective: optional

@@ -2,7 +2,7 @@
 div: 12
 title: "PHP member namespaces and magic members"
 cites: ["AD-26", "AD-7"]
-sources: []
+sources: ["decisions/ESC-9.9-2.md"]
 fewer_assertions: []
 ---
 
@@ -21,6 +21,7 @@ PHP lets a property and a method share a name, and resolves some members dynamic
 - **Request.** No magic input properties. Use `request.input('title')`, not `request.title`.
 - **Collection index access** is `collection.get(0)`, not `collection[0]`. Index syntax works only on `Model`, through its Proxy.
 - **Dynamic finders** (`whereEmail()`) are not supported. Use `where('email', v)`.
+- **Trait property defaults** are assigned after the base constructor returns. A trait's default replaces a base property of the same name only while the PHP property table shows that the base still holds its declared default; any other value is kept, so a write an `initialize<Trait>` makes during the base constructor survives (ESC-9.9-2).
 
 ## Adaptation clauses
 
@@ -33,3 +34,4 @@ PHP lets a property and a method share a name, and resolves some members dynamic
 - **DIV-12.5** Request. A magic input property read such as `$request->title` becomes `request.input('title')`.
 - **DIV-12.6** Collection index access. `$collection[0]` becomes `collection.get(0)`.
 - **DIV-12.7** No dynamic wheres or finders. A dynamic `where<Column>()` call or dynamic finder such as `whereEmail()` is not supported; the Ported Test uses `where('email', v)`.
+- **DIV-12.8** Trait defaults against a base property. When a trait and the base class it is mixed onto both declare an instance property of the same name, Xaravel differs from PHP in two cases. When the base chain declares no PHP property table listing the name, Xaravel keeps the base's value, where PHP has the trait's default. When a write made during the base constructor leaves the value PHP-identical to the base's declared default, Xaravel applies the trait's default, where PHP keeps the written value. A Ported Test whose outcome depends on either case is not adapted silently: it raises an Escalation (FR-114) (ESC-9.9-2).
