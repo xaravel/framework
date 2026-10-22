@@ -3,7 +3,7 @@ title: 'Story 9.10: PHP exception hierarchy'
 type: 'feature'
 created: '2026-10-22'
 baseline_revision: '21a0224aa648887deb8045cbe011868a3ef28a4f'
-status: 'blocked'
+status: 'in-progress'
 review_loop_iteration: 2
 followup_review_recommended: false
 context:
@@ -14,6 +14,8 @@ context:
   - '{project-root}/decisions/ESC-9.7-1.md'
   - '{project-root}/decisions/ESC-9.8-1.md'
   - '{project-root}/decisions/ESC-4.3-1.md'
+  - '{project-root}/decisions/ESC-9.10-2.md'
+  - '{project-root}/decisions/ESC-9.10-3.md'
   - '{project-root}/decisions/DIV-9.md'
 warnings: [oversized]
 deferred:
@@ -117,6 +119,10 @@ deferred:
 - `packages/runtime/tests/xaravel/{codec,json,values,semantics,registry,scope}.test.ts` -- assert the PHP classes for the switched throws.
 - `packages/runtime/docs/*.md`, `packages/runtime/README.md` -- the Epic-close pages. The exceptions page states the protocol, the porting rule for a subclass's `protected $code` / `$message` default (a constructor default, not a JS field, which would be set after `super()` and override an explicit code), and the limits under Never.
 - `packages/runtime/async-surface.json` -- regenerate; it stays as it is unless a new async method appears (none should).
+- Follow-up (`decisions/ESC-9.10-2.md`): the throwable constructors coerce their arguments as PHP does in coercive mode. A `null` `$message` becomes `""`; a `$code` PHP's coercive `int` parameter accepts (an integral float, a numeric or leading-numeric string, `true` / `false`) becomes that int; what PHP rejects keeps PHP's `TypeError`. `conformance/oracle-requests/9.10.jsonl` gains XT-runtime-36 rows for `$code` `null`, `'5'`, `5.0`, `5.5`, `true`, a `null` `$message`, and the `ErrorException` arguments, each checked against local `evaluate.php`. `exceptions.test.ts` asserts the Oracle's values in place of the strict `TypeError`s. `docs/exceptions.md` drops "PHP's coercions are not ported" for these constructors, and the Never list drops it.
+- Follow-up (ESC-9.10-2 (a)): XT-runtime-35's matrix row says only the four package indexes publish the class map when loaded first; the other Import-cycle entries load without throwing and publish nothing.
+- Follow-up (ESC-9.10-2 (b)): `XARAVEL_NO_SCOPE_GLOBAL=1` also skips the `xaravel.php.classes` install in `phpClasses.ts`. XT-runtime-35 gains a fresh-process row for a second copy loaded with it, and `docs/scope-frames.md` names the class map among what it skips.
+- Then (`decisions/ESC-9.10-3.md`): re-run the Fidelity Review with `--base c870bc261d2bcea7b12296896c8650f52e124573`. Evidence (e) is now scoped to the Story's own tests, so the prompt fits the cap.
 
 **Acceptance Criteria:**
 - The four ACs of Story 9.10 (`epics.md` line 3204), each verified by its XT row in `stories/9.10.md`.
@@ -125,6 +131,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-22: `decisions/ESC-9.10-2.md` (Maintainer) rules option 1, coercion as PHP does in coercive mode, with (a) and (b) as recommended. `decisions/ESC-9.10-3.md` (Maintainer) rules option 2: the review's evidence (e) is scoped to the Story's own tests. The coercion, the matrix row and the opt-out are follow-up tasks, so the Story is back to `in-progress`.
 - 2026-10-22: the review pass after ESC-9.10-1 found that pass 1's `strict_types` refutation is wrong (the Oracle runs exprs through `eval()`, in coercive mode), so the Never list's "PHP's coercions are not ported" is a divergence with no DIV; it also found two intent questions and a Fidelity prompt over the cap. The intent contract is unchanged until a ruling: ESC-9.10-2 (divergence) and ESC-9.10-3 (protected-path). The next Fidelity Review runs with `--base c870bc261d2bcea7b12296896c8650f52e124573`, the `main` commit #302 was squashed onto (`c870bc2..c343592` is exactly the Story); ESC-9.10-1's `6837b06` also pulls in #301.
 - 2026-10-22: `decisions/ESC-9.10-1.md` (orchestrator, amendment 2026-10-21) rules option 1: `tools/fidelity-review/fidelity-review.ts` now shows a helper called through a spread, a test helper imported from another test module, and a decision cited in an unchanged docblock (#303). The code is unchanged, so the Story is back to `in-review`. The Fidelity Review re-runs on the changed tree with `--base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e`.
 

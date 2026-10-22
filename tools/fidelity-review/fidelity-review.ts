@@ -98,7 +98,7 @@ import { isAbsolute, join, posix, relative, resolve } from "node:path";
 import { compareUnits, type InventoryEntry } from "../inventory/inventory";
 import { FIXTURES_DIR, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
-import { covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { allowedPath, covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { readWorkingInventory } from "../pin-bump/pin-bump";
 import { readUpstream } from "../upstream/upstream";
 import { SPINE_FILE, spineRules } from "../xt-coverage/consequences";
@@ -234,9 +234,11 @@ export interface Evidence {
   readonly sourceSurface: readonly EvidenceEntry[];
   /** (h) Each changed file in full, the decision and DIV records they cite, and the repository files they import, within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
   readonly wholeFiles: readonly WholeFileEntry[];
+  /** The files of touched Xaravel Tests (e) leaves out as outside the Story's scope (`inStoryScope`, ESC-9.10-3), named in (e). */
+  readonly outOfScopeTests: readonly string[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], outOfScopeTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -385,6 +387,9 @@ export function buildPrompt(input: PromptInput): Prompt {
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
   if (evidence.xaravelTests.length === 0) {
     sections.push("", "No Xaravel Test is touched: the change edits no Xaravel Test's lines, no test helper or fixture one uses, and no test file's top-level setup.");
+  }
+  if (evidence.outOfScopeTests.length > 0) {
+    sections.push("", `Left out as outside the Story's scope (ESC-9.10-3): the touched Xaravel Tests in ${evidence.outOfScopeTests.map((path) => `\`${path}\``).join(", ")}. The diff's base range also holds other PRs that merged while the Story was open, each reviewed on its own; these tests are theirs, not the Story's.`);
   }
   // A helper several touched tests use is shown once, at its first use (ESC-9.9-4).
   const shownHelpers = new Set<string>();
@@ -622,6 +627,9 @@ export const WHOLE_FILE_DEPTH = 2;
 /** The most characters of one file (h) shows; a longer file relies on its diff (and, for framework source, its (g) listing). */
 export const WHOLE_FILE_CAP = 60_000;
 
+/** The characters (h) reserves per entry beyond its path and reason: the heading's marks and the longest note. */
+const WHOLE_FILE_ENTRY_ROOM = 220;
+
 /** A relative module specifier in a static import, a re-export, a side-effect import or a literal dynamic `import(…)`. */
 const RELATIVE_IMPORT = /\bfrom\s*["'](\.{1,2}\/[^"']+)["']|^\s*import\s*["'](\.{1,2}\/[^"']+)["']|\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/gm;
 
@@ -667,10 +675,11 @@ export function fileImports(path: string, text: string, exists: (path: string) =
  * deep. A file another section already shows in full (`shown`, path → section) is named, not repeated. The entries
  * fill `budget` characters in this order: the cited records and the files changed test files import (their helpers
  * and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above; then the
- * other imports by level; then the other changed files. A file longer than `WHOLE_FILE_CAP`, or one that does not fit,
+ * other imports by level; then the other changed files, those outside the Story's scope (`inScope`, ESC-9.10-3) among
+ * them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit,
  * is named as omitted for size, never dropped silently.
  */
-export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number): WholeFileEntry[] {
+export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true): WholeFileEntry[] {
   const read = (path: string): string | null => {
     try {
       const full = join(root, path);
@@ -697,7 +706,8 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     tiers[tier]!.push({ path, reason, text, note: text === null ? `unavailable: ${path} does not exist or cannot be read` : null });
   };
   const changed = files.filter((file) => !file.status.startsWith("removed") && !file.status.includes("binary") && !wholeFileSkipped(file.filename));
-  const primary = changed.filter((file) => TS_FILE.test(file.filename) || file.filename.endsWith(".md"));
+  // A changed file outside the Story's scope comes from another PR in the base range (ESC-9.10-3), so it waits until last.
+  const primary = changed.filter((file) => (TS_FILE.test(file.filename) || file.filename.endsWith(".md")) && inScope(file.filename));
   const other = changed.filter((file) => !primary.includes(file));
   for (const file of primary) {
     add(2, file.filename, "changed");
@@ -732,10 +742,12 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     frontier = next.filter(([path]) => TS_FILE.test(path));
   }
   for (const file of other) {
-    add(4, file.filename, "changed");
+    add(4, file.filename, inScope(file.filename) ? "changed" : "changed, outside the Story's scope");
   }
-  let left = budget;
-  return tiers.flat().map((entry) => {
+  const entries = tiers.flat();
+  // Every entry renders a heading and, without its text, a note: reserve room for those before any file's text.
+  let left = budget - entries.reduce((sum, entry) => sum + entry.path.length + entry.reason.length + WHOLE_FILE_ENTRY_ROOM, 0);
+  return entries.map((entry) => {
     const section = shown.get(entry.path);
     if (section !== undefined) {
       return { ...entry, text: null, note: `shown in full above, in ${section}` };
@@ -746,8 +758,8 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     if (entry.text.length > WHOLE_FILE_CAP) {
       return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, over the ${WHOLE_FILE_CAP}-character limit for one file${entry.reason === "changed" ? "; its diff is above" : ""}` };
     }
-    // The rendered heading, fence and text.
-    const size = entry.path.length + entry.reason.length + entry.text.length + 40;
+    // Its text and fence; the heading is reserved above.
+    const size = entry.text.length + 20;
     if (size > left) {
       return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves ${Math.max(left, 0)} for this section` };
     }
@@ -917,14 +929,24 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     sourceSurface: sourceSurfaceEvidence(root, files),
     // (h) needs the rest of the prompt to size its budget, so the review fills it in last (`withWholeFiles`).
     wholeFiles: [],
+    outOfScopeTests: [],
   };
+}
+
+/**
+ * Whether a path, or a touched Xaravel Test, belongs to the Story's own change (ESC-9.10-3): a path the Story may edit
+ * (`allowedPath`), or, for a test, one that declares an Xaravel Test id the manifest assigns (an Infrastructure Story's
+ * tests live under `conformance/tests/`). Other files in the diff come from PRs merged into the base range meanwhile.
+ */
+export function inStoryScope(manifest: Pick<Manifest, "storyId" | "component" | "xaravelTestIds">, path: string, ids: readonly string[] = []): boolean {
+  return allowedPath(manifest, path) || ids.some((id) => manifest.xaravelTestIds.includes(id));
 }
 
 /**
  * `input` with evidence (h) filled in: the files another section already shows in full are named, not repeated, and
  * the whole files fill what the prompt cap leaves after every other section.
  */
-export function withWholeFiles(root: string, input: PromptInput): PromptInput {
+export function withWholeFiles(root: string, input: PromptInput, inScope: (path: string) => boolean = () => true): PromptInput {
   const shown = new Map<string, string>();
   for (const request of input.oracleRequests) {
     shown.set(request.path, "the changed Oracle request files");
@@ -944,7 +966,7 @@ export function withWholeFiles(root: string, input: PromptInput): PromptInput {
   const rest = buildPrompt({ ...input, evidence: { ...input.evidence, wholeFiles: [] } }).length;
   // Room for the section's heading and its per-file headings beyond the text `wholeFileEvidence` counts.
   const budget = PROMPT_CAP - rest - 2_000;
-  return { ...input, evidence: { ...input.evidence, wholeFiles: wholeFileEvidence(root, input.files, shown, budget) } };
+  return { ...input, evidence: { ...input.evidence, wholeFiles: wholeFileEvidence(root, input.files, shown, budget, inScope) } };
 }
 
 /** `<name>/<rel>:<a>-<b>` of an Inventory `source`, or null. */
@@ -3032,7 +3054,10 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   const readmePath = join(root, "conformance", "README.md");
   const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
-  const xaravelTests = xaravelTestEvidence(root, diff.files);
+  // (e) shows the Story's own touched tests; another PR's in the base range is named, not shown (ESC-9.10-3).
+  const touchedTests = xaravelTestEvidence(root, diff.files);
+  const xaravelTests = touchedTests.filter((entry) => inStoryScope(manifest, entry.path, entry.ids));
+  const outOfScopeTests = [...new Set(touchedTests.filter((entry) => !xaravelTests.includes(entry)).map((entry) => entry.path))].sort(compareUnits);
   const promptInput: PromptInput = {
     checklistText,
     items,
@@ -3048,6 +3073,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
       ...gatherEvidence(root, diff.files, manifest),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       xaravelTests,
+      outOfScopeTests,
       // (f) also takes the decisions a touched Xaravel Test (ESC-9.2-1) or a changed source file's docblock (ESC-9.10-1) cites on an unchanged line.
       decisions: decisionEvidence(root, [...addedLines(diff.files), ...sourceDocTexts(root, diff.files), ...xaravelTests.map((entry) => entry.body ?? "")]),
     },
@@ -3059,7 +3085,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     return stop(`the prompt is ${withoutH.length} characters, over the ${PROMPT_CAP} cap, of which section (e), the touched Xaravel Tests, is ${withoutH.length - withoutE}; the diff and its evidence are too large to review`);
   }
   // (h) fills only what the cap leaves, naming each file it cannot fit, so it never makes the prompt too large.
-  const prompt = buildPrompt(withWholeFiles(root, promptInput));
+  const prompt = buildPrompt(withWholeFiles(root, promptInput, (path) => inStoryScope(manifest, path)));
   if (prompt.length > PROMPT_CAP) {
     return stop(`the prompt is ${prompt.length} characters with section (h), over the ${PROMPT_CAP} cap; (h) should fit within it`);
   }
