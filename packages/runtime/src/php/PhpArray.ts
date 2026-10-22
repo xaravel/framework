@@ -198,4 +198,26 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   }
 }
 
+/**
+ * `[key, value]` entries as AD-9 holds a PHP array (DIV-9.2): keys normalised, a repeated key keeping its first
+ * position and its last value; a list is an `Array`, all string keys a plain object (built with `defineProperty`, so a
+ * `"__proto__"` key stays an entry), anything else a `PhpArray`. Internal: the codec builds arrays through it; the
+ * package does not export it.
+ */
+export function arrayFromEntries(entries: Iterable<readonly [PhpKeyInput, unknown]>): unknown {
+  const array = new PhpArray<PhpKeyInput, unknown>(entries);
+  const pairs = [...array];
+  if (pairs.every(([key], index) => key === index)) {
+    return pairs.map(([, value]) => value);
+  }
+  if (pairs.every(([key]) => typeof key === "string")) {
+    const map: Record<string, unknown> = {};
+    for (const [key, value] of pairs) {
+      Object.defineProperty(map, key as string, { value, enumerable: true, writable: true, configurable: true });
+    }
+    return map;
+  }
+  return array;
+}
+
 registerClass("Xaravel\\Runtime\\Php\\PhpArray", PhpArray);

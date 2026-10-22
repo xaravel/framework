@@ -1,3 +1,4 @@
+export { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 export { toBool, toFloat, toInt, toPhpString } from "./casts";
 export { float, isFloat, PhpFloat } from "./PhpFloat";
 export { hasBrand } from "./hasBrand";
@@ -6,5 +7,8 @@ export { jsonEncode } from "./jsonEncode";
 export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
 export { PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
+export { phpSerialize } from "./phpSerialize";
+export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
+export { stdClass } from "./stdClass";
 export { valueCopy } from "./valueCopy";
