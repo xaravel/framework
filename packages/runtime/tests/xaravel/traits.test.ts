@@ -455,6 +455,21 @@ function checkComposition(): void {
   }
   registerClass("App\\Concerns\\XtMapB", MapB);
   Assert.assertSame(1, [...new (mixin(null, MapA, MapB))().map].length);
+  // Different PhpArray or plain-object defaults: mixin throws the property message.
+  class MapC {
+    map = new PhpArray([[1, "y"]]);
+  }
+  registerClass("App\\Concerns\\XtMapC", MapC);
+  assertThrows(() => mixin(null, MapA, MapC), Error, /App\\Concerns\\XtMapA and App\\Concerns\\XtMapC define the same property \(\$map\)/);
+  class OptsA {
+    opts = { a: 1 };
+  }
+  registerClass("App\\Concerns\\XtOptsA", OptsA);
+  class OptsB {
+    opts = { a: 2 };
+  }
+  registerClass("App\\Concerns\\XtOptsB", OptsB);
+  assertThrows(() => mixin(null, OptsA, OptsB), Error, /App\\Concerns\\XtOptsA and App\\Concerns\\XtOptsB define the same property \(\$opts\)/);
   // A float default reached through a diamond composes, and stays a float.
   class Ratio {
     ratio = float(1.0);
