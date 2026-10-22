@@ -223,31 +223,53 @@ class XtSleepy {
 }
 registerClass("XaravelFixture\\Serialize\\Sleepy", XtSleepy);
 
-/** Records the order in which `__wakeup` / `__unserialize` run. */
-const hookLog: string[] = [];
+class XtCounted {
+  static made = 0;
 
-class XtWaker {
+  constructor(public n: unknown) {
+    XtCounted.made++;
+  }
+}
+registerClass("XaravelFixture\\Serialize\\Counted", XtCounted);
+
+class XtHooks {
+  static log: string[] = [];
+}
+registerClass("XaravelFixture\\Serialize\\Hooks", XtHooks);
+
+class XtHolder {
+  child: unknown = null;
+  later: unknown = null;
+}
+registerClass("XaravelFixture\\Serialize\\Holder", XtHolder);
+
+class XtWoken {
+  parent: XtHolder | null = null;
   n: unknown = null;
 
   __wakeup(): void {
-    hookLog.push(`wakeup ${String(this.n)}`);
+    XtHooks.log.push(`wakeup ${String(this.n)} ${String(this.parent?.later)}`);
   }
 }
-registerClass("Xaravel\\Tests\\Runtime\\XtWaker", XtWaker);
+registerClass("XaravelFixture\\Serialize\\Woken", XtWoken);
 
-class XtUnpacker {
+class XtUnpacked {
+  parent: XtHolder | null = null;
   n: unknown = null;
+  inner: unknown = null;
 
   __serialize(): Record<string, unknown> {
-    return { n: this.n };
+    return { parent: this.parent, n: this.n, inner: this.inner };
   }
 
   __unserialize(data: Record<string, unknown>): void {
-    hookLog.push(`unserialize ${String((data["n"] as XtWaker).n)}`);
+    this.parent = data["parent"] as XtHolder;
     this.n = data["n"];
+    this.inner = data["inner"];
+    XtHooks.log.push(`unserialize ${String(this.n)} ${String(this.parent.later)}`);
   }
 }
-registerClass("Xaravel\\Tests\\Runtime\\XtUnpacker", XtUnpacker);
+registerClass("XaravelFixture\\Serialize\\Unpacked", XtUnpacked);
 
 class XtMangledSleep {
   a = 1;
@@ -255,7 +277,7 @@ class XtMangledSleep {
   c = 3;
 
   __sleep(): unknown {
-    return ["a", "\0*\0b", "missing", "c"];
+    return ["a", "\0*\0b", "missing", "c", "a"];
   }
 }
 registerClass("Xaravel\\Tests\\Runtime\\XtMangledSleep", XtMangledSleep);
@@ -361,7 +383,7 @@ function matrix(): unknown[] {
 
 xaravelTest(
   "XT-runtime-24",
-  "phpSerialize gives the bytes of the Oracle's serialize() over ints, floats, bools, null, UTF-8 strings, lists, maps and objects (stdClass, public props, __serialize, __sleep, shared and self-referencing), each value alone and the whole list, and throws PHP's errors (AD-23.1)",
+  "phpSerialize gives the bytes of the Oracle's serialize() over ints, floats, bools, null, UTF-8 strings, lists, maps and objects (stdClass, public props, __serialize, __sleep, shared and self-referencing), each value alone and the whole list, and throws PHP's Closure and __serialize messages, and Xaravel's TypeErrors for values PHP cannot hold (AD-23.1)",
   () => {
     const output = oracle("XT-runtime-24");
     const v = matrix();
@@ -388,7 +410,7 @@ xaravelTest(
     }
     Assert.assertSame("", mismatches.join("\n"), `${mismatches.length} mismatch(es) with the Oracle`);
 
-    // __sleep: names verbatim, a missing name skipped; a result that is no array writes N; as PHP does.
+    // __sleep: names verbatim, a missing name skipped, a repeated one written once; a result that is no array writes N; as PHP does.
     Assert.assertSame('O:36:"Xaravel\\Tests\\Runtime\\XtMangledSleep":3:{s:1:"a";i:1;s:4:"\0*\0b";i:2;s:1:"c";i:3;}', phpSerialize(new XtMangledSleep()));
     Assert.assertSame("N;", phpSerialize(new XtBadSleep()));
     // The props protocol, always as s: keys.
@@ -422,7 +444,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-runtime-25",
-  "phpUnserialize of each Oracle serialize() string rebuilds the Oracle's unserialize() value: AD-9 arrays, marked integral floats, registered classes without their constructor, __unserialize and __wakeup after the parse, shared and self-referencing objects identical; re-serializing gives the same bytes; malformed payloads are false (AD-23.1)",
+  "phpUnserialize of each Oracle serialize() string rebuilds the Oracle's unserialize() value: AD-9 arrays, marked integral floats, registered classes without their constructor, __unserialize and __wakeup after the parse, shared and self-referencing objects identical; re-serializing gives the same bytes; malformed and lenient payloads read as the Oracle reads them (AD-23.1)",
   () => {
     const output = oracle("XT-runtime-24");
     const serialized = decode(rawResult(output, 1)) as string[];
@@ -459,88 +481,83 @@ xaravelTest(
     Assert.assertTrue(shared[0] instanceof XtPoint, "a Point");
     Assert.assertSame(shared[0], shared[1]);
     Assert.assertSame(shared[0], shared[2][0]);
-    Assert.assertTrue(phpUnserialize("d:1;") instanceof PhpFloat, "an integral d: is marked");
-    Assert.assertSame(0.5, phpUnserialize("d:0.5;"));
-    Assert.assertTrue(Object.is(-0, phpUnserialize("d:-0;")), "-0.0");
-    Assert.assertSame(9007199254740993n, phpUnserialize("i:9007199254740993;"));
-    Assert.assertTrue(phpUnserialize("a:2:{i:5;s:1:\"a\";i:2;s:1:\"b\";}") instanceof PhpArray, "a PhpArray");
-    Assert.assertSame("[5,2]", JSON.stringify([...(phpUnserialize("a:2:{i:5;s:1:\"a\";i:2;s:1:\"b\";}") as PhpArray).keys()]));
-    // A "__proto__" key stays an entry.
-    const proto = phpUnserialize('a:1:{s:9:"__proto__";i:1;}') as Record<string, unknown>;
-    Assert.assertTrue(Object.getPrototypeOf(proto) === Object.prototype, "the prototype is kept");
-    Assert.assertSame('["__proto__"]', JSON.stringify(Object.keys(proto)));
-    // A JS array twice: two PHP arrays, so two JS arrays.
-    const pair = phpUnserialize("a:2:{i:0;a:0:{}i:1;a:0:{}}") as unknown[][];
-    Assert.assertTrue(pair[0] !== pair[1], "two arrays");
-    // R: reads a slot without taking one; r: takes one.
-    Assert.assertSame("[5,5]", JSON.stringify(phpUnserialize("a:2:{i:0;i:5;i:1;R:2;}")));
-    const viaRef = phpUnserialize('O:8:"stdClass":1:{s:1:"a";R:1;}') as stdClass;
+
+    // XT-runtime-25's own request: no constructor runs; every hook runs after the whole parse, in PHP's order, so a
+    // hooked object reaches its enclosing object's later property through an r: back-reference.
+    const own = oracle("XT-runtime-25");
+    const check = (value: unknown, index: number, label: string): void => {
+      const difference = differs(value, rawResult(own, index), label);
+      if (difference !== null) {
+        mismatches.push(difference);
+      }
+    };
+    XtCounted.made = 0;
+    const counted = new XtCounted(1);
+    check(XtCounted.made, 0, "Counted::$made before");
+    check(phpUnserialize(phpSerialize(counted)), 1, "unserialize(serialize($c))");
+    check(XtCounted.made, 2, "Counted::$made after");
+    const holder = new XtHolder();
+    const woken = (n: number): XtWoken => Object.assign(new XtWoken(), { parent: holder, n });
+    holder.child = [woken(1), Object.assign(new XtUnpacked(), { parent: holder, n: 2, inner: woken(3) }), woken(4)];
+    holder.later = "x";
+    const holderBytes = phpSerialize(holder);
+    if (holderBytes !== decode(rawResult(own, 3))) {
+      mismatches.push(`serialize($h): Oracle ${JSON.stringify(decode(rawResult(own, 3)))}, got ${JSON.stringify(holderBytes)}`);
+    }
+    XtHooks.log = [];
+    const rebuiltHolder = phpUnserialize(decode(rawResult(own, 3)) as string);
+    check(rebuiltHolder, 4, "unserialize(serialize($h))");
+    check(XtHooks.log, 5, "Hooks::$log");
+    // The malformed and lenient payloads, and each rebuilt object serialized again.
+    const payloads = decode(rawResult(own, 6)) as string[];
+    const read = payloads.map((payload) => phpUnserialize(payload));
+    const readRaw = rawEntries(rawResult(own, 7));
+    const reserialized = decode(rawResult(own, 8)) as (string | null)[];
+    Assert.assertSame(payloads.length, readRaw.length);
+    read.forEach((value, index) => {
+      const difference = differs(value, readRaw[index]![1], `unserialize(${JSON.stringify(payloads[index])})`);
+      if (difference !== null) {
+        mismatches.push(difference);
+      }
+      const isObject = typeof value === "object" && value !== null && jsEntries(value) === null && !(value instanceof PhpFloat);
+      const again = isObject ? phpSerialize(value) : null;
+      if (again !== reserialized[index]) {
+        mismatches.push(`serialize(unserialize(${JSON.stringify(payloads[index])})): Oracle ${JSON.stringify(reserialized[index])}, got ${JSON.stringify(again)}`);
+      }
+    });
+    check([phpUnserialize("a:1:{i:0;".repeat(4096) + "N;" + "}".repeat(4096)) !== false, phpUnserialize("a:1:{i:0;".repeat(4097) + "N;" + "}".repeat(4097)) !== false], 9, "the depth limit");
+    const corrupt = (decode(rawResult(own, 10)) as string[])[0]!;
+    const corruptValue = phpUnserialize(corrupt) as stdClass;
+    check([corrupt, Object.keys(corruptValue), phpSerialize(corruptValue)], 10, "a corrupt member name");
+    Assert.assertSame("", mismatches.join("\n"), `${mismatches.length} mismatch(es) with the Oracle`);
+    Assert.assertTrue(rebuiltHolder instanceof XtHolder, "a Holder");
+    Assert.assertSame(rebuiltHolder, ((rebuiltHolder as XtHolder).child as XtWoken[])[0]!.parent);
+
+    // What the AD-9 model adds, which the Oracle's encoding cannot show: the marker, the array forms, identity.
+    const at = (payload: string): unknown => read[payloads.indexOf(payload)];
+    Assert.assertTrue(at("d:1;") instanceof PhpFloat, "an integral d: is marked");
+    Assert.assertTrue(at('a:2:{i:5;s:1:"a";i:2;s:1:"b";}') instanceof PhpArray, "a PhpArray");
+    Assert.assertTrue(Object.getPrototypeOf(at('a:1:{s:9:"__proto__";i:1;}')) === Object.prototype, "a __proto__ key leaves the prototype alone");
+    const viaRef = at('O:8:"stdClass":1:{s:1:"a";R:1;}') as stdClass;
     Assert.assertSame(viaRef, viaRef["a"]);
-    const slots = phpUnserialize('a:3:{i:0;O:8:"stdClass":0:{}i:1;r:2;i:2;O:8:"stdClass":0:{}}') as stdClass[];
+    const slots = at('a:3:{i:0;O:8:"stdClass":0:{}i:1;r:2;i:2;O:8:"stdClass":0:{}}') as stdClass[];
     Assert.assertSame(slots[0], slots[1]);
     Assert.assertTrue(slots[2] !== slots[0], "r: took slot 3");
-    // Every __wakeup / __unserialize runs after the parse, in the order PHP runs them (each object's payload complete).
-    hookLog.length = 0;
-    const hooked = phpSerialize([Object.assign(new XtWaker(), { n: 1 }), Object.assign(new XtUnpacker(), { n: Object.assign(new XtWaker(), { n: 2 }) }), Object.assign(new XtWaker(), { n: 3 })]);
-    phpUnserialize(hooked);
-    Assert.assertSame("wakeup 1,wakeup 2,unserialize 2,wakeup 3", hookLog.join(","));
+    const pair = phpUnserialize("a:2:{i:0;a:0:{}i:1;a:0:{}}") as unknown[][];
+    Assert.assertTrue(pair[0] !== pair[1], "two arrays");
 
-    // Malformed payloads are false, as PHP returns them; trailing data is ignored; i: beyond int64 saturates.
-    for (const payload of [
-      "",
-      "x",
-      "N",
-      "b:2;",
-      "b:1",
-      'i:;',
-      "i:1.5;",
-      's:5:"abc";',
-      's:3:"abc"',
-      'a:2:{i:0;i:1;}',
-      'a:1:{i:0;i:1;',
-      'a:1:{N;i:1;}',
-      'a:1:{d:1;i:1;}',
-      "a:2:{i:0;i:5;i:1;r:2;}",
-      "a:1:{i:0;r:9;}",
-      "a:1:{i:0;r:1;}",
-      "r:1;",
-      "d:abc;",
-      "d:+INF;",
-      "d:1e;",
-      'O:8:"stdClass":1:{s:1:"a";}',
-      'O:3:"a b":0:{}',
-      'O:0:"":0:{}',
-      'E:7:"Foo:Bar";',
-      'C:3:"Foo":0:{}',
-      "a:1:{i:0;".repeat(4097) + "N;" + "}".repeat(4097),
-    ]) {
-      Assert.assertFalse(phpUnserialize(payload), `unserialize(${JSON.stringify(payload.slice(0, 40))})`);
-    }
-    Assert.assertSame(4096, (() => {
-      let depth = 0;
-      let value = phpUnserialize("a:1:{i:0;".repeat(4096) + "N;" + "}".repeat(4096));
-      while (Array.isArray(value)) {
-        depth++;
-        value = value[0] as unknown;
-      }
-      return depth;
-    })());
+    // Cases PHP cannot express: undefined and null input, and values JS cannot hold (TypeError).
     Assert.assertFalse(phpUnserialize(undefined));
     Assert.assertFalse(phpUnserialize(null));
-    Assert.assertFalse(phpUnserialize("b:0;"));
-    Assert.assertSame(5, phpUnserialize("i:5;junk"));
-    Assert.assertSame(9223372036854775807n, phpUnserialize("i:99999999999999999999;"));
-    Assert.assertSame(-9223372036854775808n, phpUnserialize("i:-99999999999999999999;"));
-    Assert.assertSame(1000, Number(phpUnserialize("d:1e3;")));
-    Assert.assertSame(0.5, phpUnserialize("d:.5;"));
-    Assert.assertSame(-Infinity, phpUnserialize("d:-INF;"));
-    Assert.assertTrue(Number.isNaN(phpUnserialize("d:NAN;") as number), "NAN");
-    Assert.assertSame("aAb", phpUnserialize('S:3:"a\\41b";'));
-    Assert.assertSame("é", phpUnserialize('s:2:"é";'));
-    Assert.assertFalse(phpUnserialize('s:1:"é";'));
-    // A string JS cannot hold, and a payload with a lone surrogate: TypeError.
     Assert.assertTrue(thrownBy(() => phpUnserialize('S:1:"\\ff";')) instanceof TypeError, "invalid UTF-8 is a TypeError");
     Assert.assertTrue(thrownBy(() => phpUnserialize('s:1:"\uD800";')) instanceof TypeError, "a lone surrogate is a TypeError");
+    Assert.assertTrue(thrownBy(() => phpUnserialize("a:1:{i:0;R:1;}")) instanceof TypeError, "an array that contains itself is a TypeError");
+    // PHP's TypeErrors for a bad argument or option.
+    assertThrows(() => phpUnserialize(5 as unknown as string), TypeError, "unserialize(): Argument #1 ($data) must be of type string, int given");
+    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: "x" as unknown as boolean }), TypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, string given');
+    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: null as unknown as boolean }), TypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, null given');
+    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: [1] as unknown as string[] }), TypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, int given');
+    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: [true] as unknown as string[] }), TypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, true given');
     Assert.assertSame(phpUnserialize, root.phpUnserialize);
   },
 );
@@ -574,6 +591,12 @@ xaravelTest(
     const ghost = decode(rawResult(output, 6)) as string;
     const ghostValue = phpUnserialize(ghost);
     check(ghostValue, 7, "an unregistered class");
+    // The incomplete object's props protocol gives the Oracle's public props.
+    const ghostProps = (rawResult(output, 7) as { properties: [string, string, unknown][] }).properties.filter(([, scope]) => scope === "").map(([name, , item]) => [name, item]);
+    const propsDifference = differs((ghostValue as Record<symbol, () => unknown>)[Symbol.for("xaravel.php.props")]!(), { array: ghostProps }, "the ghost's props");
+    if (propsDifference !== null) {
+      mismatches.push(propsDifference);
+    }
     const ghostAgain = phpSerialize(ghostValue);
     if (ghostAgain !== decode(rawResult(output, 8))) {
       mismatches.push(`serialize(ghost): Oracle ${JSON.stringify(decode(rawResult(output, 8)))}, got ${JSON.stringify(ghostAgain)}`);

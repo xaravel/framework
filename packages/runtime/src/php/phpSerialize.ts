@@ -8,9 +8,9 @@
 //   `s:` as normalised. A JS array that contains itself (a PHP array cannot, without references) throws PHP's
 //   comparison message `Nesting level too deep - recursive dependency?`.
 // - Objects, by Registry FQCN (`fqcn()` throws for an unregistered class): `__serialize()` (a PHP array, keys verbatim;
-//   else PHP's `TypeError` `<FQCN>::__serialize() must return an array`), else `__sleep()` (names verbatim; a name whose
-//   unmangled form is no own property is skipped, and a result that is no array writes `N;`, as PHP does after its
-//   warnings), else the props (`[Symbol.for('xaravel.php.props')]()`, else the own enumerable string keys), always as
+//   else PHP's `TypeError` `<FQCN>::__serialize() must return an array`), else `__sleep()` (names verbatim, a repeated
+//   one written once; a name whose unmangled form is no own property is skipped, and a result that is no array writes
+//   `N;`, as PHP does after its warnings), else the props (`[Symbol.for('xaravel.php.props')]()`, else the own enumerable string keys), always as
 //   `s:` keys. `__PHP_Incomplete_Class` writes its original name and raw entries back. A function is a `Closure`, which
 //   PHP refuses: `Serialization of 'Closure' is not allowed` (an `Error` until Story 9.10 ports PHP's `Exception`).
 // - Back-references as `php_add_var_hash` numbers them: every serialized value takes the next slot (an emitted `r:`
@@ -21,12 +21,10 @@
 import { fqcn } from "../registry/registry";
 import { arrayEntries, floatValue, phpType } from "./casts";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
+import { LONE_SURROGATE, unmangle, utf8 } from "./mangle";
 
 const PHP_PROPS = Symbol.for("xaravel.php.props");
 const RECURSION = "Nesting level too deep - recursive dependency?";
-/** A lone (unpaired) surrogate, which has no UTF-8 form. */
-const LONE_SURROGATE = /\p{Cs}/u;
-const encoder = new TextEncoder();
 
 interface State {
   /** The number of slots taken so far (`php_serialize_data.n`). */
@@ -75,27 +73,16 @@ function serializeString(s: string): string {
   if (LONE_SURROGATE.test(s)) {
     throw new TypeError("phpSerialize(): the string holds a lone surrogate, which has no UTF-8 form");
   }
-  return `s:${encoder.encode(s).length}:"${s}";`;
+  return `s:${utf8.encode(s).length}:"${s}";`;
 }
 
 function serializeKey(key: number | bigint | string): string {
   return typeof key === "string" ? serializeString(key) : `i:${key};`;
 }
 
-/** The JS property a serialized property name stands for: `\0*\0x` and `\0Class\0x` are `x`. */
-function unmangle(name: string): string {
-  if (name.startsWith("\0")) {
-    const end = name.indexOf("\0", 1);
-    if (end !== -1) {
-      return name.slice(end + 1);
-    }
-  }
-  return name;
-}
-
 /** `O:<len>:"<name>":<n>:{…}` over `[key, value]` members, each value taking its slot. */
 function serializeMembers(name: string, members: readonly (readonly [number | bigint | string, unknown])[], state: State): string {
-  let out = `O:${encoder.encode(name).length}:"${name}":${members.length}:{`;
+  let out = `O:${utf8.encode(name).length}:"${name}":${members.length}:{`;
   for (const [key, value] of members) {
     out += serializeKey(key) + serializeValue(value, state);
   }
@@ -126,10 +113,13 @@ function serializeObject(o: object, state: State): string {
       return "N;";
     }
     const members: [string, unknown][] = [];
+    const written = new Set<string>();
     for (const [, entry] of arrayEntries(names as object)) {
-      if (typeof entry !== "string") {
+      // PHP skips a non-string and a repeated name.
+      if (typeof entry !== "string" || written.has(entry)) {
         continue;
       }
+      written.add(entry);
       const property = unmangle(entry);
       if (Object.hasOwn(o, property)) {
         members.push([entry, record[property] ?? null]);

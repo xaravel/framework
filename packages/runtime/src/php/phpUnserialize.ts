@@ -4,32 +4,35 @@
 // - Values: `N;`, `b:0;`/`b:1;`, `i:` (an int beyond ±(2^53 − 1) a `bigint`, beyond int64 saturating at
 //   `PHP_INT_MAX`/`PHP_INT_MIN` as `parse_iv` does), `d:` (an integral value marked with `float()`, so it re-serializes
 //   as `d:`), `s:` and the deprecated escaped `S:`, `a:` in AD-9 form (a list an `Array`, all string keys a plain
-//   object, else a `PhpArray`), `O:` by the Class Registry, `r:` (an object back-reference) and `R:` (PHP's reference,
-//   read as the value it refers to: AD-9 has no references).
-// - Objects: the class is resolved through the Registry (case-insensitive, test-frame classes included). One that is
-//   not registered, or not allowed by `allowedClasses` (`true`, `false`, or a list of names compared
-//   case-insensitively), is a `__PHP_Incomplete_Class` holding the raw entries, and no hook runs on it. Any other is
-//   created with `Object.create(Class.prototype)`, no constructor running; its data goes to `__unserialize(data)`, or
-//   else each property is defined under its unmangled name (`\0*\0x` and `\0Class\0x` are `x`) and `__wakeup()` runs.
-//   As PHP delays them, every `__unserialize` and `__wakeup` runs after the whole parse, in the order the objects'
-//   payloads complete.
+//   object, else a `PhpArray`), `O:` by the Class Registry, `C:` (a `Serializable` payload: AD-9 has no `Serializable`,
+//   so the object is built as for a class without an unserializer, its data skipped, as PHP does for one), `r:` (an
+//   object back-reference) and `R:` (PHP's reference, read as the value it refers to: AD-9 has no references).
+// - Objects: the class is resolved through the Registry (case-insensitive, test-frame classes included). It never
+//   imports a file, so a class the classmap or PSR-4 map maps but no module has loaded yet rebuilds as
+//   `__PHP_Incomplete_Class`; an async caller loads it first with `resolveClassAsync`. A class that is not registered,
+//   or not allowed by `allowedClasses` (`true`, `false`, or a list of names compared case-insensitively), is a
+//   `__PHP_Incomplete_Class` holding the raw entries (a repeated name once, at its first position, with its last
+//   value), and no hook runs on it. Any other is created with `Object.create(Class.prototype)`, no constructor running;
+//   its data goes to `__unserialize(data)`, or else each property is defined under its unmangled name (`\0*\0x` and
+//   `\0Class\0x` are `x`) and `__wakeup()` runs. As PHP delays them, every `__unserialize` and `__wakeup` runs after
+//   the whole parse, in the order the objects' payloads complete.
 // - Back-references are numbered as PHP numbers them: every value but an `R:` takes the next slot, keys and the array
 //   given to `__unserialize` take none.
 // - A malformed payload returns `false`, as PHP does: a truncated value, a wrong count, `b:2;`, an `r:` to a non-object
-//   or out of range, bad float text, nesting beyond `unserialize_max_depth` (4096), an enum (`E:`) or `Serializable`
-//   (`C:`) payload, which AD-9 cannot hold. Trailing data after a complete value is ignored (PHP warns and returns the
-//   value). A string PHP accepts but JS cannot hold (invalid UTF-8) throws a `TypeError`.
+//   or out of range, bad float text, nesting beyond `unserialize_max_depth` (4096), an enum (`E:`) payload, which AD-9
+//   cannot hold. Trailing data after a complete value is ignored (PHP warns and returns the value). A value PHP accepts
+//   but JS cannot hold throws a `TypeError`: a string that is not valid UTF-8, and an `R:` to an array still being read
+//   (a PHP array that contains itself through a reference).
 import { resolveClass, type RegisteredClass } from "../registry/registry";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
+import { arrayEntries, className, phpType } from "./casts";
+import { LONE_SURROGATE, unmangle, utf8 } from "./mangle";
 import { float } from "./PhpFloat";
 import { arrayFromEntries, type PhpArrayKey } from "./PhpArray";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 
 /** PHP's `unserialize_max_depth` default. */
 const MAX_DEPTH = 4096;
-/** A lone (unpaired) surrogate, which has no UTF-8 form. */
-const LONE_SURROGATE = /\p{Cs}/u;
-const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
 /** The options of `phpUnserialize`: PHP's `['allowed_classes' => …]`. */
@@ -191,11 +194,13 @@ class Reader {
         break;
       case 0x4f: // O
         return this.#object(slot);
+      case 0x43: // C
+        return this.#custom(slot);
       case 0x72: // r
         value = this.#backReference(true);
         break;
       default:
-        // E: (enum), C: (Serializable) and anything else.
+        // E: (enum) and anything else.
         return this.#fail();
     }
     this.#slots[slot] = value;
@@ -320,8 +325,8 @@ class Reader {
     return arrayFromEntries(this.#entries());
   }
 
-  #object(slot: number): unknown {
-    this.#expect("O:");
+  /** `<len>:"<name>":` of `O:` and `C:`, the name checked as `zend_is_valid_class_name` checks it. */
+  #className(): string {
     const length = this.#count();
     this.#expect(':"');
     const start = this.#pos;
@@ -341,8 +346,38 @@ class Reader {
     const name = this.#text(start, start + length);
     this.#pos += length;
     this.#expect('":');
+    return name;
+  }
+
+  /** The class `name` rebuilds as, or null for `__PHP_Incomplete_Class`. */
+  #classFor(name: string): RegisteredClass | null {
     const klass = this.allowed(name) ? findClass(name) : null;
-    if (klass === null || klass === (__PHP_Incomplete_Class as unknown)) {
+    return klass === (__PHP_Incomplete_Class as unknown) ? null : klass;
+  }
+
+  /** `C:<len>:"<name>":<n>:{<n bytes>}`: the object without its data, and no hook (AD-9 has no `Serializable`). */
+  #custom(slot: number): unknown {
+    this.#expect("C:");
+    const name = this.#className();
+    const length = this.#count();
+    this.#expect(":{");
+    if (this.#pos + length > this.bytes.length) {
+      this.#fail();
+    }
+    this.#pos += length;
+    this.#expect("}");
+    const klass = this.#classFor(name);
+    const object = klass === null ? new __PHP_Incomplete_Class(name) : (Object.create((klass as { prototype: object }).prototype) as object);
+    this.#slots[slot] = object;
+    this.#objects.add(object);
+    return object;
+  }
+
+  #object(slot: number): unknown {
+    this.#expect("O:");
+    const name = this.#className();
+    const klass = this.#classFor(name);
+    if (klass === null) {
       const incomplete = new __PHP_Incomplete_Class(name);
       this.#slots[slot] = incomplete;
       this.#objects.add(incomplete);
@@ -377,6 +412,9 @@ class Reader {
       this.#fail();
     }
     const value = this.#slots[Number(id) - 1];
+    if (value === PENDING && !object) {
+      throw new TypeError("phpUnserialize(): the payload holds an array that contains itself through a reference, which JS cannot hold");
+    }
     if (value === PENDING || (object && !this.#objects.has(value as object))) {
       this.#fail();
     }
@@ -393,31 +431,29 @@ function findClass(name: string): RegisteredClass | null {
   }
 }
 
-/** The JS property a serialized property name stands for: `\0*\0x` and `\0Class\0x` are `x`. */
-function unmangle(name: string): string {
-  if (name.startsWith("\0")) {
-    const end = name.indexOf("\0", 1);
-    if (end !== -1) {
-      return name.slice(end + 1);
-    }
+/** PHP's name for the type of `v` in a `TypeError` message: `null`, `true`, `false`, `int`, … or the class. */
+function typeName(v: unknown): string {
+  const type = phpType(v);
+  if (type === "bool") {
+    return v === true ? "true" : "false";
   }
-  return name;
+  return type === "object" ? className(v as object) : type;
 }
 
-function allowedBy(option: PhpUnserializeOptions["allowedClasses"]): (name: string) => boolean {
-  if (option === undefined || option === true) {
+function allowedBy(option: unknown): (name: string) => boolean {
+  if (option === true) {
     return () => true;
   }
   if (option === false) {
     return () => false;
   }
-  if (!Array.isArray(option)) {
-    throw new TypeError("phpUnserialize(): Option \"allowed_classes\" must be an array or of type bool");
+  if (typeof option === "symbol" || phpType(option) !== "array") {
+    throw new TypeError(`unserialize(): Option "allowed_classes" must be of type array|bool, ${typeof option === "symbol" ? "symbol" : typeName(option)} given`);
   }
   const names = new Set<string>();
-  for (const name of option as readonly unknown[]) {
+  for (const [, name] of arrayEntries(option as object)) {
     if (typeof name !== "string") {
-      throw new TypeError("phpUnserialize(): Option \"allowed_classes\" must be an array of class names");
+      throw new TypeError(`unserialize(): Option "allowed_classes" must be an array of class names, ${typeName(name)} given`);
     }
     names.add(name.toLowerCase());
   }
@@ -427,20 +463,21 @@ function allowedBy(option: PhpUnserializeOptions["allowedClasses"]): (name: stri
 /**
  * PHP's `unserialize($data, ['allowed_classes' => …])`: the value `data` encodes, in the AD-9 value model, or `false`
  * for a malformed payload (as PHP returns it, so `b:0;` and a malformed payload read alike). `undefined` and `null`
- * read as `""`, which is malformed. Throws a `TypeError` for a payload with a lone surrogate or a string that is not
- * valid UTF-8, and whatever an object's `__unserialize` or `__wakeup` throws.
+ * read as `""`, which is malformed. Throws PHP's `TypeError` for a `data` that is no string and an `allowedClasses`
+ * that is no bool or array of names, a `TypeError` for a payload with a lone surrogate or a value JS cannot hold, and
+ * whatever an object's `__unserialize` or `__wakeup` throws.
  */
 export function phpUnserialize(data: string | null | undefined, { allowedClasses = true }: PhpUnserializeOptions = {}): unknown {
-  const allowed = allowedBy(allowedClasses);
-  const text = data ?? "";
+  const text: unknown = data ?? "";
   if (typeof text !== "string") {
-    throw new TypeError("phpUnserialize(): Argument #1 ($data) must be of type string");
+    throw new TypeError(`unserialize(): Argument #1 ($data) must be of type string, ${typeof text === "symbol" ? "symbol" : typeName(text)} given`);
   }
+  const allowed = allowedBy(allowedClasses);
   if (LONE_SURROGATE.test(text)) {
     throw new TypeError("phpUnserialize(): the payload holds a lone surrogate, which has no UTF-8 form");
   }
   try {
-    return new Reader(encoder.encode(text), allowed).read();
+    return new Reader(utf8.encode(text), allowed).read();
   } catch (error) {
     if (error instanceof Malformed) {
       return false;

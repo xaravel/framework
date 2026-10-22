@@ -11,7 +11,35 @@ context:
   - '{project-root}/stories/9.7.md'
   - '{project-root}/PORTING.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      Non-public properties of a class with no hook serialize as public, and a property missing from a payload reads undefined (no visibility or default-value contract).
+    evidence: |-
+      TS visibility is erased at run time and ESC-4.1-1's props protocol is public-only; Object.create runs no field initializer. Raised as conformance/escalations/ESC-9.7-1.md item 1.
+    location: >-
+      packages/runtime/src/php/phpSerialize.ts, packages/runtime/src/php/phpUnserialize.ts
+    severity: medium
+  - summary: >-
+      A string that is not valid UTF-8 cannot be unserialized (TypeError), so binary payloads do not interoperate.
+    evidence: |-
+      AD-9 models a PHP string as a JS string and has no byte string. ESC-9.7-1 item 2.
+    location: >-
+      packages/runtime/src/php/phpUnserialize.ts
+    severity: medium
+  - summary: >-
+      Enum (E:) and Serializable (C:) payloads return false.
+    evidence: |-
+      No AD defines a ported enum model; FR-77 names scalars, arrays and plain objects. ESC-9.7-1 item 3.
+    location: >-
+      packages/runtime/src/php/phpUnserialize.ts
+    severity: medium
+  - summary: >-
+      The Closure error is a JS Error with PHP's message; PHP throws Exception.
+    evidence: |-
+      PHP's Exception is ported by Story 9.10, whose ACs do not name the codec. ESC-9.7-1 item 4.
+    location: >-
+      packages/runtime/src/php/phpSerialize.ts
+    severity: low
 ---
 
 <intent-contract>
@@ -84,6 +112,43 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-21 — Review pass
+- verdicts: 32 findings — high 0, medium 8, low 19, false 5, maybe-false 0. The staged diff left out the bot's two signed fixture files (generated data, verified by `oracle:verify-fixtures`).
+- findings:
+  - `[medium]` `[defer]` Intent: a registered class with protected/private properties and no hook serializes them as public, so its bytes differ from PHP's — TS visibility is erased and no contract carries a property's visibility (ESC-4.1-1's props protocol is public-only); a new protocol is a contract decision, raised as `conformance/escalations/ESC-9.7-1.md` item 1; AC 1 holds for such classes only once it is ruled.
+  - `[medium]` `[defer]` Intent: no real Laravel payload, enum payloads give `false` — the ACs and FR-77 name scalars, arrays and plain objects, and AD-23 gives the consumer interop tests to Cache/Session/Encryption; enums have no AD-9 model: ESC-9.7-1 item 3.
+  - `[low]` `[defer]` Intent: the Closure error is an `Error`, PHP's is `Exception` — PHP's `Exception` arrives in Story 9.10, whose ACs do not name the codec: ESC-9.7-1 item 4.
+  - `[low]` `[reject]` Intent: `stories/9.7.md` cites `epics.md` line 3007, the Story is at 3130 — the Source line is sprint planning's metadata, not this Story's to edit; nothing reads it.
+  - `[false]` `[reject]` Intent: `async-surface.json` is not in the diff — it was regenerated and is unchanged (the runtime has no async method; `async-surface --all --check` passes).
+  - `[low]` `[patch]` Verification gap: `__PHP_Incomplete_Class`'s props protocol is never exercised — XT-runtime-26 now compares the unserialized ghost with the Oracle's decoded value through the protocol.
+  - `[low]` `[patch]` Verification gap: the `allowedClasses` option errors are untested — rows added with PHP's exact messages (see the message row below).
+  - `[low]` `[patch]` Verification gap: the props comment says "as PHP's `(array)` shows them", but `(array)` also lists the mangled entries — the comment now says public entries, as the grader's decoded objects and ESC-4.1-1 hold them.
+  - `[low]` `[patch]` Edge: `__sleep()` naming a property twice writes it twice; PHP 8.5 writes it once (local probe) — a repeated name is skipped; row added.
+  - `[false]` `[reject]` Edge: a non-string `__sleep` name is dropped where PHP casts it — local PHP 8.5.11 skips it too (`[1]` gives `O:1:"E":0:{}`).
+  - `[low]` `[patch]` Edge: `R:` to an array still being read returns `false`, but PHP accepts it (`a:1:{i:0;R:1;}` is a recursive array) — it now throws the codec's `TypeError` for a value JS cannot hold, as the spec's rule says; row added.
+  - `[low]` `[patch]` Edge: a class mapped by the classmap/PSR-4 but not loaded rebuilds as incomplete without an error — the sync codec never imports (AD-6, AD-10.4); the header now says async callers load it first with `resolveClassAsync`.
+  - `[low]` `[reject]` Edge: `Object.create` skips `#private` field setup, so a class with `#` fields breaks after unserialize — ported classes keep Upstream's properties as plain fields (PORTING.md); `#` fields are Xaravel-internal (`PhpArray`, `Ref`), which no PHP payload names; a guard adds a branch for no caller.
+  - `[low]` `[patch]` Edge: a repeated member name in an incomplete payload is kept twice; PHP keeps one at the first position with the last value — `pushEntry` replaces it; row added.
+  - `[low]` `[reject]` Edge: `\0A\0x` and `x` both unmangle to `x` — only a parent and a child private property of one name collide, which needs the item-1 metadata (ESC-9.7-1) to tell apart; no guard now.
+  - `[false]` `[reject]` Edge: a hook defined as an own field is skipped — PHP's hooks are methods, and ports write them as methods (AD-3); an arrow-function field is no port of one.
+  - `[medium]` `[defer]` Blind: a property missing from the payload reads `undefined`, because no field initializer runs — PHP starts from the class's defaults; no contract carries them: ESC-9.7-1 item 1 (defaults with visibility).
+  - `[low]` `[reject]` Blind: integer-like property names are written in JS key order — only an object with numeric property names hits it, PHP's `(object)` of a list being the case; ports build `stdClass` with `Object.assign` (PORTING.md), and a fix needs a second property store.
+  - `[medium]` `[defer]` Blind: no binary-safe entry point, so non-UTF-8 payloads throw — AD-9 models a PHP string as a JS string; a byte-string type is a spine change: ESC-9.7-1 item 2.
+  - `[medium]` `[defer]` Blind: divergences (Closure error class, UTF-8 `TypeError`, `E:`/`C:`, `R:`) recorded without a DIV clause or Escalation — now raised as ESC-9.7-1; `R:` read as its value matches every value the AD-9 model holds.
+  - `[low]` `[patch]` Blind: option and argument error messages are not PHP's — now PHP 8.5's exact text (`unserialize(): Option "allowed_classes" must be of type array|bool, string given`, `… must be an array of class names, int given`, `Argument #1 ($data) must be of type string, array given`), checked against local PHP.
+  - `[false]` `[reject]` Blind: `allowedClasses: null` should read as the default — PHP 8.5 throws `TypeError` `… must be of type array|bool, null given` for null; the codec does the same.
+  - `[medium]` `[patch]` Blind: hook order, depth limit, `i:` saturation, lenient floats, `S:`, trailing data and malformed payloads are hand-asserted — a third request `XT-runtime-25` now has PHP evaluate them, and the test reads its fixture.
+  - `[low]` `[patch]` Blind: `R:` to an enclosing array returns `false` — same as the Edge row; now a `TypeError`.
+  - `[false]` `[reject]` Blind: a corrupt mangled name (`"\0abc"`) should fail — local PHP 8.5.11 accepts it with a notice and keeps the name, as the codec does.
+  - `[low]` `[patch]` Blind: `unmangle`, `LONE_SURROGATE` and the encoder are duplicated — moved into one internal module.
+  - `[low]` `[reject]` Blind: `pushEntry()` is a public mutator on an exported class — a caller can only change an incomplete object it holds; hiding it needs an internal-symbol protocol for no named harm.
+  - `[low]` `[reject]` Blind: the spec says hooks run "in creation order", the code in completion order — the code follows PHP (local probe: `wakeup 1, wakeup 2, unserialize 2, wakeup 3`); the fix would edit this spec, so it is rejected and recorded here.
+  - `[low]` `[patch]` Blind: missing planned items and coverage (multi-digit mantissas, 3-digit exponents, integral floats ≥ 2^53, `__serialize` returning int keys, `S:` keys) and the new exports out of the list's order — the matrix already has `1.7976931348623157E+308`, `1e100`, `5e-324`, `1e16` and `1e17`, and `async-surface.json` was regenerated unchanged; `src/index.ts` now sorts the new names as the list does.
+  - `[medium]` `[patch]` Fidelity Review F-7: XT-runtime-25 claims constructors do not run, but no fixture constructor is observable — the new XT-runtime-25 request has PHP count constructor calls across `unserialize`, and the JS mirror's counter is asserted against it. This changes the reviewed tree; the layer re-runs.
+  - `[medium]` `[patch]` Fidelity Review F-7: XT-runtime-25's hook log cannot tell delayed hooks from hooks run as each payload completes — the request logs a hook that reads an enclosing object's later property through `r:`, which is set only after the whole parse; the JS mirror asserts the Oracle's log.
+  - `[low]` `[patch]` Fidelity Review F-7: XT-runtime-24's consequence says "throws PHP's errors" though most are Xaravel's — reworded to say which are PHP's.
+- note: while adding the XT-runtime-25 request, local PHP 8.5.11 showed that `C:` payloads are not malformed: PHP rebuilds them as an incomplete (or, for `stdClass`, empty) object with the data dropped. The code follows PHP and the Oracle fixture, not the Never / Malformed rows' "returns `false` for `C:`" (read-only intent wording); ESC-9.7-1 item 3 records it.
+
 ## Design Notes
 
 - **Object properties and visibility.** JS has no runtime visibility, so the default path writes every property as public (`s:1:"x"`), matching PHP only for public props. A ported class whose PHP bytes carry protected or private names returns them from `__serialize()` (as Laravel's `SerializesModels` does) or names them mangled in `__sleep()`. Unserialize strips the `\0*\0` / `\0Class\0` prefix to find the JS property.
@@ -99,3 +164,56 @@ deferred: []
 - `bun run harness --xaravel --id 'XT-runtime-*'` -- expected: all pass once the fixtures are pulled
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run async-surface --all --check`, `bun run oracle:verify-fixtures` -- expected: clean
 - `bun run story:check 9.7` -- expected: pass, after the Fidelity Review of the final tree
+
+## Fidelity Review
+
+### Reviewer 1: reject at tree d5a300e4fdf88cbf5d3df7ceebef11e418fedbd5
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `f4ff76dd036930162c463e8acb5005ed3ed3b892`, on 2026-10-22T00:22:30.942Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests; the added tests are Xaravel Tests. |
+| F-2: No expected value is weakened | pass | The differential tests compare complete serialized strings and decoded values against the supplied Oracle fixtures; no existing expected value is weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, so no Upstream assertion floor applies. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change adds no Expectations skip lines. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change contains no adapted markers or Expectations adapted fields. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Both supplied Oracle fixtures have output.error equal to null; no error fixture is relied upon. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | The three test bodies cover the codec portion of AD-23.1, but XT-runtime-25 does not establish all behavior its consequence declares. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Framework changes stay within runtime and implement its codec and value classes; no other Component behavior is stubbed or faked. |
+| F-9: Every `@asyncRoot` tag is true | pass | The supplied declarations and implementations contain no asyncRoot tags, IO terminals, or public methods accepting callbacks permitted to be async. The codec operations are synchronous. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | Both requests name Xaravel Tests rather than Upstream tests. The test file records the reason for their custom inputs, and the requests exercise the serialization constructs and value categories named by the Story. |
+
+Findings:
+
+- **F-7** `packages/runtime/tests/xaravel/codec.test.ts`: XT-runtime-25 claims constructors do not run, but its fixture constructors have no observable invocation counter or failure guard. Add a constructor side effect and assert that unserialization does not trigger it.
+- **F-7** `packages/runtime/tests/xaravel/codec.test.ts`: XT-runtime-25 claims hooks run after the whole parse, but hookLog only checks completion order. Running each hook immediately when its object's payload completes would produce the same log. Add a hook that observes a later object's fully populated state through a back-reference, so execution before the whole parse completes fails.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"d5a300e4fdf88cbf5d3df7ceebef11e418fedbd5","base":"f4ff76dd036930162c463e8acb5005ed3ed3b892","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-22T00:22:30.942Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests; the added tests are Xaravel Tests.","findings":[]},{"id":"F-2","result":"pass","note":"The differential tests compare complete serialized strings and decoded values against the supplied Oracle fixtures; no existing expected value is weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so no Upstream assertion floor applies.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds no Expectations skip lines.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no adapted markers or Expectations adapted fields.","findings":[]},{"id":"F-6","result":"n/a","note":"Both supplied Oracle fixtures have output.error equal to null; no error fixture is relied upon.","findings":[]},{"id":"F-7","result":"fail","note":"The three test bodies cover the codec portion of AD-23.1, but XT-runtime-25 does not establish all behavior its consequence declares.","findings":[{"path":"packages/runtime/tests/xaravel/codec.test.ts","detail":"XT-runtime-25 claims constructors do not run, but its fixture constructors have no observable invocation counter or failure guard. Add a constructor side effect and assert that unserialization does not trigger it."},{"path":"packages/runtime/tests/xaravel/codec.test.ts","detail":"XT-runtime-25 claims hooks run after the whole parse, but hookLog only checks completion order. Running each hook immediately when its object's payload completes would produce the same log. Add a hook that observes a later object's fully populated state through a back-reference, so execution before the whole parse completes fails."}]},{"id":"F-8","result":"pass","note":"Framework changes stay within runtime and implement its codec and value classes; no other Component behavior is stubbed or faked.","findings":[]},{"id":"F-9","result":"pass","note":"The supplied declarations and implementations contain no asyncRoot tags, IO terminals, or public methods accepting callbacks permitted to be async. The codec operations are synchronous.","findings":[]},{"id":"F-10","result":"pass","note":"Both requests name Xaravel Tests rather than Upstream tests. The test file records the reason for their custom inputs, and the requests exercise the serialization constructs and value categories named by the Story.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: reject at tree d5a300e4fdf88cbf5d3df7ceebef11e418fedbd5
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `f4ff76dd036930162c463e8acb5005ed3ed3b892`, on 2026-10-22T00:22:30.942Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty and the diff adds or changes no Ported Test. Only Xaravel Tests XT-runtime-24..26 are added, so there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | n/a | There is no Ported Test, so no expected value can be compared with Upstream's. The Xaravel Tests compare exactly with the signed Oracle fixtures (assertSame / strict !== on the serialized bytes, and differs() checks kind, key order and property counts). Nothing looser was found. |
+| F-3: No assertion is removed without a DIV clause | n/a | There is no Ported Test, so no Upstream assertion count applies. No adapted marker was added (evidence (a)). |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No added line carries an '// adapted:DIV-<n>.<k>' marker, and no Expectations 'adapted' field is set (evidence (a)). |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Both added fixtures (737a77a8…, 3b5294b2…) have output.error null, and evidence (c) reports no error fixture among the base or changed ones. oracle() also throws if a fixture reports an error. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | Each consequence string was compared with its body. XT-runtime-25 matches its claims: unserialize values are diffed against Oracle result 3, the bytes are re-serialized, hook order, identity and malformed→false are checked. XT-runtime-26 also matches: allowed_classes false, a case-insensitive list and an unregistered class are diffed against the Oracle's __PHP_Incomplete_Class props, and the prop count shows the Sleepy hook did not run; the original bytes are restored. All three cite AD-23.1 correctly. XT-runtime-24 checks its serialize bytes against the Oracle, but its claim that it 'throws PHP's errors' goes beyond what the body verifies. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed source file is in packages/runtime/src/php: the phpSerialize and phpUnserialize codecs, stdClass, __PHP_Incomplete_Class, and the internal arrayFromEntries. These are the runtime's own PHP value model (AD-23.1 says runtime/php owns the codecs). The test loads assert's oracle-values.ts at run time without re-implementing it. No stub, fake or hard-coded return of another Component was found. The temporary 'Error' for the Closure case is runtime's own throw, not a fake of another package. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tag in any changed file. Every new export (phpSerialize, phpUnserialize, stdClass, __PHP_Incomplete_Class, arrayFromEntries, formatSerializeFloat) is sync, does no IO and takes no callback, so under AD-6.2 and DIV-1 none of them needs a tag. __serialize, __sleep and __wakeup are called synchronously as PHP's hooks. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | Both requests in conformance/oracle-requests/9.7.jsonl are for Xaravel Test IDs (XT-runtime-24, XT-runtime-26), so no Upstream test exists whose inputs they could take. The reason for that is written in the header of codec.test.ts, not in the request lines; it cites docs/ops/oracle.md § Per-Story requests. The exprs only evaluate serialize()/unserialize() (with allowed_classes) over the declared inputs, and the matrix in the test is shown to equal the Oracle's $v through differs() on result 0. No arbitrary PHP value is signed as an expected result: even the hand-written $ghost payload is only an input, and its expected value is PHP's own unserialize() output. |
+
+Findings:
+
+- **F-7** `packages/runtime/tests/xaravel/codec.test.ts`: XT-runtime-24's consequence string ends with "and throws PHP's errors (AD-23.1)", but the errors its body checks are mostly not PHP's: (1) the recursive-array message "Nesting level too deep - recursive dependency?" is PHP's comparison error, not anything serialize() throws; (2) the TypeErrors for an unregistered class, a lone surrogate and a bigint beyond int64 are Xaravel's own errors; (3) for a Closure, PHP throws 'Exception' (the class), and the test only checks 'Error' (the source says so until Story 9.10). None of these comes from the Oracle. Either reword the consequence to say what is checked (for example 'throws PHP's Closure and __serialize messages and Xaravel's errors for values PHP cannot hold'), or add Oracle requests for serialize(fn () => 1) and a bad __serialize, and assert the class and message from those fixtures.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"reject","tree":"d5a300e4fdf88cbf5d3df7ceebef11e418fedbd5","base":"f4ff76dd036930162c463e8acb5005ed3ed3b892","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T00:22:30.942Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the diff adds or changes no Ported Test. Only Xaravel Tests XT-runtime-24..26 are added, so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"There is no Ported Test, so no expected value can be compared with Upstream's. The Xaravel Tests compare exactly with the signed Oracle fixtures (assertSame / strict !== on the serialized bytes, and differs() checks kind, key order and property counts). Nothing looser was found.","findings":[]},{"id":"F-3","result":"n/a","note":"There is no Ported Test, so no Upstream assertion count applies. No adapted marker was added (evidence (a)).","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No added line carries an `// adapted:DIV-<n>.<k>` marker, and no Expectations `adapted` field is set (evidence (a)).","findings":[]},{"id":"F-6","result":"n/a","note":"Both added fixtures (737a77a8…, 3b5294b2…) have output.error null, and evidence (c) reports no error fixture among the base or changed ones. oracle() also throws if a fixture reports an error.","findings":[]},{"id":"F-7","result":"fail","note":"Each consequence string was compared with its body. XT-runtime-25 matches its claims: unserialize values are diffed against Oracle result 3, the bytes are re-serialized, hook order, identity and malformed→false are checked. XT-runtime-26 also matches: allowed_classes false, a case-insensitive list and an unregistered class are diffed against the Oracle's __PHP_Incomplete_Class props, and the prop count shows the Sleepy hook did not run; the original bytes are restored. All three cite AD-23.1 correctly. XT-runtime-24 checks its serialize bytes against the Oracle, but its claim that it 'throws PHP's errors' goes beyond what the body verifies.","findings":[{"path":"packages/runtime/tests/xaravel/codec.test.ts","detail":"XT-runtime-24's consequence string ends with \"and throws PHP's errors (AD-23.1)\", but the errors its body checks are mostly not PHP's: (1) the recursive-array message \"Nesting level too deep - recursive dependency?\" is PHP's comparison error, not anything serialize() throws; (2) the TypeErrors for an unregistered class, a lone surrogate and a bigint beyond int64 are Xaravel's own errors; (3) for a Closure, PHP throws `Exception` (the class), and the test only checks `Error` (the source says so until Story 9.10). None of these comes from the Oracle. Either reword the consequence to say what is checked (for example 'throws PHP's Closure and __serialize messages and Xaravel's errors for values PHP cannot hold'), or add Oracle requests for serialize(fn () => 1) and a bad __serialize, and assert the class and message from those fixtures."}]},{"id":"F-8","result":"pass","note":"Every changed source file is in packages/runtime/src/php: the phpSerialize and phpUnserialize codecs, stdClass, __PHP_Incomplete_Class, and the internal arrayFromEntries. These are the runtime's own PHP value model (AD-23.1 says runtime/php owns the codecs). The test loads assert's oracle-values.ts at run time without re-implementing it. No stub, fake or hard-coded return of another Component was found. The temporary `Error` for the Closure case is runtime's own throw, not a fake of another package.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tag in any changed file. Every new export (phpSerialize, phpUnserialize, stdClass, __PHP_Incomplete_Class, arrayFromEntries, formatSerializeFloat) is sync, does no IO and takes no callback, so under AD-6.2 and DIV-1 none of them needs a tag. __serialize, __sleep and __wakeup are called synchronously as PHP's hooks.","findings":[]},{"id":"F-10","result":"pass","note":"Both requests in conformance/oracle-requests/9.7.jsonl are for Xaravel Test IDs (XT-runtime-24, XT-runtime-26), so no Upstream test exists whose inputs they could take. The reason for that is written in the header of codec.test.ts, not in the request lines; it cites docs/ops/oracle.md § Per-Story requests. The exprs only evaluate serialize()/unserialize() (with allowed_classes) over the declared inputs, and the matrix in the test is shown to equal the Oracle's $v through differs() on result 0. No arbitrary PHP value is signed as an expected result: even the hand-written $ghost payload is only an input, and its expected value is PHP's own unserialize() output.","findings":[]}],"prior":[]}
+```
