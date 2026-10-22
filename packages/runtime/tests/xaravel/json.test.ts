@@ -1,16 +1,18 @@
 // Xaravel Tests for Story 9.8: `jsonEncode` / `jsonDecode` with PHP flag semantics (AD-23.1, AD-9). One test per
 // acceptance-criterion row of the manifest, in order, plus local rows the Oracle cannot express (a JS lone surrogate,
-// a `bigint` beyond int64, a symbol, `undefined`, the Registry's import cycle). Each Oracle row compares with the
-// signed fixture of `conformance/oracle-requests/9.8.jsonl`; a missing fixture fails the test.
+// a `bigint` beyond int64, a symbol, `undefined`, the Registry's import cycle, `json_last_error()` outside a frame).
+// Each Oracle row compares with the signed fixture of `conformance/oracle-requests/9.8.jsonl`; a missing fixture fails
+// the test.
 //
 // F-10 recorded reason: XT-runtime-27..30 are Xaravel Tests (stories/9.8.md has no test_ids), so no Upstream test
 // exists whose inputs the requests could take. Per docs/ops/oracle.md § Per-Story requests ("A Story that needs
 // expected values for other inputs (an Xaravel Differential suite …) commits conformance/oracle-requests/<story-id>.jsonl";
 // an Xaravel Test ID runs bound to a bare PHPUnit TestCase) and epics.md (Epic 9: "verified by Oracle Differential
-// Tests"), the requests evaluate only `json_encode`, `json_decode` and `JsonResponse::getContent()` over ints, floats,
-// bools, null, UTF-8 strings, lists, maps, stdClass objects and six fixture classes declared in the request
-// (`XaravelFixture\Json\Plain`, `Serial`, `SelfSerial`, `Arr`, `Jsn`, `Both`, implementing PHP's `JsonSerializable`
-// and Laravel's `Arrayable` / `Jsonable` contracts), and contain no Upstream fixture.
+// Tests"), the requests evaluate only `json_encode`, `json_decode`, `json_last_error()`, `json_last_error_msg()` and
+// `JsonResponse::getContent()` over ints, floats, bools, null, UTF-8 strings, lists, maps, stdClass objects and seven
+// fixture classes declared in the request (`XaravelFixture\Json\Plain`, `Serial`, `SelfSerial`, `Arr`, `Jsn`, `Both`,
+// `JsnSerial`, implementing PHP's `JsonSerializable` and Laravel's `Arrayable` / `Jsonable` contracts), and contain no
+// Upstream fixture.
 //
 // ESC-9.8-1 part 1: until Story 9.10 ports `JsonException` and `ValueError`, a JSON error throws an `Error` with PHP's
 // message and code, so these rows assert the Oracle's message and code and record its class.
@@ -46,12 +48,15 @@ import {
   JSON_UNESCAPED_UNICODE,
   jsonDecode,
   jsonEncode,
+  jsonLastError,
+  jsonLastErrorMsg,
   PhpArray,
   PhpFloat,
   stdClass,
 } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
 import { fqcn, registerClass } from "@xaravel/runtime/registry";
+import { currentFrame, runInFrame, runInNarrowFrame } from "@xaravel/runtime/scope";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -351,7 +356,7 @@ function matrix(): unknown[] {
 
 xaravelTest(
   "XT-runtime-27",
-  "jsonEncode(value, flags, depth) is byte-identical to the Oracle's json_encode under no flag, each of the 15 single JSON_* encode flags and the 6 combinations of the request's $flags, and gives PHP's false, partial output or error message and code for INF, NAN, recursion and depth under 0, PARTIAL, THROW, THROW|PARTIAL and PRETTY|PARTIAL; a JS lone surrogate is PHP's malformed UTF-8, a symbol an unsupported type, undefined null; the Registry's import cycle stays load-safe (AD-9.1, AD-23.1)",
+  "jsonEncode(value, flags, depth) is byte-identical to the Oracle's json_encode under no flag, each of the 15 single JSON_* encode flags and the 6 combinations of the request's $flags, and gives PHP's false, partial output or error message and code for INF, NAN, recursion and depth under 0, PARTIAL, THROW, THROW|PARTIAL and PRETTY|PARTIAL; a JS lone surrogate is PHP's malformed UTF-8, a symbol an unsupported type, undefined null; the Registry's import cycle stays load-safe; in a unit frame jsonLastError() / jsonLastErrorMsg() give the Oracle's json_last_error() / json_last_error_msg() after each call, a THROW call leaving them untouched (AD-5.5, AD-5.7, AD-9.1, AD-23.1)",
   () => {
     const output = oracle("XT-runtime-27", "$flags");
     const flags = decode(rawResult(output, 0)) as number[];
@@ -422,6 +427,7 @@ xaravelTest(
     });
     localRows();
     cycleRow();
+    lastErrorSequence("XT-runtime-27", ENCODE_STEPS);
   },
 );
 
@@ -667,7 +673,7 @@ xaravelTest("XT-runtime-29", "jsonEncode writes a bigint as its exact digits, in
 
 xaravelTest(
   "XT-runtime-30",
-  "jsonDecode(json, associative, depth, flags) gives the Oracle's json_decode value in AD-9 form (a list an Array, string keys a plain object, else a PhpArray; stdClass objects; integral floats marked), and null or PHP's error message and code on an error (AD-9.1, AD-9.2, AD-9.3, AD-9.4, AD-23.1)",
+  "jsonDecode(json, associative, depth, flags) gives the Oracle's json_decode value in AD-9 form (a list an Array, string keys a plain object, else a PhpArray; stdClass objects; integral floats marked), and null or PHP's error message and code on an error; jsonLastError() / jsonLastErrorMsg() follow the Oracle's json_last_error() through a sequence of calls in a unit frame, and record nothing outside one or in a narrow frame no unit encloses, while a narrow frame inside a unit records into the unit (AD-5.5, AD-5.7, AD-5.8, AD-9.1, AD-9.2, AD-9.4, AD-23.1)",
   () => {
     const output = oracle("XT-runtime-30", "$inputs");
     const inputs = decode(rawResult(output, 0)) as string[];
@@ -745,6 +751,8 @@ xaravelTest(
     });
     assertJsonError(() => jsonDecode("1", true, 0), "json_decode(): Argument #3 ($depth) must be greater than 0", 0, "depth 0");
     assertJsonError(() => jsonDecode("[", true, 512, JSON_THROW_ON_ERROR), "Syntax error", JSON_ERROR_SYNTAX, "[");
+    lastErrorSequence("XT-runtime-30", DECODE_STEPS);
+    lastErrorLocalRows();
   },
 );
 
@@ -812,4 +820,170 @@ function cycleRow(): void {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/** A step of a `json_last_error()` sequence request (its `$steps`): `[op, arg, flags, depth]`; `"NAN"` stands for NAN. */
+type Step = readonly ["decode" | "encode" | "last", unknown, number, number];
+
+const LAST: Step = ["last", null, 0, 0];
+
+// XT-runtime-27's json_last_error() sequence (the request's `$steps`).
+const ENCODE_STEPS: readonly Step[] = [
+  ["encode", "NAN", 0, 512],
+  LAST,
+  ["encode", "NAN", JSON_PARTIAL_OUTPUT_ON_ERROR, 512],
+  LAST,
+  ["encode", 1, JSON_THROW_ON_ERROR, 512],
+  LAST,
+  ["encode", 1, 0, 512],
+  LAST,
+  ["encode", "NAN", JSON_THROW_ON_ERROR, 512],
+  LAST,
+  ["encode", "NAN", JSON_THROW_ON_ERROR | JSON_PARTIAL_OUTPUT_ON_ERROR, 512],
+  LAST,
+  ["encode", [[1]], 0, 1],
+  LAST,
+  ["decode", "[", 0, 512],
+  ["encode", { a: 1 }, 0, 512],
+  LAST,
+];
+
+// XT-runtime-30's json_last_error() sequence (the request's `$steps`).
+const DECODE_STEPS: readonly Step[] = [
+  ["decode", "[", 0, 512],
+  LAST,
+  ["decode", "{", JSON_THROW_ON_ERROR, 512],
+  LAST,
+  ["decode", "[1]", JSON_THROW_ON_ERROR, 512],
+  LAST,
+  ["decode", "[1]", 0, 512],
+  LAST,
+  ["decode", '"\\ud800"', 0, 512],
+  LAST,
+  ["decode", "[1]", 0, 0],
+  LAST,
+  ["decode", "[", 0, 512],
+  ["decode", "[1]", JSON_THROW_ON_ERROR, 0],
+  LAST,
+  ["decode", "", 0, 512],
+  LAST,
+  ["decode", "[1]", 0, 512],
+  ["decode", "", JSON_THROW_ON_ERROR, 512],
+  LAST,
+  ["decode", "[[1]]", 0, 1],
+  LAST,
+  ["decode", "\"\u0001\"", JSON_THROW_ON_ERROR | JSON_PARTIAL_OUTPUT_ON_ERROR, 512],
+  LAST,
+];
+
+/**
+ * The Oracle's `$run($steps)` for the request of `id` whose first expr is `$steps`, replayed in one unit frame
+ * (ESC-9.8-1 part 2): each call gives the Oracle's value or error, and each `last` step the Oracle's
+ * `json_last_error()` and `json_last_error_msg()`.
+ */
+function lastErrorSequence(id: string, steps: readonly Step[]): void {
+  const output = oracle(id, "$steps");
+  // The JS steps are the Oracle's `$steps`, element by element.
+  const oracleSteps = rawItems(rawResult(output, 0));
+  Assert.assertSame(oracleSteps.length, steps.length, `${id}: $steps length`);
+  steps.forEach((step, index) => assertSamePhpValue(oracleSteps[index], [...step], `$steps[${index}]`));
+  const results = rawItems(rawResult(output, 1));
+  Assert.assertSame(results.length, steps.length, `${id}: $run($steps) results`);
+  Assert.assertSame(null, currentFrame(), "the sequence opens its own frame");
+  runInFrame("unit", () => {
+    steps.forEach(([op, arg, flags, depth], index) => {
+      const expected = rawItems(results[index]);
+      const tag = decode(expected[0]);
+      const at = `${id} step #${index}`;
+      if (op === "last") {
+        Assert.assertSame("last", tag, at);
+        Assert.assertSame(Number(decode(expected[1])), jsonLastError(), at);
+        Assert.assertSame(decode(expected[2]), jsonLastErrorMsg(), at);
+        return;
+      }
+      const call = (): unknown => (op === "decode" ? jsonDecode(arg as string, true, depth, flags) : jsonEncode(arg === "NAN" ? NaN : arg, flags, depth));
+      if (tag === "value") {
+        assertSamePhpValue(expected[1], call(), at);
+      } else {
+        // ESC-9.8-1 part 1: PHP throws a JsonException or ValueError; the port throws an Error with its message and code.
+        Assert.assertSame("throws", tag, at);
+        Assert.assertTrue(["JsonException", "ValueError"].includes(decode(expected[1]) as string), at);
+        assertJsonError(call, decode(expected[2]) as string, Number(decode(expected[3])), at);
+      }
+    });
+  });
+}
+
+/** A `JsonSerializable` whose `jsonSerialize()` throws. */
+class XtThrowingSerial {
+  get [JSON_SERIALIZABLE](): true {
+    return true;
+  }
+
+  jsonSerialize(): unknown {
+    throw new RangeError("from jsonSerialize");
+  }
+}
+
+/**
+ * The local rows of `jsonLastError()` / `jsonLastErrorMsg()` (ESC-9.8-1 part 2): the record lives in the active unit
+ * frame; outside a frame, or in a narrow frame no unit encloses, a call records nothing and the reads give 0.
+ */
+function lastErrorLocalRows(): void {
+  // Outside a frame: nothing is recorded.
+  Assert.assertSame(null, currentFrame());
+  Assert.assertSame(null, jsonDecode("["));
+  Assert.assertSame(0, jsonLastError());
+  Assert.assertSame("No error", jsonLastErrorMsg());
+  runInFrame("unit", () => {
+    // Before any call in the frame: 0.
+    Assert.assertSame(0, jsonLastError());
+    Assert.assertSame("No error", jsonLastErrorMsg());
+    jsonDecode('{"a":1,}');
+    Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+    // A throwing call (THROW without PARTIAL) leaves the previous code.
+    assertJsonError(() => jsonEncode(NaN, JSON_THROW_ON_ERROR), "Inf and NaN cannot be JSON encoded", JSON_ERROR_INF_OR_NAN, "throw");
+    Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+    Assert.assertSame("Syntax error", jsonLastErrorMsg());
+    // A jsonSerialize() exception propagates after the encoder's code (0 here) is recorded, as PHP does.
+    Assert.assertTrue(thrownBy(() => jsonEncode([new XtThrowingSerial()])) instanceof RangeError);
+    Assert.assertSame(0, jsonLastError());
+    // Under THROW (without PARTIAL) the same exception leaves the record untouched.
+    jsonDecode("[");
+    Assert.assertTrue(thrownBy(() => jsonEncode([new XtThrowingSerial()], JSON_THROW_ON_ERROR)) instanceof RangeError);
+    Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+    // Under PARTIAL, an earlier error in the same call is the code recorded (PHP 8.5.11: 7).
+    Assert.assertTrue(thrownBy(() => jsonEncode([NaN, new XtThrowingSerial()], JSON_PARTIAL_OUTPUT_ON_ERROR)) instanceof RangeError);
+    Assert.assertSame(JSON_ERROR_INF_OR_NAN, jsonLastError());
+    // The top-level Jsonable hook never runs PHP's json_encode, so the record stays as it was.
+    jsonDecode("[");
+    Assert.assertSame("custom:0", jsonEncode(new XtJsn()));
+    Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+    // A narrow frame declaring no slots writes through to the enclosing unit (AD-5.8).
+    jsonEncode([1]);
+    Assert.assertSame(0, jsonLastError());
+    runInNarrowFrame("narrow", [], () => {
+      Assert.assertSame(null, jsonDecode("["));
+    });
+    Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+    // A failed encode sets its code; each call records, success included.
+    Assert.assertSame(false, jsonEncode("a\ud800"));
+    Assert.assertSame(JSON_ERROR_UTF8, jsonLastError());
+    Assert.assertSame("[1]", jsonEncode([1]));
+    Assert.assertSame(0, jsonLastError());
+    jsonEncode(Symbol("s"));
+    Assert.assertSame(JSON_ERROR_UNSUPPORTED_TYPE, jsonLastError());
+    Assert.assertSame("Type is not supported", jsonLastErrorMsg());
+  });
+  // The record does not outlive its frame, and another frame starts at 0.
+  Assert.assertSame(0, jsonLastError());
+  runInFrame("unit", () => Assert.assertSame(0, jsonLastError()));
+  // A root narrow frame has no unit to hold the record: the call does not throw and records nothing.
+  runInNarrowFrame("narrow", [], () => {
+    Assert.assertSame(null, jsonDecode("["));
+    Assert.assertSame(0, jsonLastError());
+  });
+  // The package root exports the same functions.
+  Assert.assertSame(jsonLastError, root.jsonLastError);
+  Assert.assertSame(jsonLastErrorMsg, root.jsonLastErrorMsg);
 }

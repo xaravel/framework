@@ -21,12 +21,14 @@
 // - Errors: the result is `null`; under `JSON_THROW_ON_ERROR`, an `Error` with PHP's message and code (ESC-9.8-1
 //   part 1). A `depth` below 1 throws PHP's `ValueError` message as an `Error`.
 //
-// `json_last_error()` is not recorded (ESC-9.8-1 part 2).
+// - `json_last_error()` (ESC-9.8-1 part 2): without `JSON_THROW_ON_ERROR`, each call records its code through
+//   `recordJsonError` (`JSON_ERROR_NONE` first, so a `depth` `ValueError` leaves 0, as in PHP); under it, none.
 import {
   JSON_BIGINT_AS_STRING,
   JSON_ERROR_CTRL_CHAR,
   JSON_ERROR_DEPTH,
   JSON_ERROR_INVALID_PROPERTY_NAME,
+  JSON_ERROR_NONE,
   JSON_ERROR_STATE_MISMATCH,
   JSON_ERROR_SYNTAX,
   JSON_ERROR_UTF16,
@@ -36,6 +38,7 @@ import {
   JSON_OBJECT_AS_ARRAY,
   JSON_THROW_ON_ERROR,
   jsonError,
+  recordJsonError,
 } from "./jsonConstants";
 import { exceedsInt64 } from "./numericString";
 import { arrayFromEntries } from "./PhpArray";
@@ -73,12 +76,17 @@ const EOI: Token = { type: "eoi", value: null };
  */
 export function jsonDecode(json: string | null | undefined, associative: boolean | null = null, depth: number = 512, flags: number = 0): unknown {
   const throws = (flags & JSON_THROW_ON_ERROR) !== 0;
+  // PHP clears json_last_error() first unless it throws, so a ValueError below leaves 0 (ESC-9.8-1 part 2).
+  if (!throws) {
+    recordJsonError(JSON_ERROR_NONE);
+  }
   // PHP reads a null `$json` as "" (with a deprecation): a syntax error.
   const text = json ?? "";
   if (text === "") {
     if (throws) {
       throw jsonError(JSON_ERROR_SYNTAX);
     }
+    recordJsonError(JSON_ERROR_SYNTAX);
     return null;
   }
   if (depth <= 0) {
@@ -100,6 +108,7 @@ export function jsonDecode(json: string | null | undefined, associative: boolean
     if (throws) {
       throw jsonError(error.code);
     }
+    recordJsonError(error.code);
     return null;
   }
 }

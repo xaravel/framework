@@ -59,6 +59,8 @@ export {
   JSON_UNESCAPED_UNICODE,
   jsonDecode,
   jsonEncode,
+  jsonLastError,
+  jsonLastErrorMsg,
   looseEquals,
   normalizeNull,
   PhpArray,

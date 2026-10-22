@@ -36,6 +36,7 @@ export {
 } from "./jsonConstants";
 export { jsonDecode } from "./jsonDecode";
 export { jsonEncode } from "./jsonEncode";
+export { jsonLastError, jsonLastErrorMsg } from "./jsonLastError";
 export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
 export { PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
