@@ -13,7 +13,6 @@ import {
   isCountable,
   isFloat,
   isInt,
-  isMarkedFloat,
   isIterable,
   isNumeric,
   isPhpObject,
@@ -22,6 +21,7 @@ import {
   isTraversable,
   iterableValues,
   toNumber,
+  unmarkFloat,
 } from "../comparison/PhpValues";
 import { Factory } from "../comparator/Factory";
 import { exportValue, phpunitExport } from "../exporter/Exporter";
@@ -506,9 +506,9 @@ export class TraversableContainsOnly extends Constraint {
   }
 }
 
-/** A PHP array key (an int or a string, normalised), or null for any other value; an integral marked float is its int. */
+/** A PHP array key (an int or a string, normalised), or null for any other value; a marked float reads as its number. */
 function arrayKey(given: unknown): Key | null {
-  const key = isMarkedFloat(given) && Number.isSafeInteger(toNumber(given)) ? toNumber(given) : given;
+  const key = unmarkFloat(given);
   if (typeof key === "number" && isInt(key)) {
     // `+ 0` folds an unmarked or marked `-0` into the key `0`.
     return key + 0;

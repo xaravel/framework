@@ -47,6 +47,7 @@
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
 import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
+import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
 import { InvocationHandler } from "../Runtime/InvocationHandler";
@@ -210,7 +211,7 @@ function declaringClassOf(prototype: object): DeclaringClass | null {
   }
   const parent: unknown = Object.getPrototypeOf(ctor);
   const parentName = typeof parent === "function" && parent !== Function.prototype && !isNative(parent) ? ownClassName(parent) : null;
-  return { name, type: ctor, parentName };
+  return { name, type: ctor, parentName, parentType: parentName === null ? null : parent };
 }
 
 /** Reads a double target. Throws a TypeError for anything else. */
@@ -238,7 +239,7 @@ export function readTarget(type: unknown): TargetType {
   if (typeof type === "object" && type !== null && typeof (type as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
     const name = classNameOfClass(type);
     const methods = new Map<string, ConfigurableMethod>();
-    const declaring: DeclaringClass = { name, type, parentName: null };
+    const declaring: DeclaringClass = { name, type, parentName: null, parentType: null };
     const declared: unknown = (type as Record<symbol, unknown>)[CONTRACT_METHODS];
     if (declared !== undefined && declared !== null) {
       if (typeof (declared as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
@@ -342,8 +343,9 @@ export function returnTypeString(returns: string | null, nullable: boolean, decl
 }
 
 /** The arguments as PHPUnit's generated method collects them, with the row's defaults (see the header). */
-function collectWithRow(method: ConfigurableMethod, declared: number, args: readonly unknown[]): unknown[] {
-  const defaults = method.defaultParameterValues();
+function collectWithRow(method: ConfigurableMethod, row: SignatureRow, args: readonly unknown[]): unknown[] {
+  const declared = row.parameters.filter((parameter) => !parameter.variadic).length;
+  const defaults = method.defaultParameterValues(row);
   const parameters: unknown[] = [];
   for (let index = 0; index < declared; index++) {
     const omitted = index >= args.length || args[index] === undefined;
@@ -377,24 +379,26 @@ function doubledMethod(className: string, target: unknown, method: ConfigurableM
     const row = method.signature();
     const declaring = method.declaringClass();
     if (row === null || declaring === null) {
-      const declared = method.numberOfParameters();
+      const declared = method.numberOfParameters(null);
       const parameters: unknown[] = [];
       for (let index = 0; index < Math.max(declared, args.length); index++) {
         parameters.push(args[index] ?? null);
       }
-      return handler.invoke(new Invocation(className, name, parameters, this, method.parameterNames()));
+      return handler.invoke(new Invocation(className, name, parameters, this, method.parameterNames(null)));
     }
-    const names = method.parameterNames();
-    const parameters = collectWithRow(method, row.parameters.filter((parameter) => !parameter.variadic).length, args);
-    const known = new Map<string, unknown>([
-      [className.replace(/^\\/, "").toLowerCase(), target],
-      [declaring.name.replace(/^\\/, "").toLowerCase(), declaring.type],
-    ]);
-    const generator = new ReturnValueGenerator({
-      newInstanceOf,
-      testDoubleFor: (type: unknown) => testDouble(type, false, [], [], false, () => undefined),
-      known,
-    });
+    const names = method.parameterNames(row);
+    const parameters = collectWithRow(method, row, args);
+    // Built only when an unconfigured call needs a value.
+    const generator = (): ReturnValueGenerator =>
+      new ReturnValueGenerator({
+        newInstanceOf,
+        testDoubleFor: (type: unknown) => testDouble(type, false, [], [], false, () => undefined),
+        known: new Map<string, unknown>([
+          [className.replace(/^\\/, "").toLowerCase(), target],
+          [declaring.name.replace(/^\\/, "").toLowerCase(), declaring.type],
+          ...(declaring.parentName === null ? [] : [[declaring.parentName.replace(/^\\/, "").toLowerCase(), declaring.parentType] as [string, unknown]]),
+        ]),
+      });
     const returnType = returnTypeString(row.returns, row.nullable, declaring);
     return handler.invoke(new Invocation(declaring.name, name, parameters, this, names, returnType, generator));
   };

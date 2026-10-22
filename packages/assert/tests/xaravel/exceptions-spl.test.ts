@@ -21,7 +21,10 @@ const root = resolve(import.meta.dir, "..", "..", "..", "..");
 const SPAWN_TIMEOUT = 50_000;
 const CHILD_TIMEOUT = 60_000;
 
-/** The child: `MODE` is `runtime-first`, `grader-first` or `none`. It prints one JSON object. */
+/**
+ * The child: `MODE` is `runtime-first`, `grader-first`, `late-load` (grader exceptions built, then the runtime loaded,
+ * nothing new built) or `none`. It prints one JSON object.
+ */
 const CHILD = `
 const MODE = process.env.XT_SPL_MODE;
 if (MODE === "runtime-first") {
@@ -48,6 +51,15 @@ const { Factory } = await import(A + "comparator/Factory.ts");
 const { ExceptionComparator } = await import(A + "comparator/ExceptionComparator.ts");
 const { Exception: ExceptionConstraint } = await import(A + "Framework/Constraint/Exception/Exception.ts");
 const { testCaseState } = await import(A + "Framework/TestCase.ts");
+if (MODE === "late-load") {
+  const before = [(() => { try { Assert.assertTrue(false); } catch (e) { return e; } })(), (() => { try { Assert.assertSame(1, 2); } catch (e) { return e; } })()];
+  await import("./packages/runtime/src/index.ts");
+  const map = globalThis[Symbol.for("xaravel.php.classes")];
+  // Nothing new is built: asking the comparator (which reads the map) links the exceptions already made.
+  const accepts = new ExceptionComparator().accepts(before[0], before[1]);
+  process.stdout.write(JSON.stringify({ accepts, runtimeException: before.map((e) => e instanceof map.RuntimeException), phpException: before.map((e) => e instanceof map.Exception) }));
+  process.exit(0);
+}
 if (MODE === "grader-first") {
   await import("./packages/runtime/src/index.ts");
 }
@@ -89,7 +101,8 @@ for (const [label, make, parent] of table) {
     previous: typeof value.getPrevious === "function" ? (value.getPrevious() === prev ? "prev" : value.getPrevious()) : "(none)",
     message: value.message,
     name: value.name,
-    ownKeys: Object.keys(value),
+    ownKeys: Reflect.ownKeys(value).map(String),
+    graderException: value instanceof Exception,
     cause: value.cause === prev ? "prev" : value.cause === undefined ? "(none)" : String(value.cause),
   };
 }
@@ -112,6 +125,31 @@ if (map !== null) {
   test.expectException(map.RuntimeException);
   let instanceOf = null;
   try { Assert.assertInstanceOf(map.RuntimeException, failure); } catch (e) { instanceOf = e.getMessage(); }
+  // A TestCase body under expectException(\\RuntimeException), run as the grader's runLifecycle runs it (runTest:
+  // a throw is verified when shouldBeVerifiedFor says so, else it propagates; no throw is assertWasRaised).
+  const runTest = (body) => {
+    const t = new TestCase();
+    t.expectException(map.RuntimeException);
+    const state = testCaseState(t);
+    try {
+      let threw = false;
+      try {
+        body.call(t);
+      } catch (thrown) {
+        threw = true;
+        if (!state.exception.shouldBeVerifiedFor(thrown)) {
+          throw thrown;
+        }
+        state.exception.verify(thrown);
+      }
+      if (!threw) {
+        state.exception.assertWasRaised();
+      }
+      return null;
+    } catch (e) {
+      return [e.constructor.name, e.getMessage()];
+    }
+  };
   out.comparator = {
     runtimeExceptions: comparator.accepts(new map.RuntimeException("a"), new map.RuntimeException("b")),
     runtimeErrors: comparator.accepts(new map.TypeError("a"), new map.TypeError("b")),
@@ -125,6 +163,8 @@ if (map !== null) {
     assertInstanceOf: instanceOf,
     // PHPUnit's ExceptionExpectation::shouldBeVerifiedFor: an assertion failure still fails the test.
     verified: testCaseState(test).exception.shouldBeVerifiedFor(failure),
+    failingBody: runTest(function () { this.assertTrue(false); }),
+    throwingBody: runTest(function () { throw new map.RuntimeException("x"); }),
   };
 } else {
   out.comparator = { jsErrors: comparator.accepts(new Error("a"), new Error("b")) };
@@ -141,7 +181,7 @@ interface ChildOutput {
   readonly expectException?: Record<string, unknown>;
 }
 
-function runChild(mode: "runtime-first" | "grader-first" | "none"): ChildOutput {
+function runChild(mode: "runtime-first" | "grader-first" | "late-load" | "none"): ChildOutput {
   const child = Bun.spawnSync([process.execPath, "-e", CHILD], {
     cwd: root,
     env: { ...process.env, XT_SPL_MODE: mode },
@@ -180,9 +220,20 @@ xaravelTest("XT-assert-18", "given the runtime's class map, the grader's excepti
     previous: "prev",
     message: "m",
     name: "Exception",
-    ownKeys: ["name"],
+    // Bun 1.4.3's own Error keys (line, column, …) included.
+    ownKeys: ["message", "cause", "code", "name", "originalLine", "originalColumn", "line", "column", "sourceURL", "stack"],
+    graderException: true,
     cause: "prev",
   });
+  // The code and previous passed are the ones read back, for every class built with them.
+  for (const label of ["PHPUnit\\Framework\\Exception", "AssertionFailedError", "MockObject\\RuntimeException"]) {
+    expect({ label, code: none.classes[label]!["getCode"], previous: none.classes[label]!["previous"] }).toEqual({ label, code: 5, previous: "prev" });
+  }
+  // Laravel's InvalidArgumentException and PHPUnit's UnknownClassOrInterfaceException and EmptyStringException are
+  // PHPUnit\Framework\Exceptions, as in PHP.
+  for (const label of ["Illuminate\\Testing\\Exceptions\\InvalidArgumentException", "UnknownClassOrInterfaceException", "EmptyStringException"]) {
+    expect({ label, graderException: none.classes[label]!["graderException"] }).toEqual({ label, graderException: true });
+  }
 
   for (const [mode, run] of [
     ["runtime-first", runtimeFirst],
@@ -210,7 +261,19 @@ xaravelTest("XT-assert-18", "given the runtime's class map, the grader's excepti
     });
     expect({ mode, expectException: run.expectException }).toEqual({
       mode,
-      expectException: { failureIsRuntimeException: true, constraint: true, assertInstanceOf: null, verified: false },
+      expectException: {
+        failureIsRuntimeException: true,
+        constraint: true,
+        assertInstanceOf: null,
+        verified: false,
+        // As PHPUnit: the assertion failure fails the test; a thrown \\RuntimeException satisfies the expectation.
+        failingBody: ["ExpectationFailedException", "Failed asserting that false is true."],
+        throwingBody: null,
+      },
     });
   }
+
+  // The runtime loaded after grader exceptions exist, nothing new built: they read as the runtime's classes.
+  const lateLoad = runChild("late-load") as unknown as Record<string, unknown>;
+  expect(lateLoad).toEqual({ accepts: true, runtimeException: [true, true], phpException: [true, true] });
 }, CHILD_TIMEOUT);

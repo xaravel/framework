@@ -127,8 +127,9 @@ export abstract class AbstractInvocationImplementation implements InvocationStub
       // No single configured method: the map is used as given.
       return [...valueMap];
     }
-    const numberOfParameters = method.numberOfParameters();
-    const defaultValues = method.defaultParameterValues();
+    const row = method.signature();
+    const numberOfParameters = method.numberOfParameters(row);
+    const defaultValues = method.defaultParameterValues(row);
     const hasDefaultValues = defaultValues.size > 0;
     return [...valueMap].map((mapping) => {
       if (!Array.isArray(mapping) || mapping.length - 1 === numberOfParameters || !hasDefaultValues) {

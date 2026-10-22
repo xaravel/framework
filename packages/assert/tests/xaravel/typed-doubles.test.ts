@@ -14,10 +14,11 @@
 // of the PHP twin. A missing, unsigned or errored fixture fails the test; it
 // is never skipped. The fixture-free rows run first.
 //
-// The globals a row needs (`Symbol.for('xaravel.api.signature')`,
-// `Symbol.for('xaravel.class.lookup')`, and `Symbol.for('xaravel.php.classes')`
-// when no runtime has published it) are installed with configurable defines
-// and restored after it.
+// The globals a fixture-free row needs (`Symbol.for('xaravel.api.signature')`,
+// `Symbol.for('xaravel.class.lookup')`) are installed with configurable
+// defines and restored after it; no class map is ever faked. The Oracle cells
+// run in a child `bun` that loads @xaravel/runtime first (AD-2: the grader
+// never imports it), so `object` gets the runtime's own `stdClass`.
 import { expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -26,7 +27,7 @@ import { evaluateDefault } from "../../src/Framework/MockObject/Generator/Signat
 import { type MockObject, TestCase, xaravelTest } from "../../src/index";
 import { type Cell, runCase47 } from "./double-cells";
 import { decode, type Output, readRequests, readSignedFixture } from "./oracle-values";
-import { REQUEST, TYPED_CELLS, TYPED_ROWS, typedLookup, XtTyped, XtTypedBase } from "./typed-double-cells";
+import { REQUEST, TYPED_CELLS, TYPED_ROWS } from "./typed-double-cells";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
 const REQUESTS = "conformance/oracle-requests/9.11.jsonl";
@@ -36,6 +37,8 @@ const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 const SIGNATURE = Symbol.for("xaravel.api.signature");
 const LOOKUP = Symbol.for("xaravel.class.lookup");
 const PHP_CLASSES = Symbol.for("xaravel.php.classes");
+const SPAWN_TIMEOUT = 50_000;
+const CHILD_TIMEOUT = 60_000;
 
 /** Installs `values` on `globalThis` with configurable defines (`null` removes one), runs `fn`, and restores them. */
 function withGlobals<T>(values: ReadonlyMap<symbol, unknown>, fn: () => T): T {
@@ -61,21 +64,25 @@ function withGlobals<T>(values: ReadonlyMap<symbol, unknown>, fn: () => T): T {
   }
 }
 
-/** A `stdClass` for `object` returns when no runtime has published its class map. */
-class FakeStdClass {
-  static readonly [CLASS_FQCN]: string = "stdClass";
-}
+/**
+ * The Oracle cells' TS runs, in a fresh `bun` from the repo root that loads @xaravel/runtime first, so `object`
+ * returns the runtime's own `stdClass` (the grader never imports the runtime, AD-2). The child installs the twin's
+ * rows and a class lookup that knows `XtTypedBase`, then prints each cell's `runCase47` outcome as JSON.
+ */
+const CELLS_CHILD = `
+await import("./packages/runtime/src/index.ts");
+const cells = await import("./packages/assert/tests/xaravel/typed-double-cells.ts");
+const { runCase47 } = await import("./packages/assert/tests/xaravel/double-cells.ts");
+const define = (key, value) => Object.defineProperty(globalThis, key, { value, writable: false, enumerable: false, configurable: true });
+define(Symbol.for("xaravel.api.signature"), cells.typedLookup);
+define(Symbol.for("xaravel.class.lookup"), (name) => (name === "XtTypedBase" ? cells.XtTypedBase : null));
+process.stdout.write(JSON.stringify(cells.TYPED_CELLS.map((cell) => runCase47(cell.ts))));
+`;
 
-/** The XT-assert-20 globals: the twin's rows, a class lookup that knows `XtTypedBase`, and a class map if none. */
-function typedGlobals(): Map<symbol, unknown> {
-  const globals = new Map<symbol, unknown>([
-    [SIGNATURE, typedLookup],
-    [LOOKUP, (name: string): unknown => (name === "XtTypedBase" ? XtTypedBase : null)],
-  ]);
-  if ((globalThis as Record<symbol, unknown>)[PHP_CLASSES] === undefined) {
-    globals.set(PHP_CLASSES, Object.freeze({ stdClass: FakeStdClass }));
-  }
-  return globals;
+function runCellsChild(): unknown[] {
+  const child = Bun.spawnSync([process.execPath, "-e", CELLS_CHILD], { cwd: root, stdout: "pipe", stderr: "pipe", timeout: SPAWN_TIMEOUT });
+  expect({ exitCode: child.exitCode, stderr: child.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
+  return JSON.parse(child.stdout.toString()) as unknown[];
 }
 
 // ---------------------------------------------------------------------------
@@ -90,8 +97,38 @@ class XtDep {
   }
 }
 
-class XtExtra {
-  static readonly [CLASS_FQCN]: string = "XtExtra";
+class XtExtraBase {
+  static readonly [CLASS_FQCN]: string = "XtExtraBase";
+
+  base(): unknown {
+    return "base";
+  }
+}
+
+class XtExtra extends XtExtraBase {
+  static override readonly [CLASS_FQCN]: string = "XtExtra";
+
+  me(): unknown {
+    return this;
+  }
+  maybe(): unknown {
+    return this;
+  }
+  up(): unknown {
+    return this;
+  }
+  nb(): unknown {
+    return null;
+  }
+  inter(): unknown {
+    return null;
+  }
+  dnf(): unknown {
+    return null;
+  }
+  pad(a?: unknown, b?: unknown): unknown {
+    return [a, b];
+  }
 
   fl(): unknown {
     return 1.5;
@@ -116,6 +153,23 @@ class XtExtra {
   }
 }
 
+/** A class without a parent class, whose method declares `parent`. */
+class XtOrphan {
+  static readonly [CLASS_FQCN]: string = "XtOrphan";
+
+  up(): unknown {
+    return this;
+  }
+}
+
+/** A contract token (AD-1) naming its method, as Story 10.1's tokens do. */
+const XT_CONTRACT_BRAND = Symbol.for("XtContract");
+const XtContract = Object.freeze({
+  [CLASS_FQCN]: "XtContract",
+  [Symbol.for("xaravel.contract.methods")]: Object.freeze(["find"]),
+  [Symbol.hasInstance]: (value: unknown): boolean => typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[XT_CONTRACT_BRAND] === true,
+});
+
 /** A class with no row at all (a test-local class). */
 class XtLocal {
   static readonly [CLASS_FQCN]: string = "XtLocal";
@@ -137,10 +191,38 @@ const EXTRA_ROWS = new Map<string, object>([
   ["obj", { parameters: [], returns: "object", nullable: false }],
   ["map", { parameters: [parameter("key", null), parameter("flag", "Foo::BAR")], returns: null, nullable: true }],
   ["i", { parameters: [parameter("declared", null)], returns: "int", nullable: false }],
+  ["me", { parameters: [parameter("x", null)], returns: "self", nullable: false }],
+  ["maybe", { parameters: [parameter("x", null)], returns: "?self", nullable: true }],
+  ["up", { parameters: [], returns: "parent", nullable: false }],
+  ["nb", { parameters: [parameter("x", null)], returns: "?XtDep", nullable: true }],
+  ["inter", { parameters: [parameter("x", null)], returns: "XtDep&Countable", nullable: false }],
+  ["dnf", { parameters: [parameter("x", null)], returns: "(XtDep&Countable)|XtExtra", nullable: false }],
+  ["pad", { parameters: [parameter("a", null), parameter("b", "7")], returns: null, nullable: true }],
 ]);
 
 function extraLookup(fqcn: unknown, member: unknown): unknown {
+  if (fqcn === "XtOrphan" && member === "up") {
+    return { parameters: [], returns: "parent", nullable: false };
+  }
+  if (fqcn === "XtContract" && member === "find") {
+    return { parameters: [parameter("key", null)], returns: "string", nullable: false };
+  }
   return fqcn === "XtExtra" && typeof member === "string" ? (EXTRA_ROWS.get(member) ?? null) : null;
+}
+
+/** The thrown cell of a `with(1)` expectation on `method` broken by calling it with 2. */
+function withFailure(target: unknown, method: string): Cell {
+  return failureOf(() => {
+    const test = new TestCase();
+    const m = test.createMock(target as typeof XtExtra) as unknown as Record<string, Call> & MockObject;
+    m.expects(test.once()).method(method).with(1);
+    return m[method]!(2);
+  });
+}
+
+/** PHPUnit's message for a `with(1)` expectation on `C::m()` broken by calling it with 2, `suffix` after the call. */
+function withMessage(declaring: string, target: string, method: string, parameter: string, suffix: string): string {
+  return `Expectation for ${target}::${method}() failed.\nParameter ${parameter} for invocation ${declaring}::${method}(2)${suffix} does not match expected value.\nFailed asserting that 2 matches expected 1.`;
 }
 
 type Extra = XtExtra & MockObject;
@@ -192,7 +274,7 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
     const result = evaluateDefault(text);
     return result === null ? "(not evaluated)" : result.value;
   };
-  expect(["null", "true", "FALSE", "2", "-1", "0.5", "10.0", "1.0E+25", "9223372036854775807", "'x'", "'a\\\\b\\'c'", '"x\\n"', "[]", "['*']", "[2, 100]", "INF", "PHP_EOL", "PHP_INT_MAX", "SORT_REGULAR", "MB_CASE_FOLD"].map(evaluated)).toEqual([
+  expect(["null", "true", "FALSE", "2", "-1", "0.5", "10.0", "1.0E+25", "9223372036854775807", "'x'", "'a\\\\b\\'c'", '"x\\n"', "[]", "['*']", "[2, 100]", "INF", "PHP_EOL", "PHP_INT_MAX", "SORT_REGULAR", "MB_CASE_FOLD", "0755", "0o755", "0x1F", "0b101", "1_000", "-0x10", "0", "0x7FFF_FFFF_FFFF_FFFF"].map(evaluated)).toEqual([
     null,
     true,
     false,
@@ -213,8 +295,16 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
     9223372036854775807n,
     0,
     3,
+    493,
+    493,
+    31,
+    5,
+    1000,
+    -16,
+    0,
+    9223372036854775807n,
   ]);
-  for (const text of ["['a' => 1]", "Foo::BAR", "new \\Foo()", "Laravel\\Enums\\Case::A", '"$x"', "[Foo::A, Foo::B]", "self::X"]) {
+  for (const text of ["089", "0x", "1__0", "['a' => 1]", "Foo::BAR", "new \\Foo()", "Laravel\\Enums\\Case::A", '"$x"', "[Foo::A, Foo::B]", "self::X"]) {
     expect({ text, value: evaluateDefault(text) }).toEqual({ text, value: null });
   }
 
@@ -290,7 +380,57 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
       const stub = (new TestCase().createMock(XtExtra) as Extra).cls() as XtDep;
       expect([stub instanceof XtDep, classNameOf(stub).startsWith("TestStub_XtDep_"), stub.name()]).toEqual([true, true, null]);
     });
-    // `object`: the runtime's stdClass, or PHPUnit's message when no class map is published.
+    // `self`, `?self` and `parent`, without the class lookup: the declaring class and its parent resolve directly.
+    const self = (new TestCase().createMock(XtExtra) as Extra).me() as XtExtra;
+    const up = (new TestCase().createMock(XtExtra) as Extra).up() as XtExtraBase;
+    expect([self instanceof XtExtra, classNameOf(self).startsWith("TestStub_XtExtra_"), up instanceof XtExtraBase, up instanceof XtExtra, classNameOf(up).startsWith("TestStub_XtExtraBase_")]).toEqual([
+      true,
+      true,
+      true,
+      false,
+      true,
+    ]);
+    expect((new TestCase().createMock(XtExtra) as Extra).maybe()).toBeNull();
+    expect(withFailure(XtExtra, "me")?.[1]).toBe(withMessage("XtExtra", "XtExtra", "me", "$x", ": XtExtra"));
+    expect(withFailure(XtExtra, "maybe")?.[1]).toBe(withMessage("XtExtra", "XtExtra", "maybe", "$x", ": XtExtra"));
+    // `parent` of a class with no named parent.
+    expect(failureOf(() => (new TestCase().createMock(XtOrphan) as XtOrphan & MockObject).up())).toEqual([
+      "RuntimeException",
+      "Return value for XtOrphan::up() cannot be generated: the declaring class XtOrphan has no named parent",
+      null,
+      0,
+    ]);
+    // A nullable class type.
+    expect((new TestCase().createMock(XtExtra) as Extra).nb()).toBeNull();
+    expect(withFailure(XtExtra, "nb")?.[1]).toBe(withMessage("XtExtra", "XtExtra", "nb", "$x", ": XtDep"));
+    // An intersection and a DNF type: PHPUnit's messages, and sebastian/type's sorted forms in toString.
+    expect(failureOf(() => (new TestCase().createMock(XtExtra) as Extra).inter())).toEqual([
+      "RuntimeException",
+      "Return value for XtExtra::inter() cannot be generated because the declared return type is an intersection, please configure a return value for this method",
+      null,
+      0,
+    ]);
+    expect(failureOf(() => (new TestCase().createMock(XtExtra) as Extra).dnf())).toEqual([
+      "RuntimeException",
+      "Return value for XtExtra::dnf() cannot be generated because the declared return type is a union, please configure a return value for this method",
+      null,
+      0,
+    ]);
+    expect(withFailure(XtExtra, "inter")?.[1]).toBe(withMessage("XtExtra", "XtExtra", "inter", "$x", ": Countable&XtDep"));
+    expect(withFailure(XtExtra, "dnf")?.[1]).toBe(withMessage("XtExtra", "XtExtra", "dnf", "$x", ": (Countable&XtDep)|XtExtra"));
+    // A contract token with a row for its FQCN.
+    const contract = new TestCase().createMock(XtContract) as unknown as { find(...args: unknown[]): unknown } & MockObject;
+    expect([contract.find(), contract instanceof (XtContract as unknown as typeof XtExtra)]).toEqual(["", true]);
+    expect(withFailure(XtContract, "find")?.[1]).toBe(withMessage("XtContract", "XtContract", "find", "$key", ": string"));
+    // An explicit `undefined` is omitted: the declared default, or null where there is none; never `undefined`.
+    const padded = new TestCase().createMock(XtExtra) as Extra;
+    padded.method("pad").willReturnCallback((...a: unknown[]) => a);
+    expect([padded.pad(1, undefined), padded.pad(undefined, 2), padded.pad(1)]).toEqual([
+      [1, 7],
+      [null, 2],
+      [1, 7],
+    ]);
+    // `object`: the runtime's stdClass (in the cells' child), or PHPUnit's message when no class map is published.
     const map = (globalThis as Record<symbol, unknown>)[PHP_CLASSES] as Record<string, new () => object> | undefined;
     if (map === undefined) {
       expect(failureOf(() => (new TestCase().createMock(XtExtra) as Extra).obj())).toEqual([
@@ -315,17 +455,15 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
   expect(problems).toEqual([]);
   // The rows the fake lookup serves are the Oracle's reflection of the PHP twin, in api-surface.php's form.
   expect([resultValue(output!, 0, "rows of XtTypedBase"), resultValue(output!, 1, "rows of XtTyped")]).toEqual([TYPED_ROWS["XtTypedBase"], TYPED_ROWS["XtTyped"]]);
-  const mismatches = withGlobals(typedGlobals(), () => {
-    const found: string[] = [];
-    TYPED_CELLS.forEach((cell, index) => {
-      const oracle = resultValue(output!, index + 2, cell.label);
-      const got = runCase47(cell.ts);
-      if (!Bun.deepEquals(oracle, got, true)) {
-        found.push(`${cell.label}:\n    Oracle ${JSON.stringify(oracle)}\n    got    ${JSON.stringify(got)}`);
-      }
-    });
-    return found;
+  const outcomes = runCellsChild();
+  expect(outcomes).toHaveLength(TYPED_CELLS.length);
+  const mismatches: string[] = [];
+  TYPED_CELLS.forEach((cell, index) => {
+    const oracle = resultValue(output!, index + 2, cell.label);
+    const got = outcomes[index];
+    if (!Bun.deepEquals(oracle, got, true)) {
+      mismatches.push(`${cell.label}:\n    Oracle ${JSON.stringify(oracle)}\n    got    ${JSON.stringify(got)}`);
+    }
   });
   expect(mismatches).toEqual([]);
-  void XtTyped;
-});
+}, CHILD_TIMEOUT);

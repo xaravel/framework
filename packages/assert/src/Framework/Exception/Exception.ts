@@ -1,5 +1,6 @@
 // PHPUnit 13.4.3's `PHPUnit\Framework\Exception` (Story 4.4, ESC-4.3-1 item 12):
-// the base of every PHPUnit exception. PHP's source declares
+// the base of PHPUnit's framework exceptions (assertion failures, skips, the
+// test-double configuration errors). PHP's source declares
 // `class Exception extends RuntimeException`, so it extends the grader's
 // internal `RuntimeExceptionParent`, which links it to the runtime's
 // `\RuntimeException` when the runtime's class map is published (Story 9.11).
@@ -10,8 +11,11 @@
 // `code` a non-enumerable own property, so the grader's exporter and
 // comparators read both as they read any JS error's.
 //
-// The message rewrite protocol (Story 9.11, ESC-4.3-1 item 11): every PHPUnit
-// exception has a non-enumerable method under
+// The message rewrite protocol (Story 9.11, ESC-4.3-1 item 11): every
+// `PHPUnit\Framework\Exception` (this class and its subclasses; not
+// `MockObject\RuntimeException`, `NeverReturningMethodException`,
+// `ComparisonFailure` or `InvalidJsonException`, which PHP does not derive from
+// it) has a non-enumerable method under
 // `Symbol.for('xaravel.assert.setMessage')`, which Laravel's
 // `TestResponseAssert::appendMessageToException` port calls in place of PHP's
 // reflection on `message`, without importing the grader. Called with a string,

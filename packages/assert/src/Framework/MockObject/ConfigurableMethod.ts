@@ -5,7 +5,7 @@
 // declares it (its `Symbol.for('xaravel.class.fqcn')` brand, as
 // `ReflectionMethod::getDeclaringClass()` names it). When the signature lookup
 // has a row for that class and method (Generator/Signature.ts, read at each
-// call), the row gives the parameter count, the `$names` and the defaults:
+// call; a caller that needs several of these reads it once and passes it), the row gives the parameter count, the `$names` and the defaults:
 // only a parameter with a declared default has one, and a default the grader
 // cannot evaluate throws PHPUnit's `MockObject\RuntimeException` when it is
 // needed. With no row, there are no PHP types or default values: a JS
@@ -18,11 +18,12 @@ import { evaluateDefault, signatureOf, type SignatureRow } from "./Generator/Sig
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 
-/** The class (or contract token) that declares a method: its FQCN, the value itself, and its parent's FQCN. */
+/** The class (or contract token) that declares a method: its FQCN, the value itself, and its parent's FQCN and class. */
 export interface DeclaringClass {
   readonly name: string;
   readonly type: unknown;
   readonly parentName: string | null;
+  readonly parentType: unknown;
 }
 
 export class ConfigurableMethod {
@@ -56,14 +57,12 @@ export class ConfigurableMethod {
   }
 
   /** PHP's `count($method->getParameters())` with a row (the variadic included); else the JS source's count. */
-  numberOfParameters(): number {
-    const row = this.signature();
+  numberOfParameters(row: SignatureRow | null = this.signature()): number {
     return row === null ? this.#numberOfParameters : row.parameters.length;
   }
 
   /** `$name` per declared parameter (a row's, its variadic included, as PHPUnit reflects them), or empty (Parameters uses the index). */
-  parameterNames(): readonly string[] {
-    const row = this.signature();
+  parameterNames(row: SignatureRow | null = this.signature()): readonly string[] {
     return row === null ? this.#parameterNames : row.parameters.map((parameter) => `$${parameter.name}`);
   }
 
@@ -71,8 +70,7 @@ export class ConfigurableMethod {
    * The declared defaults by position, each evaluated when it is read (PHPUnit's `defaultParameterValues()`, which
    * has an entry only for a parameter with a default). With no row, `null` at each declared position.
    */
-  defaultParameterValues(): ReadonlyMap<number, () => unknown> {
-    const row = this.signature();
+  defaultParameterValues(row: SignatureRow | null = this.signature()): ReadonlyMap<number, () => unknown> {
     const defaults = new Map<number, () => unknown>();
     if (row === null) {
       for (let index = 0; index < this.#numberOfParameters; index++) {

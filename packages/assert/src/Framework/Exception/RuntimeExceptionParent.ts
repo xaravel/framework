@@ -12,9 +12,10 @@
 // PHP. The grader never imports the runtime (AD-2): it reads the map by its symbol only.
 //
 // Construction then runs the runtime constructor, which takes PHP's `(string $message, int $code,
-// ?Throwable $previous)`; the parent passes only those. The runtime's own `name` and `code` properties are
-// removed again, so a grader exception has the same own properties with and without the map (each class
-// sets its `name`, and PHPUnit's `Exception` its read-only `code`). With no map, the chain is the one the
+// ?Throwable $previous)`; the parent passes only those. The runtime's own `name` is removed again and `code`
+// is set the same way in both cases, so a grader exception has the same own properties with and without the
+// map (each class sets its `name`, and PHPUnit's `Exception` makes its `code` read-only). `phpClass()` links
+// too, so an exception built before the runtime loaded reads as the runtime's class once a caller asks. With no map, the chain is the one the
 // grader had before Story 9.11: the class, this parent, the JS `Error`.
 const PHP_CLASSES = Symbol.for("xaravel.php.classes");
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
@@ -27,10 +28,18 @@ export function phpClassMap(): Readonly<Record<string, unknown>> | null {
   return typeof map === "object" && map !== null ? (map as Readonly<Record<string, unknown>>) : null;
 }
 
-/** The runtime's PHP class `name`, when the map is published and holds it. */
-export function phpClass(name: string): PhpClass | null {
+function mapClass(name: string): PhpClass | null {
   const found: unknown = phpClassMap()?.[name];
   return typeof found === "function" ? (found as PhpClass) : null;
+}
+
+/**
+ * The runtime's PHP class `name`, when the map is published and holds it. It links the grader's exceptions first, so
+ * exceptions built before the runtime loaded are already `instanceof` its classes when a caller asks.
+ */
+export function phpClass(name: string): PhpClass | null {
+  link();
+  return mapClass(name);
 }
 
 let linked = false;
@@ -38,7 +47,7 @@ let linked = false;
 /** Re-parents `RuntimeExceptionParent` onto the runtime's `RuntimeException` once the map is published. */
 function link(): boolean {
   if (!linked) {
-    const parent = phpClass("RuntimeException");
+    const parent = mapClass("RuntimeException");
     if (parent !== null) {
       Object.setPrototypeOf(RuntimeExceptionParent, parent);
       Object.setPrototypeOf(RuntimeExceptionParent.prototype, parent.prototype);
@@ -67,10 +76,11 @@ export class RuntimeExceptionParent extends Error {
         : [message, { cause: previous }];
     super(...args);
     if (runtime) {
-      // The runtime's own `name` and `code`: each grader class sets its own, as without the map.
+      // The runtime's own `name`: each grader class sets its own, as without the map.
       delete (this as { name?: unknown }).name;
-      delete (this as { code?: unknown }).code;
     }
+    // PHP's `$code`, an own non-enumerable property with and without the map (PHPUnit's `Exception` makes it read-only).
+    Object.defineProperty(this, "code", { value: code, writable: true, enumerable: false, configurable: true });
   }
 
   /** PHP's `getMessage()` (a subclass with its own message keeps overriding it). */

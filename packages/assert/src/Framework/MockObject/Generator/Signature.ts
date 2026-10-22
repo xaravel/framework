@@ -10,7 +10,7 @@
 // DIV-6.4's rule: names from the JS source, `null` defaults, a `null` return.
 //
 // A row's `default` is PHP source text. `evaluateDefault` evaluates the forms the committed surface uses: `null`,
-// `true`, `false`, ints (a `bigint` outside the safe range), floats (plain numbers: the grader cannot make the
+// `true`, `false`, ints (decimal, hex, binary or octal, `_` allowed; a `bigint` outside the safe range), floats (plain numbers: the grader cannot make the
 // runtime's float marker, AD-2, so an integral one reads as an int; DIV-9.4), single-quoted strings, double-quoted
 // strings with PHP's simple escapes and no `$`, list arrays of these, and the constants `INF`, `PHP_EOL`,
 // `PHP_INT_MAX`, `SORT_REGULAR`, `MB_CASE_FOLD` and `E_DEPRECATED`. Anything else (a keyed array, a class constant,
@@ -125,7 +125,8 @@ const CONSTANTS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["E_DEPRECATED", 8192],
 ]);
 
-const INT = /^-?\d+$/;
+/** PHP int literals: decimal, `0x` hex, `0b` binary, `0o` or leading-`0` octal, with `_` separators. */
+const INT = /^-?(?:0[xX][0-9a-fA-F]+(?:_[0-9a-fA-F]+)*|0[bB][01]+(?:_[01]+)*|0[oO][0-7]+(?:_[0-7]+)*|0(?:_?[0-7]+)*|[1-9][0-9]*(?:_[0-9]+)*)$/;
 const FLOAT = /^-?(?:\d+\.\d+(?:[eE][+-]?\d+)?|\d+[eE][+-]?\d+)$/;
 const DOUBLE_ESCAPES: Readonly<Record<string, string>> = { n: "\n", t: "\t", r: "\r", v: "\v", e: "\x1b", f: "\f", "\\": "\\", $: "$", '"': '"' };
 
@@ -243,6 +244,21 @@ class Reader {
   }
 }
 
+/** A PHP int literal's value (`0755` is octal 493, as PHP reads it). */
+function intLiteral(token: string): bigint {
+  const negative = token.startsWith("-");
+  const digits = (negative ? token.slice(1) : token).replace(/_/g, "");
+  let value: bigint;
+  if (/^0[xXbBoO]/.test(digits)) {
+    value = BigInt(digits.toLowerCase());
+  } else if (digits.length > 1 && digits.startsWith("0")) {
+    value = BigInt(`0o${digits.slice(1)}`);
+  } else {
+    value = BigInt(digits);
+  }
+  return negative ? -value : value;
+}
+
 function scalar(token: string): unknown {
   const lower = token.toLowerCase();
   if (lower === "null") {
@@ -255,7 +271,7 @@ function scalar(token: string): unknown {
     return false;
   }
   if (INT.test(token)) {
-    const big = BigInt(token);
+    const big = intLiteral(token);
     return big >= SAFE_MIN && big <= SAFE_MAX ? Number(big) : big;
   }
   if (FLOAT.test(token)) {

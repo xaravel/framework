@@ -17,6 +17,8 @@
 
 import { RuntimeExceptionParent } from "../Framework/Exception/RuntimeExceptionParent";
 
+const INVALID_JSON_FQCN = Symbol.for("xaravel.class.fqcn");
+
 export const JSON_ERROR_NONE = 0;
 export const JSON_ERROR_DEPTH = 1;
 export const JSON_ERROR_STATE_MISMATCH = 2;
@@ -501,6 +503,8 @@ export function canonicalize(json: string): readonly [true, null] | readonly [fa
  * `EncodeError` above are this module's internal signals, caught here, with no PHP class.
  */
 export class InvalidJsonException extends RuntimeExceptionParent {
+  static readonly [INVALID_JSON_FQCN]: string = "PHPUnit\\Util\\InvalidJsonException";
+
   constructor() {
     super("");
     this.name = "InvalidJsonException";

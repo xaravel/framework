@@ -30,12 +30,12 @@ export class Invocation {
   readonly #parameterNames: readonly string[];
   readonly #returnType: string;
   readonly #isReturnTypeNullable: boolean;
-  readonly #generator: ReturnValueGenerator | null;
+  readonly #generator: (() => ReturnValueGenerator) | null;
 
   /**
    * `parameterNames`: `$name` per declared parameter (from the signature row or the method's source), or empty
    * (Parameters uses the index). `returnType`: the declared type string, `''` when untyped or unknown. `generator`
-   * makes the value of an unconfigured call; with none it is `null`.
+   * builds, only when an unconfigured call needs a value, what makes it; with none it is `null`.
    */
   constructor(
     className: string,
@@ -44,7 +44,7 @@ export class Invocation {
     object: object,
     parameterNames: readonly string[] = [],
     returnType: string = "",
-    generator: ReturnValueGenerator | null = null,
+    generator: (() => ReturnValueGenerator) | null = null,
   ) {
     this.#className = className;
     this.#methodName = methodName;
@@ -80,7 +80,7 @@ export class Invocation {
     if (this.#isReturnTypeNullable || this.#generator === null) {
       return null;
     }
-    return this.#generator.generate(this.#className, this.#methodName, this.#object, this.#returnType);
+    return this.#generator().generate(this.#className, this.#methodName, this.#object, this.#returnType);
   }
 
   toString(): string {

@@ -146,7 +146,9 @@ function stringKey(key: string): Key {
 }
 
 /** A branded map's key: a safe-integer `number`, an int-range `bigint` or a `string`; anything else is a TypeError. */
-function brandedKey(key: unknown): Key {
+function brandedKey(given: unknown): Key {
+  // A marked float key reads as its number (Story 9.11).
+  const key = unmarkFloat(given);
   switch (typeof key) {
     case "number":
       if (Number.isSafeInteger(key)) {

@@ -8,7 +8,7 @@
 // `[]`; `static` gives a new double of the same class that shares its configurable methods; `object` gives the
 // runtime's `stdClass` (from `Symbol.for('xaravel.php.classes')`); `callable` or `Closure` an empty function that
 // returns `null`; `Traversable`, `Generator` or `iterable` an empty generator; a single class name gives a stub of
-// it (the declaring class and the double's target resolve directly, any other name through
+// it (the double's target, the declaring class and its parent resolve directly, any other name through
 // `Symbol.for('xaravel.class.lookup')`). Anything else throws PHPUnit's `MockObject\RuntimeException`. No surface
 // row declares an intersection, so intersection doubles are not built.
 import { phpClass } from "../../Exception/RuntimeExceptionParent";
@@ -21,7 +21,7 @@ export interface DoubleFactory {
   newInstanceOf(object: object): object;
   /** `createStub(type)`. */
   testDoubleFor(type: unknown): object;
-  /** The classes a name resolves to without the lookup (the declaring class, the target), by lower-case name. */
+  /** The classes a name resolves to without the lookup (the target, the declaring class and its parent), by lower-case name. */
   readonly known: ReadonlyMap<string, unknown>;
 }
 
@@ -110,6 +110,10 @@ export class ReturnValueGenerator {
 
   #testDoubleFor(name: string, className: string, methodName: string): object {
     const bare = name.replace(/^\\/, "");
+    if (bare.toLowerCase() === "parent") {
+      // The Generator resolves `parent` to the declaring class's parent FQCN; it stays only when there is none.
+      throw cannotBeBuilt(className, methodName, `the declaring class ${className} has no named parent`);
+    }
     let type: unknown = this.#factory.known.get(bare.toLowerCase()) ?? null;
     if (type === null) {
       if (!hasClassLookup()) {
