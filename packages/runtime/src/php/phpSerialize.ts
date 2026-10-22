@@ -26,10 +26,10 @@
 // `phpSerialize`. Enums, `Serializable` and PHP references have no AD-9 value, so `E:`, `C:` and `R:` are never written.
 import { fqcn } from "../registry/registry";
 import { arrayEntries, floatValue, phpType } from "./casts";
+import { gcvt } from "./gcvt";
 import { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
-import { LONE_SURROGATE, propertyTable, type PhpPropertySlot, unmangle, utf8 } from "./mangle";
+import { declaredProps, LONE_SURROGATE, objectProps, objectTable, unmangle, utf8 } from "./mangle";
 
-const PHP_PROPS = Symbol.for("xaravel.php.props");
 const RECURSION = "Nesting level too deep - recursive dependency?";
 
 interface State {
@@ -39,40 +39,6 @@ interface State {
   readonly objects: Map<object, number>;
   /** The arrays being written, to refuse a JS array that contains itself. */
   readonly path: Set<object>;
-}
-
-/**
- * A float as `serialize()` writes it at `serialize_precision = -1` (`smart_str_append_double` with `zend_gcvt` over
- * the shortest round-trip digits): `d.dddE±x` when the decimal-point position is below -3 or above 17 (`.0` after a
- * one-digit mantissa), else positional; `INF`, `-INF`, `NAN`, and `-0` for -0.0. Internal to the codec.
- */
-export function formatSerializeFloat(x: number): string {
-  if (Number.isNaN(x)) {
-    return "NAN";
-  }
-  if (!Number.isFinite(x)) {
-    return x > 0 ? "INF" : "-INF";
-  }
-  if (x === 0) {
-    return Object.is(x, -0) ? "-0" : "0";
-  }
-  const sign = x < 0 ? "-" : "";
-  // toExponential() without a fraction count gives the shortest digits that round-trip, as zend_dtoa mode 0 does.
-  const [mantissa, exponentText] = Math.abs(x).toExponential().split("e") as [string, string];
-  const digits = mantissa.replace(".", "");
-  const exponent = Number(exponentText);
-  // |x| = 0.d1d2… * 10^decpt.
-  const decpt = exponent + 1;
-  if (decpt < -3 || decpt > 17) {
-    const fraction = digits.length > 1 ? digits.slice(1) : "0";
-    return `${sign}${digits[0]}.${fraction}E${exponent < 0 ? "-" : "+"}${Math.abs(exponent)}`;
-  }
-  if (decpt <= 0) {
-    return `${sign}0.${"0".repeat(-decpt)}${digits}`;
-  }
-  const integer = digits.length >= decpt ? digits.slice(0, decpt) : digits + "0".repeat(decpt - digits.length);
-  const fraction = digits.slice(decpt);
-  return fraction === "" ? `${sign}${integer}` : `${sign}${integer}.${fraction}`;
 }
 
 function serializeString(s: string): string {
@@ -95,27 +61,6 @@ function serializeMembers(name: string, members: readonly (readonly [number | bi
   return `${out}}`;
 }
 
-/**
- * The properties of an object whose class declares a PHP property table, by serialized name, in PHP's order: each
- * declared one (its JS value, or its default when the object has no such own property), then the object's other own
- * enumerable string keys as dynamic public properties.
- */
-function declaredProps(o: object, table: readonly PhpPropertySlot[]): Map<string, unknown> {
-  const record = o as Record<string, unknown>;
-  const props = new Map<string, unknown>();
-  const declared = new Set<string>();
-  for (const slot of table) {
-    declared.add(slot.name);
-    props.set(slot.key, Object.hasOwn(o, slot.name) ? (record[slot.name] ?? null) : slot.default);
-  }
-  for (const key of Object.keys(o)) {
-    if (!declared.has(key) && !props.has(key)) {
-      props.set(key, record[key] ?? null);
-    }
-  }
-  return props;
-}
-
 function serializeObject(o: object, state: State): string {
   if (typeof o === "function") {
     throw new Error("Serialization of 'Closure' is not allowed");
@@ -133,7 +78,7 @@ function serializeObject(o: object, state: State): string {
     }
     return serializeMembers(name, arrayEntries(data as object), state);
   }
-  const table = propertyTable(Reflect.get(Object.getPrototypeOf(o) as object, "constructor") as object);
+  const table = objectTable(o);
   const sleep: unknown = record["__sleep"];
   if (typeof sleep === "function") {
     const names: unknown = (sleep as () => unknown).call(o);
@@ -165,24 +110,7 @@ function serializeObject(o: object, state: State): string {
     }
     return serializeMembers(name, members, state);
   }
-  if (table !== null) {
-    return serializeMembers(name, [...declaredProps(o, table)], state);
-  }
-  const props: unknown = record[PHP_PROPS];
-  if (typeof props === "function") {
-    const data: unknown = (props as () => unknown).call(o);
-    const entries = typeof data === "object" && data !== null && phpType(data) === "array" ? arrayEntries(data) : [];
-    return serializeMembers(
-      name,
-      entries.map(([key, value]) => [String(key), value] as const),
-      state,
-    );
-  }
-  return serializeMembers(
-    name,
-    Object.keys(o).map((key) => [key, record[key] ?? null] as const),
-    state,
-  );
+  return serializeMembers(name, objectProps(o), state);
 }
 
 function serializeValue(v: unknown, state: State): string {
@@ -196,7 +124,7 @@ function serializeValue(v: unknown, state: State): string {
     case "int":
       return `i:${v as number | bigint};`;
     case "float":
-      return `d:${formatSerializeFloat(floatValue(v))};`;
+      return `d:${gcvt(floatValue(v), "E")};`;
     case "string":
       return serializeString(v as string);
     case "array": {
