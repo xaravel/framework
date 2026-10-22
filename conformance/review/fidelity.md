@@ -12,6 +12,8 @@ Two reviewer agents, separate from the implementer, review every Story against U
 
 **Framework source.** Whenever the change touches a `packages/<name>/src/` file, the prompt carries the `@asyncRoot` rules F-9 applies: AD-6's Derivation and Enforcement rules, DIV-1 and ESC-6.4-1 (evidence (d), [ESC-9.2-2](../escalations/ESC-9.2-2.md)). For the parts of such a file the diff's hunks leave out, evidence (g) lists every top-level and documented declaration with its line, full docblock and signature, and the line of every `@asyncRoot` tag the file holds after the change ([ESC-9.3-2](../escalations/ESC-9.3-2.md)).
 
+**Whole files.** The prompt also shows every file the change adds or modifies in full, every decision and DIV record those files cite anywhere, and the repository files they import, within the prompt's size cap (evidence (h), [MAINT-2026-10-22-fidelity-whole-files](../../decisions/MAINT-2026-10-22-fidelity-whole-files.md)). A file it names without its text is shown in full in another section, or omitted for size, as its note says; such a file is not missing from the repository.
+
 **Xaravel Tests.** The prompt shows each added or changed Xaravel Test in full, with every declaration it uses, directly or through another, from its own file or from a repository test module its file imports, each with its `path:lines`: the helpers it calls, including through a spread (`...helper()`), and the fixtures they name (evidence (e), [ESC-9.9-4](../escalations/ESC-9.9-4.md), [ESC-9.10-1](../escalations/ESC-9.10-1.md)).
 
 An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a PR that changes no Oracle request file.

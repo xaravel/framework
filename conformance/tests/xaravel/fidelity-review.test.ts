@@ -24,6 +24,7 @@ import {
   decisionEvidence,
   EXCERPT_CAP,
   fidelityVerdicts,
+  fileImports,
   gatherEvidence,
   importedDeclarations,
   findStorySpec,
@@ -54,6 +55,9 @@ import {
   testUnits,
   usedDeclarations,
   verdictSchema,
+  WHOLE_FILE_CAP,
+  wholeFileEvidence,
+  withWholeFiles,
   xaravelTestEvidence,
   type ChecklistItem,
   type PriorFinding,
@@ -718,7 +722,9 @@ xaravelTest(
     }
     expect(evidenceUser).toContain("@asyncRoot callback");
     // ESC-9.2-1: (f) carries each decision record an added line cites, once, in full, or why it is unavailable.
-    const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)"));
+    // Section (f) alone: (h) after it names (f)'s records again, as shown above.
+    const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)"), evidenceUser.indexOf("### (g) "));
+    expect(evidenceUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
     expect(sectionF).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
     expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
     expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
@@ -1269,6 +1275,71 @@ xaravelTest(
     const registryPatch = (path: string): { filename: string; status: string; patch: string }[] => [{ filename: path, status: "modified", patch: "@@ -1,1 +1,1 @@\n-x\n+y" }];
     expect(gatherEvidence(root, registryPatch(registryPath), none).decisions.map((entry) => entry.label)).toContain("decisions/ESC-9.4-1.md");
     expect(gatherEvidence(root, registryPatch("packages/runtime/tests/xaravel/registry.test.ts"), none).decisions.map((entry) => entry.label)).not.toContain("decisions/ESC-9.4-1.md");
+
+    // MAINT-2026-10-22-fidelity-whole-files: (h) shows each changed file in full, the records the changed files cite
+    // anywhere, and the repository files they import, so a reviewer never has to ask for a file the change relies on.
+    const read = (path: string): string => readFileSync(join(root, path), "utf8");
+    const semanticsTest = "packages/runtime/tests/xaravel/semantics.test.ts";
+    const oracleValues = "packages/assert/tests/xaravel/oracle-values.ts";
+    // Imports: a relative static import, a re-export, a side-effect import, a literal dynamic import and the dynamic
+    // idiom with a join(REPO, …) path resolve; a package import and a path outside the repository do not.
+    const known = new Set(["a/b/helper.ts", "a/shared.ts", "a/b/setup.ts", "a/b/lazy.ts", "pkg/tests/values.ts"]);
+    const importerText = [
+      'import { helper } from "./helper";',
+      'export { shared } from "../shared";',
+      'import "./setup";',
+      'const lazy = import("./lazy");',
+      'import { runtime } from "@xaravel/runtime";',
+      'import { gone } from "../../../outside";',
+      'const REPO = join(import.meta.dir, "..", "..");',
+      'const { Values } = (await import(join(REPO, "pkg", "tests", "values.ts"))) as { Values: unknown };',
+    ].join("\n");
+    expect(fileImports("a/b/c.test.ts", importerText, (path) => known.has(path))).toEqual(["a/b/helper.ts", "a/b/lazy.ts", "a/b/setup.ts", "a/shared.ts", "pkg/tests/values.ts"]);
+    expect(fileImports(semanticsTest, read(semanticsTest), (path) => existsSync(join(root, path)))).toContain(oracleValues);
+    // The ESC-9.10-1 cases come with no case-by-case rule: the imported grader module, and the decision a changed
+    // source file's unchanged docblock cites, are shown in full; the changed files are too.
+    const whole = wholeFileEvidence(root, [...registryPatch(registryPath), ...registryPatch(semanticsTest)], new Map(), 400_000);
+    const entry = (path: string) => whole.find((item) => item.path === path);
+    expect(entry("decisions/ESC-9.4-1.md")).toEqual({ path: "decisions/ESC-9.4-1.md", reason: `cited by ${registryPath}`, text: read("decisions/ESC-9.4-1.md"), note: null });
+    expect(entry(oracleValues)).toEqual({ path: oracleValues, reason: `imported by ${semanticsTest}`, text: read(oracleValues), note: null });
+    expect(entry(registryPath)).toEqual({ path: registryPath, reason: "changed", text: read(registryPath), note: null });
+    expect(entry(semanticsTest)!.text).toBe(read(semanticsTest));
+    expect(whole.filter((item) => item.path === registryPath)).toHaveLength(1);
+    // Order: cited records and a changed test's imports, which no other section shows, come before the changed files.
+    const order = whole.map((item) => item.path);
+    expect(order.indexOf("decisions/ESC-9.4-1.md")).toBeLessThan(order.indexOf(registryPath));
+    expect(order.indexOf(oracleValues)).toBeLessThan(order.indexOf(registryPath));
+    // A file another section shows in full is named, not repeated.
+    const named = wholeFileEvidence(root, registryPatch(registryPath), new Map([["decisions/ESC-9.4-1.md", "(f)"]]), 400_000);
+    expect(named.find((item) => item.path === "decisions/ESC-9.4-1.md")).toEqual({ path: "decisions/ESC-9.4-1.md", reason: `cited by ${registryPath}`, text: null, note: "shown in full above, in (f)" });
+    // Past the budget every file is still named, as omitted for size; none is dropped.
+    const tight = wholeFileEvidence(root, [...registryPatch(registryPath), ...registryPatch(semanticsTest)], new Map(), 100);
+    expect(tight.map((item) => item.path)).toEqual(order);
+    expect(tight.every((item) => item.text === null && item.note!.startsWith("omitted for size:"))).toBe(true);
+    // A file over the one-file limit is named with it; a removed or binary file and an Oracle fixture are not shown.
+    const toolPath = "tools/fidelity-review/fidelity-review.ts";
+    expect(read(toolPath).length).toBeGreaterThan(WHOLE_FILE_CAP);
+    expect(wholeFileEvidence(root, registryPatch(toolPath), new Map(), 400_000).find((item) => item.path === toolPath)!.note).toBe(
+      `omitted for size: ${read(toolPath).length} characters, over the ${WHOLE_FILE_CAP}-character limit for one file; its diff is above`,
+    );
+    expect(
+      wholeFileEvidence(root, [
+        { filename: "a/removed.ts", status: "removed", patch: null },
+        { filename: "a/image.png", status: "added, binary", patch: null },
+        { filename: "conformance/fixtures/runtime/x.json", status: "added", patch: "@@ -0,0 +1 @@\n+{}" },
+      ], new Map(), 400_000),
+    ).toEqual([]);
+    // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
+    // file named without its text means.
+    const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
+    const filled = withWholeFiles(root, { ...promptBase, evidence: { ...NO_EVIDENCE, decisions: gatherEvidence(root, registryPatch(registryPath), none).decisions } });
+    expect(filled.evidence.wholeFiles.find((item) => item.path === "decisions/ESC-9.4-1.md")!.note).toBe("shown in full above, in (f)");
+    const wholeUser = buildPrompt(filled).user;
+    expect(wholeUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
+    expect(wholeUser).toContain("A file named here without its text is shown in full in another section, omitted for size, or unavailable, as its note says");
+    expect(wholeUser).toContain(`#### ${registryPath} (changed)\n\n\`\`\`ts\n${read(registryPath)}`);
+    expect(buildPrompt(filled).length).toBeLessThanOrEqual(PROMPT_CAP);
+    expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)\n\nThe change adds or modifies no file this section shows.");
   },
   180_000,
 );

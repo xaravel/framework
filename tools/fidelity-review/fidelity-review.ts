@@ -54,9 +54,15 @@
 // path), in full (ESC-9.2-1); (g) for each `packages/*/src/` file the change
 // adds or modifies, every top-level declaration and every documented one, with
 // its line, full docblock and signature, and the line of each `@asyncRoot` tag
-// (a heuristic line scanner, `sourceSurface`; ESC-9.3-2). Everything is read
-// from the working tree. A missing evidence file is named ("unavailable:
-// <why>"), never dropped.
+// (a heuristic line scanner, `sourceSurface`; ESC-9.3-2); (h) whole files
+// (MAINT-2026-10-22-fidelity-whole-files): every file the change adds or
+// modifies, in full, then every decision and DIV record those files cite
+// anywhere, then the repository files they import (relative and dynamic-idiom
+// imports, `WHOLE_FILE_DEPTH` levels), each once, filling what the prompt cap
+// leaves after the other sections; a file another section shows in full is
+// named, not repeated, and one that does not fit is named as omitted for size.
+// Everything is read from the working tree. A missing evidence file is named
+// ("unavailable: <why>"), never dropped.
 //
 // A standing reject (ESC-8.8-1). A `reject` recorded for the reviewed tree
 // stands until the tree changes: `review` refuses to run on that tree (exit 1,
@@ -226,9 +232,11 @@ export interface Evidence {
   readonly decisions: readonly EvidenceEntry[];
   /** (g) Each `packages/<name>/src/` file the change adds or modifies, as its declaration-and-tag listing (`sourceSurface`, F-9, ESC-9.3-2). */
   readonly sourceSurface: readonly EvidenceEntry[];
+  /** (h) Each changed file in full, the decision and DIV records they cite, and the repository files they import, within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
+  readonly wholeFiles: readonly WholeFileEntry[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -418,6 +426,15 @@ export function buildPrompt(input: PromptInput): Prompt {
   }
   evidenceSection(sections, "### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
   evidenceSection(sections, "### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)", evidence.sourceSurface, "The change adds or modifies no `packages/*/src/` file.", "ts");
+  sections.push("", "### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
+  if (evidence.wholeFiles.length === 0) {
+    sections.push("", "The change adds or modifies no file this section shows.");
+  } else {
+    sections.push("", "A file named here without its text is shown in full in another section, omitted for size, or unavailable, as its note says: it is not missing from the repository unless the note says so.");
+  }
+  for (const entry of evidence.wholeFiles) {
+    sections.push("", `#### ${entry.path} (${entry.reason})`, "", entry.text === null ? (entry.note ?? "unavailable: not read") : fence(entry.text, wholeFileLang(entry.path)));
+  }
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
     sections.push(NO_PRIOR);
@@ -588,6 +605,157 @@ export function sourceDocTexts(root: string, files: readonly ChangedFile[]): str
     .flatMap((file) => sourceDocComments(readEvidenceFile(root, file.filename).text ?? ""));
 }
 
+/** One file of evidence (h): its repository path, why it is included, and its full text or a note saying why not. */
+export interface WholeFileEntry {
+  readonly path: string;
+  /** "changed", "cited by <path>" or "imported by <path>". */
+  readonly reason: string;
+  /** The file's full text, or null with `note` set. */
+  readonly text: string | null;
+  /** Why the text is not shown: shown in full in another section, omitted for size, or unavailable. Null when `text` is set. */
+  readonly note: string | null;
+}
+
+/** How many import levels (h) follows from the changed files. */
+export const WHOLE_FILE_DEPTH = 2;
+
+/** The most characters of one file (h) shows; a longer file relies on its diff (and, for framework source, its (g) listing). */
+export const WHOLE_FILE_CAP = 60_000;
+
+/** A relative module specifier in a static import, a re-export, a side-effect import or a literal dynamic `import(…)`. */
+const RELATIVE_IMPORT = /\bfrom\s*["'](\.{1,2}\/[^"']+)["']|^\s*import\s*["'](\.{1,2}\/[^"']+)["']|\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/gm;
+
+/** A DIV record cited by a `decisions/DIV-<n>.md` path, an `adapted:` marker, a Skip Reason or a `DIV-<n>.<k>` clause. */
+const DIV_CITATION = /\bdecisions\/DIV-([1-9]\d*)\.md\b|(?:adapted:|"adapted"\s*:\s*"|intentional-divergence:)DIV-([1-9]\d*)\b|(?<![\w./-])DIV-([1-9]\d*)\.[1-9]\d*\b/g;
+
+/** A changed file (h) never shows whole: Oracle fixtures are evidence (c), and a lockfile is not reviewed code. */
+function wholeFileSkipped(path: string): boolean {
+  return path.startsWith(`${FIXTURES_DIR}/`) || path === "bun.lock" || path.endsWith(".lockb");
+}
+
+/** The fence language of a whole file, by extension. */
+function wholeFileLang(path: string): string {
+  const ext = /\.([a-z0-9]+)$/.exec(path)?.[1] ?? "";
+  return ({ ts: "ts", tsx: "tsx", mts: "ts", cts: "ts", js: "js", md: "markdown", json: "json", jsonl: "jsonl", yml: "yaml", yaml: "yaml", php: "php", toml: "toml", sh: "sh" } as Record<string, string>)[ext] ?? "";
+}
+
+/**
+ * The repository files a TypeScript file imports: each relative specifier of a static import, re-export, side-effect
+ * import or literal dynamic `import(…)`, and each module the dynamic-import idiom binds names from (`moduleBindings`,
+ * ESC-9.10-1). `exists` says whether a repository path can be read. Package imports (`@xaravel/…`) are left out.
+ */
+export function fileImports(path: string, text: string, exists: (path: string) => boolean): string[] {
+  const out = new Set<string>();
+  for (const match of text.matchAll(RELATIVE_IMPORT)) {
+    const target = resolveCandidates(path, match[1] ?? match[2] ?? match[3]!).find(exists);
+    if (target !== undefined) {
+      out.add(target);
+    }
+  }
+  if (/\bawait\s+import\s*\(/.test(text)) {
+    for (const binding of moduleBindings(path, testUnits(text), exists)) {
+      out.add(binding.target);
+    }
+  }
+  out.delete(path);
+  return [...out].sort(compareUnits);
+}
+
+/**
+ * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
+ * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
+ * deep. A file another section already shows in full (`shown`, path → section) is named, not repeated. The entries
+ * fill `budget` characters in this order: the cited records and the files changed test files import (their helpers
+ * and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above; then the
+ * other imports by level; then the other changed files. A file longer than `WHOLE_FILE_CAP`, or one that does not fit,
+ * is named as omitted for size, never dropped silently.
+ */
+export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number): WholeFileEntry[] {
+  const read = (path: string): string | null => {
+    try {
+      const full = join(root, path);
+      return existsSync(full) && statSync(full).isFile() ? readFileSync(full, "utf8") : null;
+    } catch {
+      return null;
+    }
+  };
+  const exists = (path: string): boolean => {
+    try {
+      return !path.startsWith("..") && statSync(join(root, path)).isFile();
+    } catch {
+      return false;
+    }
+  };
+  const tiers: WholeFileEntry[][] = [[], [], [], [], []];
+  const listed = new Set<string>();
+  const add = (tier: number, path: string, reason: string): void => {
+    if (listed.has(path)) {
+      return;
+    }
+    listed.add(path);
+    const text = read(path);
+    tiers[tier]!.push({ path, reason, text, note: text === null ? `unavailable: ${path} does not exist or cannot be read` : null });
+  };
+  const changed = files.filter((file) => !file.status.startsWith("removed") && !file.status.includes("binary") && !wholeFileSkipped(file.filename));
+  const primary = changed.filter((file) => TS_FILE.test(file.filename) || file.filename.endsWith(".md"));
+  const other = changed.filter((file) => !primary.includes(file));
+  for (const file of primary) {
+    add(2, file.filename, "changed");
+  }
+  const changedTexts = changed.map((file) => [file.filename, read(file.filename) ?? ""] as const);
+  const cited: [string, string][] = [];
+  for (const [path, text] of changedTexts) {
+    for (const match of text.matchAll(DECISION_CITATION)) {
+      cited.push([`decisions/${match[1] ?? match[2]!}.md`, path]);
+    }
+    for (const match of text.matchAll(DIV_CITATION)) {
+      cited.push([`decisions/DIV-${match[1] ?? match[2] ?? match[3]!}.md`, path]);
+    }
+  }
+  for (const [record, by] of cited.sort((a, b) => compareUnits(a[0], b[0]))) {
+    if (!changed.some((file) => file.filename === record)) {
+      add(0, record, `cited by ${by}`);
+    }
+  }
+  let frontier = changedTexts.filter(([path]) => TS_FILE.test(path));
+  for (let depth = 0; depth < WHOLE_FILE_DEPTH; depth++) {
+    const next: (readonly [string, string])[] = [];
+    for (const [path, text] of frontier) {
+      for (const target of fileImports(path, text, exists)) {
+        if (!listed.has(target) && !changed.some((file) => file.filename === target)) {
+          // A changed test file's imports are its helpers and fixtures, which the reviewers check its tests against.
+          add(depth === 0 && isTestPath(path) ? 1 : 3, target, `imported by ${path}`);
+          next.push([target, read(target) ?? ""]);
+        }
+      }
+    }
+    frontier = next.filter(([path]) => TS_FILE.test(path));
+  }
+  for (const file of other) {
+    add(4, file.filename, "changed");
+  }
+  let left = budget;
+  return tiers.flat().map((entry) => {
+    const section = shown.get(entry.path);
+    if (section !== undefined) {
+      return { ...entry, text: null, note: `shown in full above, in ${section}` };
+    }
+    if (entry.text === null) {
+      return entry;
+    }
+    if (entry.text.length > WHOLE_FILE_CAP) {
+      return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, over the ${WHOLE_FILE_CAP}-character limit for one file${entry.reason === "changed" ? "; its diff is above" : ""}` };
+    }
+    // The rendered heading, fence and text.
+    const size = entry.path.length + entry.reason.length + entry.text.length + 40;
+    if (size > left) {
+      return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves ${Math.max(left, 0)} for this section` };
+    }
+    left -= size;
+    return entry;
+  });
+}
+
 const CONSEQUENCES_DIR = "conformance/xaravel-consequences";
 
 /** Every consequence line under `root` by id, each with its file; or the reason none could be read. */
@@ -747,7 +915,36 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     decisions: decisionEvidence(root, [...added, ...sourceDocTexts(root, files)]),
     // F-9 judges the tags a touched file keeps outside the diff's hunks too, so the listing shows the whole file's (ESC-9.3-2).
     sourceSurface: sourceSurfaceEvidence(root, files),
+    // (h) needs the rest of the prompt to size its budget, so the review fills it in last (`withWholeFiles`).
+    wholeFiles: [],
   };
+}
+
+/**
+ * `input` with evidence (h) filled in: the files another section already shows in full are named, not repeated, and
+ * the whole files fill what the prompt cap leaves after every other section.
+ */
+export function withWholeFiles(root: string, input: PromptInput): PromptInput {
+  const shown = new Map<string, string>();
+  for (const request of input.oracleRequests) {
+    shown.set(request.path, "the changed Oracle request files");
+  }
+  const sections: [readonly EvidenceEntry[], string][] = [
+    [input.evidence.divRecords, "(a)"],
+    [input.evidence.asyncRoot, "(d)"],
+    [input.evidence.decisions, "(f)"],
+  ];
+  for (const [entries, section] of sections) {
+    for (const entry of entries) {
+      if (entry.text !== null && !shown.has(entry.label)) {
+        shown.set(entry.label, section);
+      }
+    }
+  }
+  const rest = buildPrompt({ ...input, evidence: { ...input.evidence, wholeFiles: [] } }).length;
+  // Room for the section's heading and its per-file headings beyond the text `wholeFileEvidence` counts.
+  const budget = PROMPT_CAP - rest - 2_000;
+  return { ...input, evidence: { ...input.evidence, wholeFiles: wholeFileEvidence(root, input.files, shown, budget) } };
 }
 
 /** `<name>/<rel>:<a>-<b>` of an Inventory `source`, or null. */
@@ -2856,10 +3053,15 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     },
     prior,
   };
-  const prompt = buildPrompt(promptInput);
-  if (prompt.length > PROMPT_CAP) {
+  const withoutH = buildPrompt(promptInput);
+  if (withoutH.length > PROMPT_CAP) {
     const withoutE = buildPrompt({ ...promptInput, evidence: { ...promptInput.evidence, xaravelTests: [] } }).length;
-    return stop(`the prompt is ${prompt.length} characters, over the ${PROMPT_CAP} cap, of which section (e), the touched Xaravel Tests, is ${prompt.length - withoutE}; the diff and its evidence are too large to review`);
+    return stop(`the prompt is ${withoutH.length} characters, over the ${PROMPT_CAP} cap, of which section (e), the touched Xaravel Tests, is ${withoutH.length - withoutE}; the diff and its evidence are too large to review`);
+  }
+  // (h) fills only what the cap leaves, naming each file it cannot fit, so it never makes the prompt too large.
+  const prompt = buildPrompt(withWholeFiles(root, promptInput));
+  if (prompt.length > PROMPT_CAP) {
+    return stop(`the prompt is ${prompt.length} characters with section (h), over the ${PROMPT_CAP} cap; (h) should fit within it`);
   }
 
   const other: Cli = cli === "claude" ? "codex" : "claude";
