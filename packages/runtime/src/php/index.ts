@@ -1,5 +1,29 @@
 // Installs the Symbol.metadata polyfill before anything else loads (AD-4).
 import "../metadata/polyfill";
+// Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
+import "./phpClasses";
+export { ArgumentCountError } from "./ArgumentCountError";
+export { ArithmeticError } from "./ArithmeticError";
+export { BadFunctionCallException } from "./BadFunctionCallException";
+export { BadMethodCallException } from "./BadMethodCallException";
+export { DivisionByZeroError } from "./DivisionByZeroError";
+export { DomainException } from "./DomainException";
+export { Error } from "./Error";
+export { ErrorException } from "./ErrorException";
+export { Exception } from "./Exception";
+export { InvalidArgumentException } from "./InvalidArgumentException";
+export { JsonException } from "./JsonException";
+export { LengthException } from "./LengthException";
+export { LogicException } from "./LogicException";
+export { OutOfBoundsException } from "./OutOfBoundsException";
+export { OutOfRangeException } from "./OutOfRangeException";
+export { OverflowException } from "./OverflowException";
+export { RangeException } from "./RangeException";
+export { RuntimeException } from "./RuntimeException";
+export { TypeError } from "./TypeError";
+export { UnderflowException } from "./UnderflowException";
+export { UnexpectedValueException } from "./UnexpectedValueException";
+export { ValueError } from "./ValueError";
 export { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 export { toBool, toFloat, toInt, toPhpString } from "./casts";
 export { float, isFloat, PhpFloat } from "./PhpFloat";

@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { __PHP_Incomplete_Class, float, isFloat, PhpArray, PhpFloat, phpSerialize, phpUnserialize, stdClass } from "@xaravel/runtime/php";
+import { __PHP_Incomplete_Class, Exception, float, isFloat, PhpArray, PhpFloat, phpSerialize, phpUnserialize, stdClass, TypeError as PhpTypeError } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
 import { fqcn, registerClass } from "@xaravel/runtime/registry";
 
@@ -81,6 +81,14 @@ function thrownBy(fn: () => unknown): unknown {
 function assertThrows(fn: () => unknown, type: new (...args: never[]) => Error, message: string): void {
   const error = thrownBy(fn);
   Assert.assertTrue(error instanceof type, `expected a ${type.name}: ${String(error)}`);
+  Assert.assertSame(message, (error as Error).message);
+}
+
+/** Asserts `fn` throws the ported PHP class `type` itself (its FQCN, not a subclass's) with `message` (Story 9.10). */
+function assertPhpThrows(fn: () => unknown, type: abstract new (...args: never[]) => Error, message: string): void {
+  const error = thrownBy(fn);
+  Assert.assertTrue(error instanceof type, `expected a PHP ${fqcn(type)}: ${String(error)}`);
+  Assert.assertSame(fqcn(type), fqcn(error as Error));
   Assert.assertSame(message, (error as Error).message);
 }
 
@@ -496,10 +504,10 @@ xaravelTest(
     Assert.assertSame("d:1;", phpSerialize(float(1)));
     Assert.assertSame("i:1;", phpSerialize(1));
 
-    // PHP's errors.
-    assertThrows(() => phpSerialize(() => 1), Error, "Serialization of 'Closure' is not allowed");
-    assertThrows(() => phpSerialize([1, () => 1]), Error, "Serialization of 'Closure' is not allowed");
-    assertThrows(() => phpSerialize(new XtBadSerialize()), TypeError, "Xaravel\\Tests\\Runtime\\XtBadSerialize::__serialize() must return an array");
+    // PHP's errors, as PHP's classes (Story 9.10; ESC-9.7-1 part 4: the Closure error is PHP's Exception).
+    assertPhpThrows(() => phpSerialize(() => 1), Exception, "Serialization of 'Closure' is not allowed");
+    assertPhpThrows(() => phpSerialize([1, () => 1]), Exception, "Serialization of 'Closure' is not allowed");
+    assertPhpThrows(() => phpSerialize(new XtBadSerialize()), PhpTypeError, "Xaravel\\Tests\\Runtime\\XtBadSerialize::__serialize() must return an array");
     Assert.assertTrue(thrownBy(() => phpSerialize(new XtUnregistered())) instanceof TypeError, "an unregistered class is a TypeError");
     Assert.assertTrue(thrownBy(() => phpSerialize("\uD800")) instanceof TypeError, "a lone surrogate is a TypeError");
     Assert.assertTrue(thrownBy(() => phpSerialize(2n ** 63n)) instanceof TypeError, "a bigint beyond int64 is a TypeError");
@@ -661,11 +669,16 @@ xaravelTest(
     Assert.assertTrue(thrownBy(() => phpUnserialize('s:1:"\uD800";')) instanceof TypeError, "a lone surrogate is a TypeError");
     Assert.assertTrue(thrownBy(() => phpUnserialize("a:1:{i:0;R:1;}")) instanceof TypeError, "an array that contains itself is a TypeError");
     // PHP's TypeErrors for a bad argument or option.
-    assertThrows(() => phpUnserialize(5 as unknown as string), TypeError, "unserialize(): Argument #1 ($data) must be of type string, int given");
-    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: "x" as unknown as boolean }), TypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, string given');
-    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: null as unknown as boolean }), TypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, null given');
-    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: [1] as unknown as string[] }), TypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, int given');
-    assertThrows(() => phpUnserialize("i:1;", { allowedClasses: [true] as unknown as string[] }), TypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, true given');
+    assertPhpThrows(() => phpUnserialize(5 as unknown as string), PhpTypeError, "unserialize(): Argument #1 ($data) must be of type string, int given");
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: "x" as unknown as boolean }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, string given');
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: null as unknown as boolean }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, null given');
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: [1] as unknown as string[] }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, int given');
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: [true] as unknown as string[] }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, true given');
+    // A symbol and a bigint beyond int64 have PHP type names in these messages too (phpTypeName).
+    assertPhpThrows(() => phpUnserialize(Symbol() as unknown as string), PhpTypeError, "unserialize(): Argument #1 ($data) must be of type string, symbol given");
+    assertPhpThrows(() => phpUnserialize(2n ** 64n as unknown as string), PhpTypeError, "unserialize(): Argument #1 ($data) must be of type string, int given");
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: Symbol() as unknown as boolean }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be of type array|bool, symbol given');
+    assertPhpThrows(() => phpUnserialize("i:1;", { allowedClasses: [Symbol()] as unknown as string[] }), PhpTypeError, 'unserialize(): Option "allowed_classes" must be an array of class names, symbol given');
     Assert.assertSame(phpUnserialize, root.phpUnserialize);
   },
 );

@@ -1,5 +1,7 @@
 // PHP's `JSON_*` constants (Story 9.8, AD-23.1), with PHP 8.5's values (`ext/json/php_json.h`): the flags of
-// `jsonEncode` / `jsonDecode` and the `JSON_ERROR_*` codes a JSON error carries. It imports nothing.
+// `jsonEncode` / `jsonDecode` and the `JSON_ERROR_*` codes a JSON error carries. It imports only PHP's `JsonException`
+// (Story 9.10), whose module chain loads no codec and no Scope Frame module.
+import { JsonException } from "./JsonException";
 
 /** `json_encode`: `<` and `>` as `\u003C` and `\u003E`. */
 export const JSON_HEX_TAG = 1;
@@ -66,13 +68,11 @@ export const JSON_ERROR_MESSAGES: Readonly<Record<number, string>> = {
 };
 
 /**
- * The error a JSON function throws under `JSON_THROW_ON_ERROR`: an `Error` with PHP's message and the `JSON_ERROR_*`
- * code as its `code`. PHP throws a `JsonException`, which Story 9.10 ports (ESC-9.8-1 part 1, DIV-9.8). Internal.
+ * The error a JSON function throws under `JSON_THROW_ON_ERROR`: PHP's `JsonException` with PHP's message and the
+ * `JSON_ERROR_*` code (ESC-9.8-1 part 1). Internal.
  */
-export function jsonError(code: number): Error {
-  const error = new Error(JSON_ERROR_MESSAGES[code] ?? "Unknown error");
-  Object.defineProperty(error, "code", { value: code, enumerable: true, writable: true, configurable: true });
-  return error;
+export function jsonError(code: number): JsonException {
+  return new JsonException(JSON_ERROR_MESSAGES[code] ?? "Unknown error", code);
 }
 
 /** Where a JSON call's error code goes: `jsonLastError.ts` installs it on load (ESC-9.8-1 part 2). */

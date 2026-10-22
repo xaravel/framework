@@ -13,9 +13,9 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { float, isNumeric, jsonEncode, looseEquals, PhpArray, Ref, spaceship, toBool, toFloat, toInt, toPhpString, valueCopy } from "@xaravel/runtime/php";
+import { Error as PhpError, float, isNumeric, jsonEncode, looseEquals, PhpArray, Ref, spaceship, toBool, toFloat, toInt, toPhpString, TypeError as PhpTypeError, valueCopy } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
-import { registerClass } from "@xaravel/runtime/registry";
+import { fqcn, registerClass } from "@xaravel/runtime/registry";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -75,6 +75,14 @@ function thrownBy(fn: () => unknown): unknown {
 function assertThrows(fn: () => unknown, type: new (...args: never[]) => Error, message: string): void {
   const error = thrownBy(fn);
   Assert.assertTrue(error instanceof type, `expected a ${type.name}: ${String(error)}`);
+  Assert.assertSame(message, (error as Error).message);
+}
+
+/** Asserts `fn` throws the ported PHP class `type` itself (its FQCN, not a subclass's) with `message` (Story 9.10). */
+function assertPhpThrows(fn: () => unknown, type: abstract new (...args: never[]) => Error, message: string): void {
+  const error = thrownBy(fn);
+  Assert.assertTrue(error instanceof type, `expected a PHP ${fqcn(type)}: ${String(error)}`);
+  Assert.assertSame(fqcn(type), fqcn(error as Error));
   Assert.assertSame(message, (error as Error).message);
 }
 
@@ -247,9 +255,9 @@ xaravelTest(
     Assert.assertSame(1, spaceship(name, null));
     Assert.assertSame(-1, spaceship([], name));
     // Without a port: PHP's Error, naming the Registry FQCN, else "object" or "Closure".
-    assertThrows(() => toPhpString(new XtSemanticsOpaque()), Error, "Object of class Xaravel\\Tests\\Runtime\\XtSemanticsOpaque could not be converted to string");
-    assertThrows(() => toPhpString(new XtSemanticsUnregistered()), Error, "Object of class object could not be converted to string");
-    assertThrows(() => toPhpString(() => 1), Error, "Object of class Closure could not be converted to string");
+    assertPhpThrows(() => toPhpString(new XtSemanticsOpaque()), PhpError, "Object of class Xaravel\\Tests\\Runtime\\XtSemanticsOpaque could not be converted to string");
+    assertPhpThrows(() => toPhpString(new XtSemanticsUnregistered()), PhpError, "Object of class object could not be converted to string");
+    assertPhpThrows(() => toPhpString(() => 1), PhpError, "Object of class Closure could not be converted to string");
     Assert.assertFalse(looseEquals(new XtSemanticsOpaque(), "a"));
     Assert.assertSame(1, spaceship(new XtSemanticsOpaque(), "a"));
     Assert.assertSame(-1, spaceship("a", new XtSemanticsOpaque()));
@@ -310,7 +318,7 @@ xaravelTest(
     Assert.assertTrue(isNumeric(float(1)));
     Assert.assertSame("-0", toPhpString(-0));
     // A toString() port that returns no string: PHP's TypeError.
-    assertThrows(() => toPhpString(new XtSemanticsBadPort()), TypeError, "Xaravel\\Tests\\Runtime\\XtSemanticsBadPort::__toString(): Return value must be of type string, int returned");
+    assertPhpThrows(() => toPhpString(new XtSemanticsBadPort()), PhpTypeError, "Xaravel\\Tests\\Runtime\\XtSemanticsBadPort::__toString(): Return value must be of type string, int returned");
     // A brand-only array (the grader's BrandedArray) is a PHP array.
     Assert.assertFalse(toBool(new BrandedArray([])));
     Assert.assertSame(0, toInt(new BrandedArray([])));

@@ -1,0 +1,244 @@
+---
+title: 'Story 9.10: PHP exception hierarchy'
+type: 'feature'
+created: '2026-10-22'
+baseline_revision: '21a0224aa648887deb8045cbe011868a3ef28a4f'
+status: 'in-review'
+review_loop_iteration: 0
+followup_review_recommended: false
+context:
+  - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
+  - '{project-root}/stories/9.10.md'
+  - '{project-root}/PORTING.md'
+  - '{project-root}/decisions/ESC-9.1-2.md'
+  - '{project-root}/decisions/ESC-9.7-1.md'
+  - '{project-root}/decisions/ESC-9.8-1.md'
+  - '{project-root}/decisions/ESC-4.3-1.md'
+  - '{project-root}/decisions/DIV-9.md'
+warnings: [oversized]
+deferred:
+  - summary: >-
+      toPhpString of a ported PHP throwable throws "could not be converted to string", where PHP stringifies it through Throwable::__toString.
+    evidence: |-
+      Review pass 2026-10-22 (Edge). The class is registered now, so the cast reaches it; __toString is outside this Story (spec Never list). The Story that ports Throwable::__toString (the foundation exception handler's first reader) settles it; the Epic 9 retrospective routes it.
+    location: >-
+      packages/runtime/src/php/casts.ts (toPhpString), packages/runtime/src/php/Exception.ts
+    severity: medium
+  - summary: >-
+      phpSerialize of a ported PHP throwable writes O:<n>:"<class>":0:{}, dropping message and code, and phpUnserialize of a PHP-serialized throwable leaves PHP's mangled properties as plain ones.
+    evidence: |-
+      Review pass 2026-10-22 (Edge, Blind). Throwables have no PHP property table (spec Never list). Before this Story the classes were unregistered, so phpSerialize threw and phpUnserialize gave __PHP_Incomplete_Class. The getters no longer crash on an unserialized object (patched). The Epic 9 retrospective routes the codec form of throwables.
+    location: >-
+      packages/runtime/src/php/phpSerialize.ts, packages/runtime/src/php/phpUnserialize.ts
+    severity: medium
+  - summary: >-
+      Fidelity reviewer 1 asked for evidence the tool may not supply: the BrandedArray class (XT-runtime-22), the inherited() helper reached through child() (XT-runtime-1), and decisions/ESC-9.4-1.md cited by the resolveClassAsync docblock.
+    evidence: |-
+      Review pass 2026-10-22 (Fidelity F-7, F-7, F-9 at tree 731e2f1). All three exist in the repository. Settled by the Fidelity Review re-run on the tree with the signed fixtures: if a reviewer asks again, it is a tool evidence gap for an Escalation under the 2026-10-21 amendment.
+    location: >-
+      tools/fidelity-review/fidelity-review.ts
+    severity: medium (unverified)
+---
+
+<intent-contract>
+
+## Intent
+
+**Problem:** AD-19 and AD-26 (Errors row) make `@xaravel/runtime` the home of PHP's own throwables, each a JS `Error` subclass registered under its PHP name. None exists, so the runtime throws plain JS `Error`s where PHP throws `Exception`, `JsonException`, `ValueError`, `TypeError` or `Error` (DIV-9.8 stand-ins, ESC-9.7-1 part 4, ESC-9.8-1 part 1), no port can `catch (InvalidArgumentException)`, and the grader cannot tell PHP's `\Error` from `\Exception` (ESC-4.3-1 items 10 and 14, ESC-4.4-2 item 7, ESC-4.5-1 item 2). Epic 9 also closes with this Story: the runtime's `docs/` must describe every primitive.
+
+**Approach:** Add the 22 classes under `packages/runtime/src/php/`, export them from `@xaravel/runtime/php` and the root, publish them on `globalThis[Symbol.for('xaravel.php.classes')]` when any runtime entry loads, and switch the runtime's PHP-modelled throws to them. Verify the parent chains and constructor behaviour against signed Oracle fixtures of `conformance/oracle-requests/9.10.jsonl`, and the Epic-close docs with a content check.
+
+## Boundaries & Constraints
+
+**Always:**
+- Edit only `packages/runtime/**`, this spec, the Story's status lines (`sprint-status.yaml`, `stories/9.10.md`), `conformance/oracle-requests/9.10.jsonl` (plus the fixtures the `xaravel-oracle` bot signs for it) and the Story's own Escalations.
+- Sync only (AD-6); never return `undefined` (AD-9). No `constructor.name`, no `JSON.stringify` in `src/`. One public class per file, named exports only, each file ending with `registerClass('<PHP name>', X)` (AD-3, AD-10).
+- **The classes and chains** (PHP 8.5.11, checked locally with `class_parents`): `Exception`; `ErrorException`, `JsonException`, `RuntimeException`, `LogicException` extend `Exception`; `Error`; `TypeError`, `ValueError`, `ArithmeticError` extend `Error`; `ArgumentCountError` extends `TypeError`; `DivisionByZeroError` extends `ArithmeticError`; `InvalidArgumentException`, `DomainException`, `LengthException`, `OutOfRangeException`, `BadFunctionCallException` extend `LogicException`; `BadMethodCallException` extends `BadFunctionCallException`; `OutOfBoundsException`, `RangeException`, `OverflowException`, `UnderflowException`, `UnexpectedValueException` extend `RuntimeException`. PHP's `Exception` and `Error` each extend the JS global `Error` (`globalThis.Error`) directly, so every class is `instanceof` the JS `Error`, and no class is under both PHP roots.
+- **Constructor** `(message = "", code = 0, previous = null)` on `Exception` and `Error` (inherited by the rest). `ErrorException` is `(message = "", code = 0, severity = 1, filename = null, line = null, previous = null)` with `getSeverity()` (PHP's `E_ERROR` default). `getMessage()` returns `this.message`, `getCode()` returns `this.code` (an own, writable, configurable, non-enumerable data property), and `getPrevious()` returns the previous throwable or `null`. A non-null `previous` is also the JS `cause`. `name` is an own non-enumerable property holding the class-name brand `new.target[Symbol.for('xaravel.class.fqcn')]` (so a registered subclass shows its FQCN in a JS stack).
+- **Argument errors as PHP's.** `message` that is not a string, `code` that is not an integer `number`, or `previous` that is neither `null` nor a JS `Error` throws the ported `TypeError` with PHP's message, which names the declaring root (`Exception::__construct()`, `Error::__construct()` or `ErrorException::__construct()`): `Argument #2 ($code) must be of type int, string given`, `Argument #3 ($previous) must be of type ?Throwable, string given` (`#6` for `ErrorException`), `Argument #1 ($message) must be of type string, … given`. Type names come from the runtime's existing PHP type-name helper.
+- **The protocol.** One module, `src/php/phpClasses.ts`, imports every ported PHP class (the 22, plus `stdClass` and `__PHP_Incomplete_Class`, PHP's other built-ins in the runtime, ESC-4.3-1 item 14) and defines `globalThis[Symbol.for('xaravel.php.classes')]` as a frozen null-prototype object from PHP's declared class name to the class: non-writable, non-configurable, non-enumerable, as `xaravel.scope.run` is (`scope.ts:480-495`). If the symbol is already defined with another value, loading throws the ported `LogicException` saying `Symbol.for('xaravel.php.classes') was already defined by other code or another copy of @xaravel/runtime; @xaravel/runtime will not install over it`. `src/index.ts` and every subpath index (`scope`, `registry`, `php`) import it right after the polyfill, so loading any runtime entry publishes the map. A reader tells `\Error` from `\Exception` with `instanceof map.Error` / `instanceof map.Exception`, and folds case itself (PHP names are case-insensitive).
+- **Throws switched to the ported classes** (same message, same code):
+  - `phpSerialize` Closure: `Exception` (ESC-9.7-1 part 4); `<X>::__serialize() must return an array`: `TypeError`.
+  - `jsonEncode` / `jsonDecode` under `JSON_THROW_ON_ERROR`: `JsonException` with the `JSON_ERROR_*` code; `json_decode()` depth: `ValueError` with code 0 (ESC-9.8-1 part 1).
+  - `resolveClass` / `resolveClassAsync` miss, `Class "<FQCN>" not found`: `Error` (the Registry's own comment, `registry.ts:9-10`).
+  - `ScopeFrameException` extends `RuntimeException`, keeping its FQCN and messages (ESC-9.1-2).
+  - `PhpArray` `Cannot access offset of type … on array`: `TypeError`; `Cannot add element to the array as the next element is already occupied`: `Error`.
+  - `casts.ts` `Object of class … could not be converted to string`: `Error`; `…::__toString(): Return value must be of type string, … returned`: `TypeError`.
+  - `phpUnserialize`'s three PHP argument and option messages (`unserialize(): Argument #1 ($data) …`, `Option "allowed_classes" must be of type array|bool …`, `… must be an array of class names …`): `TypeError`.
+- **Import cycles.** Every exception file imports `registerClass` from `registry/registry.ts`, so `registry.ts` must not import, even transitively, a module that registers a class on load. Today it imports `jsonEncode` for `writeClassmap`, and `jsonConstants.ts` will import `JsonException`. Break that edge: the Registry takes its classmap encoder through an install hook, as it already takes test-frame access (`installTestFrameAccess`), and `registry/index.ts` installs `jsonEncode` there; `writeClassmap` with no encoder installed throws a JS `Error` naming `@xaravel/runtime/registry`. The miss error is built from the class registered as `Error` in the Registry's own map (falling back to `globalThis.Error` only if nothing registered it), so `registry.ts` imports no exception file. Loading any of `src/index.ts`, the three subpath indexes, `src/registry/registry.ts`, `src/php/jsonEncode.ts` or `src/scope/scope.ts` first in a fresh process must not throw.
+- **Tests that asserted the stand-ins now assert the PHP class** (stricter, never weaker): XT-runtime-24 (Closure), XT-runtime-27 and XT-runtime-30 (JSON), as the rulings direct, and the rows of the other switched messages in `codec.test.ts`, `values.test.ts`, `semantics.test.ts` and `registry.test.ts`. Where a signed fixture records the Oracle's class, assert `fqcn(error)` equals it; otherwise assert `instanceof` the ported class and its FQCN. Comments that say "until Story 9.10" are updated.
+- **Epic close (XT-runtime-37).** `packages/runtime/docs/` gets a page per primitive group (Scope Frames and propagation; the Class Registry; PHP values and semantics helpers; the serialize and JSON codecs; PHP exceptions and the protocol; traits and `inject` exists), and `packages/runtime/README.md` links each page. Every name exported from `src/index.ts` (values and types) appears in backticks in at least one page. `async-surface.json` is regenerated with `bun run async-surface runtime` and committed.
+
+**Never:**
+- Port `Throwable` / `Stringable` (interfaces are Epic 10 tokens), `getFile()` / `getLine()` / `getTrace()` / `getTraceAsString()` / `__toString()`, PHP's coercions of constructor arguments (a numeric-string or float code, a `null` message), a PHP property table for exceptions, or any other PHP class.
+- Install `Symbol.for('xaravel.class.lookup')` (ESC-4.6-1 item 9 names Story 9.4; it changes `@xaravel/mockery`'s behaviour whenever the runtime is loaded) or change `@xaravel/assert` / `@xaravel/mockery` (Story 9.11 reads the protocol and retires their internal copies).
+- Switch throws that have no PHP throwable behind them: Xaravel's own API-misuse `TypeError`s (`registerClass():`, `mixin():`, `frameSlot():`, `float():`, lone surrogates, int64 range, JS-unholdable payloads), the trait collision (a PHP compile-time fatal) and `Nesting level too deep` (a PHP fatal).
+- Edit `conformance/xaravel-consequences/**`, `tools/**`, `decisions/**`, another package, or close DIV-9.8 (Story 9.11 closes it).
+
+## I/O & Edge-Case Matrix
+
+| Scenario | Input / State | Expected Output / Behavior | Error Handling |
+|----------|--------------|---------------------------|----------------|
+| Chains (XT-runtime-35) | the 22 exported classes | each JS prototype chain, mapped through `fqcn()` up to `globalThis.Error`, equals the Oracle's `class_parents` (in order); every class `prototype instanceof globalThis.Error` | — |
+| Load and publish (XT-runtime-35) | a fresh `bun` process importing each entry listed under Import cycles | no throw; the map is frozen, null-prototype, holds the 24 names, each `===` the root export, `resolveClass(name)` and `fqcn(class) === name` | symbol pre-defined: `LogicException` naming it |
+| Switched throws (XT-runtime-35) | `resolveClass('No\\Such')`; a frame-less slot write | PHP `Error` `Class "No\Such" not found`; `ScopeFrameException` `instanceof RuntimeException` and `Exception`, FQCN unchanged | — |
+| Constructor (XT-runtime-36) | `new InvalidArgumentException('m', 5, previous)`; defaults; `ErrorException` defaults | `'m'`, `5`, `previous` (also `cause`); `instanceof LogicException`, `Exception`, JS `Error`, not PHP `Error` / `RuntimeException`; defaults `''`, `0`, `null`, severity `1`, as the Oracle | — |
+| Bad arguments (XT-runtime-36) | `('m', 'x')`, `('m', 5, 'p')`, `ErrorException('m', 'x')` | the Oracle's `TypeError` class and message | — |
+| Docs (XT-runtime-37) | `src/index.ts` exports, `docs/*.md`, README, `async-surface.json` | each export named in a page; README links each page; `async-surface` check for `runtime` passes | — |
+
+</intent-contract>
+
+## Code Map
+
+- `packages/runtime/src/scope/ScopeFrameException.ts` -- re-parent on `RuntimeException`; drop the `name` field (the base sets it).
+- `packages/runtime/src/scope/scope.ts:480-495` -- the `installGlobal` pattern for the protocol install and its guard.
+- `packages/runtime/src/registry/registry.ts:20-23, 148-150, 179-190, 330-371` -- imports of `jsonEncode` / `jsonConstants` (to remove), `notFound` (PHP `Error` via the own map), `installTestFrameAccess` (the hook pattern), `writeClassmap`.
+- `packages/runtime/src/registry/index.ts` -- install the classmap encoder; import `phpClasses` after the polyfill.
+- `packages/runtime/src/php/jsonConstants.ts:68-76` -- `jsonError` builds `JsonException`; header comment says it imports nothing, update it.
+- `packages/runtime/src/php/jsonDecode.ts:116-121` -- `valueError` builds `ValueError`.
+- `packages/runtime/src/php/phpSerialize.ts:21, 66, 77`; `PhpArray.ts:92, 152`; `casts.ts:290, 294`; `phpUnserialize.ts:450-490` (its `typeName` helper; `PhpFloat.ts:15` has another) -- the switched throws.
+- `packages/runtime/src/php/stdClass.ts`, `__PHP_Incomplete_Class.ts` -- the existing pattern for a PHP built-in class in `src/php/`.
+- `packages/runtime/src/index.ts`, `src/php/index.ts`, `src/scope/index.ts` -- exports and the `phpClasses` import. Re-exporting `Error` / `TypeError` by name is legal; inside `Error.ts` extend `globalThis.Error`.
+- `packages/mockery/src/php/Exception.ts`, `packages/assert/src/Framework/Exception/Exception.ts` (read-only) -- the grader's internal copies the protocol replaces in Story 9.11; same `getMessage` / `getCode` / `getPrevious` shape.
+- `packages/runtime/tests/xaravel/codec.test.ts:1-90, 495-510, 655-670` -- the Oracle idiom (F-10 header, `oracle-values.ts` dynamic import, `oracle(id, firstExpr)`, `thrownBy`, `assertThrows`) and the switched rows; `json.test.ts:17, 121-127, 420, 736, 749, 908-911` -- `assertJsonError` and the fixture rows that carry the Oracle's class; `inject.test.ts` -- the fresh-subprocess idiom.
+- `tools/oracle/evaluate.php:60, 407` (read-only) -- a result is `{"value": …}` or `{"throws": {"class", "message"}}`.
+- Local PHP 8.5.11 at `/opt/homebrew/bin/php`, Laravel at the Pin in `/tmp/xv98/fw` (outside the repo). Probe `/tmp/xv910.php` confirmed the chains above, the three `TypeError` messages, `ErrorException` severity `1`, and that a subclass's `protected $code = 404` wins unless a non-zero code is passed.
+
+## Tasks & Acceptance
+
+**Execution:**
+- `packages/runtime/src/php/{Exception,Error,ErrorException,TypeError,ValueError,ArgumentCountError,ArithmeticError,DivisionByZeroError,JsonException,RuntimeException,LogicException,InvalidArgumentException,DomainException,LengthException,OutOfRangeException,OutOfBoundsException,RangeException,OverflowException,UnderflowException,UnexpectedValueException,BadFunctionCallException,BadMethodCallException}.ts` -- the classes. The shared constructor checks live in one internal helper module, not copied per root.
+- `packages/runtime/src/php/phpClasses.ts` -- the protocol install.
+- `packages/runtime/src/{index.ts,php/index.ts,scope/index.ts,registry/index.ts}` -- exports and imports.
+- `packages/runtime/src/registry/registry.ts`, `src/php/{jsonConstants,jsonDecode,phpSerialize,PhpArray,casts,phpUnserialize}.ts`, `src/scope/ScopeFrameException.ts` -- the switches and the cycle break.
+- `conformance/oracle-requests/9.10.jsonl` -- one XT-runtime-35 request (`class_parents` of each of the 22, in the order above) and one XT-runtime-36 request (the `('m', 5, $p)` getters and `===`, the defaults of `Exception`, `Error` and `ErrorException` incl. `getSeverity()`, and the three bad-argument constructions as `throws` rows). Write with `bun run oracle:story` as earlier Stories did; check against local `evaluate.php` before pushing.
+- `packages/runtime/tests/xaravel/exceptions.test.ts` -- XT-runtime-35 and XT-runtime-36 (F-10 header; fixtures; subprocess rows; the matrix).
+- `packages/runtime/tests/xaravel/docs.test.ts` -- XT-runtime-37: parse the export names of `src/index.ts`, require each in backticks in some `docs/*.md`, require the README to link every page, run the `async-surface` check for `runtime`.
+- `packages/runtime/tests/xaravel/{codec,json,values,semantics,registry,scope}.test.ts` -- assert the PHP classes for the switched throws.
+- `packages/runtime/docs/*.md`, `packages/runtime/README.md` -- the Epic-close pages. The exceptions page states the protocol, the porting rule for a subclass's `protected $code` / `$message` default (a constructor default, not a JS field, which would be set after `super()` and override an explicit code), and the limits under Never.
+- `packages/runtime/async-surface.json` -- regenerate; it stays as it is unless a new async method appears (none should).
+
+**Acceptance Criteria:**
+- The four ACs of Story 9.10 (`epics.md` line 3204), each verified by its XT row in `stories/9.10.md`.
+- Given the PR is pushed, when `oracle.yml#story` runs, then the bot commits the fixtures and `bun run oracle:verify-fixtures` passes.
+- Given the whole runtime suite, when it runs, then every earlier XT-runtime row still passes with the stricter class assertions.
+
+## Spec Change Log
+
+## Review Triage Log
+
+### 2026-10-22 — Review pass
+- verdicts: 38 findings — high 0, medium 15, low 14, false 6, maybe-false 3
+- findings:
+  - `[medium]` `[patch]` Fidelity F-6 (reviewer 1): the XT-runtime-35 fixture `70a58b4d…` is missing — only `oracle.yml#story` signs fixtures, after the push; the PR is pushed and the Fidelity Review re-runs on the tree that holds them, as Stories 9.7 and 9.8 did.
+  - `[medium]` `[patch]` Fidelity F-6 (reviewer 1): the XT-runtime-36 fixture `ae94e29a…` is missing — same root and action as the row above.
+  - `[medium]` `[patch]` Fidelity F-7 (reviewer 1): XT-runtime-35/36 read missing fixtures before their assertions — same root as the missing fixtures; also reordered (see the verification-gap row).
+  - `[maybe-false]` `[defer]` Fidelity F-7 (reviewer 1): the `BrandedArray` declaration XT-runtime-22 uses is absent from the helper evidence — the class is in `semantics.test.ts`, unchanged in substance; the tool's helper evidence may omit classes. Settled by the re-run on the fixture tree: if it recurs, it is a tool evidence gap for an Escalation under the 2026-10-21 amendment.
+  - `[maybe-false]` `[defer]` Fidelity F-7 (reviewer 1): the `inherited()` helper reached through `child()` (XT-runtime-1) is absent from the evidence — the helper exists in `scope.test.ts`; same settlement as the row above.
+  - `[maybe-false]` `[defer]` Fidelity F-9 (reviewer 1): `decisions/ESC-9.4-1.md`, cited by the retained `resolveClassAsync` docblock, is not in the evidence — the decision is on `main`; same settlement as the row above.
+  - `[medium]` `[patch]` Fidelity F-6 (reviewer 2): the XT-runtime-35 fixture is missing — same root as reviewer 1's F-6.
+  - `[medium]` `[patch]` Fidelity F-6 (reviewer 2): the XT-runtime-36 fixture is missing — same root as reviewer 1's F-6.
+  - `[low]` `[patch]` Fidelity F-7 (reviewer 2): XT-runtime-35, `Error.ts`, `Exception.ts` and `docs/exceptions.md` cite an "AD-26 Errors row" that AD-26 does not have — the Errors row is in the spine's Consistency Conventions; the citations now name AD-19 and that row.
+  - `[medium]` `[patch]` Edge: an `Exception` that `phpUnserialize` builds without its constructor throws on `getPrevious()` / `getSeverity()` and has an undefined `getCode()` — the getters now tolerate a missing private slot (`null`, severity `1`) and `getCode()` gives 0; the payload's properties themselves are the deferred codec row below.
+  - `[medium]` `[patch]` Edge: an in-range `bigint` code (an AD-9 int) is rejected with "must be of type int, int given" — `int` now accepts exactly what `phpType` calls an int.
+  - `[low]` `[patch]` Edge: an unsafe integral number (`2 ** 60`, an AD-9 float) is accepted as the int code — same fix as the row above.
+  - `[false]` `[reject]` Edge: `checkArgument` falls back to the JS `TypeError` when `Exception.ts` loads before `TypeError.ts` — every package entry (`exports` in `package.json`) imports `phpClasses.ts` before anything can construct a throwable; only a deep import of an internal file reaches the fallback.
+  - `[medium]` `[defer]` Edge: `toPhpString(new Exception('m'))` throws `could not be converted to string`, where PHP stringifies a throwable through `__toString` — `__toString` is excluded by the spec's Never list; it is new reach (the class is now registered), recorded for the Story that ports `Throwable::__toString` (foundation's exception handler) via the Epic 9 retrospective.
+  - `[medium]` `[defer]` Edge: `phpSerialize(new Exception('m', 3))` writes `O:9:"Exception":0:{}`, dropping message and code — throwables have no PHP property table (Never list); before this Story the class was unregistered and the call threw. Recorded for the Epic 9 retrospective to route.
+  - `[low]` `[reject]` Edge: the JSON error's `code` turned from enumerable to non-enumerable — the spec sets `code` non-enumerable for every throwable (it is no public PHP property); readers use `getCode()` or `.code`, both tested.
+  - `[low]` `[reject]` Edge: `ScopeFrameException`'s `name` became its FQCN — the spec's rule for every throwable; no consumer in the repo reads the old short name.
+  - `[medium]` `[patch]` Verification gap: XT-runtime-35/36's non-Oracle checks (map, conflict, fresh-process loads, `writeClassmap` without an encoder, descriptors, bad arguments) sit behind `oracle()` and never run while a fixture is missing — the local checks now run before the Oracle comparisons.
+  - `[low]` `[patch]` Verification gap: `phpTypeName`'s symbol and bigint branches on the switched `phpUnserialize` paths have no test — rows added to XT-runtime-25.
+  - `[medium]` `[patch]` Verification gap (other): bigint code rejected, `-0` accepted — same root and fix as the Edge `bigint` row.
+  - `[low]` `[patch]` Verification gap (other): `ErrorException` arguments #1, #3, #4 and #5 are untested — Oracle and local rows added.
+  - `[medium]` `[patch]` Blind: unserialized exceptions crash on read — same root and fix as the Edge unserialize row.
+  - `[medium]` `[defer]` Blind: `phpSerialize` writes wrong bytes for throwables — same root as the Edge serialize row (deferred there).
+  - `[false]` `[reject]` Blind: rejecting PHP's argument coercions needs a DIV — the port behaves as PHP under `declare(strict_types=1)`, which the Oracle evaluator runs (`tools/oracle/evaluate.php:89`) and which the runtime's earlier Oracle-checked `TypeError`s already follow (`unserialize(): Argument #1 ($data) must be of type string, int given`, XT-runtime-25); a `null` message row was added to the Oracle request so that case is checked too.
+  - `[low]` `[patch]` Blind: the `bigint` / unsafe-number `int` check — same root and fix as the Edge `bigint` row.
+  - `[medium]` `[patch]` Blind: the `protected $code` porting rule in `docs/exceptions.md` contradicts PHP (`new NotFound('x', 0)` keeps 404) — the rule now passes `code === 0 ? <default> : code` and a default message parameter; a `NotFound` fixture class in the XT-runtime-36 Oracle request checks it.
+  - `[low]` `[reject]` Blind: `PhpArray`'s `undefined` / `symbol` offset rows now throw the PHP `TypeError` — one throw site carries PHP's message for every illegal offset; splitting it by input kind adds branches for inputs a port cannot pass under TS types.
+  - `[false]` `[reject]` Blind: a `resolveClass` miss is the wrong class depending on load order — same as the Edge fallback row: unreachable through any package entry.
+  - `[low]` `[patch]` Blind: the Oracle request misses bad `$message`, `ErrorException` #3–#5 and the subclass-default case — rows added (see the rows above).
+  - `[false]` `[reject]` Blind: Story bookkeeping missing — `stories/9.10.md` and sprint status are set at `done` by the orchestrator; Xaravel Tests have no Expectations lines (none exists for any `XT-runtime-*`); `async-surface.json` was regenerated and is unchanged (`async-surface --all --check` passes).
+  - `[low]` `[reject]` Blind: `assertPhpThrows` copied into three test files — each runtime test file keeps its own `thrownBy` / `assertThrows` helpers by convention; a shared module adds an import path for a five-line helper.
+  - `[low]` `[patch]` Blind: `docs.test.ts` skips export forms it cannot parse and counts `` `Error.prototype` `` as documenting `Error` — it now fails on an unparsed form, checks the subpath indexes too, and requires the name itself in backticks.
+  - `[low]` `[patch]` Blind: small gaps — blank lines in `phpType.ts`, the README's async sentence, and the unregistered-subclass `name` in the docs are fixed; the duplicated `installGlobal` guard and the twin `getMessage` / `getCode` / `getPrevious` bodies of the two PHP roots are kept (two roots by design, two globals with different owners).
+  - `[low]` `[patch]` Intent (a): AC3's "read without importing the runtime" is shown only structurally — a subprocess row now reads the map from a module that does not import the runtime and classifies a `JsonException` and a `resolveClass` miss.
+  - `[false]` `[reject]` Intent (b): `expectException` is not exercised one to one — `epics.md` gives the grader's reading of the protocol to Story 9.11.
+  - `[medium]` `[patch]` Intent (c): the fixtures are missing — same root as Fidelity F-6.
+  - `[low]` `[patch]` Intent (d): exports reachable only through subpath entries are not checked by XT-runtime-37 — the docs test now reads the subpath indexes.
+  - `[false]` `[reject]` Intent (e): scope beyond the Story text — the rulings ESC-9.1-2, ESC-9.7-1 part 4 and ESC-9.8-1 part 1 name these switches for this Story, and the spine's Errors convention covers the rest.
+
+## Design Notes
+
+- **Why switch beyond the three ruled throws.** AD-26's Errors row binds each PHP exception class to the same-named JS class with Upstream's messages. The switched sites already carry PHP's exact message for a PHP throwable; leaving a JS `TypeError` there would make `catch (TypeError)` in a port miss it. Xaravel-only errors keep the JS classes.
+- **`Error` and `TypeError` as export names.** AD-3 keeps PHP's names. A module that imports the PHP `Error` shadows the global inside that module only; runtime files that need both import the PHP one under an alias (`Error as PhpError`).
+- **Protocol shape.** A frozen name → class map, not a lookup function: the grader can enumerate the set, and it cannot drift from what loaded. It holds only PHP's built-ins, so it never overlaps the Registry-wide `xaravel.class.lookup`.
+
+## Verification
+
+**Commands:**
+- `bun run oracle:story check 9.10` -- expected: every request accepted.
+- `php tools/oracle/evaluate.php /tmp/xv98/fw 8.5.11 <now> conformance/oracle-requests/9.10.jsonl` (output outside the repo) -- expected: results match the JS side.
+- `bun test packages/runtime` and `bun run harness --xaravel --id 'XT-runtime-*'` -- expected: pass once the fixtures are pulled.
+- `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run async-surface --all --check`, `bun run escalations:check` -- expected: clean.
+- `bun run story:check 9.10` -- expected: pass after the Fidelity Review of the final tree.
+
+## Fidelity Review
+
+### Reviewer 1: reject at tree 731e2f1e1b46da1e19449b048a3d39ce405d6701
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `21a0224aa648887deb8045cbe011868a3ef28a4f`, on 2026-10-22T07:44:59.050Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and the diff changes only Xaravel Tests. |
+| F-2: No expected value is weakened | pass | Changed assertions retain exact messages and codes and strengthen exception checks with PHP classes and exact FQCNs; no comparison is weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are added, changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The diff introduces no adapted assertion marker or Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | fail | Both assigned Oracle fixtures are explicitly unavailable, so their output errors cannot be checked. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | The new tests describe relevant checks, but missing fixtures prevent their Oracle comparisons, and some touched tests lack required helper evidence. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Implementation changes remain within runtime, whose ownership includes PHP exceptions, codecs, registry and scope; no other Component is stubbed. |
+| F-9: Every `@asyncRoot` tag is true | fail | New throwable helpers are synchronous, but the retained Registry.resolveClassAsync root relies on an omitted decision approving that root. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | The two requests exercise the exception chains, constructors, getters and invalid arguments described by the Xaravel Tests. Their recorded reason explains why no Upstream test supplies these inputs. |
+
+Findings:
+
+- **F-6** `conformance/fixtures/runtime/70a58b4d5b8816d2f7272d8caa01c3290bb8c34e8dbeb3491776802018e7f5c0.json`: Supply the signed XT-runtime-35 fixture and verification evidence so its output.error can be reviewed.
+- **F-6** `conformance/fixtures/runtime/ae94e29ade2ed5adb0d7f636f2c1f882d525a2ba9bda653d6795b7df36dab5eb.json`: Supply the signed XT-runtime-36 fixture and verification evidence so its output.error can be reviewed.
+- **F-7** `packages/runtime/tests/xaravel/exceptions.test.ts`: XT-runtime-35 and XT-runtime-36 read missing fixtures before their assertions. Supply both verified fixtures to make the declared Oracle comparisons executable.
+- **F-7** `packages/runtime/tests/xaravel/semantics.test.ts`: Provide the full BrandedArray declaration used by XT-runtime-22; its implementation is absent from the supplied helper evidence.
+- **F-7** `packages/runtime/tests/xaravel/scope.test.ts`: Provide the inherited() helper called transitively through child() by XT-runtime-1; its declaration is missing from the evidence.
+- **F-9** `packages/runtime/src/registry/registry.ts`: Supply decisions/ESC-9.4-1.md, cited by the retained resolveClassAsync docblock as authorization for @​asyncRoot Registry.resolveClassAsync. The supplied DIV-1 root list does not independently establish this module-loading root.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"731e2f1e1b46da1e19449b048a3d39ce405d6701","base":"21a0224aa648887deb8045cbe011868a3ef28a4f","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-22T07:44:59.050Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and the diff changes only Xaravel Tests.","findings":[]},{"id":"F-2","result":"pass","note":"Changed assertions retain exact messages and codes and strengthen exception checks with PHP classes and exact FQCNs; no comparison is weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are added, changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The diff introduces no adapted assertion marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"fail","note":"Both assigned Oracle fixtures are explicitly unavailable, so their output errors cannot be checked.","findings":[{"path":"conformance/fixtures/runtime/70a58b4d5b8816d2f7272d8caa01c3290bb8c34e8dbeb3491776802018e7f5c0.json","detail":"Supply the signed XT-runtime-35 fixture and verification evidence so its output.error can be reviewed."},{"path":"conformance/fixtures/runtime/ae94e29ade2ed5adb0d7f636f2c1f882d525a2ba9bda653d6795b7df36dab5eb.json","detail":"Supply the signed XT-runtime-36 fixture and verification evidence so its output.error can be reviewed."}]},{"id":"F-7","result":"fail","note":"The new tests describe relevant checks, but missing fixtures prevent their Oracle comparisons, and some touched tests lack required helper evidence.","findings":[{"path":"packages/runtime/tests/xaravel/exceptions.test.ts","detail":"XT-runtime-35 and XT-runtime-36 read missing fixtures before their assertions. Supply both verified fixtures to make the declared Oracle comparisons executable."},{"path":"packages/runtime/tests/xaravel/semantics.test.ts","detail":"Provide the full BrandedArray declaration used by XT-runtime-22; its implementation is absent from the supplied helper evidence."},{"path":"packages/runtime/tests/xaravel/scope.test.ts","detail":"Provide the inherited() helper called transitively through child() by XT-runtime-1; its declaration is missing from the evidence."}]},{"id":"F-8","result":"pass","note":"Implementation changes remain within runtime, whose ownership includes PHP exceptions, codecs, registry and scope; no other Component is stubbed.","findings":[]},{"id":"F-9","result":"fail","note":"New throwable helpers are synchronous, but the retained Registry.resolveClassAsync root relies on an omitted decision approving that root.","findings":[{"path":"packages/runtime/src/registry/registry.ts","detail":"Supply decisions/ESC-9.4-1.md, cited by the retained resolveClassAsync docblock as authorization for @asyncRoot Registry.resolveClassAsync. The supplied DIV-1 root list does not independently establish this module-loading root."}]},{"id":"F-10","result":"pass","note":"The two requests exercise the exception chains, constructors, getters and invalid arguments described by the Xaravel Tests. Their recorded reason explains why no Upstream test supplies these inputs.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: reject at tree 731e2f1e1b46da1e19449b048a3d39ce405d6701
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `21a0224aa648887deb8045cbe011868a3ef28a4f`, on 2026-10-22T07:44:59.050Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty and no Ported Test is added or changed. Every changed test is an Xaravel Test (xaravelTest), so there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | pass | No Ported Tests. In the changed Xaravel Tests, assertThrows(…, Error/TypeError) became assertPhpThrows, which adds an exact FQCN check, and assertJsonError now also checks the class and getCode(). Both are stricter. The ScopeFrameException name changed from "ScopeFrameException" to its exact FQCN, following the re-parent on RuntimeException that ESC-9.1-2 orders. It is still an exact comparison, not a looser one. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, so there is no Upstream assertion count to compare. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff changes no Expectations line and adds no skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field changes. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | fail | The Story relies on the fixtures of the two requests in conformance/oracle-requests/9.10.jsonl. Evidence (c) reports both as unavailable, so I cannot check whether their output is an error or whether any recorded errors (such as the TypeError throws XT-runtime-36 compares) are what PHP gives. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | I compared each changed or added xaravelTest body with its consequence string. XT-runtime-36, XT-runtime-37, XT-runtime-13, XT-runtime-1, XT-runtime-3, XT-runtime-16, XT-runtime-22, XT-runtime-24/25 and XT-runtime-27/28/30 check what they claim. XT-runtime-35 cites AD-26, but the AD-26 Rule in evidence is the PORTING bindings table, which has no Errors row and nothing about PHP exceptions. The cited decision does not name what the test verifies. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed source file is under packages/runtime (component runtime), and AD-19 makes the runtime the owner of the base PHP exceptions. The registry's notFound and throwableArguments build the classes the runtime itself registers, falling back to the JS class only when none is registered. No other Component is stubbed or faked. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g): the only @​asyncRoot tag is on resolveClassAsync (registry.ts:127), which is unchanged and does the async import() miss path AD-10.4 names. Everything added (the exception classes and their getters, checkArgument, initThrowable, causeOf, registeredBaseClass, installClassmapEncoder, phpTypeName, installGlobal) is sync and returns no Promise, so none needs a tag. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | The two requests in 9.10.jsonl carry Xaravel Test IDs (test_ids is empty), so no Upstream test exists to take inputs from. The exceptions.test.ts header records the reason under docs/ops/oracle.md § Per-Story requests. The requests evaluate only the PHP built-ins the acceptance criteria name (class_parents, constructors, getters, instanceof, bad-argument constructions), with no Laravel code. No arbitrary PHP is signed as an expected value. |
+
+Findings:
+
+- **F-6** `conformance/fixtures/runtime/70a58b4d5b8816d2f7272d8caa01c3290bb8c34e8dbeb3491776802018e7f5c0.json`: The signed Oracle fixture for request XT-runtime-35 is missing. Run the Oracle on conformance/oracle-requests/9.10.jsonl and commit the signed fixture so its output can be checked.
+- **F-6** `conformance/fixtures/runtime/ae94e29ade2ed5adb0d7f636f2c1f882d525a2ba9bda653d6795b7df36dab5eb.json`: The signed Oracle fixture for request XT-runtime-36 is missing. XT-runtime-36 compares the TypeError class and message from it for six bad-argument constructions, so commit the signed fixture to let the recorded errors be checked against PHP's.
+- **F-7** `packages/runtime/tests/xaravel/exceptions.test.ts`: XT-runtime-35's consequence string cites AD-26, but AD-26's Rule (the PORTING.md bindings table) has no Errors row and does not cover the exception hierarchy or the Symbol.for('xaravel.php.classes') protocol. Either cite the bullet that actually holds this rule (AD-19 covers the base PHP exception classes), or show that the AD-26 Errors row exists and covers what the test checks. The same 'AD-26 Errors row' reference appears in src/php/Error.ts, src/php/Exception.ts and docs/exceptions.md.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"reject","tree":"731e2f1e1b46da1e19449b048a3d39ce405d6701","base":"21a0224aa648887deb8045cbe011868a3ef28a4f","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T07:44:59.050Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and no Ported Test is added or changed. Every changed test is an Xaravel Test (xaravelTest), so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"pass","note":"No Ported Tests. In the changed Xaravel Tests, assertThrows(…, Error/TypeError) became assertPhpThrows, which adds an exact FQCN check, and assertJsonError now also checks the class and getCode(). Both are stricter. The ScopeFrameException name changed from \"ScopeFrameException\" to its exact FQCN, following the re-parent on RuntimeException that ESC-9.1-2 orders. It is still an exact comparison, not a looser one.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there is no Upstream assertion count to compare.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff changes no Expectations line and adds no skip.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field changes.","findings":[]},{"id":"F-6","result":"fail","note":"The Story relies on the fixtures of the two requests in conformance/oracle-requests/9.10.jsonl. Evidence (c) reports both as unavailable, so I cannot check whether their output is an error or whether any recorded errors (such as the TypeError throws XT-runtime-36 compares) are what PHP gives.","findings":[{"path":"conformance/fixtures/runtime/70a58b4d5b8816d2f7272d8caa01c3290bb8c34e8dbeb3491776802018e7f5c0.json","detail":"The signed Oracle fixture for request XT-runtime-35 is missing. Run the Oracle on conformance/oracle-requests/9.10.jsonl and commit the signed fixture so its output can be checked."},{"path":"conformance/fixtures/runtime/ae94e29ade2ed5adb0d7f636f2c1f882d525a2ba9bda653d6795b7df36dab5eb.json","detail":"The signed Oracle fixture for request XT-runtime-36 is missing. XT-runtime-36 compares the TypeError class and message from it for six bad-argument constructions, so commit the signed fixture to let the recorded errors be checked against PHP's."}]},{"id":"F-7","result":"fail","note":"I compared each changed or added xaravelTest body with its consequence string. XT-runtime-36, XT-runtime-37, XT-runtime-13, XT-runtime-1, XT-runtime-3, XT-runtime-16, XT-runtime-22, XT-runtime-24/25 and XT-runtime-27/28/30 check what they claim. XT-runtime-35 cites AD-26, but the AD-26 Rule in evidence is the PORTING bindings table, which has no Errors row and nothing about PHP exceptions. The cited decision does not name what the test verifies.","findings":[{"path":"packages/runtime/tests/xaravel/exceptions.test.ts","detail":"XT-runtime-35's consequence string cites AD-26, but AD-26's Rule (the PORTING.md bindings table) has no Errors row and does not cover the exception hierarchy or the Symbol.for('xaravel.php.classes') protocol. Either cite the bullet that actually holds this rule (AD-19 covers the base PHP exception classes), or show that the AD-26 Errors row exists and covers what the test checks. The same 'AD-26 Errors row' reference appears in src/php/Error.ts, src/php/Exception.ts and docs/exceptions.md."}]},{"id":"F-8","result":"pass","note":"Every changed source file is under packages/runtime (component runtime), and AD-19 makes the runtime the owner of the base PHP exceptions. The registry's notFound and throwableArguments build the classes the runtime itself registers, falling back to the JS class only when none is registered. No other Component is stubbed or faked.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g): the only @asyncRoot tag is on resolveClassAsync (registry.ts:127), which is unchanged and does the async import() miss path AD-10.4 names. Everything added (the exception classes and their getters, checkArgument, initThrowable, causeOf, registeredBaseClass, installClassmapEncoder, phpTypeName, installGlobal) is sync and returns no Promise, so none needs a tag.","findings":[]},{"id":"F-10","result":"pass","note":"The two requests in 9.10.jsonl carry Xaravel Test IDs (test_ids is empty), so no Upstream test exists to take inputs from. The exceptions.test.ts header records the reason under docs/ops/oracle.md § Per-Story requests. The requests evaluate only the PHP built-ins the acceptance criteria name (class_parents, constructors, getters, instanceof, bad-argument constructions), with no Laravel code. No arbitrary PHP is signed as an expected value.","findings":[]}],"prior":[]}
+```

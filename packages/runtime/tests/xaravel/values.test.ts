@@ -15,7 +15,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { float, hasBrand, isFloat, jsonEncode, normalizeNull, PhpArray, PhpFloat, Ref } from "@xaravel/runtime/php";
+import { Error as PhpError, float, hasBrand, isFloat, jsonEncode, normalizeNull, PhpArray, PhpFloat, Ref, TypeError as PhpTypeError } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
 import { fqcn, registerClass } from "@xaravel/runtime/registry";
 
@@ -76,6 +76,14 @@ function thrownBy(fn: () => unknown): unknown {
 function assertThrows(fn: () => unknown, type: new (...args: never[]) => Error, message: string): void {
   const error = thrownBy(fn);
   Assert.assertTrue(error instanceof type, `expected a ${type.name}: ${String(error)}`);
+  Assert.assertSame(message, (error as Error).message);
+}
+
+/** Asserts `fn` throws the ported PHP class `type` itself (its FQCN, not a subclass's) with `message` (Story 9.10). */
+function assertPhpThrows(fn: () => unknown, type: abstract new (...args: never[]) => Error, message: string): void {
+  const error = thrownBy(fn);
+  Assert.assertTrue(error instanceof type, `expected a PHP ${fqcn(type)}: ${String(error)}`);
+  Assert.assertSame(fqcn(type), fqcn(error as Error));
   Assert.assertSame(message, (error as Error).message);
 }
 
@@ -150,18 +158,18 @@ xaravelTest(
     Assert.assertSame(1, keyOf(float(1.7)));
     Assert.assertSame("-9223372036854775809", keyOf("-9223372036854775809"));
     // A bigint outside the int64 range is no PHP int.
-    assertThrows(() => new PhpArray([[2n ** 63n, 1]]), TypeError, "Cannot access offset of type int on array");
-    assertThrows(() => new PhpArray([[-(2n ** 63n) - 1n, 1]]), TypeError, "Cannot access offset of type int on array");
+    assertPhpThrows(() => new PhpArray([[2n ** 63n, 1]]), PhpTypeError, "Cannot access offset of type int on array");
+    assertPhpThrows(() => new PhpArray([[-(2n ** 63n) - 1n, 1]]), PhpTypeError, "Cannot access offset of type int on array");
 
     // Illegal keys: PHP 8.5's message, the type as PHP names it.
-    assertThrows(() => new PhpArray([[[] as unknown as string, 1]]), TypeError, "Cannot access offset of type array on array");
-    assertThrows(() => new PhpArray([[new PhpArray() as unknown as string, 1]]), TypeError, "Cannot access offset of type array on array");
-    assertThrows(() => new PhpArray([[new XtValuesPoint() as unknown as string, 1]]), TypeError, "Cannot access offset of type Xaravel\\Tests\\Runtime\\XtValuesPoint on array");
-    assertThrows(() => new PhpArray([[new XtValuesUnregistered() as unknown as string, 1]]), TypeError, "Cannot access offset of type object on array");
-    assertThrows(() => new PhpArray([[(() => 1) as unknown as string, 1]]), TypeError, "Cannot access offset of type Closure on array");
-    assertThrows(() => new PhpArray([[undefined as unknown as string, 1]]), TypeError, "Cannot access offset of type undefined on array");
-    assertThrows(() => new PhpArray([[Symbol("k") as unknown as string, 1]]), TypeError, "Cannot access offset of type symbol on array");
-    assertThrows(() => new PhpArray().get({} as unknown as string), TypeError, "Cannot access offset of type array on array");
+    assertPhpThrows(() => new PhpArray([[[] as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type array on array");
+    assertPhpThrows(() => new PhpArray([[new PhpArray() as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type array on array");
+    assertPhpThrows(() => new PhpArray([[new XtValuesPoint() as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type Xaravel\\Tests\\Runtime\\XtValuesPoint on array");
+    assertPhpThrows(() => new PhpArray([[new XtValuesUnregistered() as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type object on array");
+    assertPhpThrows(() => new PhpArray([[(() => 1) as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type Closure on array");
+    assertPhpThrows(() => new PhpArray([[undefined as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type undefined on array");
+    assertPhpThrows(() => new PhpArray([[Symbol("k") as unknown as string, 1]]), PhpTypeError, "Cannot access offset of type symbol on array");
+    assertPhpThrows(() => new PhpArray().get({} as unknown as string), PhpTypeError, "Cannot access offset of type array on array");
 
     // The map API.
     const map = new PhpArray<string | number, string>();
@@ -202,7 +210,7 @@ xaravelTest(
 
     // Past PHP_INT_MAX: PHP's Error.
     const full = new PhpArray([["9223372036854775807", "a"]]);
-    assertThrows(() => full.push("b"), Error, "Cannot add element to the array as the next element is already occupied");
+    assertPhpThrows(() => full.push("b"), PhpError, "Cannot add element to the array as the next element is already occupied");
 
     // Exported from the package root, and registered.
     Assert.assertSame(PhpArray, root.PhpArray);

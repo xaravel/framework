@@ -24,7 +24,7 @@ A trait that uses traits extends a layer with no base: `class HasA extends mixin
 
 A class that uses traits extends a layer over its parent. PHP's `class Post extends Model { use HasA, HasB; }` is
 written `class Post extends mixin(Model, HasA, HasB) { … }`. The returned class has the instance and static members of
-the base and of every trait, both at run time and in its types.
+the base and of every trait, both at run time and in its types: its type is `Mixed` (`Mixed<Base, Traits>`).
 
 ## Composition rules
 
@@ -101,7 +101,7 @@ A Ported Test whose outcome depends on any of these cases raises an Escalation (
 `classUsesRecursive(classOrInstanceOrFqcn)` is Laravel's `class_uses_recursive`. It walks each class from the root
 ancestor down to the class. For each one it takes the traits that class uses directly, then appends the traits those
 traits use, recursively. The result is de-duplicated, keeping the first position. Layers are not classes. Trait names
-come from `fqcn()`, so an unregistered trait throws. A string argument is resolved with `resolveClass`.
+come from `fqcn()`, so an unregistered trait throws. A string argument is resolved with `resolveClass`. The argument's type is `ClassReference`.
 
 The result is a PHP array FQCN ⇒ FQCN in AD-9 form: a plain object, or `[]` when there are none.
 
@@ -134,7 +134,8 @@ when `Symbol.metadata` is undefined.
 
 `inject` has two forms:
 
-- `inject(map)` is a TC39 decorator for a class (its constructor) or for an instance or static method.
+- `inject(map)` is a TC39 decorator for a class (its constructor) or for an instance or static method. It returns an
+  `InjectDecorator`, and its map is an `InjectMap`.
 - `inject(map, fn)` stores the map on `fn` and returns `fn`.
 
 The map's keys are the parameter names, in order. It is copied once into a frozen null-prototype object. Where it is

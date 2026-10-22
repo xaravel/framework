@@ -6,8 +6,9 @@
 // - `registerClass(fqcn, X)` (9.1) also sets the grader's class-name brand, `X[Symbol.for('xaravel.class.fqcn')]`,
 //   own and non-enumerable (ESC-4.3-1 item 1). A subclass inherits it for display only; `fqcn()` reads the Registry,
 //   never the brand.
-// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Class "<FQCN>" not found`. The
-//   class is `Error` until Story 9.10 adds PHP's hierarchy.
+// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`:
+//   the class registered as `Error` (Story 9.10, `php/Error.ts`), read from the base map so this file imports no
+//   exception class, else the JS `Error` when nothing registered it.
 // - `registerTestClass(fqcn, X)` registers a test fixture in the nearest `test` unit up the frame chain (AD-10.5); it
 //   is discarded when that unit ends. `resolveClass` and `fqcn` check the test units up the chain before the base.
 // - `loadAutoload(packageJsonPath)` reads the PSR-4 map (`xaravel.autoload.psr-4`, AD-10.3) and `loadClassmap(path)`
@@ -15,12 +16,12 @@
 // - `resolveClassAsync(fqcn)` is the one async miss path (AD-10.4; decisions/ESC-9.4-1.md part 1): on a miss it
 //   `await import()`s the file the classmap, else the PSR-4 map, gives. `resolveClass` stays sync and never imports.
 //
-// The Registry imports nothing from `scope/` (the scope module imports the Registry through `ScopeFrameException`):
-// the scope module installs the Registry's access to the test units on load (`installTestFrameAccess`).
+// Load safety: every class file, PHP's exceptions included, imports `registerClass` from here, so this file imports no
+// module that registers a class on load, not even transitively (Story 9.10). It imports nothing from `scope/` or
+// `php/`: the scope module installs the Registry's access to the test units on load (`installTestFrameAccess`), and
+// `registry/index.ts` installs the classmap encoder, `jsonEncode` (`installClassmapEncoder`).
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { JSON_THROW_ON_ERROR } from "../php/jsonConstants";
-import { jsonEncode } from "../php/jsonEncode";
 
 /** Any class: the Registry stores constructors, never instances. */
 export type RegisteredClass = abstract new (...args: never[]) => unknown;
@@ -145,8 +146,20 @@ export async function resolveClassAsync(fqcn: string): Promise<RegisteredClass> 
   throw notFound(fqcn);
 }
 
+/** PHP's `Error` `Class "<FQCN>" not found`, built from the class the base map holds as `Error` (Story 9.10). */
 function notFound(fqcn: string): Error {
-  return new Error(`Class "${normalise(fqcn)}" not found`);
+  const message = `Class "${normalise(fqcn)}" not found`;
+  const php = registeredBaseClass("Error") as (new (message: string) => Error) | null;
+  return php === null ? new Error(message) : new php(message);
+}
+
+/**
+ * The class the base map holds under the PHP name `fqcn` (case-insensitive), or null; never a test class. Lets
+ * runtime modules that the PHP exceptions load (this file, their own constructor checks) build PHP's `Error` and
+ * `TypeError` without importing them. Internal.
+ */
+export function registeredBaseClass(fqcn: string): RegisteredClass | null {
+  return byKey.get(normalise(fqcn).toLowerCase())?.klass ?? null;
 }
 
 /** The test-frame entry, else the base entry, for `fqcn`; null when neither holds it. */
@@ -326,6 +339,20 @@ export function loadAutoload(packageJsonPath: string): void {
   psr4 = prefixes.sort((a, b) => b.prefix.length - a.prefix.length);
 }
 
+/** Encodes the classmap object as JSON; `registry/index.ts` installs `jsonEncode` under `JSON_THROW_ON_ERROR`. */
+let classmapEncoder: ((value: Record<string, string>) => string) | null = null;
+
+/**
+ * Installs the classmap encoder `writeClassmap` writes with; called once, by `registry/index.ts` on load, so this file
+ * never imports `jsonEncode` (whose JSON errors are PHP's `JsonException`, a registered class). Internal.
+ */
+export function installClassmapEncoder(encode: (value: Record<string, string>) => string): void {
+  if (classmapEncoder !== null) {
+    throw new TypeError("installClassmapEncoder(): the Registry's classmap encoder is already installed");
+  }
+  classmapEncoder = encode;
+}
+
 /**
  * Writes the full classmap to `path` (`bootstrap/cache/classes.json`, as `optimize` does; AD-10.4): a JSON object
  * from FQCN to file, with files relative to the classmap's directory. It holds the loaded classmap's entries and the
@@ -334,6 +361,10 @@ export function loadAutoload(packageJsonPath: string): void {
  * Throws, naming the path, when it cannot be written.
  */
 export function writeClassmap(path: string): void {
+  const encoder = classmapEncoder;
+  if (encoder === null) {
+    throw new Error("writeClassmap(): no classmap encoder is installed; import writeClassmap from @xaravel/runtime/registry");
+  }
   const entries = new Map<string, { readonly fqcn: string; readonly file: string }>();
   for (const [key, entry] of classmap) {
     if (existsSync(entry.file)) {
@@ -364,8 +395,7 @@ export function writeClassmap(path: string): void {
   }
   try {
     mkdirSync(base, { recursive: true });
-    // Under JSON_THROW_ON_ERROR the encoder returns a string or throws.
-    writeFileSync(target, jsonEncode(out, JSON_THROW_ON_ERROR) as string);
+    writeFileSync(target, encoder(out));
   } catch (error) {
     throw new Error(`Unable to write the classmap ${path}: ${messageOf(error)}`, { cause: error });
   }
