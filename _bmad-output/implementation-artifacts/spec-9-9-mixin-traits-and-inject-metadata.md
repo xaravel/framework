@@ -2,7 +2,7 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'blocked'
+status: 'in-progress'
 baseline_revision: '0aa17dff6f77a0d3176353f3bad25e6a27836e80'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -12,6 +12,7 @@ context:
   - '{project-root}/PORTING.md'
   - '{project-root}/decisions/ESC-9.9-1.md'
   - '{project-root}/decisions/ESC-9.9-2.md'
+  - '{project-root}/decisions/ESC-9.9-3.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -99,6 +100,7 @@ deferred:
 - Follow-up (`decisions/ESC-9.9-2.md`, DIV-12.8): `packages/runtime/src/traits/mixin.ts` -- for a trait default whose key the instance already owns, replace the value only when `propertyTable(Base)` lists a public or protected property of that name and the value is `identical` to its declared default; otherwise keep it. The header comment states the rule and cites ESC-9.9-2 and DIV-12.8.
 - Follow-up: `conformance/oracle-requests/9.9.jsonl` and `traits.test.ts` -- an XT-runtime-31 request covering four cases: a trait default against a parent default of the same name; the same with an `initialize<Trait>` writing a third value; a trait-only `$flag = false` that its initializer sets `true`; and a redeclared protected property. The fixture classes declare their property tables. Local rows pin the two DIV-12.8 cases (no table; a write equal to the declared default), citing DIV-12.8 in their consequence text, with no `adapted:` marker.
 - Follow-up: `packages/runtime/docs/` -- the traits page states the trait-default rule and its two DIV-12.8 limits.
+- Follow-up (`decisions/ESC-9.9-3.md`, DIV-12.9): `traits.test.ts` -- XT-runtime-31 regains the private-slot local row, asserting the base's value for an outside read and for a read through the base's own method, citing DIV-12.9 in its consequence text with no `adapted:` marker. `mixin.ts` -- the header comment cites DIV-12.9; no behaviour change. `packages/runtime/docs/traits-and-inject.md` -- the private-slot case is recorded as DIV-12.9, not open.
 
 **Acceptance Criteria:**
 - The four ACs of Story 9.9 (`epics.md` line 3180), each verified by its XT row in `stories/9.9.md`.
@@ -106,6 +108,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-21: `decisions/ESC-9.9-3.md` (Maintainer) rules option 1: a private base property keeps the base's value in the one JS slot, recorded as DIV-12.9. The code is unchanged; the private-slot row, a comment and the docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21: `decisions/ESC-9.9-1.md` (orchestrator) and `decisions/ESC-9.9-2.md` (Maintainer) are ruled. ESC-9.9-2 takes neither listed option: a trait default replaces a base property it finds still at its declared default (read from the PHP property table, ESC-9.7-1 part 1), and any other value is kept; DIV-12.8 records the two remaining cases. That rule, its Oracle request and its docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21, implementation. (1) XT-runtime-31's classes are `App\Plain\{Base, Post, Comment, Reply, Plain}`, not `App\Models\*`: `registry.test.ts` already registers `App\Models\Post`, and registrations are process-wide. Trait FQCNs (`App\Concerns\*`), the only names in the results, are unchanged. XT-runtime-32's classes are `App\Eloquent\*`. (2) The conformance harness freezes `Symbol` before tests load (`conformance/harness/intrinsics.ts`), so the polyfill now installs only when `Object.isExtensible(Symbol)`, and `inject` reads `Symbol.metadata ?? Symbol.for('Symbol.metadata')`. Without the guard, every runtime test file failed at import under the harness. XT-runtime-33 checks the polyfill in fresh processes. The in-harness gap is ESC-9.9-1 (`protected-path`).
 - 2026-10-21, follow-up implementation (ESC-9.9-2). (1) `assignDefaults` replaces an owned key only when `propertyTable(Base)` lists it as public or protected and the value is `identical` to its declared default (`holdsBaseDefault`). (2) The new XT-runtime-31 request (`App\Defaults\*`, traits `App\Concerns\{SetsName, WritesName, Flags, Unguards}`) gives each base its own constructor calling a namespaced `initialize()`, not an inherited `Host` constructor: a JS subclass's fields are set only after its parent's constructor returns, so the JS host that calls `initializeTraits` must be the class declaring the fields, and the request mirrors that. `oracle()` in `traits.test.ts` now selects a request by its first expr. (3) Per ESC-9.9-1's ruling, XT-runtime-33 also asserts `Symbol.metadata` in-process, and the polyfill and docs comments no longer say the harness skips it.
