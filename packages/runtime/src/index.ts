@@ -23,6 +23,7 @@ export {
   ScopeFrameException,
 } from "./scope/index";
 export {
+  __PHP_Incomplete_Class,
   float,
   hasBrand,
   isFloat,
@@ -34,8 +35,12 @@ export {
   type PhpArrayKey,
   PhpFloat,
   type PhpKeyInput,
+  phpSerialize,
+  phpUnserialize,
+  type PhpUnserializeOptions,
   Ref,
   spaceship,
+  stdClass,
   toBool,
   toFloat,
   toInt,

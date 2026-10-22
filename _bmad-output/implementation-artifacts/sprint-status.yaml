@@ -125,7 +125,7 @@ development_status:
   9-4-class-registry-and-fqcn: done
   9-5-phparray-ref-float-marker-and-null-normalisation: done
   9-6-php-semantics-helpers: done
-  9-7-phpserialize-phpunserialize-codec: backlog
+  9-7-phpserialize-phpunserialize-codec: blocked  # ESC-9.7-1 (contract: codec property table and defaults, byte strings, enums, Closure error); code reviewed, Fidelity pass; story:check fails only on the open Escalation
   9-8-jsonencode-jsondecode-with-php-flag-semantics: backlog
   9-9-mixin-traits-and-inject-metadata: backlog
   9-10-php-exception-hierarchy: backlog
