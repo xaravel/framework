@@ -81,7 +81,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
   const report = checkPorting(root);
   expect(report.violations).toEqual([]);
   expect(report.constructs).toBe(17);
-  expect(report.sections).toBe(11);
+  expect(report.sections).toBe(12);
   expect(report.fixtures).toBe(20);
   const porting = read(PORTING_FILE);
   const headings = porting.split("\n").filter((line) => line.startsWith("## "));
@@ -92,6 +92,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
     "## Mechanical expression rule",
     "## By-reference parameters",
     "## Exceptions",
+    "## Scalar coercion (AD-9)",
     "## Frame slots (AD-5)",
     "## APP_KEY forms (AD-23)",
     "## Promise.all allow-list (AD-6)",
@@ -173,7 +174,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
   const real = run(CLI, ["check"]);
   expect(real.stderr).toBe("");
   expect(real.code).toBe(0);
-  expect(real.stdout).toBe(`PORTING OK: 17 construct row(s) decided, 11 section(s), ${rows.length} DIV-12 pair(s), 20 fixture translation(s).\n`);
+  expect(real.stdout).toBe(`PORTING OK: 17 construct row(s) decided, 12 section(s), ${rows.length} DIV-12 pair(s), 20 fixture translation(s).\n`);
 
   // Fixture roots: an unchanged copy passes; each broken one fails with exit 1 and the matrix message.
   expect(run(CLI, ["check", "--root", fixture()]).code).toBe(0);

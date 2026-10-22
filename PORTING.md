@@ -165,6 +165,26 @@ A PHP by-reference parameter (`function f(&$x)`) takes a `Ref<T>` box from `@xar
 - **Other exception expectations.** `expectExceptionObject(new X(...))`, `expectExceptionCode` and `expectExceptionMessageMatches` keep Upstream's call (the pattern converted by § PCRE conversion), as do `$this->fail()` and the surrounding `try`/`finally`; a `catch (X)` without a variable becomes `catch (e) { if (!(e instanceof X)) throw e; … }`.
 - **The `\Error`/`\Exception` split** is published through a `Symbol.for` protocol for the grader (Story 9.10; ESC-4.3-1 items 10 and 14). Until then a JS `Error` through `ExceptionComparator` is compared as it is (DIV-9.8).
 
+## Scalar coercion (AD-9)
+
+Laravel runs in PHP's coercive mode, not under `declare(strict_types=1)`: 2 of its 1,742 source files and 18 of its 1,346 test files declare it. The Oracle evaluates every expression in coercive mode too. A port that checks scalar parameters strictly therefore diverges from Upstream (ESC-9.10-2). Where Upstream's behaviour or a test depends on it, a ported parameter typed `int`, `float`, `string` or `bool` converts its argument as PHP's coercive mode does:
+
+| Argument | `int` | `float` | `string` | `bool` |
+|---|---|---|---|---|
+| numeric string (`'5'`, `' 5'`, `'5.0'`, `'1e3'`) | its value; a fractional value as for a float | its value | as given | `'0'` and `''` are `false`, others `true` |
+| leading-numeric string (`'5 apples'`) | its numeric prefix, with a warning | its numeric prefix, with a warning | as given | `true` |
+| non-numeric string | `TypeError` | `TypeError` | as given | `''` and `'0'` are `false`, others `true` |
+| integral float (`5.0`) | `5` | as given | `'5'` | `0.0` is `false`, others `true` |
+| fractional float (`5.5`) | `5`, with PHP 8.1's deprecation | as given | `'5.5'` | `true` |
+| `true` / `false` | `1` / `0` | `1.0` / `0.0` | `'1'` / `''` | as given |
+| `null` | see below | see below | see below | see below |
+
+- **`null`** to a non-nullable scalar parameter is a `TypeError` for Laravel's own (userland) methods in coercive mode too. Only PHP's built-in functions and classes, the ones `@xaravel/runtime` ports such as `Exception::__construct`, accept it: as `''`, `0`, `0.0` or `false`, with PHP 8.1's deprecation.
+- **Warnings and deprecations** are not modelled; the converted value is.
+- **`TypeError` messages** keep PHP's text, for example `Foo::bar(): Argument #1 ($n) must be of type int, string given`.
+- **The Oracle is the authority.** When a row of this table and a signed fixture disagree, the fixture wins, and the table is corrected.
+- A Component that does not port a coercion Upstream relies on records it under a DIV clause before its Story ships; a Story never decides it locally (AD-9, AGENTS.md).
+
 ## Frame slots (AD-5)
 
 Per-unit state lives in Scope Frame slots (`frameSlot(key, init)` from `@xaravel/runtime/scope`), never in singleton fields or module variables (AD-5). These are the services Laravel keeps per request in instance fields:
