@@ -3,8 +3,7 @@
 // `getMessage()` is PHPUnit's `getMessage()`, exactly. When a ComparisonFailure
 // with exported values is attached, the JS `message` also names both values, as
 // PHPUnit's diff does: `"\n--- Expected\n" + expectedAsString + "\n+++ Actual\n"
-// + actualAsString`, so bun's failure output shows them (`messageSuffix()`,
-// which the message rewrite protocol keeps).
+// + actualAsString`, so bun's failure output shows them.
 import { AssertionFailedError } from "./AssertionFailedError";
 import type { ComparisonFailure } from "./ComparisonFailure";
 
@@ -19,14 +18,11 @@ export class ExpectationFailedException extends AssertionFailedError {
     super(message, 0, previous);
     this.name = "ExpectationFailedException";
     this.#comparisonFailure = comparisonFailure;
-    this.message = this.getMessage() + this.messageSuffix();
-  }
-
-  /** PHPUnit's diff header with both exported values, when the comparison failure has them. */
-  protected override messageSuffix(): string {
-    const expected = this.#comparisonFailure?.getExpectedAsString() ?? "";
-    const actual = this.#comparisonFailure?.getActualAsString() ?? "";
-    return expected !== "" || actual !== "" ? `\n--- Expected\n${expected}\n+++ Actual\n${actual}` : "";
+    const expected = comparisonFailure?.getExpectedAsString() ?? "";
+    const actual = comparisonFailure?.getActualAsString() ?? "";
+    if (expected !== "" || actual !== "") {
+      this.message = `${message}\n--- Expected\n${expected}\n+++ Actual\n${actual}`;
+    }
   }
 
   getComparisonFailure(): ComparisonFailure | null {

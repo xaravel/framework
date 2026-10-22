@@ -17,7 +17,7 @@
 // reachable through `Mockery.mock()`; `createMock` never calls it. Counts that
 // have no assertion kind (`addToAssertionCount`, mock verification) go to the
 // counting context's kind-less count (AssertionCounter).
-import { argumentError, stringParam, unmarkFloat } from "../comparison/PhpValues";
+import { argumentError, stringParam } from "../comparison/PhpValues";
 import { addToAssertionCount, recordAssertion } from "../declarations/AssertionCounter";
 import { Assert, type ClassOrInterface } from "./Assert";
 import { classOrInterface } from "./Constraints";
@@ -70,8 +70,7 @@ function stringArgument(method: string, name: string, value: unknown): string {
 }
 
 /** PHP's `int|string` parameter in coercive mode; a bigint keeps its exact digits as a string. */
-function intOrString(method: string, argument: unknown): number | string {
-  const value = unmarkFloat(argument);
+function intOrString(method: string, value: unknown): number | string {
   if (typeof value === "string") {
     return value;
   }
@@ -84,7 +83,7 @@ function intOrString(method: string, argument: unknown): number | string {
   if (typeof value === "bigint") {
     return Number.isSafeInteger(Number(value)) ? Number(value) : value.toString();
   }
-  const error = argumentError(method, 1, "code", "string|int", argument);
+  const error = argumentError(method, 1, "code", "string|int", value);
   throw new TypeError(error.message.replace("PHPUnit\\Framework\\Assert::", "PHPUnit\\Framework\\TestCase::"));
 }
 

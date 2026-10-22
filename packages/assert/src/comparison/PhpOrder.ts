@@ -3,11 +3,9 @@
 // GreaterThan and LessThan (`$a < $b` is `($a <=> $b) < 0`), and the
 // canonicalizing ArrayComparator's sort, order values through this. Two values
 // PHP cannot order (objects of different classes, an array missing a key of the
-// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does. A value
-// carrying the runtime's float marker orders as the plain `number` it stands
-// for (Story 9.11).
+// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does.
 import { arrayEntries, type Entries, isBuiltIn, isNumber, isPhpArray, type Key, numericValue, objectProps, RECURSION, truthy } from "./PhpComparison";
-import { formatDouble, isFloat, isPhpObject, isStringable, sameClass, stringOf, unmarkFloat } from "./PhpValues";
+import { formatDouble, isPhpObject, isStringable, sameClass, stringOf } from "./PhpValues";
 
 const UNCOMPARABLE = 1;
 
@@ -90,7 +88,7 @@ export function smartCompare(a: string, b: string): number {
 function compareNumberToString(number: number | bigint, text: string): number {
   const parsed = numericValue(text);
   if (parsed !== null) {
-    if (typeof number === "number" && isFloat(number)) {
+    if (typeof number === "number" && !Number.isSafeInteger(number)) {
       return threeway(number, Number(parsed.value));
     }
     if (parsed.int) {
@@ -98,7 +96,7 @@ function compareNumberToString(number: number | bigint, text: string): number {
     }
     return threeway(Number(number), parsed.value);
   }
-  const asString = typeof number === "number" && isFloat(number) ? formatDouble(number, 14) : String(number);
+  const asString = typeof number === "number" && !Number.isSafeInteger(number) ? formatDouble(number, 14) : String(number);
   return binaryCompare(asString, text);
 }
 
@@ -152,9 +150,7 @@ class Ordering {
     return objectLeft ? this.compare(casted, value) : this.compare(value, casted);
   }
 
-  compare(left: unknown, right: unknown): number {
-    const a = unmarkFloat(left);
-    const b = unmarkFloat(right);
+  compare(a: unknown, b: unknown): number {
     if (a === undefined || b === undefined || typeof a === "symbol" || typeof b === "symbol") {
       return Object.is(a, b) ? 0 : UNCOMPARABLE;
     }

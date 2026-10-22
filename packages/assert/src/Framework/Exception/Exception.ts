@@ -6,22 +6,12 @@
 // (sebastian-bergmann/phpunit#5965). `previous` is also the JS `cause`, and
 // `code` a non-enumerable own property, so the grader's exporter and
 // comparators read both as they read any JS error's.
-//
-// The message rewrite protocol (Story 9.11, ESC-4.3-1 item 11): every PHPUnit
-// exception has a non-enumerable method under
-// `Symbol.for('xaravel.assert.setMessage')`, which Laravel's
-// `TestResponseAssert::appendMessageToException` port calls in place of PHP's
-// reflection on `message`, without importing the grader. Called with a string,
-// it makes that string what `getMessage()` returns, and the JS `message` that
-// string plus the suffix the class adds (`messageSuffix()`); code, previous,
-// cause and any comparison failure are unchanged. It returns `null`.
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
-const SET_MESSAGE = Symbol.for("xaravel.assert.setMessage");
 
 export class Exception extends Error {
   static readonly [CLASS_FQCN]: string = "PHPUnit\\Framework\\Exception";
 
-  #message: string;
+  readonly #message: string;
   readonly #code: number;
   readonly #previous: Error | null;
 
@@ -52,20 +42,5 @@ export class Exception extends Error {
 
   getPrevious(): Error | null {
     return this.#previous;
-  }
-
-  /** What a subclass adds to the JS `message` after `getMessage()`; none here. */
-  protected messageSuffix(): string {
-    return "";
-  }
-
-  /** The message rewrite protocol: `getMessage()` becomes `message`, the JS `message` keeps the class's suffix. */
-  [SET_MESSAGE](message: unknown): null {
-    if (typeof message !== "string") {
-      throw new TypeError(`Symbol.for('xaravel.assert.setMessage'): the message must be a string, got ${message === null ? "null" : typeof message}`);
-    }
-    this.#message = message;
-    this.message = message + this.messageSuffix();
-    return null;
   }
 }

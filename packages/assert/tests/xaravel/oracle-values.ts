@@ -1,14 +1,13 @@
-// Test-side helpers for XT-assert-1 and XT-assert-17: read a signed Oracle
-// fixture and decode the evaluator's value encoding (tools/oracle/evaluate.php
-// header) into the AD-9 value model. The package tsconfig cannot reach tools/,
-// so this uses node:crypto and node:fs only.
+// Test-side helpers for XT-assert-1: read a signed Oracle fixture and decode
+// the evaluator's value encoding (tools/oracle/evaluate.php header) into the
+// AD-9 value model. The package tsconfig cannot reach tools/, so this uses
+// node:crypto and node:fs only.
 import { createPublicKey, verify } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
 export const PHP_ARRAY = Symbol.for("xaravel.php.array");
 export const PHP_PROPS = Symbol.for("xaravel.php.props");
 export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
-export const PHP_FLOAT = Symbol.for("xaravel.php.float");
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 
 /** The domain prefix of every fixture signature (tools/oracle/fixtures.ts). */
@@ -28,25 +27,6 @@ export class BrandedArray implements Iterable<readonly [Key, unknown]> {
   *[Symbol.iterator](): Iterator<readonly [Key, unknown]> {
     yield* this.entries;
   }
-}
-
-/**
- * A test-side marked float (XT-assert-17): the runtime's float brand only, as `BrandedArray` simulates the array brand;
- * `Number(v)` is its value. The grader never imports the runtime (AD-2), so it must read this as it reads `float(n)`.
- */
-export class BrandedFloat {
-  readonly [PHP_FLOAT] = true;
-
-  constructor(private readonly value: number) {}
-
-  valueOf(): number {
-    return this.value;
-  }
-}
-
-/** How `decode` represents a PHP float: a plain `number` (XT-assert-1, DIV-9) or a `BrandedFloat` (XT-assert-17). */
-export interface DecodeOptions {
-  readonly floats?: "number" | "branded";
 }
 
 /**
@@ -123,8 +103,8 @@ function phpArray(entries: (readonly [Key, unknown])[]): unknown {
   return new BrandedArray(entries);
 }
 
-/** Decodes one value of the evaluator's encoding; every PHP float a `BrandedFloat` when `options.floats` is `"branded"`. */
-export function decode(encoded: unknown, options: DecodeOptions = {}): unknown {
+/** Decodes one value of the evaluator's encoding. */
+export function decode(encoded: unknown): unknown {
   if (encoded === null || typeof encoded === "boolean" || typeof encoded === "string") {
     return encoded;
   }
@@ -136,11 +116,10 @@ export function decode(encoded: unknown, options: DecodeOptions = {}): unknown {
     return decodeInt(value["int"]);
   }
   if (typeof value["float"] === "string") {
-    const number = decodeFloat(value["float"]);
-    return options.floats === "branded" ? new BrandedFloat(number) : number;
+    return decodeFloat(value["float"]);
   }
   if (Array.isArray(value["array"])) {
-    return phpArray((value["array"] as unknown[][]).map(([key, item]) => [decodeKey(key), decode(item, options)] as const));
+    return phpArray((value["array"] as unknown[][]).map(([key, item]) => [decodeKey(key), decode(item)] as const));
   }
   if (typeof value["resource"] === "string") {
     return { [PHP_RESOURCE]: value["resource"] };
@@ -153,9 +132,9 @@ export function decode(encoded: unknown, options: DecodeOptions = {}): unknown {
     const hidden = new Map<string, unknown>();
     for (const [name, scope, item] of value["properties"] as unknown[][]) {
       if (scope === "") {
-        props.push([decodeKey(name), decode(item, options)]);
+        props.push([decodeKey(name), decode(item)]);
       } else {
-        hidden.set(String(name), decode(item, options));
+        hidden.set(String(name), decode(item));
       }
     }
     return new (classFor(value["object"]))(phpArray(props), hidden);
@@ -214,12 +193,12 @@ export function readSignedFixture(path: string, sha256: string, publicKeyPem: st
 export const LOOSE_EXPR = "array_map(fn ($a) => array_map(fn ($b) => $a == $b, $v), $v)";
 export const STRICT_EXPR = "array_map(fn ($a) => array_map(fn ($b) => $a === $b, $v), $v)";
 
-function resultValue(output: Output, index: number, label: string, options: DecodeOptions = {}): unknown {
+function resultValue(output: Output, index: number, label: string): unknown {
   const result = output.results[index];
   if (result === undefined || !("value" in result)) {
     throw new Error(`${label}: result ${index} is not a value: ${JSON.stringify(result ?? null)}`);
   }
-  return decode(result.value, options);
+  return decode(result.value);
 }
 
 /**
@@ -231,7 +210,6 @@ export function matrixMismatches(
   request: Request,
   output: Output,
   compare: { loose: (a: unknown, b: unknown) => boolean; strict: (a: unknown, b: unknown) => boolean },
-  options: DecodeOptions = {},
 ): { pairs: number; mismatches: string[] } {
   if (output.error !== null) {
     throw new Error(`${label}: the Oracle reported an error: ${JSON.stringify(output.error)}`);
@@ -239,7 +217,7 @@ export function matrixMismatches(
   if (request.exprs[0] !== "$v" || output.results.length !== request.exprs.length) {
     throw new Error(`${label}: expected $v first and one result per expr`);
   }
-  const values = resultValue(output, 0, label, options);
+  const values = resultValue(output, 0, label);
   if (!Array.isArray(values)) {
     throw new Error(`${label}: $v is not a list`);
   }

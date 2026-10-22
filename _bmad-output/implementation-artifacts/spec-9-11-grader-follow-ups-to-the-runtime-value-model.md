@@ -3,7 +3,7 @@ title: 'Story 9.11: Grader follow-ups to the runtime value model'
 type: 'feature'
 created: '2026-10-22'
 baseline_revision: '6a51f8b0a0306c52eba5b5af8d43e2bd624c246f'
-status: 'in-progress'
+status: 'blocked'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -98,6 +98,38 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-22 — Review pass
+
+Layers: Blind Hunter, Edge Case Hunter, Verification Gap, Intent Alignment. Fidelity Review skipped this pass: the Story halts on ESC-9.11-1 with XT-assert-18, AC4 and AC5 unbuilt and XT-assert-17's fixture unsigned, so it runs when the Story resumes with its full scope. Intent gap: the attempt is saved in [spec-9-11-attempt-1.patch](spec-9-11-attempt-1.patch) and the code reverted; `conformance/escalations/ESC-9.11-2.md` asks the Maintainer which `-0` rule the grader keeps.
+
+- verdicts: 25 findings — high 0, medium 15, low 4, false 4, maybe-false 0 (2 intent-alignment observations logged as descriptive rows)
+- findings:
+  - `[false]` `[reject]` Blind: XT-assert-17's signed fixture is missing while the spec is in review — the per-Story Oracle flow signs it on push (`oracle.yml#story`), as the spec's Verification says; nothing is owed locally.
+  - `[medium]` `[intent_gap]` Blind: the `-0` carve-out in `phpToString`/`var_export`/`serialize` is a divergence decided locally — the intent contract's number rule ("used everywhere") conflicts with XT-mockery-10, which pins the int forms; root cause inside the intent contract; ESC-9.11-2.
+  - `[low]` `[intent_gap]` Blind: `serialize` keeps `i:0;` for `-0` with no stated reason — same root cause as above.
+  - `[medium]` `[intent_gap]` Blind: an unmarked `-0` as a float makes `assertSame(0, -0)` fail where a JS port of a PHP int expression yields `-0` — same root cause; ESC-9.11-2 option 1 avoids it.
+  - `[medium]` `[patch]` Blind: `TestCase::exactly()`, `Exception`'s `code` and `ExceptionCode` still reject or misread a marked float — moot (intent gap); carry into the re-run.
+  - `[medium]` `[patch]` Blind: `arrayKey` does not unmark a marked float key (`assertArrayHasKey(float(1), [1 => 'x'])` fails) — moot; carry.
+  - `[medium]` `[patch]` Blind: `loose()`/`Ordering.compare()` unmark before `compareNumberToString`, so `float(1e15)` stringifies as an int against a non-numeric string — moot; carry (pass the PHP type through).
+  - `[medium]` `[patch]` Blind: the Oracle matrix lacks int/float pairs beyond 2^53, nested arrays and `"-0"`/`"0.0"`/`"1e0"` strings — moot; carry.
+  - `[medium]` `[patch]` Blind: no tests for marked NAN/INF readers, parameter coercion, exporter/var_export/serialize forms, `isScalar`/`isNumeric`/`isPhpObject`, the canonicalizing sort, `willReturnMap` — moot; carry.
+  - `[low]` `[patch]` Blind: the subprocess has no `timeout` (siblings use `SPAWN_TIMEOUT`) — moot; carry.
+  - `[low]` `[patch]` Blind: no test of `setMessage` on an `ExpectationFailedException` without a comparison failure — moot; carry.
+  - `[false]` `[reject]` Blind: spec `in-review` vs manifest `in-progress` disagree — the manifest tracks the Story, the spec its own run; both are as the process sets them.
+  - `[medium]` `[patch]` Edge: `shortenedExport` unmarks first, so ArrayComparator diffs print `1` for `float(1)` — moot; carry.
+  - `[medium]` `[patch]` Edge: `float(1e15)` against a non-numeric string in ordering — same as the Blind row; moot; carry.
+  - `[medium]` `[patch]` Edge: `arrayKey` with a marked float key — same as the Blind row; moot; carry.
+  - `[low]` `[reject]` Edge: a branded object without a numeric `valueOf` gives NaN or throws — the protocol's only producer is the runtime's frozen `Number` subclass; guarding a forged brand adds branches for a case no caller reaches.
+  - `[medium]` `[patch]` Edge: `exactly()`/`ExceptionCode` number readers not routed — same as the Blind row; moot; carry.
+  - `[medium]` `[patch]` Verification: `assertSame(float(1), float(1))` is checked only in the subprocess, after the fixture assertion, so it never runs before CI signs the fixture — moot; carry (fixture-free row, subprocess before the matrix).
+  - `[medium]` `[patch]` Verification: marked NAN/INF readers (`IsNan`, `NumericComparator`) untested — moot; carry.
+  - `[medium]` `[patch]` Verification: marked floats as `int`/`float`/`int|string` parameters untested — moot; carry.
+  - `[medium]` `[intent_gap]` Verification: the new `-0` outputs are unpinned — same root cause as the `-0` rows; ESC-9.11-2.
+  - `[medium]` `[patch]` Verification (other): `arrayKey` with a marked float — same as the Blind row; moot; carry.
+  - `[false]` `[reject]` Verification (other): the fixture is not committed — by design of the per-Story Oracle flow.
+  - `[low]` `[reject]` Intent: AC2, AC4, AC5 and the Mockery half are not implemented — held by ESC-9.11-1, which the spec records; descriptive.
+  - `[false]` `[reject]` Intent: AC1's matrix runs on a simulated marker — the subprocess row covers the runtime's real `float()`, and the grader's tests simulate brands by design (AD-2, `BrandedArray`); the Verification row above fixes when it runs.
+
 ## Design Notes
 
 - **Brand, not import.** The marker is a frozen `Number` subclass instance, so `typeof` is `"object"`; reading `v[Symbol.for('xaravel.php.float')] === true` on a non-null object is enough and cannot throw (the runtime's getter is a plain prototype getter).
@@ -110,3 +142,13 @@ deferred: []
 - `php tools/oracle/evaluate.php <Laravel at the Pin outside the repo> 8.5.11 <now> conformance/oracle-requests/9.11.jsonl` -- expected: results match the JS side.
 - `bun test packages/assert packages/mockery` and `bun run harness --xaravel --id 'XT-assert-*'` -- expected: pass once the fixture is pulled (XT-assert-17 fails only for the missing fixture before then).
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run escalations:check`, `bun run ownership:check` (if present) -- expected: clean.
+
+## Auto Run Result
+
+Status: blocked
+
+Blocking condition: intent gap, and Escalations waiting on rulings. `conformance/escalations/ESC-9.11-1.md` (`protected-path`, XT-assert-18): the manifest maps Xaravel Tests to only three of the five ACs, and AC2's Mockery half needs `packages/mockery/**`. `conformance/escalations/ESC-9.11-2.md` (`contract`, XT-assert-17): which rule the grader keeps for an unmarked `-0`, the runtime's `isFloat` or the Epic 4 rule XT-mockery-10 pins.
+
+- **Attempt 1:** implemented XT-assert-17 (the grader reads the float marker by brand in `===`, `==`, ordering, the comparators, the constraints and the exporters; a signed-Oracle matrix request in `conformance/oracle-requests/9.11.jsonl`) and XT-assert-19 (`Symbol.for('xaravel.assert.setMessage')` on PHPUnit's `Exception`). Verification: `tsc`, lint, `graph:check`, `ownership:check`, `oracle:story check 9.11` clean; `bun test packages/assert packages/mockery` 28/29, the one failure being XT-assert-17's unsigned fixture; local PHP 8.5.11 agreed with the grader on all 578 matrix cells.
+- **Review:** 25 findings (15 medium, 4 low, 4 false, 2 descriptive). The `-0` rows trace to the intent contract's number rule, so the attempt is saved in [spec-9-11-attempt-1.patch](spec-9-11-attempt-1.patch) and the code reverted. The patch-class rows (marked floats in `exactly()`/`ExceptionCode`/`arrayKey`, `shortenedExport`, the 1e15 string form, the missing tests, the subprocess timeout and order) are carried into the re-run.
+- **Resume:** once ESC-9.11-1 and ESC-9.11-2 are ruled, update the intent contract to the rulings, re-apply the patch, fix the carried rows, then run the full review, including the Fidelity Review.
