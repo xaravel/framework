@@ -1,3 +1,5 @@
+// Installs the Symbol.metadata polyfill before anything else loads (AD-4).
+import "../metadata/polyfill";
 export { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 export { toBool, toFloat, toInt, toPhpString } from "./casts";
 export { float, isFloat, PhpFloat } from "./PhpFloat";

@@ -1,3 +1,5 @@
+// Installs the Symbol.metadata polyfill before anything else loads (AD-4).
+import "./metadata/polyfill";
 export {
   bindToFrame,
   CSP_NONCE_SLOT,
@@ -80,3 +82,5 @@ export {
   valueCopy,
 } from "./php/index";
 export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
+export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
+export { bootTraits, classUsesRecursive, type ClassReference, clearBootedTraits, initializeTraits, type Mixed, mixin } from "./traits/mixin";
