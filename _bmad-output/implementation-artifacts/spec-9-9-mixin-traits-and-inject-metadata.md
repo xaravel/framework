@@ -2,7 +2,7 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'blocked'
+status: 'in-progress'
 baseline_revision: 'fe7b2dfab58a9e40c91d30cb62879b11fb4f5b06'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -10,6 +10,8 @@ context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
   - '{project-root}/stories/9.9.md'
   - '{project-root}/PORTING.md'
+  - '{project-root}/decisions/ESC-9.9-1.md'
+  - '{project-root}/decisions/ESC-9.9-2.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -87,6 +89,9 @@ deferred:
 - `packages/runtime/tests/xaravel/inject.test.ts` -- XT-runtime-33 (subprocess) and XT-runtime-34.
 - `packages/runtime/docs/` -- a page on traits and `inject`: the trait form, the composition rules, the `super` rule (inside a trait method, `super` is the trait's own parent; port `parent::m()` by naming the using class's parent), field defaults being assigned after the base constructor returns (as JS class fields), and the limits in Never.
 - `packages/runtime/async-surface.json` -- `bun run async-surface runtime`; it stays empty.
+- Follow-up (`decisions/ESC-9.9-2.md`, DIV-12.8): `packages/runtime/src/traits/mixin.ts` -- for a trait default whose key the instance already owns, replace the value only when `propertyTable(Base)` lists a public or protected property of that name and the value is `identical` to its declared default; otherwise keep it. The header comment states the rule and cites ESC-9.9-2 and DIV-12.8.
+- Follow-up: `conformance/oracle-requests/9.9.jsonl` and `traits.test.ts` -- an XT-runtime-31 request covering four cases: a trait default against a parent default of the same name; the same with an `initialize<Trait>` writing a third value; a trait-only `$flag = false` that its initializer sets `true`; and a redeclared protected property. The fixture classes declare their property tables. Local rows pin the two DIV-12.8 cases (no table; a write equal to the declared default), citing DIV-12.8 in their consequence text, with no `adapted:` marker.
+- Follow-up: `packages/runtime/docs/` -- the traits page states the trait-default rule and its two DIV-12.8 limits.
 
 **Acceptance Criteria:**
 - The four ACs of Story 9.9 (`epics.md` line 3180), each verified by its XT row in `stories/9.9.md`.
@@ -94,6 +99,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-21: `decisions/ESC-9.9-1.md` (orchestrator) and `decisions/ESC-9.9-2.md` (Maintainer) are ruled. ESC-9.9-2 takes neither listed option: a trait default replaces a base property it finds still at its declared default (read from the PHP property table, ESC-9.7-1 part 1), and any other value is kept; DIV-12.8 records the two remaining cases. That rule, its Oracle request and its docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21, implementation. (1) XT-runtime-31's classes are `App\Plain\{Base, Post, Comment, Reply, Plain}`, not `App\Models\*`: `registry.test.ts` already registers `App\Models\Post`, and registrations are process-wide. Trait FQCNs (`App\Concerns\*`), the only names in the results, are unchanged. XT-runtime-32's classes are `App\Eloquent\*`. (2) The conformance harness freezes `Symbol` before tests load (`conformance/harness/intrinsics.ts`), so the polyfill now installs only when `Object.isExtensible(Symbol)`, and `inject` reads `Symbol.metadata ?? Symbol.for('Symbol.metadata')`. Without the guard, every runtime test file failed at import under the harness. XT-runtime-33 checks the polyfill in fresh processes. The in-harness gap is ESC-9.9-1 (`protected-path`).
 
 ## Review Triage Log
