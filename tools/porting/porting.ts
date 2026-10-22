@@ -18,8 +18,8 @@
 //     that order (`PORTING.md: missing section "## <name>"`, or
 //     `PORTING.md: unexpected section "## <name>"`).
 //   - SECTION_CONTENT: each of `## Idiom table`, `## Test-adaptation rules`,
-//     `## Mechanical expression rule`, `## By-reference parameters` and
-//     `## Exceptions` that is present holds, from its heading to the next
+//     `## Mechanical expression rule`, `## By-reference parameters`,
+//     `## Exceptions` and `## Scalar coercion (AD-9)` that is present holds, from its heading to the next
 //     `#`/`##` heading and outside code fences, at least one line of its kind
 //     (a table data row, a `- ` rule line, or a prose line) and its anchor
 //     phrase (`PORTING.md: section "<h>" has no <table row|rule line|prose
@@ -69,6 +69,7 @@ export const REQUIRED_SECTIONS = [
   "## Mechanical expression rule",
   "## By-reference parameters",
   "## Exceptions",
+  "## Scalar coercion (AD-9)",
   "## Frame slots (AD-5)",
   "## APP_KEY forms (AD-23)",
   "## Promise.all allow-list (AD-6)",
@@ -89,6 +90,7 @@ export const SECTION_CONTENT: Readonly<Record<string, { kind: SectionContentKind
   "## Mechanical expression rule": { kind: "table", anchor: "syntax-directed" },
   "## By-reference parameters": { kind: "prose", anchor: "`Ref<T>`" },
   "## Exceptions": { kind: "rule", anchor: "`registerClass('<FQCN>', X)`" },
+  "## Scalar coercion (AD-9)": { kind: "table", anchor: "coercive mode" },
 };
 
 const KIND_NAMES: Readonly<Record<SectionContentKind, string>> = { table: "table row", rule: "rule line", prose: "prose line" };

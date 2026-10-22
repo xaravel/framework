@@ -257,6 +257,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   - **int/float.** Both are JS `number`. Where Upstream's behaviour depends on the distinction, the runtime's float marker carries it, and tests adapt under `adapted:DIV-9.<clause>`.
   - **Brands.** Every contract brand, marker or not, sits on the prototype as `get [Token]() { return true as const }`, which generators emit. `hasBrand(classOrInstance, Token)` checks the brand without instantiating.
   - **PHP comparison.** Objects that take part in PHP `==` expose `[Symbol.for('xaravel.php.props')]()`, so the grader compares them as PHP does.
+  - **Scalar parameters.** Upstream runs in PHP's coercive mode: 2 of its 1,742 source files declare `strict_types`, and the Oracle evaluates in coercive mode. A ported function or method whose Upstream parameter is typed `int`, `float`, `string` or `bool` takes what coercive mode accepts and converts it as PHP does, wherever Upstream's behaviour or a test depends on it, and otherwise throws PHP's `TypeError` with PHP's message. `PORTING.md` § Scalar coercion lists the conversions. The Oracle settles any doubt. Not porting a coercion that Upstream relies on needs a DIV clause first; a Story never decides it (ESC-9.10-2).
 
 ### AD-10 — Class identity and the Class Registry
 
