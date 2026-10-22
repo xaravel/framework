@@ -10,7 +10,13 @@
 //   onto the layer; static data is copied with `valueCopy`, so each using class has its own, as PHP gives each class
 //   its own trait statics.
 // - Instance property defaults are the own enumerable properties of a trait instance, read once; the layer's
-//   constructor assigns a copy of each after `super(...args)` returns, unless the instance already owns the key.
+//   constructor assigns a copy of each after `super(...args)` returns. For a key the instance already owns (a base
+//   field, or a write made during the base constructor), the trait's default replaces the value only when
+//   `propertyTable(Base)` lists a public or protected property of that name and the value is still PHP-identical to its
+//   declared default, as PHP's trait default takes the place of a parent's default; any other value is kept, so a
+//   write such as an `initialize<Trait>` called from the base constructor survives (decisions/ESC-9.9-2.md). Two
+//   cases differ from PHP (DIV-12.8): with no table listing the name the base's value is kept, and a constructor
+//   write equal to the declared default is replaced by the trait's default.
 // - A member reached twice from the same declaring trait (a diamond) is applied once. A method two different traits
 //   declare throws PHP's collision message when it is called, so a class that overrides it resolves the collision; a
 //   property two traits declare with different defaults makes `mixin` throw.
@@ -19,6 +25,7 @@
 //   PHP's method-table order, once per class; initializers once per call, the host calling it once per instance.
 //
 // The booted record is a non-enumerable own symbol property of the class, never a module variable (AD-5).
+import { propertyTable } from "../php/mangle";
 import { isFloat } from "../php/PhpFloat";
 import { valueCopy } from "../php/valueCopy";
 import { fqcn, resolveClass } from "../registry/registry";
@@ -225,13 +232,29 @@ function instanceDefaults(traits: readonly AnyClass[]): [string, unknown][] {
   return [...defaults].map(([key, { value }]) => [key, value]);
 }
 
-/** Assigns a copy of each default `instance` does not already own. */
-function assignDefaults(instance: object, defaults: readonly [string, unknown][]): void {
+/**
+ * Assigns a copy of each default to `instance`: a key it does not own, or one whose value is still the declared default
+ * of a public or protected property in `base`'s PHP property table (ESC-9.9-2, DIV-12.8). Any other value is kept.
+ */
+function assignDefaults(instance: object, defaults: readonly [string, unknown][], base: AnyClass | null): void {
   for (const [key, value] of defaults) {
-    if (!Object.hasOwn(instance, key)) {
-      Object.defineProperty(instance, key, { value: valueCopy(value), writable: true, enumerable: true, configurable: true });
+    if (Object.hasOwn(instance, key) && !holdsBaseDefault(instance, key, base)) {
+      continue;
     }
+    Object.defineProperty(instance, key, { value: valueCopy(value), writable: true, enumerable: true, configurable: true });
   }
+}
+
+/**
+ * Whether `instance[key]` is still the declared default of a public or protected property `key` that `base`'s PHP
+ * property table lists. A private property is a separate PHP slot, so it never counts.
+ */
+function holdsBaseDefault(instance: object, key: string, base: AnyClass | null): boolean {
+  if (base === null) {
+    return false;
+  }
+  const slot = propertyTable(base)?.find((entry) => entry.name === key && (entry.key === key || entry.key === `\0*\0${key}`));
+  return slot !== undefined && identical((instance as Record<string, unknown>)[key] ?? null, slot.default);
 }
 
 /**
@@ -253,13 +276,13 @@ export function mixin<B extends AnyClass | null, const Ts extends readonly AnyCl
     base === null
       ? class {
           constructor(..._args: unknown[]) {
-            assignDefaults(this, defaults);
+            assignDefaults(this, defaults, null);
           }
         }
       : class extends (base as unknown as new (...args: unknown[]) => object) {
           constructor(...args: unknown[]) {
             super(...args);
-            assignDefaults(this, defaults);
+            assignDefaults(this, defaults, base);
           }
         };
   applyMembers(Layer.prototype, "proto", traits);

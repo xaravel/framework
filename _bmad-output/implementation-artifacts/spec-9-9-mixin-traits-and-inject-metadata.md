@@ -2,8 +2,8 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-progress'
-baseline_revision: 'fe7b2dfab58a9e40c91d30cb62879b11fb4f5b06'
+status: 'in-review'
+baseline_revision: '0aa17dff6f77a0d3176353f3bad25e6a27836e80'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
@@ -101,6 +101,7 @@ deferred:
 
 - 2026-10-21: `decisions/ESC-9.9-1.md` (orchestrator) and `decisions/ESC-9.9-2.md` (Maintainer) are ruled. ESC-9.9-2 takes neither listed option: a trait default replaces a base property it finds still at its declared default (read from the PHP property table, ESC-9.7-1 part 1), and any other value is kept; DIV-12.8 records the two remaining cases. That rule, its Oracle request and its docs are added as follow-up tasks, so the Story is back to `in-progress`. The Fidelity Review runs on the final tree.
 - 2026-10-21, implementation. (1) XT-runtime-31's classes are `App\Plain\{Base, Post, Comment, Reply, Plain}`, not `App\Models\*`: `registry.test.ts` already registers `App\Models\Post`, and registrations are process-wide. Trait FQCNs (`App\Concerns\*`), the only names in the results, are unchanged. XT-runtime-32's classes are `App\Eloquent\*`. (2) The conformance harness freezes `Symbol` before tests load (`conformance/harness/intrinsics.ts`), so the polyfill now installs only when `Object.isExtensible(Symbol)`, and `inject` reads `Symbol.metadata ?? Symbol.for('Symbol.metadata')`. Without the guard, every runtime test file failed at import under the harness. XT-runtime-33 checks the polyfill in fresh processes. The in-harness gap is ESC-9.9-1 (`protected-path`).
+- 2026-10-21, follow-up implementation (ESC-9.9-2). (1) `assignDefaults` replaces an owned key only when `propertyTable(Base)` lists it as public or protected and the value is `identical` to its declared default (`holdsBaseDefault`). (2) The new XT-runtime-31 request (`App\Defaults\*`, traits `App\Concerns\{SetsName, WritesName, Flags, Unguards}`) gives each base its own constructor calling a namespaced `initialize()`, not an inherited `Host` constructor: a JS subclass's fields are set only after its parent's constructor returns, so the JS host that calls `initializeTraits` must be the class declaring the fields, and the request mirrors that. `oracle()` in `traits.test.ts` now selects a request by its first expr. (3) Per ESC-9.9-1's ruling, XT-runtime-33 also asserts `Symbol.metadata` in-process, and the polyfill and docs comments no longer say the harness skips it.
 
 ## Review Triage Log
 
@@ -169,8 +170,16 @@ deferred:
 
 ## Auto Run Result
 
-Status: blocked
-Blocking condition: ESC-9.9-2 (`divergence`: a trait default against a base class field of the same name) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). ESC-9.9-1 (`protected-path`: the harness freezes `Symbol` before the polyfill) is open as well.
+Status: in-progress
+Remaining: the `xaravel-oracle` bot must sign the new XT-runtime-31 request (`bed7e992…`) after the push; until then XT-runtime-31 fails only on the missing fixture (its local rows pass, and against local `evaluate.php` output both XT-runtime-31 requests pass). Then the Fidelity Review of the final tree and `bun run story:check 9.9`.
+
+- **Follow-up (ESC-9.9-2, DIV-12.8):** `packages/runtime/src/traits/mixin.ts` (rule and header), `conformance/oracle-requests/9.9.jsonl` (the four-case request), `packages/runtime/tests/xaravel/traits.test.ts` (Oracle comparison, two DIV-12.8 local rows, a private-slot row), `packages/runtime/docs/traits-and-inject.md` (the rule and its two limits).
+- **Verification:** `bun test packages/runtime` 33/34 (XT-runtime-31: missing signed fixture only); `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures`, `oracle:story check 9.9` clean.
+
+### Earlier run (before the ESC-9.9-2 ruling)
+
+Status (then): blocked
+Blocking condition (then): ESC-9.9-2 (`divergence`: a trait default against a base class field of the same name) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). ESC-9.9-1 (`protected-path`: the harness freezes `Symbol` before the polyfill) is open as well.
 
 - **Summary:** `mixin`, `classUsesRecursive`, `bootTraits` / `initializeTraits` / `clearBootedTraits`, the `Symbol.metadata` polyfill and `inject` / `readInjectMetadata`, exported from `@xaravel/runtime`.
 - **Files:**

@@ -35,7 +35,7 @@ PHP's do: the class's own members first, then the traits' members, then `Base`'s
 - Static methods, accessors and data are copied onto the layer (string keys only). Static data is copied with
   `valueCopy`, so each using class gets its own copy of a trait's static arrays, as PHP does.
 - Instance property defaults are read once from a trait instance. The layer's constructor calls `super(...args)` and
-  then assigns a copy of each default the instance does not already own.
+  then assigns a copy of each default, by the trait-default rule below.
 - A trait's members are its own members plus those of the traits it uses. Its own members win.
 
 Conflicts:
@@ -57,9 +57,32 @@ Conflicts:
   `super.m()` reaches the trait's `m` first, and the base's `m` after that. PHP's `as` aliases port as a method on the
   class that calls `super.<m>()`.
 - Trait field defaults are assigned after the base constructor returns, as JS class fields are. A base constructor
-  therefore does not see them, and a key the base constructor already set keeps its value. This differs from PHP when a trait
-  redeclares a base class field: PHP gives the trait's default, the layer keeps the base's value. Keeping it is what
-  lets `initialize<Trait>` writes made in the base constructor survive. The divergence awaits a ruling (ESC-9.9-2).
+  therefore does not see them. A host that calls `initializeTraits` from its constructor must do so in the class that
+  declares the fields, after they are set, since a subclass's fields are set only after its parent's constructor
+  returns.
+
+### Trait defaults against a base property
+
+When a trait declares an instance property the base also has, PHP's trait default takes the place of the parent's
+default, and a write made later (an `initialize<Trait>` that the constructor calls) wins over both. The layer can only
+assign defaults after `super(...args)` returns, so it decides per key (decisions/ESC-9.9-2.md):
+
+- A key the instance does not own gets the trait's default.
+- A key the instance owns gets the trait's default only when `propertyTable(Base)` (the PHP property table of the base
+  and its parents) lists a public or protected property of that name and the instance's value is still PHP-identical
+  to its declared default. Nothing has written it, so the trait's default replaces it, as in PHP.
+- Any other value is kept: the table does not list the name, no class in the chain declares a table, or the value
+  differs from the declared default. A write made in the base constructor survives, as in PHP. A private base property
+  is a separate PHP slot, so it never counts as the base's default.
+
+Two cases differ from PHP (DIV-12.8):
+
+1. **No table.** When no property table of the base chain lists the name, the layer cannot tell a base field from a
+   constructor write, and keeps the base's value. PHP has the trait's default.
+2. **An unchanged-looking write.** When the base constructor writes a value PHP-identical to the declared default, the
+   layer cannot tell it from the untouched default, and applies the trait's default. PHP keeps the written value.
+
+A Ported Test whose outcome depends on either case raises an Escalation (FR-114); it is not adapted.
 
 ## `classUsesRecursive`
 
@@ -93,8 +116,9 @@ calls it once per instance, from its constructor, as Model does.
 
 Importing any runtime entry (the root, `scope`, `registry` or `php`) installs `Symbol.metadata` as
 `Symbol.for('Symbol.metadata')` when it is undefined. Bun 1.4.3 has no native one. The conformance harness freezes
-`Symbol` before tests load, so under the harness the polyfill is skipped. The runtime reads the registered symbol
-directly, so `inject` behaves the same either way (ESC-9.9-1).
+`Symbol` before tests load, after installing the same `Symbol.metadata` itself, so under the harness the polyfill finds
+it defined (ESC-9.9-1). The polyfill still skips a non-extensible `Symbol`, and `inject` reads the registered symbol
+when `Symbol.metadata` is undefined.
 
 `inject` has two forms:
 

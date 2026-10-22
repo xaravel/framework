@@ -6,9 +6,9 @@
 // It imports nothing, and every runtime entry (`src/index.ts`, `scope`, `registry`, `php`) imports it first, so loading
 // any of them installs it before a decorated class is defined.
 //
-// Under the conformance harness, which freezes `Symbol` before any test file loads (`conformance/harness/intrinsics.ts`),
-// the polyfill cannot be installed and is skipped: the runtime itself reads the registered symbol directly
-// (`METADATA` in `./inject`), which is the value the polyfill would install (ESC-9.9-1).
+// The conformance harness freezes `Symbol` before any test file loads (`conformance/harness/intrinsics.ts`), after
+// installing the same `Symbol.metadata` itself (ESC-9.9-1), so the polyfill finds it defined there. A non-extensible
+// `Symbol` without one is skipped; the runtime then reads the registered symbol directly (`METADATA` in `./inject`).
 if ((Symbol as { metadata?: symbol }).metadata === undefined && Object.isExtensible(Symbol)) {
   Object.defineProperty(Symbol, "metadata", { value: Symbol.for("Symbol.metadata"), writable: false, enumerable: false, configurable: false });
 }
