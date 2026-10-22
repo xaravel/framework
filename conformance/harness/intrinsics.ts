@@ -25,6 +25,13 @@
 // and Reflect become non-writable and non-configurable, so a test cannot swap
 // in a replacement either. Every helper used here is captured at load.
 //
+// `Symbol.metadata` (AD-4, ESC-9.9-1): Bun 1.4.3 has none, and the runtime's
+// polyfill cannot add it once `Symbol` is frozen. So, before freezing, when
+// `Symbol` has no own `metadata`, it is defined as
+// `Symbol.for('Symbol.metadata')`, non-writable and non-configurable, as the
+// polyfill defines it: the key Bun attaches decorator metadata under. Code
+// under the harness then sees the same `Symbol.metadata` as code outside it.
+//
 // Override taming, after SES: freezing a prototype would make every
 // assignment of an inherited property name throw, so `this.name = …` in an
 // Error subclass or `o.toString = …` would break. Before freezing, the
@@ -46,6 +53,7 @@ const BUN_TEST_NAMES: readonly string[] = ["test", "describe", "it", "expect", "
 
 const { defineProperty, freeze, getOwnPropertyDescriptor, getPrototypeOf, isFrozen, preventExtensions } = Object;
 const ownKeys = Reflect.ownKeys;
+const symbolFor = Symbol.for;
 
 type Root = object;
 
@@ -195,6 +203,10 @@ let hardened = false;
 export function hardenIntrinsics(): void {
   if (hardened) {
     return;
+  }
+  // `Symbol.metadata`, before `Symbol` is frozen (see the header).
+  if (getOwnPropertyDescriptor(Symbol, "metadata") === undefined) {
+    defineProperty(Symbol, "metadata", { value: symbolFor("Symbol.metadata"), writable: false, enumerable: false, configurable: false });
   }
   const ctors = constructors();
   const prototypes: object[] = [];
