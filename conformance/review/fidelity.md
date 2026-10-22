@@ -6,13 +6,13 @@ Two reviewer agents, separate from the implementer, review every Story against U
 
 **Evidence notes.** The paragraphs from here to the checklist items say what the prompt carries. An item's **Check.** says only what passes and what fails; it never describes the prompt.
 
-**Decision records.** The prompt carries, in full, every decision record (`decisions/<name>.md`) that an added line, or a touched Xaravel Test, cites (evidence (f), [ESC-9.2-1](../escalations/ESC-9.2-1.md)). A ruling cited there is recorded evidence for any item: the reviewer checks the change against the decision's text, and does not require the citation to appear in the Story's manifest as well.
+**Decision records.** The prompt carries, in full, every decision record (`decisions/<name>.md`) that an added line, a touched Xaravel Test, or a docblock that evidence (g) lists for a changed `packages/<name>/src/` file cites (evidence (f), [ESC-9.2-1](../escalations/ESC-9.2-1.md), [ESC-9.10-1](../escalations/ESC-9.10-1.md)). A ruling cited there is recorded evidence for any item: the reviewer checks the change against the decision's text, and does not require the citation to appear in the Story's manifest as well.
 
 **Oracle fixtures.** The prompt lists each assigned committed request's error fixture with its error, and names each one that is present, verifies against `oracle.pub` and is not an error (evidence (c), [ESC-9.8-2](../escalations/ESC-9.8-2.md)). A fixture named there is present, even when an earlier change merged it and it is not in this diff.
 
 **Framework source.** Whenever the change touches a `packages/<name>/src/` file, the prompt carries the `@asyncRoot` rules F-9 applies: AD-6's Derivation and Enforcement rules, DIV-1 and ESC-6.4-1 (evidence (d), [ESC-9.2-2](../escalations/ESC-9.2-2.md)). For the parts of such a file the diff's hunks leave out, evidence (g) lists every top-level and documented declaration with its line, full docblock and signature, and the line of every `@asyncRoot` tag the file holds after the change ([ESC-9.3-2](../escalations/ESC-9.3-2.md)).
 
-**Xaravel Tests.** The prompt shows each added or changed Xaravel Test in full, with every declaration in its own file it uses, directly or through another: the helpers it calls and the fixtures they name (evidence (e), [ESC-9.9-4](../escalations/ESC-9.9-4.md)).
+**Xaravel Tests.** The prompt shows each added or changed Xaravel Test in full, with every declaration it uses, directly or through another, from its own file or from a repository test module its file imports, each with its `path:lines`: the helpers it calls, including through a spread (`...helper()`), and the fixtures they name (evidence (e), [ESC-9.9-4](../escalations/ESC-9.9-4.md), [ESC-9.10-1](../escalations/ESC-9.10-1.md)).
 
 An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a PR that changes no Oracle request file.
 

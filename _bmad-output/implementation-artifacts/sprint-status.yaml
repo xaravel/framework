@@ -128,7 +128,7 @@ development_status:
   9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
   9-8-jsonencode-jsondecode-with-php-flag-semantics: done
   9-9-mixin-traits-and-inject-metadata: done  # Fidelity Review passed at tree 3ba5b05 (base a5ecf39) after ESC-9.9-5
-  9-10-php-exception-hierarchy: blocked  # ESC-9.10-1 (protected-path, orchestrator may rule under the 2026-10-21 amendment): the Fidelity Review misses a spread-called helper, an imported test helper and a decision cited on an unchanged docblock; re-run the review on the changed tree with --base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
+  9-10-php-exception-hierarchy: in-progress  # ESC-9.10-1 approved (decisions/ESC-9.10-1.md, orchestrator ruling); re-run the Fidelity Review on the changed tree with --base 6837b0675db1977c0917e3e0ade582fb1b9d7b2e. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
   9-11-grader-follow-ups-to-the-runtime-value-model: backlog  # Epic 4 retro S4 (decisions/ESC-4.3-1.md)
   epic-9-retrospective: optional
 

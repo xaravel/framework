@@ -47,7 +47,9 @@
 // diff changes, that uses a test helper or fixture the diff changes, or whose
 // test file's top-level setup changes (a heuristic top-level-unit scanner,
 // `testUnits`), with every declaration in its own file it uses, directly or
-// through another, in full, each shown once (ESC-9.9-4); (f) every decision record an added line cites (`ESC-<id>`,
+// through another (a spread call included), in full, and each one it so uses that its file binds from a repository
+// test module, with that module's path (ESC-9.9-4, ESC-9.10-1), each shown once; (f) every decision record an added
+// line, a touched Xaravel Test or a docblock (g) lists cites (`ESC-<id>`,
 // `MAINT-<date>-<slug>`, `OQ-<n>`, `PHASE-0-EXIT` or a `decisions/<name>.md`
 // path), in full (ESC-9.2-1); (g) for each `packages/*/src/` file the change
 // adds or modifies, every top-level declaration and every documented one, with
@@ -86,7 +88,7 @@
 // not run, a standing reject included), 2 on a usage error. `status` 0 when `current`, else 1.
 import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, posix, relative, resolve } from "node:path";
 import { compareUnits, type InventoryEntry } from "../inventory/inventory";
 import { FIXTURES_DIR, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
@@ -387,10 +389,14 @@ export function buildPrompt(input: PromptInput): Prompt {
     sections.push(`Included because: ${entry.reasons.join("; ")}.`, "", fence(entry.body, "ts"), "");
     const helpers = entry.helpers ?? [];
     if (helpers.length > 0) {
-      sections.push("The declarations it uses from its own file, directly or through another, in full (ESC-9.9-4):");
+      sections.push(
+        helpers.some((helper) => helper.path !== undefined)
+          ? "The declarations it uses from its own file and from the repository test modules it imports, directly or through another, in full (ESC-9.9-4, ESC-9.10-1):"
+          : "The declarations it uses from its own file, directly or through another, in full (ESC-9.9-4):",
+      );
       for (const helper of helpers) {
-        const where = `\`${helper.name}\` (${entry.path}:${helper.from}-${helper.to})`;
-        const key = `${entry.path}\0${helper.from}`;
+        const where = `\`${helper.name}\` (${helper.path ?? entry.path}:${helper.from}-${helper.to})`;
+        const key = `${helper.path ?? entry.path}\0${helper.from}`;
         if (shownHelpers.has(key)) {
           sections.push("", `- ${where}: shown above.`);
           continue;
@@ -410,7 +416,7 @@ export function buildPrompt(input: PromptInput): Prompt {
       sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, consequence.lang ?? "jsonl"));
     }
   }
-  evidenceSection(sections, "### (f) Decision records cited on added lines (any item, ESC-9.2-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
+  evidenceSection(sections, "### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
   evidenceSection(sections, "### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)", evidence.sourceSurface, "The change adds or modifies no `packages/*/src/` file.", "ts");
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
@@ -509,16 +515,8 @@ const TOP_DECLARATION = /^(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:abstrac
 /** The most lines of one declaration's signature the listing shows. */
 const SIGNATURE_CAP = 12;
 
-/**
- * The declaration-and-tag listing of one source text (evidence (g), ESC-9.3-2): a header naming the line of each
- * `@asyncRoot` tag, then every top-level declaration and every declaration a docblock precedes (so each documented
- * class member), in line order, each with its full docblock and its signature up to the line that ends in `{`, `}` or
- * `;` (before a `//` comment) or comes before a blank line, every line numbered. A heuristic line scanner, like
- * `testUnits`.
- */
-export function sourceSurface(text: string): string {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const numbered = (from: number, to: number): string[] => lines.slice(from, to + 1).map((line, k) => `${from + k + 1}| ${line}`);
+/** Each declaration line `sourceSurface` lists (0-based), with the first line of the docblock before it, or null. */
+function surfaceBlocks(lines: readonly string[]): Map<number, number | null> {
   const blocks = new Map<number, number | null>();
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i]!.trim();
@@ -541,6 +539,26 @@ export function sourceSurface(text: string): string {
       blocks.set(i, null);
     }
   }
+  return blocks;
+}
+
+/** Every docblock `sourceSurface` lists for `text`: a declaration's or an `@asyncRoot` tag's (ESC-9.10-1). */
+export function sourceDocComments(text: string): string[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  return [...surfaceBlocks(lines)].flatMap(([decl, doc]) => (doc === null ? [] : [lines.slice(doc, decl).join("\n")]));
+}
+
+/**
+ * The declaration-and-tag listing of one source text (evidence (g), ESC-9.3-2): a header naming the line of each
+ * `@asyncRoot` tag, then every top-level declaration and every declaration a docblock precedes (so each documented
+ * class member), in line order, each with its full docblock and its signature up to the line that ends in `{`, `}` or
+ * `;` (before a `//` comment) or comes before a blank line, every line numbered. A heuristic line scanner, like
+ * `testUnits`.
+ */
+export function sourceSurface(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const numbered = (from: number, to: number): string[] => lines.slice(from, to + 1).map((line, k) => `${from + k + 1}| ${line}`);
+  const blocks = surfaceBlocks(lines);
   const tags = lines.flatMap((line, k) => (line.includes("@asyncRoot") ? [`line ${k + 1} (\`${line.trim().replace(/^\*\s*/, "")}\`)`] : []));
   const out = [`@asyncRoot tags: ${tags.length === 0 ? "none" : tags.join(", ")}.`, `Declarations: ${blocks.size}.`];
   for (const [decl, doc] of [...blocks].sort((a, b) => a[0] - b[0])) {
@@ -561,6 +579,13 @@ export function sourceSurfaceEvidence(root: string, files: readonly ChangedFile[
       const entry = readEvidenceFile(root, file.filename);
       return entry.text === null ? entry : { ...entry, text: sourceSurface(entry.text) };
     });
+}
+
+/** The docblocks evidence (g) lists for each `packages/<name>/src/` file the change adds or modifies, whose decision citations (f) carries (ESC-9.10-1). */
+export function sourceDocTexts(root: string, files: readonly ChangedFile[]): string[] {
+  return files
+    .filter((file) => FRAMEWORK_SRC.test(file.filename) && !file.status.startsWith("removed"))
+    .flatMap((file) => sourceDocComments(readEvidenceFile(root, file.filename).text ?? ""));
 }
 
 const CONSEQUENCES_DIR = "conformance/xaravel-consequences";
@@ -718,7 +743,8 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     // F-9 also judges kept tags and untagged new exports, so any framework source change gets the rules (ESC-9.2-2).
     asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
     xaravelTests: [],
-    decisions: decisionEvidence(root, added),
+    // (f) also takes the decisions a changed source file's docblocks cite on unchanged lines (ESC-9.10-1).
+    decisions: decisionEvidence(root, [...added, ...sourceDocTexts(root, files)]),
     // F-9 judges the tags a touched file keeps outside the diff's hunks too, so the listing shows the whole file's (ESC-9.3-2).
     sourceSurface: sourceSurfaceEvidence(root, files),
   };
@@ -1066,8 +1092,10 @@ export interface XaravelTestEntry {
   readonly helpers?: readonly TestHelper[];
 }
 
-/** A test helper or fixture declaration an Xaravel Test uses, from the test's own file (ESC-9.9-4). */
+/** A test helper or fixture declaration an Xaravel Test uses, from the test's own file (ESC-9.9-4) or a test module it imports (ESC-9.10-1). */
 export interface TestHelper {
+  /** The repository test module it is declared in, when that is not the test's own file (`importedDeclarations`); absent: the test's own file. */
+  readonly path?: string;
   readonly name: string;
   readonly from: number;
   readonly to: number;
@@ -1096,6 +1124,135 @@ export function usedDeclarations(all: readonly TestUnit[], unit: TestUnit): Test
 
 const TS_FILE = /\.[cm]?tsx?$/;
 
+/** A name a test file binds from another repository file: its local name, the name the module declares, and the module. */
+interface ModuleBinding {
+  readonly local: string;
+  readonly imported: string;
+  readonly target: string;
+}
+
+/** `const { A, B: b } = (await import(PATH)) as …`, the dynamic-import idiom the runtime's tests use (ESC-9.10-1). */
+const DYNAMIC_IMPORT = /^(?:export\s+)?const\s*\{([^}]*)\}\s*=\s*\(?\s*await\s+import\s*\(\s*([^()]*(?:\([^()]*\)[^()]*)*?)\s*\)/;
+
+/**
+ * The repository path a path expression in `path` names, or null: `import.meta.dir`, a string literal, a `const` of the
+ * file bound to one, or `join(…)`/`resolve(…)` of one followed by string literals (`join(REPO, "packages", …)`).
+ */
+function pathExpression(expr: string, path: string, consts: ReadonlyMap<string, string>, depth = 0): string | null {
+  const text = expr.trim();
+  if (depth > 8) {
+    return null;
+  }
+  if (text === "import.meta.dir" || text === "import.meta.dirname") {
+    return posix.dirname(path);
+  }
+  const literal = /^(["'])([^"'\\]*)\1$/.exec(text);
+  if (literal !== null) {
+    return literal[2]!.startsWith(".") ? posix.join(posix.dirname(path), literal[2]!) : null;
+  }
+  if (/^[A-Za-z_$][\w$]*$/.test(text)) {
+    const bound = consts.get(text);
+    return bound === undefined ? null : pathExpression(bound, path, consts, depth + 1);
+  }
+  const call = /^(?:join|resolve)\s*\(([^()]*)\)$/.exec(text);
+  if (call === null) {
+    return null;
+  }
+  const [first, ...rest] = call[1]!.split(",").map((arg) => arg.trim()).filter((arg) => arg !== "");
+  const base = first === undefined ? null : pathExpression(first, path, consts, depth + 1);
+  const parts = rest.map((arg) => /^(["'])([^"'\\]*)\1$/.exec(arg)?.[2] ?? null);
+  if (base === null || parts.some((part) => part === null || posix.isAbsolute(part))) {
+    return null;
+  }
+  return posix.join(base, ...(parts as string[]));
+}
+
+/**
+ * The names the test file `path` binds from repository files: a static named import with a relative specifier, and
+ * the dynamic-import idiom (`DYNAMIC_IMPORT`) whose path `pathExpression` resolves. `exists` says whether a repository
+ * path is a test module that can be read; a binding whose module it rejects, or a namespace import, is left out.
+ */
+function moduleBindings(path: string, all: readonly TestUnit[], exists: (path: string) => boolean): ModuleBinding[] {
+  const consts = new Map<string, string>();
+  for (const unit of all) {
+    const bound = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]*)?=\s*([\s\S]*?);?\s*$/.exec(stripLeadingComments(unit.text));
+    if (unit.kind === "declaration" && bound !== null) {
+      consts.set(bound[1]!, bound[2]!);
+    }
+  }
+  const out: ModuleBinding[] = [];
+  for (const unit of all) {
+    const code = stripLeadingComments(unit.text);
+    if (unit.kind === "import") {
+      const bindings = importBindings(code);
+      const target = bindings === null ? undefined : resolveCandidates(path, bindings.from).find(exists);
+      for (const [imported, local] of target === undefined ? [] : bindings!.names) {
+        if (imported !== "*") {
+          out.push({ local, imported, target: target! });
+        }
+      }
+      continue;
+    }
+    const dynamic = unit.kind === "setup" ? DYNAMIC_IMPORT.exec(code) : null;
+    const target = dynamic === null ? null : pathExpression(dynamic[2]!, path, consts);
+    if (target === null || target.startsWith("..") || !exists(target)) {
+      continue;
+    }
+    for (const part of dynamic![1]!.split(",")) {
+      const binding = /^\s*([A-Za-z_$][\w$]*)(?:\s*:\s*([A-Za-z_$][\w$]*))?\s*$/.exec(part);
+      if (binding !== null) {
+        out.push({ local: binding[2] ?? binding[1]!, imported: binding[1]!, target });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The declarations `texts` (an Xaravel Test in `path` and its own-file helpers) use from repository test modules the
+ * file binds names from (`moduleBindings`), and those they use in their module or its imports, to a fixed point, in
+ * path and line order (ESC-9.10-1). A name whose module has no top-level declaration of it is left out.
+ */
+export function importedDeclarations(path: string, texts: readonly string[], units: (path: string) => readonly TestUnit[], exists: (path: string) => boolean): TestHelper[] {
+  const found = new Map<string, TestHelper>();
+  const bindings = new Map<string, ModuleBinding[]>();
+  const bound = (module: string): ModuleBinding[] => {
+    if (!bindings.has(module)) {
+      bindings.set(module, moduleBindings(module, units(module), exists));
+    }
+    return bindings.get(module)!;
+  };
+  const pending: [string, string][] = texts.map((text) => [path, text]);
+  const add = (module: string, declaration: TestUnit): void => {
+    const key = `${module}\0${declaration.from}`;
+    if (!found.has(key)) {
+      found.set(key, { path: module, name: declaration.name!, from: declaration.from, to: declaration.to, text: declaration.text });
+      pending.push([module, declaration.text]);
+    }
+  };
+  while (pending.length > 0) {
+    const [module, text] = pending.pop()!;
+    if (module !== path) {
+      for (const declaration of units(module)) {
+        if (declaration.kind === "declaration" && declaration.text !== text && usesName(text, declaration.name!)) {
+          add(module, declaration);
+        }
+      }
+    }
+    for (const binding of bound(module)) {
+      if (binding.target === path || !usesName(text, binding.local)) {
+        continue;
+      }
+      const declaration = units(binding.target).find((unit) => unit.kind === "declaration" && unit.name === binding.imported);
+      if (declaration !== undefined) {
+        add(binding.target, declaration);
+      }
+    }
+  }
+  return [...found.values()].sort((a, b) => compareUnits(a.path!, b.path!) || a.from - b.from);
+}
+
+
 /** Whether `path` is a test file or test support module: under a `tests/` path segment, or a `*.test.ts`. */
 function isTestPath(path: string): boolean {
   return /(?:^|\/)tests\//.test(path) || /\.test\.[cm]?tsx?$/.test(path);
@@ -1105,8 +1262,9 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Whether `text` names `name` other than as a member (`a.name`); a spread (`...name()`) is a use (ESC-9.10-1). */
 function usesName(text: string, name: string): boolean {
-  return new RegExp(`(?<![\\w$.])${escapeRegExp(name)}(?![\\w$])`).test(text);
+  return new RegExp(`(?:(?<=\\.\\.\\.)|(?<![\\w$.]))${escapeRegExp(name)}(?![\\w$])`).test(text);
 }
 
 /**
@@ -1358,7 +1516,9 @@ export function xaravelTestEvidence(root: string, files: readonly ChangedFile[])
     .sort((a, b) => compareUnits(a.path, b.path) || a.unit.from - b.unit.from)
     .map(({ path, unit, reasons: why }) => {
       const cited = [...new Set([...(unit.consequence ?? unit.text).matchAll(/\b(?:FR|AD)-[1-9]\d*(?:\.[1-9]\d*)?\b/g)].map((match) => match[0]))].sort(compareUnits);
-      const helpers = usedDeclarations(units(path), unit);
+      const own = usedDeclarations(units(path), unit);
+      const exists = (module: string): boolean => isTestPath(module) && TS_FILE.test(module) && read(module) !== null;
+      const helpers = [...own, ...importedDeclarations(path, [unit.text, ...own.map((helper) => helper.text)], units, exists)];
       return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences, spine), citesFrom: unit.consequence === null ? "text" : "consequence", ...(helpers.length === 0 ? {} : { helpers }) };
     });
   return [...unavailable, ...out];
@@ -2691,8 +2851,8 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
       ...gatherEvidence(root, diff.files, manifest),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       xaravelTests,
-      // (f) also takes the decisions a touched Xaravel Test cites on an unchanged line (ESC-9.2-1).
-      decisions: decisionEvidence(root, [...addedLines(diff.files), ...xaravelTests.map((entry) => entry.body ?? "")]),
+      // (f) also takes the decisions a touched Xaravel Test (ESC-9.2-1) or a changed source file's docblock (ESC-9.10-1) cites on an unchanged line.
+      decisions: decisionEvidence(root, [...addedLines(diff.files), ...sourceDocTexts(root, diff.files), ...xaravelTests.map((entry) => entry.body ?? "")]),
     },
     prior,
   };

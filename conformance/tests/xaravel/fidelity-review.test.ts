@@ -25,6 +25,7 @@ import {
   EXCERPT_CAP,
   fidelityVerdicts,
   gatherEvidence,
+  importedDeclarations,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
   normaliseManifestStatus,
@@ -46,6 +47,7 @@ import {
   reviewTree,
   runFidelity,
   runReviewer,
+  sourceDocComments,
   sourceSurface,
   spineRuleText,
   standingRejects,
@@ -716,7 +718,7 @@ xaravelTest(
     }
     expect(evidenceUser).toContain("@asyncRoot callback");
     // ESC-9.2-1: (f) carries each decision record an added line cites, once, in full, or why it is unavailable.
-    const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines (any item, ESC-9.2-1)"));
+    const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)"));
     expect(sectionF).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
     expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
     expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
@@ -1151,6 +1153,122 @@ xaravelTest(
     expect((await review(xtRepo.dir, ruleFakes.env, "--loop-cli", "claude", "--base", xtBase)).code).toBe(0);
     expect(ruleFakes.calls("claude")[0]!.stdin).toContain(["- " + spineLabel("AD-26") + ":", "", "```markdown", "- **Rule:** `PORTING.md` must contain"].join("\n"));
     git(xtRepo.dir, "checkout", "-q", "--", ".");
+
+    // ESC-9.10-1 (1): a name after a spread is a use, so a helper called as `...inherited()` is carried; a member
+    // access (`env.inherited`) still is not.
+    const spreadUnits = testUnits(
+      [
+        "function inherited(): Record<string, string> {",
+        "  return {};",
+        "}",
+        "function member(): void {}",
+        "function child(): Record<string, string> {",
+        "  return { ...inherited(), a: env.member };",
+        "}",
+        'xaravelTest("XT-spread-1", "spreads a helper", () => {',
+        "  child();",
+        "});",
+      ].join("\n"),
+    );
+    expect(helpersOf(spreadUnits, "XT-spread-1")).toEqual([["inherited", 1, 3], ["child", 5, 7]]);
+    // The real case: XT-runtime-1 calls child(), which spreads inherited().
+    const scopeUnits = testUnits(readFileSync(join(root, "packages", "runtime", "tests", "xaravel", "scope.test.ts"), "utf8"));
+    expect(helpersOf(scopeUnits, "XT-runtime-1").map(([name]) => name)).toEqual(expect.arrayContaining(["child", "inherited"]));
+
+    // ESC-9.10-1 (2): (e) also carries, with its own path:lines, each declaration a touched test uses (to the same fixed
+    // point) that its file binds from a repository test module: a static relative import, or the dynamic-import idiom
+    // `const { X } = (await import(PATH)) as …` whose PATH is a `join`/`resolve` of `import.meta.dir`, a const and
+    // string literals. A namespace import, an unresolvable path, a non-test module and a name the module does not
+    // declare stay unlisted.
+    const importer = "pkg/tests/xaravel/uses.test.ts";
+    const modules: Record<string, string> = {
+      [importer]: [
+        'import { join, resolve } from "node:path";',
+        'import { staticHelper as local } from "./static-helpers";',
+        'import * as everything from "./static-helpers";',
+        'import { notThere } from "./static-helpers";',
+        'import { srcThing } from "../../src/thing";',
+        "",
+        'const REPO = resolve(import.meta.dir, "..", "..", "..");',
+        'const HELPERS = join(REPO, "shared", "tests", "helpers.ts");',
+        "const { Branded, renamed: other, unused } = (await import(HELPERS)) as Helpers;",
+        "const { lost } = (await import(somewhere())) as Helpers;",
+        "",
+        "function own(): unknown {",
+        "  return new Branded([]);",
+        "}",
+        "",
+        'xaravelTest("XT-uses-1", "uses imported helpers", () => {',
+        "  own();",
+        "  local();",
+        "  other();",
+        "  everything.namespaced();",
+        "  notThere();",
+        "  srcThing();",
+        "  lost();",
+        "});",
+      ].join("\n"),
+      "pkg/tests/xaravel/static-helpers.ts": ["export function staticHelper(): void {}", "export function namespaced(): void {}", ""].join("\n"),
+      "shared/tests/helpers.ts": [
+        'import { deep } from "./deeper";',
+        "export class Branded extends Array<unknown> {",
+        "  tag = tagOf();",
+        "}",
+        "function tagOf(): string {",
+        "  return deep();",
+        "}",
+        "export function renamed(): void {}",
+        "export function unused(): void {}",
+        "",
+      ].join("\n"),
+      "shared/tests/deeper.ts": "export function deep(): string {\n  return \"d\";\n}\n",
+      "pkg/src/thing.ts": "export function srcThing(): void {}\n",
+    };
+    const moduleUnits = (path: string): ReturnType<typeof testUnits> => (modules[path] === undefined ? [] : testUnits(modules[path]!));
+    const isModule = (path: string): boolean => modules[path] !== undefined && /(?:^|\/)tests\//.test(path);
+    const importerUnits = moduleUnits(importer);
+    const usesUnit = importerUnits.find((unit) => unit.ids.includes("XT-uses-1"))!;
+    const ownHelpers = usedDeclarations(importerUnits, usesUnit);
+    expect(ownHelpers.map((helper) => helper.name)).toEqual(["own"]);
+    expect(importedDeclarations(importer, [usesUnit.text, ...ownHelpers.map((helper) => helper.text)], moduleUnits, isModule).map((helper) => [helper.path, helper.name, helper.from, helper.to])).toEqual([
+      ["pkg/tests/xaravel/static-helpers.ts", "staticHelper", 1, 1],
+      ["shared/tests/deeper.ts", "deep", 1, 3],
+      ["shared/tests/helpers.ts", "Branded", 2, 4],
+      ["shared/tests/helpers.ts", "tagOf", 5, 7],
+      ["shared/tests/helpers.ts", "renamed", 8, 8],
+    ]);
+    // The real case: XT-runtime-22's file binds BrandedArray from the grader's oracle-values.ts by a dynamic import.
+    const semanticsPath = "packages/runtime/tests/xaravel/semantics.test.ts";
+    const realUnits = (path: string): ReturnType<typeof testUnits> => (existsSync(join(root, path)) ? testUnits(readFileSync(join(root, path), "utf8")) : []);
+    const semanticsUnits = realUnits(semanticsPath);
+    const xt22 = semanticsUnits.find((unit) => unit.ids.includes("XT-runtime-22"))!;
+    const xt22Own = usedDeclarations(semanticsUnits, xt22);
+    const xt22Imported = importedDeclarations(semanticsPath, [xt22.text, ...xt22Own.map((helper) => helper.text)], realUnits, (path) => existsSync(join(root, path)));
+    expect(xt22Imported.filter((helper) => helper.name === "BrandedArray").map((helper) => helper.path)).toEqual(["packages/assert/tests/xaravel/oracle-values.ts"]);
+    // In the prompt, an imported declaration is shown with its own path:lines, under a heading that says so.
+    const importedUser = eOnly([
+      { ids: ["XT-uses-1"], path: importer, from: usesUnit.from, to: usesUnit.to, reasons: ["its lines change"], body: usesUnit.text, unavailable: null, consequences: [], citesFrom: "consequence", helpers: [ownHelpers[0]!, { path: "shared/tests/helpers.ts", name: "renamed", from: 8, to: 8, text: "export function renamed(): void {}" }] },
+    ]);
+    expect(importedUser).toContain("The declarations it uses from its own file and from the repository test modules it imports, directly or through another, in full (ESC-9.9-4, ESC-9.10-1):");
+    expect(importedUser).toContain(`- \`own\` (${importer}:12-14):`);
+    expect(importedUser).toContain("- `renamed` (shared/tests/helpers.ts:8-8):\n\n```ts\nexport function renamed(): void {}");
+    // Through xaravelTestEvidence: a touched test's entry carries the imported declaration with its path.
+    write(xtRepo.dir, "conformance/tests/xaravel/sample-fixtures.ts", `${fixturesText}\nexport function spareRoot(): string {\n  return "spare";\n}\n`);
+    write(xtRepo.dir, sampleTest, sampleText.replace("const value = 1;", "const value = sharedRoot();"));
+    const importedEntries = xaravelTestEvidence(xtRepo.dir, reviewDiff(xtRepo.dir, xtBase).files);
+    git(xtRepo.dir, "checkout", "-q", "--", ".");
+    expect(importedEntries.find((entry) => entry.ids.includes("XT-sample-1"))!.helpers).toEqual([{ path: sampleFixtures, name: "sharedRoot", from: 3, to: 5, text: 'export function sharedRoot(): string {\n  return readFileSync("fixtures/sample.json", "utf8");\n}' }]);
+
+    // ESC-9.10-1 (3): (f) also carries each decision record cited in a docblock (g) lists for a changed packages/*/src/
+    // file, on an unchanged line too; a plain comment, and a file outside packages/*/src/, add none.
+    expect(sourceDocComments(["/** Cites decisions/ESC-1.1-1.md. */", "export function a(): void {}", "// ESC-2.2-2 in a plain comment", "export function b(): void {}", "class C {", "  /**", "   * @asyncRoot (ESC-3.3-3)", "   */", "  run(): void {}", "}"].join("\n"))).toEqual([
+      "/** Cites decisions/ESC-1.1-1.md. */",
+      "  /**\n   * @asyncRoot (ESC-3.3-3)\n   */",
+    ]);
+    const registryPath = "packages/runtime/src/registry/registry.ts";
+    const registryPatch = (path: string): { filename: string; status: string; patch: string }[] => [{ filename: path, status: "modified", patch: "@@ -1,1 +1,1 @@\n-x\n+y" }];
+    expect(gatherEvidence(root, registryPatch(registryPath), none).decisions.map((entry) => entry.label)).toContain("decisions/ESC-9.4-1.md");
+    expect(gatherEvidence(root, registryPatch("packages/runtime/tests/xaravel/registry.test.ts"), none).decisions.map((entry) => entry.label)).not.toContain("decisions/ESC-9.4-1.md");
   },
   180_000,
 );
