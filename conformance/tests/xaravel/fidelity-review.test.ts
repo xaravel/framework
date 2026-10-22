@@ -1353,6 +1353,20 @@ xaravelTest(
     const nearFilled = withWholeFiles(root, nearCap);
     expect(nearFilled.evidence.wholeFiles.some((item) => item.note?.startsWith("omitted for size:"))).toBe(true);
     expect(buildPrompt(nearFilled).length).toBeLessThanOrEqual(PROMPT_CAP);
+    // With almost no room left (Story 9.11's review: 615,865 characters with (h)), the named files fold into one
+    // summary entry, and with none at all (h) is one note: the prompt never goes over the cap.
+    const unpadded = buildPrompt({ ...promptBase, files: many, evidence: NO_EVIDENCE }).length;
+    const leaving = (headroom: number) => ({ ...promptBase, files: many, manifestText: "x".repeat(PROMPT_CAP - headroom - unpadded), evidence: NO_EVIDENCE });
+    for (const headroom of [6_000, 600, 20]) {
+      expect(buildPrompt(leaving(headroom)).length).toBe(PROMPT_CAP - headroom);
+      const filled = withWholeFiles(root, leaving(headroom));
+      expect([headroom, buildPrompt(filled).length <= PROMPT_CAP]).toEqual([headroom, true]);
+      const paths = filled.evidence.wholeFiles.map((item) => item.path);
+      expect(paths.filter((path) => path === "(other files)" || path === "(no files)").length).toBeLessThanOrEqual(1);
+    }
+    const summarised = withWholeFiles(root, leaving(6_000)).evidence.wholeFiles;
+    expect(summarised.at(-1)).toMatchObject({ path: "(other files)", reason: "named only", text: null });
+    expect(summarised.at(-1)!.note).toStartWith("named without their text (omitted for size, shown in full in another section, or unavailable): `");
 
     // ESC-9.10-3: (e) and (h) belong to the Story's own change. A path the Story may edit, or a test declaring an XT id
     // its manifest assigns, is in scope; a file another PR in the base range changed is not.

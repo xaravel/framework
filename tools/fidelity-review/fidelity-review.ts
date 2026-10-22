@@ -993,7 +993,54 @@ export function withWholeFiles(root: string, input: PromptInput, inScope: (path:
   const rest = buildPrompt({ ...input, evidence: { ...input.evidence, wholeFiles: [] } }).length;
   // Room for the section's heading and its per-file headings beyond the text `wholeFileEvidence` counts.
   const budget = PROMPT_CAP - rest - 2_000;
-  return { ...input, evidence: { ...input.evidence, wholeFiles: wholeFileEvidence(root, input.files, shown, budget, inScope) } };
+  return fitWholeFiles(input, wholeFileEvidence(root, input.files, shown, budget, inScope));
+}
+
+/** The most characters of file paths (h)'s summary entry lists before it says how many more there are. */
+const WHOLE_FILE_SUMMARY_CAP = 2_000;
+
+/** The note of (h)'s summary entry: the named files, up to `WHOLE_FILE_SUMMARY_CAP` characters, then a count of the rest. */
+function wholeFileSummaryNote(paths: readonly string[]): string {
+  const listed: string[] = [];
+  let length = 0;
+  for (const path of paths) {
+    if (length + path.length + 4 > WHOLE_FILE_SUMMARY_CAP) {
+      break;
+    }
+    listed.push(`\`${path}\``);
+    length += path.length + 4;
+  }
+  const more = paths.length - listed.length;
+  return `named without their text (omitted for size, shown in full in another section, or unavailable): ${listed.join(", ")}${more > 0 ? `, and ${more} more` : ""}`;
+}
+
+/**
+ * `input` with `entries` as evidence (h), cut down until the prompt fits `PROMPT_CAP`. The prompt without (h) is checked
+ * against the cap before this runs, so a fit always exists. A file named without its text still costs a heading and a
+ * note, so when the cap leaves little room the named files fold into one summary entry; then shown files fold into it
+ * too, the lowest-priority first; and when even that does not fit, (h) is one note saying so.
+ */
+function fitWholeFiles(input: PromptInput, entries: readonly WholeFileEntry[]): PromptInput {
+  const withH = (wholeFiles: readonly WholeFileEntry[]): PromptInput => ({ ...input, evidence: { ...input.evidence, wholeFiles } });
+  const fits = (wholeFiles: readonly WholeFileEntry[]): boolean => buildPrompt(withH(wholeFiles)).length <= PROMPT_CAP;
+  if (fits(entries)) {
+    return withH(entries);
+  }
+  let kept = entries.filter((entry) => entry.text !== null);
+  let folded = entries.filter((entry) => entry.text === null).map((entry) => entry.path);
+  for (;;) {
+    const candidate = folded.length === 0 ? kept : [...kept, { path: "(other files)", reason: "named only", text: null, note: wholeFileSummaryNote(folded) }];
+    if (fits(candidate)) {
+      return withH(candidate);
+    }
+    if (kept.length === 0) {
+      break;
+    }
+    folded = [kept.at(-1)!.path, ...folded];
+    kept = kept.slice(0, -1);
+  }
+  const none: WholeFileEntry[] = [{ path: "(no files)", reason: "omitted for size", text: null, note: `the rest of the prompt leaves no room under the ${PROMPT_CAP}-character cap, so this section shows no file` }];
+  return withH(fits(none) ? none : []);
 }
 
 /** `<name>/<rel>:<a>-<b>` of an Inventory `source`, or null. */
