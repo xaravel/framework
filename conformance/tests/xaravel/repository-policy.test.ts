@@ -811,13 +811,14 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     expect(node["continue-on-error"]).toBeUndefined();
     expect(node["if"]).toBeUndefined();
   }
-  // Story 5.6 AC5 (Epic 3 retro R5): `bun run test` verifies the committed per-Story Oracle requests in merge order, which needs full history.
+  // Story 5.6 AC5 (Epic 3 retro R5): the test run verifies the committed per-Story Oracle requests in merge order, which needs full history.
   expect(check.steps[0]).toEqual({ ...audit.steps[0]!, with: { "persist-credentials": false, "fetch-depth": 0 } });
   expect(check.steps[1]).toEqual(audit.steps[1]!);
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
-    "bun run test",
     // Story 5.9: every Xaravel Test under the harness; UNDECLARED, LATE and FAIL results gate the merge (FR-115, AD-15).
+    // It is the job's only test run: every test file is one the harness runs (XT-conformance-119), so a plain
+    // `bun run test` would run them all a second time.
     "bun run harness --xaravel",
     // Story 5.1: the Expectations File check (FR-3, AD-15, XT-conformance-91).
     "bun run expectations:check",
