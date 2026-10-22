@@ -255,6 +255,8 @@ export interface PromptInput {
   /** The content of each changed Oracle request file in the reviewed tree. */
   readonly oracleRequests: readonly { readonly path: string; readonly text: string }[];
   readonly files: readonly ChangedFile[];
+  /** The changed files the base range holds that are not the Story's (`fileInStoryScope`, ESC-9.10-4), named under the diff; absent or empty: none. */
+  readonly outOfScopeFiles?: readonly string[];
   readonly evidence: Evidence;
   /** The findings of the latest reject the review must address (`priorFindings`, ESC-8.8-1 item 3); absent or empty: none. */
   readonly prior?: readonly PriorFinding[];
@@ -373,6 +375,10 @@ export function buildPrompt(input: PromptInput): Prompt {
     sections.push("", `### ${request.path}`, "", fence(request.text, "jsonl"));
   }
   sections.push("", "## Diff");
+  const outOfScopeFiles = input.outOfScopeFiles ?? [];
+  if (outOfScopeFiles.length > 0) {
+    sections.push("", `Left out as outside the Story's scope (ESC-9.10-4): ${outOfScopeFiles.map((path) => `\`${path}\``).join(", ")}. The base range also holds other PRs that merged while the Story was open, each reviewed on its own; these changes are theirs, not the Story's, so neither their patches nor evidence drawn from them are shown.`);
+  }
   for (const file of input.files) {
     sections.push("", `### ${file.filename} (${file.status})`, "", file.patch === null ? NO_TEXTUAL_CHANGE : fence(file.patch, "diff"));
   }
@@ -940,6 +946,27 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
  */
 export function inStoryScope(manifest: Pick<Manifest, "storyId" | "component" | "xaravelTestIds">, path: string, ids: readonly string[] = []): boolean {
   return allowedPath(manifest, path) || ids.some((id) => manifest.xaravelTestIds.includes(id));
+}
+
+/**
+ * Whether a changed file belongs to the Story's own change (ESC-9.10-4): the Story's manifest, a path `inStoryScope`
+ * accepts, or a TypeScript file under `root` that declares an Xaravel Test id the manifest assigns. A file another PR
+ * in the base range changed is not.
+ */
+export function fileInStoryScope(root: string, manifest: Pick<Manifest, "storyId" | "component" | "xaravelTestIds">, path: string): boolean {
+  if (path === `${STORIES_DIR}/${manifest.storyId}.md` || inStoryScope(manifest, path)) {
+    return true;
+  }
+  if (!TS_FILE.test(path)) {
+    return false;
+  }
+  let text: string;
+  try {
+    text = readFileSync(join(root, path), "utf8");
+  } catch {
+    return false;
+  }
+  return inStoryScope(manifest, path, testUnits(text).flatMap((unit) => unit.ids));
 }
 
 /**
@@ -3026,9 +3053,15 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   if (diff.files.length === 0) {
     return stop(`the diff from ${diff.base} to tree ${diff.tree} is empty`);
   }
+  // The Story's own change: another PR's files in the base range are named, not shown, and give no evidence (ESC-9.10-4).
+  const storyFiles = diff.files.filter((file) => fileInStoryScope(root, manifest, file.filename));
+  const outOfScopeFiles = diff.files.filter((file) => !storyFiles.includes(file)).map((file) => file.filename);
+  if (storyFiles.length === 0) {
+    return stop(`the diff from ${diff.base} to tree ${diff.tree} holds no file of Story ${storyId}'s own change (ESC-9.10-4)`);
+  }
   const oracleRequests: { path: string; text: string }[] = [];
   const fixtures: { path: string; text: string | null }[] = [];
-  for (const file of diff.files) {
+  for (const file of storyFiles) {
     if (file.status.startsWith("removed")) {
       continue;
     }
@@ -3055,7 +3088,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const readmePath = join(root, "conformance", "README.md");
   const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
   // (e) shows the Story's own touched tests; another PR's in the base range is named, not shown (ESC-9.10-3).
-  const touchedTests = xaravelTestEvidence(root, diff.files);
+  const touchedTests = xaravelTestEvidence(root, storyFiles);
   const xaravelTests = touchedTests.filter((entry) => inStoryScope(manifest, entry.path, entry.ids));
   const outOfScopeTests = [...new Set(touchedTests.filter((entry) => !xaravelTests.includes(entry)).map((entry) => entry.path))].sort(compareUnits);
   const promptInput: PromptInput = {
@@ -3068,14 +3101,15 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     manifestText,
     inventory: inventoryContext(root, manifest.testIds),
     oracleRequests,
-    files: diff.files,
+    files: storyFiles,
+    outOfScopeFiles,
     evidence: {
-      ...gatherEvidence(root, diff.files, manifest),
+      ...gatherEvidence(root, storyFiles, manifest),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       xaravelTests,
       outOfScopeTests,
       // (f) also takes the decisions a touched Xaravel Test (ESC-9.2-1) or a changed source file's docblock (ESC-9.10-1) cites on an unchanged line.
-      decisions: decisionEvidence(root, [...addedLines(diff.files), ...sourceDocTexts(root, diff.files), ...xaravelTests.map((entry) => entry.body ?? "")]),
+      decisions: decisionEvidence(root, [...addedLines(storyFiles), ...sourceDocTexts(root, storyFiles), ...xaravelTests.map((entry) => entry.body ?? "")]),
     },
     prior,
   };

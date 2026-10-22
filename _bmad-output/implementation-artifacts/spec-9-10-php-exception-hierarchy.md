@@ -3,7 +3,7 @@ title: 'Story 9.10: PHP exception hierarchy'
 type: 'feature'
 created: '2026-10-22'
 baseline_revision: '21a0224aa648887deb8045cbe011868a3ef28a4f'
-status: 'blocked'
+status: 'in-review'
 review_loop_iteration: 2
 followup_review_recommended: false
 context:
@@ -16,6 +16,7 @@ context:
   - '{project-root}/decisions/ESC-4.3-1.md'
   - '{project-root}/decisions/ESC-9.10-2.md'
   - '{project-root}/decisions/ESC-9.10-3.md'
+  - '{project-root}/decisions/ESC-9.10-4.md'
   - '{project-root}/decisions/DIV-9.md'
 warnings: [oversized]
 deferred:
@@ -131,6 +132,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-10-22: `decisions/ESC-9.10-4.md` (Maintainer) rules option 1: the Fidelity Review's patches and the evidence drawn from them cover only the Story's own change, so #303's, #304's and #306's tool, checklist and decision changes in the base range are named, not shown. The Story's code is unchanged; it resumes at the review step with `--base c870bc261d2bcea7b12296896c8650f52e124573`.
 - 2026-10-22: the follow-up landed (`decisions/ESC-9.10-2.md`). The constructors coerce in `throwableArguments.ts` (`stringArgument`, `intArgument`, `previousArgument`); `formatFloat` and `stringPort` moved from `casts.ts` to the import-free `scalarString.ts` so the coercion loads no throwable. Two points of the intent's argument bullet were settled by the Oracle, as the bullet directs ("What a coercion accepts and gives is checked against the Oracle"), and are recorded here for the Maintainer: (1) PHP 8.5.11 rejects a leading-numeric `$code` string (`'5abc'` throws `must be of type int, string given`), so only whitespace-padded numeric strings coerce; (2) PHP's coercive `string` parameter also takes an int, a float, a bool and a `Stringable` object (`new \Exception(5)` gives `"5"`, `1e100` gives `"1.0E+100"`), so the port takes them too and rejects only an array, a closure or another object. An unsafe integral number (an AD-9 float) is now coerced as PHP coerces a float (`2 ** 60` gives `1152921504606846976n`), replacing pass 1's `float given` row. `XARAVEL_NO_SCOPE_GLOBAL=1` skips the class-map install. The XT-runtime-36 request gained 32 rows (indexes 26-57, plus a `Label` `__toString` fixture class in setup), checked against local `evaluate.php`; its sha256 is now `0725edf8…`, so the old fixture `8dea305e…` is deleted and the bot signs the new one.
 - 2026-10-22: the intent contract takes `decisions/ESC-9.10-2.md` as the Maintainer ruled it: the argument bullet now coerces as PHP's coercive mode does, the Never list drops "PHP's coercions of constructor arguments" (keeping only their deprecation notices out), the XT-runtime-35 load row says only the four package indexes publish the map and adds the `XARAVEL_NO_SCOPE_GLOBAL=1` opt-out, and the XT-runtime-36 row covers the coercions. The follow-up implementation starts from `main` at `386080cd6f915701f6ed4d6d2f810e1683274f64`.
 - 2026-10-22: `decisions/ESC-9.10-2.md` (Maintainer) rules option 1, coercion as PHP does in coercive mode, with (a) and (b) as recommended. `decisions/ESC-9.10-3.md` (Maintainer) rules option 2: the review's evidence (e) is scoped to the Story's own tests. The coercion, the matrix row and the opt-out are follow-up tasks, so the Story is back to `in-progress`.
