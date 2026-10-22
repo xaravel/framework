@@ -19,6 +19,7 @@ import {
   buildPrompt,
   CHECKLIST_FILE,
   classifyUnavailable,
+  consequenceEntries,
   decideVerdict,
   decisionEvidence,
   EXCERPT_CAP,
@@ -46,6 +47,7 @@ import {
   runFidelity,
   runReviewer,
   sourceSurface,
+  spineRuleText,
   standingRejects,
   testUnits,
   usedDeclarations,
@@ -1095,6 +1097,60 @@ xaravelTest(
     const removedRun = await review(removedRepo.dir, fakes({}).env, "--loop-cli", "claude", "--base", removedBase);
     expect(removedRun.code).toBe(0);
     expect(records(removedRepo.spec)).toHaveLength(2);
+
+    // ESC-9.9-5: a bare `AD-<n>` no consequence line has carries its Rule from the spine: a bullet Rule as numbered
+    // bullets, a table Rule as its Rule line and table; an AD the spine lacks, or an unreadable spine, stays unavailable.
+    const spineText = [
+      "### AD-1 — Bullets",
+      "",
+      "- **Binds:** FR-1",
+      "- **Rule:**",
+      "  - **First.** One.",
+      "  - **Second.** Two.",
+      "",
+      "### AD-2 — Table",
+      "",
+      "- **Rule:** Every row is bound:",
+      "",
+      "  | A | B |",
+      "  | --- | --- |",
+      "  | x | y |",
+      "",
+      "- **Enforcement:** CI.",
+      "",
+      "### AD-3 — None",
+      "",
+      "- **Binds:** FR-3",
+      "",
+    ].join("\n");
+    const spineEntry = { label: SPINE_FILE, text: spineText, unavailable: null };
+    const noLines = (): Map<string, string[]> => new Map([["AD-1.1", ["conformance/xaravel-consequences/x.jsonl: one"]]]);
+    const spineLabel = (id: string): string => `${id} (no line in conformance/xaravel-consequences/*.jsonl has it; its Rule from ${SPINE_FILE})`;
+    expect(consequenceEntries(["AD-1", "AD-1.2", "AD-2", "AD-3", "AD-9", "FR-9"], () => new Map(), () => spineEntry)).toEqual([
+      { label: spineLabel("AD-1"), text: "AD-1.1: **First.** One.\nAD-1.2: **Second.** Two.", unavailable: null, lang: "markdown" },
+      { label: "AD-1.2", text: null, unavailable: "unknown consequence id AD-1.2: no line in conformance/xaravel-consequences/*.jsonl has it" },
+      { label: spineLabel("AD-2"), text: "- **Rule:** Every row is bound:\n\n  | A | B |\n  | --- | --- |\n  | x | y |", unavailable: null, lang: "markdown" },
+      { label: "AD-3", text: null, unavailable: `unknown consequence id AD-3: no line in conformance/xaravel-consequences/*.jsonl has it, and ${SPINE_FILE} has no AD-3 Rule` },
+      { label: "AD-9", text: null, unavailable: `unknown consequence id AD-9: no line in conformance/xaravel-consequences/*.jsonl has it, and ${SPINE_FILE} has no AD-9 Rule` },
+      { label: "FR-9", text: null, unavailable: "unknown consequence id FR-9: no line in conformance/xaravel-consequences/*.jsonl has it" },
+    ]);
+    // A consequence line still wins over the spine, and the spine is not read for it.
+    expect(consequenceEntries(["AD-1"], noLines, () => { throw new Error("spine read"); })).toEqual([{ label: "AD-1", text: "conformance/xaravel-consequences/x.jsonl: one", unavailable: null }]);
+    expect(consequenceEntries(["AD-1"], () => "conformance/xaravel-consequences does not exist", () => ({ label: SPINE_FILE, text: null, unavailable: `${SPINE_FILE} does not exist` }))).toEqual([
+      { label: "AD-1", text: null, unavailable: `conformance/xaravel-consequences does not exist, and ${SPINE_FILE} does not exist` },
+    ]);
+    // The real spine: AD-4's bullets and AD-26's table, the two Rules Story 9.9's tests cite.
+    const realSpine = readFileSync(join(root, SPINE_FILE), "utf8");
+    const ad4 = spineRules(realSpine).get(4)!;
+    expect(spineRuleText(realSpine, 4)).toBe(ad4.map((bullet, k) => `AD-4.${k + 1}: ${bullet}`).join("\n"));
+    expect(spineRuleText(realSpine, 26)).toContain("| Traits | `mixin(Base, ...Traits)`;");
+    expect(spineRuleText(realSpine, 26)).not.toContain("### AD-27");
+    // In the prompt, a spine Rule is fenced as markdown.
+    write(xtRepo.dir, sampleTest, sampleText.replace("covers FR-111.1 and FR-999.9", "covers AD-26").replace("const value = 1;", "const value = 2;"));
+    const ruleFakes = fakes({});
+    expect((await review(xtRepo.dir, ruleFakes.env, "--loop-cli", "claude", "--base", xtBase)).code).toBe(0);
+    expect(ruleFakes.calls("claude")[0]!.stdin).toContain(["- " + spineLabel("AD-26") + ":", "", "```markdown", "- **Rule:** `PORTING.md` must contain"].join("\n"));
+    git(xtRepo.dir, "checkout", "-q", "--", ".");
   },
   180_000,
 );

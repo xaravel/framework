@@ -42,7 +42,8 @@
 // every changed fixture whose output is an error; (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
 // or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
-// the full body and cited consequences of every Xaravel Test whose lines the
+// the full body and cited consequences of every Xaravel Test (a bare `AD-<n>`
+// no consequence line has gets its spine Rule, ESC-9.9-5) whose lines the
 // diff changes, that uses a test helper or fixture the diff changes, or whose
 // test file's top-level setup changes (a heuristic top-level-unit scanner,
 // `testUnits`), with every declaration in its own file it uses, directly or
@@ -199,6 +200,8 @@ export interface EvidenceEntry {
   readonly label: string;
   readonly text: string | null;
   readonly unavailable: string | null;
+  /** The fence language of `text` where it differs from its section's; absent: the section's. */
+  readonly lang?: string;
 }
 
 /** The evidence the checklist items need, read from the root (see the header). */
@@ -404,7 +407,7 @@ export function buildPrompt(input: PromptInput): Prompt {
     }
     sections.push(`The consequences ${source} cites:`);
     for (const consequence of entry.consequences) {
-      sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, "jsonl"));
+      sections.push("", `- ${consequence.label}:`, "", consequence.text === null ? `unavailable: ${consequence.unavailable ?? "not read"}` : fence(consequence.text, consequence.lang ?? "jsonl"));
     }
   }
   evidenceSection(sections, "### (f) Decision records cited on added lines (any item, ESC-9.2-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
@@ -1106,15 +1109,58 @@ function usesName(text: string, name: string): boolean {
   return new RegExp(`(?<![\\w$.])${escapeRegExp(name)}(?![\\w$])`).test(text);
 }
 
-/** The consequence lines for each FR/AD token: `FR-<n>.<k>` exactly, a bare `FR-<n>` as every `FR-<n>.<k>` line. */
-function consequenceEntries(tokens: readonly string[], lines: () => Map<string, string[]> | string): EvidenceEntry[] {
+/**
+ * AD-`n`'s Rule from the spine `text` (ESC-9.9-5): each bullet as `AD-<n>.<k>: <bullet>`, numbered as
+ * `consequencesFor` numbers them, or, when the Rule is not a bullet list, its `- **Rule:**` line with what follows it
+ * up to the next top-level bullet (AD-26's table); null when the spine has no AD-`n` or it has no Rule.
+ */
+export function spineRuleText(text: string, n: number): string | null {
+  const bullets = spineRules(text).get(n);
+  if (bullets !== undefined) {
+    return bullets.map((bullet, k) => `AD-${n}.${k + 1}: ${bullet}`).join("\n");
+  }
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) => line.startsWith(`### AD-${n} `));
+  if (start === -1) {
+    return null;
+  }
+  const after = lines.slice(start + 1);
+  const end = after.findIndex((line) => /^#{1,3} /.test(line));
+  const section = end === -1 ? after : after.slice(0, end);
+  const at = section.findIndex((line) => line.startsWith("- **Rule:**"));
+  if (at === -1) {
+    return null;
+  }
+  const next = section.slice(at + 1).findIndex((line) => line.startsWith("- **"));
+  const rule = section.slice(at, next === -1 ? section.length : at + 1 + next);
+  while (rule.length > 0 && rule.at(-1)!.trim() === "") {
+    rule.pop();
+  }
+  return rule.join("\n");
+}
+
+/**
+ * The consequence lines for each FR/AD token: `FR-<n>.<k>` exactly, a bare `FR-<n>` as every `FR-<n>.<k>` line; and a
+ * bare `AD-<n>` no line has as AD-`n`'s Rule from the spine (ESC-9.9-5), since a consequence row lists only some ADs.
+ */
+export function consequenceEntries(tokens: readonly string[], lines: () => Map<string, string[]> | string, spine: () => EvidenceEntry): EvidenceEntry[] {
   return tokens.map((token) => {
     const all = lines();
-    if (typeof all === "string") {
-      return { label: token, text: null, unavailable: all };
+    const found = typeof all === "string" ? undefined : (all.get(token) ?? (token.includes(".") ? undefined : [...all.entries()].filter(([id]) => id.startsWith(`${token}.`)).flatMap(([, text]) => text)));
+    if (found !== undefined && found.length > 0) {
+      return { label: token, text: found.join("\n"), unavailable: null };
     }
-    const found = all.get(token) ?? (token.includes(".") ? undefined : [...all.entries()].filter(([id]) => id.startsWith(`${token}.`)).flatMap(([, text]) => text));
-    return found === undefined || found.length === 0 ? { label: token, text: null, unavailable: `unknown consequence id ${token}: no line in ${CONSEQUENCES_DIR}/*.jsonl has it` } : { label: token, text: found.join("\n"), unavailable: null };
+    const unknown = typeof all === "string" ? all : `unknown consequence id ${token}: no line in ${CONSEQUENCES_DIR}/*.jsonl has it`;
+    const ad = /^AD-([1-9]\d*)$/.exec(token);
+    if (ad === null) {
+      return { label: token, text: null, unavailable: unknown };
+    }
+    const file = spine();
+    const rule = file.text === null ? null : spineRuleText(file.text, Number(ad[1]));
+    if (rule === null) {
+      return { label: token, text: null, unavailable: `${unknown}, and ${file.text === null ? file.unavailable : `${SPINE_FILE} has no AD-${ad[1]} Rule`}` };
+    }
+    return { label: `${token} (no line in ${CONSEQUENCES_DIR}/*.jsonl has it; its Rule from ${SPINE_FILE})`, text: rule, unavailable: null, lang: "markdown" };
   });
 }
 
@@ -1306,12 +1352,14 @@ export function xaravelTestEvidence(root: string, files: readonly ChangedFile[])
   }
   let lines: Map<string, string[]> | string | null = null;
   const consequences = (): Map<string, string[]> | string => (lines ??= consequenceLines(root));
+  let spineFile: EvidenceEntry | null = null;
+  const spine = (): EvidenceEntry => (spineFile ??= readEvidenceFile(root, SPINE_FILE));
   const out: XaravelTestEntry[] = [...reasons.values()]
     .sort((a, b) => compareUnits(a.path, b.path) || a.unit.from - b.unit.from)
     .map(({ path, unit, reasons: why }) => {
       const cited = [...new Set([...(unit.consequence ?? unit.text).matchAll(/\b(?:FR|AD)-[1-9]\d*(?:\.[1-9]\d*)?\b/g)].map((match) => match[0]))].sort(compareUnits);
       const helpers = usedDeclarations(units(path), unit);
-      return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences), citesFrom: unit.consequence === null ? "text" : "consequence", ...(helpers.length === 0 ? {} : { helpers }) };
+      return { ids: unit.ids, path, from: unit.from, to: unit.to, reasons: why, body: unit.text, unavailable: null, consequences: consequenceEntries(cited, consequences, spine), citesFrom: unit.consequence === null ? "text" : "consequence", ...(helpers.length === 0 ? {} : { helpers }) };
     });
   return [...unavailable, ...out];
 }
