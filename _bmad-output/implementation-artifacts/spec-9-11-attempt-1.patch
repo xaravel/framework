@@ -1,0 +1,991 @@
+diff --git a/conformance/oracle-requests/9.11.jsonl b/conformance/oracle-requests/9.11.jsonl
+new file mode 100644
+index 0000000..750a136
+--- /dev/null
++++ b/conformance/oracle-requests/9.11.jsonl
+@@ -0,0 +1 @@
++{"id":"XT-assert-17","kind":"php-expr","input":{"bindings":{},"setup":["$v = [0, 1, -1, 100, 0.0, -0.0, 1.0, -1.0, 100.0, 9007199254740992.0, 0.5, INF, NAN, \"1\", \"1.0\", true, null];"],"exprs":["$v","array_map(fn ($a) => array_map(fn ($b) => $a === $b, $v), $v)","array_map(fn ($a) => array_map(fn ($b) => $a == $b, $v), $v)"]},"sha256":"8037e341bd3cadf9a90a884feb4abab4c26cc53750e96e28f16d649d8803d711"}
+diff --git a/packages/assert/README.md b/packages/assert/README.md
+index c0f70ab..947901d 100644
+--- a/packages/assert/README.md
++++ b/packages/assert/README.md
+@@ -24,6 +24,28 @@ None at run time.
+ 
+ `Assert` also has `assertThat(value, constraint)`, the file, directory and JSON assertions, `fail()` and `markTestSkipped()`, and the constraint factories `logicalAnd`, `greaterThanOrEqual`, `lessThanOrEqual`, `isInstanceOf` and `stringContains(string, case = true)` (PHPUnit passes `case` as the constraint's `ignoreCase`). Laravel's `assertArraySubset` records the kind `assertThat`, the PHPUnit assertion it calls (`decisions/ESC-4.3-1.md` item 8).
+ 
++## PHP values: ints and floats
++
++The grader reads PHP values by brand and protocol only and never imports `@xaravel/runtime` (AD-2). A number's PHP type is:
++
++- int: a `bigint`, or a safe-integer `number` other than `-0`;
++- float: any other `number` (a fraction, `-0`, `INF`, `NAN`, or beyond ±(2^53 − 1)), and any value carrying the runtime's float marker: a non-null object whose `[Symbol.for('xaravel.php.float')]` is `true` (`float(n)`, Story 9.5, DIV-9.4), whose value is `Number(v)`.
++
++`assertSame`, `IsIdentical` and `willReturnMap` rows use PHP `===`: two numbers are identical only when both are ints with equal values, or both floats with equal values (`NAN` never; `0.0 === -0.0`). So `assertSame(1, float(1))` fails with `Failed asserting that 1.0 is identical to 1.`, and two separate `float(1)` values are identical. `==`, ordering, `assertEquals`, `assertIsFloat` / `assertIsInt`, `gettype` and the exporters read a marked float as the plain number with PHP type float, so an integral float exports as `1.0`, as PHPUnit's exporter and `var_export` do. A plain `-0` still prints `0` through `phpToString` and `phpVarExport` (the forms `@xaravel/mockery` prints); PHPUnit's exporter prints it `-0.0`. The `===`/`==` matrix of integral floats is checked against the Oracle (XT-assert-17, `conformance/oracle-requests/9.11.jsonl`).
++
++## Rewriting a caught failure's message
++
++Laravel's `TestResponseAssert::appendMessageToException` rewrites a caught `ExpectationFailedException`'s message through reflection. A port calls the `Symbol.for('xaravel.assert.setMessage')` method instead, which every PHPUnit exception has (on `PHPUnit\Framework\Exception`'s prototype, non-enumerable), without importing the grader:
++
++```ts
++const setMessage = Symbol.for("xaravel.assert.setMessage");
++if (typeof e[setMessage] === "function") {
++  e[setMessage](`${e.getMessage()}\n\n${message}\n`);
++}
++```
++
++Called with a string, it makes that string what `getMessage()` returns, and sets the JS `message` to it followed by the suffix the class adds (`ExpectationFailedException`'s `--- Expected` / `+++ Actual` lines). Code, previous, cause and the comparison failure are unchanged, and it returns `null`. A non-string argument throws a JS `TypeError` naming the protocol (ESC-4.3-1 item 11, XT-assert-19).
++
+ ## Test doubles
+ 
+ `TestCase` has PHPUnit 13.4.3's test doubles (Story 4.7, `decisions/ESC-4.4-2.md` item 6). PHPUnit does not delegate to Mockery; Mockery stays reachable through `Mockery.mock()`.
+diff --git a/packages/assert/src/Framework/Constraints.ts b/packages/assert/src/Framework/Constraints.ts
+index ab165ec..a214587 100644
+--- a/packages/assert/src/Framework/Constraints.ts
++++ b/packages/assert/src/Framework/Constraints.ts
+@@ -20,6 +20,7 @@ import {
+   isScalar,
+   isTraversable,
+   iterableValues,
++  toNumber,
+ } from "../comparison/PhpValues";
+ import { Factory } from "../comparator/Factory";
+ import { exportValue, phpunitExport } from "../exporter/Exporter";
+@@ -214,7 +215,7 @@ export class IsNan extends Constraint {
+     return "is not nan";
+   }
+   protected override matches(other: unknown): boolean {
+-    return typeof other === "number" && Number.isNaN(other);
++    return isFloat(other) && Number.isNaN(toNumber(other));
+   }
+   override failureDescription(other: unknown): string {
+     return describeByTypeForContainers(other, this.toString());
+@@ -506,6 +507,9 @@ export class TraversableContainsOnly extends Constraint {
+ 
+ /** A PHP array key (an int or a string, normalised), or null for any other value. */
+ function arrayKey(key: unknown): Key | null {
++  if (Object.is(key, -0)) {
++    return 0;
++  }
+   if (isInt(key)) {
+     return typeof key === "bigint" && key >= BigInt(Number.MIN_SAFE_INTEGER) && key <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(key) : key;
+   }
+diff --git a/packages/assert/src/Framework/Exception/Exception.ts b/packages/assert/src/Framework/Exception/Exception.ts
+index 336176b..078e983 100644
+--- a/packages/assert/src/Framework/Exception/Exception.ts
++++ b/packages/assert/src/Framework/Exception/Exception.ts
+@@ -6,12 +6,22 @@
+ // (sebastian-bergmann/phpunit#5965). `previous` is also the JS `cause`, and
+ // `code` a non-enumerable own property, so the grader's exporter and
+ // comparators read both as they read any JS error's.
++//
++// The message rewrite protocol (Story 9.11, ESC-4.3-1 item 11): every PHPUnit
++// exception has a non-enumerable method under
++// `Symbol.for('xaravel.assert.setMessage')`, which Laravel's
++// `TestResponseAssert::appendMessageToException` port calls in place of PHP's
++// reflection on `message`, without importing the grader. Called with a string,
++// it makes that string what `getMessage()` returns, and the JS `message` that
++// string plus the suffix the class adds (`messageSuffix()`); code, previous,
++// cause and any comparison failure are unchanged. It returns `null`.
+ const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
++const SET_MESSAGE = Symbol.for("xaravel.assert.setMessage");
+ 
+ export class Exception extends Error {
+   static readonly [CLASS_FQCN]: string = "PHPUnit\\Framework\\Exception";
+ 
+-  readonly #message: string;
++  #message: string;
+   readonly #code: number;
+   readonly #previous: Error | null;
+ 
+@@ -43,4 +53,19 @@ export class Exception extends Error {
+   getPrevious(): Error | null {
+     return this.#previous;
+   }
++
++  /** What a subclass adds to the JS `message` after `getMessage()`; none here. */
++  protected messageSuffix(): string {
++    return "";
++  }
++
++  /** The message rewrite protocol: `getMessage()` becomes `message`, the JS `message` keeps the class's suffix. */
++  [SET_MESSAGE](message: unknown): null {
++    if (typeof message !== "string") {
++      throw new TypeError(`Symbol.for('xaravel.assert.setMessage'): the message must be a string, got ${message === null ? "null" : typeof message}`);
++    }
++    this.#message = message;
++    this.message = message + this.messageSuffix();
++    return null;
++  }
+ }
+diff --git a/packages/assert/src/Framework/ExpectationFailedException.ts b/packages/assert/src/Framework/ExpectationFailedException.ts
+index 22e0d1c..b026628 100644
+--- a/packages/assert/src/Framework/ExpectationFailedException.ts
++++ b/packages/assert/src/Framework/ExpectationFailedException.ts
+@@ -3,7 +3,8 @@
+ // `getMessage()` is PHPUnit's `getMessage()`, exactly. When a ComparisonFailure
+ // with exported values is attached, the JS `message` also names both values, as
+ // PHPUnit's diff does: `"\n--- Expected\n" + expectedAsString + "\n+++ Actual\n"
+-// + actualAsString`, so bun's failure output shows them.
++// + actualAsString`, so bun's failure output shows them (`messageSuffix()`,
++// which the message rewrite protocol keeps).
+ import { AssertionFailedError } from "./AssertionFailedError";
+ import type { ComparisonFailure } from "./ComparisonFailure";
+ 
+@@ -18,11 +19,14 @@ export class ExpectationFailedException extends AssertionFailedError {
+     super(message, 0, previous);
+     this.name = "ExpectationFailedException";
+     this.#comparisonFailure = comparisonFailure;
+-    const expected = comparisonFailure?.getExpectedAsString() ?? "";
+-    const actual = comparisonFailure?.getActualAsString() ?? "";
+-    if (expected !== "" || actual !== "") {
+-      this.message = `${message}\n--- Expected\n${expected}\n+++ Actual\n${actual}`;
+-    }
++    this.message = this.getMessage() + this.messageSuffix();
++  }
++
++  /** PHPUnit's diff header with both exported values, when the comparison failure has them. */
++  protected override messageSuffix(): string {
++    const expected = this.#comparisonFailure?.getExpectedAsString() ?? "";
++    const actual = this.#comparisonFailure?.getActualAsString() ?? "";
++    return expected !== "" || actual !== "" ? `\n--- Expected\n${expected}\n+++ Actual\n${actual}` : "";
+   }
+ 
+   getComparisonFailure(): ComparisonFailure | null {
+diff --git a/packages/assert/src/Framework/TestCase.ts b/packages/assert/src/Framework/TestCase.ts
+index bf62fa7..3e616fa 100644
+--- a/packages/assert/src/Framework/TestCase.ts
++++ b/packages/assert/src/Framework/TestCase.ts
+@@ -17,7 +17,7 @@
+ // reachable through `Mockery.mock()`; `createMock` never calls it. Counts that
+ // have no assertion kind (`addToAssertionCount`, mock verification) go to the
+ // counting context's kind-less count (AssertionCounter).
+-import { argumentError, stringParam } from "../comparison/PhpValues";
++import { argumentError, stringParam, unmarkFloat } from "../comparison/PhpValues";
+ import { addToAssertionCount, recordAssertion } from "../declarations/AssertionCounter";
+ import { Assert, type ClassOrInterface } from "./Assert";
+ import { classOrInterface } from "./Constraints";
+@@ -70,7 +70,8 @@ function stringArgument(method: string, name: string, value: unknown): string {
+ }
+ 
+ /** PHP's `int|string` parameter in coercive mode; a bigint keeps its exact digits as a string. */
+-function intOrString(method: string, value: unknown): number | string {
++function intOrString(method: string, argument: unknown): number | string {
++  const value = unmarkFloat(argument);
+   if (typeof value === "string") {
+     return value;
+   }
+@@ -83,7 +84,7 @@ function intOrString(method: string, value: unknown): number | string {
+   if (typeof value === "bigint") {
+     return Number.isSafeInteger(Number(value)) ? Number(value) : value.toString();
+   }
+-  const error = argumentError(method, 1, "code", "string|int", value);
++  const error = argumentError(method, 1, "code", "string|int", argument);
+   throw new TypeError(error.message.replace("PHPUnit\\Framework\\Assert::", "PHPUnit\\Framework\\TestCase::"));
+ }
+ 
+diff --git a/packages/assert/src/comparator/ArrayComparator.ts b/packages/assert/src/comparator/ArrayComparator.ts
+index 6e21792..2a4826b 100644
+--- a/packages/assert/src/comparator/ArrayComparator.ts
++++ b/packages/assert/src/comparator/ArrayComparator.ts
+@@ -5,7 +5,7 @@
+ // (`ksort`) first.
+ import { arrayEntries, type Entries, isPhpArray, type Key } from "../comparison/PhpComparison";
+ import { phpCompare, smartCompare } from "../comparison/PhpOrder";
+-import { classNameOf, isFloat, isInt, isPhpObject } from "../comparison/PhpValues";
++import { classNameOf, isPhpObject, phpNumberType } from "../comparison/PhpValues";
+ import { exportValue, shortenedExport } from "../exporter/Exporter";
+ import { serialize } from "../exporter/VarExport";
+ import { ComparisonFailure } from "../Framework/ComparisonFailure";
+@@ -22,7 +22,7 @@ function typeOrder(value: unknown): number {
+   if (typeof value === "boolean") {
+     return 1;
+   }
+-  if (isInt(value) || isFloat(value)) {
++  if (phpNumberType(value) !== null) {
+     return 2;
+   }
+   if (typeof value === "string") {
+diff --git a/packages/assert/src/comparator/NumericComparator.ts b/packages/assert/src/comparator/NumericComparator.ts
+index 207fab3..72d0dd3 100644
+--- a/packages/assert/src/comparator/NumericComparator.ts
++++ b/packages/assert/src/comparator/NumericComparator.ts
+@@ -1,26 +1,26 @@
+ // sebastian/comparator 8.4.0's `NumericComparator` (Story 4.3): numbers and
+ // numeric strings, unless both are strings, within `delta`.
+ import { numericValue } from "../comparison/PhpComparison";
+-import { isFloat, isNumeric, toNumber } from "../comparison/PhpValues";
++import { isFloat, isInt, isNumeric, toNumber } from "../comparison/PhpValues";
+ import { exportValue } from "../exporter/Exporter";
+ import { ComparisonFailure } from "../Framework/ComparisonFailure";
+ import { ScalarComparator } from "./ScalarComparator";
+ 
+ function isInfinite(value: unknown): boolean {
+-  return isFloat(value) && !Number.isNaN(value) && !Number.isFinite(value);
++  return isFloat(value) && !Number.isNaN(toNumber(value)) && !Number.isFinite(toNumber(value));
+ }
+ 
+ function isNan(value: unknown): boolean {
+-  return isFloat(value) && Number.isNaN(value);
++  return isFloat(value) && Number.isNaN(toNumber(value));
+ }
+ 
+ /** The value as a PHP int (an int, or an integer numeric string), or null when PHP's arithmetic reads it as a float. */
+ function intValue(value: unknown): bigint | null {
+-  if (typeof value === "bigint") {
+-    return value;
++  if (isInt(value)) {
++    return BigInt(value);
+   }
+-  if (typeof value === "number") {
+-    return Number.isSafeInteger(value) ? BigInt(value) : null;
++  if (isFloat(value)) {
++    return null;
+   }
+   if (typeof value === "string") {
+     const parsed = numericValue(value);
+@@ -50,8 +50,8 @@ export class NumericComparator extends ScalarComparator {
+ 
+   override assertEquals(expected: unknown, actual: unknown, delta = 0): void {
+     if (isInfinite(expected) && isInfinite(actual)) {
+-      const e = expected as number;
+-      const a = actual as number;
++      const e = toNumber(expected);
++      const a = toNumber(actual);
+       if ((e < 0 && a < 0) || (e > 0 && a > 0)) {
+         return;
+       }
+diff --git a/packages/assert/src/comparison/PhpComparison.ts b/packages/assert/src/comparison/PhpComparison.ts
+index 55db6f5..de223aa 100644
+--- a/packages/assert/src/comparison/PhpComparison.ts
++++ b/packages/assert/src/comparison/PhpComparison.ts
+@@ -15,9 +15,14 @@
+ //     `[Symbol.for('xaravel.php.props')]()` (which must return a PHP array)
+ //     when present, else from its own enumerable string keys.
+ //
+-// int and float are both JS `number` (a `bigint` is an int), so `1 === 1.0`
+-// is true here (ESC-4.1-1, DIV-9). `undefined` and `symbol` are not PHP values
+-// (AD-9); each equals only itself.
++// int and float are both JS `number` (a `bigint` is an int). A safe-integer
++// `number` other than `-0` is an int, any other `number` a float, and a value
++// carrying the runtime's float marker (`Symbol.for('xaravel.php.float')`, read
++// by brand only) is a float whatever its value, so `1 === float(1)` is false
++// and `float(1) === float(1)` true (Story 9.11, ESC-4.1-1, DIV-9.4; PhpValues'
++// `phpNumberType`). `==` reads a marked float as its plain `number`.
++// `undefined` and `symbol` are not PHP values (AD-9); each equals only itself.
++import { isMarkedFloat, phpNumberType, unmarkFloat } from "./PhpValues";
+ 
+ const PHP_ARRAY = Symbol.for("xaravel.php.array");
+ const PHP_PROPS = Symbol.for("xaravel.php.props");
+@@ -234,7 +239,8 @@ function isNumber(value: unknown): value is number | bigint {
+ }
+ 
+ /** PHP's `(bool)` cast. */
+-function truthy(value: unknown): boolean {
++function truthy(given: unknown): boolean {
++  const value = unmarkFloat(given);
+   if (value === null || value === undefined) {
+     return false;
+   }
+@@ -272,14 +278,26 @@ function numbersEqual(a: number | bigint, b: number | bigint): boolean {
+   return Number.isSafeInteger(num) ? BigInt(num) === big : Number(big) === num;
+ }
+ 
+-/** PHP `===` between two numbers: as `==`, except that an int (`bigint`) never equals a float (an unsafe `number`). */
+-function numbersIdentical(a: number | bigint, b: number | bigint): boolean {
+-  if (typeof a === typeof b) {
+-    return a === b;
++/**
++ * PHP `===` between two values of which at least one is a number (PhpValues' `phpNumberType`): identical only when
++ * both are ints with equal values, or both floats with equal values (`NAN` never; `0.0 === -0.0`, as PHP).
++ */
++function numbersIdentical(a: unknown, b: unknown): boolean {
++  const type = phpNumberType(a);
++  if (type === null || type !== phpNumberType(b)) {
++    return false;
+   }
+-  const big = (typeof a === "bigint" ? a : b) as bigint;
+-  const num = (typeof a === "number" ? a : b) as number;
+-  return Number.isSafeInteger(num) && BigInt(num) === big;
++  if (type === "float") {
++    return Number(a) === Number(b);
++  }
++  const left = a as number | bigint;
++  const right = b as number | bigint;
++  if (typeof left === typeof right) {
++    return left === right;
++  }
++  const big = (typeof left === "bigint" ? left : right) as bigint;
++  const num = (typeof left === "number" ? left : right) as number;
++  return BigInt(num) === big;
+ }
+ 
+ /** A PHP numeric string's value: an int, or a float with PHP's integer-overflow sign (`oflow`). */
+@@ -378,7 +396,10 @@ class Comparison {
+     }
+   }
+ 
+-  loose(a: unknown, b: unknown): boolean {
++  loose(left: unknown, right: unknown): boolean {
++    // A marked float is `==` as the plain `number` it stands for.
++    const a = unmarkFloat(left);
++    const b = unmarkFloat(right);
+     if (isForeign(a) || isForeign(b)) {
+       return Object.is(a, b);
+     }
+@@ -418,30 +439,30 @@ class Comparison {
+     if (typeof b !== "object" && typeof b !== "function") {
+       return false;
+     }
+-    const left = a as object;
+-    const right = b as object;
+-    if (left === right) {
++    const x = a as object;
++    const y = b as object;
++    if (x === y) {
+       return true;
+     }
+-    const leftArray = isPhpArray(left);
+-    const rightArray = isPhpArray(right);
++    const leftArray = isPhpArray(x);
++    const rightArray = isPhpArray(y);
+     if (leftArray && rightArray) {
+-      return this.guard(left, () => this.looseEntries(arrayEntries(left), arrayEntries(right)));
++      return this.guard(x, () => this.looseEntries(arrayEntries(x), arrayEntries(y)));
+     }
+     if (leftArray || rightArray) {
+       return false;
+     }
+-    if (typeof left === "function" || typeof right === "function") {
++    if (typeof x === "function" || typeof y === "function") {
+       return false;
+     }
+-    if (isBuiltIn(left) || isBuiltIn(right)) {
++    if (isBuiltIn(x) || isBuiltIn(y)) {
+       // No PHP props form: equal only to itself, checked above.
+       return false;
+     }
+-    if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) {
++    if (Object.getPrototypeOf(x) !== Object.getPrototypeOf(y)) {
+       return false;
+     }
+-    return this.guard(left, () => this.looseEntries(objectProps(left), objectProps(right)));
++    return this.guard(x, () => this.looseEntries(objectProps(x), objectProps(y)));
+   }
+ 
+   private looseEntries(a: Entries, b: Entries): boolean {
+@@ -467,8 +488,8 @@ class Comparison {
+     if (a === null || b === null) {
+       return a === b;
+     }
+-    if (isNumber(a) || isNumber(b)) {
+-      return isNumber(a) && isNumber(b) && numbersIdentical(a, b);
++    if (isNumber(a) || isNumber(b) || isMarkedFloat(a) || isMarkedFloat(b)) {
++      return numbersIdentical(a, b);
+     }
+     if (typeof a !== "object" || typeof b !== "object") {
+       return a === b;
+diff --git a/packages/assert/src/comparison/PhpOrder.ts b/packages/assert/src/comparison/PhpOrder.ts
+index 1327073..7c9d796 100644
+--- a/packages/assert/src/comparison/PhpOrder.ts
++++ b/packages/assert/src/comparison/PhpOrder.ts
+@@ -3,9 +3,11 @@
+ // GreaterThan and LessThan (`$a < $b` is `($a <=> $b) < 0`), and the
+ // canonicalizing ArrayComparator's sort, order values through this. Two values
+ // PHP cannot order (objects of different classes, an array missing a key of the
+-// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does.
++// other) compare as 1 in both directions, as ZEND_UNCOMPARABLE does. A value
++// carrying the runtime's float marker orders as the plain `number` it stands
++// for (Story 9.11).
+ import { arrayEntries, type Entries, isBuiltIn, isNumber, isPhpArray, type Key, numericValue, objectProps, RECURSION, truthy } from "./PhpComparison";
+-import { formatDouble, isPhpObject, isStringable, sameClass, stringOf } from "./PhpValues";
++import { formatDouble, isFloat, isPhpObject, isStringable, sameClass, stringOf, unmarkFloat } from "./PhpValues";
+ 
+ const UNCOMPARABLE = 1;
+ 
+@@ -88,7 +90,7 @@ export function smartCompare(a: string, b: string): number {
+ function compareNumberToString(number: number | bigint, text: string): number {
+   const parsed = numericValue(text);
+   if (parsed !== null) {
+-    if (typeof number === "number" && !Number.isSafeInteger(number)) {
++    if (typeof number === "number" && isFloat(number)) {
+       return threeway(number, Number(parsed.value));
+     }
+     if (parsed.int) {
+@@ -96,7 +98,7 @@ function compareNumberToString(number: number | bigint, text: string): number {
+     }
+     return threeway(Number(number), parsed.value);
+   }
+-  const asString = typeof number === "number" && !Number.isSafeInteger(number) ? formatDouble(number, 14) : String(number);
++  const asString = typeof number === "number" && isFloat(number) ? formatDouble(number, 14) : String(number);
+   return binaryCompare(asString, text);
+ }
+ 
+@@ -150,7 +152,9 @@ class Ordering {
+     return objectLeft ? this.compare(casted, value) : this.compare(value, casted);
+   }
+ 
+-  compare(a: unknown, b: unknown): number {
++  compare(left: unknown, right: unknown): number {
++    const a = unmarkFloat(left);
++    const b = unmarkFloat(right);
+     if (a === undefined || b === undefined || typeof a === "symbol" || typeof b === "symbol") {
+       return Object.is(a, b) ? 0 : UNCOMPARABLE;
+     }
+diff --git a/packages/assert/src/comparison/PhpValues.ts b/packages/assert/src/comparison/PhpValues.ts
+index 4a90281..fe2eabf 100644
+--- a/packages/assert/src/comparison/PhpValues.ts
++++ b/packages/assert/src/comparison/PhpValues.ts
+@@ -4,8 +4,10 @@
+ // values only through these helpers and PhpComparison's, so every module agrees
+ // on what a PHP int, float, array, object, resource or callable is.
+ //
+-//   - int: a safe-integer `number` or a `bigint` (DIV-9: an integral float reads as an int);
+-//   - float: any other `number` (fractional, NAN, INF, or beyond the safe range);
++//   - int: a `bigint`, or a safe-integer `number` other than `-0` (DIV-9: an unmarked integral float reads as an int);
++//   - float: any other `number` (fractional, `-0`, NAN, INF, or beyond the safe range), and a value carrying the
++//     runtime's float marker (a non-null object whose `[Symbol.for('xaravel.php.float')]` is `true`, read by brand
++//     only, never imported: AD-2, DIV-9.4), whose value is `Number(v)` whatever it is (Story 9.11, ESC-4.1-1);
+ //   - array: a list, a plain object or a `Symbol.for('xaravel.php.array')` value (PhpComparison);
+ //   - resource: an object branded `Symbol.for('xaravel.php.resource')`, whose value is its type;
+ //   - object: any other object, and a function (a PHP Closure);
+@@ -16,17 +18,43 @@ import { arrayEntries, isBuiltIn, isPhpArray, numericValue } from "./PhpComparis
+ 
+ export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
+ export const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
++export const PHP_FLOAT = Symbol.for("xaravel.php.float");
+ const COUNTABLE = Symbol.for("Countable");
+ const ARRAY_ACCESS = Symbol.for("ArrayAccess");
+ 
+-/** A PHP int: a safe-integer `number` (DIV-9) or a `bigint`. */
++/** A value carrying the runtime's float marker (Story 9.5): a non-null object whose float brand is `true`. */
++export function isMarkedFloat(value: unknown): value is object {
++  return typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[PHP_FLOAT] === true;
++}
++
++/** A marked float as the plain `number` it stands for; any other value as it is. */
++export function unmarkFloat(value: unknown): unknown {
++  return isMarkedFloat(value) ? Number(value) : value;
++}
++
++/**
++ * The PHP type of a number: `"int"` for a `bigint` and for a safe-integer `number` other than `-0`, `"float"` for any
++ * other `number` and for a marked float; null for a value that is not a number. Matches the runtime's `isFloat`.
++ */
++export function phpNumberType(value: unknown): "int" | "float" | null {
++  switch (typeof value) {
++    case "bigint":
++      return "int";
++    case "number":
++      return Number.isSafeInteger(value) && !Object.is(value, -0) ? "int" : "float";
++    default:
++      return isMarkedFloat(value) ? "float" : null;
++  }
++}
++
++/** A PHP int: a `bigint`, or a safe-integer `number` other than `-0` (DIV-9). */
+ export function isInt(value: unknown): value is number | bigint {
+-  return typeof value === "bigint" || (typeof value === "number" && Number.isSafeInteger(value));
++  return phpNumberType(value) === "int";
+ }
+ 
+-/** A PHP float: a `number` that is not a safe integer. */
+-export function isFloat(value: unknown): value is number {
+-  return typeof value === "number" && !Number.isSafeInteger(value);
++/** A PHP float: a `number` that is not an int, or a marked float (read its value with `toNumber`). */
++export function isFloat(value: unknown): boolean {
++  return phpNumberType(value) === "float";
+ }
+ 
+ export function isResource(value: unknown): value is object {
+@@ -44,12 +72,12 @@ export function isPhpObject(value: unknown): value is object {
+   if (typeof value === "function") {
+     return true;
+   }
+-  return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value);
++  return typeof value === "object" && value !== null && !isPhpArray(value) && !isResource(value) && !isMarkedFloat(value);
+ }
+ 
+ /** `is_scalar`. */
+ export function isScalar(value: unknown): boolean {
+-  return typeof value === "boolean" || typeof value === "number" || typeof value === "bigint" || typeof value === "string";
++  return typeof value === "boolean" || typeof value === "string" || phpNumberType(value) !== null;
+ }
+ 
+ /** `gettype`. */
+@@ -63,12 +91,15 @@ export function gettype(value: unknown): string {
+     case "bigint":
+       return "integer";
+     case "number":
+-      return Number.isSafeInteger(value) ? "integer" : "double";
++      return isInt(value) ? "integer" : "double";
+     case "string":
+       return "string";
+     case "function":
+       return "object";
+     case "object":
++      if (isMarkedFloat(value)) {
++        return "double";
++      }
+       if (isResource(value)) {
+         return "resource";
+       }
+@@ -80,14 +111,17 @@ export function gettype(value: unknown): string {
+ 
+ /** `is_numeric`. */
+ export function isNumeric(value: unknown): boolean {
+-  if (typeof value === "number" || typeof value === "bigint") {
++  if (phpNumberType(value) !== null) {
+     return true;
+   }
+   return typeof value === "string" && numericValue(value) !== null;
+ }
+ 
+-/** A numeric value as a JS number: a number, a bigint or a numeric string. */
++/** A numeric value as a JS number: a number, a marked float, a bigint or a numeric string. */
+ export function toNumber(value: unknown): number {
++  if (isMarkedFloat(value)) {
++    return Number(value);
++  }
+   if (typeof value === "number") {
+     return value;
+   }
+@@ -256,6 +290,9 @@ export function formatDouble(value: number, precision: number): string {
+ 
+ /** `(string)` of a PHP scalar or null (floats at `precision` 14); a Stringable object through `toString()`. */
+ export function phpToString(value: unknown): string {
++  if (isMarkedFloat(value)) {
++    return formatDouble(Number(value), 14);
++  }
+   if (value === null) {
+     return "";
+   }
+@@ -267,6 +304,7 @@ export function phpToString(value: unknown): string {
+     case "bigint":
+       return value.toString();
+     case "number":
++      // A plain `-0` prints `0`, as before Story 9.11: XT-mockery-10 (outside the Story's paths) holds that form.
+       return Number.isSafeInteger(value) ? String(value) : formatDouble(value, 14);
+     default:
+       if (isStringable(value)) {
+@@ -308,7 +346,8 @@ export function stringParam(method: string, position: number, name: string, valu
+ }
+ 
+ /** An `int` parameter: an int, a bool, an integral float, or a numeric string; a fractional value is truncated. */
+-export function intParam(method: string, position: number, name: string, value: unknown): number {
++export function intParam(method: string, position: number, name: string, argument: unknown): number {
++  const value = unmarkFloat(argument);
+   if (typeof value === "boolean") {
+     return value ? 1 : 0;
+   }
+@@ -319,18 +358,19 @@ export function intParam(method: string, position: number, name: string, value:
+     number = toNumber(value);
+   }
+   if (number === null || !Number.isFinite(number)) {
+-    throw argumentError(method, position, name, "int", value);
++    throw argumentError(method, position, name, "int", argument);
+   }
+   return Math.trunc(number);
+ }
+ 
+ /** A `float` parameter: an int, a float, a bool or a numeric string. */
+-export function floatParam(method: string, position: number, name: string, value: unknown): number {
++export function floatParam(method: string, position: number, name: string, argument: unknown): number {
++  const value = unmarkFloat(argument);
+   if (typeof value === "boolean") {
+     return value ? 1 : 0;
+   }
+   if (typeof value === "number" || typeof value === "bigint" || (typeof value === "string" && numericValue(value) !== null)) {
+     return toNumber(value);
+   }
+-  throw argumentError(method, position, name, "float", value);
++  throw argumentError(method, position, name, "float", argument);
+ }
+diff --git a/packages/assert/src/exporter/Exporter.ts b/packages/assert/src/exporter/Exporter.ts
+index 3e281e0..9ccd0a8 100644
+--- a/packages/assert/src/exporter/Exporter.ts
++++ b/packages/assert/src/exporter/Exporter.ts
+@@ -6,7 +6,7 @@
+ // array nested in itself is impossible in PHP, so a JS array that contains
+ // itself is printed as `Array &<n>` of its ancestor.
+ import { arrayEntries, type Entries, isBuiltIn, isPhpArray, type Key, objectProps } from "../comparison/PhpComparison";
+-import { classNameOf, formatDouble, isResource, resourceType } from "../comparison/PhpValues";
++import { classNameOf, formatDouble, isInt, isMarkedFloat, isResource, resourceType, unmarkFloat } from "../comparison/PhpValues";
+ 
+ const handles = new WeakMap<object, number>();
+ let nextHandle = 0;
+@@ -103,7 +103,9 @@ class Export {
+   private readonly arrays = new Map<object, number>();
+   private readonly objects = new Set<object>();
+ 
+-  value(value: unknown, indentation: number): string {
++  value(given: unknown, indentation: number): string {
++    // A marked float exports as the float it stands for (`1.0`), as PHPUnit's exporter does.
++    const value = unmarkFloat(given);
+     if (value === null) {
+       return "null";
+     }
+@@ -115,7 +117,7 @@ class Export {
+       case "boolean":
+         return value ? "true" : "false";
+       case "number":
+-        return Number.isSafeInteger(value) ? String(value) : exportFloat(value);
++        return isInt(value) && !isMarkedFloat(given) ? String(value) : exportFloat(value);
+       case "bigint":
+         return value.toString();
+       case "string":
+@@ -188,7 +190,8 @@ function shorten(value: string, max: number): string {
+ }
+ 
+ /** `Exporter::shortenedExport`. */
+-export function shortenedExport(value: unknown, max = 40): string {
++export function shortenedExport(given: unknown, max = 40): string {
++  const value = unmarkFloat(given);
+   if (typeof value === "string") {
+     return shorten(exportString(value), max);
+   }
+diff --git a/packages/assert/src/exporter/VarExport.ts b/packages/assert/src/exporter/VarExport.ts
+index e002533..63eb7a5 100644
+--- a/packages/assert/src/exporter/VarExport.ts
++++ b/packages/assert/src/exporter/VarExport.ts
+@@ -3,7 +3,7 @@
+ // failure with var_export; the canonicalizing ArrayComparator orders arrays and
+ // objects by their serialized form. Internal to the grader.
+ import { arrayEntries, isPhpArray, type Key } from "../comparison/PhpComparison";
+-import { classNameOf, formatDouble, isResource } from "../comparison/PhpValues";
++import { classNameOf, formatDouble, isMarkedFloat, isResource, unmarkFloat } from "../comparison/PhpValues";
+ import { objectToArray } from "./Exporter";
+ 
+ function exportString(value: string): string {
+@@ -23,7 +23,9 @@ function key(name: Key): string {
+   return typeof name === "string" ? exportString(name) : String(name);
+ }
+ 
+-function varExportAt(value: unknown, level: number): string {
++function varExportAt(given: unknown, level: number): string {
++  // A marked float exports as the float it stands for (`1.0`), as `var_export` does.
++  const value = unmarkFloat(given);
+   if (value === undefined) {
+     // AD-9 forbids `undefined`, so a message never disguises it as `NULL`.
+     return "undefined";
+@@ -35,7 +37,8 @@ function varExportAt(value: unknown, level: number): string {
+     case "boolean":
+       return value ? "true" : "false";
+     case "number":
+-      return Number.isSafeInteger(value) ? String(value) : exportFloat(value);
++      // A plain `-0` exports `0`, as before Story 9.11: XT-mockery-10 (outside the Story's paths) holds that form.
++      return Number.isSafeInteger(value) && !isMarkedFloat(given) ? String(value) : exportFloat(value);
+     case "bigint":
+       return value.toString();
+     case "string":
+@@ -80,7 +83,8 @@ function serializeKey(name: Key): string {
+ }
+ 
+ /** `serialize($value)`. A Closure is not serializable, as in PHP. */
+-export function serialize(value: unknown): string {
++export function serialize(given: unknown): string {
++  const value = unmarkFloat(given);
+   if (value === null || value === undefined) {
+     return "N;";
+   }
+@@ -88,7 +92,7 @@ export function serialize(value: unknown): string {
+     case "boolean":
+       return `b:${value ? 1 : 0};`;
+     case "number":
+-      return Number.isSafeInteger(value) ? `i:${value};` : `d:${formatDouble(value, 17)};`;
++      return Number.isSafeInteger(value) && !isMarkedFloat(given) ? `i:${value};` : `d:${formatDouble(value, 17)};`;
+     case "bigint":
+       return `i:${value.toString()};`;
+     case "string":
+diff --git a/packages/assert/tests/xaravel/oracle-values.ts b/packages/assert/tests/xaravel/oracle-values.ts
+index 9e08411..1fdec68 100644
+--- a/packages/assert/tests/xaravel/oracle-values.ts
++++ b/packages/assert/tests/xaravel/oracle-values.ts
+@@ -1,13 +1,14 @@
+-// Test-side helpers for XT-assert-1: read a signed Oracle fixture and decode
+-// the evaluator's value encoding (tools/oracle/evaluate.php header) into the
+-// AD-9 value model. The package tsconfig cannot reach tools/, so this uses
+-// node:crypto and node:fs only.
++// Test-side helpers for XT-assert-1 and XT-assert-17: read a signed Oracle
++// fixture and decode the evaluator's value encoding (tools/oracle/evaluate.php
++// header) into the AD-9 value model. The package tsconfig cannot reach tools/,
++// so this uses node:crypto and node:fs only.
+ import { createPublicKey, verify } from "node:crypto";
+ import { existsSync, readFileSync } from "node:fs";
+ 
+ export const PHP_ARRAY = Symbol.for("xaravel.php.array");
+ export const PHP_PROPS = Symbol.for("xaravel.php.props");
+ export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
++export const PHP_FLOAT = Symbol.for("xaravel.php.float");
+ const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
+ 
+ /** The domain prefix of every fixture signature (tools/oracle/fixtures.ts). */
+@@ -29,6 +30,25 @@ export class BrandedArray implements Iterable<readonly [Key, unknown]> {
+   }
+ }
+ 
++/**
++ * A test-side marked float (XT-assert-17): the runtime's float brand only, as `BrandedArray` simulates the array brand;
++ * `Number(v)` is its value. The grader never imports the runtime (AD-2), so it must read this as it reads `float(n)`.
++ */
++export class BrandedFloat {
++  readonly [PHP_FLOAT] = true;
++
++  constructor(private readonly value: number) {}
++
++  valueOf(): number {
++    return this.value;
++  }
++}
++
++/** How `decode` represents a PHP float: a plain `number` (XT-assert-1, DIV-9) or a `BrandedFloat` (XT-assert-17). */
++export interface DecodeOptions {
++  readonly floats?: "number" | "branded";
++}
++
+ /**
+  * A decoded PHP object: one class per PHP class name, its public props behind the props protocol. Its protected and
+  * private props (an exception's `message`, `code`, `previous`, …) are in `phpHidden`, by name, outside the protocol.
+@@ -103,8 +123,8 @@ function phpArray(entries: (readonly [Key, unknown])[]): unknown {
+   return new BrandedArray(entries);
+ }
+ 
+-/** Decodes one value of the evaluator's encoding. */
+-export function decode(encoded: unknown): unknown {
++/** Decodes one value of the evaluator's encoding; every PHP float a `BrandedFloat` when `options.floats` is `"branded"`. */
++export function decode(encoded: unknown, options: DecodeOptions = {}): unknown {
+   if (encoded === null || typeof encoded === "boolean" || typeof encoded === "string") {
+     return encoded;
+   }
+@@ -116,10 +136,11 @@ export function decode(encoded: unknown): unknown {
+     return decodeInt(value["int"]);
+   }
+   if (typeof value["float"] === "string") {
+-    return decodeFloat(value["float"]);
++    const number = decodeFloat(value["float"]);
++    return options.floats === "branded" ? new BrandedFloat(number) : number;
+   }
+   if (Array.isArray(value["array"])) {
+-    return phpArray((value["array"] as unknown[][]).map(([key, item]) => [decodeKey(key), decode(item)] as const));
++    return phpArray((value["array"] as unknown[][]).map(([key, item]) => [decodeKey(key), decode(item, options)] as const));
+   }
+   if (typeof value["resource"] === "string") {
+     return { [PHP_RESOURCE]: value["resource"] };
+@@ -132,9 +153,9 @@ export function decode(encoded: unknown): unknown {
+     const hidden = new Map<string, unknown>();
+     for (const [name, scope, item] of value["properties"] as unknown[][]) {
+       if (scope === "") {
+-        props.push([decodeKey(name), decode(item)]);
++        props.push([decodeKey(name), decode(item, options)]);
+       } else {
+-        hidden.set(String(name), decode(item));
++        hidden.set(String(name), decode(item, options));
+       }
+     }
+     return new (classFor(value["object"]))(phpArray(props), hidden);
+@@ -193,12 +214,12 @@ export function readSignedFixture(path: string, sha256: string, publicKeyPem: st
+ export const LOOSE_EXPR = "array_map(fn ($a) => array_map(fn ($b) => $a == $b, $v), $v)";
+ export const STRICT_EXPR = "array_map(fn ($a) => array_map(fn ($b) => $a === $b, $v), $v)";
+ 
+-function resultValue(output: Output, index: number, label: string): unknown {
++function resultValue(output: Output, index: number, label: string, options: DecodeOptions = {}): unknown {
+   const result = output.results[index];
+   if (result === undefined || !("value" in result)) {
+     throw new Error(`${label}: result ${index} is not a value: ${JSON.stringify(result ?? null)}`);
+   }
+-  return decode(result.value);
++  return decode(result.value, options);
+ }
+ 
+ /**
+@@ -210,6 +231,7 @@ export function matrixMismatches(
+   request: Request,
+   output: Output,
+   compare: { loose: (a: unknown, b: unknown) => boolean; strict: (a: unknown, b: unknown) => boolean },
++  options: DecodeOptions = {},
+ ): { pairs: number; mismatches: string[] } {
+   if (output.error !== null) {
+     throw new Error(`${label}: the Oracle reported an error: ${JSON.stringify(output.error)}`);
+@@ -217,7 +239,7 @@ export function matrixMismatches(
+   if (request.exprs[0] !== "$v" || output.results.length !== request.exprs.length) {
+     throw new Error(`${label}: expected $v first and one result per expr`);
+   }
+-  const values = resultValue(output, 0, label);
++  const values = resultValue(output, 0, label, options);
+   if (!Array.isArray(values)) {
+     throw new Error(`${label}: $v is not a list`);
+   }
+diff --git a/packages/assert/tests/xaravel/runtime-values.test.ts b/packages/assert/tests/xaravel/runtime-values.test.ts
+new file mode 100644
+index 0000000..df9354e
+--- /dev/null
++++ b/packages/assert/tests/xaravel/runtime-values.test.ts
+@@ -0,0 +1,169 @@
++// Xaravel Tests for Story 9.11 (grader follow-ups to the runtime value model;
++// FR-116, AD-2, AD-9, AD-15). One test per AC the Story carries, in order:
++// XT-assert-17 (AC1) and XT-assert-19 (AC3). XT-assert-18 (AC2) waits on
++// conformance/escalations/ESC-9.11-1.md. Like 4.1-4.7's tests these are plain
++// bun:test: `xaravelTest` is not used to test the grader itself.
++//
++// XT-assert-17's `===`/`==` matrix comes only from the signed Oracle fixture of
++// the XT-assert-17 request in conformance/oracle-requests/9.11.jsonl. A missing,
++// unsigned or errored fixture fails the test; it is never skipped. F-10: the
++// matrix has no Upstream test inputs; it is the ESC-4.1-1 follow-up (the
++// integral-float `===` matrix), written in 9.11.jsonl as ESC-9.11-1 records.
++//
++// The grader never imports @xaravel/runtime (AD-2, XT-assert-3): the matrix
++// reads every PHP float as a test-local `BrandedFloat` (the brand only), and
++// the runtime's real `float()` is exercised in a fresh `bun` subprocess.
++import { expect } from "bun:test";
++import { readFileSync } from "node:fs";
++import { join, resolve } from "node:path";
++import { Assert, AssertionFailedError, Exception, ExpectationFailedException, phpLooseEquals, phpStrictEquals, xaravelTest } from "../../src/index";
++import { gettype } from "../../src/comparison/PhpValues";
++import { BrandedFloat, matrixMismatches, readRequests, readSignedFixture } from "./oracle-values";
++
++const root = resolve(import.meta.dir, "..", "..", "..", "..");
++const REQUESTS = "conformance/oracle-requests/9.11.jsonl";
++const FIXTURES = "conformance/fixtures/assert";
++const PUBLIC_KEY = "conformance/oracle/oracle.pub";
++const SET_MESSAGE = Symbol.for("xaravel.assert.setMessage");
++
++/** The runtime's `float()` against the grader, in a fresh process (the grader's own modules never import the runtime). */
++const REAL_MARKER = `
++import { float } from "./packages/runtime/src/index.ts";
++import { Assert, ExpectationFailedException, phpLooseEquals, phpStrictEquals } from "./packages/assert/src/index.ts";
++import { gettype } from "./packages/assert/src/comparison/PhpValues.ts";
++function failure(run) {
++  try {
++    run();
++    return null;
++  } catch (error) {
++    return { expectation: error instanceof ExpectationFailedException, message: error.getMessage() };
++  }
++}
++const one = float(1);
++const out = {
++  intVsFloat: phpStrictEquals(1, float(1)),
++  floatVsFloat: phpStrictEquals(float(1), float(1)),
++  sameInstance: phpStrictEquals(one, one),
++  zeroVsMinusZero: phpStrictEquals(float(0), -0),
++  looseFloatInt: phpLooseEquals(float(1), 1),
++  assertSameIntFloat: failure(() => Assert.assertSame(1, float(1))),
++  assertSameFloatFloat: failure(() => Assert.assertSame(float(1), float(1))),
++  assertEqualsIntFloat: failure(() => Assert.assertEquals(1, float(1))),
++  assertIsFloat: failure(() => Assert.assertIsFloat(float(1))),
++  assertIsInt: failure(() => Assert.assertIsInt(float(1))),
++  gettype: gettype(float(1)),
++};
++process.stdout.write(JSON.stringify(out));
++`;
++
++xaravelTest("XT-assert-17", "given Story 9.5's float marker, phpStrictEquals(1, 1.0) and assertSame(1, 1.0) are false and fail, as in PHP, and every === and == cell of the signed integral-float matrix matches the Oracle (ESC-4.1-1)", () => {
++  // Fixture-free: the brand alone makes a float, whatever its value.
++  expect(phpStrictEquals(1, new BrandedFloat(1))).toBe(false);
++  expect(phpStrictEquals(new BrandedFloat(1), new BrandedFloat(1))).toBe(true);
++  expect(phpStrictEquals(new BrandedFloat(0), -0)).toBe(true);
++  expect(phpStrictEquals(new BrandedFloat(NaN), new BrandedFloat(NaN))).toBe(false);
++  expect(phpStrictEquals(new BrandedFloat(1), "1")).toBe(false);
++  expect(phpStrictEquals([new BrandedFloat(1)], [new BrandedFloat(1)])).toBe(true);
++  expect(phpStrictEquals([new BrandedFloat(1)], [1])).toBe(false);
++  expect(phpLooseEquals(new BrandedFloat(1), 1)).toBe(true);
++  expect(phpLooseEquals(new BrandedFloat(1), "1.0")).toBe(true);
++  expect(phpLooseEquals({ a: new BrandedFloat(1) }, { a: 1 })).toBe(true);
++  expect(gettype(new BrandedFloat(1))).toBe("double");
++  expect(() => Assert.assertSame(1, new BrandedFloat(1))).toThrow("Failed asserting that 1.0 is identical to 1.");
++  Assert.assertEquals(1, new BrandedFloat(1));
++  Assert.assertIsFloat(new BrandedFloat(1));
++  expect(() => Assert.assertIsInt(new BrandedFloat(1))).toThrow("Failed asserting that 1.0 is of type int.");
++  Assert.assertGreaterThan(new BrandedFloat(1), new BrandedFloat(2));
++
++  // The signed Oracle matrix, every PHP float decoded as a BrandedFloat.
++  const requests = readRequests(join(root, REQUESTS)).filter((request) => request.id === "XT-assert-17");
++  expect(requests).toHaveLength(1);
++  const publicKey = readFileSync(join(root, PUBLIC_KEY), "utf8");
++  const problems: string[] = [];
++  let pairs = 0;
++  for (const request of requests) {
++    const path = `${FIXTURES}/${request.sha256}.json`;
++    try {
++      const output = readSignedFixture(join(root, path), request.sha256, publicKey);
++      const result = matrixMismatches(path, request, output, { loose: phpLooseEquals, strict: phpStrictEquals }, { floats: "branded" });
++      pairs += result.pairs;
++      problems.push(...result.mismatches);
++    } catch (error) {
++      problems.push(error instanceof Error ? error.message.replace(`${root}/`, "") : String(error));
++    }
++  }
++  expect(problems).toEqual([]);
++  expect(pairs).toBeGreaterThan(0);
++
++  // The runtime's real marker, in a fresh process from the repo root.
++  const child = Bun.spawnSync([process.execPath, "-e", REAL_MARKER], { cwd: root, stdout: "pipe", stderr: "pipe" });
++  expect({ exitCode: child.exitCode, stderr: child.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
++  expect(JSON.parse(child.stdout.toString()) as unknown).toEqual({
++    intVsFloat: false,
++    floatVsFloat: true,
++    sameInstance: true,
++    zeroVsMinusZero: true,
++    looseFloatInt: true,
++    assertSameIntFloat: { expectation: true, message: "Failed asserting that 1.0 is identical to 1." },
++    assertSameFloatFloat: null,
++    assertEqualsIntFloat: null,
++    assertIsFloat: null,
++    assertIsInt: { expectation: true, message: "Failed asserting that 1.0 is of type int." },
++    gettype: "double",
++  });
++});
++
++xaravelTest("XT-assert-19", "given a caught assertion failure, the xaravel.assert.setMessage protocol rewrites its message as Laravel's TestResponseAssert::appendMessageToException does (ESC-4.3-1 item 11)", () => {
++  let caught: unknown = null;
++  try {
++    Assert.assertSame("a", "b");
++  } catch (error) {
++    caught = error;
++  }
++  expect(caught).toBeInstanceOf(ExpectationFailedException);
++  const failure = caught as ExpectationFailedException;
++  const original = failure.getMessage();
++  const suffix = failure.message.slice(original.length);
++  expect(suffix.startsWith("\n--- Expected\n")).toBe(true);
++  const comparison = failure.getComparisonFailure();
++  const code = failure.getCode();
++  const previous = failure.getPrevious();
++  const cause = failure.cause;
++
++  // Laravel's appendMessageToException: `$e->getMessage().PHP_EOL.PHP_EOL.$message.PHP_EOL`.
++  const extra = "The following exception occurred during the last request:";
++  const rewritten = `${original}\n\n${extra}\n`;
++  const setMessage = (failure as unknown as Record<symbol, (message: unknown) => unknown>)[SET_MESSAGE]!;
++  expect(setMessage.call(failure, rewritten)).toBeNull();
++  expect(failure.getMessage()).toBe(rewritten);
++  expect(failure.message).toBe(rewritten + suffix);
++  expect(failure.getComparisonFailure()).toBe(comparison);
++  expect(failure.getCode()).toBe(code);
++  expect(failure.getPrevious()).toBe(previous);
++  expect(failure.cause).toBe(cause);
++  expect(failure.toString()).toBe(rewritten);
++
++  // A plain AssertionFailedError has no suffix.
++  const plain = new AssertionFailedError("first", 0, null);
++  expect((plain as unknown as Record<symbol, (message: unknown) => unknown>)[SET_MESSAGE]!("second")).toBeNull();
++  expect({ getMessage: plain.getMessage(), message: plain.message }).toEqual({ getMessage: "second", message: "second" });
++
++  // A non-string argument is a JS TypeError naming the protocol, and changes nothing.
++  for (const bad of [null, 5, undefined, {}, ["x"]]) {
++    expect(() => setMessage.call(failure, bad)).toThrow(TypeError);
++    expect(() => setMessage.call(failure, bad)).toThrow("xaravel.assert.setMessage");
++  }
++  expect(failure.getMessage()).toBe(rewritten);
++
++  // The method is on PHPUnit\Framework\Exception's prototype, non-enumerable; the exported classes stay frozen.
++  const descriptor = Object.getOwnPropertyDescriptor(Exception.prototype, SET_MESSAGE);
++  expect(typeof descriptor?.value).toBe("function");
++  expect(descriptor?.enumerable).toBe(false);
++  for (const exported of [Exception, AssertionFailedError, ExpectationFailedException]) {
++    expect(Object.isFrozen(exported)).toBe(true);
++    expect(Object.isFrozen(exported.prototype)).toBe(true);
++  }
++  expect(() => {
++    (Exception.prototype as unknown as Record<symbol, unknown>)[SET_MESSAGE] = () => null;
++  }).toThrow(TypeError);
++});
