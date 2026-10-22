@@ -127,7 +127,7 @@ development_status:
   9-6-php-semantics-helpers: done
   9-7-phpserialize-phpunserialize-codec: done  # ESC-9.7-1 ruled (decisions/ESC-9.7-1.md); part 1 (property table) landed in the follow-up
   9-8-jsonencode-jsondecode-with-php-flag-semantics: done
-  9-9-mixin-traits-and-inject-metadata: in-progress  # ESC-9.9-5 approved (decisions/ESC-9.9-5.md, orchestrator ruling); re-run the Fidelity Review on the changed tree with --base a5ecf3905763930a6d18c518924c7e12afa3e303
+  9-9-mixin-traits-and-inject-metadata: done  # Fidelity Review passed at tree 3ba5b05 (base a5ecf39) after ESC-9.9-5
   9-10-php-exception-hierarchy: backlog  # also switches the codec Closure error to Exception (decisions/ESC-9.7-1.md part 4) and the JSON errors to JsonException / ValueError (decisions/ESC-9.8-1.md part 1)
   9-11-grader-follow-ups-to-the-runtime-value-model: backlog  # Epic 4 retro S4 (decisions/ESC-4.3-1.md)
   epic-9-retrospective: optional
