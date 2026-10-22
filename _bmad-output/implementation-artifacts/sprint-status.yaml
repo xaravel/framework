@@ -129,7 +129,7 @@ development_status:
   9-8-jsonencode-jsondecode-with-php-flag-semantics: done
   9-9-mixin-traits-and-inject-metadata: done  # Fidelity Review passed at tree 3ba5b05 (base a5ecf39) after ESC-9.9-5
   9-10-php-exception-hierarchy: done  # Fidelity Review passed at tree cc8de78 (base c870bc2) after ESC-9.10-4. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
-  9-11-grader-follow-ups-to-the-runtime-value-model: blocked  # ESC-9.11-1 (manifest covers 3 of 5 ACs; Mockery half outside the Story) and ESC-9.11-2 (unmarked -0 rule) wait on rulings; attempt saved in spec-9-11-attempt-1.patch
+  9-11-grader-follow-ups-to-the-runtime-value-model: blocked  # ESC-9.11-1 (manifest covers 3 of 5 ACs; Mockery half outside the Story) waits on the Maintainer; ESC-9.11-2 ruled (option 1: marker only, unmarked -0 stays an int); attempt saved in spec-9-11-attempt-1.patch
   epic-9-retrospective: optional
 
   epic-10: backlog
