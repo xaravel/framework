@@ -28,6 +28,7 @@ import {
   gatherEvidence,
   importedDeclarations,
   inStoryScope,
+  fileInStoryScope,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
   normaliseManifestStatus,
@@ -1370,6 +1371,20 @@ xaravelTest(
     const scopedWhole = wholeFileEvidence(root, [...registryPatch(outside), ...registryPatch(registryPath)], new Map(), 400_000, (path) => inStoryScope(story, path));
     expect(scopedWhole.at(-1)).toMatchObject({ path: outside, reason: "changed, outside the Story's scope" });
     expect(scopedWhole.find((item) => item.path === registryPath)!.reason).toBe("changed");
+
+    // ESC-9.10-4: the diff itself is the Story's own change. Its manifest, a path it may edit and a test file declaring
+    // an XT id it assigns are in scope; another PR's tool, checklist or test file is not.
+    expect(fileInStoryScope(root, story, "stories/9.10.md")).toBe(true);
+    expect(fileInStoryScope(root, story, registryPath)).toBe(true);
+    expect(fileInStoryScope(root, story, "tools/fidelity-review/fidelity-review.ts")).toBe(false);
+    expect(fileInStoryScope(root, story, "conformance/review/fidelity.md")).toBe(false);
+    expect(fileInStoryScope(root, story, "conformance/tests/xaravel/fidelity-review.test.ts")).toBe(false);
+    expect(fileInStoryScope(root, { ...story, xaravelTestIds: ["XT-conformance-161"] }, "conformance/tests/xaravel/fidelity-review.test.ts")).toBe(true);
+    expect(fileInStoryScope(root, story, "conformance/tests/xaravel/no-such.test.ts")).toBe(false);
+    // The diff section names the files it leaves out, and only when there are any.
+    const leftOutUser = buildPrompt({ ...promptBase, outOfScopeFiles: ["tools/fidelity-review/fidelity-review.ts"], evidence: NO_EVIDENCE }).user;
+    expect(leftOutUser).toContain("## Diff\n\nLeft out as outside the Story's scope (ESC-9.10-4): `tools/fidelity-review/fidelity-review.ts`.");
+    expect(buildPrompt({ ...promptBase, evidence: NO_EVIDENCE }).user).not.toContain("(ESC-9.10-4)");
   },
   180_000,
 );
