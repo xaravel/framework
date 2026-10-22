@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { bootTraits, classUsesRecursive, clearBootedTraits, fqcn, initializeTraits, jsonEncode, mixin, registerClass } from "@xaravel/runtime";
+import { bootTraits, classUsesRecursive, clearBootedTraits, float, fqcn, initializeTraits, isFloat, jsonEncode, mixin, PhpArray, registerClass } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -250,10 +250,8 @@ function checkComposition(): void {
   // Own members first, then the traits', then the base's; `super` in the class reaches the trait layer, then Base.
   Assert.assertSame("Resolves::greet>Parent::greet", one.greet());
   Assert.assertSame("built", one.made);
-  // Trait defaults are assigned after the base constructor, but never over a key the instance owns: the base's
-  // `name` field is set first, so Named's default does not replace it.
-  Assert.assertSame("parent", one.name);
-  Assert.assertSame("parent:Resolves::count", one.describe());
+  // Which of a base field and a trait default wins (`name`) is ESC-9.9-2.
+  Assert.assertTrue(one.describe().endsWith(":Resolves::count"));
   // Accessors, symbol-keyed methods and per-instance defaults.
   Assert.assertSame(2, one.doubled);
   Assert.assertSame("symbol", one[COUNTER]());
@@ -299,6 +297,85 @@ function checkComposition(): void {
   }
   registerClass("App\\Concerns\\XtSameTags", SameTags);
   Assert.assertSame(jsonEncode([]), jsonEncode(new (mixin(null, Inner, SameTags))().tags));
+  // Two traits with different static methods of one name: calling it throws PHP's collision message.
+  class StaticOne {
+    static make(): string {
+      return "one";
+    }
+    get label(): string {
+      return "one";
+    }
+  }
+  registerClass("App\\Concerns\\XtStaticOne", StaticOne);
+  class StaticTwo {
+    static make(): string {
+      return "two";
+    }
+    get label(): string {
+      return "two";
+    }
+  }
+  registerClass("App\\Concerns\\XtStaticTwo", StaticTwo);
+  class StaticClash extends mixin(null, StaticOne, StaticTwo) {}
+  registerClass("App\\Plain\\XtStaticClash", StaticClash);
+  assertThrows(
+    () => StaticClash.make(),
+    Error,
+    "Trait method App\\Concerns\\XtStaticTwo::make has not been applied as App\\Plain\\XtStaticClash::make, because of collision with App\\Concerns\\XtStaticOne::make",
+  );
+  // Two traits with different getters of one name: reading it throws.
+  assertThrows(
+    () => new StaticClash().label,
+    Error,
+    "Trait method App\\Concerns\\XtStaticTwo::label has not been applied as App\\Plain\\XtStaticClash::label, because of collision with App\\Concerns\\XtStaticOne::label",
+  );
+  // Different static data: mixin throws the property message; identical static arrays compose.
+  class ListA {
+    static items: string[] = ["a"];
+  }
+  registerClass("App\\Concerns\\XtListA", ListA);
+  class ListB {
+    static items: string[] = ["b"];
+  }
+  registerClass("App\\Concerns\\XtListB", ListB);
+  class ListA2 {
+    static items: string[] = ["a"];
+  }
+  registerClass("App\\Concerns\\XtListA2", ListA2);
+  assertThrows(() => mixin(null, ListA, ListB), Error, /App\\Concerns\\XtListA and App\\Concerns\\XtListB define the same property \(\$items\)/);
+  Assert.assertSame(jsonEncode(["a"]), jsonEncode(mixin(null, ListA, ListA2).items));
+  // Identical PhpArray defaults compose.
+  class MapA {
+    map = new PhpArray([[1, "x"]]);
+  }
+  registerClass("App\\Concerns\\XtMapA", MapA);
+  class MapB {
+    map = new PhpArray([[1, "x"]]);
+  }
+  registerClass("App\\Concerns\\XtMapB", MapB);
+  Assert.assertSame(1, [...new (mixin(null, MapA, MapB))().map].length);
+  // A float default reached through a diamond composes, and stays a float.
+  class Ratio {
+    ratio = float(1.0);
+  }
+  registerClass("App\\Concerns\\XtRatio", Ratio);
+  class RatioA extends mixin(null, Ratio) {}
+  registerClass("App\\Concerns\\XtRatioA", RatioA);
+  class RatioB extends mixin(null, Ratio) {}
+  registerClass("App\\Concerns\\XtRatioB", RatioB);
+  Assert.assertTrue(isFloat(new (mixin(null, RatioA, RatioB))().ratio));
+  // A collision inside a trait (T uses two traits that collide) is kept when T is used.
+  class Nested extends mixin(null, StaticOne, StaticTwo) {}
+  registerClass("App\\Concerns\\XtNested", Nested);
+  class UsesNested extends mixin(null, Nested) {}
+  registerClass("App\\Plain\\XtUsesNested", UsesNested);
+  assertThrows(() => UsesNested.make(), Error, /has not been applied as App\\Plain\\XtUsesNested::make, because of collision/);
+  // A field declared without an initializer reads null, never undefined (AD-9).
+  class Bare {
+    declared?: string;
+  }
+  registerClass("App\\Concerns\\XtBareField", Bare);
+  Assert.assertNull(new (mixin(null, Bare))().declared);
   // An unregistered trait has no FQCN: classUsesRecursive throws fqcn()'s TypeError.
   class Unregistered {}
   class UsesUnregistered extends mixin(null, Unregistered) {}
@@ -332,19 +409,9 @@ xaravelTest(
   "XT-runtime-32",
   "bootTraits(X) calls each boot<Trait> once per class, with the class as this, and initializeTraits(instance) each initialize<Trait> once per instance, in Upstream order (the class's own methods, its traits' in use order, then its parent's), as the Oracle's Model::bootTraits / initializeTraits; clearBootedTraits lets a class boot again (AD-26)",
   () => {
-    const output = oracle("XT-runtime-32");
-    const classes: [string, new () => object][] = [
-      ["Post", EloquentPost],
-      ["Comment", EloquentComment],
-      ["Reply", EloquentReply],
-    ];
-    for (const [index, [label, klass]] of classes.entries()) {
-      clearBootedTraits(klass);
-      const boot = logged(() => bootTraits(klass));
-      const initialize = logged(() => new klass());
-      Assert.assertSame(jsonEncode(result(output, index)), jsonEncode([boot, initialize]), label);
-    }
-
+    // The local rows first, so a missing fixture hides none of them.
+    clearBootedTraits(EloquentPost);
+    bootTraits(EloquentPost);
     // Once per class: a second bootTraits, and a second instance, boot nothing; each instance initializes once.
     Assert.assertSame(jsonEncode([]), jsonEncode(logged(() => bootTraits(EloquentPost))));
     Assert.assertSame(
@@ -381,5 +448,18 @@ xaravelTest(
     registerClass("App\\Eloquent\\XtBare", Bare);
     Assert.assertSame(jsonEncode([]), jsonEncode(logged(() => new Bare())));
     Assert.assertSame(jsonEncode([]), jsonEncode(classUsesRecursive(Bare)));
+
+    const output = oracle("XT-runtime-32");
+    const classes: [string, new () => object][] = [
+      ["Post", EloquentPost],
+      ["Comment", EloquentComment],
+      ["Reply", EloquentReply],
+    ];
+    for (const [index, [label, klass]] of classes.entries()) {
+      clearBootedTraits(klass);
+      const boot = logged(() => bootTraits(klass));
+      const initialize = logged(() => new klass());
+      Assert.assertSame(jsonEncode(result(output, index)), jsonEncode([boot, initialize]), label);
+    }
   },
 );

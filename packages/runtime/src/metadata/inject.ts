@@ -21,7 +21,7 @@ const METADATA: symbol = (Symbol as { metadata?: symbol }).metadata ?? Symbol.fo
 const INJECT = Symbol.for("xaravel.inject");
 
 /** A parameter name, which is an identifier (an integer-like key would reorder the map). */
-const IDENTIFIER = /^[\p{ID_Start}_$][\p{ID_Continue}$‌‍]*$/u;
+const IDENTIFIER = /^[\p{ID_Start}_$][\p{ID_Continue}$\u200C\u200D]*$/u;
 
 /** A map of parameter name to what is injected for it (a class, a contract token or a spec), in parameter order. */
 export type InjectMap = Readonly<Record<string, unknown>>;

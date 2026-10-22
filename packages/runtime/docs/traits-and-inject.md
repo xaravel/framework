@@ -57,7 +57,9 @@ Conflicts:
   `super.m()` reaches the trait's `m` first, and the base's `m` after that. PHP's `as` aliases port as a method on the
   class that calls `super.<m>()`.
 - Trait field defaults are assigned after the base constructor returns, as JS class fields are. A base constructor
-  therefore does not see them, and a key the base constructor already set keeps its value.
+  therefore does not see them, and a key the base constructor already set keeps its value. This differs from PHP when a trait
+  redeclares a base class field: PHP gives the trait's default, the layer keeps the base's value. Keeping it is what
+  lets `initialize<Trait>` writes made in the base constructor survive. The divergence awaits a ruling (ESC-9.9-2).
 
 ## `classUsesRecursive`
 

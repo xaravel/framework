@@ -19,6 +19,7 @@
 //   PHP's method-table order, once per class; initializers once per call, the host calling it once per instance.
 //
 // The booted record is a non-enumerable own symbol property of the class, never a module variable (AD-5).
+import { isFloat } from "../php/PhpFloat";
 import { valueCopy } from "../php/valueCopy";
 import { fqcn, resolveClass } from "../registry/registry";
 
@@ -85,6 +86,9 @@ function identical(a: unknown, b: unknown): boolean {
   if (Object.is(a, b) || a === b) {
     return true;
   }
+  if (isFloat(a) && isFloat(b)) {
+    return Number(a) === Number(b);
+  }
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
     return false;
   }
@@ -126,10 +130,24 @@ function traitMembers(trait: AnyClass, side: "proto" | "static", out: Map<string
       out.set(key, { declarer: trait, descriptor: Object.getOwnPropertyDescriptor(holder, key)! });
     }
   }
+  const layer: unknown = Object.getPrototypeOf(trait);
+  const composed: object | null = layerOf(layer) === null ? null : side === "proto" ? ((layer as AnyClass).prototype as object) : (layer as object);
   for (const used of directTraits(trait)) {
-    traitMembers(used, side, out);
+    for (const [key, member] of traitMembers(used, side)) {
+      if (out.has(key)) {
+        continue;
+      }
+      // A collision among the used traits is resolved on the trait's own layer (a thrower): take the layer's.
+      const own = composed === null ? undefined : Object.getOwnPropertyDescriptor(composed, key);
+      out.set(key, own !== undefined && !sameDescriptor(own, member.descriptor) ? { declarer: trait, descriptor: own } : member);
+    }
   }
   return out;
+}
+
+/** Whether two descriptors hold the same value or accessors (a static data copy counts as the same). */
+function sameDescriptor(a: PropertyDescriptor, b: PropertyDescriptor): boolean {
+  return "value" in a && "value" in b ? identical(a.value, b.value) : a.get === b.get && a.set === b.set;
 }
 
 /** Whether a descriptor is a method (a function data property that is not enumerable, as class methods are). */
@@ -149,7 +167,13 @@ function sameMember(a: PropertyDescriptor, b: PropertyDescriptor): boolean {
 function collision(first: AnyClass, later: AnyClass, key: string | symbol): (this: object) => never {
   const name = keyName(key);
   return function (this: object): never {
-    throw new Error(`Trait method ${fqcn(later)}::${name} has not been applied as ${fqcn(this)}::${name}, because of collision with ${fqcn(first)}::${name}`);
+    let receiver: string;
+    try {
+      receiver = fqcn(this);
+    } catch {
+      receiver = "an unregistered class";
+    }
+    throw new Error(`Trait method ${traitName(later)}::${name} has not been applied as ${receiver}::${name}, because of collision with ${traitName(first)}::${name}`);
   };
 }
 
@@ -171,12 +195,12 @@ function applyMembers(target: object, side: "proto" | "static", traits: readonly
           continue;
         }
         throw new Error(
-          `${traitName(previous.declarer)} and ${traitName(member.declarer)} define the same static property ($${keyName(key)}) in the composition of a class. However, the definition differs and is considered incompatible.`,
+          `${traitName(previous.declarer)} and ${traitName(member.declarer)} define the same property ($${keyName(key)}) in the composition of a class. However, the definition differs and is considered incompatible.`,
         );
       }
       applied.set(key, member);
       const descriptor = member.descriptor;
-      Object.defineProperty(target, key, side === "static" && "value" in descriptor && !isMethod(descriptor) ? { ...descriptor, value: valueCopy(descriptor.value) } : descriptor);
+      Object.defineProperty(target, key, side === "static" && "value" in descriptor && !isMethod(descriptor) ? { ...descriptor, value: valueCopy(descriptor.value ?? null) } : descriptor);
     }
   }
 }
@@ -187,7 +211,7 @@ function instanceDefaults(traits: readonly AnyClass[]): [string, unknown][] {
   for (const trait of traits) {
     const instance = Reflect.construct(trait as unknown as new () => object, []) as Record<string, unknown>;
     for (const key of Object.keys(instance)) {
-      const value = instance[key];
+      const value = instance[key] ?? null;
       const previous = defaults.get(key);
       if (previous === undefined) {
         defaults.set(key, { from: trait, value });

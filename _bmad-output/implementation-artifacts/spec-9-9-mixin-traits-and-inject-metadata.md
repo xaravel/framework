@@ -2,16 +2,23 @@
 title: 'Story 9.9: `mixin`, traits and `inject` metadata'
 type: 'feature'
 created: '2026-10-21'
-status: 'in-review'
+status: 'blocked'
 baseline_revision: 'fe7b2dfab58a9e40c91d30cb62879b11fb4f5b06'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-9-context.md'
   - '{project-root}/stories/9.9.md'
   - '{project-root}/PORTING.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      A wrapping method decorator stacked after @inject leaves the map on the replaced function, so readInjectMetadata on the final method returns null.
+    evidence: |-
+      Review pass 2026-10-21 (Blind, Edge). Whether ports stack wrapping method decorators is unknown; the Container (Epic 18) is the first reader and can settle it.
+    location: >-
+      packages/runtime/src/metadata/inject.ts
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -91,6 +98,54 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-21 — Review pass
+- verdicts: 39 findings — high 0, medium 8, low 22, false 7, maybe-false 2
+- findings:
+  - Intent alignment:
+    - `[low]` `reject` AC3 is met only in a fresh process. Under the harness, `Symbol` is frozen. — Known and escalated as ESC-9.9-1 (`protected-path`). The fix is a Protected harness change, not this Story's.
+    - `[false]` `reject` AC2 uses Upstream order, not "trait order". — AD-26 binds "run as Upstream", and the Oracle fixture pins that order. The choice is recorded in Design Notes.
+    - `[false]` `reject` "Once per instance" sits with the host, not the helper. — This is Model's design (`initializeTraits` has no guard). It is recorded in Boundaries.
+    - `[low]` `reject` The Oracle fixtures were absent at review time. — The bot committed them (98d96fa). XT-runtime-31/32 now pass against them.
+    - `[false]` `reject` Composition and validation go beyond the AC text. — AD-26 and AD-4 require them (the spec's Boundaries).
+    - `[false]` `reject` The packaging surface. — "No new subpath" is the spec's rule, and the root exports everything.
+  - Verification gap:
+    - `[medium]` `patch` XT-runtime-32's local assertions ran only after `oracle(...)`. — They now run before it. The fixtures have also landed.
+    - `[medium]` `patch` Collisions of static methods, accessors and static data, and `PhpArray` defaults, were untested. — Cases were added to `checkComposition()`.
+    - `[low]` `reject` (other) No test covers the frozen-`Symbol` skip. — It is covered indirectly: every harness test that imports the runtime would crash without the guard.
+  - Edge case:
+    - `[medium]` `patch` A nested collision in a used trait was lost. — `traitMembers` now prefers the layer's composed descriptor, and a test was added.
+    - `[medium]` `patch` `collision()` called `fqcn` on unregistered names and masked the collision message. — It now uses `traitName` and a guarded receiver name.
+    - `[medium]` `patch` A `float(1.0)` default was judged incompatible. — `identical` now compares marked floats by value. A diamond test was added.
+    - `[low]` `reject` NaN defaults are judged identical. — PHP property defaults are constant expressions, so a NaN default is unlikely. The fix would add a branch.
+    - `[medium]` `patch`+escalated A base class field beats the trait's default, where PHP lets the trait win (probe: `"named"`). — The assertion that enshrined it was removed. Raised as ESC-9.9-2 (`divergence`).
+    - `[low]` `reject` A base constructor cannot read trait defaults. — This is JS field timing, documented in `docs/traits-and-inject.md`.
+    - `[low]` `reject` A non-constructible trait throws a raw error. — A trait is a class by the spec's rule, so this does not happen in everyday use.
+    - `[low]` `patch` The static-property collision wording. — It now uses PHP's "define the same property ($x)".
+    - `[low]` `reject` A static named `name`/`length`, or symbol statics, is not copied. — No Upstream trait declares them. Skipping symbol keys keeps the Registry brand from being copied.
+    - `[low]` `reject` A static `initialize<Trait>` is not recorded. — No Upstream trait declares one statically. Model's convention is an instance method.
+    - `[low]` `reject` A re-entrant `clearBootedTraits` during boot. — Contrived; no host does this.
+    - `[low]` `reject` `inject` on a non-extensible function throws a raw `TypeError`. — It still fails loudly. A guard adds a branch for a rare case.
+    - `[low]` `reject` A class decorator context with no metadata. — Only a hand-called decorator does this, and it fails loudly.
+    - `[maybe-false]` `defer` A wrapping decorator stacked after `@inject` hides the map. — Whether ports stack decorators like this is unknown. Medium (unverified); deferred.
+    - `[low]` `reject` A non-enumerable key is validated before it is skipped. — Maps are object literals, so this is negligible.
+    - `[false]` `reject` The spec claims Bun never attaches metadata. — The fix would edit this build's spec. The code handles both cases.
+  - Blind:
+    - `[medium]` `patch` False incompatibility in diamond defaults (`PhpFloat`). — Same as the edge-case row; fixed.
+    - `[medium]` `patch`+escalated Trait default vs parent property. — Same as the edge-case row; ESC-9.9-2.
+    - `[low]` `reject` ES private members in traits. — No port writes `#x` in a trait, since PHP traits have no such privacy. Documenting it adds nothing.
+    - `[low]` `reject` A trait that `extends` an ordinary class. — The spec's trait form forbids it.
+    - `[low]` `reject` Trait constructors run at `mixin` time. — The spec states that defaults are read once at `mixin` time. PHP defaults are constant expressions.
+    - `[low]` `patch` Collision thrower masking. — Same fix as the edge-case row.
+    - `[low]` `reject` The property-collision message lacks the class name. — The layer cannot know the using class. All the other text is PHP's.
+    - `[medium]` `patch` `undefined` defaults leaked (AD-9). — They are now normalised to `null`, with a test.
+    - `[maybe-false]` `defer` Stacked-decorator fragility. — Same as the edge-case row; deferred.
+    - `[low]` `patch` Invisible characters in `IDENTIFIER`. — Now written as escapes. Reserved words and `__proto__` are rejected as negligible.
+    - `[false]` `reject` XT-runtime-33 versus ESC-9.9-1. — ESC-9.9-1 was reworded: option 2's behaviour ships, and option 1 is what is requested.
+    - `[low]` `reject` The fixtures were missing. — They have landed and the tests pass.
+    - `[low]` `reject` Coverage of the `TypeError` paths, an unknown FQCN and a duplicate trait. — These are simple guards and rare inputs.
+    - `[low]` `reject` `Mixed<B, Ts>` drops `abstract`. — Type looseness only; no runtime harm.
+    - `[false]` `reject` Artifact inconsistencies. — Statuses follow the workflow. The manifest's line is its generation line. `async-surface --all --check` ran clean.
+
 ## Design Notes
 
 - **Upstream order over "trait order".** The AC says "in trait order"; AD-26 says boot/initialize "run as Upstream". Upstream's order is `ReflectionClass::getMethods()`'s: the class's own methods, its traits depth-first, then the parent's. That is what "trait order" means in PHP, and the Oracle fixture pins it. It differs from `classUsesRecursive` order whenever a parent has traits (`Comment`: `HasB` boots before `HasP`).
@@ -105,3 +160,26 @@ deferred: []
 - `bun test packages/runtime` and `bun run harness --xaravel --id 'XT-runtime-*'` -- expected: pass once fixtures are pulled.
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check`, `bun run async-surface --all --check`, `bun run escalations:check` -- expected: clean.
 - `bun run story:check 9.9` -- expected: pass after the Fidelity Review of the final tree.
+
+## Auto Run Result
+
+Status: blocked
+Blocking condition: ESC-9.9-2 (`divergence`: a trait default against a base class field of the same name) waits on the Maintainer (MAINT-2026-10-16: a divergence ruling is the Maintainer's). ESC-9.9-1 (`protected-path`: the harness freezes `Symbol` before the polyfill) is open as well.
+
+- **Summary:** `mixin`, `classUsesRecursive`, `bootTraits` / `initializeTraits` / `clearBootedTraits`, the `Symbol.metadata` polyfill and `inject` / `readInjectMetadata`, exported from `@xaravel/runtime`.
+- **Files:**
+  - `packages/runtime/src/traits/mixin.ts`: trait composition and the boot helpers.
+  - `packages/runtime/src/metadata/{polyfill,inject}.ts`: the polyfill and `inject`.
+  - The `src/` index files: the exports and the polyfill import.
+  - `packages/runtime/tests/xaravel/{traits,inject}.test.ts`: XT-runtime-31..34.
+  - `packages/runtime/docs/traits-and-inject.md`.
+  - `conformance/oracle-requests/9.9.jsonl` and its two bot-signed fixtures.
+  - `conformance/escalations/ESC-9.9-1.md` and `ESC-9.9-2.md`.
+- **Review:** 39 findings. 10 patched (medium 7, low 3), 1 deferred (stacked decorators, medium unverified), 28 rejected, each with its reason in the triage log.
+- **Fidelity Review:** not run yet. It runs on the final tree after the Maintainer rules on ESC-9.9-2, because option 2 would change `mixin.ts`.
+- **Follow-up review recommended:** true. Seven medium entries were patched, and the Fidelity Review is still to run.
+- **Verification:** all clean or passing:
+  - `bun test packages/runtime`: 34/34 pass against the signed fixtures.
+  - `bun run harness --xaravel --id 'XT-runtime-*'`: 34/34 pass.
+  - `tsc -b`, `lint`, `graph:check`, `registration:check`, `async-surface --all --check`, `escalations:check`, `oracle:verify-fixtures` and `oracle:story check 9.9`.
+- **Residual risk:** inside the harness process, `Symbol.metadata` is undefined (ESC-9.9-1). The runtime reads `Symbol.for('Symbol.metadata')` there directly.
