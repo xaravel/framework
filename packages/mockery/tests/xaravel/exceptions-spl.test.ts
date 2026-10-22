@@ -19,7 +19,7 @@ import { xaravelTest } from "@xaravel/assert";
 
 const root = resolve(import.meta.dir, "..", "..", "..", "..");
 const SPAWN_TIMEOUT = 50_000;
-const CHILD_TIMEOUT = 120_000;
+const CHILD_TIMEOUT = 4 * SPAWN_TIMEOUT + 20_000;
 
 /** The PHP classes the copies stand for. */
 const SPL = ["Exception", "RuntimeException", "LogicException", "InvalidArgumentException", "BadFunctionCallException", "BadMethodCallException", "OutOfBoundsException", "UnexpectedValueException"] as const;
@@ -51,6 +51,10 @@ const ROWS: Record<string, (typeof SPL)[number]> = {
   "Mockery\\Exception\\InvalidCountException": "OutOfBoundsException",
   "Mockery\\Exception\\RuntimeException": "Exception",
   "Mockery\\Exception\\InvalidArgumentException": "InvalidArgumentException",
+  "Mockery\\Exception": "UnexpectedValueException",
+  "Mockery\\CountValidator\\Exception": "OutOfBoundsException",
+  "Mockery\\Exception\\InvalidOrderException": "UnexpectedValueException",
+  "JMac\\Testing\\Exceptions\\DoubleException": "RuntimeException",
 };
 
 /**
@@ -60,6 +64,7 @@ const ROWS: Record<string, (typeof SPL)[number]> = {
 const CHILD = `
 const MODE = process.env.XT_SPL_MODE;
 const SPL = ${JSON.stringify(SPL)};
+const CHAIN = ${JSON.stringify(CHAIN)};
 if (MODE === "runtime-first") {
   await import("./packages/runtime/src/index.ts");
 }
@@ -69,11 +74,15 @@ const copies = {};
 for (const name of SPL) {
   copies[name] = (await import(P + "php/" + name + ".ts"))[name];
 }
-const { Mockery, BadMethodCallException, NoMatchingExpectationException, InvalidCountException, RuntimeException, InvalidArgumentException } = mockery;
+const { Mockery, BadMethodCallException, NoMatchingExpectationException, InvalidCountException, RuntimeException, InvalidArgumentException, Exception: MockeryException, CountValidatorException, InvalidOrderException } = mockery;
+// Abstract in TS only: built directly here for its inherited constructor.
+const { DoubleException } = await import(P + "JMac/Testing/Exceptions/DoubleException.ts");
+const FQCN = Symbol.for("xaravel.class.fqcn");
 const A = "./packages/assert/src/";
 const { Assert, TestCase } = await import(A + "index.ts");
 const { Exception: ExceptionConstraint } = await import(A + "Framework/Constraint/Exception/Exception.ts");
 const { testCaseState } = await import(A + "Framework/TestCase.ts");
+const { ExceptionComparator } = await import(A + "comparator/ExceptionComparator.ts");
 const prev = new Error("prev");
 class XtSplFoo { bar() {} }
 const unexpectedCall = () => {
@@ -88,6 +97,10 @@ const table = [
   ["Mockery\\\\Exception\\\\InvalidCountException", () => new InvalidCountException("m", 5, prev)],
   ["Mockery\\\\Exception\\\\RuntimeException", () => new RuntimeException("m", 5, prev)],
   ["Mockery\\\\Exception\\\\InvalidArgumentException", () => new InvalidArgumentException("m", 5, prev)],
+  ["Mockery\\\\Exception", () => new MockeryException("m", 5, prev)],
+  ["Mockery\\\\CountValidator\\\\Exception", () => new CountValidatorException("m", 5, prev)],
+  ["Mockery\\\\Exception\\\\InvalidOrderException", () => new InvalidOrderException("m", 5, prev)],
+  ["JMac\\\\Testing\\\\Exceptions\\\\DoubleException", () => new DoubleException("m", 5, prev)],
 ];
 const call = (value, method) => (typeof value[method] === "function" ? value[method]() : "(none)");
 const describe = (value, map) => ({
@@ -134,7 +147,8 @@ for (const name of SPL) {
   const above = Object.getPrototypeOf(parent);
   const pparent = Object.getPrototypeOf(copies[name].prototype);
   const pabove = Object.getPrototypeOf(pparent);
-  const expected = name === "Exception" ? Error : copies[name === "BadMethodCallException" ? "BadFunctionCallException" : ["RuntimeException", "LogicException"].includes(name) ? "Exception" : ["InvalidArgumentException", "BadFunctionCallException"].includes(name) ? "LogicException" : "RuntimeException"];
+  // The PHP parent: the next class in CHAIN, or the JS Error for the root.
+  const expected = CHAIN[name].length === 1 ? Error : copies[CHAIN[name][1]];
   chain[name] = {
     internal: !Object.values(copies).includes(parent) && !exported.includes(parent) && parent !== Error && pparent === parent.prototype,
     unfrozen: !Object.isFrozen(parent) && !Object.isFrozen(parent.prototype),
@@ -169,17 +183,19 @@ if (map !== null) {
       }
       return null;
     } catch (e) {
-      return [e.constructor.name, e.getMessage().split(". Message was:")[0]];
+      return [e.constructor[FQCN], e.getMessage().split(". Message was:")[0]];
     }
   };
   const callBaz = function () { Mockery.mock(XtSplFoo).baz(); };
   out.expectException = {
-    failure: [failure.constructor.name, failure instanceof map.BadMethodCallException, failure instanceof map.LogicException, failure instanceof map.RuntimeException],
+    failure: [failure.constructor[FQCN], failure instanceof map.BadMethodCallException, failure instanceof map.LogicException, failure instanceof map.RuntimeException],
     constraint: new ExceptionConstraint(map.BadMethodCallException).evaluate(failure, "", true),
     assertInstanceOf: instanceOf,
     badMethodCall: runTest(map.BadMethodCallException, callBaz),
     runtimeException: runTest(map.RuntimeException, callBaz),
   };
+  // The compares side: the grader's ExceptionComparator takes two Mockery exceptions as \\Exceptions.
+  out.comparator = new ExceptionComparator().accepts(unexpectedCall(), unexpectedCall());
   out.delegated = {
     runtimeIsCopy: new map.RuntimeException("x") instanceof copies.RuntimeException,
     copyIsExceptionCopy: new copies.RuntimeException("x") instanceof copies.Exception,
@@ -206,6 +222,7 @@ interface ChildOutput {
   readonly expectException?: Record<string, unknown>;
   readonly delegated?: Record<string, unknown>;
   readonly coercion?: unknown;
+  readonly comparator?: boolean;
 }
 
 function runChild(mode: "none" | "runtime-first" | "mockery-first" | "late-load"): unknown {
@@ -276,15 +293,16 @@ xaravelTest("XT-mockery-12", "given the runtime's class map, Mockery's exception
     expect({ mode, expectException: run.expectException }).toEqual({
       mode,
       expectException: {
-        failure: ["BadMethodCallException", true, true, false],
+        failure: ["Mockery\\Exception\\BadMethodCallException", true, true, false],
         constraint: true,
         assertInstanceOf: null,
         // PHPUnit verifies a non-PHPUnit exception: a \BadMethodCallException satisfies the expectation.
         badMethodCall: null,
         // Mockery's BadMethodCallException is a \LogicException, never a \RuntimeException, as in PHP.
-        runtimeException: ["ExpectationFailedException", 'Failed asserting that exception of type "Mockery\\Exception\\BadMethodCallException" matches expected exception "RuntimeException"'],
+        runtimeException: ["PHPUnit\\Framework\\ExpectationFailedException", 'Failed asserting that exception of type "Mockery\\Exception\\BadMethodCallException" matches expected exception "RuntimeException"'],
       },
     });
+    expect({ mode, comparator: run.comparator }).toEqual({ mode, comparator: true });
     expect({ mode, delegated: run.delegated }).toEqual({ mode, delegated: { runtimeIsCopy: true, copyIsExceptionCopy: true, noMatchIsMockeryBadMethodCall: false } });
     expect({ mode, coercion: run.coercion }).toEqual({ mode, coercion: [true, "Exception::__construct(): Argument #2 ($code) must be of type int, string given"] });
   }

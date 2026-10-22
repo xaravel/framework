@@ -32,7 +32,7 @@ type AnyClass = abstract new (...args: never[]) => object;
 /** A PHP throwable as the copies expose it: PHP's getters on a JS `Error`. */
 export interface SplThrowable extends Error {
   getMessage(): string;
-  getCode(): number;
+  getCode(): number | bigint;
   getPrevious(): Error | null;
 }
 
@@ -87,7 +87,7 @@ export function splParent(name: SplName, base: AnyClass | ErrorConstructor): Spl
   const Base = base as unknown as new (...args: unknown[]) => Error;
 
   class SplParent extends Base {
-    readonly #code: number;
+    readonly #code: number | bigint;
     readonly #previous: Error | null;
 
     /**
@@ -107,10 +107,10 @@ export function splParent(name: SplName, base: AnyClass | ErrorConstructor): Spl
       // `Error(message, options)`.
       const args: unknown[] = runtime || !root ? [message, code, previous] : previous === null ? [message] : [message, { cause: previous }];
       super(...args);
-      let ownCode = code;
+      let ownCode: number | bigint = code;
       if (runtime) {
         // The runtime's coerced code; its own `name` is replaced below, as without the map.
-        ownCode = (this as unknown as { code: number }).code;
+        ownCode = (this as unknown as { code: number | bigint }).code;
         delete (this as { name?: unknown }).name;
       }
       this.#code = ownCode;
@@ -125,7 +125,7 @@ export function splParent(name: SplName, base: AnyClass | ErrorConstructor): Spl
       return this.message;
     }
 
-    getCode(): number {
+    getCode(): number | bigint {
       return this.#code;
     }
 

@@ -86,6 +86,36 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-22 — Review pass
+
+Layers: Blind Hunter, Edge Case Hunter, Verification Gap (no gaps), Intent Alignment, Fidelity Review (both reviewers pass at tree `53dcbfa`).
+
+- verdicts: 23 findings — high 0, medium 2, low 18, false 3, maybe-false 0 (Intent Alignment's descriptive observations are logged as 5 rows)
+- findings:
+  - `[low]` `[patch]` Edge: four children of 50 s each run inside a 120 s test timeout — `CHILD_TIMEOUT` raised above `4 * SPAWN_TIMEOUT`.
+  - `[low]` `[reject]` Edge: a parent env with `XARAVEL_NO_SCOPE_GLOBAL=1` leaks into the children — nothing in the repo's harness, CI or scripts sets it (`git grep`), and the sibling XT-assert-18 spawns the same way; a guard adds code for a case no run reaches.
+  - `[low]` `[patch]` Edge: linked `getCode()` can return the runtime's `bigint` while typed `number` — typed `number | bigint`, as the runtime's `Exception.getCode()`.
+  - `[false]` `[reject]` Edge: `setPrototypeOf` throwing mid-loop leaves a parent half-linked — the parents are never frozen or made non-extensible, so `Object.setPrototypeOf` on them cannot throw.
+  - `[low]` `[reject]` Edge: `SplClass` declares a static `[FQCN]` the parent does not define — every copy declares its own (`override` needs the base declaration), `classNameOf` reads own brands only, and nothing reads a parent's brand.
+  - `[low]` `[patch]` Edge: a numeric-string code reads differently linked and unlinked — unlinked keeps today's raw value by design (keep today's behaviour without the map); the README now states the coercion difference (grouped with the Blind coercion row).
+  - `[low]` `[patch]` Blind: `getCode()` bigint typing — same root as the Edge row.
+  - `[low]` `[patch]` Blind: the modes coerce arguments differently and the README does not say so — README sentence added.
+  - `[low]` `[reject]` Blind: the construction and `graderExceptionClass()` late-load triggers are untested — every trigger calls the same `linkSplParents()`, the `mockery-first` mode links by construction, and `late-load` covers the re-parenting of earlier instances; a sub-mode per trigger adds children for one shared path.
+  - `[false]` `[reject]` Blind: a partly filled class map never links — the runtime publishes one frozen map holding all 24 names (`phpClasses.ts:43-70`), so a partial map is not reachable.
+  - `[medium]` `[patch]` Blind: Mockery's own exceptions that reach `\OutOfBoundsException` and `\UnexpectedValueException` are not rows — `Mockery\Exception`, `CountValidator\Exception`, `InvalidOrderException` and a `DoubleException` added.
+  - `[low]` `[patch]` Blind: the test names classes by `constructor.name` — it now reports the FQCN brand.
+  - `[low]` `[patch]` Blind: the child times out before reporting — same root as the Edge timeout row.
+  - `[false]` `[reject]` Blind: the Story status lines are missing from the diff — they were set to `in-progress` in the Story's first commit (`553464e`), the baseline, and move to `done` at the end.
+  - `[low]` `[patch]` Blind: the PHP tree is written twice in the test (a ternary beside `CHAIN`) — derived from `CHAIN`.
+  - `[low]` `[reject]` Blind: nothing checks that each `splParent` call names the right PHP parent — XT-mockery-12 asserts every copy's parent against `CHAIN` in every mode, which catches a wrong pairing; a runtime table adds a second copy of the tree.
+  - `[low]` `[patch]` Blind: the README omits that a linked copy's `instanceof` also matches runtime instances — README sentence added.
+  - `[low]` `[reject]` Blind: the own-keys assertion pins Bun's internal `Error` keys — the sibling XT-assert-18 pins the same list for Bun 1.4.3 (pinned in `.bun-version`), and each linked run is also compared with the no-map run.
+  - `[medium]` `[patch]` Intent: the "compares" half of AC1 is never exercised — a linked-mode row checks that the grader's `ExceptionComparator` accepts two Mockery exceptions.
+  - `[low]` `[reject]` Intent: `andThrow('<SPL name>')` still builds the copy, and SPL names outside the eight are not found — the copy is linked, so it is `instanceof` PHP's class as AC1 asks; other SPL names are pre-existing and outside the copies the AC names.
+  - `[low]` `[reject]` Intent: `expectException` is shown through a re-implemented `runTest`, not a `portedTest` under the harness — the grader's XT-assert-18 idiom; graded packages cannot be loaded in-process by a grader test (AD-2).
+  - `[low]` `[reject]` Intent: lazy linking leaves an early-built exception unlinked until a trigger — documented in the README and tested (`late-load`); ESC-9.11-1's design note asks for lazy resolution.
+  - `[low]` `[reject]` Intent: delegated `instanceof` and linked coercion go beyond the text — both follow "as in PHP" (one class per PHP name; PHP's constructor types) and are tested; descriptive.
+
 ## Design Notes
 
 - **Why a parent per copy.** The copies are frozen (`src/index.ts`), so their own `[[Prototype]]` cannot change; and PHP's tree has eight levels Mockery needs (`\OutOfBoundsException` for `CountValidator\Exception`, `\UnexpectedValueException` for `Mockery\Exception`, …), so one shared parent (the grader's single `RuntimeExceptionParent`) is not enough.
@@ -97,3 +127,55 @@ deferred: []
 - `bun test packages/mockery packages/assert` -- expected: pass, XT-mockery-12 included.
 - `bun run harness --xaravel --id 'XT-mockery-*'` -- expected: no difference.
 - `bun --bun tsc -b`, `bun run lint`, `bun run graph:check`, `bun run registration:check` -- expected: clean.
+
+## Fidelity Review
+
+### Reviewer 1: pass at tree 53dcbfa8967b5cd09e29f8300458f18c9c8fc280
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `553464e33da57f48164bd072d1b806c8b21392d2`, on 2026-10-22T23:30:36.943Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and none are added or changed. |
+| F-2: No expected value is weakened | pass | The diff adds exact expectations in XT-mockery-12; it changes or weakens no existing expected value. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted marker or Expectations adapted field is added or changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture evidence identifies no relied-on Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-mockery-12 checks the declared SPL chains, exclusion of PHP Error, exception matching, fallback chains, and getter and own-key parity across load orders. Its consequence cites no FR or AD bullet tokens. |
+| F-8: No stub, fake or partial implementation of another Component | pass | All implementation changes stay in mockery and link its internal copies through the runtime-owned symbol protocol authorized by ESC-4.5-1 and ESC-9.11-1; no other Component is stubbed. |
+| F-9: Every `@asyncRoot` tag is true | pass | The supplied source and declaration inventory contain no asyncRoot tags. The changed methods perform synchronous prototype linking, construction, getters, and lookup, requiring no async tags under AD-6. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"53dcbfa8967b5cd09e29f8300458f18c9c8fc280","base":"553464e33da57f48164bd072d1b806c8b21392d2","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-22T23:30:36.943Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and none are added or changed.","findings":[]},{"id":"F-2","result":"pass","note":"The diff adds exact expectations in XT-mockery-12; it changes or weakens no existing expected value.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted marker or Expectations adapted field is added or changed.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture evidence identifies no relied-on Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-mockery-12 checks the declared SPL chains, exclusion of PHP Error, exception matching, fallback chains, and getter and own-key parity across load orders. Its consequence cites no FR or AD bullet tokens.","findings":[]},{"id":"F-8","result":"pass","note":"All implementation changes stay in mockery and link its internal copies through the runtime-owned symbol protocol authorized by ESC-4.5-1 and ESC-9.11-1; no other Component is stubbed.","findings":[]},{"id":"F-9","result":"pass","note":"The supplied source and declaration inventory contain no asyncRoot tags. The changed methods perform synchronous prototype linking, construction, getters, and lookup, requiring no async tags under AD-6.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree 53dcbfa8967b5cd09e29f8300458f18c9c8fc280
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `553464e33da57f48164bd072d1b806c8b21392d2`, on 2026-10-22T23:30:36.943Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty, so there are no Inventory rows or Upstream source. The diff adds or changes no Ported Test, only the Xaravel Test XT-mockery-12 and grader source. |
+| F-2: No expected value is weakened | n/a | There is no Ported Test, so no expected value can be compared with Upstream's. XT-mockery-12 is a new Xaravel Test and no existing expected value changes. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, and evidence (a) shows no adapted:DIV marker. There is no Upstream assertion count to compare. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip: no conformance expectations file is touched and test_ids is empty. |
+| F-5: Every `adapted` marker matches its clause | n/a | Evidence (a): no added line carries an adapted:DIV-<n>.<k> marker or an Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c): there are no assigned Oracle requests, no base error fixtures and no changed fixtures. The Story relies on no Oracle fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Checked XT-mockery-12's consequence clause by clause against its body. - Linked case: in the runtime-first and mockery-first runs, each row's instances.runtime equals PHP's chain from CHAIN, and phpError (instanceof the runtime's Error) is false. The ROWS parents match Mockery 1.6.15: NoMatchingExpectation leads to UnexpectedValueException through Mockery\Exception, InvalidCount to OutOfBounds through CountValidator\Exception, and Mockery\Exception\RuntimeException to \Exception. - expectException: badMethodCall is null under expectException(\BadMethodCallException), and RuntimeException is rejected with PHPUnit's message. - No-map case: map is false, each chain is 'php parent copy', and copies are instanceof along PHP's chain. - Same either way: getters, message, name, own keys and the code descriptor are compared with the no-map rows in both linked modes and in late-load. The string cites no FR or AD tokens. The body checks at least what the string claims. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Code changes stay inside packages/mockery (the Story's component): src/php/*, the new src/php/SplParent.ts and src/support/classes.ts. The runtime is only read through the published globalThis[Symbol.for('xaravel.php.classes')] protocol (ESC-4.5-1 item 2, ESC-9.11-1). Nothing stubs, fakes or hard-codes runtime behaviour; with no map, the copies keep their own chain. The test imports packages/runtime only in a child process, to exercise the real runtime. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tags in any changed src file. Every new or kept export (splParent, linkSplParents, the SplParent constructor, getters and Symbol.hasInstance, graderExceptionClass and the copy classes) is synchronous. None reaches an IO root or accepts a callback, so none needs a tag and no tag is false. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"53dcbfa8967b5cd09e29f8300458f18c9c8fc280","base":"553464e33da57f48164bd072d1b806c8b21392d2","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-22T23:30:36.943Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty, so there are no Inventory rows or Upstream source. The diff adds or changes no Ported Test, only the Xaravel Test XT-mockery-12 and grader source.","findings":[]},{"id":"F-2","result":"n/a","note":"There is no Ported Test, so no expected value can be compared with Upstream's. XT-mockery-12 is a new Xaravel Test and no existing expected value changes.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, and evidence (a) shows no adapted:DIV marker. There is no Upstream assertion count to compare.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip: no conformance expectations file is touched and test_ids is empty.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV-<n>.<k> marker or an Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): there are no assigned Oracle requests, no base error fixtures and no changed fixtures. The Story relies on no Oracle fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Checked XT-mockery-12's consequence clause by clause against its body.\n- Linked case: in the runtime-first and mockery-first runs, each row's instances.runtime equals PHP's chain from CHAIN, and phpError (instanceof the runtime's Error) is false. The ROWS parents match Mockery 1.6.15: NoMatchingExpectation leads to UnexpectedValueException through Mockery\\Exception, InvalidCount to OutOfBounds through CountValidator\\Exception, and Mockery\\Exception\\RuntimeException to \\Exception.\n- expectException: badMethodCall is null under expectException(\\BadMethodCallException), and RuntimeException is rejected with PHPUnit's message.\n- No-map case: map is false, each chain is 'php parent copy', and copies are instanceof along PHP's chain.\n- Same either way: getters, message, name, own keys and the code descriptor are compared with the no-map rows in both linked modes and in late-load.\nThe string cites no FR or AD tokens. The body checks at least what the string claims.","findings":[]},{"id":"F-8","result":"pass","note":"Code changes stay inside packages/mockery (the Story's component): src/php/*, the new src/php/SplParent.ts and src/support/classes.ts. The runtime is only read through the published globalThis[Symbol.for('xaravel.php.classes')] protocol (ESC-4.5-1 item 2, ESC-9.11-1). Nothing stubs, fakes or hard-codes runtime behaviour; with no map, the copies keep their own chain. The test imports packages/runtime only in a child process, to exercise the real runtime.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tags in any changed src file. Every new or kept export (splParent, linkSplParents, the SplParent constructor, getters and Symbol.hasInstance, graderExceptionClass and the copy classes) is synchronous. None reaches an IO root or accepts a callback, so none needs a tag and no tag is false.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
