@@ -20,6 +20,8 @@ import {
   isScalar,
   isTraversable,
   iterableValues,
+  toNumber,
+  unmarkFloat,
 } from "../comparison/PhpValues";
 import { Factory } from "../comparator/Factory";
 import { exportValue, phpunitExport } from "../exporter/Exporter";
@@ -214,7 +216,7 @@ export class IsNan extends Constraint {
     return "is not nan";
   }
   protected override matches(other: unknown): boolean {
-    return typeof other === "number" && Number.isNaN(other);
+    return isFloat(other) && Number.isNaN(toNumber(other));
   }
   override failureDescription(other: unknown): string {
     return describeByTypeForContainers(other, this.toString());
@@ -504,8 +506,13 @@ export class TraversableContainsOnly extends Constraint {
   }
 }
 
-/** A PHP array key (an int or a string, normalised), or null for any other value. */
-function arrayKey(key: unknown): Key | null {
+/** A PHP array key (an int or a string, normalised), or null for any other value; a marked float reads as its number. */
+function arrayKey(given: unknown): Key | null {
+  const key = unmarkFloat(given);
+  if (typeof key === "number" && isInt(key)) {
+    // `+ 0` folds an unmarked or marked `-0` into the key `0`.
+    return key + 0;
+  }
   if (isInt(key)) {
     return typeof key === "bigint" && key >= BigInt(Number.MIN_SAFE_INTEGER) && key <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(key) : key;
   }

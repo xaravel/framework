@@ -1,26 +1,26 @@
 // sebastian/comparator 8.4.0's `NumericComparator` (Story 4.3): numbers and
 // numeric strings, unless both are strings, within `delta`.
 import { numericValue } from "../comparison/PhpComparison";
-import { isFloat, isNumeric, toNumber } from "../comparison/PhpValues";
+import { isFloat, isInt, isNumeric, toNumber } from "../comparison/PhpValues";
 import { exportValue } from "../exporter/Exporter";
 import { ComparisonFailure } from "../Framework/ComparisonFailure";
 import { ScalarComparator } from "./ScalarComparator";
 
 function isInfinite(value: unknown): boolean {
-  return isFloat(value) && !Number.isNaN(value) && !Number.isFinite(value);
+  return isFloat(value) && !Number.isNaN(toNumber(value)) && !Number.isFinite(toNumber(value));
 }
 
 function isNan(value: unknown): boolean {
-  return isFloat(value) && Number.isNaN(value);
+  return isFloat(value) && Number.isNaN(toNumber(value));
 }
 
 /** The value as a PHP int (an int, or an integer numeric string), or null when PHP's arithmetic reads it as a float. */
 function intValue(value: unknown): bigint | null {
-  if (typeof value === "bigint") {
-    return value;
+  if (isInt(value)) {
+    return BigInt(value);
   }
-  if (typeof value === "number") {
-    return Number.isSafeInteger(value) ? BigInt(value) : null;
+  if (isFloat(value)) {
+    return null;
   }
   if (typeof value === "string") {
     const parsed = numericValue(value);
@@ -50,8 +50,8 @@ export class NumericComparator extends ScalarComparator {
 
   override assertEquals(expected: unknown, actual: unknown, delta = 0): void {
     if (isInfinite(expected) && isInfinite(actual)) {
-      const e = expected as number;
-      const a = actual as number;
+      const e = toNumber(expected);
+      const a = toNumber(actual);
       if ((e < 0 && a < 0) || (e > 0 && a > 0)) {
         return;
       }

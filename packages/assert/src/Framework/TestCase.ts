@@ -17,7 +17,7 @@
 // reachable through `Mockery.mock()`; `createMock` never calls it. Counts that
 // have no assertion kind (`addToAssertionCount`, mock verification) go to the
 // counting context's kind-less count (AssertionCounter).
-import { argumentError, stringParam } from "../comparison/PhpValues";
+import { argumentError, stringParam, unmarkFloat } from "../comparison/PhpValues";
 import { addToAssertionCount, recordAssertion } from "../declarations/AssertionCounter";
 import { Assert, type ClassOrInterface } from "./Assert";
 import { classOrInterface } from "./Constraints";
@@ -69,8 +69,15 @@ function stringArgument(method: string, name: string, value: unknown): string {
   }
 }
 
+/** PHP's TypeError for argument #1 of `TestCase::<method>()`, naming the given value's PHP type (`float`, `string`, …). */
+function testCaseArgumentError(method: string, name: string, type: string, value: unknown): TypeError {
+  const error = argumentError(method, 1, name, type, value);
+  return new TypeError(error.message.replace("PHPUnit\\Framework\\Assert::", "PHPUnit\\Framework\\TestCase::"));
+}
+
 /** PHP's `int|string` parameter in coercive mode; a bigint keeps its exact digits as a string. */
-function intOrString(method: string, value: unknown): number | string {
+function intOrString(method: string, argument: unknown): number | string {
+  const value = unmarkFloat(argument);
   if (typeof value === "string") {
     return value;
   }
@@ -83,7 +90,7 @@ function intOrString(method: string, value: unknown): number | string {
   if (typeof value === "bigint") {
     return Number.isSafeInteger(Number(value)) ? Number(value) : value.toString();
   }
-  const error = argumentError(method, 1, "code", "string|int", value);
+  const error = argumentError(method, 1, "code", "string|int", argument);
   throw new TypeError(error.message.replace("PHPUnit\\Framework\\Assert::", "PHPUnit\\Framework\\TestCase::"));
 }
 
@@ -185,8 +192,13 @@ export class TestCase extends Assert {
 
   /** Counts `count` assertions that have no kind (Story 4.7): they count for the zero-assertion rule, never in the report's kinds. */
   addToAssertionCount(count: number): void {
-    addToAssertionCount(count);
-    this.#numberOfAssertionsPerformed += count;
+    // A marked float reads as its number (Story 9.11).
+    const value: unknown = unmarkFloat(count);
+    if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+      throw testCaseArgumentError("addToAssertionCount", "count", "int", count);
+    }
+    addToAssertionCount(value);
+    this.#numberOfAssertionsPerformed += value;
   }
 
   /** The kind-less assertions this TestCase counted. */
@@ -212,10 +224,12 @@ export class TestCase extends Assert {
   }
 
   exactly(count: number): InvokedCount {
-    if (typeof count !== "number" || !Number.isSafeInteger(count)) {
-      throw new TypeError(`PHPUnit\\Framework\\TestCase::exactly(): Argument #1 ($count) must be of type int, ${typeof count} given`);
+    // A marked float reads as its number (Story 9.11): an integral one is the int it stands for.
+    const value: unknown = unmarkFloat(count);
+    if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+      throw testCaseArgumentError("exactly", "count", "int", count);
     }
-    return new InvokedCount(count);
+    return new InvokedCount(value + 0);
   }
 
   /** A stub that throws `exception`, for `willReturnOnConsecutiveCalls(…)` and `willReturn(…)`. */

@@ -15,6 +15,10 @@
 // floats (`1.0` is `1`, `1e25` is `1.0e+25`, `-0.0` is `-0`), `\/` and
 // `\uXXXX` escapes by default, and `JSON_PRETTY_PRINT`'s four-space layout.
 
+import { RuntimeExceptionParent } from "../Framework/Exception/RuntimeExceptionParent";
+
+const INVALID_JSON_FQCN = Symbol.for("xaravel.class.fqcn");
+
 export const JSON_ERROR_NONE = 0;
 export const JSON_ERROR_DEPTH = 1;
 export const JSON_ERROR_STATE_MISMATCH = 2;
@@ -493,8 +497,14 @@ export function canonicalize(json: string): readonly [true, null] | readonly [fa
   return encoded === null ? [true, null] : [false, encoded];
 }
 
-/** PHPUnit's `InvalidJsonException`. Internal to the grader. */
-export class InvalidJsonException extends Error {
+/**
+ * PHPUnit's `InvalidJsonException`. Internal to the grader. PHP: `final class InvalidJsonException extends
+ * RuntimeException`, so it sits on the runtime's `RuntimeException` once linked (Story 9.11). `JsonError` and
+ * `EncodeError` above are this module's internal signals, caught here, with no PHP class.
+ */
+export class InvalidJsonException extends RuntimeExceptionParent {
+  static readonly [INVALID_JSON_FQCN]: string = "PHPUnit\\Util\\InvalidJsonException";
+
   constructor() {
     super("");
     this.name = "InvalidJsonException";

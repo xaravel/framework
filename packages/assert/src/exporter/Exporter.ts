@@ -6,7 +6,7 @@
 // array nested in itself is impossible in PHP, so a JS array that contains
 // itself is printed as `Array &<n>` of its ancestor.
 import { arrayEntries, type Entries, isBuiltIn, isPhpArray, type Key, objectProps } from "../comparison/PhpComparison";
-import { classNameOf, formatDouble, isResource, resourceType } from "../comparison/PhpValues";
+import { classNameOf, formatDouble, isInt, isMarkedFloat, isResource, resourceType, unmarkFloat } from "../comparison/PhpValues";
 
 const handles = new WeakMap<object, number>();
 let nextHandle = 0;
@@ -103,7 +103,9 @@ class Export {
   private readonly arrays = new Map<object, number>();
   private readonly objects = new Set<object>();
 
-  value(value: unknown, indentation: number): string {
+  value(given: unknown, indentation: number): string {
+    // A marked float exports as the float it stands for (`1.0`), as PHPUnit's exporter does.
+    const value = unmarkFloat(given);
     if (value === null) {
       return "null";
     }
@@ -115,7 +117,7 @@ class Export {
       case "boolean":
         return value ? "true" : "false";
       case "number":
-        return Number.isSafeInteger(value) ? String(value) : exportFloat(value);
+        return isInt(given) ? String(value) : exportFloat(value);
       case "bigint":
         return value.toString();
       case "string":
@@ -189,6 +191,10 @@ function shorten(value: string, max: number): string {
 
 /** `Exporter::shortenedExport`. */
 export function shortenedExport(value: unknown, max = 40): string {
+  if (isMarkedFloat(value)) {
+    // A marked float keeps its float form (`1.0`), as PHPUnit's exporter prints it.
+    return exportValue(value);
+  }
   if (typeof value === "string") {
     return shorten(exportString(value), max);
   }

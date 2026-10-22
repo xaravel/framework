@@ -4,9 +4,17 @@
 // `invoke` asks every matcher in order: each one that matches is invoked; the
 // first return value wins; the last exception is rethrown after all of them,
 // and the first AssertionFailedError is kept, so `verify` rethrows it even
-// when the test caught it. A call no matcher returns for returns `null`
-// (ESC-4.7-1 item 2: PHPUnit generates a value of the declared return type).
+// when the test caught it. A call no matcher returns for returns the value
+// `Invocation::generateReturnValue` generates (Story 9.11: the declared return
+// type's, when a signature row exists; else `null`, DIV-6.4).
+//
+// Story 9.11 (ESC-5.3-3): when a rule raises an ExpectationFailedException after
+// the test's counts have ended (a call from a timer the body left behind), the
+// failure is reported to `Symbol.for('xaravel.harness.late')` with kind `null`
+// and not thrown, and the call returns `null`.
+import { countsEnded, lateReports, reportLateFailure } from "../../../declarations/AssertionCounter";
 import { AssertionFailedError } from "../../AssertionFailedError";
+import { ExpectationFailedException } from "../../ExpectationFailedException";
 import type { ConfigurableMethod } from "../ConfigurableMethod";
 import { MethodParametersAlreadyConfiguredForAnotherMatcherException } from "../Exception/MethodParametersAlreadyConfiguredForAnotherMatcherException";
 import type { Invocation } from "./Invocation";
@@ -64,6 +72,7 @@ export class InvocationHandler {
   }
 
   invoke(invocation: Invocation): unknown {
+    const reported = lateReports();
     let exception: { value: unknown } | null = null;
     let hasReturnValue = false;
     let returnValue: unknown = null;
@@ -84,6 +93,12 @@ export class InvocationHandler {
       }
     }
     if (exception !== null) {
+      if (exception.value instanceof ExpectationFailedException && countsEnded()) {
+        if (lateReports() === reported) {
+          reportLateFailure(null);
+        }
+        return null;
+      }
       throw exception.value;
     }
     if (hasReturnValue) {
