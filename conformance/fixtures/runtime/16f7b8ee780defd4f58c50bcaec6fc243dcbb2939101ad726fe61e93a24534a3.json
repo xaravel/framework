@@ -1,0 +1,1 @@
+{"sha256":"16f7b8ee780defd4f58c50bcaec6fc243dcbb2939101ad726fe61e93a24534a3","output":{"error":null,"results":[{"throws":{"class":"Error","message":"Class \"App\\Missing\" not found"}},{"throws":{"class":"Error","message":"Class \"\\App\\Missing\" not found"}}]},"signature":"/n62Mu37SYcGKh3f9CJSK5MTwUMARsyufwVdXbanOb0o6LtszbGKMS6B7J9o2hZGGFMNqDOZNioLGWju4JZQCg=="}

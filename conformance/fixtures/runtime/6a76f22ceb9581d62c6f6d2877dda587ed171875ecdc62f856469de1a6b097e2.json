@@ -1,0 +1,1 @@
+{"sha256":"6a76f22ceb9581d62c6f6d2877dda587ed171875ecdc62f856469de1a6b097e2","output":{"error":null,"results":[{"value":"Tests\\Fixtures\\Foo"},{"value":true},{"throws":{"class":"Error","message":"Class \"App\\Post2\" not found"}}]},"signature":"gVOTt7ZVbfxqqs8Z5kvZiPJU1iRVApGT6Hj0aqmShHJuiIgohyjezI5U5UXQhdYiBJw3fNsWXF2HtjbZFA/YBA=="}
