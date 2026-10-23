@@ -4,6 +4,8 @@ status: blocked
 
 # BMad Build Auto Result
 
+**Ruled 2026-10-22** (`decisions/MAINT-2026-10-22-epic-9-item-3-split.md`): the item's `action` is narrowed to L1–L5, L15 and L16, and the S2 Oracle rows are Story 9.13. The blocking condition below no longer applies. The next run starts at planning, from the investigation notes.
+
 Status: blocked
 Blocking condition: path outside the item's scope. The action of `epic-9-retro-item-3-scope-registry-gaps` asks for Oracle rows for XT-runtime-18, 20, 23 and the class-name lookups of XT-runtime-12..14 (finding S2). On the route of the MAINT-2026-10-16 amendment of 2026-10-22 (`planning/retro-9-*`, scope `allowedPath` for `runtime`) no signed fixture can be produced:
 

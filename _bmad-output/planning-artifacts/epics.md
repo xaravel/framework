@@ -3272,6 +3272,31 @@ So that a Mockery failure is the `\Exception` subclass PHP's Mockery throws, and
 **When** the Epic closes
 **Then** a planning change records in `decisions/DIV-9.md` that DIV-9.8 is closed, naming both Stories, and updates the `PORTING.md` line that cites it.
 
+### Story 9.13: Oracle rows for the runtime's PHP-mirroring checks
+
+As a Framework Agent,
+I want the runtime checks that mirror PHP and have no Oracle row to be compared with signed PHP output,
+So that the Epic's PHP-mirroring behaviour is grounded in the Oracle, not only in the test author's reading of PHP (component `runtime`; Epic 9 retro finding S2, MAINT-2026-10-22-epic-9-item-3-split).
+
+**Acceptance Criteria:**
+
+**Given** the class-name lookups of XT-runtime-12..14 (case-insensitive names and a leading `\`)
+**When** the same lookups run on the Oracle
+**Then** each Xaravel result matches the signed fixture, in requests from `conformance/oracle-requests/9.13.jsonl`.
+
+**Given** a function that writes through a `Ref<T>` box (XT-runtime-18)
+**When** the same by-reference write runs on the Oracle with `&`
+**Then** the value the caller reads back matches the signed fixture.
+
+**Given** `normalizeNull(v)` over the values XT-runtime-20 checks
+**When** the PHP value each one stands for is read back on the Oracle
+**Then** each result matches the signed fixture.
+
+**Given** `valueCopy(x)` of a nested array or `PhpArray` (XT-runtime-23)
+**When** the copy is mutated on the Oracle as the test mutates it
+**Then** the original and the copy match the signed fixture
+**And** any difference a fixture shows is fixed in `packages/runtime`, never by removing or weakening an assertion.
+
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 
 Packages built in parallel agree on every interface and container key without importing each other's half-built code.
