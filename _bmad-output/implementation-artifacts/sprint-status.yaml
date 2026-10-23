@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 22:06
+last_updated: 10-23-2026 02:28
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1453,7 +1453,7 @@ action_items:
       them), handles an out-of-range or NaN depth as PHP does, and the 9.6 truth table
       drives plain-number floats (findings L6-L8)"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-5-grader-runtime-protocols"
     epic: 9
@@ -1461,8 +1461,8 @@ action_items:
       parents once linked; Mockery getDebugType reads the float marker; Mockery exception
       copies coerce as AD-9 requires with and without the class map; one implementation
       of assert formatDouble and encodeDouble; runtime throwables port getFile, getLine,
-      getTrace, getTraceAsString and __toString under DIV-9.12, so the runtime and the
-      grader's copies take a throwable as a string argument as PHP does; ObjectComparator
+      getTrace, getTraceAsString and __toString under DIV-9.12, so the runtime and
+      the grader's copies take a throwable as a string argument as PHP does; ObjectComparator
       compares a throwable's file, line and trace as PHP's (array) cast does; no assertion
       removed or weakened (findings L9-L13; decisions/MAINT-2026-10-23-throwable-file-line-trace.md)"
     owner: "orchestrator"
@@ -1485,8 +1485,8 @@ action_items:
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-10-item-1-psr-api-surface"
     epic: 10
-    action: "Export the Psr\\Container, Psr\\SimpleCache and Psr\\Log interfaces at the
-      versions the Oracle framework install pins into conformance/api-surface/contracts.jsonl
+    action: "Export the Psr\\Container, Psr\\SimpleCache and Psr\\Log interfaces at
+      the versions the Oracle framework install pins into conformance/api-surface/contracts.jsonl
       (oracle:api-surface, componentForFqcn maps the three namespaces to contracts),
       with tests; no other Component's rows, schema or citation file changes (decisions/ESC-10.1-4.md)"
     owner: "orchestrator"
