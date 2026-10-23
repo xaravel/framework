@@ -10,6 +10,13 @@
 // Tests"), the request evaluates only the PHP constructs its acceptance criterion names (`==`, `<=>`, `is_numeric`,
 // `(int)`, `(float)`, `(string)`, `(bool)`) over scalars, numeric and whitespace strings, `"1e3"`, `INF`, `NAN`,
 // arrays and stdClass objects, and contains no Laravel code and no Upstream fixture.
+//
+// Story 9.13: XT-runtime-23 also compares with the signed Oracle fixture of `conformance/oracle-requests/9.13.jsonl`;
+// a missing fixture fails the test. F-10 recorded reason: it is a Xaravel Test (stories/9.13.md has no test_ids), so no
+// Upstream test exists whose inputs the request could take; per the same docs/ops/oracle.md § Per-Story requests, the
+// request evaluates only PHP's copy-on-assign of the test's structure as PHP arrays (`$original["ref"] = &$ref`,
+// `$copy = $original`, the test's mutations of the copy, `$copy["ref"] = 2`) and of a sparse `[5 => 1]` after `unset`,
+// and contains no Laravel code and no Upstream fixture.
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -36,14 +43,16 @@ interface OracleValues {
 const ORACLE_VALUES = join(REPO, "packages", "assert", "tests", "xaravel", "oracle-values.ts");
 const { BrandedArray, decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
 const REQUESTS = "conformance/oracle-requests/9.6.jsonl";
+/** Story 9.13's requests (XT-runtime-23). */
+const REQUESTS_9_13 = "conformance/oracle-requests/9.13.jsonl";
 const FIXTURES = "conformance/fixtures/runtime";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 
-/** The signed Oracle output of the Story's one request for `id`. */
-function oracle(id: string): Output {
-  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+/** The signed Oracle output of the one request for `id` in `file` (Story 9.6's by default). */
+function oracle(id: string, file: string = REQUESTS): Output {
+  const requests = readRequests(join(REPO, file)).filter((request) => request.id === id);
   if (requests.length !== 1) {
-    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+    throw new Error(`${file}: expected one request for ${id}, found ${requests.length}`);
   }
   const request = requests[0]!;
   const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
@@ -398,8 +407,19 @@ xaravelTest(
     // The next free index survives the copy: [5 => 1], unset 5, copy, push gives key 6.
     const sparse = new PhpArray([[5, 1]]);
     sparse.delete(5);
-    Assert.assertSame(6, valueCopy(sparse).push(2));
-    Assert.assertSame(6, sparse.push(2));
+    const pushedCopy = valueCopy(sparse).push(2);
+    const pushed = sparse.push(2);
+    Assert.assertSame(6, pushedCopy);
+    Assert.assertSame(6, pushed);
+
+    // The Oracle: PHP's copy-on-assign of the same structure, with the same mutations of the copy.
+    const output = oracle("XT-runtime-23", REQUESTS_9_13);
+    Assert.assertSame(decode(rawResult(output, 0)), jsonEncode([original.list, original.php]));
+    Assert.assertSame(decode(rawResult(output, 1)), jsonEncode([copy.list, copy.php]));
+    Assert.assertSame(decode(rawResult(output, 2)), original.point === copy.point);
+    Assert.assertSame(decode(rawResult(output, 3)), ref.value);
+    Assert.assertSame(decode(rawResult(output, 4)), pushedCopy);
+    Assert.assertSame(decode(rawResult(output, 5)), pushed);
 
     // A null-prototype map keeps its prototype; a scalar is returned as it is; undefined is null.
     const bare = Object.assign(Object.create(null) as Record<string, unknown>, { a: [1] });

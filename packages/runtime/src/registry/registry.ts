@@ -6,7 +6,8 @@
 // - `registerClass(fqcn, X)` (9.1) also sets the grader's class-name brand, `X[Symbol.for('xaravel.class.fqcn')]`,
 //   own and non-enumerable (ESC-4.3-1 item 1). A subclass inherits it for display only; `fqcn()` reads the Registry,
 //   never the brand.
-// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`:
+// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`
+//   with the name as given, a leading `\` kept (Story 9.13):
 //   the class registered as `Error` (Story 9.10, `php/Error.ts`), read from the base map so this file imports no
 //   exception class, else the JS `Error` when nothing registered it.
 // - `registerTestClass(fqcn, X)` registers a test fixture in the nearest `test` unit up the frame chain (AD-10.5); it
@@ -163,9 +164,12 @@ export async function resolveClassAsync(fqcn: string): Promise<RegisteredClass> 
   throw notFound(fqcn);
 }
 
-/** PHP's `Error` `Class "<FQCN>" not found`, built from the class the base map holds as `Error` (Story 9.10). */
+/**
+ * PHP's `Error` `Class "<FQCN>" not found`, built from the class the base map holds as `Error` (Story 9.10). The name
+ * is the one given, a leading `\` kept, as PHP's `new $name` writes it (Story 9.13); only the lookup normalises.
+ */
 function notFound(fqcn: string): Error {
-  const message = `Class "${normalise(fqcn)}" not found`;
+  const message = `Class "${fqcn}" not found`;
   const php = registeredBaseClass("Error") as (new (message: string) => Error) | null;
   return php === null ? new Error(message) : new php(message);
 }

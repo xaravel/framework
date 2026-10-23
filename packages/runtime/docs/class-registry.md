@@ -1,8 +1,8 @@
 # The Class Registry
 
 `@xaravel/runtime/registry` is Xaravel's single class identity (AD-10): a process-wide map from PHP FQCN to class.
-Names are case-insensitive, as PHP's are, and a leading `\` is ignored. Everything here is exported from
-`@xaravel/runtime/registry` and from the package root.
+Names are case-insensitive, as PHP's are, and a lookup ignores a leading `\`; the not-found message keeps the name as
+given. Everything here is exported from `@xaravel/runtime/registry` and from the package root.
 
 ## Registering
 
@@ -41,7 +41,9 @@ registerClass("App\\Models\\Post", Post);
 - `fqcn(classOrInstance)` is the FQCN a class, or an instance's class, was registered under. It throws for an
   unregistered class. Never use `constructor.name` for identity.
 - `resolveClass(fqcn)` is the class registered under a name. A test class wins over the base registration. A miss
-  throws PHP's `Error` `Class "<FQCN>" not found` (see [PHP exceptions](exceptions.md)). It never imports a file.
+  throws PHP's `Error` `Class "<FQCN>" not found` (see [PHP exceptions](exceptions.md)), naming the class as given:
+  as PHP's `new $name` does, a leading `\` stays in the message (`Class "\App\Missing" not found`), though the lookup
+  ignores it. It never imports a file.
 - `resolveClassAsync(fqcn)` is the one async miss path (AD-10.4). On a miss it imports the file the classmap gives,
   else the file the PSR-4 map gives, and resolves with the class that file registered.
 
