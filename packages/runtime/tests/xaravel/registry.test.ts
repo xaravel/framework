@@ -13,6 +13,9 @@
 //   - XT-runtime-13: `new $n` of a missing class, with and without a leading `\`;
 //   - XT-runtime-14: `getName()` of a lower-cased name, `class_exists` of a differently cased taken name, and `new $n`
 //     of a missing one.
+//
+// Story 9.14: XT-runtime-40, the manifest's one Xaravel Test, covers both of its acceptance criteria: `fqcn()` of a
+// `contract<T>()` token, and every other value unchanged (ESC-10.1-3).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -498,6 +501,90 @@ xaravelTest(
       Assert.assertSame("{}", jsonEncode(new Map()));
     } finally {
       reset();
+    }
+  },
+);
+
+/** A class `XT-runtime-40` registers in a test frame only. */
+class TokenFixture {}
+
+/** The shape `contract<T>()` (`packages/contracts/src/Contract.ts`) gives a token, built by hand: the runtime does not import `@xaravel/contracts`. */
+function contractToken(name: string): object {
+  const brand = Symbol.for(name);
+  return Object.freeze({
+    brand,
+    [BRAND]: name,
+    [Symbol.for("xaravel.contract.methods")]: Object.freeze([]),
+    [Symbol.for("xaravel.contract.parameters")]: Object.freeze({}),
+    [Symbol.hasInstance](value: unknown): boolean {
+      return ((typeof value === "object" && value !== null) || typeof value === "function") && (value as Record<symbol, unknown>)[brand] === true;
+    },
+    [Symbol.toPrimitive](): symbol {
+      return brand;
+    },
+  });
+}
+
+xaravelTest(
+  "XT-runtime-40",
+  "fqcn() of a contract<T>() token (a frozen, non-function object whose own, non-writable Symbol.for('xaravel.class.fqcn') data property is a string) returns that string, inside a test frame too; any other value behaves as before: a registered class or instance gives its FQCN, an unfrozen, sealed, accessor, inherited, non-string or function value throws, and resolveClass never resolves a token's name (ESC-10.1-3 option 1, AD-10)",
+  async () => {
+    const name = "Illuminate\\Contracts\\Support\\Arrayable";
+    const token = contractToken(name);
+    Assert.assertSame(name, fqcn(token));
+
+    // Inside a test frame that registered a test class, the token still gives its own FQCN, and test classes still resolve.
+    await runInRootFrame("test", async () => {
+      registerTestClass("Tests\\Fixtures\\TokenFixture", TokenFixture);
+      Assert.assertSame(name, fqcn(token));
+      Assert.assertSame("Tests\\Fixtures\\TokenFixture", fqcn(TokenFixture));
+      Assert.assertSame("Tests\\Fixtures\\TokenFixture", fqcn(new TokenFixture()));
+    });
+
+    // Every value that is not such a token keeps the Registry path and its miss message.
+    const missMessage = "fqcn(): the class is not registered; end its file with registerClass('<FQCN>', <Class>)";
+    const sealed: Record<PropertyKey, unknown> = { other: 1 };
+    Object.defineProperty(sealed, BRAND, { value: name, writable: false, enumerable: true, configurable: false });
+    Object.seal(sealed);
+    const accessor = Object.freeze(Object.defineProperty({}, BRAND, { get: () => name, enumerable: true, configurable: false }));
+    const inherited = Object.freeze(Object.create(Object.freeze({ [BRAND]: name })) as object);
+    const frozenFunction = function frozenFunction(): void {};
+    Object.defineProperty(frozenFunction, BRAND, { value: name, enumerable: false, writable: false, configurable: false });
+    Object.freeze(frozenFunction);
+    const misses: [string, object][] = [
+      ["not frozen", { [BRAND]: name }],
+      ["sealed, not frozen", sealed],
+      ["accessor key", accessor],
+      ["inherited key", inherited],
+      ["number value", Object.freeze({ [BRAND]: 42 })],
+      ["null value", Object.freeze({ [BRAND]: null })],
+      ["function", frozenFunction],
+      ["unregistered class", Unregistered],
+      ["unregistered instance", new Unregistered()],
+    ];
+    Assert.assertTrue(Object.isSealed(sealed) && !Object.isFrozen(sealed));
+    for (const [label, value] of misses) {
+      const error = thrownBy(() => fqcn(value));
+      Assert.assertInstanceOf(TypeError, error, label);
+      Assert.assertSame(missMessage, (error as Error).message, label);
+    }
+
+    // A registered class and its instance give the FQCN, as before.
+    registerClass("App\\Models\\Post", Post);
+    Assert.assertSame("App\\Models\\Post", fqcn(Post));
+    Assert.assertSame("App\\Models\\Post", fqcn(new Post()));
+    Assert.assertSame("App\\Models\\Post", fqcn(Object.freeze(new Post())));
+
+    // No token is registered: its name never resolves as a class.
+    const notFound = thrownBy(() => resolveClass(name));
+    Assert.assertInstanceOf(PhpError, notFound);
+    Assert.assertSame(`Class "${name}" not found`, (notFound as Error).message);
+
+    // A non-object is refused before any lookup.
+    for (const value of [null, "x", 1]) {
+      const error = thrownBy(() => fqcn(value as unknown as object));
+      Assert.assertInstanceOf(TypeError, error);
+      Assert.assertSame("fqcn(): the value is not a class or an object", (error as Error).message);
     }
   },
 );

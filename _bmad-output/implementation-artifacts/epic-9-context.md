@@ -21,6 +21,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
 - Story 9.11: Grader follow-ups to the runtime value model
 - Story 9.12: Mockery exceptions on the runtime's SPL classes
 - Story 9.13: Oracle rows for the runtime's PHP-mirroring checks
+- Story 9.14: `fqcn()` of a contract token
 
 ## Requirements & Constraints
 
@@ -54,6 +55,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
   - `registerTestClass` writes to the test frame's overlay only.
   - The PSR-4 map comes from `package.json` `xaravel.autoload.psr-4`. An async miss uses `await import()`. `writeClassmap` / `loadClassmap` handle `bootstrap/cache/classes.json`.
   - `registerClass` also sets the grader's class-name brand (ESC-4.3-1 item 1).
+  - Contract tokens (ESC-10.1-3). A `contract<T>()` token is a frozen, non-function object, because both test doubles treat every function as a class. It carries its FQCN as an own, non-writable `Symbol.for('xaravel.class.fqcn')` string data property. `fqcn(token)` returns that string; for every other value `fqcn()` behaves as before (registered class or instance gives its FQCN, test frames first; anything else throws). `resolveClass` never resolves a token's name as a class, and tokens are never passed to `registerClass`.
 - **Value model (AD-9, DIV-9).**
   - `null` is the only absent value, and `undefined` is never returned.
   - A list is an `Array`, and an all-non-integer-string-keyed map is a plain object. Anything else is a `PhpArray` branded `Symbol.for('xaravel.php.array')`. Its `[Symbol.iterator]()` yields normalised `[key, value]` pairs in insertion order, which is the protocol the grader reads (ESC-4.1-1). Its JSON form follows the list rule.
@@ -83,6 +85,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
   - late assertions reported to `xaravel.harness.late` (ESC-5.3-3).
 - Story 9.12 is component `mockery` (split out of 9.11 by ESC-9.11-1) and needs 9.10 and 9.11. Mockery's exceptions (its copies in `packages/mockery/src/php/`) extend the runtime's SPL classes when the runtime's class map is published, and keep today's chain when it is absent (ESC-4.5-1 item 2).
 - Story 9.13 is component `runtime` (split out of the Epic 9 retro by a Maintainer ruling) and needs 9.4, 9.5 and 9.6. It adds Oracle rows in `conformance/oracle-requests/9.13.jsonl` for existing runtime checks that mirror PHP but have none: class-name lookups (case-insensitive names, leading `\`; XT-runtime-12..14), by-reference writes through `Ref<T>` versus PHP `&` (XT-runtime-18), `normalizeNull` (XT-runtime-20) and `valueCopy` copy-on-write of nested arrays and `PhpArray` (XT-runtime-23). Any difference a signed fixture shows is fixed in `packages/runtime`, never by removing or weakening an assertion.
+- Story 9.14 is component `runtime` and needs 9.4. It is the runtime half of ESC-10.1-3: one branch in the registry's `fqcn()`, verified by XT-runtime-40. It unblocks Story 10.1's XT-contracts-3 (a token's FQCN resolvable through `fqcn()`) and feeds the container and Story 10.4's `canonicalToken`. No new key is added; the token key already exists for the test doubles.
 - DIV-9.8 closes only after both 9.11 and 9.12 land: a planning change then records the closure in `decisions/DIV-9.md`, naming both Stories, and updates the `PORTING.md` line that cites it.
 - Epic 10 (`@xaravel/contracts`) depends on the runtime and supplies the interface tokens whose brands 9.5 and 9.8 detect.
 - Every later Component depends on the runtime.

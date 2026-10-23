@@ -5,7 +5,9 @@
 //
 // - `registerClass(fqcn, X)` (9.1) also sets the grader's class-name brand, `X[Symbol.for('xaravel.class.fqcn')]`,
 //   own and non-enumerable (ESC-4.3-1 item 1). A subclass inherits it for display only; `fqcn()` reads the Registry,
-//   never the brand.
+//   never the brand, save for one case: a `contract<T>()` token, a frozen non-function object carrying the key as an
+//   own, non-writable string data property, gives that string (ESC-10.1-3, Story 9.14). No token is registered, so
+//   `resolveClass` never resolves a token's name.
 // - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`
 //   with the name as given, a leading `\` kept (Story 9.13):
 //   the class registered as `Error` (Story 9.10, `php/Error.ts`), read from the base map so this file imports no
@@ -98,10 +100,18 @@ export function registerClass(fqcn: string, klass: RegisteredClass): void {
   byClass.set(klass, name);
 }
 
-/** The FQCN `classOrInstance`'s class was registered under; throws when that class is not registered. */
+/**
+ * The FQCN `classOrInstance`'s class was registered under; throws when that class is not registered. A contract token
+ * (`contract<T>()`: a frozen, non-function object whose own, non-writable `Symbol.for('xaravel.class.fqcn')` data
+ * property is a string) gives that string (ESC-10.1-3).
+ */
 export function fqcn(classOrInstance: object): string {
   if ((typeof classOrInstance !== "object" && typeof classOrInstance !== "function") || classOrInstance === null) {
     throw new TypeError("fqcn(): the value is not a class or an object");
+  }
+  const token = tokenFqcn(classOrInstance);
+  if (token !== null) {
+    return token;
   }
   const klass: unknown = typeof classOrInstance === "function" ? classOrInstance : Object.getPrototypeOf(classOrInstance)?.constructor;
   if (typeof klass === "function") {
@@ -117,6 +127,18 @@ export function fqcn(classOrInstance: object): string {
     throw new TypeError("fqcn(): the class is not registered; end its file with registerClass('<FQCN>', <Class>)");
   }
   return name;
+}
+
+/** A contract token's own FQCN key (ESC-10.1-3), else null: only a frozen non-function object's own, non-writable string data property counts. */
+function tokenFqcn(value: object): string | null {
+  if (typeof value !== "object" || !Object.isFrozen(value)) {
+    return null;
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(value, CLASS_FQCN);
+  if (descriptor === undefined || !("value" in descriptor) || descriptor.writable !== false || typeof descriptor.value !== "string") {
+    return null;
+  }
+  return descriptor.value;
 }
 
 /**
