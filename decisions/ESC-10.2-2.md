@@ -23,3 +23,11 @@ Option 1 is approved. Option 2, renaming the method under a new DIV-12 pair, is 
 
 - **The list half** is action item **`epic-10-item-4-async-surface`** (owner orchestrator), an approved Infrastructure change to `tools/async-surface/` with tests. It also carries ESC-10.2-6's tool half, if the tool checks a tag's reason.
 - **The contract half** (the overloads and its `async-surface.json` lines) is Story 10.2's.
+
+## Route amended (2026-10-23, after #351)
+
+The tool change and the `packages/contracts/async-surface.json` lines it produces must land in one change, or CI's `async-surface --all --check` fails on drift. A tools-only item cannot carry the package file, and Story 10.2's branch cannot carry `tools/`. So action item `epic-10-item-4-async-surface` now also names `packages/contracts`:
+- It goes on the retro-item route of the MAINT-2026-10-16 amendment of 2026-10-22, with its `--item` Fidelity Review.
+- Its only `packages/contracts` change is the regenerated `async-surface.json`.
+- The contract's `then` overloads stay Story 10.2's.
+- **An exception for this item only.** This ruling approves the `tools/async-surface/` change and its tests as part of the item. The amendment's "Outside the scope" rule does not apply to it, because the tool and its generated file cannot land apart. The Fidelity Review covers the item's `packages/contracts` change. The tool change gets the other review layers, and merges under the first amendment like any orchestrator Infrastructure change.
