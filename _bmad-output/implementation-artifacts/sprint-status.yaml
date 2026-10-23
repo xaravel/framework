@@ -1456,21 +1456,22 @@ action_items:
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-5-grader-runtime-protocols"
     epic: 9
-    action: "packages/assert and packages/mockery: freeze the exception parents once
-      linked; Mockery getDebugType reads the float marker; Mockery exception copies
-      coerce as AD-9 requires with and without the class map; one implementation of
-      assert formatDouble and encodeDouble; no assertion removed or weakened (findings
-      L9-L11, L13)"
+    action: "packages/assert, packages/mockery and packages/runtime: freeze the exception
+      parents once linked; Mockery getDebugType reads the float marker; Mockery exception
+      copies coerce as AD-9 requires with and without the class map; one implementation
+      of assert formatDouble and encodeDouble; runtime throwables port getFile, getLine,
+      getTrace, getTraceAsString and __toString under DIV-9.12, so the runtime and the
+      grader's copies take a throwable as a string argument as PHP does; ObjectComparator
+      compares a throwable's file, line and trace as PHP's (array) cast does; no assertion
+      removed or weakened (findings L9-L13; decisions/MAINT-2026-10-23-throwable-file-line-trace.md)"
     owner: "orchestrator"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-6-grader-float-and-error-equality"
     epic: 9
-    action: "Rule on two Story 9.11 grader gaps: (a) a generated float return or default
+    action: "Rule on a Story 9.11 grader gap: (a) a generated float return or default
       is the int 0 against AC4 (runtime publishes its float constructor for the grader,
-      or a DIV-9.4 clause); (b) Error equality through ObjectComparator ignores file/line/trace,
-      changing outcomes PHP fails (Oracle row and compare as PHP, or a divergence
-      clause) (findings S3, L12)"
+      or a DIV-9.4 clause) (finding S3; (b), finding L12, moved to item 5 by decisions/MAINT-2026-10-23-throwable-file-line-trace.md)"
     owner: "Maintainer"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
