@@ -1532,7 +1532,10 @@ action_items:
       parents closure and each one's builtins (Symbol.for('xaravel.contract.builtins');
       absent means none), each once, so a double of a child contract or of a contract
       with built-in PHP parents can configure every inherited method as a PHP mock
-      can; Xaravel Tests in each package; no assertion removed or weakened (decisions/ESC-10.2-4.md)"
+      can; built-ins are configured by their PHP names (getIterator drives the double's
+      iterator protocol, __toString its toString and toPrimitive); Xaravel Tests in each
+      package; no assertion removed or weakened (decisions/ESC-10.2-4.md, its 2026-10-23
+      clarification)"
     owner: "orchestrator"
     status: in-progress
     ref: "decisions/ESC-10.2-4.md"
