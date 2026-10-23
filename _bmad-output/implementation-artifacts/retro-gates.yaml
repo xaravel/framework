@@ -69,3 +69,17 @@ epic-9:
     - epic-9-retro-item-6-grader-float-and-error-equality
     - epic-9-retro-item-7-registry-per-application
     - epic-9-retro-item-5-grader-runtime-protocols
+epic-10:
+  # No retrospective yet; items 1-5 came from Maintainer rulings (ESC-10.1-4, ESC-10.1-6, ESC-10.2-1, -2, -4, -6).
+  # epic-10-item-4-async-surface: its outcome ("send, through and via get thenable lines") changes
+  # packages/contracts/async-surface.json, because Pipeline.send/through/via already exist on main. The item names no
+  # packages/<c>, so a planning/retro-10-* branch may not carry that file (planning scope, MAINT 2026-10-22), and
+  # without it CI's `async-surface --all --check` fails on drift. ESC-10.2-2 gives the lines to Story 10.2, whose
+  # branch may not change tools/. Spec: _bmad-output/implementation-artifacts/spec-retro-10-async-surface.md.
+  verdict: null
+  attempts: 0
+  doc: null
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-10-item-4-async-surface

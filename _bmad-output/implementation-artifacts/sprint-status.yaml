@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-23-2026 15:25
+last_updated: 10-23-2026 15:34
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1521,7 +1521,7 @@ action_items:
       accept @asyncRoot callback on a contract method whose implementations are DIV-1
       async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md, decisions/ESC-10.2-6.md)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/ESC-10.2-2.md"
   - id: "epic-10-item-5-double-inherited-methods"
     epic: 10
