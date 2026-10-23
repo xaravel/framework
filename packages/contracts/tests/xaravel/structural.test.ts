@@ -4,7 +4,7 @@
 // object to `Support\Responsable::toResponse`, and fails with TS2345 when the class lacks a structural member or an
 // async function is passed as a sync-only (`SyncClosure`) callback. Every concrete class the Upstream contract files
 // name maps to a `src/structural/` type, which the port imports where the class is in a signature.
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -197,9 +197,15 @@ xaravelTest(
     Assert.assertSame(JSON.stringify({ "@xaravel/runtime": "workspace:*" }), JSON.stringify(manifest.dependencies ?? null));
 
     // Every concrete class an Upstream contract file names is a structural type (or a PHP built-in's Xaravel form),
-    // and the contract file imports it when the class is in a signature.
+    // and the contract file imports it when the class is in a signature. The Upstream snapshot is gitignored and synced
+    // by `bun run upstream:sync`; CI's `check` job does not sync it, so there this part warns and is left to local runs
+    // (`bun run harness`, `story:check`), as scans.test.ts's XT-conformance-248 does.
     const structural = structuralFiles();
-    for (const ns of NAMESPACES) {
+    const upstreamSynced = existsSync(join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts"));
+    if (!upstreamSynced) {
+      console.warn("structural.test.ts: conformance/upstream is not synced; the Upstream concrete-class check is skipped");
+    }
+    for (const ns of upstreamSynced ? NAMESPACES : []) {
       const dir = join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts", ns);
       for (const entry of readdirSync(dir).filter((name) => name.endsWith(".php"))) {
         const source = readFileSync(join(dir, entry), "utf8");
