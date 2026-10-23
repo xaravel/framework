@@ -82,7 +82,7 @@ say "rc=$rc model=$MODEL outcome=${outcome:-none} log=$log"
 
 case "$outcome" in
   progress) sleep 60 ;;
-  idle)     sleep 1800 ;;
+  idle)     sleep 60 ;;    # the Maintainer may unblock it at any time (2026-10-23)
   stop)     touch "$STATE/STOP"; exit 0 ;;
   *)
     if wait="$(limit_wait "$log")"; then
