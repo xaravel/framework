@@ -135,6 +135,7 @@ xaravelTest(
     });
     Assert.assertSame(valueOf(output, 3), fqcn(Post));
     Assert.assertSame(valueOf(output, 3), fqcn(new Post()));
+    Assert.assertSame(valueOf(output, 3), fqcn(new (resolveClass("\\app\\models\\post") as new () => object)()));
 
     // Registering the same class under the same FQCN again is a no-op, a leading `\` included.
     registerClass("\\App\\Models\\Post", Post);
@@ -166,6 +167,7 @@ xaravelTest(
     Assert.assertInstanceOf(PhpError, miss);
     Assert.assertSame("Error", fqcn(miss as object));
     Assert.assertSame('Class "App\\Missing" not found', (miss as Error).message);
+    Assert.assertSame('Class "\\App\\Missing" not found', (thrownBy(() => resolveClass("\\App\\Missing")) as Error).message);
     // The Oracle: PHP's `new $n` for each name; a leading `\` stays in PHP's message.
     const output = oracle("XT-runtime-13");
     const names = ["App\\Missing", "\\App\\Missing"];
