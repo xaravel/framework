@@ -30,7 +30,10 @@ null)` adds `getSeverity()`, which defaults to PHP's `E_ERROR` (1).
 - `getMessage()` returns the message, and `getCode()` returns the code.
 - `getPrevious()` returns the previous throwable, or `null`. A non-null `previous` is also the JS `cause`.
 - `code` is an own, writable, non-enumerable property. An int code is a `number` or, beyond ±(2^53 − 1), a `bigint`
-  in the int64 range (AD-9.3). On an object built without the constructor (as `phpUnserialize` builds one),
+  in the int64 range (AD-9.3). A `bigint` outside int64 is no PHP int: an argument holding one is read as the float
+  PHP makes of that integer literal. `new Exception("a", 2n ** 70n)` throws
+  `Exception::__construct(): Argument #2 ($code) must be of type int, float given`, and `new Exception(2n ** 70n)`
+  has the message `1.1805916207174E+21`. On an object built without the constructor (as `phpUnserialize` builds one),
   `getCode()` is `0`, `getPrevious()` is `null` and `getSeverity()` is `1`.
 - `name` is the class's FQCN brand, so a registered subclass shows its FQCN in a JS stack: a `ScopeFrameException`
   prints as `Xaravel\Runtime\Scope\ScopeFrameException: …`. An unregistered subclass inherits its parent's brand, so

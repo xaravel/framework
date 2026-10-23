@@ -1,10 +1,12 @@
 // `interleave(units)`: the dev-only helper every concurrency test uses (AD-5, NFR-4).
 //
 // Every unit starts synchronously, in array order, each in its own fresh root `unit` frame, which sees no enclosing
-// frame's slots but runs for the enclosing frame's Application (AD-5.3), read once before the units start. Started in
+// frame's slots but runs for the enclosing frame's Application (AD-5.3), read once before the units start. Opened under
+// a `test` unit, each unit's origin is that test unit: the test's overlays, statics and test classes stay readable in
+// the unit, while the unit's writes stay in it (Epic 9 retro, L1). Started in
 // one tick, units that await settled promises resume in FIFO microtask order, so the units take turns at every `await`
 // (a, b, a, b, …) in the same order on every run. Each unit ends after its defer list.
-import { currentFrame, runInRootFrame } from "./scope";
+import { currentFrame, runInInterleaveUnit } from "./scope";
 
 /**
  * Runs `units` concurrently, each in its own root `unit` frame, and resolves with their results in order; rejects with
@@ -27,7 +29,7 @@ export async function interleave<T>(units: ReadonlyArray<() => Promise<T>>): Pro
   }
   const app = currentFrame()?.app ?? null;
   for (const unit of units) {
-    started.push(runInRootFrame("unit", () => startUnit(unit), app));
+    started.push(runInInterleaveUnit(() => startUnit(unit), app));
   }
   // Every unit settles before interleave does, so no sibling of a failed unit keeps running past it.
   const settled = await Promise.allSettled(started);
