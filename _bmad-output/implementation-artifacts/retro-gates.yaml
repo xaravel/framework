@@ -66,7 +66,6 @@ epic-9:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer:
-    - epic-9-item-1-consequence-rows
     - epic-9-retro-item-2-retro-code-route
     - epic-9-retro-item-3-scope-registry-gaps
     - epic-9-retro-item-4-json-encode-value-model

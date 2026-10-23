@@ -18,7 +18,7 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs, runHarness, type HarnessResult } from "../../harness/harness";
 import { judgeXaravel, xaravelTestFiles } from "../../harness/xaravel";
 import { coverage, runCoverage } from "../../../tools/xt-coverage/coverage";
-import { CONSEQUENCE_SOURCES, consequencesFor, declaredConsequences, expectedFiles, PRD_FILE, readConsequences, SPINE_FILE } from "../../../tools/xt-coverage/consequences";
+import { CONSEQUENCE_SOURCES, consequencesFor, declaredConsequences, expectedFiles, PRD_FILE, prdConsequences, readConsequences, SPINE_FILE, spineRules } from "../../../tools/xt-coverage/consequences";
 import { apiSurfaceClause, approvalsClause, CLAUSES, fixturesClause, fullRunClause, lastSummary, MAX_ITEMS, renderClause, repoFromRemote, runApiSurfaceGate, runStoryCheck, testsClause, xaravelClause, type FixturesInput, type GateRun } from "../../../tools/story-check/story-check";
 import { EPICS, parseManifest } from "../../../tools/ownership/ownership";
 import { appendRecords, CHECKLIST_FILE, parseChecklist, RECORD_KIND, renderRecord, reviewTree, type Cli, type VerdictRecord } from "../../../tools/fidelity-review/fidelity-review";
@@ -73,9 +73,25 @@ xaravelTest(
     expect(scripts["xt:coverage"]).toBe("bun --no-env-file tools/xt-coverage/coverage.ts");
     const check = Bun.spawnSync([process.execPath, join(root, "tools", "xt-coverage", "consequences.ts"), "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" });
     expect([check.exitCode, check.stderr.toString()]).toEqual([0, ""]);
-    expect([...expectedFiles(root).keys()]).toEqual(["conformance/xaravel-consequences/conformance.jsonl", "conformance/xaravel-consequences/runtime.jsonl"]);
+    expect([...expectedFiles(root).keys()]).toEqual(["conformance/xaravel-consequences/conformance.jsonl", "conformance/xaravel-consequences/runtime.jsonl", "conformance/xaravel-consequences/contracts.jsonl"]);
     expect(CONSEQUENCE_SOURCES["conformance"]).toEqual({ frs: [1, 2, 3, 4, 5, 6, 7, 8, 9, 111, 112, 113, 114, 115, 116], ads: [15, 16, 17, 21, 28] });
     expect(CONSEQUENCE_SOURCES["runtime"]).toEqual({ frs: [], ads: [2, 5, 6, 9, 10, 23] });
+    // MAINT-2026-10-22-consequence-rows: from contracts on, a row is what the Component's Epic declares on its Covers
+    // line, ADs with a Rule list and FRs with a consequence list, plus AD-2 and AD-6. Derived from epics.md, not copied.
+    const epics = readFileSync(join(root, "_bmad-output", "planning-artifacts", "epics.md"), "utf8");
+    const covers = /^## Epic 10:[\s\S]*?^\*\*Covers:\*\*(.*)$/m.exec(epics)![1]!;
+    const numbers = (kind: string): number[] => [...covers.matchAll(new RegExp(`\\b${kind}-(\\d+)\\b`, "g"))].map((match) => Number(match[1]));
+    const withLists = { frs: prdConsequences(readFileSync(join(root, PRD_FILE), "utf8")), ads: spineRules(readFileSync(join(root, SPINE_FILE), "utf8")) };
+    const declared = {
+      frs: numbers("FR").filter((n) => withLists.frs.has(n)).sort((a, b) => a - b),
+      ads: [...new Set([...numbers("AD"), 2, 6])].filter((n) => withLists.ads.has(n)).sort((a, b) => a - b),
+    };
+    expect(CONSEQUENCE_SOURCES["contracts"]).toEqual(declared);
+    expect(declared).toEqual({ frs: [10, 19, 21], ads: [1, 2, 6, 27] });
+    const contractIds = readConsequences(root, "contracts").map((line) => line.id);
+    for (const front of ["FR-10", "FR-19", "FR-21", "AD-1", "AD-2", "AD-6", "AD-27"]) {
+      expect([front, contractIds.includes(`${front}.1`)]).toEqual([front, true]);
+    }
 
     // The IDs are mechanical: unique, every FR (by n, then k) before every AD (by n, then k), and each FR / AD present.
     const lines = readConsequences(root, "conformance");
