@@ -4,7 +4,7 @@ type: 'bugfix'
 created: '2026-10-22'
 baseline_revision: '1291ff3104a3e0b9d792d02adaee09cc556e6f41'
 action_item: 'epic-9-retro-item-4-json-encode-value-model'
-status: 'in-review'
+status: 'blocked'
 review_loop_iteration: 4
 followup_review_recommended: false
 context:
@@ -87,6 +87,8 @@ deferred:
 - Given the change, when `bun run harness`, `bun run typecheck` and `bun run lint` run, then the harness reports no difference and both others exit 0.
 
 ## Spec Change Log
+
+- 2026-10-23: Fidelity Review re-run at tree `e9bfb33` (after #334): both reviewers rejected on F-7 again because XT-runtime-22's request and fixture (275,927 characters) were omitted for size. The review range from `baseline_revision` (`1291ff3`) also holds the runtime changes other PRs merged since (item 3, #327; Story 10.1), and their touched tests fill section (e) with about 200K characters. A dry run with fake reviewer CLIs in a throwaway worktree showed that with `--base` at the merge-base (`489ce125`, `origin/main`), the diff is only this item's seven files and the request and fixture are shown in full (prompt 590,964 characters). Status set to `blocked` until the tree changes (see Auto Run Result).
 
 - 2026-10-23: status `blocked` → `in-review`. The blocking condition (Fidelity Review item mode showed no Oracle request or fixture for XT-runtime-22) was fixed on `main` by #328 (`planning/item-mode-evidence`), which this branch merges. No intent change; the review resumes at the Fidelity Review layer on the changed tree.
 
@@ -471,6 +473,20 @@ Findings of the latest reject, addressed (ESC-8.8-1):
 ```
 
 ## Auto Run Result
+
+Status: blocked (2026-10-23, resumable without the Maintainer)
+Blocking condition: standing reject at tree `e9bfb3335c31256265d990652d61679e8b708e21` (ESC-8.8-1). Both reviewers rejected on F-7 because XT-runtime-22's request and fixture output were omitted for size. #334 added that evidence to the tool, but with the base at `baseline_revision` the prompt has no room for it: the range also holds other PRs' `packages/runtime` changes. With `--base` at the merge-base with `origin/main`, it fits and is shown in full (dry run, fake CLIs, throwaway worktree). The standing-reject rule forbids a re-run on the same tree, and no honest change to this item's code or tests is left to make, so the re-run waits until merging `origin/main` changes the reviewed tree.
+
+**Resume:**
+1. Merge `origin/main`. Continue only if the reviewed tree differs from `e9bfb33`.
+2. Run `XARAVEL_FIDELITY_CLAUDE_MODEL=<model> bun run fidelity:review review --item epic-9-retro-item-4-json-encode-value-model --spec <this spec> --loop-cli claude --base $(git merge-base HEAD origin/main)`. With that base the review covers only this item's own change (the ESC-9.10-4 principle). The changes merged from `main` were reviewed in their own PRs.
+3. The item merges only when `status --item` prints `current`.
+
+Verification at tree `e9bfb33` (this pass's patches included):
+- `bun run harness`: `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Xaravel Tests: 338, 333 passed, 0 failed, 5 skipped.
+- `bun run typecheck` and `bun run lint`: exit 0.
+- The new depth rows were checked against PHP 8.5.11.
+
 
 Status: blocked
 Blocking condition: Fidelity Review evidence gap with no route for an action item. Reviewer 1 (codex) rejected trees 72491f1, a9edbd3 and 9b09af3 on F-7: it asks for XT-runtime-22's request (`setup`, `exprs`) from `conformance/oracle-requests/9.6.jsonl` and its verified fixture. Both exist in the repository, but `tools/fidelity-review/fidelity-review.ts` shows neither for an `--item` review: evidence (c) lists only requests a Story manifest assigns, and (h) follows imports, not `readRequests(join(REPO, REQUESTS))`. Reviewer 2 passed tree 9b09af3 once the test asserted the operand coverage itself. Reviewer 1 still asks for the request and the fixture. The 2026-10-21 amendment lets the orchestrator widen evidence only through a Story's Escalation (`planning/esc-<id>`). An action item has no Story id, and `escalations:check` accepts only manifest Test IDs, so the orchestrator has no route to fix the gap. Maintainer decision needed: extend the amendment to action items (show the Oracle requests and fixtures a touched Xaravel Test reads), or rule another route.
