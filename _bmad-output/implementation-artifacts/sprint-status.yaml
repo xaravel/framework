@@ -1515,12 +1515,11 @@ action_items:
     ref: "decisions/ESC-10.2-1.md"
   - id: "epic-10-item-4-async-surface"
     epic: 10
-    action: "tools/async-surface: Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\
-      Pipeline\\Pipeline join the thenable type list, so send, through and via get
-      thenable lines and lint treats a Pipeline as a thenable (ESC-10.2-2); if the
-      tool checks a tag's reason, accept @asyncRoot callback on a contract method
-      whose implementations are DIV-1 async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md,
-      decisions/ESC-10.2-6.md)"
+    action: "tools/async-surface: Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\Pipeline\\Pipeline
+      join the thenable type list, so send, through and via get thenable lines and lint
+      treats a Pipeline as a thenable (ESC-10.2-2); if the tool checks a tag's reason,
+      accept @asyncRoot callback on a contract method whose implementations are DIV-1
+      async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md, decisions/ESC-10.2-6.md)"
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-10.2-2.md"
