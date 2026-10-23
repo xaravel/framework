@@ -10,6 +10,14 @@
 //   brand getter `get [Symbol.for('<FQCN>')]() { return true }`, and its methods
 //   are the names at `token[Symbol.for('xaravel.contract.methods')]` (a bare
 //   symbol carries none; ESC-4.7-1 item 5).
+//   A token's parents (ESC-10.1-6): the contracts at
+//   `token[Symbol.for('xaravel.contract.parents')]` (a token object or a bare
+//   symbol each; absent or `null` is none) and their parents in turn, walked
+//   depth-first, each contract once, cycle-safe. The double class also
+//   carries each parent's brand getter, so a double of a child contract is
+//   `instanceof` every contract it extends, as a PHP mock of a child
+//   interface is. Only brands are added: the doubled methods stay the
+//   target token's own list.
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
@@ -57,6 +65,7 @@ import { InvocationOrder } from "../Runtime/Rule/InvocationOrder";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
+const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
 /** The double's InvocationHandler, on the instance. */
 const HANDLER = Symbol("PHPUnit\\Framework\\MockObject\\InvocationHandler");
 /** The double's configuration, on the double class's prototype. */
@@ -83,6 +92,57 @@ export interface TargetType {
   readonly methods: ReadonlyMap<string, ConfigurableMethod>;
   /** The brand getter a token's `Symbol.hasInstance` reads, or null for a class. */
   readonly brand: symbol | null;
+  /** The brands of every contract a token extends, own brand excluded; empty for a class and a bare symbol. */
+  readonly parentBrands: readonly symbol[];
+}
+
+function isContractToken(value: unknown): value is object {
+  return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
+}
+
+/**
+ * The brands of the contracts `token` extends: its `Symbol.for('xaravel.contract.parents')` and theirs in turn,
+ * depth-first, each contract once (a cycle back to `token` adds nothing). Throws a TypeError for a parents value
+ * that is not an iterable of contract tokens.
+ */
+function parentBrandsOf(token: object, ownBrand: symbol): symbol[] {
+  const brands: symbol[] = [];
+  const visited = new Set<unknown>([token, ownBrand]);
+  const walk = (contract: object, name: string): void => {
+    const parents: unknown = (contract as Record<symbol, unknown>)[CONTRACT_PARENTS];
+    if (parents === undefined || parents === null) {
+      return;
+    }
+    if (typeof (parents as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
+      throw new TypeError(`${name}: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens`);
+    }
+    for (const parent of parents as Iterable<unknown>) {
+      if (typeof parent === "symbol") {
+        if (!visited.has(parent)) {
+          visited.add(parent);
+          if (!brands.includes(parent) && parent !== ownBrand) {
+            brands.push(parent);
+          }
+        }
+        continue;
+      }
+      if (!isContractToken(parent)) {
+        throw new TypeError(`${name}: [Symbol.for('xaravel.contract.parents')] must hold contract tokens, got ${parent === null ? "null" : typeof parent}`);
+      }
+      if (visited.has(parent)) {
+        continue;
+      }
+      visited.add(parent);
+      const parentName = classNameOfClass(parent);
+      const brand = Symbol.for(parentName);
+      if (brand !== ownBrand && !brands.includes(brand)) {
+        brands.push(brand);
+      }
+      walk(parent, parentName);
+    }
+  };
+  walk(token, classNameOfClass(token));
+  return brands;
 }
 
 function isNative(fn: unknown): boolean {
@@ -231,12 +291,12 @@ export function readTarget(type: unknown): TargetType {
         methods.set(key, configurable(key, descriptor.value as (...args: never[]) => unknown, declaring));
       }
     }
-    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null };
+    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null, parentBrands: [] };
   }
   if (typeof type === "symbol") {
-    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type };
+    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type, parentBrands: [] };
   }
-  if (typeof type === "object" && type !== null && typeof (type as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
+  if (isContractToken(type)) {
     const name = classNameOfClass(type);
     const methods = new Map<string, ConfigurableMethod>();
     const declaring: DeclaringClass = { name, type, parentName: null, parentType: null };
@@ -252,7 +312,8 @@ export function readTarget(type: unknown): TargetType {
         methods.set(method, new ConfigurableMethod(method, 0, [], declaring));
       }
     }
-    return { name, parent: null, methods, brand: Symbol.for(name) };
+    const brand = Symbol.for(name);
+    return { name, parent: null, methods, brand, parentBrands: parentBrandsOf(type, brand) };
   }
   throw new TypeError(`PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got ${type === null ? "null" : typeof type}`);
 }
@@ -451,6 +512,9 @@ export function testDouble(
   Object.defineProperty(prototype, DOUBLE, { value: configuration });
   if (target.brand !== null) {
     Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: false });
+  }
+  for (const brand of target.parentBrands) {
+    Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: false });
   }
   for (const method of doubled) {
     Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, type, method), writable: true, enumerable: false, configurable: true });

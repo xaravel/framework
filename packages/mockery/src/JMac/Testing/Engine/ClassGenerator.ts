@@ -2,8 +2,9 @@
 //
 // A class target gets `class extends Target`; a token (an interface) or an intersection of tokens a fresh class
 // that carries each token's brand `Symbol.for('<FQCN>')` (as a getter, so an AD-1 token's `Symbol.hasInstance`
-// holds). Its name is `JMac\Testing\Engine\Generated\<Short>_<n>`, with the process-wide counter of
-// ClassGenerator.php, and one generated class serves every double of the same targets (cached, as PHP's).
+// holds), and the brand of every contract each token extends (`DoubleTarget.parentBrands`, ESC-10.1-6). Its name is
+// `JMac\Testing\Engine\Generated\<Short>_<n>`, with the process-wide counter of ClassGenerator.php, and one generated
+// class serves every double of the same targets (cached, as PHP's).
 //
 // Every instance method of the targets, other than a `__*` magic method outside DOUBLEABLE_MAGIC_METHODS, is
 // overridden on the generated prototype by a method that calls `ProxyBehavior.intercept` with the arguments
@@ -131,6 +132,9 @@ export class ClassGenerator {
       }
       if (target.brand !== null) {
         Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: true });
+      }
+      for (const brand of target.parentBrands) {
+        Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: true });
       }
     }
     const control = collisions.length === 0;

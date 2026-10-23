@@ -10,6 +10,13 @@
 //   `xaravel.*` protocol keys; a token with neither throws InvalidDoubleTargetException). Its methods are the names at
 //   `token[Symbol.for('xaravel.contract.methods')]`; a bare symbol carries no list, so any method name is
 //   configurable on it, as on a Mockery token mock. A token is an interface: it has no method bodies.
+//   A token's parents (ESC-10.1-6): the contracts at `token[Symbol.for('xaravel.contract.parents')]` (each a token
+//   object or a bare symbol; absent or `null` is none) and their parents in turn, walked depth-first, each contract
+//   once, cycle-safe. Each parent's brand is read by the same rule as a target's own (a bare symbol is its own
+//   brand), and the generated class carries them all (`parentBrands`), so a double of a child contract is
+//   `instanceof` every contract it extends, as a PHP mock of a child interface is. Only brands are added: the
+//   doubled methods stay the token's own list. The parents are read once, when the target is first read (a token's
+//   parents are fixed, as contract() freezes them).
 //
 // Parameter names are read from a method's source (`a`, `a = 1` and `...rest` name `$a` and `$rest`; a destructured
 // parameter is named by its position), as @xaravel/assert's test doubles read them (ESC-4.7-1 item 2). A token's
@@ -28,6 +35,7 @@ export interface ContractToken {
 export type TargetInput = AnyClass | symbol | ContractToken;
 
 const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
+const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
 const STATIC_SKIP: ReadonlySet<string> = new Set(["length", "name", "prototype", "caller", "arguments"]);
 const IDENTIFIER = /^[A-Za-z_$][\w$]*/;
 /** ClassGenerator's reserved verbs: never a method of a bare symbol token. */
@@ -36,6 +44,58 @@ const RESERVED: ReadonlySet<string> = new Set(["instance", "expects", "allows", 
 /** A contract token object (not a class, not a symbol). */
 export function isContractToken(value: unknown): value is ContractToken {
   return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
+}
+
+/** A token object's FQCN: its own `Symbol.for('xaravel.class.fqcn')`, else its registered brand's key. */
+function tokenName(token: ContractToken): string {
+  const fqcn: unknown = (token as unknown as Record<symbol, unknown>)[FQCN];
+  const brand = Object.getOwnPropertySymbols(token).find((key) => {
+    const registered = Symbol.keyFor(key);
+    return registered !== undefined && registered !== "" && !registered.startsWith("xaravel.");
+  });
+  const name = typeof fqcn === "string" && fqcn !== "" ? fqcn : (brand?.description ?? "");
+  if (name === "") {
+    throw new InvalidDoubleTargetException("(contract token)", "it carries no FQCN: neither Symbol.for('xaravel.class.fqcn') nor a brand Symbol.for('<FQCN>')");
+  }
+  return name;
+}
+
+/**
+ * The brands of the contracts `token` extends: its `Symbol.for('xaravel.contract.parents')` and theirs in turn,
+ * depth-first, each contract once (a cycle back to `token` adds nothing). Throws a TypeError for a parents value
+ * that is not an iterable of contract tokens.
+ */
+function parentBrandsOf(token: ContractToken, name: string, ownBrand: symbol): symbol[] {
+  const brands: symbol[] = [];
+  const visited = new Set<unknown>([token, ownBrand]);
+  const walk = (contract: ContractToken, contractName: string): void => {
+    const parents: unknown = (contract as unknown as Record<symbol, unknown>)[CONTRACT_PARENTS];
+    if (parents === undefined || parents === null) {
+      return;
+    }
+    if (typeof (parents as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
+      throw new TypeError(`${contractName}: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens`);
+    }
+    for (const parent of parents as Iterable<unknown>) {
+      if (typeof parent !== "symbol" && !isContractToken(parent)) {
+        throw new TypeError(`${contractName}: [Symbol.for('xaravel.contract.parents')] must hold contract tokens, got ${parent === null ? "null" : typeof parent}`);
+      }
+      if (visited.has(parent)) {
+        continue;
+      }
+      visited.add(parent);
+      const parentName = typeof parent === "symbol" ? null : tokenName(parent);
+      const brand = parentName === null ? (parent as symbol) : Symbol.for(parentName);
+      if (brand !== ownBrand && !brands.includes(brand)) {
+        brands.push(brand);
+      }
+      if (parentName !== null) {
+        walk(parent as ContractToken, parentName);
+      }
+    }
+  };
+  walk(token, name);
+  return brands;
 }
 
 /** The source of `list` split on its top-level commas (brackets, strings, template literals and comments skipped). */
@@ -106,14 +166,17 @@ export class DoubleTarget {
   readonly ctor: AnyClass | null;
   /** The token's brand `Symbol.for('<FQCN>')`, or null for a class. */
   readonly brand: symbol | null;
+  /** The brands of every contract a token extends, own brand excluded; empty for a class and a bare symbol. */
+  readonly parentBrands: readonly symbol[];
   readonly #token: ContractToken | null;
   /** A token's method names, or null for a bare symbol (any name). */
   readonly #tokenMethods: readonly string[] | null;
 
-  private constructor(name: string, ctor: AnyClass | null, brand: symbol | null, token: ContractToken | null, tokenMethods: readonly string[] | null) {
+  private constructor(name: string, ctor: AnyClass | null, brand: symbol | null, token: ContractToken | null, tokenMethods: readonly string[] | null, parentBrands: readonly symbol[] = []) {
     this.name = name;
     this.ctor = ctor;
     this.brand = brand;
+    this.parentBrands = Object.freeze([...parentBrands]);
     this.#token = token;
     this.#tokenMethods = tokenMethods;
   }
@@ -130,15 +193,7 @@ export class DoubleTarget {
     } else if (typeof input === "symbol") {
       target = new DoubleTarget(input.description ?? "", null, input, null, null);
     } else if (isContractToken(input)) {
-      const fqcn: unknown = (input as unknown as Record<symbol, unknown>)[FQCN];
-      const brand = Object.getOwnPropertySymbols(input).find((key) => {
-        const registered = Symbol.keyFor(key);
-        return registered !== undefined && registered !== "" && !registered.startsWith("xaravel.");
-      });
-      const name = typeof fqcn === "string" && fqcn !== "" ? fqcn : (brand?.description ?? "");
-      if (name === "") {
-        throw new InvalidDoubleTargetException("(contract token)", "it carries no FQCN: neither Symbol.for('xaravel.class.fqcn') nor a brand Symbol.for('<FQCN>')");
-      }
+      const name = tokenName(input);
       const declared: unknown = (input as unknown as Record<symbol, unknown>)[CONTRACT_METHODS];
       const methods: string[] = [];
       if (declared !== undefined && declared !== null) {
@@ -152,7 +207,8 @@ export class DoubleTarget {
           methods.push(method);
         }
       }
-      target = new DoubleTarget(name, null, Symbol.for(name), input, methods);
+      const brand = Symbol.for(name);
+      target = new DoubleTarget(name, null, brand, input, methods, parentBrandsOf(input, name, brand));
     }
     if (target !== null) {
       if (typeof input === "symbol") {
