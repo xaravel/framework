@@ -1046,17 +1046,23 @@ xaravelTest(
       Assert.assertSame("[1]", jsonEncode([1], 0, 4294967297));
       Assert.assertSame(false, jsonEncode([[1]], 0, 4294967297));
       Assert.assertSame(1, jsonLastError());
-      // -2^63 is the int64 minimum, which wraps to 0; so does the largest double below 2^63.
+      // -2^63 is the int64 minimum, which wraps to 0; the largest double below 2^63 wraps to -1024. Below 1, every
+      // array is too deep and a scalar still encodes (PHP 8.5.11: `json_encode([1], 0, -1)` is false, `json_encode(1, 0, 0)` is "1").
       jsonDecode("[");
       Assert.assertSame(false, jsonEncode([1], 0, -(2 ** 63)));
       Assert.assertSame(1, jsonLastError());
       jsonDecode("[");
       Assert.assertSame(false, jsonEncode([1], 0, 9223372036854774784));
       Assert.assertSame(1, jsonLastError());
+      Assert.assertSame(false, jsonEncode([1], 0, -1));
+      Assert.assertSame(false, jsonEncode([], 0, 0));
+      Assert.assertSame("1", jsonEncode(1, 0, 0));
+      Assert.assertSame("1", jsonEncode(1, 0, -1));
       // A fractional depth truncates toward zero (PHP's deprecation notice is not reproduced).
       Assert.assertSame("[1]", jsonEncode([1], 0, 2.5));
       Assert.assertSame("[[1]]", jsonEncode([[1]], 0, 2.5));
       Assert.assertSame(false, jsonEncode([1], 0, 0.9));
+      Assert.assertSame(false, jsonEncode([1], 0, -0.5));
       // A non-finite or out-of-int64 depth is Z_PARAM_LONG's TypeError, json_last_error() left as it was.
       jsonDecode("[");
       for (const depth of [NaN, Infinity, -Infinity, 2 ** 63, 1e19, -9.3e18]) {

@@ -124,6 +124,29 @@ deferred:
   - `[medium]` `[patch]` (fidelity-review, reviewer 1 F-7) XT-runtime-22's request and fixture are still not in the prompt, so the declared operand coverage in both passes is unverified — patched in the test, as reviewer 2 allows ("or otherwise show in the test"): each pass now asserts `$w` has the request's 73 operands and holds null, true, false, int 0, PHP_INT_MAX, the numeric, leading-whitespace and other strings (`"1e3"`, `"INF"`, `"NAN"` among them), an empty Array, a PhpArray, a plain-object array and the 4 closing objects, and that 1.5, -1.5, -0.0, INF, -INF and NAN are plain numbers in the plain pass and marked floats in the marked pass. Operands read from `conformance/oracle-requests/9.6.jsonl`'s setup.
   - `[medium]` `[patch]` (fidelity-review, reviewer 2 F-7) The same finding (P-1 not fixed) — same patch.
 
+### 2026-10-23 — Review pass (resumed after #328, tree dbffa37)
+- verdicts: 19 findings — high 0, medium 2, low 9, false 6, maybe-false 0 (2 of the false are carried)
+- findings:
+  - `[low]` `[patch]` (blind, edge-case) The docs and header say a plain object's integer-like keys come out in ascending order, but `Object.keys` sorts only array-index keys (0 to 2^32-2); `{"-1":"a","0":"b"}` gives `{"0":"b","-1":"a"}` — patched: header and `docs/codecs.md` say exactly which keys move, with that example.
+  - `[low]` `[reject]` (blind) No test pins the documented ordering limit — asserting a non-PHP order in an XT would pin a difference from PHP; the limit is `arrayEntries`' (carried from the 2026-10-22 key-order row) and is documented.
+  - `[low]` `[patch]` (blind) The header says "a value is classified as `phpType` classifies it", but primitives keep their own `typeof` cases — patched: "an object is classified…".
+  - `[low]` `[patch]` (blind) XT-runtime-15's comment still says the classmap is written with default flags — patched: it names the classmap's `JSON_FORCE_OBJECT`.
+  - `[low]` `[patch]` (blind) `codecs.md` puts `stdClass` and `JSON_FORCE_OBJECT` side by side, though the flag turns lists into objects too — patched: `stdClass` for one `{}`, and the flag's reach is stated.
+  - `[false]` `[reject]` (blind) Nothing guards the classmap encoder's "values are strings" assumption — `writeClassmap` builds the classmap from registered FQCN to module path strings, and XT-runtime-15 round-trips a non-empty one; nothing writes a non-string value.
+  - `[false]` `[reject]` (blind) `parseDepth` rejects a bigint or `PhpFloat` depth — carried: the 2026-10-22 row; the signature is `depth: number`, so tsc refuses those.
+  - `[false]` `[reject]` (blind) The divergences cite no DIV — the missing deprecation notice is the runtime's standing "notices are never reproduced" rule (`casts.ts`), and the key order is `arrayEntries`' pre-existing limit under AD-9.2; neither is new to this change.
+  - `[low]` `[reject]` (blind) XT-runtime-27's new fresh-process row checks only the output and message — a broken registration would fail the existing registration rows of the same test; adding `fqcn` checks in the child is extra code for a case not shown reachable.
+  - `[low]` `[reject]` (blind) XT-runtime-22 hard-codes 73 operands — deliberate: the count pins the signed fixture the reviewers asked about, and a fixture change re-signs and is reviewed with the test.
+  - `[low]` `[patch]` (blind) Depth rows missing for `-1`, `-0.5` and a scalar at depth 0 or -1 — patched: four rows plus `-0.5`, each checked against PHP 8.5.11 (`json_encode([1],0,-1)` false, `json_encode(1,0,0)` and `(1,0,-1)` `"1"`, `json_encode([],0,0)` false).
+  - `[false]` `[reject]` (blind) "The review tool failed" — the exit 1 is the Fidelity Review's reject, triaged below.
+  - `[low]` `[patch]` (verification-gap) The comment says the largest double below 2^63 wraps to 0; it wraps to -1024 — patched; the assertion was already right.
+  - `[low]` `[patch]` (edge-case) Same claim as the first row (key order of negative and large keys) — same patch.
+  - `[false]` `[reject]` (intent) An empty plain object now encodes as `[]`, beyond the intent — carried: PHP-correct (AD-9.2), recorded in Design Notes.
+  - `[false]` `[reject]` (intent) L8 is checked only at the 9.6 helpers, not through `jsonEncode` — the retro defines L8 as a test gap in the 9.6 truth table (`semantics.test.ts`), which is what the plain pass covers.
+  - `[low]` `[reject]` (intent) `decodePlain` repeats `phpType`'s int/float rule — carried: `phpType` is not on the public surface the test reads.
+  - `[medium]` `[patch]` (fidelity-review, reviewer 1 F-7) XT-runtime-22's request and fixture output are still not in the prompt; evidence (c) only names the fixture as present — an evidence gap in the tool, fixed on `planning/retro-9-evidence-oracle-fixtures` (#334) under the 2026-10-22 amendment's "Missing evidence" bullet: evidence (c) now shows each touched Xaravel Test's request line and fixture output in full. The tool change changes the reviewed tree; the layer re-runs after #334 merges.
+  - `[medium]` `[patch]` (fidelity-review, reviewer 2 F-7) The same finding — same fix.
+
 ## Design Notes
 
 The list rule has one consequence beyond the matrix: an empty plain object is an empty PHP array, so it encodes as PHP's `[]` (PHP 8.5.11: `json_encode(['a' => [1], 'b' => []])` is `{"a":[1],"b":[]}`). Two files outside the Code Map follow from it, both in `packages/runtime`:

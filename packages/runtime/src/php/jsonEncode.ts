@@ -7,12 +7,13 @@
 // - Strings: PHP's escapes (`\/`, `\"`, `\\`, the short escapes, `\u00xx` for other control characters, lower-case
 //   `\uXXXX` with surrogate pairs for non-ASCII), the `JSON_HEX_*`, `JSON_UNESCAPED_*` and `JSON_NUMERIC_CHECK` flags.
 //   A lone surrogate is PHP's malformed UTF-8: `JSON_INVALID_UTF8_IGNORE` drops it, `_SUBSTITUTE` writes U+FFFD.
-// - Arrays (AD-9.2): a value is classified as 9.6's `phpType` classifies it, and a PHP array (an `Array`, a `PhpArray`
+// - Arrays (AD-9.2): an object is classified as 9.6's `phpType` classifies it (a primitive keeps its own case), and a PHP array (an `Array`, a `PhpArray`
 //   by its `Symbol.for('xaravel.php.array')` brand, or a plain object) is read through `arrayEntries`, so a hole or
 //   `undefined` reads as `null` and a plain object's integer-like keys are PHP's int keys (`normalizeKey`). Any of the
 //   three is a list when its keys are exactly `0..n-1` in order (`{"0":"a","1":"b"}` is `["a","b"]`) and an object
-//   otherwise. `JSON_FORCE_OBJECT` makes every array an object. A plain object's integer-like keys come out in JS's
-//   ascending order (`Object.keys`), not PHP's insertion order, so `{"1":"b","0":"a"}` is `["a","b"]` where PHP's
+//   otherwise. `JSON_FORCE_OBJECT` makes every array an object. A plain object's array-index keys (`0` to `2^32 - 2`)
+//   come out first in ascending order, then its other keys in insertion order (`Object.keys`), not PHP's insertion order
+//   throughout, so `{"1":"b","0":"a"}` is `["a","b"]` where PHP's
 //   `['1' => 'b', '0' => 'a']` is `{"1":"b","0":"a"}`; AD-9.2 makes such an array a `PhpArray`, which keeps its order
 //   (the limit `arrayEntries` has for every 9.6 helper).
 // - Objects: `JsonSerializable` (its `Symbol.for('JsonSerializable')` brand) encodes `jsonSerialize()`'s result, or its
