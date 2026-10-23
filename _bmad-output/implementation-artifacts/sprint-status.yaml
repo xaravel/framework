@@ -133,8 +133,8 @@ development_status:
   9-12-mockery-exceptions-on-the-runtime-spl-classes: done  # Fidelity Review passed at tree 0f28a37; XT-mockery-12. DIV-9.8 closure is the planning change ESC-9.11-1 names
   epic-9-retrospective: done
 
-  epic-10: backlog
-  10-1-token-brand-and-contract-t-mechanism: backlog
+  epic-10: in-progress
+  10-1-token-brand-and-contract-t-mechanism: blocked  # waits on epic-9-item-1-consequence-rows: ESC-9.1-3 requires the contracts consequence row before contracts' first Story with Xaravel Tests; that row waits on the Maintainer's reading (spec-retro-9-consequence-rows.md)
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
