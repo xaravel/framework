@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 16:57
+last_updated: 10-22-2026 17:08
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1421,7 +1421,7 @@ action_items:
       says Stories 9.11 and 9.12 closed it (clause kept, not renumbered), and PORTING.md:166
       describes the split as landed; no adapted:DIV-9.8 marker exists (finding S1)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-2-retro-code-route"
     epic: 9
