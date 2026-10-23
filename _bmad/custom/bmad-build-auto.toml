@@ -11,13 +11,13 @@ persistent_facts = ["file:_bmad-output/implementation-artifacts/lessons.md"]
 [[workflow.review_layers]]
 id = "fidelity-review"
 name = "Fidelity Review"
-when = "the work is a Story (`<epic>.<story>`) and `stories/<id>.md` exists for it. Skip it for planning, retrospective and other non-Story work."
+when = "the work is a Story (`<epic>.<story>`) and `stories/<id>.md` exists for it, or a retrospective action item from epic 9 on whose `action` names a `packages/<component>` (MAINT-2026-10-16, amendment 2026-10-22). Skip it for planning, other retrospective and other non-Story work."
 instruction = """
 Do not launch a subagent for this layer. Run this command from the project root:
 
 bun run fidelity:review review --story <id> --spec {spec_file} --loop-cli <cli>
 
-`<id>` is the Story id. `<cli>` is the agent CLI running this loop: `claude` when you are Claude Code, `codex` when you are Codex. When `<cli>` is `claude`, prefix the command with `XARAVEL_FIDELITY_CLAUDE_MODEL=<your own model id>` (for example `XARAVEL_FIDELITY_CLAUDE_MODEL=claude-opus-5-5 bun run fidelity:review review …`), so the Claude reviewers run on the loop's model rather than the CLI's weaker default. The command runs two fresh-context reviewer subprocesses over the Story's diff against `conformance/review/fidelity.md`, reviewer 1 on the other CLI when it is available, and appends both verdicts to `{spec_file}` under `## Fidelity Review`. Never edit those records.
+`<id>` is the Story id. For a retrospective action item, pass `--item <action item id>` in place of `--story <id>`, here and in the Finalize re-check below, and keep `--spec {spec_file}`. `<cli>` is the agent CLI running this loop: `claude` when you are Claude Code, `codex` when you are Codex. When `<cli>` is `claude`, prefix the command with `XARAVEL_FIDELITY_CLAUDE_MODEL=<your own model id>` (for example `XARAVEL_FIDELITY_CLAUDE_MODEL=claude-opus-5-5 bun run fidelity:review review …`), so the Claude reviewers run on the loop's model rather than the CLI's weaker default. The command runs two fresh-context reviewer subprocesses over the Story's diff against `conformance/review/fidelity.md`, reviewer 1 on the other CLI when it is available, and appends both verdicts to `{spec_file}` under `## Fidelity Review`. Never edit those records.
 
 It can run for over an hour (two 15-minute attempts on the other CLI, then two on the fallback). Run it as one blocking command with a timeout of at least 75 minutes; if your shell tool caps a command below that, start it in the background and wait for it to exit before reading its output. Launch it alongside the other layers.
 

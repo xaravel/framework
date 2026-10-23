@@ -50,7 +50,7 @@ The `ownership` check (Story 1.5) allows a Story to edit only `packages/<compone
 
 - On a `planning/retro-<N>-*` branch with N ≤ 8, an `ownership` failure does not block the merge when every violation is `planning scope:` for a path under `packages/**`, or another violation this ruling already allows. The other merge conditions still apply, and the orchestrator merges with `--admin`.
 - A `planning scope:` violation for `conformance/expectations/**` still blocks on every branch: no retrospective fix may change grader data.
-- From Epic 9 on (N ≥ 9) the rule stays strict. The Maintainer decides the route for code-changing retrospective items at the Epic 8 checkpoint.
+- From Epic 9 on (N ≥ 9) the rule stays strict. The Maintainer decides the route for code-changing retrospective items at the Epic 8 checkpoint. (Decided by the amendment of 2026-10-22 below.)
 
 ## Amendment 2026-10-21: missing Fidelity Review evidence
 
@@ -61,6 +61,19 @@ Three Stories in a row (ESC-9.1-4, ESC-9.2-1, ESC-9.2-2) stopped because the Fid
 - **Where the wording goes** (added 2026-10-21, after #289). In `conformance/review/fidelity.md`, a sentence that says what the prompt now carries goes in the evidence notes above the checklist items, never in an item's **Check.** paragraph. A Check states only what passes and what fails, and that changes only through me.
 - **What it may never change.** A checklist item's check (F-1..F-10), the verdict rule, the verdict schema, the standing-reject rule (ESC-8.8-1), how reviewers or their CLIs are chosen, the `story:check` approvals clause, or any evidence it would remove or narrow. A gap that needs one of those is mine.
 - **How it merges.** On a `planning/esc-<id>` branch, merged like the orchestrator's other planning PRs: an expected `protected-paths` failure merges with `--admin` under the first amendment. The PR body names the reject's tree and the finding it answers, and ISSUE reports it. The Story then re-runs its Fidelity Review on a changed tree, as the standing-reject rule requires.
+
+## Amendment 2026-10-22: code-changing retrospective items from Epic 9 on
+
+Epic 9's retrospective found no route for an action item that changes `packages/**` once N ≥ 9 (finding P5, action item `epic-9-retro-item-2-retro-code-route`). This is my ruling: such an item is done on a retrospective branch, limited to the components it names, and only after the same review a Story gets.
+
+- **Which items.** An action item from epic N ≥ 9 that the orchestrator owns, that passes step D's waiting test, and whose `action` names at least one `packages/<component>`. Its scope is the paths a Story of each named component may edit (`allowedPath` in `tools/ownership/ownership.ts`), plus its own records under `_bmad-output/implementation-artifacts/`.
+- **Outside the scope.** A fix that needs another component, another Protected Path, or any `conformance/expectations/**` line is not done this way. The orchestrator sets the item `in-progress`, records why under its finding, and the item waits for me.
+- **How it is built.** On `planning/retro-<N>-<slug>`, through `bmad-build-auto` with every review layer a Story gets. That includes the Fidelity Review, run for the item: `bun run fidelity:review review --item <id> --spec <the item's spec>`. The tool reads the item from sprint status and reviews only its scope. The item's checks run as a Story's do: the full `bun run harness` with no differences, `bun run typecheck` and `bun run lint`.
+- **When it merges.** Only when `bun run fidelity:review status --item <id> --spec <the item's spec>` prints `current`: two `pass` verdicts for the head tree. A reject stands until its findings are fixed (ESC-8.8-1), and the 2026-10-21 amendment applies to missing evidence. An Escalation the item raises follows "Decisions during a Story" above.
+- **The checks.** An `ownership` failure does not block when every violation is `planning scope:` for a path under `packages/<component>/**` of a component the item names, or one this ruling already allows. A `planning scope:` violation for `conformance/expectations/**`, or for any other component, still blocks. The first amendment covers `protected-paths` (`packages/assert/` and `packages/mockery/` are Protected). The orchestrator merges with `--admin`. The PR body names the item, its components and the reviewed tree.
+- **What it may never change.** An item's `action`, `owner` or `epic` in sprint status, to widen or move its scope: the review reads the scope from `action`. A new item is added only by a retrospective. The other rules of this file still hold, the grader rules included.
+
+N ≤ 8 keeps the 2026-10-18 rule.
 
 ## Revoking
 
