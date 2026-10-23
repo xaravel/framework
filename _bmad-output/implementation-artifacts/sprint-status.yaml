@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 20:33
+last_updated: 10-22-2026 21:08
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1443,7 +1443,7 @@ action_items:
       each with an XT case that fails today (findings L1-L5, L15, L16; the S2 Oracle
       rows are Story 9.13, decisions/MAINT-2026-10-22-epic-9-item-3-split.md)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-4-json-encode-value-model"
     epic: 9

@@ -11,6 +11,8 @@
 //   inside int64; a leading-numeric (`"5abc"`), non-numeric or out-of-range string or float, an array and an object
 //   are rejected.
 // - A `?Throwable` parameter takes null or a JS `Error`.
+// - A `bigint` outside int64 is no PHP int: it stands for the float PHP makes of such an integer literal
+//   (`2n ** 70n` for `1180591620717411303424`), so it is read, coerced and named (`float given`) as that float.
 // PHP's deprecation notices for a coerced `null` or a fractional float are not reproduced.
 //
 // Load safety: the exception classes import this file, so it imports only the Registry and modules that import
@@ -19,7 +21,7 @@
 // falling back to the JS `TypeError` only when nothing registered it. The package does not export this module.
 import { registeredBaseClass } from "../registry/registry";
 import { parseNumeric } from "./numericString";
-import { intKey } from "./phpInt";
+import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 import { className, phpType, phpTypeName } from "./phpType";
 import { formatFloat, stringPort } from "./scalarString";
 
@@ -32,12 +34,20 @@ function phpTypeError(message: string): globalThis.Error {
   return php === null ? new TypeError(message) : new php(message);
 }
 
-/** PHP's `TypeError` for argument `position` (`$name`) of `<root>::__construct()`, declared as `type`. */
-function argumentError(root: string, position: number, name: string, type: string, value: unknown): globalThis.Error {
-  return phpTypeError(`${root}::__construct(): Argument #${position} ($${name}) must be of type ${type}, ${phpTypeName(value)} given`);
+/**
+ * `value` as the PHP value it stands for: a `bigint` outside int64 as the float PHP makes of that integer literal
+ * (`Number(value)`, which rounds as PHP's parser does), any other value unchanged.
+ */
+function phpValueOf(value: unknown): unknown {
+  return typeof value === "bigint" && (value < INT_MIN || value > INT_MAX) ? Number(value) : value;
 }
 
-/** `phpType(value)`, or null for a value it throws for (a symbol, a `bigint` beyond int64), which no parameter takes. */
+/** PHP's `TypeError` for argument `position` (`$name`) of `<root>::__construct()`, declared as `type`. */
+function argumentError(root: string, position: number, name: string, type: string, value: unknown): globalThis.Error {
+  return phpTypeError(`${root}::__construct(): Argument #${position} ($${name}) must be of type ${type}, ${phpTypeName(phpValueOf(value))} given`);
+}
+
+/** `phpType(value)`, or null for a value it throws for (a symbol), which no parameter takes. */
 function typeOf(value: unknown): ReturnType<typeof phpType> | null {
   try {
     return phpType(value);
@@ -59,7 +69,8 @@ function floatToIntArgument(value: number): number | bigint | null {
 }
 
 /** `value` as PHP's coercive `int` parameter takes it (`zend_parse_arg_long_weak`), or null when it rejects it. */
-function toIntArgument(value: unknown): number | bigint | null {
+function toIntArgument(argument: unknown): number | bigint | null {
+  const value = phpValueOf(argument);
   switch (typeOf(value)) {
     case "null":
       return 0;
@@ -82,7 +93,8 @@ function toIntArgument(value: unknown): number | bigint | null {
 }
 
 /** `value` as PHP's coercive `string` parameter takes it (`zend_parse_arg_str_weak`), or null when it rejects it. */
-function toStringArgument(value: unknown): string | null {
+function toStringArgument(argument: unknown): string | null {
+  const value = phpValueOf(argument);
   switch (typeOf(value)) {
     case "null":
       return "";

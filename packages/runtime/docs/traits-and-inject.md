@@ -159,6 +159,11 @@ Invalid input throws a `TypeError` naming AD-4:
 
 - `insteadof`. None of Upstream's traits needs it.
 - `as` aliases. Port each one as a class method, as above.
-- Trait constructors.
+- Trait constructors. A trait's constructor runs once, at `mixin()` time, when the layer reads the trait's instance
+  property defaults from a trait instance; it does not run when the using class is constructed. Port constructor
+  work as an `initialize<Trait>` method.
+- JS `#private` members in a trait. A trait method that uses one throws a JS `TypeError` when it is called on an
+  instance of the using class, since that instance never had the trait's private field. Port a trait's private
+  state as a plain field.
 - Eloquent's `#[Boot]` / `#[Initialize]` attributes, which belong to Model's own loop.
 - Interpreting `inject` specs, which is the Container's job (Epic 18).
