@@ -2,7 +2,7 @@
 div: 9
 title: "PHP value model"
 cites: ["AD-9"]
-sources: ["decisions/ESC-4.3-1.md", "decisions/ESC-4.4-2.md", "decisions/ESC-4.7-1.md"]
+sources: ["decisions/ESC-4.3-1.md", "decisions/ESC-4.4-2.md", "decisions/ESC-4.7-1.md", "decisions/MAINT-2026-10-23-throwable-file-line-trace.md"]
 fewer_assertions: []
 ---
 
@@ -24,6 +24,7 @@ PHP values map to TypeScript by fixed rules (AD-9), so that no Component chooses
 - **int/float.** Both are JS `number`. The distinction is preserved where Laravel's behaviour depends on it, through the runtime's float marker.
 - **Marker interfaces** become brands. `implements ShouldQueue` requires a brand getter, which generators emit, and the framework checks it with `hasBrand(classOrInstance, Token)` without instantiating the class.
 - **PHP comparison.** An object that PHP compares with `==` exposes its compared properties through `[Symbol.for('xaravel.php.props')]()`, so the test matchers compare it as PHP does.
+- **Throwables.** A throwable has PHP's `getFile()`, `getLine()`, `getTrace()`, `getTraceAsString()` and `__toString()`. Their values name the JavaScript call site (DIV-9.12). Their shape follows PHP, and so does every outcome that depends on them: a throwable as a string argument, and its equality.
 
 ## Adaptation clauses
 
@@ -40,3 +41,4 @@ PHP values map to TypeScript by fixed rules (AD-9), so that no Component chooses
 - **DIV-9.9** The export of an exception lacks PHP's `string`, `file`, `line` and `trace`. This is a message-only difference. No Ported Test is adapted under this clause: Upstream's expected values and messages are kept; only the grader's own failure output differs (ESC-4.3-1 item 13).
 - **DIV-9.10** The wrong-class message ends in JS stack frames, not PHP's. This is a message-only difference. No Ported Test is adapted under this clause: Upstream's expected values and messages are kept; only the grader's own failure output differs (ESC-4.4-2 item 3).
 - **DIV-9.11** PHPUnit's test-double notices and deprecations (the no-expectations notice, the `any()` deprecation, `with()` without `expects()`) are an outcome-neutral, message-only difference. No Ported Test is adapted under this clause: Upstream's expected values and messages are kept; only the grader's own failure output differs (ESC-4.7-1 item 3).
+- **DIV-9.12** A throwable's `getFile()`, `getLine()`, `getTrace()`, `getTraceAsString()` and `__toString()` name the JavaScript call site, not a PHP one. The file and line are those of the frame that constructed it, as the JS stack gives them, and the trace holds the frames above it, in PHP's shape and without `args`. The format, and every outcome that depends on these values, follow PHP: a throwable as a string argument, and equality through `ObjectComparator`. No Ported Test is adapted under this clause. An Upstream assertion on a specific file, line or trace text raises an Escalation (FR-114) (MAINT-2026-10-23-throwable-file-line-trace).
