@@ -31,6 +31,8 @@ import {
   itemXaravelTestIds,
   touchedTestFixtures,
   fitTestFixtures,
+  compactOracleValue,
+  COMPACT_FIXTURE_NOTE,
   inStoryScope,
   ITEM_NOTE,
   fileInStoryScope,
@@ -1488,6 +1490,23 @@ xaravelTest(
     expect(fitted.evidence.testFixtures.map((entry) => entry.text === null)).toEqual([false, true]);
     expect(fitted.evidence.testFixtures[1]!.unavailable).toStartWith(`omitted for size: ${PROMPT_CAP} characters`);
     expect(buildPrompt(fitted).user.length).toBeLessThanOrEqual(PROMPT_CAP);
+    // One whose full output does not fit is first shown in a compact form that loses nothing: an int is its bare
+    // decimal, a 0..n-1 array a JSON array, and every other value keeps the Oracle encoding (Epic 9 retro item 4:
+    // XT-runtime-22's fixture, omitted for size at tree e9bfb33).
+    expect(compactOracleValue({ array: [[{ int: "0" }, null], [{ int: "1" }, { float: "1.5" }], [{ int: "2" }, "1"], [{ int: "3" }, { int: "-9223372036854775808" }]] })).toBe('[null,{"float":"1.5"},"1",-9223372036854775808]');
+    expect(compactOracleValue({ array: [[{ int: "1" }, true], [{ int: "0" }, false]] })).toBe('{"array":[[1,true],[0,false]]}');
+    expect(compactOracleValue({ array: [[{ int: "0" }, { int: "1" }], ["a", { array: [] }]] })).toBe('{"array":[[0,1],["a",[]]]}');
+    expect(compactOracleValue({ object: "stdClass", properties: [["a", "", { int: "1" }]] })).toBe('{"object":"stdClass","properties":[["a","",1]]}');
+    expect(compactOracleValue({ results: [{ value: 1 }] })).toBeNull();
+    const roomy = "y".repeat(PROMPT_CAP - buildPrompt({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures } }).user.length + Math.floor(testFixtures[0]!.text!.length / 2));
+    const squeezed = fitTestFixtures({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures, consequences: [{ label: "pad", text: roomy, unavailable: null }] } });
+    const compactEntry = squeezed.evidence.testFixtures[0]!;
+    expect(compactEntry.label).toBe(`${testFixtures[0]!.label} (${COMPACT_FIXTURE_NOTE})`);
+    const compactShown = JSON.parse(compactEntry.text!) as { request: unknown; fixture: { path: string; verified: boolean; output: { results: { value: unknown }[] } } };
+    expect([compactShown.request, compactShown.fixture.path, compactShown.fixture.verified]).toEqual([shownFixture.request, runtime22Fixture, true]);
+    expect(compactShown.fixture.output.results[1]!.value).toBeArrayOfSize(73);
+    expect(compactEntry.text!.length).toBeLessThan(testFixtures[0]!.text!.length / 2);
+    expect(buildPrompt(squeezed).user.length).toBeLessThanOrEqual(PROMPT_CAP);
   },
   180_000,
 );

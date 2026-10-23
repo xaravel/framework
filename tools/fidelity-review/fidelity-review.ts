@@ -48,7 +48,8 @@
 // Xaravel Test (e) declares, each committed request with that id whose fixture
 // is present, verified and not an error, as its request line and fixture
 // output in full (`touchedTestFixtures`; one that does not fit the prompt cap
-// is named as omitted for size); (d) DIV-1, ESC-6.4-1 and
+// is shown with its output in a lossless compact form, `compactOracleValue`,
+// and named as omitted for size if that does not fit either); (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
 // or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
 // the full body and cited consequences of every Xaravel Test (a bare `AD-<n>`
@@ -1096,12 +1097,83 @@ export function touchedTestFixtures(root: string, touched: readonly Pick<Xaravel
   return out;
 }
 
+/** The label suffix of a (c) touched-test fixture shown in compact form (`compactOracleValue`). */
+export const COMPACT_FIXTURE_NOTE =
+  "fixture output in compact form, to fit the prompt cap: an int is its bare decimal and an array whose keys are 0..n-1 in order is a JSON array of its values; every other value is in the Oracle encoding (docs/ops/oracle.md)";
+
+/**
+ * An Oracle-encoded value (docs/ops/oracle.md) as compact text that loses nothing: `{"int":"<decimal>"}` becomes the
+ * bare decimal and an `{"array":…}` whose keys are the ints 0..n-1 in order becomes a JSON array of its values; every
+ * other value keeps its encoding. Null when the value holds a JSON number, which the compact form would make ambiguous.
+ */
+export function compactOracleValue(value: unknown): string | null {
+  if (typeof value === "number") {
+    return null;
+  }
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  const parts = (items: readonly unknown[]): string | null => {
+    const out: string[] = [];
+    for (const item of items) {
+      const text = compactOracleValue(item);
+      if (text === null) {
+        return null;
+      }
+      out.push(text);
+    }
+    return `[${out.join(",")}]`;
+  };
+  if (Array.isArray(value)) {
+    return parts(value);
+  }
+  const object = value as Record<string, unknown>;
+  const keys = Object.keys(object);
+  if (keys.length === 1 && keys[0] === "int" && typeof object["int"] === "string" && /^-?\d+$/.test(object["int"])) {
+    return object["int"];
+  }
+  const entries = object["array"];
+  if (keys.length === 1 && Array.isArray(entries) && entries.every((entry, index) => Array.isArray(entry) && entry.length === 2 && compactOracleValue(entry[0]) === String(index))) {
+    return parts(entries.map((entry) => (entry as unknown[])[1]));
+  }
+  const out: string[] = [];
+  for (const key of keys) {
+    const text = compactOracleValue(object[key]);
+    if (text === null) {
+      return null;
+    }
+    out.push(`${JSON.stringify(key)}:${text}`);
+  }
+  return `{${out.join(",")}}`;
+}
+
+/** A (c) touched-test fixture entry with its fixture output in compact form, or null when that is not shorter. */
+function compactTestFixture(entry: EvidenceEntry): EvidenceEntry | null {
+  let shown: { request: unknown; fixture: { path: string; verified: boolean; output: unknown } };
+  try {
+    shown = JSON.parse(entry.text!) as typeof shown;
+  } catch {
+    return null;
+  }
+  if (typeof shown !== "object" || shown === null || typeof shown.fixture !== "object" || shown.fixture === null) {
+    return null;
+  }
+  const output = compactOracleValue(shown.fixture.output);
+  if (output === null) {
+    return null;
+  }
+  const text = `{"request":${JSON.stringify(shown.request)},"fixture":{"path":${JSON.stringify(shown.fixture.path)},"verified":${JSON.stringify(shown.fixture.verified)},"output":${output}}}`;
+  return text.length < entry.text!.length ? { label: `${entry.label} (${COMPACT_FIXTURE_NOTE})`, text, unavailable: null } : null;
+}
+
 /**
  * `input` with (c)'s touched-test fixtures cut down until the prompt without (h) fits `PROMPT_CAP`: the longest shown
- * one is named as omitted for size first. (h) then fills what is left (`withWholeFiles`).
+ * one is shown in compact form first (`compactOracleValue`), and named as omitted for size when that is not shorter or
+ * still does not fit. (h) then fills what is left (`withWholeFiles`).
  */
 export function fitTestFixtures(input: PromptInput): PromptInput {
   let fixtures = [...input.evidence.testFixtures];
+  const compacted = new Set<EvidenceEntry>();
   const build = (): PromptInput => ({ ...input, evidence: { ...input.evidence, testFixtures: fixtures } });
   while (buildPrompt(build()).length > PROMPT_CAP) {
     const shown = fixtures.filter((entry) => entry.text !== null);
@@ -1109,6 +1181,12 @@ export function fitTestFixtures(input: PromptInput): PromptInput {
       break;
     }
     const longest = shown.reduce((a, b) => (b.text!.length > a.text!.length ? b : a));
+    const compact = compacted.has(longest) ? null : compactTestFixture(longest);
+    if (compact !== null) {
+      compacted.add(compact);
+      fixtures = fixtures.map((entry) => (entry === longest ? compact : entry));
+      continue;
+    }
     fixtures = fixtures.map((entry) => (entry === longest ? { label: entry.label, text: null, unavailable: `omitted for size: ${entry.text!.length} characters, and the rest of the prompt leaves too little of the ${PROMPT_CAP}-character cap` } : entry));
   }
   return build();
