@@ -14,7 +14,26 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./psr": "./src/psr/index.ts"
+    "./psr": "./src/psr/index.ts",
+    "./support": "./src/support/index.ts",
+    "./container": "./src/container/index.ts",
+    "./config": "./src/config/index.ts",
+    "./foundation": "./src/foundation/index.ts",
+    "./pipeline": "./src/pipeline/index.ts",
+    "./events": "./src/events/index.ts",
+    "./bus": "./src/bus/index.ts",
+    "./queue": "./src/queue/index.ts",
+    "./cache": "./src/cache/index.ts",
+    "./redis": "./src/redis/index.ts",
+    "./encryption": "./src/encryption/index.ts",
+    "./hashing": "./src/hashing/index.ts",
+    "./filesystem": "./src/filesystem/index.ts",
+    "./process": "./src/process/index.ts",
+    "./translation": "./src/translation/index.ts",
+    "./validation": "./src/validation/index.ts",
+    "./debug": "./src/debug/index.ts",
+    "./concurrency": "./src/concurrency/index.ts",
+    "./json-schema": "./src/json-schema/index.ts"
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"

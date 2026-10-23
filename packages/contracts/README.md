@@ -37,6 +37,8 @@ A third argument lists the contract tokens it extends, for example `contract<Not
 
 `@xaravel/contracts/psr` exports the PSR interfaces and their tokens: `ContainerInterface`, `ContainerExceptionInterface` and `NotFoundExceptionInterface` (psr/container), `LoggerInterface` and `LoggerAwareInterface` (psr/log), and `CacheInterface`, `CacheException` and `InvalidArgumentException` (psr/simple-cache), plus the structural `DateInterval` type.
 
+The core and service contracts are at `@xaravel/contracts/<namespace>`, one subpath per `Illuminate\Contracts` namespace: `support`, `container`, `config`, `foundation`, `pipeline`, `events`, `bus`, `queue`, `cache`, `redis`, `encryption`, `hashing`, `filesystem`, `process`, `translation`, `validation`, `debug`, `concurrency` and `json-schema` (for example `import { Repository } from "@xaravel/contracts/cache"`). A concrete class a contract names (`Request`, `Collection`, `Batch`, …) is a structural interface in `src/structural/`, re-exported as a type by each subpath that names it.
+
 ## Dependencies
 
 - `@xaravel/runtime` (workspace): allowed for every package (AD-2).
