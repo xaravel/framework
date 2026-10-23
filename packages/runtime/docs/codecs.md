@@ -31,8 +31,16 @@ A value JS cannot hold (a string that is not valid UTF-8, a lone surrogate, an a
 `jsonEncode(value, flags = 0, depth = 512)` is PHP's `json_encode`, byte for byte across flag combinations. It returns
 the JSON string, or `false` on error.
 
-- A `PhpArray` is a list when its keys are exactly `0..n-1`, and an object otherwise. A `bigint` is written as its
-  exact digits.
+- A PHP array (an `Array`, a `PhpArray` or a plain object) is a list when its keys are exactly `0..n-1` in order, and
+  an object otherwise. A plain object's integer-like keys are PHP's int keys, so `{"0":"a"}` is `["a"]` and `{}` is
+  `[]`; use a `stdClass` for one `{}` (`JSON_FORCE_OBJECT` makes every array an object, lists included). A plain
+  object's array-index keys (`0` to `2^32 - 2`) come out first in ascending order, then its other keys in insertion
+  order, not PHP's insertion order (`{"1":"b","0":"a"}` is `["a","b"]`, `{"-1":"a","0":"b"}` is `{"0":"b","-1":"a"}`);
+  use a `PhpArray`, which keeps its order. A `bigint`
+  is written as its exact digits.
+- `depth` is parsed as PHP parses it: a fractional depth truncates toward zero and the result wraps to int32 (`2^31`
+  is `INT_MIN`, so every array is too deep). A depth that is not finite or lies outside `[-2^63, 2^63)` throws PHP's
+  `TypeError`, leaving `jsonLastError()` as it was.
 - `JsonSerializable` objects encode `jsonSerialize()`. At the top level, a `Jsonable` returns `toJson(flags)`, and an
   `Arrayable` encodes `toArray()`. Each is detected by its `Symbol.for(<FQCN>)` brand, without importing contracts.
 

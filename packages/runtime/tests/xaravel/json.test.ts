@@ -54,6 +54,7 @@ import {
   PhpArray,
   PhpFloat,
   stdClass,
+  TypeError as PhpTypeError,
   ValueError,
 } from "@xaravel/runtime/php";
 import * as root from "@xaravel/runtime";
@@ -828,6 +829,12 @@ function cycleRow(): void {
       Assert.assertSame(index === 1 ? "[1.5]" : "ok", run.stdout.toString().trim());
       Assert.assertSame("{}", readFileSync(join(dir, files[index] as string), "utf8"));
     }
+    // The module itself imported first (Epic 9 retro item 4: it now loads casts.ts, phpType.ts and TypeError.ts).
+    const module = join(REPO, "packages", "runtime", "src", "php", "jsonEncode.ts");
+    const first = `import { jsonEncode } from ${jsonEncode(module)};\nconsole.log(jsonEncode({ "0": "a" }));\ntry { jsonEncode([1], 0, NaN); } catch (error) { console.log(error.message); }\n`;
+    const run = Bun.spawnSync([process.execPath, "-e", first], { stdout: "pipe", stderr: "pipe" });
+    Assert.assertSame(0, run.exitCode, `jsonEncode.ts first: ${run.stderr.toString()}`);
+    Assert.assertSame('["a"]\njson_encode(): Argument #3 ($depth) must be of type int, float given', run.stdout.toString().trim());
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -998,3 +1005,78 @@ function lastErrorLocalRows(): void {
   Assert.assertSame(jsonLastError, root.jsonLastError);
   Assert.assertSame(jsonLastErrorMsg, root.jsonLastErrorMsg);
 }
+
+/**
+ * XT-runtime-38 (Epic 9 retrospective item 4, findings L6 and L7): `jsonEncode` reads values with 9.6's value model and
+ * parses `depth` as PHP does. Local rows, each value checked against PHP 8.5.11 (`php -r`); no Oracle request can be
+ * signed on a retrospective branch.
+ */
+xaravelTest(
+  "XT-runtime-38",
+  "jsonEncode classifies a value as phpType does and reads a plain object's keys through arrayEntries, so integer-like keys are PHP's int keys and any PHP array whose keys are exactly 0..n-1 in order is a JSON list; depth is parsed as json_encode's Z_PARAM_LONG then (int) cast: a fractional depth truncates, one beyond INT_MAX wraps to int32, and a non-finite or out-of-int64 depth throws PHP's TypeError before json_last_error() is touched (AD-9.2, AD-23.1)",
+  () => {
+    // A plain object is a PHP array: integer-like keys are int keys, and keys 0..n-1 in order make a list.
+    Assert.assertSame('["a","b"]', jsonEncode({ "0": "a", "1": "b" }));
+    Assert.assertSame("[null]", jsonEncode({ "0": undefined }));
+    Assert.assertSame('{"x":["a"]}', jsonEncode({ x: { "0": "a" } }));
+    Assert.assertSame("[]", jsonEncode({}));
+    Assert.assertSame('{"b":[]}', jsonEncode({ b: {} }));
+    Assert.assertSame("[]", jsonEncode(Object.create(null)));
+    // Not a list: a key that is not 0..n-1, or one that is no canonical decimal stays a string.
+    Assert.assertSame('{"1":"a"}', jsonEncode({ "1": "a" }));
+    Assert.assertSame('{"01":"a","-0":"b"}', jsonEncode({ "01": "a", "-0": "b" }));
+    Assert.assertSame('{"0":"a","x":"b"}', jsonEncode({ "0": "a", x: "b" }));
+    // JSON_FORCE_OBJECT still makes every array an object.
+    Assert.assertSame('{"0":"a"}', jsonEncode({ "0": "a" }, JSON_FORCE_OBJECT));
+    Assert.assertSame('{"b":{}}', jsonEncode({ b: {} }, JSON_FORCE_OBJECT));
+    // A branded PhpArray and a JS Array keep their rule.
+    Assert.assertSame('["a"]', jsonEncode(new PhpArray([[0, "a"]])));
+    Assert.assertSame('{"1":"a"}', jsonEncode(new PhpArray([[1, "a"]])));
+    Assert.assertSame("[]", jsonEncode([]));
+    // An empty stdClass is still an object.
+    Assert.assertSame("{}", jsonEncode(new stdClass()));
+
+    runInFrame("unit", () => {
+      // A depth beyond INT_MAX is (int) cast to int32: 2^31 is INT_MIN, so every array is too deep.
+      Assert.assertSame(false, jsonEncode([1], 0, 2147483648));
+      Assert.assertSame(1, jsonLastError());
+      Assert.assertSame(false, jsonEncode([[1]], 0, 2147483649));
+      Assert.assertSame("1", jsonEncode(1, 0, 2147483648));
+      // 2^32 + 1 wraps to 1.
+      Assert.assertSame("[1]", jsonEncode([1], 0, 4294967297));
+      Assert.assertSame(false, jsonEncode([[1]], 0, 4294967297));
+      Assert.assertSame(1, jsonLastError());
+      // -2^63 is the int64 minimum, which wraps to 0; the largest double below 2^63 wraps to -1024. Below 1, every
+      // array is too deep and a scalar still encodes (PHP 8.5.11: `json_encode([1], 0, -1)` is false, `json_encode(1, 0, 0)` is "1").
+      jsonDecode("[");
+      Assert.assertSame(false, jsonEncode([1], 0, -(2 ** 63)));
+      Assert.assertSame(1, jsonLastError());
+      jsonDecode("[");
+      Assert.assertSame(false, jsonEncode([1], 0, 9223372036854774784));
+      Assert.assertSame(1, jsonLastError());
+      Assert.assertSame(false, jsonEncode([1], 0, -1));
+      Assert.assertSame(false, jsonEncode([], 0, 0));
+      Assert.assertSame("1", jsonEncode(1, 0, 0));
+      Assert.assertSame("1", jsonEncode(1, 0, -1));
+      // A fractional depth truncates toward zero (PHP's deprecation notice is not reproduced).
+      Assert.assertSame("[1]", jsonEncode([1], 0, 2.5));
+      Assert.assertSame("[[1]]", jsonEncode([[1]], 0, 2.5));
+      Assert.assertSame(false, jsonEncode([1], 0, 0.9));
+      Assert.assertSame(false, jsonEncode([1], 0, -0.5));
+      // A non-finite or out-of-int64 depth is Z_PARAM_LONG's TypeError, json_last_error() left as it was.
+      jsonDecode("[");
+      for (const depth of [NaN, Infinity, -Infinity, 2 ** 63, 1e19, -9.3e18]) {
+        const error = thrownBy(() => jsonEncode([1], 0, depth));
+        Assert.assertTrue(error instanceof PhpTypeError, `depth ${depth}: ${String(error)}`);
+        Assert.assertSame("TypeError", fqcn(error as Error), `depth ${depth}`);
+        Assert.assertSame("json_encode(): Argument #3 ($depth) must be of type int, float given", (error as Error).message, `depth ${depth}`);
+        Assert.assertSame(0, (error as PhpTypeError).getCode(), `depth ${depth}`);
+        Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError(), `depth ${depth}`);
+      }
+      // The same under JSON_THROW_ON_ERROR: the TypeError, not a JsonException.
+      Assert.assertTrue(thrownBy(() => jsonEncode([1], JSON_THROW_ON_ERROR, NaN)) instanceof PhpTypeError);
+      // The top-level Jsonable hook runs before the depth is parsed (Laravel never calls json_encode on that path).
+      Assert.assertSame("custom:0", jsonEncode(new XtJsn(), 0, NaN));
+    });
+  },
+);

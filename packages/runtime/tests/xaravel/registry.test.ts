@@ -489,8 +489,10 @@ xaravelTest(
       }
       Assert.assertStringContainsString(join(root, "nope.json"), (thrownBy(() => loadAutoload(join(root, "nope.json"))) as Error).message);
 
-      // The default-flags jsonEncode core the classmap is written with (decisions/ESC-9.4-1.md part 2).
-      Assert.assertSame('{"a":[1,true,null,"\\/\\"\\\\\\n\\u0001\\u00e9\\ud83d\\ude00"],"b":{}}', jsonEncode({ a: [1, true, null, '/"\\\n\u0001é😀'], b: {} }));
+      // The default-flags jsonEncode core (decisions/ESC-9.4-1.md part 2); the classmap adds JSON_FORCE_OBJECT. An empty plain
+      // object is an empty PHP array, PHP's `[]` (Epic 9 retro item 4; PHP 8.5.11 `json_encode(['a' => [...], 'b' => []])`);
+      // `writeClassmap` keeps an empty classmap `{}` with JSON_FORCE_OBJECT (XT-runtime-27's fresh-process row).
+      Assert.assertSame('{"a":[1,true,null,"\\/\\"\\\\\\n\\u0001\\u00e9\\ud83d\\ude00"],"b":[]}', jsonEncode({ a: [1, true, null, '/"\\\n\u0001é😀'], b: {} }));
       // Story 9.8 grows the core into PHP's json_encode: a float and an object without public properties encode.
       Assert.assertSame("1.5", jsonEncode(1.5));
       Assert.assertSame("{}", jsonEncode(new Map()));
