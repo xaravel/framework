@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 19:32
+last_updated: 10-22-2026 20:06
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1442,7 +1442,7 @@ action_items:
       and constructor-at-mixin limits; fix the int-given bigint message; each with
       an XT case that fails today (findings L1-L5, L15, L16, S2)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-4-json-encode-value-model"
     epic: 9
