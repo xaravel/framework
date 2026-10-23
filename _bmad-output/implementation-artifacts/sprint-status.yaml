@@ -118,7 +118,7 @@ development_status:
   8-8-phase-1-gate: done  # ESC-8.8-1 rejected by the Maintainer; Fidelity Review re-run on the head tree passed (both reviewers)
   epic-8-retrospective: done
 
-  epic-9: done
+  epic-9: in-progress
   9-1-scope-frame-primitive-and-interleave: done
   9-2-frame-kinds-defer-list-and-context-propagation: done
   9-3-per-application-overlays-and-framestatic: done
@@ -131,6 +131,7 @@ development_status:
   9-10-php-exception-hierarchy: done  # Fidelity Review passed at tree cc8de78 (base c870bc2) after ESC-9.10-4. Also switches the codec Closure error and the JSON errors (ESC-9.7-1 part 4, ESC-9.8-1 part 1): done in #302
   9-11-grader-follow-ups-to-the-runtime-value-model: done  # Fidelity Review passed at tree 252e8fc (after ESC-9.11-1, ESC-9.11-2); all five ACs, XT-assert-17..21
   9-12-mockery-exceptions-on-the-runtime-spl-classes: done  # Fidelity Review passed at tree 0f28a37; XT-mockery-12. DIV-9.8 closure is the planning change ESC-9.11-1 names
+  9-13-oracle-rows-for-the-runtime-php-mirroring-checks: backlog  # Epic 9 retro finding S2 (decisions/MAINT-2026-10-22-epic-9-item-3-split.md)
   epic-9-retrospective: done
 
   epic-10: in-progress
@@ -1437,12 +1438,12 @@ action_items:
     action: "packages/runtime: test registrations, overlays and statics visible inside
       interleave units opened from a test frame; brands that do not leak between concurrent
       test frames; frameSlot writes on an ended unit throw; base registerClass refuses
-      a key a live test frame holds; app = null code and docblock agree; Oracle rows
-      for XT-runtime-18, 20, 23 and the class-name lookups of 12-14; document #private
+      a key a live test frame holds; app = null code and docblock agree; document #private
       and constructor-at-mixin limits; fix the int-given bigint message; each with
-      an XT case that fails today (findings L1-L5, L15, L16, S2)"
+      an XT case that fails today (findings L1-L5, L15, L16; the S2 Oracle rows are
+      Story 9.13, decisions/MAINT-2026-10-22-epic-9-item-3-split.md)"
     owner: "orchestrator"
-    status: in-progress
+    status: open
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-4-json-encode-value-model"
     epic: 9
