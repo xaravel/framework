@@ -20,6 +20,8 @@ import {
   CHECKLIST_FILE,
   classifyUnavailable,
   consequenceEntries,
+  dataFileExcerpt,
+  dataFileReads,
   decideVerdict,
   decisionEvidence,
   EXCERPT_CAP,
@@ -769,7 +771,7 @@ xaravelTest(
     // ESC-9.2-1: (f) carries each decision record an added line cites, once, in full, or why it is unavailable.
     // Section (f) alone: (h) after it names (f)'s records again, as shown above.
     const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)"), evidenceUser.indexOf("### (g) "));
-    expect(evidenceUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
+    expect(evidenceUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
     expect(sectionF).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
     expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
     expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
@@ -1374,17 +1376,66 @@ xaravelTest(
         { filename: "conformance/fixtures/runtime/x.json", status: "added", patch: "@@ -0,0 +1 @@\n+{}" },
       ], new Map(), 400_000),
     ).toEqual([]);
+    // ESC-10.1-5: (h) also shows the repository files a changed test file reads as data, with its helpers and fixtures.
+    // A read's path resolves as an import's does: import.meta.dir, a file const, join/resolve and string literals.
+    const dataKnown = new Set(["a/rows.jsonl", "a/b/one.json", "pkg/data.txt"]);
+    const readerText = [
+      'const REPO = join(import.meta.dir, "..", "..");',
+      'const DATA = join(REPO, "pkg", "data.txt");',
+      'const rows = readFileSync(join(import.meta.dir, "..", "rows.jsonl"), "utf8");',
+      'const one = await readFile(join(import.meta.dir, "one.json"));',
+      "const text = await Bun.file(DATA).text();",
+      'readFileSync(join(root, "unresolved.json"));',
+      'readFileSync(join(import.meta.dir, "missing.json"));',
+      'readFileSync(join(import.meta.dir, "..", "..", "..", "outside.json"));',
+    ].join("\n");
+    expect(dataFileReads("a/b/c.test.ts", readerText, (path) => dataKnown.has(path))).toEqual(["a/b/one.json", "a/rows.jsonl", "pkg/data.txt"]);
+    const psrTest = "packages/contracts/tests/xaravel/psr.test.ts";
+    const contractsRows = "conformance/api-surface/contracts.jsonl";
+    expect(dataFileReads(psrTest, read(psrTest), (path) => existsSync(join(root, path)))).toEqual([contractsRows]);
+    // A data file under the one-file limit is shown whole, before the changed files; a changed file that is not a test
+    // adds none.
+    const dataRoot = tempDir("fidelity-data-");
+    mkdirSync(join(dataRoot, "a", "tests"), { recursive: true });
+    writeFileSync(join(dataRoot, "a", "rows.json"), '{"rows":[1,2]}\n');
+    const dataReader = 'const rows = readFileSync(join(import.meta.dir, "..", "rows.json"), "utf8");\n';
+    writeFileSync(join(dataRoot, "a", "tests", "rows.test.ts"), dataReader);
+    writeFileSync(join(dataRoot, "a", "source.ts"), dataReader.replace('"..", ', ""));
+    writeFileSync(join(dataRoot, "a", "tests", "rows.json"), "{}\n");
+    const dataWhole = wholeFileEvidence(dataRoot, [{ filename: "a/tests/rows.test.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000);
+    expect(dataWhole.map((item) => [item.path, item.reason])).toEqual([["a/rows.json", "read by a/tests/rows.test.ts"], ["a/tests/rows.test.ts", "changed"]]);
+    expect(dataWhole[0]!.text).toBe('{"rows":[1,2]}\n');
+    expect(wholeFileEvidence(dataRoot, [{ filename: "a/source.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000).map((item) => item.path)).toEqual(["a/source.ts"]);
+    // One over the limit shows the lines the test's string literals select, most selective first, each literal whole
+    // or not at all within the limit, in file order; a literal matching nearly every line is left out.
+    const common = Array.from({ length: 2_000 }, (_, index) => `{"kind":"method","n":${index},"pad":"${"x".repeat(30)}"}`);
+    const dataText = [`{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface"}`, ...common.slice(0, 1_000), `{"fqcn":"Psr\\\\Log\\\\LogLevel","kind":"class"}`, ...common.slice(1_000)].join("\n");
+    expect(dataText.length).toBeGreaterThan(WHOLE_FILE_CAP);
+    const excerpt = dataFileExcerpt(dataText, 'const NS = "Psr\\\\Log\\\\";\nrow.kind === "method";\nconst no = "absent";\n')!;
+    expect(excerpt).toEqual({ text: `{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface"}\n{"fqcn":"Psr\\\\Log\\\\LogLevel","kind":"class"}\n`, lines: 2, of: 2_002, literals: ["Psr\\\\Log\\\\"] });
+    expect(dataFileExcerpt(dataText, 'const no = "absent";\n')).toBeNull();
+    // The ESC-10.1-5 case: XT-contracts-4 reads contracts.jsonl (over the limit), so (h) shows every PSR row it reads.
+    expect(read(contractsRows).length).toBeGreaterThan(WHOLE_FILE_CAP);
+    const psrWhole = wholeFileEvidence(root, registryPatch(psrTest), new Map(), 400_000);
+    const rowsEntry = psrWhole.find((item) => item.path === contractsRows)!;
+    expect(rowsEntry.reason).toStartWith(`read by ${psrTest}; excerpt: the `);
+    expect(rowsEntry.reason).toContain('"Psr\\\\Container\\\\", ');
+    expect(rowsEntry.text!.length).toBeLessThanOrEqual(WHOLE_FILE_CAP);
+    const psrRows = read(contractsRows).split("\n").filter((line) => line.startsWith('{"fqcn":"Psr\\\\'));
+    expect(psrRows.length).toBe(28);
+    expect(psrRows.filter((line) => !rowsEntry.text!.split("\n").includes(line))).toEqual([]);
+    expect(psrWhole.findIndex((item) => item.path === contractsRows)).toBeLessThan(psrWhole.findIndex((item) => item.path === psrTest));
     // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
     // file named without its text means.
     const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
     const filled = withWholeFiles(root, { ...promptBase, evidence: { ...NO_EVIDENCE, decisions: gatherEvidence(root, registryPatch(registryPath), none).decisions } });
     expect(filled.evidence.wholeFiles.find((item) => item.path === "decisions/ESC-9.4-1.md")!.note).toBe("shown in full above, in (f)");
     const wholeUser = buildPrompt(filled).user;
-    expect(wholeUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
+    expect(wholeUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
     expect(wholeUser).toContain("A file named here without its text is shown in full in another section, omitted for size, or unavailable, as its note says");
     expect(wholeUser).toContain(`#### ${registryPath} (changed)\n\n\`\`\`ts\n${read(registryPath)}`);
     expect(buildPrompt(filled).length).toBeLessThanOrEqual(PROMPT_CAP);
-    expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)\n\nThe change adds or modifies no file this section shows.");
+    expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)\n\nThe change adds or modifies no file this section shows.");
     // (h) reserves room for every entry's heading and note, so a prompt near the cap still fits with it: many files,
     // nearly all omitted for size, never push it over.
     const many = [...new Bun.Glob("packages/runtime/src/**/*.ts").scanSync({ cwd: root })].sort().map((filename) => ({ filename, status: "modified", patch: "@@ -1 +1 @@\n-a\n+b" }));
