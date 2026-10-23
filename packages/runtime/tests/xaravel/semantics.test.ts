@@ -92,15 +92,30 @@ function assertPhpThrows(fn: () => unknown, type: abstract new (...args: never[]
  * object is the grader's decoded object (its props behind `Symbol.for('xaravel.php.props')`).
  */
 function decodeMarked(encoded: unknown): unknown {
+  return decodeOperand(encoded, false);
+}
+
+/**
+ * The same, but a PHP float the value model can hold as a plain `number` stays plain (a non-integral float, `-0`,
+ * `INF`, `NAN`: `phpType(n)` is `float`); an integral float, which a plain `number` would make an int, stays marked
+ * (Epic 9 retrospective item 4, finding L8).
+ */
+function decodePlain(encoded: unknown): unknown {
+  return decodeOperand(encoded, true);
+}
+
+function decodeOperand(encoded: unknown, plainFloats: boolean): unknown {
   if (typeof encoded !== "object" || encoded === null) {
     return decode(encoded);
   }
   const value = encoded as Record<string, unknown>;
   if (typeof value["float"] === "string") {
-    return float(decode(encoded) as number);
+    const n = decode(encoded) as number;
+    // phpType's rule: a safe-integer number that is not -0 is an int.
+    return plainFloats && !(Number.isSafeInteger(n) && !Object.is(n, -0)) ? n : float(n);
   }
   if (Array.isArray(value["array"])) {
-    const entries = (value["array"] as [unknown, unknown][]).map(([key, item]) => [typeof key === "string" ? key : (decode(key) as number | bigint), decodeMarked(item)] as const);
+    const entries = (value["array"] as [unknown, unknown][]).map(([key, item]) => [typeof key === "string" ? key : (decode(key) as number | bigint), decodeOperand(item, plainFloats)] as const);
     if (entries.every(([key], index) => key === index)) {
       return entries.map(([, item]) => item);
     }
@@ -174,70 +189,115 @@ xaravelTest(
   () => {
     const output = oracle("XT-runtime-22");
     const raw = (rawResult(output, 0) as { array: unknown[][] }).array;
-    const w = raw.map(([, encoded]) => decodeMarked(encoded));
     const mismatches: string[] = [];
+    // Each matrix runs twice: with every float marked, and with the floats a plain number can hold left plain (L8).
+    for (const [pass, decodeValue] of [
+      ["marked", decodeMarked],
+      ["plain", decodePlain],
+    ] as const) {
+      const w = raw.map(([, encoded]) => decodeValue(encoded));
+      const before = mismatches.length;
+      if (pass === "plain") {
+        // The plain pass does hold floats as plain numbers (a non-integral float, -0, INF or NAN of $w).
+        Assert.assertTrue(w.some((value) => typeof value === "number" && !(Number.isSafeInteger(value) && !Object.is(value, -0))), "plain floats in $w");
+      }
+      // The operands the consequence declares are in the Oracle's $w (69 values of $v, then the 4 objects of $o), in
+      // both passes: scalars, numeric, leading-whitespace and other strings, "1e3", INF, NAN, arrays and objects.
+      Assert.assertSame(73, w.length, `${pass}: operands in $w`);
+      const holds = (what: string, test: (value: unknown) => boolean): void => {
+        Assert.assertTrue(w.some(test), `${pass}: $w holds ${what}`);
+      };
+      holds("null", (value) => value === null);
+      holds("true", (value) => value === true);
+      holds("false", (value) => value === false);
+      holds("int 0", (value) => value === 0);
+      holds("PHP_INT_MAX", (value) => value === 9223372036854775807n);
+      for (const text of ["1", "1.5", "01", " 1", "1 ", "\t1\n", " 1 x", "1e3", ".5", "0x1A", "abc", "9223372036854775808", "1e1000", "INF", "NAN"]) {
+        holds(JSON.stringify(text), (value) => value === text);
+      }
+      holds("an empty array", (value) => Array.isArray(value) && value.length === 0);
+      holds("a PhpArray ([1 => 1, 0 => 2])", (value) => value instanceof PhpArray);
+      holds("a plain-object array (['a' => 1])", (value) => typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype);
+      Assert.assertTrue(w.slice(69).every((value) => typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof PhpArray)), `${pass}: the 4 objects of $o close $w`);
+      // The floats 1.5, -1.5, -0.0, INF, -INF and NAN: plain numbers in the plain pass, marked in the marked pass.
+      for (const [what, test] of [
+        ["1.5", (n: number) => n === 1.5],
+        ["-1.5", (n: number) => n === -1.5],
+        ["-0.0", (n: number) => Object.is(n, -0)],
+        ["INF", (n: number) => n === Infinity],
+        ["-INF", (n: number) => n === -Infinity],
+        ["NAN", (n: number) => Number.isNaN(n)],
+      ] as const) {
+        holds(`${what} as a ${pass} float`, (value) => (pass === "plain" ? typeof value === "number" : typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[Symbol.for("xaravel.php.float")] === true) && test(Number(value)));
+      }
 
-    // The == and <=> matrices over every ordered pair.
-    const loose = decode(rawResult(output, 1)) as boolean[][];
-    const order = decode(rawResult(output, 2)) as number[][];
-    Assert.assertSame(w.length, loose.length);
-    Assert.assertSame(w.length, order.length);
-    for (let i = 0; i < w.length; i++) {
-      for (let j = 0; j < w.length; j++) {
-        const equal = looseEquals(w[i], w[j]);
-        if (equal !== loose[i]![j]) {
-          mismatches.push(`${show(raw, i)} == ${show(raw, j)}: Oracle ${String(loose[i]![j])}, got ${String(equal)}`);
+      // The == and <=> matrices over every ordered pair.
+      const loose = decode(rawResult(output, 1)) as boolean[][];
+      const order = decode(rawResult(output, 2)) as number[][];
+      Assert.assertSame(w.length, loose.length);
+      Assert.assertSame(w.length, order.length);
+      for (let i = 0; i < w.length; i++) {
+        for (let j = 0; j < w.length; j++) {
+          const equal = looseEquals(w[i], w[j]);
+          if (equal !== loose[i]![j]) {
+            mismatches.push(`${show(raw, i)} == ${show(raw, j)}: Oracle ${String(loose[i]![j])}, got ${String(equal)}`);
+          }
+          const compared = spaceship(w[i], w[j]);
+          if (compared !== order[i]![j]) {
+            mismatches.push(`${show(raw, i)} <=> ${show(raw, j)}: Oracle ${String(order[i]![j])}, got ${String(compared)}`);
+          }
         }
-        const compared = spaceship(w[i], w[j]);
-        if (compared !== order[i]![j]) {
-          mismatches.push(`${show(raw, i)} <=> ${show(raw, j)}: Oracle ${String(order[i]![j])}, got ${String(compared)}`);
+      }
+
+      // is_numeric, (int), (float) and (bool) over each value.
+      const numeric = decode(rawResult(output, 3)) as boolean[];
+      const ints = decode(rawResult(output, 4)) as (number | bigint)[];
+      const floats = decode(rawResult(output, 5)) as number[];
+      const bools = decode(rawResult(output, 6)) as boolean[];
+      Assert.assertSame(w.length, numeric.length);
+      Assert.assertSame(w.length, ints.length);
+      Assert.assertSame(w.length, floats.length);
+      Assert.assertSame(w.length, bools.length);
+      w.forEach((value, index) => {
+        if (isNumeric(value) !== numeric[index]) {
+          mismatches.push(`is_numeric(${show(raw, index)}): Oracle ${String(numeric[index])}, got ${String(isNumeric(value))}`);
         }
+        if (toInt(value) !== ints[index]) {
+          mismatches.push(`(int) ${show(raw, index)}: Oracle ${String(ints[index])}, got ${String(toInt(value))}`);
+        }
+        if (!sameFloat(toFloat(value), floats[index]!)) {
+          mismatches.push(`(float) ${show(raw, index)}: Oracle ${String(floats[index])}, got ${String(toFloat(value))}`);
+        }
+        if (toBool(value) !== bools[index]) {
+          mismatches.push(`(bool) ${show(raw, index)}: Oracle ${String(bools[index])}, got ${String(toBool(value))}`);
+        }
+      });
+
+      // (string) over $v, the values of $w before the objects, and over the float-format list $f.
+      const strings = decode(rawResult(output, 7)) as string[];
+      // $v is $w without the four objects of $o.
+      Assert.assertSame(w.length - 4, strings.length);
+      strings.forEach((expected, index) => {
+        const actual = toPhpString(w[index]);
+        if (actual !== expected) {
+          mismatches.push(`(string) ${show(raw, index)}: Oracle ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+        }
+      });
+      const floatStrings = decode(rawResult(output, 8)) as string[];
+      const f = (rawResult(output, 9) as { array: unknown[][] }).array.map(([, encoded]) => decodeValue(encoded));
+      Assert.assertSame(f.length, floatStrings.length);
+      f.forEach((value, index) => {
+        const actual = toPhpString(value);
+        if (actual !== floatStrings[index]) {
+          mismatches.push(`(string) $f[${index}] ${String(value)}: Oracle ${JSON.stringify(floatStrings[index])}, got ${JSON.stringify(actual)}`);
+        }
+      });
+      // Prefix this pass's mismatch lines with its name.
+      for (let index = before; index < mismatches.length; index++) {
+        mismatches[index] = `${pass}: ${mismatches[index]!}`;
       }
     }
 
-    // is_numeric, (int), (float) and (bool) over each value.
-    const numeric = decode(rawResult(output, 3)) as boolean[];
-    const ints = decode(rawResult(output, 4)) as (number | bigint)[];
-    const floats = decode(rawResult(output, 5)) as number[];
-    const bools = decode(rawResult(output, 6)) as boolean[];
-    Assert.assertSame(w.length, numeric.length);
-    Assert.assertSame(w.length, ints.length);
-    Assert.assertSame(w.length, floats.length);
-    Assert.assertSame(w.length, bools.length);
-    w.forEach((value, index) => {
-      if (isNumeric(value) !== numeric[index]) {
-        mismatches.push(`is_numeric(${show(raw, index)}): Oracle ${String(numeric[index])}, got ${String(isNumeric(value))}`);
-      }
-      if (toInt(value) !== ints[index]) {
-        mismatches.push(`(int) ${show(raw, index)}: Oracle ${String(ints[index])}, got ${String(toInt(value))}`);
-      }
-      if (!sameFloat(toFloat(value), floats[index]!)) {
-        mismatches.push(`(float) ${show(raw, index)}: Oracle ${String(floats[index])}, got ${String(toFloat(value))}`);
-      }
-      if (toBool(value) !== bools[index]) {
-        mismatches.push(`(bool) ${show(raw, index)}: Oracle ${String(bools[index])}, got ${String(toBool(value))}`);
-      }
-    });
-
-    // (string) over $v, the values of $w before the objects, and over the float-format list $f.
-    const strings = decode(rawResult(output, 7)) as string[];
-    // $v is $w without the four objects of $o.
-    Assert.assertSame(w.length - 4, strings.length);
-    strings.forEach((expected, index) => {
-      const actual = toPhpString(w[index]);
-      if (actual !== expected) {
-        mismatches.push(`(string) ${show(raw, index)}: Oracle ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-      }
-    });
-    const floatStrings = decode(rawResult(output, 8)) as string[];
-    const f = (rawResult(output, 9) as { array: unknown[][] }).array.map(([, encoded]) => decodeMarked(encoded));
-    Assert.assertSame(f.length, floatStrings.length);
-    f.forEach((value, index) => {
-      const actual = toPhpString(value);
-      if (actual !== floatStrings[index]) {
-        mismatches.push(`(string) $f[${index}] ${String(value)}: Oracle ${JSON.stringify(floatStrings[index])}, got ${JSON.stringify(actual)}`);
-      }
-    });
     Assert.assertSame("", mismatches.join("\n"), `${mismatches.length} mismatch(es) with the Oracle`);
 
     // Objects with a toString() port: cast through it; compared with a string through it, with an int as 1.

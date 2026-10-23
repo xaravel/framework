@@ -89,7 +89,8 @@ registerClass("App\\Exceptions\\NotFound", NotFound);
   `…::__serialize() must return an array`.
 - `phpUnserialize`: `TypeError` for a bad argument or `allowed_classes` option.
 - `jsonEncode` and `jsonDecode` under `JSON_THROW_ON_ERROR`: `JsonException` with the `JSON_ERROR_*` code. A
-  `jsonDecode` depth below 1: `ValueError`.
+  `jsonDecode` depth below 1: `ValueError`. A `jsonEncode` depth that is not finite or not in the int64 range:
+  `TypeError` `json_encode(): Argument #3 ($depth) must be of type int, float given`.
 
 Xaravel's own API-misuse errors (`registerClass():`, `mixin():`, `frameSlot():`, `float():`, values JS cannot hold)
 stay JS `TypeError`s, because no PHP throwable stands behind them. PHP fatals (a trait collision, `Nesting level too

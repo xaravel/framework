@@ -7,15 +7,24 @@
 // - Strings: PHP's escapes (`\/`, `\"`, `\\`, the short escapes, `\u00xx` for other control characters, lower-case
 //   `\uXXXX` with surrogate pairs for non-ASCII), the `JSON_HEX_*`, `JSON_UNESCAPED_*` and `JSON_NUMERIC_CHECK` flags.
 //   A lone surrogate is PHP's malformed UTF-8: `JSON_INVALID_UTF8_IGNORE` drops it, `_SUBSTITUTE` writes U+FFFD.
-// - Arrays (AD-9.2): an `Array` is a list (a hole reads as `null`), a `PhpArray` (its `Symbol.for('xaravel.php.array')`
-//   brand) is a list when its keys are exactly `0..n-1` in order and an object otherwise, a plain object is an object.
-//   `JSON_FORCE_OBJECT` makes every array an object.
+// - Arrays (AD-9.2): a value is classified as 9.6's `phpType` classifies it, and a PHP array (an `Array`, a `PhpArray`
+//   by its `Symbol.for('xaravel.php.array')` brand, or a plain object) is read through `arrayEntries`, so a hole or
+//   `undefined` reads as `null` and a plain object's integer-like keys are PHP's int keys (`normalizeKey`). Any of the
+//   three is a list when its keys are exactly `0..n-1` in order (`{"0":"a","1":"b"}` is `["a","b"]`) and an object
+//   otherwise. `JSON_FORCE_OBJECT` makes every array an object. A plain object's integer-like keys come out in JS's
+//   ascending order (`Object.keys`), not PHP's insertion order, so `{"1":"b","0":"a"}` is `["a","b"]` where PHP's
+//   `['1' => 'b', '0' => 'a']` is `{"1":"b","0":"a"}`; AD-9.2 makes such an array a `PhpArray`, which keeps its order
+//   (the limit `arrayEntries` has for every 9.6 helper).
 // - Objects: `JsonSerializable` (its `Symbol.for('JsonSerializable')` brand) encodes `jsonSerialize()`'s result, or its
 //   properties when the result is the object itself; any other object is a JSON object of its public properties, read
 //   as `phpSerialize` reads them (`objectProps`), mangled `\0` names skipped. A function is a `Closure`: `{}`. At the
 //   top level only, as Laravel's `Js::encode` and `JsonResponse::setData` do before they call `json_encode`, an
 //   `Illuminate\Contracts\Support\Jsonable` returns its `toJson(flags)`, and an `Arrayable` that is not
 //   `JsonSerializable` encodes its `toArray()`.
+// - `depth`: parsed as PHP's `Z_PARAM_LONG` in coercive mode, then `(int)` cast as `json_encode` does. A number that is
+//   not finite or lies outside `[-2^63, 2^63)` throws PHP's `TypeError` before `json_last_error()` is touched; any
+//   other is truncated toward zero (PHP's deprecation notice is not reproduced) and wrapped to int32, so `2^31` is
+//   `INT_MIN` (every array is too deep) and `2^32 + 1` is 1. The top-level hooks below run first.
 // - Errors, in PHP's order: a symbol (unsupported type), a lone surrogate, `INF`/`NAN`, recursion and nesting deeper
 //   than `depth` set PHP's `JSON_ERROR_*` code. The result is then `false`; with `JSON_PARTIAL_OUTPUT_ON_ERROR` the
 //   string with PHP's stand-ins; with `JSON_THROW_ON_ERROR` (and without the partial flag) PHP's `JsonException` with
@@ -25,8 +34,10 @@
 //   `json_encode` never runs on that path (Laravel calls `toJson()` instead), so the record is left as it was.
 //
 // Load safety: the Class Registry no longer imports this file (Story 9.10: `registry/index.ts` installs it as the
-// classmap encoder), so loading it first in a fresh process is safe; its only class file is `JsonException`, through
-// `jsonConstants.ts`. Brands are still read by `Symbol.for` key, so it needs no value-model class file.
+// classmap encoder), so loading it first in a fresh process is safe. Its class files (`JsonException` through
+// `jsonConstants.ts`, PHP's `TypeError`, and the value-model classes `casts.ts` loads for `arrayEntries`) import only
+// `registry/registry.ts`, never `registry/index.ts`; brands are still read by `Symbol.for` key.
+import { arrayEntries } from "./casts";
 import { gcvt } from "./gcvt";
 import { hasBrand } from "./hasBrand";
 import {
@@ -55,11 +66,13 @@ import {
 } from "./jsonConstants";
 import { objectProps } from "./mangle";
 import { parseNumeric } from "./numericString";
+import { phpType } from "./phpType";
+import { TypeError as PhpTypeError } from "./TypeError";
 
 const HEX = "0123456789abcdef";
 
-const PHP_ARRAY = Symbol.for("xaravel.php.array");
-const PHP_FLOAT = Symbol.for("xaravel.php.float");
+/** `(double)ZEND_LONG_MAX`, 2^63: the first float `Z_PARAM_LONG` rejects (`ZEND_DOUBLE_FITS_LONG`). */
+const LONG_LIMIT = 2 ** 63;
 const JSONABLE = Symbol.for("Illuminate\\Contracts\\Support\\Jsonable");
 const ARRAYABLE = Symbol.for("Illuminate\\Contracts\\Support\\Arrayable");
 const JSON_SERIALIZABLE = Symbol.for("JsonSerializable");
@@ -99,7 +112,7 @@ export function jsonEncode(value: unknown, flags: number = 0, depth: number = 51
       data = (data as { toArray: () => unknown }).toArray();
     }
   }
-  const encoder: Encoder = { flags, maxDepth: depth, depth: 0, error: 0, out: "", path: new Set() };
+  const encoder: Encoder = { flags, maxDepth: parseDepth(depth), depth: 0, error: 0, out: "", path: new Set() };
   const records = (flags & JSON_THROW_ON_ERROR) === 0 || (flags & JSON_PARTIAL_OUTPUT_ON_ERROR) !== 0;
   try {
     encodeValue(data, encoder);
@@ -119,6 +132,18 @@ export function jsonEncode(value: unknown, flags: number = 0, depth: number = 51
     throw jsonError(encoder.error);
   }
   return encoder.out;
+}
+
+/**
+ * `json_encode`'s `$depth`: `Z_PARAM_LONG` in coercive mode (a float that is not finite or does not fit an int64 is a
+ * `TypeError`, any other truncates toward zero), then the `(int)` cast into `php_json_encoder.max_depth`.
+ */
+function parseDepth(depth: number): number {
+  if (!Number.isFinite(depth) || depth < -LONG_LIMIT || depth >= LONG_LIMIT) {
+    throw new PhpTypeError("json_encode(): Argument #3 ($depth) must be of type int, float given");
+  }
+  // An integral double in the int64 range is exact, so its low 32 bits are those of the truncated int64.
+  return Math.trunc(depth) | 0;
 }
 
 /** `php_json_encode_zval`: false on a failure that stops encoding unless the partial flag is set. */
@@ -154,20 +179,14 @@ function encodeValue(value: unknown, encoder: Encoder): boolean {
     encoder.out += "null";
     return true;
   }
-  const record = value as Record<symbol, unknown>;
-  if (record[PHP_FLOAT] === true) {
+  // 9.6's classification: a marked float, a PHP array (Array, branded PhpArray, plain object), else an object.
+  const type = phpType(value);
+  if (type === "float") {
     encodeDouble(Number(value), encoder);
     return true;
   }
-  if (Array.isArray(value)) {
-    const entries: [Key, unknown][] = [];
-    for (let index = 0; index < value.length; index++) {
-      entries.push([index, value[index] as unknown]);
-    }
-    return encodeContainer(value, entries, true, false, encoder);
-  }
-  if (record[PHP_ARRAY] === true) {
-    const entries = [...(value as Iterable<readonly [Key, unknown]>)].map(([key, item]): [Key, unknown] => [key, item]);
+  if (type === "array") {
+    const entries = arrayEntries(value);
     return encodeContainer(
       value,
       entries,
@@ -175,11 +194,6 @@ function encodeValue(value: unknown, encoder: Encoder): boolean {
       false,
       encoder,
     );
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  if (prototype === Object.prototype || prototype === null) {
-    const entries = Object.keys(value).map((key): [Key, unknown] => [key, (value as Record<string, unknown>)[key]]);
-    return encodeContainer(value, entries, false, false, encoder);
   }
   if (hasBrand(value, JSON_SERIALIZABLE)) {
     return encodeSerializable(value, encoder);
