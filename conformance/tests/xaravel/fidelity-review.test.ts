@@ -40,6 +40,7 @@ import {
   fileInStoryScope,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
+  namedRuleCitations,
   normaliseManifestStatus,
   NO_PRIOR,
   PRIOR_HEADING,
@@ -49,6 +50,7 @@ import {
   parseChecklist,
   parseRecords,
   parseVerdict,
+  phpDeclarationLines,
   precedenceSection,
   PROMPT_CAP,
   RECORD_KIND,
@@ -66,6 +68,9 @@ import {
   spineRuleText,
   standingRejects,
   testUnits,
+  UPSTREAM_SNAPSHOT_DIR,
+  upstreamReadDirs,
+  upstreamSourcesNamed,
   usedDeclarations,
   verdictSchema,
   WHOLE_FILE_CAP,
@@ -750,7 +755,7 @@ xaravelTest(
     expect(evidenceUser).toContain("unavailable: decisions/DIV-77.md does not exist");
     expect(evidenceUser).toContain("unavailable: decisions/DIV-55.md does not exist");
     expect(evidenceUser).toContain("unavailable: decisions/DIV-66.md does not exist");
-    expect(evidenceUser).toContain("### (b) Consequences cited on added lines (F-7)");
+    expect(evidenceUser).toContain("### (b) Consequences cited on added lines, and the spine Rule bullets an `AD-<n>` citation names (F-7, F-9)");
     const fr1111 = readFileSync(join(root, "conformance", "xaravel-consequences", "conformance.jsonl"), "utf8").split("\n").find((line) => line.startsWith('{"id":"FR-111.1"'))!;
     expect(evidenceUser).toContain(`conformance/xaravel-consequences/conformance.jsonl: ${fr1111}`);
     expect(evidenceUser).toContain("unknown consequence id FR-999.9");
@@ -771,7 +776,7 @@ xaravelTest(
     // ESC-9.2-1: (f) carries each decision record an added line cites, once, in full, or why it is unavailable.
     // Section (f) alone: (h) after it names (f)'s records again, as shown above.
     const sectionF = evidenceUser.slice(evidenceUser.indexOf("### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)"), evidenceUser.indexOf("### (g) "));
-    expect(evidenceUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
+    expect(evidenceUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files and Upstream sources changed tests read (any item)");
     expect(sectionF).toContain(`#### decisions/ESC-6.4-1.md\n\n\`\`\`markdown\n${readFileSync(join(root, "decisions", "ESC-6.4-1.md"), "utf8")}`);
     expect(sectionF.split("#### decisions/ESC-6.4-1.md").length).toBe(2);
     expect(sectionF).toContain("unavailable: decisions/ESC-404-1.md does not exist");
@@ -821,6 +826,13 @@ xaravelTest(
     const divCited = (line: string) => gatherEvidence(root, [{ filename: "packages/runtime/tests/xaravel/json.test.ts", status: "modified", patch: `@@ -1 +1 @@\n-a\n+${line}\n` }], none).divRecords.map((entry) => [entry.label, entry.text !== null]);
     expect(divCited("// ESC-9.8-1 part 1, DIV-9.8")).toEqual([["decisions/DIV-9.md", true]]);
     expect(divCited("// decisions/DIV-9.md, DIV-9, xDIV-9.8, a/DIV-9.8")).toEqual([]);
+    // ESC-10.2-7 (b): an added line naming a Rule bullet ("AD-5, the spine's Lifecycle") carries that bullet in (b);
+    // one citing the same bullet by its dotted id keeps the consequence line instead, and one naming none adds nothing.
+    const namedCited = (line: string) => gatherEvidence(root, [{ filename: "packages/runtime/tests/xaravel/json.test.ts", status: "modified", patch: `@@ -1 +1 @@\n-a\n+${line}\n` }], none).consequences.map((entry) => entry.label.split(" ")[0]);
+    const lifecycleId = `AD-5.${spineRules(readFileSync(join(root, SPINE_FILE), "utf8")).get(5)!.findIndex((bullet) => bullet.startsWith("**Lifecycle.**")) + 1}`;
+    expect(namedCited("// a sync boot() (AD-5, the spine's Lifecycle)")).toEqual([lifecycleId]);
+    expect(namedCited(`// a sync boot() (AD-5, the spine's Lifecycle; ${lifecycleId})`)).toEqual([lifecycleId]);
+    expect(namedCited("// a sync boot() (AD-5, see the spine)")).toEqual([]);
     // Top-level declarations with or without a docblock, documented members, a one-line body and a multi-line signature.
     expect(
       sourceSurface(
@@ -1200,6 +1212,25 @@ xaravelTest(
     expect(spineRuleText(realSpine, 4)).toBe(ad4.map((bullet, k) => `AD-4.${k + 1}: ${bullet}`).join("\n"));
     expect(spineRuleText(realSpine, 26)).toContain("| Traits | `mixin(Base, ...Traits)`;");
     expect(spineRuleText(realSpine, 26)).not.toContain("### AD-27");
+    // ESC-10.2-7 (b): a bare AD-<n> whose clause names one of its Rule bullets by its bold lead cites that bullet, without
+    // case or backticks; a clause naming none, a bare AD-<n> with no clause, an AD the spine lacks and a dotted id add
+    // nothing, and the spine is not read unless some citation has a clause.
+    const namedSpine = { label: SPINE_FILE, text: spineText.replace("**Second.** Two.", "**Writes before `sealed`** Two."), unavailable: null };
+    const namedLabel = (id: string, lead: string): string => `${id} (${id.split(".")[0]}'s ${lead} rule, cited by name; from ${SPINE_FILE})`;
+    expect(namedRuleCitations(["// Sync (AD-1, the spine's first rule).", " * as AD-1's writes before sealed say; AD-1, Writes Before `Sealed`", "(AD-1)", "AD-1, unrelated", "AD-9, First", "AD-1.2, First"], () => namedSpine)).toEqual([
+      { label: namedLabel("AD-1.1", "First"), text: "AD-1.1: **First.** One.", unavailable: null, lang: "markdown" },
+      { label: namedLabel("AD-1.2", "Writes before sealed"), text: "AD-1.2: **Writes before `sealed`** Two.", unavailable: null, lang: "markdown" },
+    ]);
+    expect(namedRuleCitations(["(AD-1)", "AD-1.2, First"], () => { throw new Error("spine read"); })).toEqual([]);
+    expect(namedRuleCitations(["AD-1, First"], () => ({ label: SPINE_FILE, text: null, unavailable: `${SPINE_FILE} does not exist` }))).toEqual([
+      { label: `${SPINE_FILE} (Rule bullets cited by name)`, text: null, unavailable: `${SPINE_FILE} does not exist` },
+    ]);
+    // The ESC-10.2-7 case: Story 10.2's Application.ts cites "AD-5, the spine's Lifecycle", which is AD-5.2.
+    const ad5 = spineRules(realSpine).get(5)!;
+    const lifecycle = ad5.findIndex((bullet) => bullet.startsWith("**Lifecycle.**"));
+    const realNamed = namedRuleCitations([" * Sync: a deferred provider has a sync `boot()` (AD-5, the spine's Lifecycle)."], () => ({ label: SPINE_FILE, text: realSpine, unavailable: null }));
+    expect(realNamed).toEqual([{ label: namedLabel(`AD-5.${lifecycle + 1}`, "Lifecycle"), text: `AD-5.${lifecycle + 1}: ${ad5[lifecycle]!}`, unavailable: null, lang: "markdown" }]);
+    expect(realNamed[0]!.text).toContain("Deferred providers have a sync `boot()`.");
     // In the prompt, a spine Rule is fenced as markdown.
     write(xtRepo.dir, sampleTest, sampleText.replace("covers FR-111.1 and FR-999.9", "covers AD-26").replace("const value = 1;", "const value = 2;"));
     const ruleFakes = fakes({});
@@ -1425,17 +1456,96 @@ xaravelTest(
     expect(psrRows.length).toBe(28);
     expect(psrRows.filter((line) => !rowsEntry.text!.split("\n").includes(line))).toEqual([]);
     expect(psrWhole.findIndex((item) => item.path === contractsRows)).toBeLessThan(psrWhole.findIndex((item) => item.path === psrTest));
+    // ESC-10.2-7 (c): a file a changed test copies into a fixture (copyFileSync's source) is shown like a data file.
+    expect(dataFileReads("a/b/c.test.ts", 'copyFileSync(join(import.meta.dir, "one.json"), join(tmp, "one.json"));\ncopyFileSync(join(tmp, "x"), "y");', (path) => dataKnown.has(path))).toEqual(["a/b/one.json"]);
+    const structuralTest = "packages/contracts/tests/xaravel/structural.test.ts";
+    expect(dataFileReads(structuralTest, read(structuralTest), (path) => existsSync(join(root, path)))).toContain("tsconfig.base.json");
+    // ESC-10.2-7 (a): a changed test that reads Upstream sources through a computed path (a directory walk, a file
+    // name built from a class name) gets the sources of the classes a changed file names in a string literal, under
+    // the longest constant directory of the read; a name only in a comment, a class outside that directory and a read
+    // outside the snapshot add none.
+    const upRoot = tempDir("fidelity-upstream-");
+    const contractsDir = `${UPSTREAM_SNAPSHOT_DIR}/framework/src/Illuminate/Contracts`;
+    const arrayablePhp = "<?php\n\nnamespace Illuminate\\Contracts\\Support;\n\nuse Stringable;\n\n/**\n * @template TKey\n */\ninterface Arrayable extends\n    Stringable\n{\n    public function toArray();\n}\n";
+    const upstreamFiles: Record<string, string> = {
+      [`${contractsDir}/Support/Arrayable.php`]: arrayablePhp,
+      [`${contractsDir}/Bus/Dispatcher.php`]: "<?php\n\nnamespace Illuminate\\Contracts\\Bus;\n\ninterface Dispatcher\n{\n}\n",
+      [`${contractsDir}/Bus/Unported.php`]: "<?php\n\nnamespace Illuminate\\Contracts\\Bus;\n\ninterface Unported\n{\n}\n",
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/src/Illuminate/Support/Collection.php`]: "<?php\n\nnamespace Illuminate\\Support;\n\nclass Collection\n{\n}\n",
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/src/Illuminate/Bus/Batch.php`]: "<?php\n\nnamespace Illuminate\\Bus;\n\nclass Batch\n{\n}\n",
+      "packages/x/src/support/Arrayable.ts": '// Illuminate\\Contracts\\Support\\Arrayable; returns an Illuminate\\Support\\Collection.\nexport const Arrayable = contract("Illuminate\\\\Contracts\\\\Support\\\\Arrayable");\n',
+      "packages/x/src/bus/Dispatcher.ts": 'registerClass("Illuminate\\\\Contracts\\\\Bus\\\\Dispatcher", Dispatcher);\nregisterClass("Illuminate\\\\Bus\\\\Batch", Batch);\n',
+      "packages/x/tests/walk.test.ts": [
+        'const REPO = join(import.meta.dir, "..", "..", "..");',
+        'const NAMESPACES = ["Support", "Bus"];',
+        "for (const ns of NAMESPACES) {",
+        '  const dir = join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts", ns);',
+        '  for (const entry of readdirSync(dir).filter((name) => name.endsWith(".php"))) {',
+        '    const source = readFileSync(join(dir, entry), "utf8");',
+        "  }",
+        "}",
+        'readdirSync(join(REPO, "packages"));',
+        "",
+      ].join("\n"),
+      "packages/x/tests/name.test.ts": 'const REPO = join(import.meta.dir, "..", "..", "..");\nfunction declaration(name: string): string {\n  const path = join(REPO, "conformance", "upstream", "framework", "src", ...name.split("\\\\")) + ".php";\n  return readFileSync(path, "utf8");\n}\n',
+    };
+    for (const [path, text] of Object.entries(upstreamFiles)) {
+      mkdirSync(dirname(join(upRoot, path)), { recursive: true });
+      writeFileSync(join(upRoot, path), text);
+    }
+    const isUpDir = (path: string) => existsSync(join(upRoot, path)) && !path.endsWith(".php") && !path.endsWith(".ts");
+    expect(upstreamReadDirs("packages/x/tests/walk.test.ts", upstreamFiles["packages/x/tests/walk.test.ts"]!, isUpDir)).toEqual([contractsDir]);
+    expect(upstreamReadDirs("packages/x/tests/name.test.ts", upstreamFiles["packages/x/tests/name.test.ts"]!, isUpDir)).toEqual([`${UPSTREAM_SNAPSHOT_DIR}/framework/src`]);
+    expect(upstreamReadDirs("a/x.test.ts", 'readFileSync(join(root, "conformance", "upstream", "framework"));\nreaddirSync(join(import.meta.dir, "..", "..", "outside", "upstream"));\nreadFileSync(join(import.meta.dir, "..", "conformance", "upstream", "framework", "src", "Illuminate", "Contracts", "Bus", "Dispatcher.php"));', isUpDir)).toEqual([]);
+    const upTexts = Object.entries(upstreamFiles).filter(([path]) => path.startsWith("packages/"));
+    expect(upstreamSourcesNamed(upRoot, [contractsDir], upTexts).map((source) => [source.path, source.fqcn, source.by, source.dir])).toEqual([
+      [`${contractsDir}/Bus/Dispatcher.php`, "Illuminate\\Contracts\\Bus\\Dispatcher", "packages/x/src/bus/Dispatcher.ts", contractsDir],
+      [`${contractsDir}/Support/Arrayable.php`, "Illuminate\\Contracts\\Support\\Arrayable", "packages/x/src/support/Arrayable.ts", contractsDir],
+    ]);
+    expect(upstreamSourcesNamed(upRoot, [`${UPSTREAM_SNAPSHOT_DIR}/framework/src`], upTexts).map((source) => source.path)).toEqual([
+      `${UPSTREAM_SNAPSHOT_DIR}/framework/src/Illuminate/Bus/Batch.php`,
+      `${contractsDir}/Bus/Dispatcher.php`,
+      `${contractsDir}/Support/Arrayable.php`,
+    ]);
+    expect(upstreamSourcesNamed(upRoot, [], upTexts)).toEqual([]);
+    expect(upstreamSourcesNamed(tempDir("fidelity-no-upstream-"), [contractsDir], upTexts)).toEqual([]);
+    // The declaration lines: namespace, top-level use, and the declaration up to its `{`, extends lists included.
+    expect(phpDeclarationLines(arrayablePhp)).toBe("namespace Illuminate\\Contracts\\Support;\nuse Stringable;\ninterface Arrayable extends\n    Stringable\n{\n");
+    expect(phpDeclarationLines("<?php\n\nreturn [];\n")).toBe("");
+    // In (h) they come with the files changed tests read, each once and before the changed files; a changed source
+    // is not repeated.
+    const upChanged = ["packages/x/tests/walk.test.ts", "packages/x/src/support/Arrayable.ts", "packages/x/src/bus/Dispatcher.ts"].map((filename) => ({ filename, status: "added", patch: "@@ -0,0 +1 @@\n+x" }));
+    const upWhole = wholeFileEvidence(upRoot, upChanged, new Map(), 400_000);
+    const reader = (fqcn: string, by: string) => `read by packages/x/tests/walk.test.ts from ${contractsDir}/: the Upstream source of ${fqcn}, which ${by} names`;
+    expect(upWhole.map((item) => [item.path, item.reason])).toEqual([
+      [`${contractsDir}/Bus/Dispatcher.php`, reader("Illuminate\\Contracts\\Bus\\Dispatcher", "packages/x/src/bus/Dispatcher.ts")],
+      [`${contractsDir}/Support/Arrayable.php`, reader("Illuminate\\Contracts\\Support\\Arrayable", "packages/x/src/support/Arrayable.ts")],
+      ["packages/x/tests/walk.test.ts", "changed"],
+      ["packages/x/src/support/Arrayable.ts", "changed"],
+      ["packages/x/src/bus/Dispatcher.ts", "changed"],
+    ]);
+    expect(upWhole[1]!.text).toBe(arrayablePhp);
+    // A changed file that is not a test reads none.
+    expect(wholeFileEvidence(upRoot, upChanged.slice(1), new Map(), 400_000).map((item) => item.path)).toEqual(["packages/x/src/support/Arrayable.ts", "packages/x/src/bus/Dispatcher.ts"]);
+    // One that does not fit shows its declaration lines, its room reserved before the whole files take theirs.
+    // The budget is each entry's reserved heading room (220 beyond its path and reason) plus the two declarations' room.
+    const headings = upWhole.reduce((sum, item) => sum + item.path.length + item.reason.length + 220, 0);
+    const declarationRoom = [arrayablePhp, upstreamFiles[`${contractsDir}/Bus/Dispatcher.php`]!].reduce((sum, text) => sum + phpDeclarationLines(text).length + 20, 0);
+    const upTight = wholeFileEvidence(upRoot, upChanged, new Map(), headings + declarationRoom);
+    expect(upTight[1]!.text).toBe(phpDeclarationLines(arrayablePhp));
+    expect(upTight[1]!.reason).toStartWith(`${reader("Illuminate\\Contracts\\Support\\Arrayable", "packages/x/src/support/Arrayable.ts")}; its declaration lines only, the file omitted for size: ${arrayablePhp.length} characters`);
+    expect(upTight[1]!.note).toBeNull();
     // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
     // file named without its text means.
     const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
     const filled = withWholeFiles(root, { ...promptBase, evidence: { ...NO_EVIDENCE, decisions: gatherEvidence(root, registryPatch(registryPath), none).decisions } });
     expect(filled.evidence.wholeFiles.find((item) => item.path === "decisions/ESC-9.4-1.md")!.note).toBe("shown in full above, in (f)");
     const wholeUser = buildPrompt(filled).user;
-    expect(wholeUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
+    expect(wholeUser).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files and Upstream sources changed tests read (any item)");
     expect(wholeUser).toContain("A file named here without its text is shown in full in another section, omitted for size, or unavailable, as its note says");
     expect(wholeUser).toContain(`#### ${registryPath} (changed)\n\n\`\`\`ts\n${read(registryPath)}`);
     expect(buildPrompt(filled).length).toBeLessThanOrEqual(PROMPT_CAP);
-    expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)\n\nThe change adds or modifies no file this section shows.");
+    expect(buildPrompt({ ...promptBase, files: [], evidence: NO_EVIDENCE }).user).toContain("### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files and Upstream sources changed tests read (any item)\n\nThe change adds or modifies no file this section shows.");
     // (h) reserves room for every entry's heading and note, so a prompt near the cap still fits with it: many files,
     // nearly all omitted for size, never push it over.
     const many = [...new Bun.Glob("packages/runtime/src/**/*.ts").scanSync({ cwd: root })].sort().map((filename) => ({ filename, status: "modified", patch: "@@ -1 +1 @@\n-a\n+b" }));

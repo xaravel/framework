@@ -41,7 +41,10 @@
 // evidence the items need: (a) every DIV record an added
 // `adapted:DIV-<n>.<k>` token or `DIV-<n>.<k>` clause citation cites
 // (ESC-9.8-2); (b) the consequence line of every
-// `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line; (c) every assigned
+// `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line, and each spine Rule
+// bullet a bare `AD-<n>` names by its lead on an added line or in a changed
+// source file's docblock ("AD-5, the spine's Lifecycle",
+// `namedRuleCitations`; ESC-10.2-7); (c) every assigned
 // committed Oracle request's fixture whose `output.error` is not null, a
 // line for each one present, verified and not an error (ESC-9.8-2),
 // every changed fixture whose output is an error, and, for each id a touched
@@ -69,8 +72,10 @@
 // modifies, in full, then every decision and DIV record those files cite
 // anywhere, then the repository files they import (relative and dynamic-idiom
 // imports, `WHOLE_FILE_DEPTH` levels), and the repository files changed test
-// files read as data (`dataFileReads`; one over `WHOLE_FILE_CAP` as the lines
-// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5), each
+// files read as data (`dataFileReads`, `copyFileSync` sources included; one over `WHOLE_FILE_CAP` as the lines
+// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), and the Upstream sources they read
+// through a computed path under the snapshot (`upstreamReadDirs`): each one of a class a changed file names
+// (`upstreamSourcesNamed`), and one that does not fit as its declaration lines (`phpDeclarationLines`; ESC-10.2-7), each
 // once, filling what the prompt cap leaves after the other sections; a file another section shows in full is
 // named, not repeated, and one that does not fit is named as omitted for size.
 // Everything is read from the working tree. A missing evidence file is named
@@ -348,7 +353,7 @@ function evidenceSection(sections: string[], heading: string, entries: readonly 
     sections.push("", none);
   }
   for (const entry of entries) {
-    sections.push("", `#### ${entry.label}`, "", entry.text === null ? `unavailable: ${entry.unavailable ?? "not read"}` : fence(entry.text, lang));
+    sections.push("", `#### ${entry.label}`, "", entry.text === null ? `unavailable: ${entry.unavailable ?? "not read"}` : fence(entry.text, entry.lang ?? lang));
   }
 }
 
@@ -416,7 +421,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   const evidence = input.evidence;
   sections.push("", "## Evidence for the checklist items");
   evidenceSection(sections, "### (a) DIV records cited by added adapted markers or DIV clauses (F-3, F-5)", evidence.divRecords, "No added line carries an `adapted:DIV-<n>.<k>` marker or cites a `DIV-<n>.<k>` clause.", "markdown");
-  evidenceSection(sections, "### (b) Consequences cited on added lines (F-7)", evidence.consequences, "No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence.", "jsonl");
+  evidenceSection(sections, "### (b) Consequences cited on added lines, and the spine Rule bullets an `AD-<n>` citation names (F-7, F-9)", evidence.consequences, "No added line cites an `FR-<n>.<k>` or `AD-<n>.<k>` consequence, or names an AD's Rule bullet.", "jsonl");
   evidenceSection(sections, "### (c) Oracle fixtures whose output is an error (F-6)", evidence.errorFixtures, "No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.", "json");
   evidenceSection(sections, "### (c) Oracle fixtures that are present, verify against oracle.pub and are not errors (F-6)", evidence.presentFixtures, "No fixture of an assigned committed Oracle request is present, verified and not an error.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
@@ -469,7 +474,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   }
   evidenceSection(sections, "### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
   evidenceSection(sections, "### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)", evidence.sourceSurface, "The change adds or modifies no `packages/*/src/` file.", "ts");
-  sections.push("", "### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
+  sections.push("", "### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files and Upstream sources changed tests read (any item)");
   if (evidence.wholeFiles.length === 0) {
     sections.push("", "The change adds or modifies no file this section shows.");
   } else {
@@ -651,7 +656,10 @@ export function sourceDocTexts(root: string, files: readonly ChangedFile[]): str
 /** One file of evidence (h): its repository path, why it is included, and its full text or a note saying why not. */
 export interface WholeFileEntry {
   readonly path: string;
-  /** "changed", "cited by <path>", "imported by <path>" or "read by <path>" (with "; excerpt: …" when `dataFileExcerpt` cut it). */
+  /**
+   * "changed", "cited by <path>", "imported by <path>" or "read by <path>" (with "; excerpt: …" when `dataFileExcerpt`
+   * cut it, or, for an Upstream source, "from <dir>/: …" and "; its declaration lines only, …" when it is cut to them).
+   */
   readonly reason: string;
   /** The file's full text, or null with `note` set. */
   readonly text: string | null;
@@ -710,13 +718,14 @@ export function fileImports(path: string, text: string, exists: (path: string) =
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
  * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
- * deep; and the repository files changed test files read as data (ESC-10.1-5). A file another section already shows
- * in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters in this order: the
- * cited records, and the files changed test files read or import (their data, helpers and fixtures), which no other
- * section shows; then the changed TypeScript and Markdown, whose diff is above; then the
- * other imports by level; then the other changed files, those outside the Story's scope (`inScope`, ESC-9.10-3) among
- * them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit,
- * is named as omitted for size, never dropped silently.
+ * deep; the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7); and the
+ * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). A file another
+ * section already shows in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters
+ * in this order: the cited records, and the files changed test files read or import (their data, Upstream sources,
+ * helpers and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
+ * then the other imports by level; then the other changed files, those outside the Story's scope (`inScope`,
+ * ESC-9.10-3) among them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit, is named as omitted for size,
+ * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit.
  */
 export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true): WholeFileEntry[] {
   const read = (path: string): string | null => {
@@ -787,6 +796,33 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       readData(path, text);
     }
   }
+  // A changed test that reads Upstream sources through a computed path (a directory walk, or a file name built from a
+  // class name) reads the sources of the classes the change ports: each one a changed file names is shown, and one that
+  // does not fit as its declaration lines (ESC-10.2-7).
+  const isDir = (path: string): boolean => {
+    try {
+      return !path.startsWith("..") && statSync(join(root, path)).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  const readers = new Map<string, string>();
+  for (const [path, text] of changedTexts) {
+    if (TS_FILE.test(path) && isTestPath(path)) {
+      for (const dir of upstreamReadDirs(path, text, isDir)) {
+        if (!readers.has(dir)) {
+          readers.set(dir, path);
+        }
+      }
+    }
+  }
+  const upstream = new Set<string>();
+  for (const source of upstreamSourcesNamed(root, [...readers.keys()], changedTexts)) {
+    if (!listed.has(source.path) && !changed.some((file) => file.filename === source.path)) {
+      add(1, source.path, `read by ${readers.get(source.dir)!} from ${source.dir}/: the Upstream source of ${source.fqcn}, which ${source.by} names`);
+      upstream.add(source.path);
+    }
+  }
   let frontier = changedTexts.filter(([path]) => TS_FILE.test(path));
   for (let depth = 0; depth < WHOLE_FILE_DEPTH; depth++) {
     const next: (readonly [string, string])[] = [];
@@ -807,6 +843,31 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   const entries = tiers.flat();
   // Every entry renders a heading and, without its text, a note: reserve room for those before any file's text.
   let left = budget - entries.reduce((sum, entry) => sum + entry.path.length + entry.reason.length + WHOLE_FILE_ENTRY_ROOM, 0);
+  // An Upstream source that is omitted for size still shows its declaration lines (ESC-10.2-7). Room for every one's
+  // is reserved first, when it all fits, and handed back as each whole file fits; otherwise each takes what is left.
+  const declarations = new Map<string, string>();
+  for (const entry of entries) {
+    const text = upstream.has(entry.path) && entry.text !== null && !shown.has(entry.path) ? phpDeclarationLines(entry.text) : "";
+    if (text !== "") {
+      declarations.set(entry.path, text);
+    }
+  }
+  const reserve = [...declarations.values()].reduce((sum, text) => sum + text.length + 20, 0);
+  const reserved = reserve <= left;
+  if (reserved) {
+    left -= reserve;
+  }
+  const refund = (path: string): number => (reserved && declarations.has(path) ? declarations.get(path)!.length + 20 : 0);
+  const declared = (entry: WholeFileEntry, omitted: WholeFileEntry): WholeFileEntry => {
+    const text = declarations.get(entry.path) ?? "";
+    if (text === "" || (!reserved && text.length + 20 > left)) {
+      return omitted;
+    }
+    if (!reserved) {
+      left -= text.length + 20;
+    }
+    return { ...entry, reason: `${entry.reason}; its declaration lines only, the file ${omitted.note!}`, text, note: null };
+  };
   return entries.map((entry) => {
     const section = shown.get(entry.path);
     if (section !== undefined) {
@@ -816,14 +877,14 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       return entry;
     }
     if (entry.text.length > WHOLE_FILE_CAP) {
-      return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, over the ${WHOLE_FILE_CAP}-character limit for one file${entry.reason === "changed" ? "; its diff is above" : ""}` };
+      return declared(entry, { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, over the ${WHOLE_FILE_CAP}-character limit for one file${entry.reason === "changed" ? "; its diff is above" : ""}` });
     }
     // Its text and fence; the heading is reserved above.
     const size = entry.text.length + 20;
-    if (size > left) {
-      return { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves ${Math.max(left, 0)} for this section` };
+    if (size > left + refund(entry.path)) {
+      return declared(entry, { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves ${Math.max(left, 0)} for this section` });
     }
-    left -= size;
+    left -= size - refund(entry.path);
     return entry;
   });
 }
@@ -973,6 +1034,10 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
       return found === undefined ? { label: token, text: null, unavailable: `unknown consequence id ${token}: no line in ${CONSEQUENCES_DIR}/*.jsonl has it` } : { label: token, text: found.join("\n"), unavailable: null };
     });
   }
+  // A bare `AD-<n>` followed by the name of one of its Rule bullets ("AD-5, the spine's Lifecycle") cites that bullet,
+  // on an added line or in a changed source file's docblock (ESC-10.2-7).
+  const named = namedRuleCitations([...added, ...sourceDocTexts(root, files)], () => readEvidenceFile(root, SPINE_FILE));
+  consequences = [...consequences, ...named.filter((entry) => !tokens.has(entry.label.split(" ")[0]!))];
   const fixtures = assignedFixtures(root, [...manifest.testIds, ...manifest.xaravelTestIds]);
   return {
     divRecords,
@@ -1722,11 +1787,14 @@ function fileConsts(all: readonly TestUnit[]): Map<string, string> {
   return consts;
 }
 
-/** The path argument of a `readFileSync(…)`, `readFile(…)` or `Bun.file(…)` call: a file read as data (ESC-10.1-5). */
-const DATA_READ = /\b(?:readFileSync|readFile|Bun\.file)\s*\(\s*([^(),]*(?:\([^()]*\)[^(),]*)*?)\s*[,)]/g;
+/**
+ * The path argument of a `readFileSync(…)`, `readFile(…)` or `Bun.file(…)` call, a file read as data (ESC-10.1-5), or the
+ * source argument of a `copyFileSync(…)` call, a file copied into a fixture such as a compiler project (ESC-10.2-7).
+ */
+const DATA_READ = /\b(?:readFileSync|readFile|Bun\.file|copyFileSync)\s*\(\s*([^(),]*(?:\([^()]*\)[^(),]*)*?)\s*[,)]/g;
 
 /**
- * The repository files the test file `path` reads as data (ESC-10.1-5): each `DATA_READ` path argument that
+ * The repository files the test file `path` reads as data, or copies into a fixture (ESC-10.1-5, ESC-10.2-7): each `DATA_READ` path argument that
  * `pathExpression` resolves, through the file's top-level `const`s, to a path `exists` accepts. A path the tool
  * cannot resolve, or one outside the repository, is left out.
  */
@@ -1741,6 +1809,229 @@ export function dataFileReads(path: string, text: string, exists: (path: string)
   }
   out.delete(path);
   return [...out].sort(compareUnits);
+}
+
+/** Where `bun run upstream:sync` puts the Upstream snapshot (gitignored): one directory per package, each with its `src/`. */
+export const UPSTREAM_SNAPSHOT_DIR = "conformance/upstream";
+
+/** A call that reads a file or lists a directory, up to its opening parenthesis (ESC-10.2-7). */
+const SOURCE_READ = /\b(?:readFileSync|readFile|Bun\.file|readdirSync|readdir)\s*\(/g;
+
+/** `text` split at each `separator` outside quotes and brackets. */
+function topLevelSplit(text: string, separator: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let from = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]!;
+    if (quote !== null) {
+      if (char === "\\") {
+        i++;
+      } else if (char === quote) {
+        quote = null;
+      }
+    } else if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+    } else if ("([{".includes(char)) {
+      depth++;
+    } else if (")]}".includes(char)) {
+      depth--;
+    } else if (char === separator && depth === 0) {
+      parts.push(text.slice(from, i));
+      from = i + 1;
+    }
+  }
+  parts.push(text.slice(from));
+  return parts;
+}
+
+/** The first argument of the call whose `(` ends just before `open`: up to its first top-level `,` or its closing `)`. */
+function firstArgument(text: string, open: number): string {
+  let end = open;
+  let depth = 0;
+  let quote: string | null = null;
+  for (; end < text.length; end++) {
+    const char = text[end]!;
+    if (quote !== null) {
+      if (char === "\\") {
+        end++;
+      } else if (char === quote) {
+        quote = null;
+      }
+    } else if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+    } else if ("([{".includes(char)) {
+      depth++;
+    } else if (")]}".includes(char)) {
+      if (depth === 0) {
+        break;
+      }
+      depth--;
+    } else if (char === "," && depth === 0) {
+      break;
+    }
+  }
+  return text.slice(open, end);
+}
+
+/** Each `const` of a file at any depth, by name, with every initializer it is bound to (one per function that binds it). */
+function constBindings(text: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const match of text.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]*)?=(?![=>])\s*([^;]*);/g)) {
+    out.set(match[1]!, [...(out.get(match[1]!) ?? []), match[2]!]);
+  }
+  return out;
+}
+
+/** The longest constant path a path expression starts with, and whether the expression is that path exactly. */
+interface PathPrefix {
+  readonly path: string;
+  readonly complete: boolean;
+}
+
+/**
+ * The longest constant paths a path expression in `path` starts with (ESC-10.2-7), one per binding of the names it uses:
+ * what `pathExpression` resolves (`import.meta.dir`, string literals, `const`s, `join`/`resolve`), stopping at the first
+ * computed part, such as a variable file name, a spread (`...name.split("\\")`) or a concatenation (`+ ".php"`).
+ */
+function pathPrefixes(expr: string, path: string, bindings: ReadonlyMap<string, readonly string[]>, depth = 0): PathPrefix[] {
+  const text = expr.trim();
+  if (depth > 8 || text === "") {
+    return [];
+  }
+  const sum = topLevelSplit(text, "+");
+  if (sum.length > 1) {
+    return pathPrefixes(sum[0]!, path, bindings, depth + 1).map((prefix) => ({ path: prefix.complete ? posix.dirname(prefix.path) : prefix.path, complete: false }));
+  }
+  if (text === "import.meta.dir" || text === "import.meta.dirname") {
+    return [{ path: posix.dirname(path), complete: true }];
+  }
+  const literal = /^(["'])([^"'\\]*)\1$/.exec(text);
+  if (literal !== null) {
+    return literal[2]!.startsWith(".") ? [{ path: posix.join(posix.dirname(path), literal[2]!), complete: true }] : [];
+  }
+  if (/^[A-Za-z_$][\w$]*$/.test(text)) {
+    return (bindings.get(text) ?? []).flatMap((bound) => pathPrefixes(bound, path, bindings, depth + 1));
+  }
+  const call = /^(?:join|resolve)\s*\(([\s\S]*)\)$/.exec(text);
+  if (call === null) {
+    return [];
+  }
+  const [first, ...rest] = topLevelSplit(call[1]!, ",").map((arg) => arg.trim()).filter((arg) => arg !== "");
+  return (first === undefined ? [] : pathPrefixes(first, path, bindings, depth + 1)).map((base) => {
+    if (!base.complete) {
+      return base;
+    }
+    let joined = base.path;
+    for (const arg of rest) {
+      const part = /^(["'])([^"'\\]*)\1$/.exec(arg)?.[2];
+      if (part === undefined || posix.isAbsolute(part)) {
+        return { path: joined, complete: false };
+      }
+      joined = posix.join(joined, part);
+    }
+    return { path: joined, complete: true };
+  });
+}
+
+/**
+ * The directories of the Upstream snapshot the test file `path` reads sources from through a computed path (ESC-10.2-7):
+ * for each call that reads a file or lists a directory, the longest constant directory its path argument starts with
+ * (`pathPrefixes`, through the file's `const`s at any depth), when that is `UPSTREAM_SNAPSHOT_DIR` or under it and `isDir`
+ * accepts it. A path that resolves to a file exactly is a data file read (`dataFileReads`), not listed here.
+ */
+export function upstreamReadDirs(path: string, text: string, isDir: (path: string) => boolean): string[] {
+  const bindings = constBindings(text);
+  const out = new Set<string>();
+  for (const match of text.matchAll(SOURCE_READ)) {
+    for (const prefix of pathPrefixes(firstArgument(text, match.index + match[0].length), path, bindings)) {
+      const inSnapshot = prefix.path === UPSTREAM_SNAPSHOT_DIR || prefix.path.startsWith(`${UPSTREAM_SNAPSHOT_DIR}/`);
+      if (inSnapshot && isDir(prefix.path)) {
+        out.add(prefix.path);
+      }
+    }
+  }
+  return [...out].sort(compareUnits);
+}
+
+/** A PHP class name with its namespace, as Upstream writes it or as a TypeScript string literal escapes it (`Illuminate\\Contracts\\…`). */
+const PHP_CLASS_NAME = /(?<![\w\\])[A-Z][A-Za-z0-9_]*(?:\\{1,2}[A-Z][A-Za-z0-9_]*)+/g;
+
+/** An Upstream source file a changed test reads, found through the class a changed file names. */
+export interface UpstreamSource {
+  readonly path: string;
+  readonly fqcn: string;
+  /** The changed file that names the class first. */
+  readonly by: string;
+  /** The directory of `upstreamReadDirs` the file is under (the deepest, if several are). */
+  readonly dir: string;
+}
+
+/**
+ * The Upstream source files under `dirs` of the classes `texts` (path, text) name in a string literal (ESC-10.2-7): for
+ * each name, the file `<UPSTREAM_SNAPSHOT_DIR>/<package>/src/<name as a path>.php` that the snapshot's PSR-4 layout gives
+ * it, when it exists under one of `dirs`. A test that walks a directory or builds a file name from a class name reads
+ * the sources of the classes the change ports, and a port names the class it ports in a string literal
+ * (`registerClass('<FQCN>', …)`, `contract("<FQCN>")`; AD-10). A name only in a comment or a doc is left out.
+ */
+export function upstreamSourcesNamed(root: string, dirs: readonly string[], texts: readonly (readonly [string, string])[]): UpstreamSource[] {
+  if (dirs.length === 0) {
+    return [];
+  }
+  let packages: string[];
+  try {
+    packages = readdirSync(join(root, UPSTREAM_SNAPSHOT_DIR), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => `${UPSTREAM_SNAPSHOT_DIR}/${entry.name}/src`);
+  } catch {
+    return [];
+  }
+  const roots = packages.filter((src) => dirs.some((dir) => dir.startsWith(`${src}/`) || dir === src || src.startsWith(`${dir}/`)));
+  const out = new Map<string, UpstreamSource>();
+  for (const [by, text] of texts) {
+    const literals = [...text.matchAll(/(["'])((?:\\.|(?!\1)[^\\\n])*)\1/g)].map((literal) => literal[2]!).join("\n");
+    for (const match of literals.matchAll(PHP_CLASS_NAME)) {
+      const fqcn = match[0].replace(/\\\\/g, "\\");
+      for (const src of roots) {
+        const path = `${src}/${fqcn.split("\\").join("/")}.php`;
+        const dir = dirs.filter((candidate) => path.startsWith(`${candidate}/`)).sort((a, b) => b.length - a.length)[0];
+        if (dir === undefined || out.has(path)) {
+          continue;
+        }
+        try {
+          if (statSync(join(root, path)).isFile()) {
+            out.set(path, { path, fqcn, by, dir });
+          }
+        } catch {
+          // Not in the snapshot: the name is not an Upstream class under these directories.
+        }
+      }
+    }
+  }
+  return [...out.values()].sort((a, b) => compareUnits(a.path, b.path));
+}
+
+/**
+ * The declaration lines of a PHP source (ESC-10.2-7): its `namespace` and top-level `use` lines, and each top-level
+ * `class`, `interface`, `trait` or `enum` declaration up to its `{`, with its `extends` and `implements` lists.
+ */
+export function phpDeclarationLines(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (/^(?:namespace|use)\s/.test(line)) {
+      out.push(line);
+    } else if (/^(?:(?:abstract|final|readonly)\s+)*(?:class|interface|trait|enum)\s+\w/.test(line)) {
+      let at = i;
+      out.push(lines[at]!);
+      while (!lines[at]!.includes("{") && at + 1 < lines.length && at - i < 20) {
+        at++;
+        out.push(lines[at]!);
+      }
+      i = at;
+    }
+  }
+  return out.length === 0 ? "" : `${out.join("\n")}\n`;
 }
 
 /** A string literal of at least three characters, as written between its quotes. */
@@ -1916,6 +2207,45 @@ export function spineRuleText(text: string, n: number): string | null {
     rule.pop();
   }
   return rule.join("\n");
+}
+
+/** A bare `AD-<n>` citation and the rest of its clause, up to a `)`, `;` or the end of the line. */
+const AD_NAMED_CITATION = /(?<![\w./-])AD-([1-9]\d*)(?![\w.-])([^)\n;]{0,80})/g;
+
+/**
+ * The spine Rule bullets cited by name in `texts` (ESC-10.2-7): a bare `AD-<n>` whose clause names one of AD-`n`'s
+ * Rule bullets by its bold lead ("AD-5, the spine's Lifecycle" names `**Lifecycle.**`, compared without case or
+ * backticks) cites that bullet. Each is labelled `AD-<n>.<k>`, numbered as `consequencesFor` numbers it, and the spine
+ * (`spine`) is read only when some text has a bare `AD-<n>` with a clause. An unreadable spine is named once.
+ */
+export function namedRuleCitations(texts: readonly string[], spine: () => EvidenceEntry): EvidenceEntry[] {
+  const cited: [number, string][] = [];
+  for (const text of texts) {
+    for (const match of text.matchAll(AD_NAMED_CITATION)) {
+      if (match[2]!.trim() !== "") {
+        cited.push([Number(match[1]), match[2]!.replace(/`/g, "").toLowerCase()]);
+      }
+    }
+  }
+  if (cited.length === 0) {
+    return [];
+  }
+  const file = spine();
+  if (file.text === null) {
+    return [{ label: `${SPINE_FILE} (Rule bullets cited by name)`, text: null, unavailable: file.unavailable }];
+  }
+  const rules = spineRules(file.text);
+  const out = new Map<string, EvidenceEntry>();
+  for (const [n, clause] of cited) {
+    (rules.get(n) ?? []).forEach((bullet, k) => {
+      const lead = /^\*\*(.+?)[.:]?\*\*/.exec(bullet)?.[1]?.replace(/`/g, "");
+      const id = `AD-${n}.${k + 1}`;
+      if (lead !== undefined && !out.has(id) && new RegExp(`(?<![\\w-])${escapeRegExp(lead.toLowerCase())}(?![\\w-])`).test(clause)) {
+        out.set(id, { label: `${id} (AD-${n}'s ${lead} rule, cited by name; from ${SPINE_FILE})`, text: `${id}: ${bullet}`, unavailable: null, lang: "markdown" });
+      }
+    });
+  }
+  return [...out.values()].sort((a, b) => compareUnits(a.label, b.label));
 }
 
 /**
