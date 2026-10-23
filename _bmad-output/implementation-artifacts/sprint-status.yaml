@@ -134,7 +134,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: in-progress  # the contracts consequence row landed (decisions/MAINT-2026-10-22-consequence-rows.md)
+  10-1-token-brand-and-contract-t-mechanism: blocked  # ESC-10.1-1 (AD-1 token typing) and ESC-10.1-2 (contracts/psr subpath), waiting on the Maintainer
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
