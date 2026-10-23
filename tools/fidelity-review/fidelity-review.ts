@@ -68,8 +68,10 @@
 // (MAINT-2026-10-22-fidelity-whole-files): every file the change adds or
 // modifies, in full, then every decision and DIV record those files cite
 // anywhere, then the repository files they import (relative and dynamic-idiom
-// imports, `WHOLE_FILE_DEPTH` levels), each once, filling what the prompt cap
-// leaves after the other sections; a file another section shows in full is
+// imports, `WHOLE_FILE_DEPTH` levels), and the repository files changed test
+// files read as data (`dataFileReads`; one over `WHOLE_FILE_CAP` as the lines
+// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5), each
+// once, filling what the prompt cap leaves after the other sections; a file another section shows in full is
 // named, not repeated, and one that does not fit is named as omitted for size.
 // Everything is read from the working tree. A missing evidence file is named
 // ("unavailable: <why>"), never dropped.
@@ -246,7 +248,7 @@ export interface Evidence {
   readonly decisions: readonly EvidenceEntry[];
   /** (g) Each `packages/<name>/src/` file the change adds or modifies, as its declaration-and-tag listing (`sourceSurface`, F-9, ESC-9.3-2). */
   readonly sourceSurface: readonly EvidenceEntry[];
-  /** (h) Each changed file in full, the decision and DIV records they cite, and the repository files they import, within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
+  /** (h) Each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (ESC-10.1-5), within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
   readonly wholeFiles: readonly WholeFileEntry[];
   /** The files of touched Xaravel Tests (e) leaves out as outside the Story's scope (`inStoryScope`, ESC-9.10-3), named in (e). */
   readonly outOfScopeTests: readonly string[];
@@ -464,7 +466,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   }
   evidenceSection(sections, "### (f) Decision records cited on added lines, by touched Xaravel Tests and in changed source files' docblocks (any item, ESC-9.2-1, ESC-9.10-1)", evidence.decisions, "No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).", "markdown");
   evidenceSection(sections, "### (g) Every declaration and @asyncRoot tag of each changed framework source file, with its docblock (F-9, ESC-9.3-2)", evidence.sourceSurface, "The change adds or modifies no `packages/*/src/` file.", "ts");
-  sections.push("", "### (h) Whole files: each changed file in full, the decision and DIV records they cite, and the repository files they import (any item)");
+  sections.push("", "### (h) Whole files: each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (any item)");
   if (evidence.wholeFiles.length === 0) {
     sections.push("", "The change adds or modifies no file this section shows.");
   } else {
@@ -646,7 +648,7 @@ export function sourceDocTexts(root: string, files: readonly ChangedFile[]): str
 /** One file of evidence (h): its repository path, why it is included, and its full text or a note saying why not. */
 export interface WholeFileEntry {
   readonly path: string;
-  /** "changed", "cited by <path>" or "imported by <path>". */
+  /** "changed", "cited by <path>", "imported by <path>" or "read by <path>" (with "; excerpt: …" when `dataFileExcerpt` cut it). */
   readonly reason: string;
   /** The file's full text, or null with `note` set. */
   readonly text: string | null;
@@ -705,9 +707,10 @@ export function fileImports(path: string, text: string, exists: (path: string) =
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
  * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
- * deep. A file another section already shows in full (`shown`, path → section) is named, not repeated. The entries
- * fill `budget` characters in this order: the cited records and the files changed test files import (their helpers
- * and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above; then the
+ * deep; and the repository files changed test files read as data (ESC-10.1-5). A file another section already shows
+ * in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters in this order: the
+ * cited records, and the files changed test files read or import (their data, helpers and fixtures), which no other
+ * section shows; then the changed TypeScript and Markdown, whose diff is above; then the
  * other imports by level; then the other changed files, those outside the Story's scope (`inScope`, ESC-9.10-3) among
  * them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit,
  * is named as omitted for size, never dropped silently.
@@ -738,6 +741,22 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     const text = read(path);
     tiers[tier]!.push({ path, reason, text, note: text === null ? `unavailable: ${path} does not exist or cannot be read` : null });
   };
+  // A changed test file's data files are what its tests compare against, as its helpers and fixtures are (ESC-10.1-5).
+  // One over the one-file limit shows the lines the test's string literals select (`dataFileExcerpt`).
+  const readData = (path: string, text: string): void => {
+    for (const target of dataFileReads(path, text, exists)) {
+      if (listed.has(target) || changed.some((file) => file.filename === target) || wholeFileSkipped(target)) {
+        continue;
+      }
+      add(1, target, `read by ${path}`);
+      const entry = tiers[1]!.at(-1)!;
+      const excerpt = entry.text !== null && entry.text.length > WHOLE_FILE_CAP ? dataFileExcerpt(entry.text, text) : null;
+      if (excerpt !== null) {
+        const literals = excerpt.literals.map((literal) => `"${literal}"`).join(", ");
+        tiers[1]![tiers[1]!.length - 1] = { path: target, reason: `read by ${path}; excerpt: the ${excerpt.lines} of its ${excerpt.of} lines that hold ${literals}`, text: excerpt.text, note: null };
+      }
+    }
+  };
   const changed = files.filter((file) => !file.status.startsWith("removed") && !file.status.includes("binary") && !wholeFileSkipped(file.filename));
   // A changed file outside the Story's scope comes from another PR in the base range (ESC-9.10-3), so it waits until last.
   const primary = changed.filter((file) => (TS_FILE.test(file.filename) || file.filename.endsWith(".md")) && inScope(file.filename));
@@ -758,6 +777,11 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   for (const [record, by] of cited.sort((a, b) => compareUnits(a[0], b[0]))) {
     if (!changed.some((file) => file.filename === record)) {
       add(0, record, `cited by ${by}`);
+    }
+  }
+  for (const [path, text] of changedTexts) {
+    if (TS_FILE.test(path) && isTestPath(path)) {
+      readData(path, text);
     }
   }
   let frontier = changedTexts.filter(([path]) => TS_FILE.test(path));
@@ -1683,12 +1707,8 @@ function pathExpression(expr: string, path: string, consts: ReadonlyMap<string, 
   return posix.join(base, ...(parts as string[]));
 }
 
-/**
- * The names the test file `path` binds from repository files: a static named import with a relative specifier, and
- * the dynamic-import idiom (`DYNAMIC_IMPORT`) whose path `pathExpression` resolves. `exists` says whether a repository
- * path is a test module that can be read; a binding whose module it rejects, or a namespace import, is left out.
- */
-function moduleBindings(path: string, all: readonly TestUnit[], exists: (path: string) => boolean): ModuleBinding[] {
+/** Each top-level `const` of a file by name, with its initializer's text, for `pathExpression`. */
+function fileConsts(all: readonly TestUnit[]): Map<string, string> {
   const consts = new Map<string, string>();
   for (const unit of all) {
     const bound = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]*)?=\s*([\s\S]*?);?\s*$/.exec(stripLeadingComments(unit.text));
@@ -1696,6 +1716,88 @@ function moduleBindings(path: string, all: readonly TestUnit[], exists: (path: s
       consts.set(bound[1]!, bound[2]!);
     }
   }
+  return consts;
+}
+
+/** The path argument of a `readFileSync(…)`, `readFile(…)` or `Bun.file(…)` call: a file read as data (ESC-10.1-5). */
+const DATA_READ = /\b(?:readFileSync|readFile|Bun\.file)\s*\(\s*([^(),]*(?:\([^()]*\)[^(),]*)*?)\s*[,)]/g;
+
+/**
+ * The repository files the test file `path` reads as data (ESC-10.1-5): each `DATA_READ` path argument that
+ * `pathExpression` resolves, through the file's top-level `const`s, to a path `exists` accepts. A path the tool
+ * cannot resolve, or one outside the repository, is left out.
+ */
+export function dataFileReads(path: string, text: string, exists: (path: string) => boolean): string[] {
+  const consts = fileConsts(testUnits(text));
+  const out = new Set<string>();
+  for (const match of text.matchAll(DATA_READ)) {
+    const target = pathExpression(match[1]!, path, consts);
+    if (target !== null && !target.startsWith("..") && exists(target)) {
+      out.add(target);
+    }
+  }
+  out.delete(path);
+  return [...out].sort(compareUnits);
+}
+
+/** A string literal of at least three characters, as written between its quotes. */
+const STRING_LITERAL = /(["'])((?:\\.|(?!\1)[^\\\n]){3,})\1/g;
+
+/** The lines of a data file that a test file's string literals select, and the literals that selected them. */
+export interface DataExcerpt {
+  readonly text: string;
+  readonly lines: number;
+  readonly of: number;
+  readonly literals: readonly string[];
+}
+
+/**
+ * The lines of a data file over `WHOLE_FILE_CAP` that the test reading it selects (ESC-10.1-5): each string literal of
+ * `testText`, as written (so `"Psr\\Log\\"` matches a JSON line's `Psr\\Log\\`) or unescaped, selects the lines that
+ * hold it. Literals are taken most selective first (fewest characters selected), each whole or not at all, while the
+ * excerpt stays within `WHOLE_FILE_CAP`; the lines keep their file order. Null when no literal selects a line that fits.
+ */
+export function dataFileExcerpt(text: string, testText: string): DataExcerpt | null {
+  const lines = text.split("\n").filter((line) => line !== "");
+  const literals = new Set<string>();
+  for (const match of testText.matchAll(STRING_LITERAL)) {
+    literals.add(match[2]!);
+  }
+  const selections = [...literals]
+    .map((literal) => {
+      const plain = literal.replace(/\\(.)/g, (_, char: string) => ({ n: "\n", t: "\t", r: "\r" })[char] ?? char);
+      const hit = lines.map((line, index) => (line.includes(literal) || line.includes(plain) ? index : -1)).filter((index) => index >= 0);
+      return { literal, hit, size: hit.reduce((sum, index) => sum + lines[index]!.length + 1, 0) };
+    })
+    .filter((selection) => selection.hit.length > 0)
+    .sort((a, b) => a.size - b.size || (a.literal < b.literal ? -1 : a.literal > b.literal ? 1 : 0));
+  const kept = new Set<number>();
+  const used: string[] = [];
+  let size = 0;
+  for (const selection of selections) {
+    const added = selection.hit.filter((index) => !kept.has(index));
+    const more = added.reduce((sum, index) => sum + lines[index]!.length + 1, 0);
+    if (added.length === 0 || size + more > WHOLE_FILE_CAP) {
+      continue;
+    }
+    added.forEach((index) => kept.add(index));
+    used.push(selection.literal);
+    size += more;
+  }
+  if (kept.size === 0) {
+    return null;
+  }
+  const shown = [...kept].sort((a, b) => a - b).map((index) => lines[index]!);
+  return { text: `${shown.join("\n")}\n`, lines: shown.length, of: lines.length, literals: used };
+}
+
+/**
+ * The names the test file `path` binds from repository files: a static named import with a relative specifier, and
+ * the dynamic-import idiom (`DYNAMIC_IMPORT`) whose path `pathExpression` resolves. `exists` says whether a repository
+ * path is a test module that can be read; a binding whose module it rejects, or a namespace import, is left out.
+ */
+function moduleBindings(path: string, all: readonly TestUnit[], exists: (path: string) => boolean): ModuleBinding[] {
+  const consts = fileConsts(all);
   const out: ModuleBinding[] = [];
   for (const unit of all) {
     const code = stripLeadingComments(unit.text);
