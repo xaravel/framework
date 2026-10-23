@@ -1,14 +1,79 @@
 // Xaravel Tests for Story 9.4: the Class Registry and `fqcn()` (AD-10.1..10.5). One test per acceptance-criterion row
 // of the manifest, in order. `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each body starts outside any Scope
 // Frame. Registrations into the base are process-wide, so every FQCN here is used by this file only.
+//
+// Story 9.13: XT-runtime-12, 13 and 14 also compare with the signed Oracle fixtures of
+// `conformance/oracle-requests/9.13.jsonl`; a missing fixture fails the test. F-10 recorded reason: they are Xaravel
+// Tests (stories/9.13.md has no test_ids), so no Upstream test exists whose inputs these requests could take. Per
+// docs/ops/oracle.md § Per-Story requests ("A Story that needs expected values for other inputs (an Xaravel
+// Differential suite …) commits conformance/oracle-requests/<story-id>.jsonl"; an Xaravel Test ID runs bound to a bare
+// PHPUnit TestCase), each request evaluates only the PHP class-name lookups its test mirrors, over classes it declares
+// itself with eval(), and contains no Laravel code and no Upstream fixture:
+//   - XT-runtime-12: `(new \ReflectionClass($n))->getName()` for each spelling, and `get_class(new $n)`;
+//   - XT-runtime-13: `new $n` of a missing class, with and without a leading `\`;
+//   - XT-runtime-14: `getName()` of a lower-cased name, `class_exists` of a differently cased taken name, and `new $n`
+//     of a missing one.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Error as PhpError, jsonEncode } from "@xaravel/runtime/php";
 import { fqcn, loadAutoload, loadClassmap, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "@xaravel/runtime/registry";
 import { bindToFrame, interleave, runInFrame, runInNarrowFrame, runInRootFrame, ScopeFrameException } from "@xaravel/runtime/scope";
+
+const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
+
+/** The part of the grader's Oracle helpers (`packages/assert/tests/xaravel/oracle-values.ts`) this file uses. */
+interface Output {
+  error: unknown;
+  results: ({ value: unknown } | { throws: { class: string; message: string } })[];
+}
+interface OracleValues {
+  decode: (encoded: unknown) => unknown;
+  readRequests: (path: string) => { id: string; sha256: string }[];
+  readSignedFixture: (path: string, sha256: string, publicKeyPem: string) => Output;
+}
+
+// The runtime has no dependencies (AD-2), so its tsc project cannot reference @xaravel/assert's test files; the
+// grader's fixture reader is loaded at run time instead of being re-implemented here.
+const ORACLE_VALUES = join(REPO, "packages", "assert", "tests", "xaravel", "oracle-values.ts");
+const { decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
+const REQUESTS = "conformance/oracle-requests/9.13.jsonl";
+const FIXTURES = "conformance/fixtures/runtime";
+const PUBLIC_KEY = "conformance/oracle/oracle.pub";
+
+/** The signed Oracle output of the Story's one request for `id`. */
+function oracle(id: string): Output {
+  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+  if (requests.length !== 1) {
+    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+  }
+  const request = requests[0]!;
+  const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
+  if (output.error !== null) {
+    throw new Error(`${id}: the Oracle reported an error: ${JSON.stringify(output.error)}`);
+  }
+  return output;
+}
+
+/** The decoded value of result `index`. */
+function valueOf(output: Output, index: number): unknown {
+  const result = output.results[index];
+  if (result === undefined || !("value" in result)) {
+    throw new Error(`result ${index} is not a value: ${JSON.stringify(result ?? null)}`);
+  }
+  return decode(result.value);
+}
+
+/** The PHP throwable result `index` records. */
+function throwsOf(output: Output, index: number): { class: string; message: string } {
+  const result = output.results[index];
+  if (result === undefined || !("throws" in result)) {
+    throw new Error(`result ${index} is not a throwable: ${JSON.stringify(result ?? null)}`);
+  }
+  return result.throws;
+}
 
 /** The value `fn` throws, or null when it returns. */
 function thrownBy(fn: () => unknown): unknown {
@@ -62,6 +127,15 @@ xaravelTest(
     Assert.assertSame("App\\Models\\Post", fqcn(Post));
     Assert.assertSame("App\\Models\\Post", fqcn(new Post()));
 
+    // The Oracle: PHP's name for each spelling (`ReflectionClass::getName()`), and `get_class(new $n)`.
+    const output = oracle("XT-runtime-12");
+    const spellings = ["App\\Models\\Post", "\\app\\models\\post", "APP\\MODELS\\POST", "\\app\\models\\post"];
+    spellings.forEach((spelling, index) => {
+      Assert.assertSame(valueOf(output, index), fqcn(resolveClass(spelling)), spelling);
+    });
+    Assert.assertSame(valueOf(output, 3), fqcn(Post));
+    Assert.assertSame(valueOf(output, 3), fqcn(new Post()));
+
     // Registering the same class under the same FQCN again is a no-op, a leading `\` included.
     registerClass("\\App\\Models\\Post", Post);
     Assert.assertSame("App\\Models\\Post", fqcn(Post));
@@ -92,7 +166,16 @@ xaravelTest(
     Assert.assertInstanceOf(PhpError, miss);
     Assert.assertSame("Error", fqcn(miss as object));
     Assert.assertSame('Class "App\\Missing" not found', (miss as Error).message);
-    Assert.assertSame('Class "App\\Missing" not found', (thrownBy(() => resolveClass("\\App\\Missing")) as Error).message);
+    // The Oracle: PHP's `new $n` for each name; a leading `\` stays in PHP's message.
+    const output = oracle("XT-runtime-13");
+    const names = ["App\\Missing", "\\App\\Missing"];
+    names.forEach((name, index) => {
+      const php = throwsOf(output, index);
+      const error = thrownBy(() => resolveClass(name));
+      Assert.assertInstanceOf(PhpError, error, name);
+      Assert.assertSame(php.class, fqcn(error as object), name);
+      Assert.assertSame(php.message, (error as Error).message, name);
+    });
 
     try {
       loadAutoload(writePackageJson(null));
@@ -101,6 +184,13 @@ xaravelTest(
       Assert.assertInstanceOf(PhpError, asyncMiss);
       Assert.assertSame("Error", fqcn(asyncMiss as object));
       Assert.assertSame('Class "App\\Missing" not found', (asyncMiss as Error).message);
+      for (const [index, name] of names.entries()) {
+        const php = throwsOf(output, index);
+        const error = await rejectionOf(resolveClassAsync(name));
+        Assert.assertInstanceOf(PhpError, error, name);
+        Assert.assertSame(php.class, fqcn(error as object), name);
+        Assert.assertSame(php.message, (error as Error).message, name);
+      }
     } finally {
       reset();
     }
@@ -119,8 +209,12 @@ xaravelTest(
   "XT-runtime-14",
   "registering a different class under an existing key throws, and the same class under a second FQCN throws naming both; registerTestClass(fqcn, X) inside a test frame registers into that test frame's overlay only: resolvable and fqcn-able there and from its children, not in a sibling or later test frame or outside, and ScopeFrameException outside any test frame (AD-10.5, AD-5.8)",
   async () => {
+    // The Oracle: PHP's name for `tests\fixtures\foo`, whether `app\models\POST` names the taken class, and `new $n`
+    // of the unregistered `App\Post2`.
+    const output = oracle("XT-runtime-14");
     registerClass("App\\Models\\Post", Post);
     const duplicate = thrownBy(() => registerClass("app\\models\\POST", OtherPost));
+    Assert.assertSame(valueOf(output, 1), duplicate instanceof TypeError, "the key is taken, so the registration is refused");
     Assert.assertInstanceOf(TypeError, duplicate);
     Assert.assertSame("registerClass(): app\\models\\POST is already registered to another class", (duplicate as Error).message);
     Assert.assertSame(Post, resolveClass("App\\Models\\Post"));
@@ -131,6 +225,9 @@ xaravelTest(
     Assert.assertSame("registerClass(): the class registered as App\\Models\\Post cannot also be registered as App\\Post2", (second as Error).message);
     Assert.assertSame("App\\Models\\Post", fqcn(Post));
     Assert.assertSame('Class "App\\Post2" not found', (thrownBy(() => resolveClass("App\\Post2")) as Error).message);
+    const post2 = thrownBy(() => resolveClass("App\\Post2"));
+    Assert.assertSame(throwsOf(output, 2).class, fqcn(post2 as object));
+    Assert.assertSame(throwsOf(output, 2).message, (post2 as Error).message);
 
     // Outside any frame, and in a frame with no test unit up the chain.
     const outside = thrownBy(() => registerTestClass("Tests\\Fixtures\\Foo", Foo));
@@ -143,6 +240,7 @@ xaravelTest(
     await runInRootFrame("test", async () => {
       registerTestClass("Tests\\Fixtures\\Foo", Foo);
       Assert.assertSame(Foo, resolveClass("tests\\fixtures\\foo"));
+      Assert.assertSame(valueOf(output, 0), fqcn(resolveClass("tests\\fixtures\\foo")));
       Assert.assertSame("Tests\\Fixtures\\Foo", fqcn(Foo));
       Assert.assertSame("Tests\\Fixtures\\Foo", fqcn(new Foo()));
       Assert.assertSame("Tests\\Fixtures\\Foo", (Foo as unknown as Record<symbol, unknown>)[BRAND]);

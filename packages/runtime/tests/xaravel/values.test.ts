@@ -12,6 +12,14 @@
 //     `array_key_first([$k => 0])` over PHP's key edge cases;
 //   - XT-runtime-17: `json_encode` of the matrix arrays;
 //   - XT-runtime-19: `is_float` over the listed values.
+//
+// Story 9.13: XT-runtime-18 and 20 also compare with the signed Oracle fixtures of
+// `conformance/oracle-requests/9.13.jsonl`; a missing fixture fails the test. F-10 recorded reason: they are Xaravel
+// Tests (stories/9.13.md has no test_ids), so no Upstream test exists whose inputs these requests could take; per the
+// same docs/ops/oracle.md § Per-Story requests, each request evaluates only the PHP construct its test mirrors, and
+// contains no Laravel code and no Upstream fixture:
+//   - XT-runtime-18: a by-reference parameter, `function (&$x) { $x++; }` on `$r = 1`, and a list replaced through one;
+//   - XT-runtime-20: the value of a `void` call, `null`, `0`, `""`, `false` and `["a" => 1]`, and its `json_encode`.
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -37,14 +45,16 @@ interface OracleValues {
 const ORACLE_VALUES = join(REPO, "packages", "assert", "tests", "xaravel", "oracle-values.ts");
 const { decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
 const REQUESTS = "conformance/oracle-requests/9.5.jsonl";
+/** Story 9.13's requests (XT-runtime-18 and 20). */
+const REQUESTS_9_13 = "conformance/oracle-requests/9.13.jsonl";
 const FIXTURES = "conformance/fixtures/runtime";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 
-/** The signed Oracle output of the Story's one request for `id`. */
-function oracle(id: string): Output {
-  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+/** The signed Oracle output of the one request for `id` in `file` (Story 9.5's by default). */
+function oracle(id: string, file: string = REQUESTS): Output {
+  const requests = readRequests(join(REPO, file)).filter((request) => request.id === id);
   if (requests.length !== 1) {
-    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+    throw new Error(`${file}: expected one request for ${id}, found ${requests.length}`);
   }
   const request = requests[0]!;
   const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
@@ -293,6 +303,10 @@ xaravelTest("XT-runtime-18", "a function that writes through a Ref<T> box change
     x.value = [...x.value, "a"];
   })(list);
   Assert.assertSame('["a"]', jsonEncode(list.value));
+  // The Oracle: PHP's `$r` and `json_encode($list)` after the same writes through `&$x`.
+  const output = oracle("XT-runtime-18", REQUESTS_9_13);
+  Assert.assertSame(decode(rawResult(output, 0)), r.value);
+  Assert.assertSame(decode(rawResult(output, 1)), jsonEncode(list.value));
   Assert.assertSame(Ref, root.Ref);
   Assert.assertSame("Xaravel\\Runtime\\Php\\Ref", fqcn(Ref));
 });
@@ -348,6 +362,13 @@ xaravelTest("XT-runtime-20", "normalizeNull(undefined) is null, and every other 
   Assert.assertSame(false, normalizeNull(false));
   const object = { a: 1 };
   Assert.assertSame(object, normalizeNull(object));
+  // The Oracle: PHP's value of a `void` call (JS's undefined), then each value as it is; the array through json_encode.
+  const output = oracle("XT-runtime-20", REQUESTS_9_13);
+  [undefined, null, 0, "", false].forEach((value, index) => {
+    Assert.assertSame(decode(rawResult(output, index)), normalizeNull(value), `value #${index}`);
+  });
+  Assert.assertSame(jsonEncode(decode(rawResult(output, 5))), jsonEncode(normalizeNull(object)));
+  Assert.assertSame(decode(rawResult(output, 6)), jsonEncode(normalizeNull(object)));
   Assert.assertSame(normalizeNull, root.normalizeNull);
 });
 
