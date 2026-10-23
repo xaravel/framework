@@ -135,7 +135,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: in-progress  # ESC-10.1-1 and ESC-10.1-2 ruled (decisions/ESC-10.1-1.md, ESC-10.1-2.md)
+  10-1-token-brand-and-contract-t-mechanism: blocked  # ESC-10.1-3 (fqcn() on a token, XT-contracts-3) and ESC-10.1-4 (PSR metadata source, XT-contracts-4), waiting on the Maintainer; XT-contracts-1, -2, -18 merged
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog

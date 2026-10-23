@@ -17,5 +17,9 @@
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }
