@@ -17,7 +17,8 @@
 //   carries each parent's brand getter, so a double of a child contract is
 //   `instanceof` every contract it extends, as a PHP mock of a child
 //   interface is. Only brands are added: the doubled methods stay the
-//   target token's own list.
+//   target token's own list. The walk is `contractParentBrands`
+//   (ContractParents.ts), which @xaravel/mockery's doubles share.
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
@@ -55,6 +56,7 @@
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
 import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
+import { contractParentBrands } from "./ContractParents";
 import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
@@ -65,7 +67,6 @@ import { InvocationOrder } from "../Runtime/Rule/InvocationOrder";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
-const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
 /** The double's InvocationHandler, on the instance. */
 const HANDLER = Symbol("PHPUnit\\Framework\\MockObject\\InvocationHandler");
 /** The double's configuration, on the double class's prototype. */
@@ -98,51 +99,6 @@ export interface TargetType {
 
 function isContractToken(value: unknown): value is object {
   return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
-}
-
-/**
- * The brands of the contracts `token` extends: its `Symbol.for('xaravel.contract.parents')` and theirs in turn,
- * depth-first, each contract once (a cycle back to `token` adds nothing). Throws a TypeError for a parents value
- * that is not an iterable of contract tokens.
- */
-function parentBrandsOf(token: object, ownBrand: symbol): symbol[] {
-  const brands: symbol[] = [];
-  const visited = new Set<unknown>([token, ownBrand]);
-  const walk = (contract: object, name: string): void => {
-    const parents: unknown = (contract as Record<symbol, unknown>)[CONTRACT_PARENTS];
-    if (parents === undefined || parents === null) {
-      return;
-    }
-    if (typeof (parents as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
-      throw new TypeError(`${name}: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens`);
-    }
-    for (const parent of parents as Iterable<unknown>) {
-      if (typeof parent === "symbol") {
-        if (!visited.has(parent)) {
-          visited.add(parent);
-          if (!brands.includes(parent) && parent !== ownBrand) {
-            brands.push(parent);
-          }
-        }
-        continue;
-      }
-      if (!isContractToken(parent)) {
-        throw new TypeError(`${name}: [Symbol.for('xaravel.contract.parents')] must hold contract tokens, got ${parent === null ? "null" : typeof parent}`);
-      }
-      if (visited.has(parent)) {
-        continue;
-      }
-      visited.add(parent);
-      const parentName = classNameOfClass(parent);
-      const brand = Symbol.for(parentName);
-      if (brand !== ownBrand && !brands.includes(brand)) {
-        brands.push(brand);
-      }
-      walk(parent, parentName);
-    }
-  };
-  walk(token, classNameOfClass(token));
-  return brands;
 }
 
 function isNative(fn: unknown): boolean {
@@ -313,7 +269,7 @@ export function readTarget(type: unknown): TargetType {
       }
     }
     const brand = Symbol.for(name);
-    return { name, parent: null, methods, brand, parentBrands: parentBrandsOf(type, brand) };
+    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, classNameOfClass) };
   }
   throw new TypeError(`PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got ${type === null ? "null" : typeof type}`);
 }

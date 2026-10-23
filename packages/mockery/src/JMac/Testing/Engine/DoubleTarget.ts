@@ -16,11 +16,13 @@
 //   brand), and the generated class carries them all (`parentBrands`), so a double of a child contract is
 //   `instanceof` every contract it extends, as a PHP mock of a child interface is. Only brands are added: the
 //   doubled methods stay the token's own list. The parents are read once, when the target is first read (a token's
-//   parents are fixed, as contract() freezes them).
+//   parents are fixed, as contract() freezes them). The walk is @xaravel/assert's `contractParentBrands`, which
+//   PHPUnit's doubles share, with this file's `tokenName` naming each token.
 //
 // Parameter names are read from a method's source (`a`, `a = 1` and `...rest` name `$a` and `$rest`; a destructured
 // parameter is named by its position), as @xaravel/assert's test doubles read them (ESC-4.7-1 item 2). A token's
 // methods carry none.
+import { contractParentBrands } from "@xaravel/assert";
 import { classNameOf, FQCN, isClass } from "../../../support/values";
 import { InvalidDoubleTargetException } from "../Exceptions/InvalidDoubleTargetException";
 
@@ -35,7 +37,6 @@ export interface ContractToken {
 export type TargetInput = AnyClass | symbol | ContractToken;
 
 const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
-const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
 const STATIC_SKIP: ReadonlySet<string> = new Set(["length", "name", "prototype", "caller", "arguments"]);
 const IDENTIFIER = /^[A-Za-z_$][\w$]*/;
 /** ClassGenerator's reserved verbs: never a method of a bare symbol token. */
@@ -58,44 +59,6 @@ function tokenName(token: ContractToken): string {
     throw new InvalidDoubleTargetException("(contract token)", "it carries no FQCN: neither Symbol.for('xaravel.class.fqcn') nor a brand Symbol.for('<FQCN>')");
   }
   return name;
-}
-
-/**
- * The brands of the contracts `token` extends: its `Symbol.for('xaravel.contract.parents')` and theirs in turn,
- * depth-first, each contract once (a cycle back to `token` adds nothing). Throws a TypeError for a parents value
- * that is not an iterable of contract tokens.
- */
-function parentBrandsOf(token: ContractToken, name: string, ownBrand: symbol): symbol[] {
-  const brands: symbol[] = [];
-  const visited = new Set<unknown>([token, ownBrand]);
-  const walk = (contract: ContractToken, contractName: string): void => {
-    const parents: unknown = (contract as unknown as Record<symbol, unknown>)[CONTRACT_PARENTS];
-    if (parents === undefined || parents === null) {
-      return;
-    }
-    if (typeof (parents as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
-      throw new TypeError(`${contractName}: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens`);
-    }
-    for (const parent of parents as Iterable<unknown>) {
-      if (typeof parent !== "symbol" && !isContractToken(parent)) {
-        throw new TypeError(`${contractName}: [Symbol.for('xaravel.contract.parents')] must hold contract tokens, got ${parent === null ? "null" : typeof parent}`);
-      }
-      if (visited.has(parent)) {
-        continue;
-      }
-      visited.add(parent);
-      const parentName = typeof parent === "symbol" ? null : tokenName(parent);
-      const brand = parentName === null ? (parent as symbol) : Symbol.for(parentName);
-      if (brand !== ownBrand && !brands.includes(brand)) {
-        brands.push(brand);
-      }
-      if (parentName !== null) {
-        walk(parent as ContractToken, parentName);
-      }
-    }
-  };
-  walk(token, name);
-  return brands;
 }
 
 /** The source of `list` split on its top-level commas (brackets, strings, template literals and comments skipped). */
@@ -208,7 +171,7 @@ export class DoubleTarget {
         }
       }
       const brand = Symbol.for(name);
-      target = new DoubleTarget(name, null, brand, input, methods, parentBrandsOf(input, name, brand));
+      target = new DoubleTarget(name, null, brand, input, methods, contractParentBrands(input, brand, (token) => tokenName(token as ContractToken)));
     }
     if (target !== null) {
       if (typeof input === "symbol") {

@@ -2,7 +2,7 @@
 title: 'Retro item epic-10-item-2: a double of a child contract carries every parent brand'
 type: 'feature'
 created: '2026-10-23'
-status: 'blocked'
+status: 'in-review'
 baseline_revision: '972ade3e94c93bf011046acbaef414a445084522'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -70,6 +70,12 @@ deferred:
 - Given a token with no parents key, when a double is made, then its own enumerable/own-symbol brands are the same set as on the baseline.
 
 ## Spec Change Log
+
+### 2026-10-23 — Resumed; the shared walk settled
+- Trigger: the Fidelity Review `--item` block is cleared on main (#344, ruling-added item ids accepted), and the deferred medium finding (the parents walk duplicated in assert and mockery) had to be settled before merge.
+- Amended: outside `<intent-contract>` only. The walk is one implementation, `contractParentBrands(token, ownBrand, nameOf)` in `packages/assert/src/Framework/MockObject/Generator/ContractParents.ts`, exported from the `@xaravel/assert` index (mockery already imports its `php*` helpers from there; XT-conformance-7 allows no subpath export). PHPUnit's `Generator` passes `classNameOfClass`, Mockery's `DoubleTarget` its own `tokenName`, so each package keeps its own target-name rule. XT-assert-3's exact export list gains `contractParentBrands`; every assertion stays.
+- Known-bad state avoided: two copies of one protocol walk drifting apart (Epic 4 lesson).
+- KEEP: the matrix behaviour, both error messages, the brand descriptors (assert `configurable: false`, mockery `configurable: true`), XT-assert-22 and XT-mockery-13 unchanged.
 
 ## Review Triage Log
 
