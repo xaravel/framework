@@ -148,8 +148,11 @@ export type Cli = (typeof CLIS)[number];
 export type Verdict = "pass" | "reject";
 
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
-/** A retrospective action item's id in sprint status, `epic-<N>-retro-item-<k>-<slug>`. */
-export const RETRO_ITEM_ID = /^epic-[1-9]\d*-retro-item-[1-9]\d*-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/**
+ * An action item's id in sprint status: `epic-<N>-retro-item-<k>-<slug>` from a retrospective, or
+ * `epic-<N>-item-<k>-<slug>` from a Maintainer ruling (ESC-10.1-4, ESC-10.1-6).
+ */
+export const RETRO_ITEM_ID = /^epic-[1-9]\d*-(?:retro-)?item-[1-9]\d*-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ITEM_HEADING = /^### (F-[1-9]\d*): (\S.*)$/;
 const TREE_ID = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/;
 
@@ -3338,7 +3341,7 @@ function parseArgs(argv: readonly string[]): Args {
       throw new UsageError("pass --story or --item, not both");
     }
     if (!RETRO_ITEM_ID.test(itemId)) {
-      throw new UsageError(`--item must be a retrospective action item id, epic-<N>-retro-item-<k>-<slug>, got ${JSON.stringify(itemId)}`);
+      throw new UsageError(`--item must be an action item id, epic-<N>-retro-item-<k>-<slug> or epic-<N>-item-<k>-<slug>, got ${JSON.stringify(itemId)}`);
     }
     if (!values.has("--spec")) {
       throw new UsageError("--item needs --spec: an action item's spec cannot be found from its id");

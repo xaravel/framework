@@ -1494,8 +1494,9 @@ xaravelTest(
     // MAINT-2026-10-16, amendment 2026-10-22: a retrospective action item from Epic 9 on is reviewed as a Story is. Its
     // sprint status entry stands in for a manifest, and its scope is what a Story of each component its action names
     // may edit.
-    expect(["epic-9-retro-item-3-scope-registry-gaps", "epic-12-retro-item-10-x"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([true, true]);
-    expect(["9.1", "epic-9-item-1-consequence-rows", "epic-9-retro-item-3", "epic-9-retro-item-3-Bad"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([false, false, false, false]);
+    // Retrospective items, and items a Maintainer ruling adds (ESC-10.1-4, ESC-10.1-6, #343).
+    expect(["epic-9-retro-item-3-scope-registry-gaps", "epic-12-retro-item-10-x", "epic-10-item-2-double-parent-brands", "epic-9-item-1-consequence-rows"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([true, true, true, true]);
+    expect(["9.1", "epic-9-retro-item-3", "epic-9-item-3", "epic-9-retro-item-3-Bad", "epic-9-retro-3-x", "epic-0-item-1-x"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([false, false, false, false, false, false]);
     const statusOf = (...items: { id: string; action: string }[]): string =>
       `development_status:\n  epic-9: done\naction_items:\n${items.map((item) => `  - id: "${item.id}"\n    epic: 9\n    action: "${item.action}"\n    owner: "orchestrator"\n    status: open\n    ref: "r.md"\n`).join("")}`;
     const grader = "epic-9-retro-item-5-grader-runtime-protocols";
