@@ -134,7 +134,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: in-progress
+  10-1-token-brand-and-contract-t-mechanism: blocked  # waits on epic-9-item-1-consequence-rows: ESC-9.1-3 requires the contracts consequence row before contracts' first Story with Xaravel Tests; that row waits on the Maintainer's reading (spec-retro-9-consequence-rows.md)
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
