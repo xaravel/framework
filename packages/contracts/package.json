@@ -13,7 +13,8 @@
     "bun": ">=1.4"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./psr": "./src/psr/index.ts"
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"
