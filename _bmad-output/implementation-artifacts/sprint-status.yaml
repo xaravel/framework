@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 17:08
+last_updated: 10-22-2026 19:32
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1409,9 +1409,9 @@ action_items:
     action: "Add a CONSEQUENCE_SOURCES row (tools/xt-coverage/consequences.ts) and
       its generated conformance/xaravel-consequences/<component>.jsonl for every Phase
       1 Component without one, each before that Component's first Story with Xaravel
-      Tests: what its Epic declares on its Covers line (ADs with a Rule list, FRs with
-      a consequence list) plus AD-2 and AD-6; tests for each row
-      (decisions/MAINT-2026-10-22-consequence-rows.md; contracts row landed)"
+      Tests: what its Epic declares on its Covers line (ADs with a Rule list, FRs
+      with a consequence list) plus AD-2 and AD-6; tests for each row (decisions/MAINT-2026-10-22-consequence-rows.md;
+      contracts row landed)"
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-22-consequence-rows.md"
@@ -1430,7 +1430,7 @@ action_items:
       the item component, or turn such items into Stories in epics.md; items 3-5 wait
       on it (finding P5)"
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-3-scope-registry-gaps"
     epic: 9

@@ -4,7 +4,7 @@ Every Story is reviewed against Upstream by two reviewer agents, separate from t
 
 ## What runs
 
-`bmad-build-auto`'s review step has a layer `fidelity-review` (`_bmad/custom/bmad-build-auto.toml`). It runs only when the work is a Story with a manifest `stories/<id>.md`, alongside the four adversarial layers, and runs:
+`bmad-build-auto`'s review step has a layer `fidelity-review` (`_bmad/custom/bmad-build-auto.toml`). It runs when the work is a Story with a manifest `stories/<id>.md`, or a retrospective action item from epic 9 on that changes `packages/**` (see below). It runs alongside the four adversarial layers, and runs:
 
 ```sh
 bun run fidelity:review review --story <id> --spec <spec file> --loop-cli <claude|codex>
@@ -144,6 +144,17 @@ Each counted record's `prior` is re-checked too ([ESC-8.8-1](../../decisions/ESC
 | No `--story`, a bad Story id or option, or no loop CLI | usage message, exit 2 |
 
 `bun run fidelity:review status --story <id> [--spec <file>]` prints `current: …` and exits 0 when the counting passes for `reviewTree(root, "worktree")`. Otherwise it exits 1 and prints `stale: …` (verdicts exist, but none for this tree) or `missing: …` (a verdict is missing, a reject, the cross-model rule, or a malformed record), with one line per slot.
+
+### Retrospective action items
+
+From Epic 9 on, an action item that changes `packages/**` gets the same review as a Story ([MAINT-2026-10-16](../../decisions/MAINT-2026-10-16-unattended-orchestrator.md), amendment 2026-10-22):
+
+```sh
+bun run fidelity:review review --item <action item id> --spec <the item's spec> --loop-cli <claude|codex>
+bun run fidelity:review status --item <action item id> --spec <the item's spec>
+```
+
+`--item` takes an id of the form `epic-<N>-retro-item-<k>-<slug>` and needs `--spec`. The tool reads the item from sprint status. It refuses an item that is not there, or whose `action` names no `packages/<component>` or one that does not exist. The item's scope is the paths a Story of each component its `action` names may edit. Any other changed file is named under the diff as left out, as for a Story. The prompt shows the item's sprint status entry under `## Action item`, with a note that the checklist's "the Story" means the item. Everything else is the same as for a Story: the prompt, the reviewers, the records, the standing-reject rule and the count. `story:check` does not run for an item. The loop merges it only when `status --item` prints `current`.
 
 ## In the review step
 
