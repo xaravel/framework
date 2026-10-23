@@ -223,6 +223,9 @@ xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted,
  */
 const SUBPATH_EXPORTS: Readonly<Record<string, readonly string[]>> = {
   "@xaravel/runtime": ["scope", "registry", "php"],
+  // ESC-10.1-2: the spine's Xaravel subpaths (psr, aliases, async, testing; view is shared), then every
+  // Illuminate\Contracts namespace at the Pin, kebab-case, nested ones at their nested subpath.
+  "@xaravel/contracts": ["psr", "aliases", "async", "testing", "auth", "auth/access", "auth/middleware", "broadcasting", "bus", "cache", "concurrency", "config", "console", "container", "cookie", "database", "database/eloquent", "database/events", "database/query", "debug", "encryption", "events", "filesystem", "foundation", "hashing", "http", "image", "json-schema", "log", "mail", "notifications", "pagination", "pipeline", "process", "queue", "redis", "routing", "session", "session/middleware", "support", "translation", "validation", "view"],
 };
 
 /** XT-7's exports check: the root entry, plus only the package's `SUBPATH_EXPORTS`. */

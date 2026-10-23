@@ -3294,7 +3294,7 @@ So that injection and `instanceof` work as they do in PHP (AD-1, DIV-3).
 
 **Given** a contract token `Arrayable`, with brand `Symbol.for('Illuminate\\Contracts\\Support\\Arrayable')`
 **When** `x instanceof Arrayable` runs
-**Then** it is `true` exactly when `x`'s prototype chain carries `get [Arrayable]() { return true }`.
+**Then** it is `true` exactly when `x`'s prototype chain carries `get [Arrayable.brand]() { return true }` (the brand key `Symbol.for('Illuminate\\Contracts\\Support\\Arrayable')`, ESC-10.1-1).
 
 **Given** a class that `implements Arrayable` without the brand getter
 **When** it type-checks
@@ -3306,7 +3306,7 @@ So that injection and `instanceof` work as they do in PHP (AD-1, DIV-3).
 
 **Given** a contract token
 **When** a test double reads it
-**Then** it carries its method names at `Symbol.for('xaravel.contract.methods')` and each method's parameter names (ESC-4.5-1 item 3, ESC-4.7-1 item 5).
+**Then** it carries its method names at `Symbol.for('xaravel.contract.methods')`, and each method's parameter names at `Symbol.for('xaravel.contract.parameters')` as a frozen `{ <method>: [<param>, …] }` record (ESC-4.5-1 item 3, ESC-4.7-1 item 5, ESC-10.1-1).
 
 **Given** `@xaravel/contracts/psr`
 **When** it is imported

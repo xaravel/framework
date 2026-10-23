@@ -30,13 +30,13 @@ Port every `Illuminate\Contracts\*` interface, plus the Xaravel-only seams, into
 - **Token and brand (AD-1, AD-9).**
   - Each contract exports an `interface` and a runtime token under the same Upstream name.
   - The brand key is `Symbol.for('<Upstream FQCN>')`, so runtime and the grader can detect it without importing contracts.
-  - The interface requires `readonly [Token]: true`, so a class that `implements` the contract without the brand fails to compile.
-  - The token's `Symbol.hasInstance` reads the brand through the prototype chain.
-  - Every brand, including marker interfaces, sits on the prototype as `get [Token]() { return true as const }`, which generators emit.
+  - The token exposes the brand key as `Token.brand`, typed as the contract's own `unique symbol`. The interface requires `readonly [Token.brand]: true`, so a class that `implements` the contract without the brand fails to compile (ESC-10.1-1).
+  - The token's `Symbol.hasInstance` reads the brand through the prototype chain, and its `Symbol.toPrimitive` returns the brand key, so `get [Token]()` names the same property and `hasBrand` is unchanged.
+  - Every brand, including marker interfaces, sits on the prototype as `get [Token.brand]() { return true as const }`, which generators emit.
   - `hasBrand(classOrInstance, Token)` checks a brand without instantiating. Marker contracts such as `ShouldQueue` and `ShouldBroadcast` are brand-only tokens.
 - **App and package interfaces.** Their tokens are made with `contract<T>('<FQCN>')`. They behave like framework tokens and resolve through `fqcn()`. Abstract classes are tokens as they are. Importing a contract with `import type` for injection is a lint error.
 - **Test-double metadata (ESC-4.5-1 item 3, ESC-4.7-1 item 5).**
-  - Every token carries its method names at `Symbol.for('xaravel.contract.methods')`, plus each method's parameter names.
+  - Every token carries its method names at `Symbol.for('xaravel.contract.methods')`, and each method's parameter names at `Symbol.for('xaravel.contract.parameters')` as a frozen `{ <method>: [<param>, …] }` record (ESC-10.1-1). The grader still reads parameters from `Symbol.for('xaravel.api.signature')`.
   - The committed API surface records the methods of every Upstream interface, so the token generator reads both from it.
   - A bare symbol target still has no method list.
   - Mockery and the PHPUnit doubles read this metadata. Their proxies leave symbol keys alone.

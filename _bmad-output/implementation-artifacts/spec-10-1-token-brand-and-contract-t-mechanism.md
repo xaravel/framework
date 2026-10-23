@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: in-progress
 ---
 
 # Story 10.1: Token, brand and `contract<T>()` mechanism
@@ -22,3 +22,10 @@ Blocking condition: two Escalations, both waiting on the Maintainer. Together th
 - `conformance/escalations/ESC-10.1-2.md` (XT-contracts-4, trigger `protected-path`). `./psr` needs a `SUBPATH_EXPORTS` entry in the Protected `conformance/tests/xaravel/scaffold.test.ts` (ESC-9.1-1).
 
 The resumed run stopped at step 2, before the plan was written: no code or tests were written. The probes were run outside the repository, under `/tmp`. The ruling decides the token's type shape, and every task in the plan depends on it. The compiled `epic-10-context.md` is still valid for the next run.
+
+### Maintainer rulings, 2026-10-22
+
+- `decisions/ESC-10.1-1.md`: option 1. The compile-time brand key is `Token.brand`, a per-contract `unique symbol` whose value is `Symbol.for('<FQCN>')`. The interface requires `readonly [Token.brand]: true`. The token's `Symbol.hasInstance` reads the brand, and its `Symbol.toPrimitive` returns the key. Generators emit `get [Token.brand]()`. The fourth criterion is XT-contracts-18, now in the manifest. Parameter names go at `Symbol.for('xaravel.contract.parameters')`, a frozen `{ <method>: [<param>, …] }` record.
+- `decisions/ESC-10.1-2.md`: option 1. `SUBPATH_EXPORTS` lists every `@xaravel/contracts` subpath Epic 10 builds, `psr` included.
+
+Resume at step 2 (plan) for XT-contracts-1..4 and XT-contracts-18. `epic-10-context.md` is updated to the ruling.
