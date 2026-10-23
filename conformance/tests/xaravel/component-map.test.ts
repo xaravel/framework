@@ -16,6 +16,7 @@ import {
   declaredClasses,
   expectedAliases,
   parseMap,
+  PSR_NAMESPACES,
   readMap,
   testFiles,
 } from "../../../tools/component-map/component-map";
@@ -302,10 +303,19 @@ xaravelTest("XT-conformance-47", "every Component records its namespaces, classe
     ["Laravel\\Ai\\Agent", "ai"],
     ["Laravel\\Mcp\\Server\\Tool", "mcp"],
     ["Laravel\\Boost\\Boost", "boost"],
+    // The PSR namespaces AD-22 gives to @xaravel/contracts/psr (ESC-10.1-4), which no Upstream src/ declares.
+    ["Psr\\Container\\ContainerInterface", "contracts"],
+    ["Psr\\Log\\LoggerInterface", "contracts"],
+    ["\\Psr\\SimpleCache\\CacheInterface", "contracts"],
   ] as const) {
     expect([fqcn, componentForFqcn(realMap, fqcn)]).toEqual([fqcn, component]);
   }
   expect(componentForFqcn(realMap, "Symfony\\Component\\HttpFoundation\\Request")).toBeNull();
+  // Nothing else under Psr\ has a Component, and the fallback is exactly the three namespaces.
+  expect(PSR_NAMESPACES).toEqual({ "Psr\\Container\\": "contracts", "Psr\\Log\\": "contracts", "Psr\\SimpleCache\\": "contracts" });
+  for (const fqcn of ["Psr\\Clock\\ClockInterface", "Psr\\Cache\\CacheItemPoolInterface", "Psr\\Http\\Message\\RequestInterface", "Psr\\LogExtra\\X", "Psr\\Log"]) {
+    expect([fqcn, componentForFqcn(realMap, fqcn)]).toEqual([fqcn, null]);
+  }
   for (const [alias, component] of [
     ["auth.driver", "auth"],
     ["app", "foundation"],

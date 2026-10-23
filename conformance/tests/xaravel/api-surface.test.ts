@@ -5,7 +5,9 @@
 // tools/oracle/api-surface.php with the local `php` against the committed
 // fixture php-fixtures/api-surface/ (PHP code a tool runs needs a test that
 // executes it); they are skipped with the reason when `php` is absent, and
-// fail instead under XARAVEL_PHP_FIXTURES=require.
+// fail instead under XARAVEL_PHP_FIXTURES=require. The PSR passes
+// (epic-10-item-1, ESC-10.1-4) run through the same stand-in, and
+// the real PHP runs their interfaces mode against php-fixtures/api-surface-psr/.
 import { expect } from "bun:test";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,17 +21,22 @@ import {
   citationProblems,
   defErrors,
   exportSurface,
+  FRAMEWORK_LOCK,
   main,
   parseOptions,
+  psrPins,
+  PSR_PACKAGES,
   readSurfaceSchema,
   UsageError,
 } from "../../../tools/oracle/api-surface";
 import { compareUnits, renderJson, type Json, type JsonObject } from "../../../tools/oracle/request";
+import { PSR_NAMESPACES } from "../../../tools/component-map/component-map";
 import { activePhases, isProtected, LIST_PATH, parseList } from "../../../tools/protected-paths/protected-paths";
 import { Assert, xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
 const FIXTURE = join(import.meta.dir, "php-fixtures", "api-surface");
+const PSR_FIXTURE = join(import.meta.dir, "php-fixtures", "api-surface-psr");
 const SCRIPT = join(root, API_SURFACE_SCRIPT);
 const REQUIRE = process.env["XARAVEL_PHP_FIXTURES"] === "require";
 const PHP = Bun.which("php");
@@ -80,10 +87,24 @@ const MAP_LINES = [
   '{"component":"ai","tests":[],"namespaces":["Fixture\\\\","Laravel\\\\Ai\\\\"],"classes":[],"aliases":[]}',
   '{"component":"auth","tests":[],"namespaces":["Illuminate\\\\Auth\\\\"],"classes":[],"aliases":[]}',
   '{"component":"boost","tests":[],"namespaces":["Laravel\\\\Boost\\\\"],"classes":[],"aliases":[]}',
+  '{"component":"contracts","tests":[],"namespaces":["Illuminate\\\\Contracts\\\\"],"classes":[],"aliases":[]}',
   '{"component":"macroable","tests":[],"namespaces":[],"classes":["Illuminate\\\\Support\\\\Traits\\\\Macroable"],"aliases":[]}',
   '{"component":"mcp","tests":[],"namespaces":["Laravel\\\\Mcp\\\\"],"classes":[],"aliases":[]}',
   '{"component":"support","tests":[],"namespaces":["Illuminate\\\\Support\\\\"],"classes":[],"aliases":[]}',
 ];
+
+/** The PSR packages of the fixture's framework lock: name, version and `autoload.psr-4`, among an unrelated package. */
+const LOCK_PACKAGES: JsonObject[] = [
+  { name: "psr/clock", version: "1.0.0", autoload: { "psr-4": { "Psr\\Clock\\": "src/" } } },
+  { name: "psr/container", version: "2.0.2", autoload: { "psr-4": { "Psr\\Container\\": "src/" } } },
+  { name: "psr/log", version: "3.0.2", autoload: { "psr-4": { "Psr\\Log\\": "src" } } },
+  { name: "psr/simple-cache", version: "3.0.0", autoload: { "psr-4": { "Psr\\SimpleCache\\": "src/" } } },
+];
+
+/** Writes the fixture's framework lock with `packages`. */
+function writeLock(dir: string, packages: JsonObject[] = LOCK_PACKAGES): void {
+  writeFiles(dir, { [FRAMEWORK_LOCK]: `${JSON.stringify({ packages, "packages-dev": [] }, null, 4)}\n` });
+}
 
 function writeFiles(dir: string, files: Record<string, string>): void {
   for (const [path, text] of Object.entries(files)) {
@@ -112,6 +133,7 @@ function withRoot(body: (fx: Fixture) => void): void {
       [`${API_SURFACE_DIR}/additions.jsonl`]: "",
       [`${API_SURFACE_DIR}/exceptions.jsonl`]: "",
     });
+    writeLock(dir);
     body({ dir, calls: [] });
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -122,9 +144,16 @@ const decl = (fqcn: string, kind = "class"): string => `{"member":null,"kind":"$
 const method = (fqcn: string, name: string): string =>
   `{"fqcn":${JSON.stringify(fqcn)},"kind":"method","member":"${name}","static":true,"parameters":[{"byRef":false,"variadic":false,"optional":true,"default":"null","nullable":true,"type":null,"name":"value"}],"returns":"string","nullable":false}`;
 
-/** The canned PHP output per repository, with members listed out of order and keys out of order. */
+/** The canned PHP output per repository (or PSR package), with members listed out of order and keys out of order. */
 function cannedOutput(repo: string, classes: readonly string[]): string {
   const lines: string[] = [];
+  if (repo === "psr/log") {
+    lines.push(decl("Psr\\Log\\LoggerInterface", "interface"), method("Psr\\Log\\LoggerInterface", "log"));
+  } else if (repo === "psr/container") {
+    lines.push(decl("Psr\\Container\\ContainerInterface", "interface"));
+  } else if (repo === "psr/simple-cache") {
+    lines.push(decl("Psr\\SimpleCache\\CacheInterface", "interface"));
+  }
   for (const fqcn of classes) {
     lines.push(decl(fqcn, fqcn.endsWith("Macroable") ? "trait" : fqcn.endsWith("Agent") ? "interface" : "class"));
     if (fqcn === "Illuminate\\Support\\Str") {
@@ -139,17 +168,36 @@ function cannedOutput(repo: string, classes: readonly string[]): string {
   return lines.map((line) => `${line}\n`).join("");
 }
 
-/** A stand-in image runner: it reads the mounted class list and answers `output(repo, classes, pass)`. */
+/** The fixture lock's version and PSR-4 directory of each PSR package, which a PSR pass's command must carry. */
+function lockedPsr(dir: string): Map<string, { version: string; dir: string }> {
+  const lock = JSON.parse(readFileSync(join(dir, FRAMEWORK_LOCK), "utf8")) as { packages: { name: string; version: string; autoload: { "psr-4": Record<string, string> } }[] };
+  return new Map(lock.packages.map((entry) => [entry.name, { version: entry.version, dir: Object.values(entry.autoload["psr-4"])[0]!.replace(/\/+$/, "") }]));
+}
+
+/**
+ * A stand-in image runner: it reads the mounted class list and answers `output(repo, classes, pass)`. A PSR pass
+ * (`--interfaces <package> <version> …`) answers `output(package, [], pass)`, after its command is checked against the
+ * fixture lock.
+ */
 function standIn(fx: Fixture, output: (repo: string, classes: string[], pass: number) => string = (repo, classes) => cannedOutput(repo, classes)): ImageRunner {
   const passes = new Map<string, number>();
   return (image, mounts, command) => {
     expect(image).toBe(IMAGE);
+    expect(mounts.find((entry) => entry.container === command[1])!.host).toBe(join(fx.dir, API_SURFACE_SCRIPT));
+    if (command[2] === "--interfaces") {
+      const name = command[3]!;
+      const locked = lockedPsr(fx.dir).get(name)!;
+      expect(command.slice(4)).toEqual([locked.version, `${IMAGE_UPSTREAM}/framework/vendor/autoload.php`, `${IMAGE_UPSTREAM}/framework/vendor/${name}/${locked.dir}`]);
+      fx.calls.push([name, [...command]]);
+      const pass = (passes.get(name) ?? 0) + 1;
+      passes.set(name, pass);
+      return output(name, [], pass);
+    }
     const listPath = command[4]!;
     const mount = mounts.find((entry) => listPath.startsWith(`${entry.container}/`))!;
     const classes = readFileSync(join(mount.host, basename(listPath)), "utf8").split("\n").filter((line) => line !== "");
     const repo = basename(listPath, ".txt");
     expect(command.slice(2, 4)).toEqual([`${IMAGE_UPSTREAM}/${repo}/vendor/autoload.php`, `${IMAGE_UPSTREAM}/${repo}/src`]);
-    expect(mounts.find((entry) => entry.container === command[1])!.host).toBe(join(fx.dir, API_SURFACE_SCRIPT));
     fx.calls.push([repo, [...command]]);
     const pass = (passes.get(repo) ?? 0) + 1;
     passes.set(repo, pass);
@@ -251,13 +299,13 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
     expect(result.stderr).toBe("");
     expect(result.code).toBe(0);
     expect(result.stdout).toBe(
-      ["ai: 1 lines", "auth: 1 lines", "boost: 1 lines", "macroable: 1 lines", "mcp: 1 lines", "support: 6 lines", `removed ${API_SURFACE_DIR}/stale.jsonl`, "API surface: 11 lines in 6 files.", ""].join("\n"),
+      ["ai: 1 lines", "auth: 1 lines", "boost: 1 lines", "contracts: 4 lines", "macroable: 1 lines", "mcp: 1 lines", "support: 6 lines", `removed ${API_SURFACE_DIR}/stale.jsonl`, "API surface: 15 lines in 7 files.", ""].join("\n"),
     );
-    // Two passes per repository, in pin order, with the image paths.
-    expect(fx.calls.map(([repo]) => repo)).toEqual(["framework", "framework", "ai", "ai", "mcp", "mcp", "boost", "boost"]);
+    // Two passes per repository, in pin order, with the image paths, then two per PSR package (XT-conformance-260).
+    expect(fx.calls.map(([repo]) => repo)).toEqual(["framework", "framework", "ai", "ai", "mcp", "mcp", "boost", "boost", "psr/container", "psr/container", "psr/log", "psr/log", "psr/simple-cache", "psr/simple-cache"]);
     expect(fx.calls[0]![1].slice(0, 2)).toEqual(["php", "/xaravel/api-surface.php"]);
     const files = surfaceFiles(fx.dir);
-    expect(Object.keys(files)).toEqual(["additions.jsonl", "ai.jsonl", "auth.jsonl", "boost.jsonl", "exceptions.jsonl", "macroable.jsonl", "mcp.jsonl", "support.jsonl"]);
+    expect(Object.keys(files)).toEqual(["additions.jsonl", "ai.jsonl", "auth.jsonl", "boost.jsonl", "contracts.jsonl", "exceptions.jsonl", "macroable.jsonl", "mcp.jsonl", "support.jsonl"]);
     expect(files["additions.jsonl"]).toBe("");
     expect(files["exceptions.jsonl"]).toBe("");
     expect(files["ai.jsonl"]).toBe('{"fqcn":"Laravel\\\\Ai\\\\Agent","kind":"interface","member":null,"stubbed":[]}\n');
@@ -350,8 +398,26 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
     for (const [repo, list] of Object.entries(classes)) {
       writeFiles(local, { [`${repo}/vendor/autoload.php`]: "<?php\n", [`${repo}/vendor/canned.txt`]: cannedOutput(repo, list) });
     }
+    // A PSR pass reads the framework install's vendor/<package>/<PSR-4 dir>; the fake php checks that path.
+    for (const name of ["psr/container", "psr/log", "psr/simple-cache"]) {
+      writeFiles(local, { [`framework/vendor/canned-${basename(name)}.txt`]: cannedOutput(name, []) });
+    }
     const php = join(fx.dir, "fake-php");
-    writeFileSync(php, '#!/bin/sh\n[ "$#" = 4 ] || exit 3\ncat "$(dirname "$2")/canned.txt"\n', { mode: 0o755 });
+    writeFileSync(
+      php,
+      [
+        "#!/bin/sh",
+        'if [ "$2" = --interfaces ]; then',
+        '  [ "$#" = 6 ] && [ "$6" = "$(dirname "$5")/$3/src" ] || exit 4',
+        '  cat "$(dirname "$5")/canned-$(basename "$3").txt"',
+        "  exit",
+        "fi",
+        '[ "$#" = 4 ] || exit 3',
+        'cat "$(dirname "$2")/canned.txt"',
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
     const viaLocal = buildSurface(fx.dir, { local, php });
     expect(viaLocal).toEqual(buildSurface(fx.dir, { runner: standIn(fx), image: IMAGE }));
     // A local source file that differs from the snapshot fails before any PHP runs.
@@ -453,6 +519,33 @@ xaravelTest("XT-conformance-199", "the committed conformance/api-surface/<compon
       previous = key;
     }
   }
+  // The PSR interfaces (ESC-10.1-4) are in contracts.jsonl only: the 8 interfaces of psr/container, psr/log and
+  // psr/simple-cache, nothing else under Psr\, and no class, trait, enum or function.
+  const psr = names.flatMap((name) =>
+    readFileSync(join(dir, name), "utf8")
+      .slice(0, -1)
+      .split("\n")
+      .map((line) => [name, JSON.parse(line) as JsonObject] as const)
+      .filter(([, value]) => (value["fqcn"] as string).startsWith("Psr\\")),
+  );
+  expect([...new Set(psr.map(([name]) => name))]).toEqual(["contracts.jsonl"]);
+  expect(psr.filter(([, value]) => value["member"] === null).map(([, value]) => `${value["kind"] as string} ${value["fqcn"] as string}`)).toEqual([
+    "interface Psr\\Container\\ContainerExceptionInterface",
+    "interface Psr\\Container\\ContainerInterface",
+    "interface Psr\\Container\\NotFoundExceptionInterface",
+    "interface Psr\\Log\\LoggerAwareInterface",
+    "interface Psr\\Log\\LoggerInterface",
+    "interface Psr\\SimpleCache\\CacheException",
+    "interface Psr\\SimpleCache\\CacheInterface",
+    "interface Psr\\SimpleCache\\InvalidArgumentException",
+  ]);
+  expect(psr.filter(([, value]) => value["member"] !== null).map(([, value]) => `${value["fqcn"] as string}::${value["member"] as string}`)).toEqual([
+    "Psr\\Container\\ContainerInterface::get",
+    "Psr\\Container\\ContainerInterface::has",
+    "Psr\\Log\\LoggerAwareInterface::setLogger",
+    ...["alert", "critical", "debug", "emergency", "error", "info", "log", "notice", "warning"].map((member) => `Psr\\Log\\LoggerInterface::${member}`),
+    ...["clear", "delete", "deleteMultiple", "get", "getMultiple", "has", "set", "setMultiple"].map((member) => `Psr\\SimpleCache\\CacheInterface::${member}`),
+  ]);
 });
 
 // ---------------------------------------------------------------------------
@@ -545,4 +638,160 @@ xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist emp
     writeFileSync(join(fx.dir, API_SURFACE_DIR, "additions.jsonl"), render(line(null)));
     expect(checkCitations(fx.dir)).toEqual([`${API_SURFACE_DIR}/additions.jsonl:1: $: missing "citation"`, `${API_SURFACE_DIR}/exceptions.jsonl is missing`]);
   });
+});
+
+// ---------------------------------------------------------------------------
+// XT-conformance-260 and -261 (epic-10-item-1, ESC-10.1-4)
+
+xaravelTest("XT-conformance-260", "after the repositories, the export runs two interfaces-mode passes per PSR package against the framework install, with the version and PSR-4 directory of the framework lock; a lock gap, a PSR function line or a FQCN outside the package's namespace fails the run and writes nothing (ESC-10.1-4, AD-22)", () => {
+  // The committed lock pins the three packages the ruling names.
+  expect(psrPins(root)).toEqual([
+    { package: "psr/container", prefix: "Psr\\Container\\", version: "2.0.2", dir: "src" },
+    { package: "psr/log", prefix: "Psr\\Log\\", version: "3.0.2", dir: "src" },
+    { package: "psr/simple-cache", prefix: "Psr\\SimpleCache\\", version: "3.0.0", dir: "src" },
+  ]);
+  // The exported packages' prefixes are exactly the namespaces componentForFqcn gives to contracts.
+  expect(PSR_PACKAGES.map(({ prefix }): string => prefix).sort()).toEqual(Object.keys(PSR_NAMESPACES).sort());
+  expect(Object.values(PSR_NAMESPACES).every((component) => component === "contracts")).toBe(true);
+
+  withRoot((fx) => {
+    expect(run(["--root", fx.dir], standIn(fx)).code).toBe(0);
+    // The PSR passes' exact commands, in PSR_PACKAGES order, after the four repositories.
+    expect(fx.calls.slice(8).map(([, command]) => command)).toEqual(
+      [
+        ["psr/container", "2.0.2"],
+        ["psr/container", "2.0.2"],
+        ["psr/log", "3.0.2"],
+        ["psr/log", "3.0.2"],
+        ["psr/simple-cache", "3.0.0"],
+        ["psr/simple-cache", "3.0.0"],
+      ].map(([name, version]) => ["php", "/xaravel/api-surface.php", "--interfaces", name!, version!, `${IMAGE_UPSTREAM}/framework/vendor/autoload.php`, `${IMAGE_UPSTREAM}/framework/vendor/${name!}/src`]),
+    );
+    const param = '{"name":"value","type":null,"nullable":true,"default":"null","optional":true,"variadic":false,"byRef":false}';
+    expect(surfaceFiles(fx.dir)["contracts.jsonl"]).toBe(
+      [
+        '{"fqcn":"Psr\\\\Container\\\\ContainerInterface","kind":"interface","member":null,"stubbed":[]}',
+        '{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface","member":null,"stubbed":[]}',
+        `{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"method","member":"log","static":true,"parameters":[${param}],"returns":"string","nullable":false}`,
+        '{"fqcn":"Psr\\\\SimpleCache\\\\CacheInterface","kind":"interface","member":null,"stubbed":[]}',
+        "",
+      ].join("\n"),
+    );
+
+    // The version and the PSR-4 directory come from the lock (a trailing slash dropped).
+    const moved = LOCK_PACKAGES.map((entry) => (entry["name"] === "psr/log" ? { ...entry, version: "3.0.9", autoload: { "psr-4": { "Psr\\Log\\": "lib/" } } } : entry));
+    writeLock(fx.dir, moved);
+    fx.calls.length = 0;
+    expect(run(["--root", fx.dir], standIn(fx)).code).toBe(0);
+    expect(fx.calls.find(([name]) => name === "psr/log")![1].slice(3)).toEqual(["psr/log", "3.0.9", `${IMAGE_UPSTREAM}/framework/vendor/autoload.php`, `${IMAGE_UPSTREAM}/framework/vendor/psr/log/lib`]);
+    writeLock(fx.dir);
+    expect(run(["--root", fx.dir], standIn(fx)).code).toBe(0);
+
+    // Failures write nothing.
+    const before = surfaceFiles(fx.dir);
+    const lockGaps: [string, () => void, string][] = [
+      ["missing package", () => writeLock(fx.dir, LOCK_PACKAGES.filter((entry) => entry["name"] !== "psr/simple-cache")), `${FRAMEWORK_LOCK} does not lock psr/simple-cache`],
+      [
+        "other prefix",
+        () => writeLock(fx.dir, LOCK_PACKAGES.map((entry) => (entry["name"] === "psr/container" ? { ...entry, autoload: { "psr-4": { "Psr\\Box\\": "src/" } } } : entry))),
+        `${FRAMEWORK_LOCK}: psr/container's PSR-4 prefixes are Psr\\Box\\, expected only Psr\\Container\\`,
+      ],
+      [
+        "extra prefix",
+        () => writeLock(fx.dir, LOCK_PACKAGES.map((entry) => (entry["name"] === "psr/log" ? { ...entry, autoload: { "psr-4": { "Psr\\Log\\": "src", "Psr\\Clock\\": "clock" } } } : entry))),
+        `${FRAMEWORK_LOCK}: psr/log's PSR-4 prefixes are Psr\\Log\\, Psr\\Clock\\, expected only Psr\\Log\\`,
+      ],
+      [
+        "escaping directory",
+        () => writeLock(fx.dir, LOCK_PACKAGES.map((entry) => (entry["name"] === "psr/log" ? { ...entry, autoload: { "psr-4": { "Psr\\Log\\": "../x" } } } : entry))),
+        `${FRAMEWORK_LOCK}: psr/log's PSR-4 directory "../x" is not a relative path inside the package`,
+      ],
+      ["no version", () => writeLock(fx.dir, LOCK_PACKAGES.map((entry) => (entry["name"] === "psr/log" ? { ...entry, version: "" } : entry))), `${FRAMEWORK_LOCK}: psr/log has no version`],
+      ["missing lock", () => rmSync(join(fx.dir, FRAMEWORK_LOCK)), `${FRAMEWORK_LOCK} is missing`],
+    ];
+    for (const [label, breakLock, message] of lockGaps) {
+      breakLock();
+      fx.calls.length = 0;
+      const result = run(["--root", fx.dir], standIn(fx));
+      expect([label, result.code, result.stderr]).toEqual([label, 1, `API surface export failed: ${message}\n`]);
+      // The lock is read before any PHP runs.
+      expect([label, fx.calls.length]).toEqual([label, 0]);
+      expect([label, surfaceFiles(fx.dir)]).toEqual([label, before]);
+      writeLock(fx.dir);
+    }
+    const failing: [string, (repo: string, classes: string[], pass: number) => string, string][] = [
+      [
+        "function",
+        (repo, classes) =>
+          repo === "psr/log" ? `${cannedOutput(repo, classes)}{"fqcn":"Psr\\\\Log\\\\helper","kind":"function","member":null,"static":false,"parameters":[],"returns":null,"nullable":true,"file":"helper.php"}\n` : cannedOutput(repo, classes),
+        "API surface export failed: psr/log line 3: a PSR pass exports interfaces only, not function Psr\\Log\\helper",
+      ],
+      [
+        "outside the namespace",
+        (repo, classes) => (repo === "psr/log" ? `${decl("Psr\\Clock\\ClockInterface", "interface")}\n` : cannedOutput(repo, classes)),
+        "API surface export failed: psr/log line 1: Psr\\Clock\\ClockInterface is not in psr/log's namespace Psr\\Log\\",
+      ],
+      [
+        "not deterministic",
+        (repo, classes, pass) => (repo === "psr/simple-cache" && pass === 2 ? "" : cannedOutput(repo, classes)),
+        "api surface not deterministic: psr/simple-cache (first difference at line 1)",
+      ],
+    ];
+    for (const [label, output, message] of failing) {
+      const result = run(["--root", fx.dir], standIn(fx, output));
+      expect([label, result.code, result.stderr]).toEqual([label, 1, `${message}\n`]);
+      expect([label, surfaceFiles(fx.dir)]).toEqual([label, before]);
+    }
+    // The script's version check failing (exit 1) fails the run naming the package.
+    const drift = run(["--root", fx.dir], (image, mounts, command) => {
+      if (command[3] === "psr/log") {
+        throw new Error("php /xaravel/api-surface.php … failed (exit 1): api-surface: psr/log is installed at 3.0.1, the lock pins 3.0.2");
+      }
+      return standIn(fx)(image, mounts, command);
+    });
+    expect(drift.code).toBe(1);
+    expect(drift.stderr).toBe("API surface export failed: api-surface.php failed for psr/log: php /xaravel/api-surface.php … failed (exit 1): api-surface: psr/log is installed at 3.0.1, the lock pins 3.0.2\n");
+    expect(surfaceFiles(fx.dir)).toEqual(before);
+  });
+});
+
+/** Runs the real exporter's interfaces mode on php-fixtures/api-surface-psr/<dir>. */
+function runInterfaces(packageName: string, version: string, dir = "src"): { code: number; stdout: string; stderr: string } {
+  const proc = Bun.spawnSync([PHP!, SCRIPT, "--interfaces", packageName, version, join(PSR_FIXTURE, "autoload.php"), join(PSR_FIXTURE, dir)], { stdout: "pipe", stderr: "pipe" });
+  return { code: proc.exitCode ?? -1, stdout: proc.stdout.toString(), stderr: proc.stderr.toString() };
+}
+
+phpTest("XT-conformance-261", "api-surface.php's interfaces mode exports only the interfaces a package declares (not its class, trait or function), after checking the installed version is the lock's; a version mismatch, a missing package or a tokenized interface that loads as a class fails it (ESC-10.1-4)", () => {
+  const result = runInterfaces("fixture/psr", "1.0.0");
+  expect(result.stderr).toBe("");
+  expect(result.code).toBe(0);
+  const lines = [
+    '{"fqcn":"PsrFixture\\\\Errors\\\\ErrorLike","kind":"interface","member":null,"stubbed":[]}',
+    '{"fqcn":"PsrFixture\\\\LoggerLike","kind":"interface","member":null,"stubbed":[]}',
+    `{"fqcn":"PsrFixture\\\\LoggerLike","kind":"method","member":"log","static":false,"parameters":[${[p("level", null, true, null, false), p("message", "Stringable|string", false, null, false), p("context", "array", false, "[]", true)].join(",")}],"returns":"void","nullable":false}`,
+    '{"fqcn":"PsrFixture\\\\LoggerLike","kind":"constant","member":"LEVEL","static":true}',
+  ];
+  expect(result.stdout).toBe(lines.map((line) => `${line}\n`).join(""));
+  for (const line of lines) {
+    expect([line, defErrors(JSON.parse(line), "surface", schema)]).toEqual([line, []]);
+  }
+  // Deterministic.
+  expect(runInterfaces("fixture/psr", "1.0.0").stdout).toBe(result.stdout);
+  // The installed version must be the lock's, and the package installed.
+  expect(runInterfaces("fixture/psr", "1.0.1")).toEqual({ code: 1, stdout: "", stderr: "api-surface: fixture/psr is installed at 1.0.0, the lock pins 1.0.1\n" });
+  expect(runInterfaces("fixture/other", "1.0.0")).toEqual({ code: 1, stdout: "", stderr: "api-surface: fixture/other is not installed\n" });
+  // A directory declaring no interface (Errors/ holds one, so use a temp dir with only a class) fails instead of exporting nothing.
+  const empty = mkdtempSync(join(tmpdir(), "xaravel-api-surface-psr-"));
+  try {
+    writeFileSync(join(empty, "Thing.php"), "<?php\n\nnamespace PsrFixture;\n\nclass Thing\n{\n}\n");
+    const proc = Bun.spawnSync([PHP!, SCRIPT, "--interfaces", "fixture/psr", "1.0.0", join(PSR_FIXTURE, "autoload.php"), empty], { stdout: "pipe", stderr: "pipe" });
+    expect([proc.exitCode, proc.stdout.toString(), proc.stderr.toString()]).toEqual([1, "", `api-surface: fixture/psr declares no interface under ${empty}\n`]);
+  } finally {
+    rmSync(empty, { recursive: true, force: true });
+  }
+  // A name the tokenizer finds after `interface` that loads as a class fails, naming it.
+  expect(runInterfaces("fixture/psr", "1.0.0", "odd")).toEqual({ code: 1, stdout: "", stderr: "api-surface: PsrOdd\\Odd is not an interface\n" });
+  // The mode takes exactly its five arguments.
+  const usage = Bun.spawnSync([PHP!, SCRIPT, "--interfaces", "fixture/psr", "1.0.0", join(PSR_FIXTURE, "autoload.php")], { stdout: "pipe", stderr: "pipe" });
+  expect(usage.exitCode).toBe(2);
 });
