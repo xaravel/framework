@@ -1,12 +1,13 @@
-// Xaravel Tests for Story 10.1: the contract token mechanism (AD-1.1, ESC-10.1-1). XT-contracts-2 (the compile-time
-// brand) is in brand-compile.test.ts. XT-contracts-3 waits on ESC-10.1-3 and XT-contracts-4 on ESC-10.1-4.
+// Xaravel Tests for Story 10.1: the contract token mechanism (AD-1.1, ESC-10.1-1) and app contracts (AD-1.5,
+// ESC-10.1-3). XT-contracts-2 (the compile-time brand) is in brand-compile.test.ts, and XT-contracts-4 (the
+// `@xaravel/contracts/psr` tokens) in psr.test.ts.
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Assert, TestCase, xaravelTest } from "@xaravel/assert";
 import { Double } from "@xaravel/mockery";
 import { hasBrand, jsonEncode } from "@xaravel/runtime/php";
-import { loadClassmap } from "@xaravel/runtime/registry";
+import { fqcn, loadClassmap, resolveClass } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, contract, CONTRACT_METHODS, CONTRACT_PARAMETERS } from "@xaravel/contracts";
 
 declare const ArrayableBrand: unique symbol;
@@ -223,5 +224,81 @@ xaravelTest(
     Assert.assertNull(mock.area());
     const unconfigurable = thrownBy(() => new TestCase().createMock(Shape).method("perimeter"));
     Assert.assertStringContainsString("perimeter", (unconfigurable as Error).message);
+  },
+);
+
+declare const BillingBrand: unique symbol;
+/** An app contract, declared as the README shows. */
+interface Billing {
+  readonly [Billing.brand]: true;
+  charge(amount: number): unknown;
+}
+const Billing = contract<Billing, typeof BillingBrand>("App\\Contracts\\Billing", { charge: ["amount"] });
+
+class StripeBilling implements Billing {
+  get [Billing.brand](): true {
+    return true as const;
+  }
+
+  charge(amount: number): unknown {
+    return amount;
+  }
+}
+
+class PlainBilling {
+  charge(amount: number): unknown {
+    return amount;
+  }
+}
+
+/** The message of the error Mockery throws when a double of `token` is told to expect `method`, which it lacks. */
+function unknownMethodMessage(token: object, method: string): string {
+  const double = Double.for(token as never) as { expects(method: string): unknown };
+  const error = thrownBy(() => double.expects(method));
+  Assert.assertInstanceOf(Error, error);
+  return (error as Error).message;
+}
+
+xaravelTest(
+  "XT-contracts-3",
+  "an app or package interface's token made with contract<T>('<FQCN>') behaves like a framework token (instanceof, hasBrand, test doubles) and resolves through fqcn(), which gives its FQCN without a leading \\ (AD-1.5)",
+  () => {
+    Assert.assertSame("App\\Contracts\\Billing", fqcn(Billing));
+    Assert.assertSame("Illuminate\\Contracts\\Support\\Arrayable", fqcn(Arrayable));
+    Assert.assertSame("App\\Contracts\\Billing", fqcn(contract("\\App\\Contracts\\Billing")));
+    Assert.assertSame(Symbol.for("App\\Contracts\\Billing"), Billing.brand);
+
+    // instanceof and hasBrand, as for Arrayable.
+    const billing: unknown = new StripeBilling();
+    Assert.assertTrue(billing instanceof Billing);
+    if (billing instanceof Billing) {
+      Assert.assertSame(3, billing.charge(3));
+    }
+    Assert.assertTrue(hasBrand(StripeBilling, Billing));
+    Assert.assertFalse(new PlainBilling() instanceof Billing);
+    Assert.assertFalse(hasBrand(PlainBilling, Billing));
+
+    // Test doubles: instances of the token, named by its FQCN, as for a framework-namespace token.
+    const double = Double.for(Billing as never) as { allows(method: string): { returns(value: unknown): unknown }; charge(amount: number): unknown };
+    Assert.assertTrue(double instanceof Billing);
+    double.allows("charge").returns(9);
+    Assert.assertSame(9, double.charge(1));
+    const appMessage = unknownMethodMessage(Billing, "refund");
+    Assert.assertStringContainsString("App\\Contracts\\Billing", appMessage);
+    const frameworkMessage = unknownMethodMessage(Arrayable, "refund");
+    Assert.assertStringContainsString("Illuminate\\Contracts\\Support\\Arrayable", frameworkMessage);
+    Assert.assertSame(frameworkMessage.replace("Illuminate\\Contracts\\Support\\Arrayable", "App\\Contracts\\Billing"), appMessage);
+
+    const mock = new TestCase().createMock(Billing);
+    Assert.assertTrue(mock instanceof Billing);
+    Assert.assertStringStartsWith("MockObject_App_Contracts_Billing_", String(((mock as object).constructor as unknown as Record<symbol, unknown>)[CLASS_FQCN]));
+    const frameworkMock = new TestCase().createMock(Arrayable);
+    Assert.assertTrue(frameworkMock instanceof Arrayable);
+    Assert.assertStringStartsWith("MockObject_Illuminate_Contracts_Support_Arrayable_", String(((frameworkMock as object).constructor as unknown as Record<symbol, unknown>)[CLASS_FQCN]));
+
+    // A token is not a class: its name never resolves through the Registry.
+    const notFound = thrownBy(() => resolveClass("App\\Contracts\\Billing"));
+    Assert.assertInstanceOf(Error, notFound);
+    Assert.assertStringContainsString("App\\Contracts\\Billing", (notFound as Error).message);
   },
 );

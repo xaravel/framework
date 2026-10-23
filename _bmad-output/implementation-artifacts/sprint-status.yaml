@@ -136,7 +136,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: in-progress  # ESC-10.1-3 and ESC-10.1-4 ruled: XT-contracts-3 after Story 9.14, XT-contracts-4 after action item epic-10-item-1-psr-api-surface; XT-contracts-1, -2, -18 merged
+  10-1-token-brand-and-contract-t-mechanism: blocked  # XT-contracts-1, -2, -18 merged (#331); XT-contracts-3 and -4 built (second pass), blocked on ESC-10.1-5 (Fidelity Review evidence: data files a test reads; orchestrator may rule, amendment 2026-10-21) and ESC-10.1-6 (doubles of a child contract lack parent brands)
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog

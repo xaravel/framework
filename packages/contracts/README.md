@@ -33,6 +33,8 @@ new StripeBilling() instanceof Billing; // true
 
 The token carries its method names at `Symbol.for('xaravel.contract.methods')` and their parameter names at `Symbol.for('xaravel.contract.parameters')`, which test doubles read.
 
+`@xaravel/contracts/psr` exports the PSR interfaces and their tokens: `ContainerInterface`, `ContainerExceptionInterface` and `NotFoundExceptionInterface` (psr/container), `LoggerInterface` and `LoggerAwareInterface` (psr/log), and `CacheInterface`, `CacheException` and `InvalidArgumentException` (psr/simple-cache), plus the structural `DateInterval` type.
+
 ## Dependencies
 
 - `@xaravel/runtime` (workspace): allowed for every package (AD-2).

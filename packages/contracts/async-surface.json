@@ -1,0 +1,10 @@
+[
+{"method":"CacheInterface.clear","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.flush"},
+{"method":"CacheInterface.delete","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.forget"},
+{"method":"CacheInterface.deleteMultiple","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.forget"},
+{"method":"CacheInterface.get","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.get"},
+{"method":"CacheInterface.getMultiple","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.many"},
+{"method":"CacheInterface.has","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.get"},
+{"method":"CacheInterface.set","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.put"},
+{"method":"CacheInterface.setMultiple","file":"src/psr/SimpleCache/CacheInterface.ts","root":"Cache\\Store.putMany"}
+]

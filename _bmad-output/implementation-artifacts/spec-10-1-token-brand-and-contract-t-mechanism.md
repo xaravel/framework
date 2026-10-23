@@ -2,15 +2,18 @@
 title: 'Story 10.1: Token, brand and contract<T>() mechanism'
 type: 'feature'
 created: '2026-10-23'
-status: 'in-progress'
-baseline_revision: '16df6f3df445b28f55a1f31aa096f538232a92b2'
-review_loop_iteration: 1
+status: 'blocked'
+baseline_revision: '9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba'
+review_loop_iteration: 0
 followup_review_recommended: false
 context:
   - '{project-root}/decisions/ESC-10.1-1.md'
+  - '{project-root}/decisions/ESC-10.1-3.md'
+  - '{project-root}/decisions/ESC-10.1-4.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-10-context.md'
   - '{project-root}/AGENTS.md'
-warnings: []
+warnings:
+  - oversized
 deferred: []
 ---
 
@@ -23,6 +26,8 @@ deferred: []
 **Problem:** `@xaravel/contracts` is empty. Stories 10.2–10.5 and every later package need one mechanism to declare a contract: a TypeScript interface plus a same-named runtime token, so that `instanceof`, brands and test doubles work as in PHP (AD-1, AD-9, DIV-3, ESC-10.1-1).
 
 **Approach:** Add `contract<T, B>(fqcn, members?)` and the token type to the package root. Cover XT-contracts-1, -2 and -18 with Xaravel Tests. XT-contracts-3 (`fqcn()` on a token) waits on `conformance/escalations/ESC-10.1-3.md`, and XT-contracts-4 (`@xaravel/contracts/psr`) waits on `conformance/escalations/ESC-10.1-4.md`. Both were raised during planning, so this Story ends `blocked` on them, with the rest of its work merged.
+
+**Resume (2026-10-23, second pass):** XT-contracts-1, -2 and -18 merged in #331. Both rulings have landed: Story 9.14 makes `fqcn()` read a frozen token's own FQCN key (ESC-10.1-3), and action item `epic-10-item-1-psr-api-surface` put the PSR interfaces' rows in `conformance/api-surface/contracts.jsonl` (ESC-10.1-4). This pass adds XT-contracts-3 (an app contract made with `contract<T>()` behaves like a framework token and resolves through `fqcn()`) and XT-contracts-4 (the `@xaravel/contracts/psr` subpath, ported from those rows). The Always and Never rules below are for the first pass; the **Second pass** rules replace them where they conflict.
 
 ## Boundaries & Constraints
 
@@ -48,6 +53,15 @@ deferred: []
 - Write a test for XT-contracts-3 or XT-contracts-4.
 - Edit `packages/contracts/tsconfig.json` or README `## Dependencies` by hand for a devDependency; runtime has neither.
 
+**Second pass (XT-contracts-3, XT-contracts-4):**
+- Always: `packages/contracts/package.json` `exports` gains exactly `"./psr": "./src/psr/index.ts"` (allowed by `SUBPATH_EXPORTS`, ESC-10.1-2). Dependencies stay `{ "@xaravel/runtime": "workspace:*" }`.
+- Always: `@xaravel/contracts/psr` exports, for each of the 8 interface rows (`kind: "interface"`) under `Psr\Container\`, `Psr\Log\` and `Psr\SimpleCache\` in `conformance/api-surface/contracts.jsonl`, an `interface` and a same-named token made by `contract<X, typeof XBrand>('<FQCN>', members)`, declared as the Design Notes shape. Upstream short names: `ContainerInterface`, `ContainerExceptionInterface`, `NotFoundExceptionInterface`, `LoggerInterface`, `LoggerAwareInterface`, `CacheInterface`, `CacheException`, `InvalidArgumentException`.
+- Always: each token's `members` lists that FQCN's `kind: "method"` rows in file order, each with its parameter names in row order, verbatim (`CacheInterface::get` keeps `default`). Exception interfaces have `{}`.
+- Always: the TS interface keeps Upstream's methods (camelCase is already Upstream's) and parameter names, except a reserved word, which takes a descriptive name (`default` → `defaultValue`; the API-surface check accepts any name there). Interface parents follow Upstream: `NotFoundExceptionInterface extends ContainerExceptionInterface`, `InvalidArgumentException extends CacheException`, and PHP's `Throwable` parent of `ContainerExceptionInterface` and `CacheException` becomes `extends Error` (Xaravel's throwables are JS `Error`s, `@xaravel/runtime/php` `Exception`/`Error`).
+- Always: PHP types map as: `string` → `string`; `bool` → `boolean`; `void` → `void`; `mixed` or untyped (`LoggerInterface::log`'s `$level`) → `unknown`; `array` → `readonly unknown[] | Readonly<Record<string, unknown>> | PhpArray` (AD-9, three forms; `PhpArray` type-imported from `@xaravel/runtime/php`); `iterable` → `Iterable<unknown> | Readonly<Record<string, unknown>> | PhpArray`; `Stringable|string` → `string | { toString(): string }` (AD-26 maps `__toString` to `toString()`); `DateInterval|int|null` → `DateInterval | number | null`, where `DateInterval` is a structural interface declared in `src/psr/SimpleCache/DateInterval.ts` with PHP's public `DateInterval` properties `y m d h i s f invert` (`number`) and `days` (`number | false`), all readonly (AD-1.2: a concrete type named by a contract is a structural interface inside contracts); `Psr\Log\LoggerInterface` → the ported `LoggerInterface`. Nullable PHP types add `| null`; a nullable `mixed` return stays `unknown`. No parameter or return type contains `undefined`.
+- Always: XT-contracts-3 cites AD-1.5; XT-contracts-4 cites AD-1.1 and AD-2.3.
+- Never: change `src/Contract.ts`'s behaviour, `@xaravel/runtime`, any file outside `packages/contracts/**`, the manifest's `test_ids`, or any `conformance/**` file. Never call `registerClass` on a token. Never port a PSR class or trait (`AbstractLogger`, `NullLogger`, `LoggerTrait`, `LogLevel`): only the interfaces the rows list.
+
 ## I/O & Edge-Case Matrix
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
@@ -62,6 +76,11 @@ deferred: []
 | doubles | Mockery `DoubleTarget.of(token)` / assert `Generator` | name is the FQCN, methods are the token's | none |
 | bad FQCN | `''`, `'\\'`, `'a\\\\b'`, non-string | throws `TypeError` naming `contract()` | thrown at call |
 | leading `\` | `contract('\\App\\Foo')` | FQCN `App\\Foo`, brand `Symbol.for('App\\Foo')` | none |
+| app contract (XT-3) | `const Billing = contract<Billing, typeof BillingBrand>('App\\Contracts\\Billing', { charge: ['amount'] })` | `fqcn(Billing)` is `'App\\Contracts\\Billing'`; a branded class instance is `instanceof Billing` and `hasBrand` true, an unbranded one false; `Double.for(Billing)` and `new TestCase().createMock(Billing)` are `instanceof Billing`, and an unexpected call's message names `App\\Contracts\\Billing`, as for a framework-namespace token; `fqcn(Arrayable)` likewise returns `'Illuminate\\Contracts\\Support\\Arrayable'`, so app and framework tokens behave alike; `resolveClass('App\\Contracts\\Billing')` still throws (a token is not a class) | none |
+| app contract, leading `\` (XT-3) | `contract('\\App\\Contracts\\Billing')` | `fqcn()` gives `'App\\Contracts\\Billing'` | none |
+| psr exports (XT-4) | `import * as psr from '@xaravel/contracts/psr'` | the runtime exports are exactly the 8 tokens, each named by its Upstream short name; `fqcn(token)` and `token[CLASS_FQCN]` are its row FQCN; `brand` is `Symbol.for(FQCN)` | none |
+| psr metadata (XT-4) | each token vs `contracts.jsonl` rows | `CONTRACT_METHODS` equals the FQCN's method rows' `member`s in file order; `CONTRACT_PARAMETERS[m]` equals that row's `parameters[].name` | none |
+| psr brands (XT-4) | a class with `get [LoggerInterface.brand]()` and the 9 methods | `instanceof LoggerInterface` true; with `NotFoundExceptionInterface` and `ContainerExceptionInterface` brands on an `Error` subclass, `instanceof` both is true | none |
 
 </intent-contract>
 
@@ -79,6 +98,14 @@ deferred: []
 - `packages/runtime/tests/xaravel/registry.test.ts:119-127`: the `xaravelTest(id, consequence, fn)` style.
 - `conformance/harness/xaravel.ts`: the harness finds `packages/*/tests/xaravel/**/*.test.ts`. A bare `test()` there is reported as UNDECLARED.
 
+Second pass:
+- `packages/contracts/src/Contract.ts` and `src/index.ts`: done in #331. `contract()` freezes the token, so its `CLASS_FQCN` own key is non-writable, which is what 9.14's branch needs. Read-only.
+- `packages/runtime/src/registry/registry.ts:108-147`: `fqcn(value)` returns a frozen non-function object's own non-writable string `Symbol.for('xaravel.class.fqcn')` (Story 9.14, XT-runtime-40); `resolveClass` (:149) never resolves a token. Read-only.
+- `conformance/api-surface/contracts.jsonl`: 8 `Psr\` interface rows and their 19 method rows (ContainerInterface `get has`; LoggerAwareInterface `setLogger`; LoggerInterface `alert critical debug emergency error info log notice warning`; CacheInterface `clear delete deleteMultiple get getMultiple has set setMultiple`), alphabetical by member. The member order of each token and the test's expectations come from here. Read-only.
+- `conformance/tests/xaravel/scaffold.test.ts:224-245`: `SUBPATH_EXPORTS["@xaravel/contracts"]` includes `psr`; the target must be `./src/psr/index.ts`. Read-only.
+- `tools/api-surface/api-surface.ts:451-481`: `contract('Psr\\…')` registers any FQCN literal, so `bun run api-surface --details contracts` must then show the 27 PSR rows matched (none missing, extra or mismatched). A method with fewer than two optional parameters needs only the positional form (AD-26); every PSR method qualifies.
+- `packages/contracts/tests/xaravel/contract.test.ts`: has the test-local `Arrayable`, `thrownBy`, and the double patterns XT-contracts-3 reuses.
+
 ## Tasks & Acceptance
 
 **Execution:**
@@ -94,13 +121,24 @@ deferred: []
 - `packages/contracts/tests/xaravel/brand-compile.test.ts`: write XT-contracts-2, covering both compile rows through a spawned `tsc -b` on a temp project that imports `@xaravel/contracts`. Assert the exit code, and assert that a line containing `TS2420` and `Arrayable.brand` is present or absent as each row requires. Clean up the temp dir.
 - `packages/contracts/README.md`: under a usage heading, add a short section that shows how to declare a contract. Keep the existing required lines.
 
+**Execution, second pass:**
+- `packages/contracts/src/psr/Container/{ContainerInterface,ContainerExceptionInterface,NotFoundExceptionInterface}.ts`, `src/psr/Log/{LoggerInterface,LoggerAwareInterface}.ts`, `src/psr/SimpleCache/{CacheInterface,CacheException,InvalidArgumentException,DateInterval}.ts`: one contract (interface plus token, Design Notes shape) per file, following the second-pass Always rules. Each file's header comment names the Upstream FQCN and its package version (psr/container 2.0.2, psr/log 3.0.2, psr/simple-cache 3.0.0, from ESC-10.1-4).
+- `packages/contracts/src/psr/index.ts`: named re-exports of the 8 contracts (value and type) and `type DateInterval`.
+- `packages/contracts/package.json`: add `"./psr": "./src/psr/index.ts"` to `exports`.
+- `packages/contracts/tests/xaravel/contract.test.ts`: add XT-contracts-3 for the two app-contract matrix rows, and update the header comment that says XT-3 and XT-4 wait.
+- `packages/contracts/tests/xaravel/psr.test.ts`: add XT-contracts-4 for the three psr rows. It reads `conformance/api-surface/contracts.jsonl` (path from `import.meta.dir`) and derives every expected FQCN, method list and parameter list from it; it hard-codes none of them. It checks the export set both ways (no missing and no extra token), and builds the brand classes in the psr brands row.
+- `packages/contracts/README.md`: add one line to the usage section naming `@xaravel/contracts/psr` and what it exports.
+
 **Acceptance Criteria:**
-- Given the token mechanism, when `bun run harness --xaravel --id 'XT-contracts-*'` runs, then XT-contracts-1, -2 and -18 pass, and none is UNDECLARED.
+- Given the token mechanism, when `bun run harness --xaravel --id 'XT-contracts-*'` runs, then XT-contracts-1, -2, -3, -4 and -18 pass, and none is UNDECLARED.
+- Given `contract<T>('App\\Contracts\\Billing')`, when it is used as a token, then it behaves like a framework token and `fqcn()` returns `App\Contracts\Billing` (XT-contracts-3).
+- Given `@xaravel/contracts/psr`, when it is imported, then it exports exactly the PSR container, simple-cache and log interfaces' tokens, with metadata equal to the committed rows (XT-contracts-4), and `bun run api-surface --details contracts` reports every `Psr\` row matched.
 - Given the package, when `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check` and the full `bun run harness --xaravel` run, then each one passes.
 
 ## Spec Change Log
 
 - 2026-10-23, implementation: under `--pretty false`, tsc 7.0.2 writes TS2420 on one line and `Property '[Arrayable.brand]' is missing …` on the next, indented line. XT-contracts-2 therefore checks the TS2420 diagnostic block (its line plus the indented elaboration lines) for `[Arrayable.brand]`, not a single line. The intent (TS2420 naming the brand) is unchanged.
+- 2026-10-23, second pass review: `CacheInterface`'s methods return `Promise<…>` of the mapped types with `@asyncRoot` tags (AD-6: Laravel's Repository implements them over `Cache\Store`), which the type map's `bool → boolean` row did not say; Fidelity F-9. `getMultiple` returns `Iterable<unknown> | PhpArray`. XT-contracts-3 checks the PHPUnit double by its mock class name, since PHPUnit's unexpected-call message never names the class.
 
 ## Review Triage Log
 
@@ -139,6 +177,34 @@ deferred: []
 - verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
 - findings: none. Both reviewers recorded `pass` at tree `1791224ea8d690e2c9a69fa73b245165f21b0d2d`.
 
+### 2026-10-23 — Review pass (second pass: XT-contracts-3, XT-contracts-4)
+- verdicts: 24 findings — high 0, medium 4, low 15, false 5, maybe-false 0 (verification-gap filed none; intent-alignment's 5 divergences are logged below)
+- findings:
+  - `[medium]` `[patch]` (fidelity F-9, both reviewers, tree 94fc9c53) `CacheInterface`'s eight methods are sync though Laravel's Repository implements them over `Cache\Store` IO (AD-6 root) — every method now returns `Promise<…>` with an `@asyncRoot Cache\Store.<get|put|forget|flush|many|putMany>` tag; `packages/contracts/async-surface.json` generated; `async-surface --all --check` ok.
+  - `[medium]` `[intent_gap]` (fidelity F-7, both reviewers, tree 94fc9c53) the reviewers cannot see the `contracts.jsonl` PSR rows XT-contracts-4 reads — the rows are in the repository; `fidelity-review.ts` evidence (h) never shows a data file a test reads. Raised `conformance/escalations/ESC-10.1-5.md` (missing evidence, 2026-10-21 amendment).
+  - `[medium]` `[intent_gap]` (edge) a double of `NotFoundExceptionInterface` is not `instanceof ContainerExceptionInterface`: `Generator.ts:452` and Mockery's double define only the target's brand, and a token records no parents — confirmed in the code; the fix spans contracts, mockery and assert. Raised `conformance/escalations/ESC-10.1-6.md`.
+  - `[medium]` `[intent_gap]` (edge) same root: a mocked `InvalidArgumentException` is not caught by `instanceof CacheException` — grouped with the row above, ESC-10.1-6.
+  - `[low]` `[intent_gap]` (edge) same root: a thrown double of an exception interface is not `instanceof Error` — grouped with the row above, ESC-10.1-6.
+  - `[low]` `[patch]` (edge, blind) `unknownMethodMessage` reads `.message` off a possible null — asserts `Error` first.
+  - `[low]` `[patch]` (edge, blind) `psr.test.ts`'s header says nothing is hard-coded, but the count 8 and the namespace set are — header reworded: they are the spec's, the FQCNs and lists come from the rows.
+  - `[low]` `[patch]` (blind) `getMultiple`'s return type admits a non-iterable record — return is now `Iterable<unknown> | PhpArray`.
+  - `[low]` `[reject]` (blind) `Context` and `PhpIterable` are not exported — an implementer may accept a wider type (`unknown`); exporting adds public surface for no caller today.
+  - `[low]` `[reject]` (blind) `Message` accepts any object — the spec's mapping of `Stringable|string` (AD-26 `toString()`); every JS object has `toString`, as every PHP `Stringable` has `__toString`; a marker would add surface.
+  - `[low]` `[patch]` (blind) the SimpleCache exception pair's brands are not exercised — added `InvalidKey`/`CacheFailure` checks to XT-contracts-4.
+  - `[low]` `[reject]` (blind) no compile-time test for the PSR interfaces — XT-contracts-2 covers the brand mechanism, and `bun run typecheck` plus `api-surface` check the declarations; a second tsc fixture adds minutes for no new mechanism.
+  - `[low]` `[patch]` (blind) the `defaultValue` note is only on `get` — repeated on `getMultiple`.
+  - `[low]` `[patch]` (blind) `CacheInterface` lacks an interface summary — added Upstream's.
+  - `[low]` `[reject]` (blind) Upstream `@throws` lines are not carried — documentation only; the exception contracts themselves are ported.
+  - `[low]` `[reject]` (blind) the README omits versions and the type-only `DateInterval` — the source headers carry the versions; README stays a short usage note.
+  - `[false]` `[reject]` (blind) the spec is missing from the reviewed diff — specs under `_bmad-output/` are excluded from the reviewed tree by design (ESC-8.8-1).
+  - `[false]` `[reject]` (intent R2) optional parameters admit `undefined` — AD-9 forbids returning `undefined`; an omitted optional argument is the API-surface tool's accepted form of a PHP default (`?`).
+  - `[low]` `[reject]` (intent R4) `createMock`'s unexpected-call message is not checked — PHPUnit's "cannot be configured" message never names the class; the test checks the mock class name for both tokens instead (logged in the Spec Change Log).
+  - `[false]` `[reject]` (intent R1) token member order differs from the interface body order — by design: the metadata follows the rows (Code Map), the body follows Upstream source.
+  - `[false]` `[reject]` (intent, type surface) the type map is not exercised by tests — typecheck and `api-surface --details contracts` (28 matched, 0 mismatched) check it; same as the compile-time row above.
+  - `[false]` `[reject]` (intent, hard-coding) the namespace set and count are hard-coded — the spec states both; the derived lists are what the lesson asks for.
+  - `[low]` `[patch]` (blind) `unknownMethodMessage` crashes on null instead of failing an assertion — same defect as the edge row above; fixed by the same assertion.
+  - `[low]` `[patch]` (blind) `psr.test.ts`'s header overclaims — same defect as the edge row above; fixed by the same rewording.
+
 ## Design Notes
 
 Declaration shape that Story 10.2's generators will emit:
@@ -152,6 +218,16 @@ class Post implements Arrayable { get [Arrayable.brand]() { return true as const
 
 ESC-10.1-1's probe confirmed this resolves under TS 7.0.2 `--strict`. If the circular reference between the interface and the const does not compile, stop and report it: do not change the ruled shape.
 
+Second pass, a PSR contract with a parent:
+
+```ts
+declare const NotFoundExceptionInterfaceBrand: unique symbol;
+export interface NotFoundExceptionInterface extends ContainerExceptionInterface { readonly [NotFoundExceptionInterface.brand]: true }
+export const NotFoundExceptionInterface = contract<NotFoundExceptionInterface, typeof NotFoundExceptionInterfaceBrand>("Psr\\Container\\NotFoundExceptionInterface");
+```
+
+An implementing class carries every brand in its chain, as PHP's `instanceof` holds for each parent interface. The `DateInterval` structural type follows AD-1.2 rather than waiting for Carbon (`@xaravel/support`, Phase 2): it lists PHP's own public properties, so a later `CarbonInterval` port that keeps PHP's `DateInterval` properties satisfies it structurally.
+
 ## Verification
 
 **Commands:**
@@ -160,6 +236,7 @@ ESC-10.1-1's probe confirmed this resolves under TS 7.0.2 `--strict`. If the cir
 - `bun run harness --xaravel`: no differences.
 - `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check`: each exits 0.
 - `bun run api-surface contracts` (or the tool's documented form): no new unexplained member is reported for the root entry.
+- Second pass: `bun run harness --xaravel --id 'XT-contracts-*'` shows 5 of 5 passing; `bun run api-surface --details contracts` lists no `Psr\` finding and 0 extra, 0 mismatched; the full `bun run harness` (every Variant) has no differences; `bun run story:check 10.1` passes, Fidelity Review included.
 
 ## Auto Run Result
 
@@ -336,3 +413,74 @@ Findings of the latest reject, addressed (ESC-8.8-1):
 
 - `decisions/ESC-10.1-3.md`: option 1. `fqcn()` reads a frozen token's own `Symbol.for('xaravel.class.fqcn')` key, built by new Story 9.14 (`runtime`). XT-contracts-3 resumes once 9.14 is `done`.
 - `decisions/ESC-10.1-4.md`: option 1. The PSR interfaces join `conformance/api-surface/contracts.jsonl` through action item `epic-10-item-1-psr-api-surface`. XT-contracts-4 resumes once that item is `done`, taking the PSR tokens' metadata from those rows.
+
+### Reviewer 1: reject at tree 94fc9c53db0314d0ebe953c9a2d8f5341020a094
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba`, on 2026-10-23T13:33:22.864Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and the diff adds or changes none. |
+| F-2: No expected value is weakened | pass | Compared the changed tests and diff: existing expected values remain unchanged, and no exact assertion or expected exception is weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change introduces no adapted markers or Expectations adapted fields. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture evidence identifies no Oracle error fixture relied on by this Story. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | Compared XT-contracts-3, XT-contracts-4 and XT-contracts-18 with their consequences and cited decisions. XT-contracts-4 depends on API-surface fixture rows absent from the prompt, so its expected names and metadata cannot be confirmed. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Compared the changed paths and implementations with the contracts scope and ESC-10.1-4. Changes remain within contracts; structural DateInterval and test-local branded classes do not implement another Component's production behavior. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared all changed source declarations with AD-6 and DIV-1. They declare interfaces, structural types and synchronous token construction; no implementation performs IO or accepts an async callback, and no asyncRoot tag is retained or added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no Oracle request file. |
+
+Findings:
+
+- **F-7** `conformance/api-surface/contracts.jsonl`: Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"94fc9c53db0314d0ebe953c9a2d8f5341020a094","base":"9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-23T13:33:22.864Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and the diff adds or changes none.","findings":[]},{"id":"F-2","result":"pass","note":"Compared the changed tests and diff: existing expected values remain unchanged, and no exact assertion or expected exception is weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change introduces no adapted markers or Expectations adapted fields.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture evidence identifies no Oracle error fixture relied on by this Story.","findings":[]},{"id":"F-7","result":"fail","note":"Compared XT-contracts-3, XT-contracts-4 and XT-contracts-18 with their consequences and cited decisions. XT-contracts-4 depends on API-surface fixture rows absent from the prompt, so its expected names and metadata cannot be confirmed.","findings":[{"path":"conformance/api-surface/contracts.jsonl","detail":"Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified."}]},{"id":"F-8","result":"pass","note":"Compared the changed paths and implementations with the contracts scope and ESC-10.1-4. Changes remain within contracts; structural DateInterval and test-local branded classes do not implement another Component's production behavior.","findings":[]},{"id":"F-9","result":"pass","note":"Compared all changed source declarations with AD-6 and DIV-1. They declare interfaces, structural types and synchronous token construction; no implementation performs IO or accepts an async callback, and no asyncRoot tag is retained or added.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no Oracle request file.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: reject at tree 94fc9c53db0314d0ebe953c9a2d8f5341020a094
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba`, on 2026-10-23T13:33:22.864Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest's test_ids is empty and the change adds or changes no Ported Test, so there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | n/a | There are no Ported Tests, so no expected value can be weakened against Upstream. The Xaravel Tests' expected values come from the token mechanism and from the committed API-surface rows, and none is loosened to match output. |
+| F-3: No assertion is removed without a DIV clause | n/a | There are no Ported Tests, so there are no Upstream assertions to count. No adapted markers are added. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | Evidence (a): no added line carries an adapted:DIV marker or cites a DIV clause. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c): no assigned or changed Oracle fixture is an error. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-contracts-3: the body checks fqcn() for an app token, a framework token and a token with a leading backslash; the brand; instanceof and hasBrand, both positive and negative; the Mockery double and its FQCN-named error message, compared with the framework token's; the PHPUnit mock's name; and that resolveClass does not resolve the token. This matches its consequence, and AD-1.5 (tokens made with contract<T>('<FQCN>')) is the bullet tested. XT-contracts-4: the body checks that exactly the 8 PSR interface tokens are exported by short name. For each it checks fqcn, CLASS_FQCN, brand Symbol.for(FQCN), and the method and parameter lists against the committed rows, plus instanceof across the brands, including the parent brand. This matches the consequence. AD-1.1 covers the brand and instanceof parts. AD-2.3 (third-party code follows AD-22) is the contracts consequence that routes the PSR ports to @​xaravel/contracts/psr. XT-contracts-18's body is unchanged; its local Billing shadows the new helper. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed file is in packages/contracts (the psr subpath, package.json, README, tests). DateInterval is a structural interface inside contracts, which AD-1.2 permits. No other Component's behaviour is stubbed, faked or hard-coded. |
+| F-9: Every `@asyncRoot` tag is true | fail | Evidence (g): none of the new files has an @​asyncRoot tag. ContainerInterface (sync container) and LoggerInterface/LoggerAwareInterface are plausibly sync under DIV-1. CacheInterface is not: DIV-1 and AD-6 make cache stores async roots ('cache stores (including array)'). Laravel's Illuminate\Cache\Repository implements Psr\SimpleCache\CacheInterface, and its get/set/delete/etc. reach Store IO, so they are async by derivation. A CacheInterface whose methods return sync values cannot be implemented by the cache Repository, and its IO methods carry no @​asyncRoot tag. No recorded decision in the prompt says the PSR cache contract is sync. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+- **F-9** `packages/contracts/src/psr/SimpleCache/CacheInterface.ts`: get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an '@​asyncRoot <Contract.method>' docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"reject","tree":"94fc9c53db0314d0ebe953c9a2d8f5341020a094","base":"9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-23T13:33:22.864Z","items":[{"id":"F-1","result":"n/a","note":"The manifest's test_ids is empty and the change adds or changes no Ported Test, so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"n/a","note":"There are no Ported Tests, so no expected value can be weakened against Upstream. The Xaravel Tests' expected values come from the token mechanism and from the committed API-surface rows, and none is loosened to match output.","findings":[]},{"id":"F-3","result":"n/a","note":"There are no Ported Tests, so there are no Upstream assertions to count. No adapted markers are added.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV marker or cites a DIV clause.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): no assigned or changed Oracle fixture is an error.","findings":[]},{"id":"F-7","result":"pass","note":"XT-contracts-3: the body checks fqcn() for an app token, a framework token and a token with a leading backslash; the brand; instanceof and hasBrand, both positive and negative; the Mockery double and its FQCN-named error message, compared with the framework token's; the PHPUnit mock's name; and that resolveClass does not resolve the token. This matches its consequence, and AD-1.5 (tokens made with contract<T>('<FQCN>')) is the bullet tested. XT-contracts-4: the body checks that exactly the 8 PSR interface tokens are exported by short name. For each it checks fqcn, CLASS_FQCN, brand Symbol.for(FQCN), and the method and parameter lists against the committed rows, plus instanceof across the brands, including the parent brand. This matches the consequence. AD-1.1 covers the brand and instanceof parts. AD-2.3 (third-party code follows AD-22) is the contracts consequence that routes the PSR ports to @xaravel/contracts/psr. XT-contracts-18's body is unchanged; its local Billing shadows the new helper.","findings":[]},{"id":"F-8","result":"pass","note":"Every changed file is in packages/contracts (the psr subpath, package.json, README, tests). DateInterval is a structural interface inside contracts, which AD-1.2 permits. No other Component's behaviour is stubbed, faked or hard-coded.","findings":[]},{"id":"F-9","result":"fail","note":"Evidence (g): none of the new files has an @asyncRoot tag. ContainerInterface (sync container) and LoggerInterface/LoggerAwareInterface are plausibly sync under DIV-1. CacheInterface is not: DIV-1 and AD-6 make cache stores async roots ('cache stores (including array)'). Laravel's Illuminate\\Cache\\Repository implements Psr\\SimpleCache\\CacheInterface, and its get/set/delete/etc. reach Store IO, so they are async by derivation. A CacheInterface whose methods return sync values cannot be implemented by the cache Repository, and its IO methods carry no @asyncRoot tag. No recorded decision in the prompt says the PSR cache contract is sync.","findings":[{"path":"packages/contracts/src/psr/SimpleCache/CacheInterface.ts","detail":"get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an `@asyncRoot <Contract.method>` docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it."}]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
+
+### Run of 2026-10-23, second pass
+
+Status: blocked
+Blocking condition: two Escalations raised in review, both on XT-contracts-4.
+- `conformance/escalations/ESC-10.1-5.md` (`protected-path`): the Fidelity Review rejected F-7 because its prompt never shows the `contracts.jsonl` rows XT-contracts-4 reads. This is a missing-evidence gap the orchestrator may fix itself (MAINT-2026-10-16, amendment 2026-10-21); the Story then re-runs its Fidelity Review on the changed tree.
+- `conformance/escalations/ESC-10.1-6.md` (`contract`): a test double of a child contract is not `instanceof` its parents, because tokens record no parents and both doubles define only the target's brand.
+
+**What changed**
+- `packages/contracts/package.json`: `exports` gains `./psr`.
+- `packages/contracts/src/psr/**`: the 8 PSR contracts (interface plus token) from the committed rows, and the structural `DateInterval`. `CacheInterface` is async with `@asyncRoot Cache\Store.*` tags (F-9).
+- `packages/contracts/async-surface.json`: new, 8 lines.
+- `packages/contracts/tests/xaravel/contract.test.ts`: XT-contracts-3 (AD-1.5).
+- `packages/contracts/tests/xaravel/psr.test.ts`: XT-contracts-4 (AD-1.1, AD-2.3), derived from the rows.
+- `packages/contracts/README.md`: a line on `@xaravel/contracts/psr`.
+
+**Review**: 24 findings. 9 patched (1 medium, 8 low), 2 Escalations (3 medium, 1 low grouped), 12 rejected with reasons in the Review Triage Log. The Fidelity Review rejected at tree 94fc9c53 (F-7, F-9). F-9 is fixed, and F-7 waits on ESC-10.1-5, so the review was not re-run.
+
+**Verification**: `bun run typecheck`, `bun run lint`, `bun run async-surface --all --check`, `bun run registration:check` and `bun run escalations:check` all exit 0. `bun run harness --xaravel`: 343 tests, 338 passed, 0 failed, 5 skipped. `--id 'XT-contracts-*'`: 5 of 5 passed. `bun run api-surface contracts`: 28 matched (every `Psr\` row), 0 extra, 0 mismatched.
+
+**Residual risks**: `story:check 10.1` cannot pass until the Fidelity Review records two passes on a changed tree.
