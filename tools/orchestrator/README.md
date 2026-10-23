@@ -4,7 +4,7 @@ Moves Xaravel forward unattended, one Story per iteration, under the Maintainer 
 
 It runs on a dedicated host under launchd. Each Maintainer names that host in `XARAVEL_ORCH_HOST`, in their own git-ignored `.claude/settings.local.json`; the commands below use it. Sessions use `claude-opus-5-5` unless `XARAVEL_ORCH_MODEL` overrides it. Each session runs with `--permission-mode auto`, so a classifier still reviews every action. When it refuses a step, such as an `--admin` merge, the session does not work around it: it marks the Story `blocked` and reports it on the status issue for the Maintainer.
 
-Between iterations `run.sh` waits 1 minute after `progress`, 30 minutes after `idle`, and 15 minutes after a failure. When a failed iteration's log says Claude's usage limit was hit ("You've hit your session limit · resets 11:50pm …"), it instead sleeps until two minutes after that reset time (at most 8 hours) and records `usage limit; sleeping …` in `history`.
+Between iterations `run.sh` waits 1 minute after `progress` or `idle`, and 15 minutes after a failure. When a failed iteration's log says Claude's usage limit was hit ("You've hit your session limit · resets 11:50pm …"), it instead sleeps until two minutes after that reset time (at most 8 hours) and records `usage limit; sleeping …` in `history`.
 
 Before it resets the clone, `run.sh` commits any uncommitted work on a `story/*` or `planning/*` branch as a local, unpushed `[orchestrator wip]` commit and records it in `history`. That work comes from an iteration that died mid-Story, for example on the usage limit. The next iteration checks that branch out and resumes from it instead of starting over. The WIP commits disappear when the PR is squash-merged.
 
