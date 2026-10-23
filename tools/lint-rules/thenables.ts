@@ -5,8 +5,17 @@
 // Story 10.5, supplies it) both match a type by its qualified name, never by
 // its short name (Retro 6 item 12; MAINT-2026-10-19 item 7): `registeredFqcn`
 // follows a name through its import, and through re-exports, to the source
-// module that registers it with `registerClass('<FQCN>', X)` (AD-10), and
-// `isThenableFqcn` compares that FQCN with the list.
+// module that registers it with `registerClass('<FQCN>', X)` (AD-10) or
+// declares it as a contract token (`const X = contract('<FQCN>', …)`,
+// ESC-10.1-3; ESC-10.2-2), and `isThenableFqcn` compares that FQCN with the
+// list.
+//
+// A contract token counts only at the top level (`const`, exported or not),
+// when the callee is the identifier `contract` bound by a named import
+// `contract` (from any specifier) and its first argument is a string literal
+// shaped as an FQCN, after unwrapping parentheses, `as`, `<T>` assertions,
+// `satisfies` and `!` around the call (type arguments are fine). A `registerClass` of the same
+// local wins over a token.
 //
 // Resolution: a relative specifier tries `.js` → `.ts`, the path itself when it
 // ends in `.ts` / `.tsx` (so a relative `.d.ts` too), `<path>.ts`, then
@@ -15,7 +24,7 @@
 // parsed like any other. In the target module, an export is followed through a local
 // `export { L as X }` or exported declaration to `L`, which is either
 // registered there (a conforming top-level `registerClass`, the scan's own
-// recogniser) or imported (followed again); through `export { Y as X } from`;
+// recogniser, or a contract token) or imported (followed again); through `export { Y as X } from`;
 // and through each `export *`. A visited set stops cycles; parsed modules are
 // cached by path and mtime. `export { X as default }` is followed like any
 // export; `export default class X` / `export default X` and `export * as ns`
@@ -25,9 +34,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseSync } from "oxc-parser";
-import { normaliseFqcn, recogniseRegistration, type Node } from "../registration/recognise";
+import { isFqcn, normaliseFqcn, recogniseRegistration, type Node } from "../registration/recognise";
 
-/** The Upstream FQCNs of the thenable types: the Query and Eloquent Builders, the Relation classes and the `Pending*` builders. */
+/** The Upstream FQCNs of the thenable types: the Query and Eloquent Builders, the Relation classes, the `Pending*` builders and the Pipeline contract and class. */
 export const THENABLE_TYPES: readonly string[] = [
   "Illuminate\\Database\\Query\\Builder",
   "Illuminate\\Database\\Eloquent\\Builder",
@@ -53,6 +62,9 @@ export const THENABLE_TYPES: readonly string[] = [
   "Illuminate\\Broadcasting\\PendingBroadcast",
   "Illuminate\\Testing\\PendingCommand",
   "Laravel\\Mcp\\Server\\Testing\\PendingTestResponse",
+  // A pipeline keeps Upstream's `then(destination)`, so it is a declared thenable (ESC-10.2-2).
+  "Illuminate\\Contracts\\Pipeline\\Pipeline",
+  "Illuminate\\Pipeline\\Pipeline",
 ];
 
 /** A local binding an import declaration creates: a named import (`imported` is the exported name) or a namespace (`imported` null). */
@@ -124,7 +136,7 @@ export function importBindings(statements: readonly unknown[]): Map<string, Impo
 
 /** What the resolver needs of one module. */
 interface ModuleInfo {
-  /** Local class name → registered FQCN (without a leading `\`; the first registration wins). */
+  /** Local name → registered FQCN (without a leading `\`; the first `registerClass` wins, then a contract token). */
   readonly registrations: ReadonlyMap<string, string>;
   readonly imports: ReadonlyMap<string, ImportBinding>;
   /** Exported name → local name (an exported declaration, or a local `export { L as X }`). */
@@ -148,7 +160,7 @@ function declaredNames(decl: unknown): string[] {
   return name === null ? [] : [name];
 }
 
-/** Reads registrations, imports and exports from a program's top-level statements. */
+/** Reads registrations (`registerClass` calls, then contract tokens), imports and exports from a program's top-level statements. */
 export function moduleInfoOf(statements: readonly unknown[]): ModuleInfo {
   const registrations = new Map<string, string>();
   const exports = new Map<string, string>();
@@ -189,7 +201,64 @@ export function moduleInfoOf(statements: readonly unknown[]): ModuleInfo {
       }
     }
   }
-  return { registrations, imports: importBindings(statements), exports, reexports, stars };
+  // Contract tokens after every `registerClass`, so a registration of the same local wins.
+  const imports = importBindings(statements);
+  for (const [name, fqcn] of contractTokens(statements, imports)) {
+    if (!registrations.has(name)) {
+      registrations.set(name, fqcn);
+    }
+  }
+  return { registrations, imports, exports, reexports, stars };
+}
+
+/** An expression without the parentheses, `as`, `<T>` assertions, `satisfies` and `!` around it. */
+function unwrapExpression(value: unknown): unknown {
+  let current = value;
+  for (;;) {
+    const type = prop(current, "type");
+    if (type !== "ParenthesizedExpression" && type !== "TSAsExpression" && type !== "TSSatisfiesExpression" && type !== "TSNonNullExpression" && type !== "TSTypeAssertion") {
+      return current;
+    }
+    current = prop(current, "expression");
+  }
+}
+
+/**
+ * The contract tokens (ESC-10.1-3) of a program's top-level statements, in order: `[local, FQCN]` for each top-level
+ * `const X = contract("<FQCN>", …)` (exported or not), where `contract` is the identifier a named import `contract`
+ * binds (from any specifier) and the first argument is a string literal shaped as an FQCN, after unwrapping
+ * parentheses, `as`, `<T>` assertions, `satisfies` and `!` around the call. Type arguments are allowed; an optional call is not.
+ */
+function contractTokens(statements: readonly unknown[], imports: ReadonlyMap<string, ImportBinding>): [string, string][] {
+  const binding = imports.get("contract");
+  if (binding === undefined || binding.imported !== "contract") {
+    return [];
+  }
+  const out: [string, string][] = [];
+  for (const statement of statements) {
+    const decl = prop(statement, "type") === "ExportNamedDeclaration" ? prop(statement, "declaration") : statement;
+    if (prop(decl, "type") !== "VariableDeclaration" || prop(decl, "kind") !== "const") {
+      continue;
+    }
+    for (const declarator of list(prop(decl, "declarations"))) {
+      const id = prop(declarator, "id");
+      const name = prop(id, "type") === "Identifier" ? bindingName(id) : null;
+      const call = unwrapExpression(prop(declarator, "init"));
+      if (name === null || prop(call, "type") !== "CallExpression" || prop(call, "optional") === true) {
+        continue;
+      }
+      const callee = prop(call, "callee");
+      if (prop(callee, "type") !== "Identifier" || prop(callee, "name") !== "contract") {
+        continue;
+      }
+      const first = list(prop(call, "arguments"))[0];
+      const fqcn = prop(first, "type") === "Literal" ? prop(first, "value") : null;
+      if (typeof fqcn === "string" && isFqcn(fqcn)) {
+        out.push([name, normaliseFqcn(fqcn)]);
+      }
+    }
+  }
+  return out;
 }
 
 /** The parsed module at `path` (cached by path and mtime), or null when it cannot be read. */

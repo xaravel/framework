@@ -575,3 +575,173 @@ function resolverCases(): void {
   expect(isThenableFqcn("Illuminate\\Database\\Schema\\Builder", THENABLE_TYPES)).toBeNull();
   expect(isThenableFqcn(null, THENABLE_TYPES)).toBeNull();
 }
+
+// XT-conformance-263
+
+const PIPELINE = "Illuminate\\Contracts\\Pipeline\\Pipeline";
+
+/** A `contract` stand-in for the temp sources (the demo tsconfig has `types: []`). */
+const CONTRACT_STAND = "export function contract<T, B = never>(id: string, shape: object): { readonly id: string; readonly shape: object; readonly t?: T; readonly b?: B } {\n  return { id, shape };\n}\n";
+
+/**
+ * A reduced stand-in for `packages/contracts`' Pipeline source: the interface with `this`-returning setters (one a
+ * `this | null` union case) and its token, without the brand member and with a short shape.
+ */
+const PIPELINE_SOURCE = String.raw`import { contract } from "./Contract";
+
+declare const PipelineBrand: unique symbol;
+
+export interface Pipeline {
+  send(passable: unknown): this;
+  through(pipes: unknown): this | null;
+  via(method: string): this;
+  /** @asyncRoot callback */
+  then(destination: () => unknown): Promise<unknown>;
+}
+
+export const Pipeline = contract<Pipeline, typeof PipelineBrand>("Illuminate\\Contracts\\Pipeline\\Pipeline", {
+  send: ["passable"],
+});
+`;
+
+xaravelTest(
+  "XT-conformance-263",
+  "a contract token (a top-level const X = contract(\"<FQCN>\", …) with contract imported by name) resolves as a registration of X, a registerClass of the same local winning; Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\Pipeline\\Pipeline are listed thenables; a this return type in a class or interface resolves to its own FQCN, so a listed owner's this-returning methods get thenable lines and packages/contracts lists Pipeline.send, through and via (ESC-10.2-2, ESC-10.2-6; AD-6)",
+  () => {
+    // The list gains both Pipelines, by FQCN.
+    expect(THENABLE_TYPES).toContain(PIPELINE);
+    expect(THENABLE_TYPES).toContain("Illuminate\\Pipeline\\Pipeline");
+
+    // Token resolves: directly, through an importer, through a re-export; with `as`, `<T>`, `satisfies`, `!` and parentheses.
+    const dir = tempDir("xaravel-async-surface-token-");
+    write(dir, {
+      "src/Contract.ts": CONTRACT_STAND,
+      "src/Pipeline.ts": PIPELINE_SOURCE,
+      "src/Use.ts": 'import { Pipeline } from "./Pipeline";\nexport type Used = Pipeline;\n',
+      "src/Barrel.ts": 'export { Pipeline as P } from "./Pipeline";\n',
+      "src/Wrapped.ts": String.raw`import { contract as make } from "./Contract";
+import { contract } from "./Contract";
+export const A = (contract("A\\One", {}) as unknown)!;
+export const B = contract<unknown, never>("\\A\\Two", {}) satisfies object;
+export const C = ((contract("A\\Three", {})));
+const D = contract("A\\Four", {});
+export { D as Renamed };
+export const E = make("A\\Five", {});
+export const F = <unknown>contract("A\\Six", {});
+`,
+      // Not a token: `contract` not imported (a local function), a non-literal first argument, a `let`, a nested
+      // call, a non-FQCN literal, an optional call, a `contract` imported under another name.
+      "src/Local.ts": String.raw`function contract(id: string, shape: object): object {
+  return { id, shape };
+}
+export const P = contract("A\\Local", {});
+`,
+      "src/NotTokens.ts": String.raw`import { contract } from "./Contract";
+const id = "A\\Dynamic";
+declare function wrap(value: unknown): unknown;
+export const Dynamic = contract(id, {});
+export let Mutable = contract("A\\Let", {});
+export const Nested = wrap(contract("A\\Nested", {}));
+export const Odd = contract("not an fqcn", {});
+export const Optional = contract?.("A\\Optional", {});
+export function inner(): unknown {
+  const Inner = contract("A\\Inner", {});
+  return Inner;
+}
+`,
+      "src/Aliased.ts": String.raw`import { other as contract } from "./Contract";
+export const P = contract("A\\Aliased", {});
+`,
+      // registerClass wins over a token of the same local, wherever it sits.
+      "src/Both.ts": String.raw`import { contract } from "./Contract";
+export const P = contract("X\\Token", {});
+registerClass("A\\B", P);
+function registerClass(fqcn: string, value: object): void {
+  void [fqcn, value];
+}
+`,
+    });
+    const use = join(dir, "src", "Use.ts");
+    expect(registeredFqcn(join(dir, "src", "Pipeline.ts"), null, "Pipeline")).toBe(PIPELINE);
+    expect(registeredFqcn(use, "./Pipeline", "Pipeline")).toBe(PIPELINE);
+    expect(registeredFqcn(use, null, "Pipeline")).toBe(PIPELINE);
+    expect(registeredFqcn(use, "./Barrel", "P")).toBe(PIPELINE);
+    expect(registeredFqcn(use, "./Wrapped", "A")).toBe("A\\One");
+    expect(registeredFqcn(use, "./Wrapped", "B")).toBe("A\\Two");
+    expect(registeredFqcn(use, "./Wrapped", "C")).toBe("A\\Three");
+    expect(registeredFqcn(use, "./Wrapped", "Renamed")).toBe("A\\Four");
+    expect(registeredFqcn(use, "./Wrapped", "E")).toBeNull();
+    expect(registeredFqcn(use, "./Wrapped", "F")).toBe("A\\Six");
+    expect(registeredFqcn(use, "./Local", "P")).toBeNull();
+    for (const name of ["Dynamic", "Mutable", "Nested", "Odd", "Optional", "inner"]) {
+      expect(registeredFqcn(use, "./NotTokens", name)).toBeNull();
+    }
+    // A token inside a function is not top-level, so its local is no registration.
+    expect(registeredFqcn(join(dir, "src", "NotTokens.ts"), null, "Inner")).toBeNull();
+    expect(registeredFqcn(use, "./Aliased", "P")).toBeNull();
+    expect(registeredFqcn(use, "./Both", "P")).toBe("A\\B");
+    expect(isThenableFqcn(registeredFqcn(use, "./Pipeline", "Pipeline"), THENABLE_TYPES)).toBe(PIPELINE);
+
+    // `this` through the walk, with a stub resolver: the listed owner `Pipeline` (the file's own binding), the
+    // unlisted `Repo`; an exported alias resolves through its local name.
+    const owners: Readonly<Record<string, string>> = { Pipeline: PIPELINE, Repo: "App\\Repo", Hub: "Illuminate\\Pipeline\\Pipeline" };
+    const asked: string[] = [];
+    const resolver: FqcnResolver = (file, specifier, name) => {
+      asked.push(`${file}:${specifier ?? ""}#${name}`);
+      return specifier === null ? (owners[name] ?? null) : null;
+    };
+    const walk = (text: string): ReturnType<typeof surfaceOf> => surfaceOf([{ file: "src/pipeline/Pipeline.ts", text }], THENABLE_TYPES, resolver);
+    const line = (method: string, thenable: string): { method: string; file: string; thenable: string } => ({ method, file: "src/pipeline/Pipeline.ts", thenable });
+    const listed = walk("export interface Pipeline {\n    send(passable: unknown): this;\n    through(pipes: unknown): this | null;\n    via(method: string): (this);\n    /** @asyncRoot callback */\n    then(destination: () => unknown): Promise<unknown>;\n}\n");
+    expect(listed.errors).toEqual([]);
+    expect(listed.entries).toEqual([
+      line("Pipeline.send", PIPELINE),
+      { method: "Pipeline.then", file: "src/pipeline/Pipeline.ts", root: "callback" },
+      line("Pipeline.through", PIPELINE),
+      line("Pipeline.via", PIPELINE),
+    ]);
+    expect(asked).toContain("src/pipeline/Pipeline.ts:#Pipeline");
+    // A class, exported under another name: `this` resolves through the local `Hub`, the line names the export; a
+    // static member's `this` (invalid there, TS2526) names no owner, so it yields no line.
+    expect(walk("declare class Hub {\n    pipe(): this;\n    static make(): this;\n    private hidden(): this;\n}\nexport { Hub as Pipes };\n").entries).toEqual([
+      line("Pipes.pipe", "Illuminate\\Pipeline\\Pipeline"),
+    ]);
+    // An unlisted owner, and `this` outside a class or interface, yield no line.
+    expect(walk("export interface Repo {\n    tap(): this;\n}\nexport interface Unknown {\n    tap(): this;\n}\nexport declare function f(this: unknown): unknown;\n")).toEqual({ entries: [], errors: [] });
+    // A tag on a `this`-returning method of a listed owner is the existing thenable error.
+    const tagged = walk("export interface Pipeline {\n    /** @asyncRoot callback */\n    send(passable: unknown): this;\n}\n");
+    expect(tagged.entries).toEqual([]);
+    expect(tagged.errors).toEqual([{ file: "src/pipeline/Pipeline.ts", method: "Pipeline.send", message: "Pipeline.send returns a thenable but no Promise, so it carries no @asyncRoot tag (AD-6)" }]);
+
+    // End to end: the real CLI and tsc over a temp package holding the token, with the real resolver.
+    const root2 = demoRoot({});
+    write(join(root2, "packages", "demo"), {
+      "src/Contract.ts": CONTRACT_STAND,
+      "src/Pipeline.ts": PIPELINE_SOURCE,
+      "src/Repo.ts": "export interface Repo {\n  tap(): this;\n}\n",
+    });
+    const run = cli(root2, ["demo"]);
+    expect(run.stderr).toBe("");
+    expect(run.exitCode).toBe(0);
+    expect(readFileSync(SURFACE(root2), "utf8")).toBe(
+      [
+        "[",
+        String.raw`{"method":"Pipeline.send","file":"src/Pipeline.ts","thenable":"Illuminate\\Contracts\\Pipeline\\Pipeline"},`,
+        String.raw`{"method":"Pipeline.then","file":"src/Pipeline.ts","root":"callback"},`,
+        String.raw`{"method":"Pipeline.through","file":"src/Pipeline.ts","thenable":"Illuminate\\Contracts\\Pipeline\\Pipeline"},`,
+        String.raw`{"method":"Pipeline.via","file":"src/Pipeline.ts","thenable":"Illuminate\\Contracts\\Pipeline\\Pipeline"}`,
+        "]",
+        "",
+      ].join("\n"),
+    );
+
+    // The real `packages/contracts`: the CLI's check passes, and its committed thenable lines include the three.
+    const real = cli(root, ["--check", "contracts"]);
+    expect(real.stderr).toBe("");
+    expect(real.exitCode).toBe(0);
+    const committed = readFileSync(join(root, "packages", "contracts", "async-surface.json"), "utf8").split("\n").map((text) => text.replace(/,$/, ""));
+    for (const method of ["send", "through", "via"]) {
+      expect(committed).toContain(JSON.stringify({ method: `Pipeline.${method}`, file: "src/pipeline/Pipeline.ts", thenable: PIPELINE }));
+    }
+  },
+);

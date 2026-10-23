@@ -142,7 +142,7 @@ xaravelTest(
     expect([...new Set(THENABLE_TYPES.map((fqcn) => fqcn.slice(fqcn.lastIndexOf("\\") + 1)))].sort()).toEqual(
       [
         "BelongsTo", "BelongsToMany", "Builder", "HasMany", "HasManyThrough", "HasOne", "HasOneOrMany", "HasOneOrManyThrough", "HasOneThrough", "MorphMany", "MorphOne", "MorphOneOrMany", "MorphTo", "MorphToMany",
-        "PendingBatch", "PendingBroadcast", "PendingChain", "PendingClosureDispatch", "PendingCommand", "PendingDispatch", "PendingRequest", "PendingTestResponse", "Relation",
+        "PendingBatch", "PendingBroadcast", "PendingChain", "PendingClosureDispatch", "PendingCommand", "PendingDispatch", "PendingRequest", "PendingTestResponse", "Pipeline", "Relation",
       ].sort(),
     );
     const singletons = JSON.parse(readFileSync(SINGLETONS, "utf8")) as { classes: string[]; bootOnly: { property: string; writers: string[] }[] };
@@ -273,6 +273,17 @@ function edgeCases(): void {
     "packages/demo/src/then/Declared.ts": ['import type { Builder } from "../support";\n\nexport async function find(): Promise<Builder | null> {\n  return null;\n}\n', x(THEN)],
     "packages/demo/src/then/Qualified.ts": ['import * as db from "../support";\n\nexport async function find(): Promise<db.Builder> {\n  return await new db.Builder().get().then(() => new db.Builder());\n}\n', x(THEN)],
     "packages/demo/src/then/Implements.ts": ["interface Thenable {\n  readonly id: number;\n}\n\nclass Deferred implements Thenable {\n  readonly id = 1;\n}\n\nexport class Jobs {\n  async next(): Promise<unknown> {\n    return new Deferred();\n  }\n}\n", x(THEN)],
+    // A contract token (ESC-10.2-2): `Pipeline`, declared by `contract("<FQCN>", …)` with `contract` imported by name,
+    // resolves to the listed `Illuminate\Contracts\Pipeline\Pipeline`.
+    "packages/demo/src/then/Contract.ts": [
+      "export interface Token<T, B> {\n  readonly id: string;\n  readonly shape: object;\n  readonly t: T | null;\n  readonly b: B | null;\n}\n\nexport function contract<T, B>(id: string, shape: object): Token<T, B> {\n  return { id, shape, t: null, b: null };\n}\n",
+      [],
+    ],
+    "packages/demo/src/then/pipeline.ts": [
+      'import { contract } from "./Contract";\n\ndeclare const PipelineBrand: unique symbol;\n\nexport interface Pipeline {\n  send(passable: unknown): this;\n  then(destination: () => unknown): Promise<unknown>;\n}\n\nexport const Pipeline = contract<Pipeline, typeof PipelineBrand>("Illuminate\\\\Contracts\\\\Pipeline\\\\Pipeline", { send: ["passable"] });\n',
+      [],
+    ],
+    "packages/demo/src/then/PipelineReturn.ts": ['import type { Pipeline } from "./pipeline";\n\nexport async function find(): Promise<Pipeline | null> {\n  return null;\n}\n', x(THEN)],
     "packages/demo/src/then/Awaited.ts": [
       'import { Builder } from "../support";\n\nexport class Repository {\n  async find(): Promise<readonly string[]> {\n    return await new Builder().get();\n  }\n\n  query(): Builder {\n    return new Builder();\n  }\n\n  async count(): Promise<number> {\n    const make = (): Builder => new Builder();\n    return make.length;\n  }\n}\n',
       [],
@@ -379,6 +390,7 @@ function edgeCases(): void {
   for (const [path, name] of [
     ["packages/demo/src/then/AsResolved.ts", "Illuminate\\Database\\Query\\Builder"],
     ["packages/demo/src/then/SameFile.ts", "Illuminate\\Http\\Client\\PendingRequest"],
+    ["packages/demo/src/then/PipelineReturn.ts", "Illuminate\\Contracts\\Pipeline\\Pipeline"],
     ["packages/demo/src/then/Let.ts", "Lazy"],
   ] as const) {
     expect(thenMessage(path)).toBe(`an async function returns the thenable \`${name}\` unawaited, so the Promise resolves to its terminal's result; await it or drop \`async\` (AD-6)`);
