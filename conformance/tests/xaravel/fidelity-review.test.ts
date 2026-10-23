@@ -27,7 +27,9 @@ import {
   fileImports,
   gatherEvidence,
   importedDeclarations,
+  inItemScope,
   inStoryScope,
+  ITEM_NOTE,
   fileInStoryScope,
   findStorySpec,
   MANIFEST_STATUS_PLACEHOLDER,
@@ -44,7 +46,9 @@ import {
   PROMPT_CAP,
   RECORD_KIND,
   RECORDS_HEADING,
+  readActionItem,
   renderRecord,
+  RETRO_ITEM_ID,
   REVIEWER_TIMEOUT_MS,
   reviewDiff,
   reviewTree,
@@ -400,6 +404,37 @@ xaravelTest(
       expect(call.stdin).toContain(`### ${CHANGED} (added)`);
       expect(call.stdin).toContain("+export const added = 1; // FR-111.1");
     }
+    // An action item's review (amendment 2026-10-22): --item needs --spec, the item's scope decides the diff, and its
+    // verdicts are recorded in the item's spec, which status then reads.
+    const itemId = "epic-9-retro-item-3-support-fix";
+    const itemSpec = "_bmad-output/implementation-artifacts/spec-retro-9-support-fix.md";
+    expect((await runFidelity(["review", "--item", itemId, "--root", repo.dir, "--loop-cli", "claude"], {})).err[0]).toBe("--item needs --spec: an action item's spec cannot be found from its id");
+    expect((await runFidelity(["status", "--item", itemId, "--story", "9.1", "--spec", itemSpec, "--root", repo.dir], {})).err[0]).toBe("pass --story or --item, not both");
+    expect((await runFidelity(["status", "--item", "9.1", "--spec", itemSpec, "--root", repo.dir], {})).code).toBe(2);
+    const itemRepo = makeRepo();
+    write(itemRepo.dir, SPRINT, `action_items:\n  - id: "${itemId}"\n    epic: 9\n    action: "packages/support: fix Str (L1)"\n    owner: "orchestrator"\n    status: open\n    ref: "r.md"\n`);
+    write(itemRepo.dir, itemSpec, `---\ntitle: 'Retro 9 support fix'\nbaseline_revision: '${itemRepo.base}'\nstatus: 'in-review'\n---\n\n# Retro 9 support fix\n`);
+    const itemTree = reviewTree(itemRepo.dir, "worktree", itemSpec);
+    const itemFakes = fakes({ codex: [pass("gpt-fake-1")], claude: [pass("claude-fake-1")] });
+    const itemRun = await runFidelity(["review", "--item", itemId, "--spec", itemSpec, "--root", itemRepo.dir, "--loop-cli", "claude"], itemFakes.env);
+    expect(itemRun.out).toEqual(["reviewer 1: pass (codex/gpt-fake-1)", "reviewer 2: pass (claude/claude-fake-1)", `recorded 2 verdict(s) in ${itemSpec} for tree ${itemTree}`]);
+    expect(itemRun.code).toBe(0);
+    const itemStdin = itemFakes.calls("codex")[0]!.stdin;
+    expect(itemStdin).toContain(`# Retrospective action item ${itemId}: tree ${itemTree}`);
+    expect(itemStdin).toContain('components: ["support"]');
+    expect(itemStdin).toContain("+export const added = 1; // FR-111.1");
+    // The Story-named Oracle request file is not the item's: it is named, not shown.
+    expect(itemStdin).toContain(`Left out as outside the Story's scope (ESC-9.10-4): \`${REQUESTS}\``);
+    expect(itemStdin).not.toContain("## Manifest");
+    expect((await runFidelity(["status", "--item", itemId, "--spec", itemSpec, "--root", itemRepo.dir], {})).out[0]).toStartWith("current: ");
+    expect(readFileSync(itemRepo.spec, "utf8")).not.toContain(RECORDS_HEADING);
+    // An item whose action names no package has nothing to review: refused before any reviewer runs.
+    write(itemRepo.dir, SPRINT, `action_items:\n  - id: "${itemId}"\n    epic: 9\n    action: "rule the route (P5)"\n`);
+    write(itemRepo.dir, CHANGED, "export const added = 2; // FR-111.1\n");
+    const refused = await runFidelity(["review", "--item", itemId, "--spec", itemSpec, "--root", itemRepo.dir, "--loop-cli", "claude"], itemFakes.env);
+    expect([refused.code, refused.err.at(-1)]).toEqual([1, `fidelity-review: action item ${itemId} names no packages/<component>, so it has no scope to review; nothing recorded`]);
+    expect(itemFakes.calls("codex").length).toBe(1);
+
     const claudeArgv = claudeCall!.argv;
     const flag = (name: string): string => claudeArgv[claudeArgv.indexOf(name) + 1]!;
     expect(claudeArgv.slice(0, 3)).toEqual(["-p", "--output-format", "json"]);
@@ -1399,6 +1434,28 @@ xaravelTest(
     const leftOutUser = buildPrompt({ ...promptBase, outOfScopeFiles: ["tools/fidelity-review/fidelity-review.ts"], evidence: NO_EVIDENCE }).user;
     expect(leftOutUser).toContain("## Diff\n\nLeft out as outside the Story's scope (ESC-9.10-4): `tools/fidelity-review/fidelity-review.ts`.");
     expect(buildPrompt({ ...promptBase, evidence: NO_EVIDENCE }).user).not.toContain("(ESC-9.10-4)");
+
+    // MAINT-2026-10-16, amendment 2026-10-22: a retrospective action item from Epic 9 on is reviewed as a Story is. Its
+    // sprint status entry stands in for a manifest, and its scope is what a Story of each component its action names
+    // may edit.
+    expect(["epic-9-retro-item-3-scope-registry-gaps", "epic-12-retro-item-10-x"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([true, true]);
+    expect(["9.1", "epic-9-item-1-consequence-rows", "epic-9-retro-item-3", "epic-9-retro-item-3-Bad"].map((id) => RETRO_ITEM_ID.test(id))).toEqual([false, false, false, false]);
+    const statusOf = (...items: { id: string; action: string }[]): string =>
+      `development_status:\n  epic-9: done\naction_items:\n${items.map((item) => `  - id: "${item.id}"\n    epic: 9\n    action: "${item.action}"\n    owner: "orchestrator"\n    status: open\n    ref: "r.md"\n`).join("")}`;
+    const grader = "epic-9-retro-item-5-grader-runtime-protocols";
+    const graderItem = readActionItem(root, statusOf({ id: grader, action: "packages/assert and packages/mockery: freeze the parents; packages/assert again (L9)" }), grader);
+    expect(typeof graderItem === "string" ? graderItem : graderItem.components).toEqual(["assert", "mockery"]);
+    expect(typeof graderItem === "string" ? "" : graderItem.text).toContain('action: "packages/assert and packages/mockery: freeze the parents; packages/assert again (L9)"');
+    expect(readActionItem(root, statusOf({ id: grader, action: "x" }), "epic-9-retro-item-9-gone")).toBe("_bmad-output/implementation-artifacts/sprint-status.yaml has no action item epic-9-retro-item-9-gone");
+    expect(readActionItem(root, statusOf({ id: grader, action: "rule the route (P5)" }), grader)).toBe(`action item ${grader} names no packages/<component>, so it has no scope to review`);
+    expect(readActionItem(root, statusOf({ id: grader, action: "packages/nowhere: x" }), grader)).toBe(`action item ${grader} names packages/nowhere, which does not exist`);
+    const scoped = { id: grader, components: ["assert", "mockery"] };
+    expect(["packages/assert/src/Assert.ts", "packages/mockery/tests/x.test.ts", "packages/runtime/src/Registry.ts", "tools/fidelity-review/fidelity-review.ts", "conformance/tests/xaravel/fidelity-review.test.ts"].map((path) => inItemScope(scoped, path))).toEqual([true, true, false, false, false]);
+    const itemUser = buildPrompt({ ...promptBase, subject: "item", storyId: grader, manifestText: "id: x", evidence: NO_EVIDENCE }).user;
+    expect(itemUser.startsWith(`# Retrospective action item ${grader}: tree `)).toBe(true);
+    expect(itemUser).toContain(`## Action item\n\n${ITEM_NOTE}\n\n\`\`\`yaml\nid: x\n\`\`\``);
+    expect(itemUser).toContain("The action item assigns no Ported Test IDs.");
+    expect(itemUser).not.toContain("## Manifest");
   },
   180_000,
 );
@@ -1769,6 +1826,9 @@ xaravelTest(
     expect(layer.instruction).toContain("bun run fidelity:review review --story <id> --spec {spec_file} --loop-cli <cli>");
     expect(layer.instruction).toContain("Finalize re-check: `bun run fidelity:review status --story <id> --spec {spec_file}`");
     expect(layer.instruction).toContain("NO-VERDICT");
+    // A retrospective action item from epic 9 on runs the same layer with --item (MAINT-2026-10-16, amendment 2026-10-22).
+    expect(layer.when).toContain("retrospective action item from epic 9 on");
+    expect(layer.instruction).toContain("pass `--item <action item id>` in place of `--story <id>`, here and in the Finalize re-check below");
     const step4 = readFileSync(join(root, ".claude", "skills", "bmad-build-auto", "step-04-review.md"), "utf8");
     expect(step4).toContain("A review layer may name a Finalize re-check.");
     expect(step4).toContain("review repair loop exceeded 5 iterations (non-convergence)");

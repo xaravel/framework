@@ -11,6 +11,11 @@
 //       [--spec <file>] [--root <dir>]
 //       prints `current` when two `pass` verdicts are recorded for the working
 //       tree, else `stale` or `missing` with the reason.
+//   … review|status --item <action item id> --spec <file> […]
+//       does the same for a retrospective action item from Epic 9 on
+//       (MAINT-2026-10-16, amendment 2026-10-22). The item has no manifest:
+//       its sprint status entry stands in for one, and its scope is the paths
+//       a Story of each `packages/<component>` its action names may edit.
 //
 // The reviewed tree. `reviewTree(root, mode, spec)` is the git tree id a
 // verdict is bound to: the repository without the bookkeeping set ESC-8.8-1
@@ -136,6 +141,8 @@ export type Cli = (typeof CLIS)[number];
 export type Verdict = "pass" | "reject";
 
 const STORY_ID = /^[1-9]\d*\.[1-9]\d*$/;
+/** A retrospective action item's id in sprint status, `epic-<N>-retro-item-<k>-<slug>`. */
+export const RETRO_ITEM_ID = /^epic-[1-9]\d*-retro-item-[1-9]\d*-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ITEM_HEADING = /^### (F-[1-9]\d*): (\S.*)$/;
 const TREE_ID = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/;
 
@@ -245,7 +252,13 @@ export interface PromptInput {
   readonly items: readonly ChecklistItem[];
   /** The `## Precedence` section of `conformance/README.md`, or null when it could not be read. */
   readonly precedence: string | null;
+  /** The Story id, or the action item id when `subject` is `item`. */
   readonly storyId: string;
+  /**
+   * What is reviewed: a Story, with its manifest in `manifestText` (absent: a Story), or a retrospective action item,
+   * with its sprint status entry there instead (`actionItemText`; MAINT-2026-10-16, amendment 2026-10-22).
+   */
+  readonly subject?: "story" | "item";
   /** The reviewed tree id. */
   readonly tree: string;
   /** The base revision the diff is taken against. */
@@ -301,6 +314,9 @@ export interface Prompt {
 }
 
 export const NO_TEXTUAL_CHANGE = "(no textual change)";
+/** The note above an action item's sprint status entry, in place of a manifest (MAINT-2026-10-16, amendment 2026-10-22). */
+export const ITEM_NOTE =
+  "This change is a retrospective action item, reviewed as a Story is (MAINT-2026-10-16, amendment 2026-10-22). It has no manifest: its sprint status entry below states its intent and the findings it answers, and wherever the checklist says the Story, read this item. Its scope is the paths a Story of each listed component may edit.";
 /** The user-text section that lists the latest reject's findings. */
 export const PRIOR_HEADING = "## Findings of the latest reject (ESC-8.8-1)";
 /** That section's text when there is none. */
@@ -353,10 +369,13 @@ export function buildPrompt(input: PromptInput): Prompt {
     );
   }
   const system = systemLines.join("\n");
-  const sections: string[] = [`# Story ${input.storyId}: tree ${input.tree} against base ${input.base}`, "", "## Manifest", "", fence(input.manifestText, "markdown")];
+  const item = input.subject === "item";
+  const sections: string[] = item
+    ? [`# Retrospective action item ${input.storyId}: tree ${input.tree} against base ${input.base}`, "", "## Action item", "", ITEM_NOTE, "", fence(input.manifestText, "yaml")]
+    : [`# Story ${input.storyId}: tree ${input.tree} against base ${input.base}`, "", "## Manifest", "", fence(input.manifestText, "markdown")];
   sections.push("", "## Inventory rows and Upstream source");
   if (input.inventory.length === 0) {
-    sections.push("", "The manifest assigns no Ported Test IDs (`test_ids` is empty).");
+    sections.push("", item ? "The action item assigns no Ported Test IDs." : "The manifest assigns no Ported Test IDs (`test_ids` is empty).");
   }
   for (const entry of input.inventory) {
     sections.push("", `### ${entry.id}`, "");
@@ -967,6 +986,50 @@ export function fileInStoryScope(root: string, manifest: Pick<Manifest, "storyId
     return false;
   }
   return inStoryScope(manifest, path, testUnits(text).flatMap((unit) => unit.ids));
+}
+
+/** A retrospective action item as the review reads it from sprint status (MAINT-2026-10-16, amendment 2026-10-22). */
+export interface ActionItem {
+  readonly id: string;
+  /** Each `packages/<component>` its `action` names, in order, without repeats. */
+  readonly components: readonly string[];
+  /** The entry as the prompt shows it, in place of a manifest. */
+  readonly text: string;
+}
+
+/**
+ * The action item `id` from the sprint status text `statusText`, or the reason it cannot be reviewed: no such item, or
+ * an action that names no `packages/<component>`, or one whose `packages/<component>` does not exist under `root`.
+ */
+export function readActionItem(root: string, statusText: string, id: string): ActionItem | string {
+  let data: unknown;
+  try {
+    data = Bun.YAML.parse(statusText);
+  } catch (error) {
+    return `${SPRINT_STATUS} does not parse: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  const entries = isRecord(data) && Array.isArray(data["action_items"]) ? (data["action_items"] as unknown[]) : [];
+  const entry = entries.find((candidate) => isRecord(candidate) && candidate["id"] === id);
+  if (!isRecord(entry)) {
+    return `${SPRINT_STATUS} has no action item ${id}`;
+  }
+  const action = typeof entry["action"] === "string" ? entry["action"] : "";
+  const components = [...new Set([...action.matchAll(/\bpackages\/([a-z0-9][a-z0-9-]*)/g)].map((match) => match[1]!))];
+  if (components.length === 0) {
+    return `action item ${id} names no packages/<component>, so it has no scope to review`;
+  }
+  const missing = components.filter((component) => !existsSync(join(root, "packages", component)));
+  if (missing.length > 0) {
+    return `action item ${id} names ${missing.map((component) => `packages/${component}`).join(", ")}, which does not exist`;
+  }
+  const field = (name: string): string => `${name}: ${JSON.stringify(entry[name] ?? null)}`;
+  const text = [field("id"), field("epic"), field("owner"), field("status"), field("ref"), field("action"), `components: ${JSON.stringify(components)}`].join("\n");
+  return { id, components, text };
+}
+
+/** Whether `path` is one an action item's change may hold: one a Story of any of its components may edit (`allowedPath`). */
+export function inItemScope(item: Pick<ActionItem, "id" | "components">, path: string): boolean {
+  return item.components.some((component) => allowedPath({ storyId: item.id, component }, path));
 }
 
 /**
@@ -2971,6 +3034,7 @@ export interface RunResult {
 export const USAGE = [
   "Usage: bun tools/fidelity-review/fidelity-review.ts review --story <id> [--spec <file>] [--base <rev>] [--loop-cli claude|codex] [--root <dir>]",
   "       bun tools/fidelity-review/fidelity-review.ts status --story <id> [--spec <file>] [--root <dir>]",
+  "  For a retrospective action item, pass --item <action item id> and --spec <file> in place of --story.",
   "  The loop CLI is --loop-cli, else XARAVEL_LOOP_CLI, else claude when CLAUDECODE is set.",
 ].join("\n");
 
@@ -2978,6 +3042,9 @@ class UsageError extends Error {}
 
 interface Args {
   readonly command: "review" | "status";
+  /** A Story (`--story`) or a retrospective action item (`--item`). */
+  readonly subject: "story" | "item";
+  /** The Story id or the action item id. */
   readonly storyId: string;
   readonly spec: string | null;
   readonly base: string | null;
@@ -2990,7 +3057,7 @@ function parseArgs(argv: readonly string[]): Args {
   if (command !== "review" && command !== "status") {
     throw new UsageError(command === undefined ? "missing subcommand review or status" : `unknown subcommand ${command}`);
   }
-  const allowed = command === "review" ? ["--story", "--spec", "--base", "--loop-cli", "--root"] : ["--story", "--spec", "--root"];
+  const allowed = command === "review" ? ["--story", "--item", "--spec", "--base", "--loop-cli", "--root"] : ["--story", "--item", "--spec", "--root"];
   const values = new Map<string, string>();
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -3003,15 +3070,28 @@ function parseArgs(argv: readonly string[]): Args {
     }
     values.set(arg, value);
   }
-  const storyId = values.get("--story");
-  if (storyId === undefined) {
-    throw new UsageError("--story is required");
+  const itemId = values.get("--item");
+  if (itemId !== undefined) {
+    if (values.has("--story")) {
+      throw new UsageError("pass --story or --item, not both");
+    }
+    if (!RETRO_ITEM_ID.test(itemId)) {
+      throw new UsageError(`--item must be a retrospective action item id, epic-<N>-retro-item-<k>-<slug>, got ${JSON.stringify(itemId)}`);
+    }
+    if (!values.has("--spec")) {
+      throw new UsageError("--item needs --spec: an action item's spec cannot be found from its id");
+    }
   }
-  if (!STORY_ID.test(storyId)) {
+  const storyId = itemId ?? values.get("--story");
+  if (storyId === undefined) {
+    throw new UsageError("--story or --item is required");
+  }
+  if (itemId === undefined && !STORY_ID.test(storyId)) {
     throw new UsageError(`--story must be of the form <epic>.<story>, got ${JSON.stringify(storyId)}`);
   }
   return {
     command,
+    subject: itemId === undefined ? "story" : "item",
     storyId,
     spec: values.get("--spec") ?? null,
     base: values.get("--base") ?? null,
@@ -3048,6 +3128,20 @@ function display(root: string, path: string): string {
   return rel.startsWith("..") || isAbsolute(rel) ? path : rel;
 }
 
+/** What a review covers: a Story from its manifest, or an action item from its sprint status entry. */
+interface Subject {
+  /** `Story <id>` or `action item <id>`, for messages. */
+  readonly label: string;
+  /** The manifest, or the action item entry, as the prompt shows it. */
+  readonly text: string;
+  readonly testIds: readonly string[];
+  readonly xaravelTestIds: readonly string[];
+  /** `inStoryScope` or `inItemScope`. */
+  readonly inScope: (path: string, ids?: readonly string[]) => boolean;
+  /** `fileInStoryScope` or `inItemScope`. */
+  readonly fileInScope: (path: string) => boolean;
+}
+
 async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const out: string[] = [];
   const err: string[] = [];
@@ -3059,16 +3153,30 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   const checklistText = readFileSync(checklistPath, "utf8");
   const items = parseChecklist(checklistText);
-  const manifestFile = `${STORIES_DIR}/${storyId}.md`;
-  if (!existsSync(join(root, manifestFile))) {
-    return stop(`${manifestFile} does not exist`);
+  let subject: Subject;
+  if (args.subject === "item") {
+    const statusPath = join(root, SPRINT_STATUS);
+    if (!existsSync(statusPath)) {
+      return stop(`${SPRINT_STATUS} does not exist`);
+    }
+    const item = readActionItem(root, readFileSync(statusPath, "utf8"), storyId);
+    if (typeof item === "string") {
+      return stop(item);
+    }
+    subject = { label: `action item ${storyId}`, text: item.text, testIds: [], xaravelTestIds: [], inScope: (path) => inItemScope(item, path), fileInScope: (path) => inItemScope(item, path) };
+  } else {
+    const manifestFile = `${STORIES_DIR}/${storyId}.md`;
+    if (!existsSync(join(root, manifestFile))) {
+      return stop(`${manifestFile} does not exist`);
+    }
+    const manifestText = readFileSync(join(root, manifestFile), "utf8");
+    const parsed = parseManifest(manifestFile, manifestText);
+    if (parsed.manifest === null) {
+      return stop(`${manifestFile} is invalid: ${parsed.violations.join("; ")}`);
+    }
+    const manifest: Manifest = parsed.manifest;
+    subject = { label: `Story ${storyId}`, text: manifestText, testIds: manifest.testIds, xaravelTestIds: manifest.xaravelTestIds, inScope: (path, ids) => inStoryScope(manifest, path, ids), fileInScope: (path) => fileInStoryScope(root, manifest, path) };
   }
-  const manifestText = readFileSync(join(root, manifestFile), "utf8");
-  const parsed = parseManifest(manifestFile, manifestText);
-  if (parsed.manifest === null) {
-    return stop(`${manifestFile} is invalid: ${parsed.violations.join("; ")}`);
-  }
-  const manifest: Manifest = parsed.manifest;
   const spec = specPath(root, args.spec, storyId);
   const base = args.base ?? specBaseline(readFileSync(spec, "utf8"));
   if (base === null) {
@@ -3101,10 +3209,10 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     return stop(`the diff from ${diff.base} to tree ${diff.tree} is empty`);
   }
   // The Story's own change: another PR's files in the base range are named, not shown, and give no evidence (ESC-9.10-4).
-  const storyFiles = diff.files.filter((file) => fileInStoryScope(root, manifest, file.filename));
+  const storyFiles = diff.files.filter((file) => subject.fileInScope(file.filename));
   const outOfScopeFiles = diff.files.filter((file) => !storyFiles.includes(file)).map((file) => file.filename);
   if (storyFiles.length === 0) {
-    return stop(`the diff from ${diff.base} to tree ${diff.tree} holds no file of Story ${storyId}'s own change (ESC-9.10-4)`);
+    return stop(`the diff from ${diff.base} to tree ${diff.tree} holds no file of ${subject.label}'s own change (ESC-9.10-4)`);
   }
   const oracleRequests: { path: string; text: string }[] = [];
   const fixtures: { path: string; text: string | null }[] = [];
@@ -3136,22 +3244,23 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
   // (e) shows the Story's own touched tests; another PR's in the base range is named, not shown (ESC-9.10-3).
   const touchedTests = xaravelTestEvidence(root, storyFiles);
-  const xaravelTests = touchedTests.filter((entry) => inStoryScope(manifest, entry.path, entry.ids));
+  const xaravelTests = touchedTests.filter((entry) => subject.inScope(entry.path, entry.ids));
   const outOfScopeTests = [...new Set(touchedTests.filter((entry) => !xaravelTests.includes(entry)).map((entry) => entry.path))].sort(compareUnits);
   const promptInput: PromptInput = {
     checklistText,
     items,
     precedence,
     storyId,
+    subject: args.subject,
     tree: diff.tree,
     base: diff.base,
-    manifestText,
-    inventory: inventoryContext(root, manifest.testIds),
+    manifestText: subject.text,
+    inventory: inventoryContext(root, subject.testIds),
     oracleRequests,
     files: storyFiles,
     outOfScopeFiles,
     evidence: {
-      ...gatherEvidence(root, storyFiles, manifest),
+      ...gatherEvidence(root, storyFiles, { testIds: [...subject.testIds], xaravelTestIds: [...subject.xaravelTestIds] }),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       xaravelTests,
       outOfScopeTests,
@@ -3166,7 +3275,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     return stop(`the prompt is ${withoutH.length} characters, over the ${PROMPT_CAP} cap, of which section (e), the touched Xaravel Tests, is ${withoutH.length - withoutE}; the diff and its evidence are too large to review`);
   }
   // (h) fills only what the cap leaves, naming each file it cannot fit, so it never makes the prompt too large.
-  const prompt = buildPrompt(withWholeFiles(root, promptInput, (path) => inStoryScope(manifest, path)));
+  const prompt = buildPrompt(withWholeFiles(root, promptInput, (path) => subject.inScope(path)));
   if (prompt.length > PROMPT_CAP) {
     return stop(`the prompt is ${prompt.length} characters with section (h), over the ${PROMPT_CAP} cap; (h) should fit within it`);
   }
