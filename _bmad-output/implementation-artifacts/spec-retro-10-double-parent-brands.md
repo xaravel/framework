@@ -104,6 +104,34 @@ deferred:
   - `[low]` `[patch]` (verification-gap other) assert test header contradiction — same patch as above.
   - **Fidelity Review produced no verdict:** `--item must be a retrospective action item id, epic-<N>-retro-item-<k>-<slug>, got "epic-10-item-2-double-parent-brands"` (exit 2). `RETRO_ITEM_ID` in `tools/fidelity-review/fidelity-review.ts:152` rejects ids of items a Maintainer ruling adds (`epic-<N>-item-<k>-<slug>`), and `conformance/tests/xaravel/fidelity-review.test.ts:1498` asserts that rejection. The item cannot reach `status … current`, so it cannot merge.
 
+### 2026-10-23 — Review pass (resumed, shared walk)
+- verdicts: 24 findings — high 0, medium 1, low 15, false 8, maybe-false 0
+- findings:
+  - `[low]` `[reject]` (edge) a well-known symbol (`Symbol.toPrimitive`) as a bare-symbol parent gets a `true` getter — hand-built tokens only (`contract()` passes tokens); the fix adds a guard branch.
+  - `[low]` `[reject]` (blind) the frontmatter still defers the duplicated walk — the fix edits this spec; the deferred list is append-only, and the Spec Change Log records it settled.
+  - `[low]` `[reject]` (blind) Auto Run Result stale — the fix edits this spec; Finalize rewrites it.
+  - `[false]` `[reject]` (blind) no verification after the refactor — `bun run harness` (differ=0), `harness --xaravel` (340 passed, 0 failed), typecheck and lint were run after the refactor and again after this pass's patches.
+  - `[low]` `[patch]` (blind) `isContractToken` copied in `Generator.ts` and `ContractParents.ts` — `ContractParents.ts` exports it and `Generator.ts` imports it; mockery's exported one predates this item.
+  - `[low]` `[reject]` (blind) Change Log / Code Map out of date — the fix edits this spec.
+  - `[low]` `[reject]` (blind) `contractParentBrands` has no direct test — both packages' tests drive every branch through it, and `tsc -b` pins its signature for mockery.
+  - `[low]` `[reject]` (blind) a nested bad parents list's error naming is untested — malformed hand-built tokens only; the message names the contract holding the list by construction.
+  - `[low]` `[patch]` (blind) assert reads parents on every double, mockery once — the Generator header now says so.
+  - `carried` `[low]` `[reject]` (blind) a FQCN-less parent is `class@anonymous` in assert — same as the earlier pass's first row; `contract()` always sets the FQCN.
+  - `[medium]` `[patch]` (blind) the intersection row checks only `instanceof` — grouped with Fidelity F-7 below.
+  - `[low]` `[reject]` (blind) no-parents path for class and bare-symbol targets untested — both branches return a literal `[]`, and the existing typed-doubles tests still pin their brands.
+  - `carried` `[low]` `[reject]` (verification-gap) a brand-only or nameless parent token in mockery untested — same root as the earlier pass's second row; hand-built tokens only.
+  - `[low]` `[patch]` (verification-gap other) `isContractToken` duplicated — same patch as above.
+  - `[false]` `[reject]` (intent) the real PSR tokens do not record parents yet — that half is Story 10.1's by the ruling; this item is the consumer side, tested with stand-ins as AD-2 requires.
+  - `[false]` `[reject]` (intent) XT-assert-3's expected export list widened — the assertion is still an exact match of the full list; a new export must appear in it, which is stricter, not weaker.
+  - `[false]` `[reject]` (intent) the new public export was not asked for — settling the deferred duplication was; the export is the shared implementation the Epic 4 lesson asks for.
+  - `carried` `[false]` `[reject]` (intent) `getMockBuilder`, string-FQCN and `SafeDefaultResolver` paths untested — they reach the same `readTarget`/`DoubleTarget.of`.
+  - `[false]` `[reject]` (intent) `<name>` reading for nested errors — the matrix names the contract whose list is read; the top-level rows test it.
+  - `[low]` `[reject]` (intent) mockery throws InvalidDoubleTargetException for a nameless parent, assert names it `class@anonymous` — each package keeps its own target-name rule, as the intent says.
+  - `[false]` `[reject]` (intent) the records disagree — the fix edits this spec; Finalize rewrites Auto Run Result.
+  - `[false]` `[reject]` (intent) intersection syntax — `Double.for` is variadic, and the test calls it that way.
+  - `[low]` `[patch]` (fidelity, reviewer 1 reject at tree 64c1265f) F-7: XT-mockery-13's intersection case does not check the doubled methods — BaseA/BaseB now declare `ba`/`bb`; the row asserts the four brands and that the prototype has `fa`, `fb` and not `ba`, `bb`.
+  - `[low]` `[patch]` (fidelity) F-7 grouped with the blind intersection row: same patch.
+
 ## Verification
 
 **Commands:**
@@ -122,3 +150,55 @@ Blocking condition: Fidelity Review cannot run for this item. `bun run fidelity:
 - Review: 3 low patches (comments), 1 medium deferred (shared walk), 10 rejected (reasons in the triage log). Follow-up review recommended: false.
 - Verification: new tests fail on baseline 972ade3e and pass after; `bun run harness` SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0 (before the comment-only patches); `bun run harness --xaravel` 345 tests, 0 failed; `bun run typecheck` and `bun run lint` clean after the patches.
 - Residual risk: the two packages keep their own walk (deferred item); no Fidelity Review has run.
+
+## Fidelity Review
+
+### Reviewer 1: reject at tree 64c1265fef5435f427e88b297df98fa9e6eb0972
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `972ade3e94c93bf011046acbaef414a445084522`, on 2026-10-23T19:01:53.809Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed, and no Ported Test IDs are assigned. |
+| F-2: No expected value is weakened | pass | The changed export-list expectation remains exact and adds contractParentBrands; existing assertions retain their comparisons and expected values. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted marker or Expectations adapted field is added or changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture evidence identifies no Oracle error fixture relied on by this item. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | Compared all three touched Xaravel Tests with their consequence strings. The intersection case verifies parent membership but does not verify its declared method restriction. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Compared the changed paths and implementation with the action item's assert/mockery scope and ESC-10.1-6. The shared brand traversal implements those components' doubles without implementing another component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared the touched source files and declaration inventory with AD-6 and DIV-1. They retain no asyncRoot tags and introduce synchronous traversal and brand-definition functions requiring none. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No conformance/oracle-requests file changes. |
+
+Findings:
+
+- **F-7** `packages/mockery/tests/xaravel/parent-brands.test.ts`: XT-mockery-13 claims that intersection doubles retain only the target tokens' own doubled methods, but the intersection case checks only instanceof results. Give BaseA and BaseB distinct methods and assert that both's prototype doubles fa and fb while excluding those parent methods.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"64c1265fef5435f427e88b297df98fa9e6eb0972","base":"972ade3e94c93bf011046acbaef414a445084522","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-23T19:01:53.809Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed, and no Ported Test IDs are assigned.","findings":[]},{"id":"F-2","result":"pass","note":"The changed export-list expectation remains exact and adds contractParentBrands; existing assertions retain their comparisons and expected values.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted marker or Expectations adapted field is added or changed.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture evidence identifies no Oracle error fixture relied on by this item.","findings":[]},{"id":"F-7","result":"fail","note":"Compared all three touched Xaravel Tests with their consequence strings. The intersection case verifies parent membership but does not verify its declared method restriction.","findings":[{"path":"packages/mockery/tests/xaravel/parent-brands.test.ts","detail":"XT-mockery-13 claims that intersection doubles retain only the target tokens' own doubled methods, but the intersection case checks only instanceof results. Give BaseA and BaseB distinct methods and assert that both's prototype doubles fa and fb while excluding those parent methods."}]},{"id":"F-8","result":"pass","note":"Compared the changed paths and implementation with the action item's assert/mockery scope and ESC-10.1-6. The shared brand traversal implements those components' doubles without implementing another component.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the touched source files and declaration inventory with AD-6 and DIV-1. They retain no asyncRoot tags and introduce synchronous traversal and brand-definition functions requiring none.","findings":[]},{"id":"F-10","result":"n/a","note":"No conformance/oracle-requests file changes.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree 64c1265fef5435f427e88b297df98fa9e6eb0972
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `972ade3e94c93bf011046acbaef414a445084522`, on 2026-10-23T19:01:53.809Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The action item assigns no Ported Test IDs, and the change adds or changes no portedTest. It touches only Xaravel Tests (XT-assert-3, XT-assert-22, XT-mockery-13), so there are no Upstream assertions to compare. |
+| F-2: No expected value is weakened | pass | No Ported Test is touched. The only changed expected value is in XT-assert-3: its exact export list (still compared with toEqual) gains 'contractParentBrands', the new export that index.ts adds and freezes. That is not a looser comparison, and no exception class or message was generalised. The new tests use exact toEqual/toBe comparisons, with full TypeError messages. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is changed and no assertion is removed. XT-assert-3 keeps every assertion, with one list value extended. No adapted:DIV marker is added (evidence (a)). |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip and touches no Expectations file. |
+| F-5: Every `adapted` marker matches its clause | n/a | No added line carries an adapted:DIV-<n>.<k> marker or an Expectations adapted field (evidence (a)). |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The item relies on no Oracle fixture. Evidence (c) lists no error fixture, base or changed, and the new tests say no fixture is needed. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-assert-22, both createMock and createStub of Child->Parent->Root: instanceof is true for Child, Parent and Root and false for Unrelated, and brandsOf is exactly the closure. Only 'child' is an own method of the prototype. It also checks the absent and null parents keys, a diamond with a cycle, a bare symbol parent and the TypeError messages, which matches its consequence. XT-mockery-13 checks the same through Double.for and adds an intersection: both bases are true and Unrelated is false. Its method-list check covers only the single-token case; in the intersection case the bases declare no methods, so the check would not catch a regression there. It passes because both cases build the prototype through the same per-target instanceMethods() path in ClassGenerator. Neither string cites an FR-<n>.<k> or AD-<n>.<k> bullet. XT-assert-3 (AD-15.9, grader isolation and frozen exports) still verifies that every export, including the new contractParentBrands, is frozen, and that src/ imports stay relative or point to grader packages. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed file is in packages/assert or packages/mockery, the two components the item lists. The shared walk sits in @​xaravel/assert and @​xaravel/mockery imports it, which is a grader-to-grader edge that ESC-4.5-1 item 7 allows. The tests use stand-in tokens, as ESC-10.1-6 directs, because graders may not import @​xaravel/contracts (AD-2). There is no stub or fake of another component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tag in any changed source file. The new export contractParentBrands and every modified method (readTarget, testDouble, DoubleTarget.of, ClassGenerator.#build, tokenName) are synchronous: they do no IO and take no callback that DIV-1 allows to be async. So no tag is missing or false. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"64c1265fef5435f427e88b297df98fa9e6eb0972","base":"972ade3e94c93bf011046acbaef414a445084522","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-23T19:01:53.809Z","items":[{"id":"F-1","result":"n/a","note":"The action item assigns no Ported Test IDs, and the change adds or changes no portedTest. It touches only Xaravel Tests (XT-assert-3, XT-assert-22, XT-mockery-13), so there are no Upstream assertions to compare.","findings":[]},{"id":"F-2","result":"pass","note":"No Ported Test is touched. The only changed expected value is in XT-assert-3: its exact export list (still compared with toEqual) gains 'contractParentBrands', the new export that index.ts adds and freezes. That is not a looser comparison, and no exception class or message was generalised. The new tests use exact toEqual/toBe comparisons, with full TypeError messages.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is changed and no assertion is removed. XT-assert-3 keeps every assertion, with one list value extended. No adapted:DIV marker is added (evidence (a)).","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip and touches no Expectations file.","findings":[]},{"id":"F-5","result":"n/a","note":"No added line carries an adapted:DIV-<n>.<k> marker or an Expectations adapted field (evidence (a)).","findings":[]},{"id":"F-6","result":"n/a","note":"The item relies on no Oracle fixture. Evidence (c) lists no error fixture, base or changed, and the new tests say no fixture is needed.","findings":[]},{"id":"F-7","result":"pass","note":"XT-assert-22, both createMock and createStub of Child->Parent->Root: instanceof is true for Child, Parent and Root and false for Unrelated, and brandsOf is exactly the closure. Only 'child' is an own method of the prototype. It also checks the absent and null parents keys, a diamond with a cycle, a bare symbol parent and the TypeError messages, which matches its consequence. XT-mockery-13 checks the same through Double.for and adds an intersection: both bases are true and Unrelated is false. Its method-list check covers only the single-token case; in the intersection case the bases declare no methods, so the check would not catch a regression there. It passes because both cases build the prototype through the same per-target instanceMethods() path in ClassGenerator. Neither string cites an FR-<n>.<k> or AD-<n>.<k> bullet. XT-assert-3 (AD-15.9, grader isolation and frozen exports) still verifies that every export, including the new contractParentBrands, is frozen, and that src/ imports stay relative or point to grader packages.","findings":[]},{"id":"F-8","result":"pass","note":"Every changed file is in packages/assert or packages/mockery, the two components the item lists. The shared walk sits in @xaravel/assert and @xaravel/mockery imports it, which is a grader-to-grader edge that ESC-4.5-1 item 7 allows. The tests use stand-in tokens, as ESC-10.1-6 directs, because graders may not import @xaravel/contracts (AD-2). There is no stub or fake of another component.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tag in any changed source file. The new export contractParentBrands and every modified method (readTarget, testDouble, DoubleTarget.of, ClassGenerator.#build, tokenName) are synchronous: they do no IO and take no callback that DIV-1 allows to be async. So no tag is missing or false.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```

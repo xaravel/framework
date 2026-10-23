@@ -18,7 +18,8 @@
 //   `instanceof` every contract it extends, as a PHP mock of a child
 //   interface is. Only brands are added: the doubled methods stay the
 //   target token's own list. The walk is `contractParentBrands`
-//   (ContractParents.ts), which @xaravel/mockery's doubles share.
+//   (ContractParents.ts), which @xaravel/mockery's doubles share; it runs
+//   each time a double is made (Mockery reads a token's parents once).
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
@@ -56,7 +57,7 @@
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
 import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
-import { contractParentBrands } from "./ContractParents";
+import { contractParentBrands, isContractToken } from "./ContractParents";
 import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
@@ -95,10 +96,6 @@ export interface TargetType {
   readonly brand: symbol | null;
   /** The brands of every contract a token extends, own brand excluded; empty for a class and a bare symbol. */
   readonly parentBrands: readonly symbol[];
-}
-
-function isContractToken(value: unknown): value is object {
-  return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
 }
 
 function isNative(fn: unknown): boolean {

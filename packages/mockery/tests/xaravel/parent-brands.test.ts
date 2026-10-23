@@ -89,13 +89,16 @@ xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double
   // A bare symbol parent is its own brand.
   expect((double(token("XtM\\WithSymbol", [], () => [Symbol.for("X\\Base")])) as Record<symbol, unknown>)[Symbol.for("X\\Base")]).toBe(true);
 
-  // Intersection: every parent of both tokens.
-  const BaseA = token("XtM\\BaseA", []);
-  const BaseB = token("XtM\\BaseB", []);
+  // Intersection: every parent of both tokens; the doubled methods are the two tokens' own, never a parent's.
+  const BaseA = token("XtM\\BaseA", ["ba"]);
+  const BaseB = token("XtM\\BaseB", ["bb"]);
   const TokA = token("XtM\\TokA", ["fa"], () => [BaseA]);
   const TokB = token("XtM\\TokB", ["fb"], () => [BaseB]);
   const both = double(TokA, TokB);
   expect([TokA, TokB, BaseA, BaseB, Unrelated].map((t) => both instanceof (t as never))).toEqual([true, true, true, true, false]);
+  expect(brandsOf(both)).toEqual(["XtM\\BaseA", "XtM\\BaseB", "XtM\\TokA", "XtM\\TokB"]);
+  const bothProto = Object.getPrototypeOf(both) as object;
+  expect(["fa", "fb", "ba", "bb"].map((method) => Object.hasOwn(bothProto, method))).toEqual([true, true, false, false]);
 
   // Not an iterable, or an entry that is not a contract.
   expect(messageOf(() => double(token("XtM\\Bad", [], () => 42)))).toBe("TypeError: XtM\\Bad: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens");

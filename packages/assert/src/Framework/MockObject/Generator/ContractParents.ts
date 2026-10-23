@@ -8,7 +8,8 @@
 
 const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
 
-function isContractToken(value: unknown): value is object {
+/** A contract token object: it has a `Symbol.hasInstance` (an AD-1 token). */
+export function isContractToken(value: unknown): value is object {
   return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
 }
 
