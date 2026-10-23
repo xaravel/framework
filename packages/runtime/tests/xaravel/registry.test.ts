@@ -13,6 +13,9 @@
 //   - XT-runtime-13: `new $n` of a missing class, with and without a leading `\`;
 //   - XT-runtime-14: `getName()` of a lower-cased name, `class_exists` of a differently cased taken name, and `new $n`
 //     of a missing one.
+//
+// Story 9.14: XT-runtime-40, the manifest's one Xaravel Test, covers both of its acceptance criteria: `fqcn()` of a
+// `contract<T>()` token, and every other value unchanged (ESC-10.1-3).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -512,6 +515,7 @@ function contractToken(name: string): object {
     brand,
     [BRAND]: name,
     [Symbol.for("xaravel.contract.methods")]: Object.freeze([]),
+    [Symbol.for("xaravel.contract.parameters")]: Object.freeze({}),
     [Symbol.hasInstance](value: unknown): boolean {
       return ((typeof value === "object" && value !== null) || typeof value === "function") && (value as Record<symbol, unknown>)[brand] === true;
     },
@@ -569,6 +573,7 @@ xaravelTest(
     registerClass("App\\Models\\Post", Post);
     Assert.assertSame("App\\Models\\Post", fqcn(Post));
     Assert.assertSame("App\\Models\\Post", fqcn(new Post()));
+    Assert.assertSame("App\\Models\\Post", fqcn(Object.freeze(new Post())));
 
     // No token is registered: its name never resolves as a class.
     const notFound = thrownBy(() => resolveClass(name));
