@@ -8,7 +8,7 @@ import { Assert, TestCase, xaravelTest } from "@xaravel/assert";
 import { Double } from "@xaravel/mockery";
 import { hasBrand, jsonEncode } from "@xaravel/runtime/php";
 import { fqcn, loadClassmap, resolveClass } from "@xaravel/runtime/registry";
-import { CLASS_FQCN, contract, CONTRACT_METHODS, CONTRACT_PARAMETERS } from "@xaravel/contracts";
+import { CLASS_FQCN, contract, CONTRACT_METHODS, CONTRACT_PARAMETERS, CONTRACT_PARENTS } from "@xaravel/contracts";
 
 declare const ArrayableBrand: unique symbol;
 /** A test-local `Illuminate\Contracts\Support\Arrayable`, declared as Story 10.2's generators will emit it. */
@@ -122,7 +122,7 @@ xaravelTest(
     Assert.assertTrue(Object.assign(() => null, { [key]: true }) instanceof Arrayable);
 
     // The token's own keys, exactly.
-    const expectedKeys: (string | symbol)[] = ["brand", CLASS_FQCN, CONTRACT_METHODS, CONTRACT_PARAMETERS, Symbol.hasInstance, Symbol.toPrimitive];
+    const expectedKeys: (string | symbol)[] = ["brand", CLASS_FQCN, CONTRACT_METHODS, CONTRACT_PARAMETERS, CONTRACT_PARENTS, Symbol.hasInstance, Symbol.toPrimitive];
     const ownKeys = Reflect.ownKeys(Arrayable);
     Assert.assertSame(expectedKeys.length, ownKeys.length);
     for (const ownKey of expectedKeys) {
@@ -168,7 +168,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-contracts-18",
-  "the token carries its method names at Symbol.for('xaravel.contract.methods') and its parameter names at Symbol.for('xaravel.contract.parameters') as a frozen { <method>: [<param>, …] } record (ESC-10.1-1 (b), ESC-4.5-1 item 3), and Mockery's and PHPUnit's doubles take their method list from the token",
+  "the token carries its method names at Symbol.for('xaravel.contract.methods') and its parameter names at Symbol.for('xaravel.contract.parameters') as a frozen { <method>: [<param>, …] } record (ESC-10.1-1 (b), ESC-4.5-1 item 3), and its parent contract tokens at Symbol.for('xaravel.contract.parents') as a frozen copy of the given list, [] when none, while instanceof still reads only its own brand (ESC-10.1-6); Mockery's and PHPUnit's doubles take their method list from the token",
   () => {
     Assert.assertSame(Symbol.for("xaravel.contract.methods"), CONTRACT_METHODS);
     Assert.assertSame(Symbol.for("xaravel.contract.parameters"), CONTRACT_PARAMETERS);
@@ -202,6 +202,43 @@ xaravelTest(
       const error = thrownBy(() => contract("X\\Z", bad as unknown as Record<string, string[]>));
       Assert.assertInstanceOf(TypeError, error);
       Assert.assertStringContainsString("contract()", (error as TypeError).message);
+    }
+
+    // Parents: a frozen copy of the given list, in order; a frozen [] when none.
+    Assert.assertSame(Symbol.for("xaravel.contract.parents"), CONTRACT_PARENTS);
+    const P = contract("X\\P");
+    const Q = contract("X\\Q");
+    const given = [P, Q];
+    const C = contract("X\\C", {}, given);
+    Assert.assertTrue(Object.isFrozen(C[CONTRACT_PARENTS]));
+    Assert.assertSame(2, C[CONTRACT_PARENTS].length);
+    Assert.assertSame(P, C[CONTRACT_PARENTS][0]);
+    Assert.assertSame(Q, C[CONTRACT_PARENTS][1]);
+    Assert.assertFalse((given as readonly unknown[]) === C[CONTRACT_PARENTS]);
+    given.push(contract("X\\R"));
+    given.shift();
+    Assert.assertSame(2, C[CONTRACT_PARENTS].length);
+    Assert.assertSame(P, C[CONTRACT_PARENTS][0]);
+    Assert.assertSame(Q, C[CONTRACT_PARENTS][1]);
+    for (const token of [X, Billing, P]) {
+      Assert.assertTrue(Array.isArray(token[CONTRACT_PARENTS]));
+      Assert.assertSame(0, token[CONTRACT_PARENTS].length);
+      Assert.assertTrue(Object.isFrozen(token[CONTRACT_PARENTS]));
+    }
+
+    // instanceof reads only the token's own brand: the parents feed the doubles, not the brand check.
+    const onlyChild = { [C.brand]: true };
+    Assert.assertTrue(onlyChild instanceof C);
+    Assert.assertFalse(onlyChild instanceof P);
+    Assert.assertFalse({ [P.brand]: true } instanceof C);
+
+    // Bad parents throw a TypeError naming contract() and the child's FQCN.
+    // oxlint-disable-next-line no-sparse-arrays
+    for (const bad of [[{}], [null], [Symbol.for("X")], [class {}], "x", null, [, P], [{ [CLASS_FQCN]: "X\\P" }], [{ [Symbol.hasInstance]: () => true }]]) {
+      const error = thrownBy(() => contract("X\\Child", {}, bad as never));
+      Assert.assertInstanceOf(TypeError, error);
+      Assert.assertStringContainsString("contract()", (error as TypeError).message);
+      Assert.assertStringContainsString("X\\Child", (error as TypeError).message);
     }
 
     // Mockery's Double: an instance of the token, its methods the token's, named by the FQCN.

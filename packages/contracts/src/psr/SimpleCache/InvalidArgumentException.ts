@@ -9,4 +9,4 @@ export interface InvalidArgumentException extends CacheException {
   readonly [InvalidArgumentException.brand]: true;
 }
 
-export const InvalidArgumentException = contract<InvalidArgumentException, typeof InvalidArgumentExceptionBrand>("Psr\\SimpleCache\\InvalidArgumentException");
+export const InvalidArgumentException = contract<InvalidArgumentException, typeof InvalidArgumentExceptionBrand>("Psr\\SimpleCache\\InvalidArgumentException", {}, [CacheException]);

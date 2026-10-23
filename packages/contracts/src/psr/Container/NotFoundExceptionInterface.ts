@@ -9,4 +9,4 @@ export interface NotFoundExceptionInterface extends ContainerExceptionInterface 
   readonly [NotFoundExceptionInterface.brand]: true;
 }
 
-export const NotFoundExceptionInterface = contract<NotFoundExceptionInterface, typeof NotFoundExceptionInterfaceBrand>("Psr\\Container\\NotFoundExceptionInterface");
+export const NotFoundExceptionInterface = contract<NotFoundExceptionInterface, typeof NotFoundExceptionInterfaceBrand>("Psr\\Container\\NotFoundExceptionInterface", {}, [ContainerExceptionInterface]);

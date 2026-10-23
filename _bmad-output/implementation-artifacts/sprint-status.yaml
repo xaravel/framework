@@ -136,7 +136,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: in-progress  # XT-contracts-1, -2, -3, -18 merged; XT-contracts-4 after action item epic-10-item-2-double-parent-brands (decisions/ESC-10.1-6.md): tokens record their parents at Symbol.for('xaravel.contract.parents'); re-run the review with --base 9e1bd6d7
+  10-1-token-brand-and-contract-t-mechanism: done
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog

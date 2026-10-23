@@ -2,7 +2,7 @@
 title: 'Story 10.1: Token, brand and contract<T>() mechanism'
 type: 'feature'
 created: '2026-10-23'
-status: 'in-progress'
+status: 'done'
 baseline_revision: '9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -10,11 +10,27 @@ context:
   - '{project-root}/decisions/ESC-10.1-1.md'
   - '{project-root}/decisions/ESC-10.1-3.md'
   - '{project-root}/decisions/ESC-10.1-4.md'
+  - '{project-root}/decisions/ESC-10.1-5.md'
+  - '{project-root}/decisions/ESC-10.1-6.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-10-context.md'
   - '{project-root}/AGENTS.md'
 warnings:
   - oversized
-deferred: []
+deferred:
+  - summary: >-
+      A child token's method list omits its parents' methods, so a double of a child contract whose parent declares methods cannot configure the inherited ones.
+    evidence: |-
+      Mockery's DoubleTarget and PHPUnit's Generator take methods from the target token's Symbol.for('xaravel.contract.methods') only, and the API-surface rows list declared methods only (Illuminate\Contracts\Container\Container has get but not has). No Story 10.1 token has a parent with methods. Story 10.2 generates the first such children and must settle whether members include inherited methods or the doubles union them.
+    location: >-
+      packages/contracts/src/Contract.ts (contract), Story 10.2
+    severity: medium
+  - summary: >-
+      A test double of a PSR exception interface (Throwable parent mapped to Error) is not instanceof Error at runtime.
+    evidence: |-
+      ContainerExceptionInterface and CacheException extend Error at the type level; Double.for and createMock build plain objects. ESC-10.1-6 ruled contract brands only, and Error is not a contract token. The fix belongs to @xaravel/assert and @xaravel/mockery, outside Story 10.1's component.
+    location: >-
+      packages/assert/src/Framework/MockObject/Generator/Generator.ts, packages/mockery/src/JMac/Testing/Engine/DoubleTarget.ts
+    severity: low
 ---
 
 # Story 10.1: Token, brand and `contract<T>()` mechanism
@@ -28,6 +44,8 @@ deferred: []
 **Approach:** Add `contract<T, B>(fqcn, members?)` and the token type to the package root. Cover XT-contracts-1, -2 and -18 with Xaravel Tests. XT-contracts-3 (`fqcn()` on a token) waits on `conformance/escalations/ESC-10.1-3.md`, and XT-contracts-4 (`@xaravel/contracts/psr`) waits on `conformance/escalations/ESC-10.1-4.md`. Both were raised during planning, so this Story ends `blocked` on them, with the rest of its work merged.
 
 **Resume (2026-10-23, second pass):** XT-contracts-1, -2 and -18 merged in #331. Both rulings have landed: Story 9.14 makes `fqcn()` read a frozen token's own FQCN key (ESC-10.1-3), and action item `epic-10-item-1-psr-api-surface` put the PSR interfaces' rows in `conformance/api-surface/contracts.jsonl` (ESC-10.1-4). This pass adds XT-contracts-3 (an app contract made with `contract<T>()` behaves like a framework token and resolves through `fqcn()`) and XT-contracts-4 (the `@xaravel/contracts/psr` subpath, ported from those rows). The Always and Never rules below are for the first pass; the **Second pass** rules replace them where they conflict.
+
+**Resume (2026-10-23, third pass):** the second pass merged in #340, blocked on ESC-10.1-5 and ESC-10.1-6. Both are ruled. ESC-10.1-5 made the Fidelity Review show the `contracts.jsonl` rows XT-contracts-4 reads (#341). ESC-10.1-6 (option 1) has `contract()` record a token's parents at `Symbol.for('xaravel.contract.parents')`, and action item `epic-10-item-2-double-parent-brands` (#345, done) made both doubles define every brand in that chain. This pass adds the parents to `contract()` and to the two PSR child tokens, extends XT-contracts-4 to a double of each child contract, and re-runs the Fidelity Review with `--base 9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba`. The **Third pass** rules replace earlier ones where they conflict.
 
 ## Boundaries & Constraints
 
@@ -62,6 +80,14 @@ deferred: []
 - Always: XT-contracts-3 cites AD-1.5; XT-contracts-4 cites AD-1.1 and AD-2.3.
 - Never: change `src/Contract.ts`'s behaviour, `@xaravel/runtime`, any file outside `packages/contracts/**`, the manifest's `test_ids`, or any `conformance/**` file. Never call `registerClass` on a token. Never port a PSR class or trait (`AbstractLogger`, `NullLogger`, `LoggerTrait`, `LogLevel`): only the interfaces the rows list.
 
+**Third pass (ESC-10.1-6):**
+- Always: `contract<T, B>(fqcn, members = {}, parents = [])`. `parents` is a list of contract tokens (`readonly ContractToken<object>[]`). The token gains one own key, `[Symbol.for('xaravel.contract.parents')]`: a frozen copy of `parents` in the given order, a frozen `[]` when none. Export its key as `CONTRACT_PARENTS` from `src/Contract.ts` and the package root, and add it to `ContractToken` as `readonly [CONTRACT_PARENTS]: readonly ContractToken<object>[]`.
+- Always: a parent that is not a contract token (a non-null object with a string own `[CLASS_FQCN]` and a function `[Symbol.hasInstance]`), or a `parents` that is not an array, throws a `TypeError` naming `contract()` and the child's FQCN. A later change to the caller's array does not change the token's.
+- Always: the token's own brand check is unchanged: `instanceof` still reads only the token's own brand. The parents feed the doubles (ESC-10.1-6), and an implementing class still carries every brand in its chain itself.
+- Always: `NotFoundExceptionInterface` passes `[ContainerExceptionInterface]` and `InvalidArgumentException` passes `[CacheException]`, Upstream's `extends`. The other six PSR tokens pass none. `ContainerExceptionInterface` and `CacheException` extend PHP's `Throwable`, which is not a contract token, so they record no parent.
+- Always: XT-contracts-1's exact own-key assertion adds `CONTRACT_PARENTS`. XT-contracts-18 covers the parents metadata rows. XT-contracts-4 adds the psr parents and psr double rows. No assertion is removed or weakened.
+- Never: change `@xaravel/runtime`, `@xaravel/assert`, `@xaravel/mockery`, any `conformance/**` file or the manifest. The second-pass Never rule against changing `src/Contract.ts`'s behaviour is lifted for this change only.
+
 ## I/O & Edge-Case Matrix
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
@@ -81,6 +107,11 @@ deferred: []
 | psr exports (XT-4) | `import * as psr from '@xaravel/contracts/psr'` | the runtime exports are exactly the 8 tokens, each named by its Upstream short name; `fqcn(token)` and `token[CLASS_FQCN]` are its row FQCN; `brand` is `Symbol.for(FQCN)` | none |
 | psr metadata (XT-4) | each token vs `contracts.jsonl` rows | `CONTRACT_METHODS` equals the FQCN's method rows' `member`s in file order; `CONTRACT_PARAMETERS[m]` equals that row's `parameters[].name` | none |
 | psr brands (XT-4) | a class with `get [LoggerInterface.brand]()` and the 9 methods | `instanceof LoggerInterface` true; with `NotFoundExceptionInterface` and `ContainerExceptionInterface` brands on an `Error` subclass, `instanceof` both is true | none |
+| parents metadata (third pass) | `const P = contract('X\\P'); const C = contract('X\\C', {}, [P])`; `contract('X\\Y')` | `C[CONTRACT_PARENTS]` is a frozen `[P]`; `X\\Y`'s is a frozen `[]`; a later push to the caller's array leaves `[P]` | none |
+| parents, own brand only (third pass) | an object with only `C`'s brand | `instanceof C` true, `instanceof P` false | none |
+| bad parents (third pass) | `parents` of `[{}]`, `[null]`, `[Symbol.for('X')]`, `[class {}]`, `'x'` | throws `TypeError` naming `contract()` | thrown at call |
+| psr parents (XT-4, third pass) | `NotFoundExceptionInterface`, `InvalidArgumentException`, the other six | parents `[ContainerExceptionInterface]`, `[CacheException]`, and `[]` for each other token | none |
+| psr doubles (XT-4, third pass) | Mockery `Double.for(NotFoundExceptionInterface)` / `Double.for(InvalidArgumentException)` and PHPUnit `createMock` of each | the double is `instanceof` the child token and its parent (`ContainerExceptionInterface`, `CacheException`); a double of a parent is not `instanceof` the child | none |
 
 </intent-contract>
 
@@ -106,6 +137,15 @@ Second pass:
 - `tools/api-surface/api-surface.ts:451-481`: `contract('Psr\\…')` registers any FQCN literal, so `bun run api-surface --details contracts` must then show the 27 PSR rows matched (none missing, extra or mismatched). A method with fewer than two optional parameters needs only the positional form (AD-26); every PSR method qualifies.
 - `packages/contracts/tests/xaravel/contract.test.ts`: has the test-local `Arrayable`, `thrownBy`, and the double patterns XT-contracts-3 reuses.
 
+Third pass:
+- `packages/contracts/src/Contract.ts`: `contract()` (end of file) builds the frozen token; `copyMembers` is the validate-and-freeze pattern to mirror for `parents`. `ContractToken` and the three key constants sit at the top.
+- `packages/contracts/src/index.ts`: add `CONTRACT_PARENTS` to the named re-exports.
+- `packages/contracts/src/psr/Container/NotFoundExceptionInterface.ts` and `src/psr/SimpleCache/InvalidArgumentException.ts`: each already imports its parent token; pass `{}` and `[Parent]` to `contract()`.
+- `packages/assert/src/Framework/MockObject/Generator/ContractParents.ts` (`contractParentBrands`) and `packages/mockery/src/JMac/Testing/Engine/DoubleTarget.ts`: read `token[Symbol.for('xaravel.contract.parents')]` (iterable of tokens or symbols; absent or `null` is none) and walk it depth-first. Read-only; a frozen array of `contract()` tokens is what they take.
+- `packages/assert/tests/xaravel/parent-brands.test.ts`, `packages/mockery/tests/xaravel/parent-brands.test.ts`: the doubles' own tests with stand-in tokens. Read-only.
+- `packages/contracts/tests/xaravel/contract.test.ts`: XT-contracts-1's own-key list (`expectedKeys`) and XT-contracts-18's metadata block; XT-contracts-3's `Double.for(token as never)` and `new TestCase().createMock(token)` are the double patterns for XT-contracts-4.
+- `packages/contracts/tests/xaravel/psr.test.ts`: XT-contracts-4; the rows carry no parents, so the two parent relations are the spec's (Upstream's `extends`).
+
 ## Tasks & Acceptance
 
 **Execution:**
@@ -129,16 +169,26 @@ Second pass:
 - `packages/contracts/tests/xaravel/psr.test.ts`: add XT-contracts-4 for the three psr rows. It reads `conformance/api-surface/contracts.jsonl` (path from `import.meta.dir`) and derives every expected FQCN, method list and parameter list from it; it hard-codes none of them. It checks the export set both ways (no missing and no extra token), and builds the brand classes in the psr brands row.
 - `packages/contracts/README.md`: add one line to the usage section naming `@xaravel/contracts/psr` and what it exports.
 
+**Execution, third pass:**
+- `packages/contracts/src/Contract.ts`: add `CONTRACT_PARENTS`, the `parents` parameter with its validation and frozen copy, the own key, and the `ContractToken` member, following the third-pass Always rules. Update the header comment and `contract()`'s doc comment to name parents and ESC-10.1-6.
+- `packages/contracts/src/index.ts`: re-export `CONTRACT_PARENTS`.
+- `packages/contracts/src/psr/Container/NotFoundExceptionInterface.ts`, `src/psr/SimpleCache/InvalidArgumentException.ts`: pass their parent token.
+- `packages/contracts/tests/xaravel/contract.test.ts`: add `CONTRACT_PARENTS` to XT-contracts-1's own keys; add the parents metadata, own-brand-only and bad-parents rows to XT-contracts-18, and name the parents key in its consequence string (citing ESC-10.1-6).
+- `packages/contracts/tests/xaravel/psr.test.ts`: add the psr parents and psr doubles rows to XT-contracts-4, and name them in its consequence string (citing ESC-10.1-6).
+- `packages/contracts/README.md`: one sentence in the usage section on the `parents` argument.
+
 **Acceptance Criteria:**
 - Given the token mechanism, when `bun run harness --xaravel --id 'XT-contracts-*'` runs, then XT-contracts-1, -2, -3, -4 and -18 pass, and none is UNDECLARED.
 - Given `contract<T>('App\\Contracts\\Billing')`, when it is used as a token, then it behaves like a framework token and `fqcn()` returns `App\Contracts\Billing` (XT-contracts-3).
 - Given `@xaravel/contracts/psr`, when it is imported, then it exports exactly the PSR container, simple-cache and log interfaces' tokens, with metadata equal to the committed rows (XT-contracts-4), and `bun run api-surface --details contracts` reports every `Psr\` row matched.
+- Given `NotFoundExceptionInterface` and `InvalidArgumentException`, when a Mockery or PHPUnit double of either is made, then it is `instanceof` its Upstream parent token as well as its own (ESC-10.1-6), and each token's `Symbol.for('xaravel.contract.parents')` holds exactly its Upstream parents.
 - Given the package, when `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check` and the full `bun run harness --xaravel` run, then each one passes.
 
 ## Spec Change Log
 
 - 2026-10-23, implementation: under `--pretty false`, tsc 7.0.2 writes TS2420 on one line and `Property '[Arrayable.brand]' is missing …` on the next, indented line. XT-contracts-2 therefore checks the TS2420 diagnostic block (its line plus the indented elaboration lines) for `[Arrayable.brand]`, not a single line. The intent (TS2420 naming the brand) is unchanged.
 - 2026-10-23, second pass review: `CacheInterface`'s methods return `Promise<…>` of the mapped types with `@asyncRoot` tags (AD-6: Laravel's Repository implements them over `Cache\Store`), which the type map's `bool → boolean` row did not say; Fidelity F-9. `getMultiple` returns `Iterable<unknown> | PhpArray`. XT-contracts-3 checks the PHPUnit double by its mock class name, since PHPUnit's unexpected-call message never names the class.
+- 2026-10-23, third pass plan: ESC-10.1-6 added the Third pass rules, matrix rows, Code Map, Tasks and one acceptance criterion. `baseline_revision` stays `9e1bd6d7…`, the Story's base, so the review layers and the Fidelity Review (`--base 9e1bd6d7…`, ESC-10.1-5) see the whole Story change; this pass alone starts at `532f933c0696e68c655a7a432b7978ebe7902a39`.
 
 ## Review Triage Log
 
@@ -205,6 +255,29 @@ Second pass:
   - `[low]` `[patch]` (blind) `unknownMethodMessage` crashes on null instead of failing an assertion — same defect as the edge row above; fixed by the same assertion.
   - `[low]` `[patch]` (blind) `psr.test.ts`'s header overclaims — same defect as the edge row above; fixed by the same rewording.
 
+### 2026-10-23 — Review pass (third pass: token parents, ESC-10.1-6)
+- verdicts: 19 findings — high 0, medium 2, low 11, false 6, maybe-false 0 (verification-gap filed none; the Fidelity Review recorded two `pass` verdicts at tree `9d37aa561827e762a7ce786e6cecb84ab3878e1b`, no findings)
+- findings:
+  - `[medium]` `[defer]` (edge) a child token's `CONTRACT_METHODS` omits its parents' methods, so a double of a child whose parent declares methods cannot configure them — real in principle: both doubles take methods from the target token only, and the API-surface rows list only declared methods (`Illuminate\Contracts\Container\Container` has `get` but not `has`). No token in this Story has a parent with methods (the PSR parents declare none). Members semantics predate this pass; Story 10.2, the first to generate children of method-bearing parents, must settle it. Deferred.
+  - `[low]` `[reject]` (edge) a self-parent or duplicate parent is accepted silently — the doubles' walk drops both (`contractParentBrands` is cycle-safe and de-duplicates), so no wrong brand results; a guard adds branches for input no generator produces.
+  - `[low]` `[reject]` (edge) a look-alike parent (own string FQCN plus `hasInstance`, not frozen) is accepted — only hand-made objects reach it; the spec's token test is the one written, and a stricter predicate adds checks for input nothing produces.
+  - `[low]` `[reject]` (blind) `contract()` accepts token objects only while the shared walk also accepts bare symbols and any iterable — intended: the Third pass rules make `parents` an array of contract tokens; the walk accepts symbols for the doubles' stand-in tokens. `contract()` output is always a frozen array the walk reads.
+  - `[low]` `[reject]` (blind) a fake object with both an own FQCN and `hasInstance` passes as a parent — same root as the look-alike edge row above.
+  - `[low]` `[reject]` (blind) self and duplicate parents are neither rejected nor tested — same root as the self-parent edge row above.
+  - `[low]` `[reject]` (blind) nothing at compile time ties `T`'s `extends` to `parents`, and XT-contracts-2 has no child-contract case — a type constraint over the parents' interfaces adds generic complexity; the two PSR relations are asserted at runtime in XT-contracts-4, and the brand mechanism's compile check is unchanged.
+  - `[low]` `[reject]` (blind) the two parent relations are hand-written because the rows carry no `extends` — the Third pass rules state them (Upstream's `extends`); Story 10.2's generated tokens take their parents from Upstream per ESC-10.1-6, which is that Story's source question.
+  - `[low]` `[defer]` (blind) a double of a PSR exception interface is not `instanceof Error` (PHP's `Throwable` parent maps to `Error`) — carried from the second pass's edge row, re-verified: still true. ESC-10.1-6 ruled only contract brands, and `Error` is not a contract token; making a double extend `Error` is a change to `@xaravel/assert` and `@xaravel/mockery`, outside this Story's component. Deferred.
+  - `[low]` `[reject]` (blind) the README does not list the PSR port's departures (async `CacheInterface`, `defaultValue`, `Error`) — the source headers and types carry them; README stays a short usage note (as the second pass's README row).
+  - `[low]` `[reject]` (blind) the README shows no class implementing a child contract — the README already says such a class carries every brand in its chain; `psr.test.ts` holds the example; adding one is docs-only polish.
+  - `[low]` `[reject]` (blind) only one level of parents is exercised in this package — the transitive walk is the doubles' and is tested in `packages/assert/tests/xaravel/parent-brands.test.ts` and `packages/mockery/tests/xaravel/parent-brands.test.ts`; `contract()` stores a plain frozen array that walk reads.
+  - `[false]` `[reject]` (blind) `copyParents` rejects a `Set` or generator — the parameter type is `readonly ContractToken<object>[]` and the Third pass rules say a non-array throws; the message says "list", which is the array the type asks for.
+  - `[false]` `[reject]` (blind) XT-contracts-18 uses `Billing` before its declaration (TDZ) — `xaravelTest` callbacks run after the module is evaluated; the harness run passes 5 of 5.
+  - `[false]` `[reject]` (intent) XT-contracts-18 builds no double of a generic token with parents — the Third pass assigns the double rows to XT-contracts-4, which builds both doubles of real child tokens.
+  - `[medium]` `[patch]` (intent) `CacheInterface` returns `Promise<…>` and `getMultiple` narrows its return — carried: second-pass row (Fidelity F-9), already patched and logged in the Spec Change Log.
+  - `[false]` `[reject]` (intent) optional parameters admit `undefined` — carried: second-pass intent R2 row.
+  - `[false]` `[reject]` (intent) XT-contracts-18's consequence does not cite AD-1.1 — carried: the first pass removed AD-1.1 from it on the Fidelity F-7 finding (no consequence row states the metadata); this pass only appends the parents clause.
+  - `[false]` `[reject]` (intent) the Fidelity Review re-run is not visible in the diff — it ran with `--base 9e1bd6d7…` and recorded two passes; `fidelity:review status` prints `current`.
+
 ## Design Notes
 
 Declaration shape that Story 10.2's generators will emit:
@@ -237,6 +310,7 @@ An implementing class carries every brand in its chain, as PHP's `instanceof` ho
 - `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check`: each exits 0.
 - `bun run api-surface contracts` (or the tool's documented form): no new unexplained member is reported for the root entry.
 - Second pass: `bun run harness --xaravel --id 'XT-contracts-*'` shows 5 of 5 passing; `bun run api-surface --details contracts` lists no `Psr\` finding and 0 extra, 0 mismatched; the full `bun run harness` (every Variant) has no differences; `bun run story:check 10.1` passes, Fidelity Review included.
+- Third pass: `bun run harness --xaravel --id 'XT-contracts-*'` shows 5 of 5 passing; `bun run harness --xaravel` has no differences; `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check`, `bun run async-surface --all --check` and `bun run api-surface --details contracts` (28 matched, 0 extra, 0 mismatched) pass. The Fidelity Review re-runs with `--base 9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba` at step 4.
 
 ## Auto Run Result
 
@@ -488,3 +562,83 @@ Blocking condition: two Escalations raised in review, both on XT-contracts-4.
 ### Maintainer ruling, 2026-10-23 (ESC-10.1-6)
 
 `decisions/ESC-10.1-6.md`: option 1. `contract<T, B>(fqcn, members, parents?)` keeps its parent tokens as a frozen array at `Symbol.for('xaravel.contract.parents')`. The PSR tokens pass their Upstream parents: `NotFoundExceptionInterface` extends `ContainerExceptionInterface`, and `InvalidArgumentException` extends `CacheException`. Action item `epic-10-item-2-double-parent-brands` first makes both doubles define the whole brand chain. Resume XT-contracts-4 after it, re-running the Fidelity Review with `--base 9e1bd6d7` (ESC-10.1-5).
+
+### Reviewer 1: pass at tree 9d37aa561827e762a7ce786e6cecb84ab3878e1b
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba`, on 2026-10-23T19:31:19.332Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The manifest assigns no Ported Tests, and none are added or changed. |
+| F-2: No expected value is weakened | pass | Compared the changed assertions with the supplied diff and decisions. Existing checks remain exact; the added parent-metadata key follows ESC-10.1-6 rather than weakening an expectation. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The Story sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change contains no assertion adaptation marker or Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture evidence identifies no Oracle error fixture relied on by this Story. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared all four touched Xaravel Tests with their consequence strings, cited bullets and decisions. Their assertions cover brands, app tokens, frozen metadata, PSR exports and parent relationships. The supplied PSR rows establish XT-contracts-4's expected interface, method and parameter lists. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The Story's package changes remain within contracts. Parent-token metadata and PSR declarations follow ESC-10.1-4 and ESC-10.1-6; no other Component's implementation is stubbed. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared every changed source declaration with AD-6 and DIV-1. All eight cache methods return Promises, name appropriate cache-store roots and match async-surface.json. The remaining declarations require no async tag. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file changes. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `conformance/api-surface/contracts.jsonl`: Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified. **fixed**: Evidence (h) now supplies all 28 PSR rows consumed by psrRows(), including the eight interfaces and their method and parameter records.
+- **P-2** (reviewer 2, F-9) `packages/contracts/src/psr/SimpleCache/CacheInterface.ts`: get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an '@​asyncRoot <Contract.method>' docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it. **fixed**: All eight CacheInterface methods now return Promise types, carry cache-root docblock tags and have matching committed async-surface.json entries.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"9d37aa561827e762a7ce786e6cecb84ab3878e1b","base":"9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-23T19:31:19.332Z","items":[{"id":"F-1","result":"n/a","note":"The manifest assigns no Ported Tests, and none are added or changed.","findings":[]},{"id":"F-2","result":"pass","note":"Compared the changed assertions with the supplied diff and decisions. Existing checks remain exact; the added parent-metadata key follows ESC-10.1-6 rather than weakening an expectation.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"The Story sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no assertion adaptation marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture evidence identifies no Oracle error fixture relied on by this Story.","findings":[]},{"id":"F-7","result":"pass","note":"Compared all four touched Xaravel Tests with their consequence strings, cited bullets and decisions. Their assertions cover brands, app tokens, frozen metadata, PSR exports and parent relationships. The supplied PSR rows establish XT-contracts-4's expected interface, method and parameter lists.","findings":[]},{"id":"F-8","result":"pass","note":"The Story's package changes remain within contracts. Parent-token metadata and PSR declarations follow ESC-10.1-4 and ESC-10.1-6; no other Component's implementation is stubbed.","findings":[]},{"id":"F-9","result":"pass","note":"Compared every changed source declaration with AD-6 and DIV-1. All eight cache methods return Promises, name appropriate cache-store roots and match async-surface.json. The remaining declarations require no async tag.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"conformance/api-surface/contracts.jsonl","detail":"Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified.","fixed":true,"note":"Evidence (h) now supplies all 28 PSR rows consumed by psrRows(), including the eight interfaces and their method and parameter records."},{"id":"P-2","reviewer":2,"item":"F-9","path":"packages/contracts/src/psr/SimpleCache/CacheInterface.ts","detail":"get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an `@asyncRoot <Contract.method>` docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it.","fixed":true,"note":"All eight CacheInterface methods now return Promise types, carry cache-root docblock tags and have matching committed async-surface.json entries."}]}
+```
+
+### Reviewer 2: pass at tree 9d37aa561827e762a7ce786e6cecb84ab3878e1b
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba`, on 2026-10-23T19:31:19.332Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | Manifest test_ids is empty; the change adds or changes no Ported Test. |
+| F-2: No expected value is weakened | n/a | There are no Ported Tests and therefore no Upstream expected values to compare. The Xaravel Tests' expected values come from the committed rows or the rulings, and none is loosened. |
+| F-3: No assertion is removed without a DIV clause | n/a | There are no Ported Tests, so there are no Upstream assertions to count. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No added line carries an adapted:DIV marker, and there is no Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | No assigned Oracle fixture is an error, and the change adds or modifies no error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-contracts-4: checked against the 28 PSR rows in the contracts.jsonl excerpt. - Interfaces: 8, and the 8 runtime exports match their short names (DateInterval is type-only). - Method order: matches the file order of the rows (CacheInterface clear..setMultiple; LoggerInterface alert..warning). - Parameter names: match (for example get ['key','default'], log ['level','message','context']). - Body checks: brands, instanceof, frozen parents per ESC-10.1-6, and that child doubles are instanceof the parent while parent doubles are not instanceof the child. - Citations: AD-1.1 (instanceof and brand) and AD-2.3 (third-party code per AD-22, the psr subpath) fit what the body verifies.  XT-contracts-18: checks the methods and parameters keys, frozen copies, a frozen parents copy in order, [] when there are no parents, instanceof reading only the token's own brand, TypeErrors on bad parents, and doubles taking the method list from the token. It cites no FR/AD ids.  XT-contracts-3: checks fqcn() with and without a leading backslash, instanceof and hasBrand, both kinds of double, and that resolveClass rejects a token's name, as AD-1.5 asks.  XT-contracts-1: the only change adds CONTRACT_PARENTS to the token's exact own keys, which matches Contract.ts. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The shown changes are in packages/contracts only: the token parents half that ESC-10.1-6 assigns to Story 10.1, plus the PSR tokens under ESC-10.1-4. The doubles half lives in packages/assert and packages/mockery under action item epic-10-item-2. It is outside this Story and was left out of the prompt. The change adds no stub or fake of another Component. |
+| F-9: Every `@asyncRoot` tag is true | pass | CacheInterface: all eight methods return a Promise and carry an @​asyncRoot Cache\Store.* tag. Each tag names the store root that Laravel's Repository, which implements this interface, reaches: get→get, set→put, delete→forget, clear→flush, getMultiple→many, setMultiple→putMany, deleteMultiple→forget, has→get. async-surface.json has the matching eight lines.  The other exports stay sync, which DIV-1 allows: - ContainerInterface: the container is sync under DIV-1. - LoggerInterface: logging is not one of DIV-1's async roots. - Contract.ts: it does no IO and takes no callbacks. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-7) `conformance/api-surface/contracts.jsonl`: Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified. **fixed**: Evidence (h) now includes an excerpt of conformance/api-surface/contracts.jsonl with all 28 Psr\ rows: interface rows, method rows and full parameter records. These are the rows psrRows() reads. I checked them against the tokens' methods and parameters.
+- **P-2** (reviewer 2, F-9) `packages/contracts/src/psr/SimpleCache/CacheInterface.ts`: get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an '@​asyncRoot <Contract.method>' docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it. **fixed**: CacheInterface.ts declares all eight methods as returning Promise<…>. Each has an @​asyncRoot Cache\Store.<method> tag that names the matching store root, and the matching async-surface.json lines are committed.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"9d37aa561827e762a7ce786e6cecb84ab3878e1b","base":"9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-23T19:31:19.332Z","items":[{"id":"F-1","result":"n/a","note":"Manifest test_ids is empty; the change adds or changes no Ported Test.","findings":[]},{"id":"F-2","result":"n/a","note":"There are no Ported Tests and therefore no Upstream expected values to compare. The Xaravel Tests' expected values come from the committed rows or the rulings, and none is loosened.","findings":[]},{"id":"F-3","result":"n/a","note":"There are no Ported Tests, so there are no Upstream assertions to count.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No added line carries an adapted:DIV marker, and there is no Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"No assigned Oracle fixture is an error, and the change adds or modifies no error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-contracts-4: checked against the 28 PSR rows in the contracts.jsonl excerpt.\n- Interfaces: 8, and the 8 runtime exports match their short names (DateInterval is type-only).\n- Method order: matches the file order of the rows (CacheInterface clear..setMultiple; LoggerInterface alert..warning).\n- Parameter names: match (for example get ['key','default'], log ['level','message','context']).\n- Body checks: brands, instanceof, frozen parents per ESC-10.1-6, and that child doubles are instanceof the parent while parent doubles are not instanceof the child.\n- Citations: AD-1.1 (instanceof and brand) and AD-2.3 (third-party code per AD-22, the psr subpath) fit what the body verifies.\n\nXT-contracts-18: checks the methods and parameters keys, frozen copies, a frozen parents copy in order, [] when there are no parents, instanceof reading only the token's own brand, TypeErrors on bad parents, and doubles taking the method list from the token. It cites no FR/AD ids.\n\nXT-contracts-3: checks fqcn() with and without a leading backslash, instanceof and hasBrand, both kinds of double, and that resolveClass rejects a token's name, as AD-1.5 asks.\n\nXT-contracts-1: the only change adds CONTRACT_PARENTS to the token's exact own keys, which matches Contract.ts.","findings":[]},{"id":"F-8","result":"pass","note":"The shown changes are in packages/contracts only: the token parents half that ESC-10.1-6 assigns to Story 10.1, plus the PSR tokens under ESC-10.1-4. The doubles half lives in packages/assert and packages/mockery under action item epic-10-item-2. It is outside this Story and was left out of the prompt. The change adds no stub or fake of another Component.","findings":[]},{"id":"F-9","result":"pass","note":"CacheInterface: all eight methods return a Promise and carry an @asyncRoot Cache\\Store.* tag. Each tag names the store root that Laravel's Repository, which implements this interface, reaches: get→get, set→put, delete→forget, clear→flush, getMultiple→many, setMultiple→putMany, deleteMultiple→forget, has→get. async-surface.json has the matching eight lines.\n\nThe other exports stay sync, which DIV-1 allows:\n- ContainerInterface: the container is sync under DIV-1.\n- LoggerInterface: logging is not one of DIV-1's async roots.\n- Contract.ts: it does no IO and takes no callbacks.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-7","path":"conformance/api-surface/contracts.jsonl","detail":"Supply the PSR rows consumed by psrRows(), including interface, method and parameter records. XT-contracts-4 derives its expected exports and metadata from these rows; without them, the declared Upstream coverage and expected values cannot be verified.","fixed":true,"note":"Evidence (h) now includes an excerpt of conformance/api-surface/contracts.jsonl with all 28 Psr\\ rows: interface rows, method rows and full parameter records. These are the rows psrRows() reads. I checked them against the tokens' methods and parameters."},{"id":"P-2","reviewer":2,"item":"F-9","path":"packages/contracts/src/psr/SimpleCache/CacheInterface.ts","detail":"get, set, delete, clear, getMultiple, setMultiple, deleteMultiple and has perform cache-store IO in every implementation (Laravel's Repository implements this interface), and AD-6/DIV-1 make cache stores async. Under AD-6, declare them as returning Promise<…> with an `@asyncRoot <Contract.method>` docblock tag naming the cache root, and commit the matching async-surface.json lines. If this PSR contract is meant to stay sync, record that ruling in a decision (escalation) and cite it.","fixed":true,"note":"CacheInterface.ts declares all eight methods as returning Promise<…>. Each has an @asyncRoot Cache\\Store.<method> tag that names the matching store root, and the matching async-surface.json lines are committed."}]}
+```
+
+### Run of 2026-10-23, third pass
+
+Status: done
+
+**What changed** (third pass, ESC-10.1-6)
+- `packages/contracts/src/Contract.ts`: `contract<T, B>(fqcn, members = {}, parents = [])`. The token keeps a frozen copy of its parent tokens at `CONTRACT_PARENTS` (`Symbol.for('xaravel.contract.parents')`), `[]` when none, and `ContractToken` carries the key. A non-array `parents` or a non-token parent throws a `TypeError` naming `contract()` and the child FQCN. `instanceof` still reads only the token's own brand.
+- `packages/contracts/src/index.ts`: re-exports `CONTRACT_PARENTS`.
+- `packages/contracts/src/psr/Container/NotFoundExceptionInterface.ts`, `src/psr/SimpleCache/InvalidArgumentException.ts`: pass `[ContainerExceptionInterface]` and `[CacheException]`.
+- `packages/contracts/tests/xaravel/contract.test.ts`: XT-contracts-1's exact own keys add `CONTRACT_PARENTS`; XT-contracts-18 adds the parents metadata, own-brand-only and bad-parents rows.
+- `packages/contracts/tests/xaravel/psr.test.ts`: XT-contracts-4 adds every token's parents and real Mockery and PHPUnit doubles of each child (instanceof the parent) and of each parent (not instanceof the child).
+- `packages/contracts/README.md`: one paragraph on the `parents` argument.
+
+**Review**: 19 findings (high 0, medium 2, low 11, false 6). None patched in this pass (one medium row is the carried second-pass F-9 patch). Two deferred (frontmatter `deferred`): inherited methods for children of method-bearing parents (medium, Story 10.2), and doubles of the PSR exception interfaces not being `instanceof Error` (low, `assert`/`mockery`). Every rejection's reason is in the Review Triage Log. Fidelity Review: two `pass` verdicts at tree `9d37aa561827e762a7ce786e6cecb84ab3878e1b` (base `9e1bd6d7…`); `fidelity:review status` prints `current`, which answers the standing rejects at tree 94fc9c53.
+
+**Follow-up review recommended**: no. This pass patched nothing (0 high, 0 medium).
+
+**Verification**: `bun run harness --xaravel --id 'XT-contracts-*'`: 5 of 5 passed. `bun run harness --xaravel`: 345 tests, 340 passed, 0 failed, 5 skipped, no differences. `bun run typecheck`, `bun run lint`, `bun run registration:check`, `bun run escalations:check` and `bun run async-surface --all --check` exit 0. `bun run api-surface --details contracts`: 28 matched, 0 extra, 0 mismatched (156 missing are Stories 10.2–10.5).
+
+**Residual risks**: the two deferred items above. The new double assertions were not mutation-checked against a tree without parents; ESC-10.1-6 records that the doubles carried only the target's own brand before #345.
