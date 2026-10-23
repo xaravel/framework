@@ -77,7 +77,7 @@ Epic 9's retrospective found no route for an action item that changes `packages/
   - The item then re-runs its Fidelity Review on the changed tree.
 - **Other questions.** Any other question that would need an Escalation for a Story makes the item wait for me.
 - **The checks.** An `ownership` failure does not block when every violation is `planning scope:` for a path under `packages/<component>/**` of a component the item names, or one this ruling already allows. A `planning scope:` violation for `conformance/expectations/**`, or for any other component, still blocks. The first amendment covers `protected-paths` (`packages/assert/` and `packages/mockery/` are Protected). The orchestrator merges with `--admin`. The PR body names the item, its components and the reviewed tree.
-- **What it may never change.** An item's `action`, `owner` or `epic` in sprint status, to widen or move its scope: the review reads the scope from `action`. A new item is added only by a retrospective. The other rules of this file still hold, the grader rules included.
+- **What it may never change.** An item's `action`, `owner` or `epic` in sprint status, to widen or move its scope: the review reads the scope from `action`. A new item is added only by a retrospective or by a Maintainer ruling (added 2026-10-23, ESC-10.1-6). The other rules of this file still hold, the grader rules included.
 
 N ≤ 8 keeps the 2026-10-18 rule.
 
