@@ -2,7 +2,7 @@
 div: 1
 title: "Async IO Terminals"
 cites: ["AD-6", "AD-1"]
-sources: []
+sources: ["decisions/ESC-10.2-3.md"]
 fewer_assertions: []
 ---
 
@@ -34,3 +34,4 @@ fewer_assertions: []
 - **DIV-1.1** IO terminals are awaited. An Upstream call to a method that is async under this record (an async root, a method derived from one, or a thenable terminal) is awaited in the Ported Test, and the test body becomes `async` (DIV-8). The call's arguments and the assertions on its result are unchanged.
 - **DIV-1.2** Async callbacks use the async companions. Where an Upstream callback passed to a sync API performs IO, the Ported Test calls the matching companion (`eachAsync`, `mapAsync`, `filterAsync`, `rejectAsync`, `firstAsync`, `everyAsync`, `containsAsync` or `partitionAsync`) and awaits it. The assertions on its result are unchanged.
 - **DIV-1.3** Lazy database collections are async. `instanceof LazyCollection` on the result of `cursor()` or `lazy()` becomes `instanceof AsyncLazyCollection`, and iterating it uses `for await`.
+- **DIV-1.4** A validator's message bag is its last completed run's. `Validator::getMessageBag()` (`MessageProvider`, sync) returns the bag of the last awaited `validate()`, `passes()`, `fails()` or `errors()` run, and an empty bag before one; Upstream runs the rules on first access, which is async under AD-6. A Ported Test that reads a validator's message bag before running it awaits `passes()` first, marked with this clause (ESC-10.2-3).

@@ -137,7 +137,7 @@ development_status:
 
   epic-10: in-progress
   10-1-token-brand-and-contract-t-mechanism: done
-  10-2-port-the-contracts-for-the-core-and-service-namespaces: blocked  # ESC-10.2-1..6 waiting on the Maintainer (static members, Pipeline thenable, Validator getMessageBag, doubles of child contracts, deferred providers, callback-contract tags); ESC-10.2-7 Fidelity evidence ruled by the orchestrator (decisions/ESC-10.2-7.md), re-run the Fidelity Review with --base 1c2f48aa once 1..6 are ruled
+  10-2-port-the-contracts-for-the-core-and-service-namespaces: in-progress  # ESC-10.2-1..6 ruled (decisions/ESC-10.2-*.md): after action items epic-10-item-3..5, add token statics and builtins, the Pipeline then overloads and thenable lines, and resume XT-contracts-5 and -7
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
   10-5-xaravel-only-contracts: backlog
@@ -1504,3 +1504,33 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-10.1-6.md"
+  - id: "epic-10-item-3-api-surface-statics"
+    epic: 10
+    action: "tools/api-surface counts a contract's static members: the constants in a
+      token's statics record (contract() statics argument) and the members of a same-file
+      interface <X>Static, as that FQCN's static members; tests; no committed rows,
+      schema or citation file changes (decisions/ESC-10.2-1.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-10.2-1.md"
+  - id: "epic-10-item-4-async-surface"
+    epic: 10
+    action: "tools/async-surface: Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\Pipeline\\Pipeline
+      join the thenable type list, so send, through and via get thenable lines and lint
+      treats a Pipeline as a thenable (ESC-10.2-2); if the tool checks a tag's reason,
+      accept @asyncRoot callback on a contract method whose implementations are DIV-1
+      async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md, decisions/ESC-10.2-6.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-10.2-2.md"
+  - id: "epic-10-item-5-double-inherited-methods"
+    epic: 10
+    action: "packages/assert and packages/mockery: PHPUnit's Generator and Mockery's
+      DoubleTarget take a double's methods from the target token, every token in its
+      parents closure and each one's builtins (Symbol.for('xaravel.contract.builtins');
+      absent means none), each once, so a double of a child contract or of a contract
+      with built-in PHP parents can configure every inherited method as a PHP mock can;
+      Xaravel Tests in each package; no assertion removed or weakened (decisions/ESC-10.2-4.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-10.2-4.md"
