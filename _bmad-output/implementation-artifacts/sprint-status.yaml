@@ -136,7 +136,7 @@ development_status:
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: blocked  # XT-contracts-1, -2, -18 merged (#331); XT-contracts-3 and -4 built (second pass), ESC-10.1-5 ruled (Fidelity Review (h) shows the data files a changed test reads; re-run the review with --base 9e1bd6d7); still blocked on ESC-10.1-6 (doubles of a child contract lack parent brands)
+  10-1-token-brand-and-contract-t-mechanism: in-progress  # XT-contracts-1, -2, -3, -18 merged; XT-contracts-4 after action item epic-10-item-2-double-parent-brands (decisions/ESC-10.1-6.md): tokens record their parents at Symbol.for('xaravel.contract.parents'); re-run the review with --base 9e1bd6d7
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
@@ -1492,3 +1492,15 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-10.1-4.md"
+  - id: "epic-10-item-2-double-parent-brands"
+    epic: 10
+    action: "packages/assert and packages/mockery: PHPUnit's Generator and Mockery's
+      DoubleTarget define the brand of every contract in the target token's parents
+      closure (Symbol.for('xaravel.contract.parents'), a frozen array of parent tokens;
+      absent means none) on the double's prototype, besides the target's own, so a
+      double of a child contract is instanceof its parents as in PHP; Xaravel Tests
+      for a double of a child contract in each package; no assertion removed or weakened
+      (decisions/ESC-10.1-6.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-10.1-6.md"

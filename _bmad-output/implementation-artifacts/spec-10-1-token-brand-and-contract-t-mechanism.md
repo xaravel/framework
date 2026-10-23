@@ -2,7 +2,7 @@
 title: 'Story 10.1: Token, brand and contract<T>() mechanism'
 type: 'feature'
 created: '2026-10-23'
-status: 'blocked'
+status: 'in-progress'
 baseline_revision: '9e1bd6d7ee0e26fbaea859cf05d8d832aab799ba'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -484,3 +484,7 @@ Blocking condition: two Escalations raised in review, both on XT-contracts-4.
 **Verification**: `bun run typecheck`, `bun run lint`, `bun run async-surface --all --check`, `bun run registration:check` and `bun run escalations:check` all exit 0. `bun run harness --xaravel`: 343 tests, 338 passed, 0 failed, 5 skipped. `--id 'XT-contracts-*'`: 5 of 5 passed. `bun run api-surface contracts`: 28 matched (every `Psr\` row), 0 extra, 0 mismatched.
 
 **Residual risks**: `story:check 10.1` cannot pass until the Fidelity Review records two passes on a changed tree.
+
+### Maintainer ruling, 2026-10-23 (ESC-10.1-6)
+
+`decisions/ESC-10.1-6.md`: option 1. `contract<T, B>(fqcn, members, parents?)` keeps its parent tokens as a frozen array at `Symbol.for('xaravel.contract.parents')`. The PSR tokens pass their Upstream parents: `NotFoundExceptionInterface` extends `ContainerExceptionInterface`, and `InvalidArgumentException` extends `CacheException`. Action item `epic-10-item-2-double-parent-brands` first makes both doubles define the whole brand chain. Resume XT-contracts-4 after it, re-running the Fidelity Review with `--base 9e1bd6d7` (ESC-10.1-5).
