@@ -33,6 +33,8 @@ new StripeBilling() instanceof Billing; // true
 
 The token carries its method names at `Symbol.for('xaravel.contract.methods')` and their parameter names at `Symbol.for('xaravel.contract.parameters')`, which test doubles read.
 
+A third argument lists the contract tokens it extends, for example `contract<NotFoundExceptionInterface, typeof NotFoundExceptionInterfaceBrand>("Psr\\Container\\NotFoundExceptionInterface", {}, [ContainerExceptionInterface])`. The token keeps them at `Symbol.for('xaravel.contract.parents')`, so a test double of the contract is also an instance of each parent; an implementing class still carries every brand in its chain itself.
+
 `@xaravel/contracts/psr` exports the PSR interfaces and their tokens: `ContainerInterface`, `ContainerExceptionInterface` and `NotFoundExceptionInterface` (psr/container), `LoggerInterface` and `LoggerAwareInterface` (psr/log), and `CacheInterface`, `CacheException` and `InvalidArgumentException` (psr/simple-cache), plus the structural `DateInterval` type.
 
 ## Dependencies
