@@ -1142,7 +1142,7 @@ const noMaybePromiseReturn = rule("Disallow a public signature returning `T | Pr
 
 const noAsyncThenableReturn = rule("Disallow returning a thenable unawaited from an async function (AD-6).", (context) => {
   // Set by `Program`: the same-file structural thenables (a class declaring `then` or implementing `PromiseLike` /
-  // `Thenable`), the file's import bindings and its own registrations (local class name → FQCN).
+  // `Thenable`), the file's import bindings and its own registrations (local name → FQCN: `registerClass` calls, then contract tokens).
   const structural = new Set<string>();
   let imports: ReadonlyMap<string, ImportBinding> = new Map();
   let registrations: ReadonlyMap<string, string> = new Map();

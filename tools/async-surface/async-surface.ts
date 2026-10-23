@@ -31,6 +31,11 @@
 //   `registerClass` (`registeredFqcn` in `tools/lint-rules/thenables.ts`), when
 //   that FQCN is in the thenable list (compared without a leading `\`,
 //   case-insensitively; printed as the list spells it). Never by short name.
+//   A contract token (`const X = contract("<FQCN>", …)` with `contract`
+//   imported by name) counts as a registration of `X` (ESC-10.2-2). A `this`
+//   return type in a class or interface is that declaration itself, resolved
+//   through its local name in its own source file, so only a listed owner
+//   (a Pipeline's `send(): this`) yields a thenable line.
 //   The list: `THENABLE_TYPES` from `@xaravel/contracts/async` when it
 //   resolves from `<root>` and exports a non-empty `string[]` (Story 10.5),
 //   else `THENABLE_TYPES` from `tools/lint-rules/thenables.ts`.
@@ -166,6 +171,8 @@ interface TypeContext {
   readonly imports: ReadonlyMap<string, ImportBinding>;
   readonly resolve: FqcnResolver;
   readonly thenables: readonly string[];
+  /** The local name of the class or interface whose members are walked (what `this` refers to), or null outside one. */
+  readonly self: string | null;
 }
 
 /** The FQCN a type name (`X`, `ns.X`) or an `import("…")` qualifier refers to, or null. */
@@ -218,6 +225,14 @@ function collectReturns(value: unknown, context: TypeContext, out: Returns): voi
         return;
       }
       const thenable = isThenableFqcn(typeFqcn(name, n.type === "TSImportType" ? importSourceOf(n) : null, context), context.thenables);
+      if (thenable !== null) {
+        out.thenables.add(thenable);
+      }
+      return;
+    }
+    case "TSThisType": {
+      // `this` is the owner itself, resolved through its local name in its own source file.
+      const thenable = context.self === null ? null : isThenableFqcn(context.resolve(context.file, null, context.self), context.thenables);
       if (thenable !== null) {
         out.thenables.add(thenable);
       }
@@ -301,7 +316,7 @@ function signatureReturns(types: readonly unknown[], context: TypeContext): { pr
 }
 
 /** The public signatures of a class or interface body. */
-function memberSignatures(owner: string, decl: Node, text: string, comments: readonly Comment[], context: TypeContext): Signature[] {
+function memberSignatures(owner: string, decl: Node, text: string, comments: readonly Comment[], ownerContext: TypeContext): Signature[] {
   const body = node(decl["body"]);
   const out: Signature[] = [];
   for (const member of nodes(body?.["body"])) {
@@ -319,6 +334,8 @@ function memberSignatures(owner: string, decl: Node, text: string, comments: rea
       continue;
     }
     const qualified = `${owner}.${member["static"] === true ? "static " : ""}${name}`;
+    // `this` is invalid in a static member (TS2526), so it names no owner there.
+    const context = member["static"] === true ? { ...ownerContext, self: null } : ownerContext;
     switch (member.type) {
       case "MethodDefinition":
       case "TSAbstractMethodDefinition": {
@@ -361,7 +378,7 @@ function fileSignatures(file: string, text: string, thenables: readonly string[]
   const comments = result.comments as unknown as Comment[];
   const program = result.program as unknown as Node;
   const statements = nodes(program["body"]);
-  const context: TypeContext = { file, imports: importBindings(statements), resolve, thenables };
+  const context: TypeContext = { file, imports: importBindings(statements), resolve, thenables, self: null };
 
   // Local declarations by name, with the start their doc comment sits before.
   const locals = new Map<string, { decl: Node; start: number }[]>();
@@ -425,7 +442,7 @@ function fileSignatures(file: string, text: string, thenables: readonly string[]
       switch (decl.type) {
         case "ClassDeclaration":
         case "TSInterfaceDeclaration":
-          out.push(...memberSignatures(name, decl, text, comments, context));
+          out.push(...memberSignatures(name, decl, text, comments, { ...context, self: local }));
           break;
         case "TSDeclareFunction":
         case "FunctionDeclaration":
