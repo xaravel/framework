@@ -10,6 +10,16 @@
 //   brand getter `get [Symbol.for('<FQCN>')]() { return true }`, and its methods
 //   are the names at `token[Symbol.for('xaravel.contract.methods')]` (a bare
 //   symbol carries none; ESC-4.7-1 item 5).
+//   A token's parents (ESC-10.1-6): the contracts at
+//   `token[Symbol.for('xaravel.contract.parents')]` (a token object or a bare
+//   symbol each; absent or `null` is none) and their parents in turn, walked
+//   depth-first, each contract once, cycle-safe. The double class also
+//   carries each parent's brand getter, so a double of a child contract is
+//   `instanceof` every contract it extends, as a PHP mock of a child
+//   interface is. Only brands are added: the doubled methods stay the
+//   target token's own list. The walk is `contractParentBrands`
+//   (ContractParents.ts), which @xaravel/mockery's doubles share; it runs
+//   each time a double is made (Mockery reads a token's parents once).
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
@@ -47,6 +57,7 @@
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
 import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
+import { contractParentBrands, isContractToken } from "./ContractParents";
 import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
@@ -83,6 +94,8 @@ export interface TargetType {
   readonly methods: ReadonlyMap<string, ConfigurableMethod>;
   /** The brand getter a token's `Symbol.hasInstance` reads, or null for a class. */
   readonly brand: symbol | null;
+  /** The brands of every contract a token extends, own brand excluded; empty for a class and a bare symbol. */
+  readonly parentBrands: readonly symbol[];
 }
 
 function isNative(fn: unknown): boolean {
@@ -231,12 +244,12 @@ export function readTarget(type: unknown): TargetType {
         methods.set(key, configurable(key, descriptor.value as (...args: never[]) => unknown, declaring));
       }
     }
-    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null };
+    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null, parentBrands: [] };
   }
   if (typeof type === "symbol") {
-    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type };
+    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type, parentBrands: [] };
   }
-  if (typeof type === "object" && type !== null && typeof (type as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
+  if (isContractToken(type)) {
     const name = classNameOfClass(type);
     const methods = new Map<string, ConfigurableMethod>();
     const declaring: DeclaringClass = { name, type, parentName: null, parentType: null };
@@ -252,7 +265,8 @@ export function readTarget(type: unknown): TargetType {
         methods.set(method, new ConfigurableMethod(method, 0, [], declaring));
       }
     }
-    return { name, parent: null, methods, brand: Symbol.for(name) };
+    const brand = Symbol.for(name);
+    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, classNameOfClass) };
   }
   throw new TypeError(`PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got ${type === null ? "null" : typeof type}`);
 }
@@ -451,6 +465,9 @@ export function testDouble(
   Object.defineProperty(prototype, DOUBLE, { value: configuration });
   if (target.brand !== null) {
     Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: false });
+  }
+  for (const brand of target.parentBrands) {
+    Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: false });
   }
   for (const method of doubled) {
     Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, type, method), writable: true, enumerable: false, configurable: true });

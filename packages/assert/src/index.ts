@@ -6,7 +6,8 @@
 // The `php*` helpers other than the two comparisons are the grader's PHP value
 // layer over the AD-9 value model, exported so @xaravel/mockery reads values
 // exactly as the grader does (Epic 4 retrospective A1). XT-conformance-7 allows
-// no subpath export, so they sit on the index.
+// no subpath export, so they sit on the index. So does `contractParentBrands`,
+// the parents walk both packages' test doubles share (ESC-10.1-6).
 import {
   arrayEntries as phpArrayEntries,
   isBrandedArray as phpIsBrandedArray,
@@ -31,6 +32,7 @@ import { Constraint } from "./Framework/Constraint";
 import { Exception } from "./Framework/Exception/Exception";
 import { SkippedWithMessageException } from "./Framework/Exception/SkippedWithMessageException";
 import { ExpectationFailedException } from "./Framework/ExpectationFailedException";
+import { contractParentBrands } from "./Framework/MockObject/Generator/ContractParents";
 import { MockBuilder } from "./Framework/MockObject/MockBuilder";
 import { TestCase } from "./Framework/TestCase";
 import { objectHandle as phpObjectHandle } from "./exporter/Exporter";
@@ -41,6 +43,7 @@ for (const exported of [
   AssertionFailedError,
   ComparisonFailure,
   Constraint,
+  contractParentBrands,
   Exception,
   ExpectationFailedException,
   MockBuilder,
@@ -74,6 +77,7 @@ export {
   AssertionFailedError,
   ComparisonFailure,
   Constraint,
+  contractParentBrands,
   Exception,
   ExpectationFailedException,
   MockBuilder,
