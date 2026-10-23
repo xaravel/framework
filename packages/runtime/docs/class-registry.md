@@ -39,7 +39,9 @@ registerClass("App\\Models\\Post", Post);
 ## Resolving
 
 - `fqcn(classOrInstance)` is the FQCN a class, or an instance's class, was registered under. It throws for an
-  unregistered class. Never use `constructor.name` for identity.
+  unregistered class. Never use `constructor.name` for identity. A `contract<T>()` token gives its own FQCN: a frozen,
+  non-function object whose own, non-writable `Symbol.for('xaravel.class.fqcn')` data property is a string. A token is
+  never registered, so `resolveClass` does not resolve its name.
 - `resolveClass(fqcn)` is the class registered under a name. A test class wins over the base registration. A miss
   throws PHP's `Error` `Class "<FQCN>" not found` (see [PHP exceptions](exceptions.md)), naming the class as given:
   as PHP's `new $name` does, a leading `\` stays in the message (`Class "\App\Missing" not found`), though the lookup
