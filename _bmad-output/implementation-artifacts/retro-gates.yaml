@@ -66,6 +66,5 @@ epic-9:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer:
-    - epic-9-retro-item-4-json-encode-value-model
     - epic-9-retro-item-6-grader-float-and-error-equality
     - epic-9-retro-item-7-registry-per-application
