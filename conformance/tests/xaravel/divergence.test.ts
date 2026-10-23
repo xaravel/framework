@@ -201,7 +201,9 @@ xaravelTest("XT-conformance-149", "decisions/DIV-1.md to DIV-12.md exist with PR
     expect(citeProblems(n, fields["cites"] as string[], bindings)).toEqual([]);
     expect(Array.isArray(fields["sources"])).toBe(true);
     for (const source of fields["sources"] as string[]) {
-      expect(source).toMatch(/^decisions\/ESC-[\d.-]+\.md$/);
+      // A clause comes from an approved Escalation decision, or from a Maintainer ruling for work that has no Story to
+      // raise one (DIV-9.12, MAINT-2026-10-23-throwable-file-line-trace).
+      expect(source).toMatch(/^decisions\/(?:ESC-[\d.-]+|MAINT-\d{4}-\d{2}-\d{2}-[a-z0-9-]+)\.md$/);
       expect(existsSync(join(root, source))).toBe(true);
     }
     expect(fields["fewer_assertions"]).toEqual([]);

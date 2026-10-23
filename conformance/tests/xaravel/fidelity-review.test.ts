@@ -29,6 +29,8 @@ import {
   importedDeclarations,
   inItemScope,
   itemXaravelTestIds,
+  touchedTestFixtures,
+  fitTestFixtures,
   inStoryScope,
   ITEM_NOTE,
   fileInStoryScope,
@@ -1464,6 +1466,28 @@ xaravelTest(
     expect([...itemFixtures.errorFixtures, ...itemFixtures.presentFixtures].map((entry) => entry.label.split(" ")[0])).toContain("XT-runtime-22");
     const noIds = gatherEvidence(root, [], { testIds: [], xaravelTestIds: itemXaravelTestIds([]) });
     expect([noIds.errorFixtures, noIds.presentFixtures]).toEqual([[], []]);
+    // (c) also shows, in full, the request line and fixture output of each id a touched Xaravel Test declares, so a
+    // reviewer can check the operands and expected values it compares (Epic 9 retro item 4: XT-runtime-22's 9.6 row).
+    const runtime22Sha = "1ff7702e40a6d33e0990903eef69e749a47d40a64faa31ed0c6b39e6cecb9bc3";
+    const runtime22Fixture = `conformance/fixtures/runtime/${runtime22Sha}.json`;
+    const testFixtures = touchedTestFixtures(root, [{ ids: ["XT-runtime-22"] }]);
+    expect(testFixtures.map((entry) => entry.label)).toEqual([`XT-runtime-22 (conformance/oracle-requests/9.6.jsonl; ${runtime22Fixture})`]);
+    const shownFixture = JSON.parse(testFixtures[0]!.text!) as { request: { id: string; sha256: string; input: { setup: string[] } }; fixture: { path: string; verified: boolean; output: unknown } };
+    expect([shownFixture.request.id, shownFixture.request.sha256, shownFixture.fixture.path, shownFixture.fixture.verified]).toEqual(["XT-runtime-22", runtime22Sha, runtime22Fixture, true]);
+    expect(shownFixture.request.input.setup[0]).toStartWith("$v = [null, true, false, 0,");
+    expect(shownFixture.fixture.output).toEqual((JSON.parse(readFileSync(join(root, runtime22Fixture), "utf8")) as { output: unknown }).output);
+    // An error fixture is (c)'s error section's, and an id with no committed request, or no touched test, shows nothing.
+    expect(touchedTestFixtures(root, [{ ids: [ERROR_REQUEST_ID] }])).toEqual([]);
+    expect(touchedTestFixtures(root, [{ ids: ["XT-runtime-9999"] }, { ids: [] }])).toEqual([]);
+    const testFixtureUser = buildPrompt({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures } }).user;
+    expect(testFixtureUser).toContain(`### (c) The Oracle requests and fixture outputs of the touched Xaravel Tests, in full (F-7)\n\n#### ${testFixtures[0]!.label}\n\n\`\`\`json\n${testFixtures[0]!.text}`);
+    expect(buildPrompt({ ...promptBase, evidence: NO_EVIDENCE }).user).toContain("No touched Xaravel Test declares an id with a committed Oracle request whose fixture is present, verifies and is not an error.");
+    // One that does not fit the cap is named as omitted for size, longest first, so the prompt without (h) still fits.
+    const huge = { label: "XT-sample-9 (x.jsonl; y.json)", text: "x".repeat(PROMPT_CAP), unavailable: null };
+    const fitted = fitTestFixtures({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures: [testFixtures[0]!, huge] } });
+    expect(fitted.evidence.testFixtures.map((entry) => entry.text === null)).toEqual([false, true]);
+    expect(fitted.evidence.testFixtures[1]!.unavailable).toStartWith(`omitted for size: ${PROMPT_CAP} characters`);
+    expect(buildPrompt(fitted).user.length).toBeLessThanOrEqual(PROMPT_CAP);
   },
   180_000,
 );

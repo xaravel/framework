@@ -43,8 +43,12 @@
 // (ESC-9.8-2); (b) the consequence line of every
 // `FR-<n>.<k>`/`AD-<n>.<k>` token on an added line; (c) every assigned
 // committed Oracle request's fixture whose `output.error` is not null, a
-// line for each one present, verified and not an error (ESC-9.8-2), and
-// every changed fixture whose output is an error; (d) DIV-1, ESC-6.4-1 and
+// line for each one present, verified and not an error (ESC-9.8-2),
+// every changed fixture whose output is an error, and, for each id a touched
+// Xaravel Test (e) declares, each committed request with that id whose fixture
+// is present, verified and not an error, as its request line and fixture
+// output in full (`touchedTestFixtures`; one that does not fit the prompt cap
+// is named as omitted for size); (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
 // or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
 // the full body and cited consequences of every Xaravel Test (a bare `AD-<n>`
@@ -231,6 +235,8 @@ export interface Evidence {
   readonly presentFixtures: readonly EvidenceEntry[];
   /** (c) Each fixture the change adds or modifies whose `output.error` is not null, or why it was not read (F-6). */
   readonly headErrorFixtures: readonly EvidenceEntry[];
+  /** (c) For each id a touched Xaravel Test declares, each committed request's line and fixture output, in full (`touchedTestFixtures`, F-7). */
+  readonly testFixtures: readonly EvidenceEntry[];
   /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot` or a `packages/<name>/src/` file changes, else empty (F-9, ESC-9.1-4, ESC-9.2-2). */
   readonly asyncRoot: readonly EvidenceEntry[];
   /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
@@ -245,7 +251,7 @@ export interface Evidence {
   readonly outOfScopeTests: readonly string[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], outOfScopeTests: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], testFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], outOfScopeTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -408,6 +414,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   evidenceSection(sections, "### (c) Oracle fixtures whose output is an error (F-6)", evidence.errorFixtures, "No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.", "json");
   evidenceSection(sections, "### (c) Oracle fixtures that are present, verify against oracle.pub and are not errors (F-6)", evidence.presentFixtures, "No fixture of an assigned committed Oracle request is present, verified and not an error.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
+  evidenceSection(sections, "### (c) The Oracle requests and fixture outputs of the touched Xaravel Tests, in full (F-7)", evidence.testFixtures, "No touched Xaravel Test declares an id with a committed Oracle request whose fixture is present, verifies and is not an error.", "json");
   evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`, and the change touches no `packages/*/src/` file.", "markdown");
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
   if (evidence.xaravelTests.length === 0) {
@@ -945,6 +952,8 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     errorFixtures: fixtures.errors,
     presentFixtures: fixtures.present,
     headErrorFixtures: [],
+    // (c)'s touched-test fixtures need the touched tests (e), so the review fills them in (`touchedTestFixtures`).
+    testFixtures: [],
     // F-9 also judges kept tags and untagged new exports, so any framework source change gets the rules (ESC-9.2-2).
     asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
     xaravelTests: [],
@@ -1039,6 +1048,70 @@ export function inItemScope(item: Pick<ActionItem, "id" | "components">, path: s
  */
 export function itemXaravelTestIds(touched: readonly Pick<XaravelTestEntry, "ids">[]): string[] {
   return [...new Set(touched.flatMap((entry) => entry.ids))];
+}
+
+/**
+ * (c) for the touched Xaravel Tests (F-7): for each id a touched test (e) declares, each committed Oracle request with
+ * that id whose fixture is present, verifies and is not an error, as its request line and its fixture's `output`, in
+ * full, so a reviewer can check the operands and expected values the test compares (Epic 9 retro item 4). A fixture
+ * that is missing, does not verify or is an error is already named, or shown, by the other (c) sections.
+ */
+export function touchedTestFixtures(root: string, touched: readonly Pick<XaravelTestEntry, "ids">[]): EvidenceEntry[] {
+  const wanted = new Set(itemXaravelTestIds(touched));
+  if (wanted.size === 0) {
+    return [];
+  }
+  let requests: [string, { id: string; component: string; file: string }][];
+  let pem: string;
+  try {
+    requests = [...committedRequests(root).requests].filter(([, request]) => covers(wanted, request.id)).sort(([a, x], [b, y]) => compareUnits(x.id, y.id) || compareUnits(a, b));
+    pem = verificationKey(root).export({ type: "spki", format: "pem" }).toString();
+  } catch {
+    // Why the requests or the key cannot be read is (c)'s first section's to name (`assignedFixtures`).
+    return [];
+  }
+  const out: EvidenceEntry[] = [];
+  for (const [sha256, { id, component, file }] of requests) {
+    const rel = `${FIXTURES_DIR}/${component}/${sha256}.json`;
+    const path = join(root, rel);
+    if (!existsSync(path) || !existsSync(join(root, file))) {
+      continue;
+    }
+    const text = readFileSync(path, "utf8");
+    if (verifyFixture(text, pem, sha256).length > 0) {
+      continue;
+    }
+    const output = (JSON.parse(text) as { output?: { error?: unknown } }).output;
+    if (output === undefined || (output.error !== null && output.error !== undefined)) {
+      continue;
+    }
+    const request = readFileSync(join(root, file), "utf8")
+      .split("\n")
+      .find((line) => line.includes(`"sha256":"${sha256}"`));
+    if (request === undefined) {
+      continue;
+    }
+    out.push({ label: `${id} (${file}; ${rel})`, text: JSON.stringify({ request: JSON.parse(request) as unknown, fixture: { path: rel, verified: true, output } }), unavailable: null });
+  }
+  return out;
+}
+
+/**
+ * `input` with (c)'s touched-test fixtures cut down until the prompt without (h) fits `PROMPT_CAP`: the longest shown
+ * one is named as omitted for size first. (h) then fills what is left (`withWholeFiles`).
+ */
+export function fitTestFixtures(input: PromptInput): PromptInput {
+  let fixtures = [...input.evidence.testFixtures];
+  const build = (): PromptInput => ({ ...input, evidence: { ...input.evidence, testFixtures: fixtures } });
+  while (buildPrompt(build()).length > PROMPT_CAP) {
+    const shown = fixtures.filter((entry) => entry.text !== null);
+    if (shown.length === 0) {
+      break;
+    }
+    const longest = shown.reduce((a, b) => (b.text!.length > a.text!.length ? b : a));
+    fixtures = fixtures.map((entry) => (entry === longest ? { label: entry.label, text: null, unavailable: `omitted for size: ${entry.text!.length} characters, and the rest of the prompt leaves too little of the ${PROMPT_CAP}-character cap` } : entry));
+  }
+  return build();
 }
 
 /**
@@ -3255,7 +3328,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const touchedTests = xaravelTestEvidence(root, storyFiles);
   const xaravelTests = touchedTests.filter((entry) => subject.inScope(entry.path, entry.ids));
   const outOfScopeTests = [...new Set(touchedTests.filter((entry) => !xaravelTests.includes(entry)).map((entry) => entry.path))].sort(compareUnits);
-  const promptInput: PromptInput = {
+  const promptInput: PromptInput = fitTestFixtures({
     checklistText,
     items,
     precedence,
@@ -3272,13 +3345,14 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
       // An action item's assigned ids are those its touched tests declare, so (c) shows their Oracle fixtures.
       ...gatherEvidence(root, storyFiles, { testIds: [...subject.testIds], xaravelTestIds: args.subject === "item" ? itemXaravelTestIds(xaravelTests) : [...subject.xaravelTestIds] }),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
+      testFixtures: touchedTestFixtures(root, xaravelTests),
       xaravelTests,
       outOfScopeTests,
       // (f) also takes the decisions a touched Xaravel Test (ESC-9.2-1) or a changed source file's docblock (ESC-9.10-1) cites on an unchanged line.
       decisions: decisionEvidence(root, [...addedLines(storyFiles), ...sourceDocTexts(root, storyFiles), ...xaravelTests.map((entry) => entry.body ?? "")]),
     },
     prior,
-  };
+  });
   const withoutH = buildPrompt(promptInput);
   if (withoutH.length > PROMPT_CAP) {
     const withoutE = buildPrompt({ ...promptInput, evidence: { ...promptInput.evidence, xaravelTests: [] } }).length;

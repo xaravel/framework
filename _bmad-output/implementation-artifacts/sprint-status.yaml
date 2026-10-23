@@ -118,7 +118,7 @@ development_status:
   8-8-phase-1-gate: done  # ESC-8.8-1 rejected by the Maintainer; Fidelity Review re-run on the head tree passed (both reviewers)
   epic-8-retrospective: done
 
-  epic-9: done
+  epic-9: in-progress
   9-1-scope-frame-primitive-and-interleave: done
   9-2-frame-kinds-defer-list-and-context-propagation: done
   9-3-per-application-overlays-and-framestatic: done
@@ -132,10 +132,11 @@ development_status:
   9-11-grader-follow-ups-to-the-runtime-value-model: done  # Fidelity Review passed at tree 252e8fc (after ESC-9.11-1, ESC-9.11-2); all five ACs, XT-assert-17..21
   9-12-mockery-exceptions-on-the-runtime-spl-classes: done  # Fidelity Review passed at tree 0f28a37; XT-mockery-12. DIV-9.8 closure is the planning change ESC-9.11-1 names
   9-13-oracle-rows-for-the-runtime-php-mirroring-checks: done  # Fidelity Review passed at tree 9131dda; resolveClass keeps a leading \ in its not-found message (PHP); Epic 9 retro finding S2 (decisions/MAINT-2026-10-22-epic-9-item-3-split.md)
+  9-14-fqcn-of-a-contract-token: backlog  # ESC-10.1-3 (decisions/ESC-10.1-3.md): fqcn() reads a frozen token's own FQCN key
   epic-9-retrospective: done
 
   epic-10: in-progress
-  10-1-token-brand-and-contract-t-mechanism: blocked  # ESC-10.1-3 (fqcn() on a token, XT-contracts-3) and ESC-10.1-4 (PSR metadata source, XT-contracts-4), waiting on the Maintainer; XT-contracts-1, -2, -18 merged
+  10-1-token-brand-and-contract-t-mechanism: in-progress  # ESC-10.1-3 and ESC-10.1-4 ruled: XT-contracts-3 after Story 9.14, XT-contracts-4 after action item epic-10-item-1-psr-api-surface; XT-contracts-1, -2, -18 merged
   10-2-port-the-contracts-for-the-core-and-service-namespaces: backlog
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
@@ -1456,21 +1457,22 @@ action_items:
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-5-grader-runtime-protocols"
     epic: 9
-    action: "packages/assert and packages/mockery: freeze the exception parents once
-      linked; Mockery getDebugType reads the float marker; Mockery exception copies
-      coerce as AD-9 requires with and without the class map; one implementation of
-      assert formatDouble and encodeDouble; no assertion removed or weakened (findings
-      L9-L11, L13)"
+    action: "packages/assert, packages/mockery and packages/runtime: freeze the exception
+      parents once linked; Mockery getDebugType reads the float marker; Mockery exception
+      copies coerce as AD-9 requires with and without the class map; one implementation
+      of assert formatDouble and encodeDouble; runtime throwables port getFile, getLine,
+      getTrace, getTraceAsString and __toString under DIV-9.12, so the runtime and the
+      grader's copies take a throwable as a string argument as PHP does; ObjectComparator
+      compares a throwable's file, line and trace as PHP's (array) cast does; no assertion
+      removed or weakened (findings L9-L13; decisions/MAINT-2026-10-23-throwable-file-line-trace.md)"
     owner: "orchestrator"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-6-grader-float-and-error-equality"
     epic: 9
-    action: "Rule on two Story 9.11 grader gaps: (a) a generated float return or default
+    action: "Rule on a Story 9.11 grader gap: (a) a generated float return or default
       is the int 0 against AC4 (runtime publishes its float constructor for the grader,
-      or a DIV-9.4 clause); (b) Error equality through ObjectComparator ignores file/line/trace,
-      changing outcomes PHP fails (Oracle row and compare as PHP, or a divergence
-      clause) (findings S3, L12)"
+      or a DIV-9.4 clause) (finding S3; (b), finding L12, moved to item 5 by decisions/MAINT-2026-10-23-throwable-file-line-trace.md)"
     owner: "Maintainer"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
@@ -1481,3 +1483,12 @@ action_items:
     owner: "Maintainer"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
+  - id: "epic-10-item-1-psr-api-surface"
+    epic: 10
+    action: "Export the Psr\\Container, Psr\\SimpleCache and Psr\\Log interfaces at the
+      versions the Oracle framework install pins into conformance/api-surface/contracts.jsonl
+      (oracle:api-surface, componentForFqcn maps the three namespaces to contracts),
+      with tests; no other Component's rows, schema or citation file changes (decisions/ESC-10.1-4.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-10.1-4.md"

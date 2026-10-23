@@ -3297,6 +3297,23 @@ So that the Epic's PHP-mirroring behaviour is grounded in the Oracle, not only i
 **Then** the original and the copy match the signed fixture
 **And** any difference a fixture shows is fixed in `packages/runtime`, never by removing or weakening an assertion.
 
+### Story 9.14: `fqcn()` of a contract token
+
+As a Framework Agent,
+I want `fqcn()` to name a contract token as it names a class,
+So that a token's FQCN has the one identity lookup AD-10 gives every class, for the container and Story 10.4's `canonicalToken` (component `runtime`; ESC-10.1-3).
+
+**Acceptance Criteria:**
+
+**Given** a frozen, non-function object whose own, non-writable `Symbol.for('xaravel.class.fqcn')` data property is a string, as `contract<T>()` makes
+**When** `fqcn(value)` runs
+**Then** it returns that string.
+
+**Given** a class, an instance, an unregistered class, or any other object
+**When** `fqcn(value)` runs
+**Then** it behaves exactly as before: a registered class or instance gives its FQCN (test frames first), and anything else throws
+**And** `resolveClass` never resolves a token's name as a class.
+
 ## Epic 10: `@xaravel/contracts`: tokens, aliases & Xaravel-only contracts
 
 Packages built in parallel agree on every interface and container key without importing each other's half-built code.
