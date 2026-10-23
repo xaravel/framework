@@ -334,11 +334,12 @@ xaravelTest(
     Assert.assertSame(3, full.getCode());
 
     // An int is what AD-9.3 holds as one: an in-range bigint is kept; an int64-overflowing bigint, which PHP cannot
-    // hold, is rejected. An unsafe integral number is an AD-9 float, coerced as PHP coerces a float (an Oracle row).
+    // hold, is the float PHP makes of that literal, and is rejected as an out-of-range float (`float given`, PHP
+    // 8.5.11). An unsafe integral number is an AD-9 float, coerced as PHP coerces a float (an Oracle row).
     Assert.assertSame(5n, new php.Exception("m", 5n).getCode());
     const overflow = thrownBy(() => new php.Exception("m", 2n ** 64n));
     Assert.assertInstanceOf(php.TypeError, overflow);
-    Assert.assertSame("Exception::__construct(): Argument #2 ($code) must be of type int, int given", (overflow as Error).message);
+    Assert.assertSame("Exception::__construct(): Argument #2 ($code) must be of type int, float given", (overflow as Error).message);
     const symbol = thrownBy(() => new php.Exception(Symbol("s") as unknown as string));
     Assert.assertInstanceOf(php.TypeError, symbol);
     Assert.assertSame("Exception::__construct(): Argument #1 ($message) must be of type string, symbol given", (symbol as Error).message);

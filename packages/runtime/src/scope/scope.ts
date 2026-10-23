@@ -5,10 +5,11 @@
 // reading one returns `init()` without storing it.
 //
 // Frame kinds (AD-5.8, Story 9.2). Frames form a parent chain. `runInFrame` opens a unit frame: a child of the active
-// frame, else a root unit. `runInRootFrame` always opens a root unit (production kernels,
-// `interleave`). `runInNarrowFrame` opens a narrow frame that overrides only the slots it declares. A child of a `test`
-// unit keeps only the request, route and CSP nonce slots; its other writes land in the test frame. A child of any
-// other unit keeps its own writes and reads its parent's values until it writes them.
+// frame, else a root unit. `runInRootFrame` always opens a root unit (production kernels; `interleave` opens its root
+// units through `runInInterleaveUnit`, which also records an origin, below). `runInNarrowFrame` opens a narrow frame
+// that overrides only the slots it declares. A child of a `test` unit keeps only the request, route and CSP nonce
+// slots; its other writes land in the test frame. A child of any other unit keeps its own writes and reads its
+// parent's values until it writes them.
 //
 // End of a unit (AD-5.9). `frameDefer(promise)` adds to the innermost unit's defer list; a unit whose body returns a
 // Promise settles only after the list drains. A sync body that leaves deferred promises throws.
@@ -20,11 +21,18 @@
 //
 // Applications, overlays and statics (AD-5.3, AD-5.5, Story 9.3). A frame carries the Application it runs for
 // (`currentFrame()?.app`): the one its opener names, else its parent's, else null. `currentApplication()` falls back to
-// the process's default Application (`setDefaultApplication`). `frameOverlay(app)` is a unit's overlay for one
-// Application; `frameStatic(Class, key, init)` holds one Upstream static per unit. Both write where an undeclared slot
+// the process's default Application (`setDefaultApplication`) wherever the frame's Application is null, a frame opened
+// with `app` null included (AD-5.3). `frameOverlay(app)` is a unit's overlay for one Application;
+// `frameStatic(Class, key, init)` holds one Upstream static per unit. Both write where an undeclared slot
 // write goes (AD-5.8): through narrow frames, from a child of a `test` unit into the test frame, else into the unit.
 // Reads walk the chain up to the first unit that holds the key. A unit's overlays and statics are discarded when it
-// ends, and a write to an ended unit throws. The runtime never imports Foundation: an Application is any object.
+// ends, and a write to an ended unit throws, a `frameSlot` write included. The runtime never imports Foundation: an
+// Application is any object.
+//
+// Origin (Epic 9 retro, L1). An `interleave` unit opened under a `test` unit is a root unit whose origin is that test
+// unit. Overlay, static and test-class reads that reach a root unit continue from its origin, so a concurrency test's
+// fakes and fixtures stay visible in its units. Slot reads and every write never follow the origin: the unit sees none
+// of the test's slots, and its writes stay in the unit (AD-5.8).
 //
 // Stream, async-generator and timer wrapping is in propagate.ts.
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -76,6 +84,11 @@ interface Store {
   readonly frame: Frame;
   readonly slots: Map<FrameSlotKey, unknown>;
   readonly parent: Store | null;
+  /**
+   * The `test` unit an `interleave` unit was opened under, else null. Only overlay, static and test-class reads follow
+   * it, from a root unit; slots and writes never do.
+   */
+  readonly origin: Store | null;
   readonly type: "unit" | "narrow";
   /** The declared slots of a narrow frame; null for a unit. */
   readonly declared: ReadonlySet<FrameSlotKey> | null;
@@ -110,8 +123,9 @@ export function currentFrame(): Frame | null {
 /**
  * Runs `fn` in a unit frame of `kind`: a child of the active frame, or a root unit when there is none. A non-Promise
  * result is returned unchanged (AD-6); a Promise result becomes a Promise that settles with it only after the unit's
- * defer list has drained (AD-5.9). The frame runs for `app` when given (`null`: for no Application); omitted, for the
- * active frame's Application. Untagged, as a generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above.
+ * defer list has drained (AD-5.9). The frame runs for `app` when given; omitted, for the active frame's Application. A
+ * frame whose Application is `null` names none, and `currentApplication()` in it falls back to the default
+ * Application. Untagged, as a generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above.
  */
 export function runInFrame<T>(kind: string, fn: () => T, app?: object | null): T {
   checkRun("runInFrame", kind, fn);
@@ -122,8 +136,9 @@ export function runInFrame<T>(kind: string, fn: () => T, app?: object | null): T
 
 /**
  * Runs `fn` in a root unit frame of `kind`, which sees no enclosing frame's slots; otherwise as `runInFrame`. The frame
- * runs for `app` when given (`null`: for no Application); omitted, for no Application (null). Untagged, as a generic
- * Scope Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
+ * runs for `app` when given; omitted or `null`, it names no Application, and `currentApplication()` in it falls back to
+ * the default Application. Untagged, as a generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above
+ * `runInFrame`.
  */
 export function runInRootFrame<T>(kind: string, fn: () => T, app?: object | null): T {
   checkRun("runInRootFrame", kind, fn);
@@ -142,7 +157,10 @@ export function setDefaultApplication(app: object | null): void {
   defaultApplication = app;
 }
 
-/** The active frame's Application, else the process's default Application, else null (AD-5.3). */
+/**
+ * The active frame's Application, else the process's default Application, else null (AD-5.3). A frame opened with
+ * `app` null names no Application, so in it this is the default Application too.
+ */
 export function currentApplication(): object | null {
   return storage.getStore()?.frame.app ?? defaultApplication;
 }
@@ -219,7 +237,7 @@ export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>,
     declared.add(key);
   }
   const parent = storage.getStore() ?? null;
-  const store: Store = { frame: Object.freeze({ kind, app: parent?.frame.app ?? null }), slots: new Map(), parent, type: "narrow", declared, defers: null, overlays: null, statics: null, ended: false };
+  const store: Store = { frame: Object.freeze({ kind, app: parent?.frame.app ?? null }), slots: new Map(), parent, origin: null, type: "narrow", declared, defers: null, overlays: null, statics: null, ended: false };
   return storage.run(store, fn);
 }
 
@@ -262,7 +280,10 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
         }
       }
       const value = init();
-      ownerOf(store, key)?.slots.set(key, value);
+      const owner = ownerOf(store, key);
+      if (owner !== null && !owner.ended) {
+        owner.slots.set(key, value);
+      }
       return value;
     },
     set(value: T): void {
@@ -273,6 +294,9 @@ export function frameSlot<T>(key: FrameSlotKey, init: () => T): FrameSlot<T> {
       const owner = ownerOf(store, key);
       if (owner === null) {
         throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} from the ${store.frame.kind} frame: it does not declare the slot and no unit frame encloses it`);
+      }
+      if (owner.ended) {
+        throw new ScopeFrameException(`Cannot write the frame slot ${String(key)} to the ${owner.frame.kind} frame after it has ended`);
       }
       owner.slots.set(key, value);
     },
@@ -307,13 +331,29 @@ function checkKey(name: string, key: unknown): asserts key is FrameSlotKey {
  * that holds `key` for it, or null when none does. Writes go to `ownerOf(store, OVERLAY_KEY)` instead; the two
  * agree because a child of a `test` unit never holds overlay or static entries (its writes, and the `init()` values
  * `frameStatic` stores, all land in the test frame), so the first unit up the chain that holds a key is its owner or
- * an ancestor the owner reads through.
+ * an ancestor the owner reads through. From a root unit the walk continues from its origin (`readUp`), which a write
+ * never reaches.
  */
 function lookUp(kind: "overlays" | "statics", owner: object, key: FrameSlotKey): Map<FrameSlotKey, unknown> | null {
-  for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = frame.parent) {
+  for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = readUp(frame)) {
     const entries = frame[kind]?.get(owner);
     if (entries?.has(key) === true) {
       return entries;
+    }
+  }
+  return null;
+}
+
+/** The next frame an overlay, static or test-class read walks to: the parent, else (from a root unit) the origin. */
+function readUp(frame: Store): Store | null {
+  return frame.parent ?? frame.origin;
+}
+
+/** The nearest `test` unit from `store` up the read chain (`store` itself included, origins followed), or null. */
+function nearestTest(store: Store | null): Store | null {
+  for (let frame = store; frame !== null; frame = readUp(frame)) {
+    if (frame.type === "unit" && frame.frame.kind === "test") {
+      return frame;
     }
   }
   return null;
@@ -379,8 +419,16 @@ function ownerOf(store: Store, key: FrameSlotKey): Store | null {
   return null;
 }
 
-function runUnit<T>(kind: string, parent: Store | null, fn: () => T, app: object | null): T {
-  const store: Store = { frame: Object.freeze({ kind, app }), slots: new Map(), parent, type: "unit", declared: null, defers: [], overlays: new Map(), statics: new Map(), ended: false };
+/**
+ * Runs `fn` in a root `unit` frame for `app`, as `runInRootFrame("unit", fn, app)`, whose origin is the nearest `test`
+ * unit up the active chain, origins followed (Epic 9 retro, L1): `interleave`'s units. Internal: not re-exported.
+ */
+export function runInInterleaveUnit<T>(fn: () => T, app: object | null): T {
+  return runUnit("unit", null, fn, app, nearestTest(storage.getStore() ?? null));
+}
+
+function runUnit<T>(kind: string, parent: Store | null, fn: () => T, app: object | null, origin: Store | null = null): T {
+  const store: Store = { frame: Object.freeze({ kind, app }), slots: new Map(), parent, origin, type: "unit", declared: null, defers: [], overlays: new Map(), statics: new Map(), ended: false };
   let result: T;
   try {
     result = storage.run(store, fn);
@@ -444,13 +492,15 @@ function drain(store: Store, result: Promise<unknown>): Promise<unknown> {
  * The Class Registry's access to the `test` units (Story 9.4; AD-10.5): `registerTestClass` writes into the statics of
  * the nearest unit of kind `test` up the chain, from wherever it is called (a nested unit, a narrow frame), so the
  * fixture stays for the test and is discarded when the test unit ends; reads see every `test` unit up the chain,
- * nearest first. Installed into the Registry on load, so `registry/` imports nothing from `scope/` (the scope module
- * already imports the Registry through `ScopeFrameException`). Internal: not re-exported.
+ * nearest first, origins followed (so an `interleave` unit of a test sees the test's classes), while a write never
+ * follows an origin. `write` also returns the test unit's liveness, so the Registry can tell which test-class maps are
+ * held by a running test (L4). Installed into the Registry on load, so `registry/` imports nothing from `scope/`
+ * (the scope module already imports the Registry through `ScopeFrameException`). Internal: not re-exported.
  */
 installTestFrameAccess({
   read(owner: object): Map<FrameSlotKey, unknown>[] {
     const found: Map<FrameSlotKey, unknown>[] = [];
-    for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = frame.parent) {
+    for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = readUp(frame)) {
       const entries = frame.type === "unit" && frame.frame.kind === "test" ? frame.statics?.get(owner) : undefined;
       if (entries !== undefined) {
         found.push(entries);
@@ -458,7 +508,7 @@ installTestFrameAccess({
     }
     return found;
   },
-  write(owner: object, what: string): Map<FrameSlotKey, unknown> {
+  write(owner: object, what: string): { readonly entries: Map<FrameSlotKey, unknown>; readonly ended: () => boolean } {
     const store = storage.getStore();
     if (store === undefined) {
       throw new ScopeFrameException(`Cannot register ${what} with no active Scope Frame; run the code inside a test frame`);
@@ -473,7 +523,8 @@ installTestFrameAccess({
     if (test.ended) {
       throw new ScopeFrameException(`Cannot register ${what} to the test frame after it has ended`);
     }
-    return entriesOf(test, "statics", owner);
+    const unit = test;
+    return { entries: entriesOf(unit, "statics", owner), ended: () => unit.ended };
   },
 });
 

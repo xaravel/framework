@@ -6,11 +6,19 @@
 // - `registerClass(fqcn, X)` (9.1) also sets the grader's class-name brand, `X[Symbol.for('xaravel.class.fqcn')]`,
 //   own and non-enumerable (ESC-4.3-1 item 1). A subclass inherits it for display only; `fqcn()` reads the Registry,
 //   never the brand.
-// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`:
+// - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`
+//   with the name as given, a leading `\` kept (Story 9.13):
 //   the class registered as `Error` (Story 9.10, `php/Error.ts`), read from the base map so this file imports no
 //   exception class, else the JS `Error` when nothing registered it.
 // - `registerTestClass(fqcn, X)` registers a test fixture in the nearest `test` unit up the frame chain (AD-10.5); it
-//   is discarded when that unit ends. `resolveClass` and `fqcn` check the test units up the chain before the base.
+//   is discarded when that unit ends. `resolveClass` and `fqcn` check the test units up the chain before the base,
+//   an `interleave` unit's origin test included. A test class's brand is an own, configurable accessor, installed
+//   once per class, that reads the name the nearest test unit up the active chain holds the class under, else the
+//   inherited brand, else null: concurrent test frames each see their own name, and none outlives its test (L2).
+//   A base `registerClass` replaces the accessor with its non-configurable value.
+// - The Registry keeps the test-class maps of the test units that have registered a class while they run, and drops
+//   each once its unit has ended. `registerClass` refuses a key such a map holds for another class, and a class such
+//   a map holds under another FQCN (L4), from any frame, a sibling test's included.
 // - `loadAutoload(packageJsonPath)` reads the PSR-4 map (`xaravel.autoload.psr-4`, AD-10.3) and `loadClassmap(path)`
 //   the classmap (`bootstrap/cache/classes.json`); `writeClassmap(path)` writes it (AD-10.4). Both are boot state.
 // - `resolveClassAsync(fqcn)` is the one async miss path (AD-10.4; decisions/ESC-9.4-1.md part 1): on a miss it
@@ -74,6 +82,16 @@ export function registerClass(fqcn: string, klass: RegisteredClass): void {
   }
   if (previous !== undefined) {
     throw new TypeError(`registerClass(): the class registered as ${previous} cannot also be registered as ${name}`);
+  }
+  for (const maps of liveTestMaps()) {
+    const held = maps.byKey.get(key);
+    if (held !== undefined && held.klass !== klass) {
+      throw new TypeError(`registerClass(): ${name} is already registered to another class in a running test`);
+    }
+    const as = maps.byClass.get(klass);
+    if (as !== undefined && as.toLowerCase() !== key) {
+      throw new TypeError(`registerClass(): the class registered as ${as} in a running test cannot also be registered as ${name}`);
+    }
   }
   Object.defineProperty(klass, CLASS_FQCN, { value: name, enumerable: false, writable: false, configurable: false });
   byKey.set(key, { fqcn: name, klass });
@@ -146,9 +164,12 @@ export async function resolveClassAsync(fqcn: string): Promise<RegisteredClass> 
   throw notFound(fqcn);
 }
 
-/** PHP's `Error` `Class "<FQCN>" not found`, built from the class the base map holds as `Error` (Story 9.10). */
+/**
+ * PHP's `Error` `Class "<FQCN>" not found`, built from the class the base map holds as `Error` (Story 9.10). The name
+ * is the one given, a leading `\` kept, as PHP's `new $name` writes it (Story 9.13); only the lookup normalises.
+ */
 function notFound(fqcn: string): Error {
-  const message = `Class "${normalise(fqcn)}" not found`;
+  const message = `Class "${fqcn}" not found`;
   const php = registeredBaseClass("Error") as (new (message: string) => Error) | null;
   return php === null ? new Error(message) : new php(message);
 }
@@ -179,13 +200,13 @@ function lookUp(fqcn: string): Entry | null {
 
 /**
  * The Registry's access to the `test` units of the active frame chain (internal). `read(owner)` is `owner`'s entries
- * in each `test` unit up the chain, nearest first; `write(owner, what)` is `owner`'s entries in the nearest one,
- * created on first use, and throws `ScopeFrameException` outside any frame, with no `test` unit up the chain, or once
- * it has ended.
+ * in each `test` unit up the chain, nearest first, an `interleave` unit's origin test included; `write(owner, what)`
+ * is `owner`'s entries in the nearest one up the parent chain, created on first use, with whether that unit has
+ * ended, and throws `ScopeFrameException` outside any frame, with no `test` unit up the chain, or once it has ended.
  */
 export interface TestFrameAccess {
   read(owner: object): ReadonlyArray<Map<string | symbol, unknown>>;
-  write(owner: object, what: string): Map<string | symbol, unknown>;
+  write(owner: object, what: string): { readonly entries: Map<string | symbol, unknown>; readonly ended: () => boolean };
 }
 
 let testFrames: TestFrameAccess | null = null;
@@ -209,6 +230,52 @@ const BY_CLASS: unique symbol = Symbol("xaravel.registry.test.byClass");
 interface TestClassMaps {
   readonly byKey: Map<string, Entry>;
   readonly byClass: Map<RegisteredClass, string>;
+}
+
+/** The test-class maps of the test units that registered a class, with whether each unit has ended (L4). */
+const liveTests = new Map<TestClassMaps["byKey"], { readonly maps: TestClassMaps; readonly ended: () => boolean }>();
+
+/** The test-class maps of the test units still running; drops those whose unit has ended. */
+function liveTestMaps(): TestClassMaps[] {
+  const live: TestClassMaps[] = [];
+  for (const [key, record] of liveTests) {
+    if (record.ended()) {
+      liveTests.delete(key);
+    } else {
+      live.push(record.maps);
+    }
+  }
+  return live;
+}
+
+/** Classes that carry the test-class brand accessor (L2). */
+const branded = new WeakSet<RegisteredClass>();
+
+/**
+ * Installs `klass`'s test-class brand once: an own, configurable accessor that reads the FQCN the nearest test unit up
+ * the active chain holds `klass` under, else the brand `klass` inherits, else null (AD-9). It closes over `klass`, so a
+ * subclass that inherits it shows its parent's name.
+ */
+function installTestBrand(klass: RegisteredClass): void {
+  if (branded.has(klass)) {
+    return;
+  }
+  const parent: unknown = Object.getPrototypeOf(klass);
+  Object.defineProperty(klass, CLASS_FQCN, {
+    get: (): string | null => {
+      for (const maps of testClassMaps()) {
+        const name = maps.byClass.get(klass);
+        if (name !== undefined) {
+          return name;
+        }
+      }
+      const inherited: unknown = parent === null ? null : Reflect.get(parent as object, CLASS_FQCN);
+      return typeof inherited === "string" ? inherited : null;
+    },
+    enumerable: false,
+    configurable: true,
+  });
+  branded.add(klass);
 }
 
 /** The test-class maps of each `test` unit up the active frame chain, nearest first. */
@@ -237,7 +304,8 @@ function mapsOf(entries: Map<string | symbol, unknown>): TestClassMaps {
  * discarded when the test unit ends. Throws `ScopeFrameException` outside any test frame; throws, as `registerClass`
  * does, when the base or a test unit up the chain holds the key for another class or the class under another FQCN.
  * Registering a class where it is already registered under the same FQCN is a no-op. The class gets the grader's
- * brand, configurable so a later test may register it under another FQCN.
+ * brand as an own accessor that reads the name the active chain's test units hold it under, else null, so concurrent
+ * test frames do not see each other's names and a later test may register it under another FQCN.
  */
 export function registerTestClass(fqcn: string, klass: RegisteredClass): void {
   if (typeof fqcn !== "string" || normalise(fqcn) === "") {
@@ -275,8 +343,11 @@ export function registerTestClass(fqcn: string, klass: RegisteredClass): void {
       throw new TypeError(`registerTestClass(): the class registered as ${as} in this test cannot also be registered as ${name}`);
     }
   }
-  const target = mapsOf(testFrames.write(TEST_CLASSES, `the test class ${name}`));
-  Object.defineProperty(klass, CLASS_FQCN, { value: name, enumerable: false, writable: false, configurable: true });
+  const written = testFrames.write(TEST_CLASSES, `the test class ${name}`);
+  const target = mapsOf(written.entries);
+  liveTestMaps();
+  liveTests.set(target.byKey, { maps: target, ended: written.ended });
+  installTestBrand(klass);
   anyTestClass = true;
   target.byKey.set(key, { fqcn: name, klass });
   target.byClass.set(klass, name);

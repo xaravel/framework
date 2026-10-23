@@ -20,6 +20,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
 - Story 9.10: PHP exception hierarchy
 - Story 9.11: Grader follow-ups to the runtime value model
 - Story 9.12: Mockery exceptions on the runtime's SPL classes
+- Story 9.13: Oracle rows for the runtime's PHP-mirroring checks
 
 ## Requirements & Constraints
 
@@ -81,6 +82,7 @@ Build `@xaravel/runtime`, the zero-dependency L0 package every later Component b
   - PHPUnit double return types and defaults from surface rows (ESC-4.7-1 item 2);
   - late assertions reported to `xaravel.harness.late` (ESC-5.3-3).
 - Story 9.12 is component `mockery` (split out of 9.11 by ESC-9.11-1) and needs 9.10 and 9.11. Mockery's exceptions (its copies in `packages/mockery/src/php/`) extend the runtime's SPL classes when the runtime's class map is published, and keep today's chain when it is absent (ESC-4.5-1 item 2).
+- Story 9.13 is component `runtime` (split out of the Epic 9 retro by a Maintainer ruling) and needs 9.4, 9.5 and 9.6. It adds Oracle rows in `conformance/oracle-requests/9.13.jsonl` for existing runtime checks that mirror PHP but have none: class-name lookups (case-insensitive names, leading `\`; XT-runtime-12..14), by-reference writes through `Ref<T>` versus PHP `&` (XT-runtime-18), `normalizeNull` (XT-runtime-20) and `valueCopy` copy-on-write of nested arrays and `PhpArray` (XT-runtime-23). Any difference a signed fixture shows is fixed in `packages/runtime`, never by removing or weakening an assertion.
 - DIV-9.8 closes only after both 9.11 and 9.12 land: a planning change then records the closure in `decisions/DIV-9.md`, naming both Stories, and updates the `PORTING.md` line that cites it.
 - Epic 10 (`@xaravel/contracts`) depends on the runtime and supplies the interface tokens whose brands 9.5 and 9.8 detect.
 - Every later Component depends on the runtime.
