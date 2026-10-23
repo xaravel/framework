@@ -2,7 +2,7 @@
 title: 'Retro item epic-9-item-1: consequence row for the contracts Component'
 type: 'chore'
 created: '2026-10-21'
-status: 'blocked'
+status: 'done'
 baseline_revision: 'f107215fb835c0a0943033aa7fc374c8025cf967'
 review_loop_iteration: 0
 followup_review_recommended: false

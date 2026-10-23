@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: in-progress
 ---
 
 # Story 10.1: Token, brand and `contract<T>()` mechanism
