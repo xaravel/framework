@@ -423,7 +423,7 @@ Blocking condition: seven Escalations, all waiting on the Maintainer except ESC-
 - ESC-10.2-1, option 1: `contract()` takes a `statics` record (the token's frozen constants), and a contract with a static method exports `<X>Static`. Action item `epic-10-item-3-api-surface-statics` teaches the API-surface tool. Fill in `Filesystem::VISIBILITY_*` and `ShouldBeDiscovered::shouldBeDiscovered`.
 - ESC-10.2-2, option 1: Pipeline keeps `then(destination)`, declares the `PromiseLike` overload too, and is a thenable. Action item `epic-10-item-4-async-surface` adds it to the list. Add its `thenable` lines.
 - ESC-10.2-3, option 2: `MessageProvider::getMessageBag()` stays sync (DIV-1.4). No change to the port.
-- ESC-10.2-4, option 1: `contract()` takes a `builtins` list (`Symbol.for('xaravel.contract.builtins')`). Action item `epic-10-item-5-double-inherited-methods` teaches both doubles.
+- ESC-10.2-4, option 1: `contract()` takes a `builtins` list (`Symbol.for('xaravel.contract.builtins')`). Action item `epic-10-item-5-double-inherited-methods` teaches both doubles. The list holds PHP names (`count`, `offsetExists`, `offsetGet`, `offsetSet`, `offsetUnset`, `getIterator`, `__toString`), per the ruling's 2026-10-23 clarification.
 - ESC-10.2-5, option 1: the `Application` split stands as ported (the AD-5 note is in the spine).
 - ESC-10.2-6, option 1: rule-object methods keep `Promise` returns with `@asyncRoot callback`; F-9's Check now covers them.
 

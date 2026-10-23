@@ -28,3 +28,18 @@ Option 1 is approved. A PHP mock of an interface has every method of the interfa
   - with Xaravel Tests for a double of a child contract and of a contract with built-in parents, in each package;
   - with its Fidelity Review in `--item` mode.
 - **The `builtins` half** is Story 10.2's (`packages/contracts`).
+
+## Clarification (2026-10-23, after #353)
+
+Both doubles key and configure methods by name (`method('x')`, `shouldReceive('x')`), so the list above cannot hold `Symbol.iterator`. The rule follows `PORTING.md`, which maps `IteratorAggregate` to `[Symbol.iterator]` and `__toString` to `toString()`:
+
+- **The list holds PHP names.** A token's `builtins` list (`Symbol.for('xaravel.contract.builtins')`) holds the built-in methods' PHP names:
+  - `count` for `Countable`;
+  - `offsetExists`, `offsetGet`, `offsetSet` and `offsetUnset` for `ArrayAccess`;
+  - `getIterator` for `IteratorAggregate`;
+  - `__toString` for `Stringable`.
+- **A test configures the PHP name**, as Upstream's tests do (`->method('getIterator')`, `->shouldReceive('getIterator')`), so those lines port unchanged.
+- **The double wires the JS protocol to that configuration:**
+  - its `[Symbol.iterator]()` iterates whatever `getIterator` is configured to return;
+  - its `toString()` and `[Symbol.toPrimitive]` return what `__toString` is configured to return, and configuring `toString` configures the same method.
+- **`count` and the `offset*` methods** keep the same name in both languages, so nothing extra is needed.
