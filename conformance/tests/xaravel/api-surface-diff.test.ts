@@ -707,3 +707,112 @@ xaravelTest(
   },
   TIMEOUT,
 );
+
+// ---------------------------------------------------------------------------
+// XT-conformance-262 (epic-10-item-3-api-surface-statics, ESC-10.2-1)
+
+xaravelTest(
+  "XT-conformance-262",
+  "a contract token's static side counts: the keys of contract()'s 4th-argument statics record as static constants, and the members of a same-file <X>Static class or interface as static; a registerClass has none, and a statics argument that is not an object literal with plain keys is a tool failure (ESC-10.2-1, AD-15)",
+  () => {
+    const F = "X\\F";
+    const iface: UpstreamRecord = { fqcn: F, kind: "interface", member: null };
+    const constant = (member: string): UpstreamRecord => ({ fqcn: F, kind: "constant", member, static: true });
+    const run = (upstream: UpstreamRecord[], dts: string, source: string): string[] =>
+      diffComponent({ component: "x", upstream: [iface, ...upstream], additions: [], exceptions: [], div12: [], declarations: [{ file: "src/F.ts", text: dts }], sources: [{ file: "src/F.ts", text: source }] }).items.map((item) =>
+        renderItem("x", item),
+      );
+    const DTS = "export interface F {\n  get(): string;\n}\nexport declare const F: symbol;\n";
+    const token = (args: string): string => `export const F = contract("X\\\\F"${args});\n`;
+
+    // Constants: the statics record's keys (an identifier or a string key) are static constants.
+    const constants = diffComponent({
+      component: "x",
+      upstream: [iface, method(F, "get"), constant("A"), constant("B")],
+      additions: [],
+      exceptions: [],
+      div12: [],
+      declarations: [{ file: "src/F.ts", text: DTS }],
+      sources: [{ file: "src/F.ts", text: token(', {}, [], { A: "a", "B": "b" }') }],
+    });
+    expect(constants.items.map((item) => renderItem("x", item))).toEqual([]);
+    expect(constants.matched).toBe(4);
+    // `as const`, `satisfies` and parentheses are unwrapped.
+    expect(run([constant("A")], DTS, token(', {}, [], { A: "a" } as const'))).toEqual(["x: extra method X\\F::get"]);
+    expect(run([constant("A")], DTS, token(', {}, [], ({ A: "a" } satisfies Record<string, string>)'))).toEqual(["x: extra method X\\F::get"]);
+    expect(run([constant("A")], DTS, token(', {}, [], (({ A: "a" }) as const)'))).toEqual(["x: extra method X\\F::get"]);
+    expect(run([constant("A")], DTS, token(', {}, [], <const>{ A: "a" }'))).toEqual(["x: extra method X\\F::get"]);
+    expect(run([constant("A")], DTS, token(', {}, [], { A: "a" }!'))).toEqual(["x: extra method X\\F::get"]);
+
+    // Static method: a member of `FStatic` is static and keeps its role.
+    const withStatic = `${DTS}export interface FStatic {\n  s(): boolean;\n}\n`;
+    const staticMethod = method(F, "s", [], { static: true });
+    expect(run([method(F, "get"), staticMethod], withStatic, token(""))).toEqual([]);
+    // A `<X>Static` member and a statics key of one name are one static member.
+    expect(run([method(F, "get"), { fqcn: F, kind: "constant", member: "C", static: true }], `${DTS}export interface FStatic {\n  readonly C: string;\n}\n`, token(', {}, [], { C: "c" }'))).toEqual([]);
+    // A `FStatic` method and a statics key of one name: one static member, a method and a constant.
+    expect(run([method(F, "get"), method(F, "C", [], { static: true }), constant("C")], `${DTS}export interface FStatic {\n  C(): string;\n}\n`, token(', {}, [], { C: "c" }'))).toEqual([]);
+    // Static extra: a `FStatic` member Upstream lacks.
+    expect(run([method(F, "get"), staticMethod], `${DTS}export interface FStatic {\n  s(): boolean;\n  t(): void;\n}\n`, token(""))).toEqual(["x: extra method X\\F::t"]);
+    // Static missing: an Upstream constant with no statics key.
+    expect(run([method(F, "get"), constant("C")], DTS, token(', {}, [], { A: "a" }'))).toEqual(["x: missing constant X\\F::C", "x: extra property X\\F::A"]);
+    // Instance vs static: an Upstream instance method declared only in `FStatic`.
+    expect(run([method(F, "get"), method(F, "s")], withStatic, token(""))).toEqual(["x: mismatch method X\\F::s: is static, Upstream not static"]);
+
+    // No statics: contract() with 1 to 3 arguments behaves as before.
+    for (const args of ["", ", {}", ", {}, []"]) {
+      expect(run([method(F, "get"), constant("A")], DTS, token(args))).toEqual(["x: missing constant X\\F::A"]);
+    }
+    // A Symbol.for token has no statics record, but its `<X>Static` counts.
+    const L = "Illuminate\\L";
+    const symbolToken = diffComponent({
+      component: "x",
+      upstream: [{ fqcn: L, kind: "interface", member: null }, method(L, "s", [], { static: true })],
+      additions: [],
+      exceptions: [],
+      div12: [],
+      declarations: [{ file: "src/L.ts", text: "export interface L {\n}\nexport interface LStatic {\n  s(): boolean;\n}\nexport declare const L: { readonly brand: symbol };\n" }],
+      sources: [{ file: "src/L.ts", text: 'export const L = { brand: Symbol.for("Illuminate\\\\L") };\n' }],
+    });
+    expect(symbolToken.items.map((item) => renderItem("x", item))).toEqual([]);
+
+    // registerClass: `AStatic` is ignored, and so is a contract token of the same FQCN, statics and all.
+    expect(single([method("X\\A", "s", [], { static: true })], "", "", { declarations: [{ file: "src/A.ts", text: "export interface AStatic {\n  s(): boolean;\n}\n" }] })).toEqual(["x: missing method X\\A::s"]);
+    const registered = diffComponent({
+      component: "x",
+      upstream: [{ fqcn: F, kind: "interface", member: null }, constant("A")],
+      additions: [],
+      exceptions: [],
+      div12: [],
+      declarations: [{ file: "src/F.ts", text: "export declare class G {\n}\nexport interface GStatic {\n  readonly A: string;\n}\nexport interface F {\n}\nexport interface FStatic {\n  readonly A: string;\n}\n" }],
+      sources: [{ file: "src/F.ts", text: `${token(', {}, [], { A: "a" }')}export class G {}\nregisterClass("X\\\\F", G);\n` }],
+    });
+    expect(registered.items.map((item) => renderItem("x", item))).toEqual(["x: missing constant X\\F::A"]);
+
+    // Unreadable statics: an identifier, a spread (in the record or the arguments), a computed or non-string key, a method
+    // or an accessor is a tool failure naming the file and FQCN.
+    const failing = (args: string): (() => string[]) => () => run([], DTS, `const S = { A: "a" };\nconst R = [{}, [], S];\n${token(args)}`);
+    const MESSAGE = "src/F.ts: the statics of X\\F (contract's 4th argument) must be an object literal with plain keys, after parentheses, `as`, `satisfies`, `<T>` and `!`; found";
+    expect(failing(", {}, [], S")).toThrow(`${MESSAGE} Identifier`);
+    expect(failing(", {}, [], { ...S }")).toThrow(`${MESSAGE} SpreadElement`);
+    expect(failing(", ...R")).toThrow(`${MESSAGE} SpreadElement`);
+    expect(failing(', {}, [], { ["A"]: "a" }')).toThrow(`${MESSAGE} a computed key`);
+    expect(failing(', {}, [], { 1: "a" }')).toThrow(`${MESSAGE} an unsupported key`);
+    expect(failing(', {}, [], { A() { return "a"; } }')).toThrow(`${MESSAGE} a method or accessor`);
+    expect(failing(', {}, [], { get A() { return "a"; } }')).toThrow(`${MESSAGE} a method or accessor`);
+    // An explicit `undefined` is no statics.
+    expect(run([method(F, "get"), constant("A")], DTS, token(", {}, [], undefined"))).toEqual(["x: missing constant X\\F::A"]);
+    // A registerClass of the same FQCN replaces the token, whose statics are then not read.
+    expect(() =>
+      diffComponent({
+        component: "x",
+        upstream: [iface],
+        additions: [],
+        exceptions: [],
+        div12: [],
+        declarations: [{ file: "src/F.ts", text: "export declare class G {\n}\n" }],
+        sources: [{ file: "src/F.ts", text: `const S = { A: "a" };\n${token(", {}, [], S")}export class G {}\nregisterClass("X\\\\F", G);\n` }],
+      }),
+    ).not.toThrow();
+  },
+);

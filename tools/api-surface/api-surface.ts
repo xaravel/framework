@@ -22,6 +22,17 @@
 // `constructor`, `__toString` → `toString`, the AD-26 options object, and the
 // DIV-12 pairs (`conformance/scans/div12-pairs.jsonl`).
 //
+// A contract token also has a static side (ESC-10.2-1), as a `.d.ts`
+// interface cannot hold a static member: each key of the token's statics
+// record, the 4th argument of `contract(fqcn, members, parents, statics)` read
+// from the source, is a static property (a constant; its type unchecked), and
+// every member of a `class`/`interface` `<X>Static` in the same `.d.ts` counts
+// as static in its own role. A statics argument that is not an object literal
+// with plain (identifier or string) keys, after parentheses, `as`,
+// `satisfies`, `<T>` and `!`, is a tool failure; `undefined` is none. A
+// `registerClass` registration has no static side beyond its own `static`
+// members; its `<X>Static` declarations are ignored.
+//
 // A `model-config` method with a decided DIV-12 rename (`DIV12_RENAMES`:
 // `fillable` → `setFillable`, `touches` → `isTouching`) is matched under its
 // new name. An `option-pair` on a non-trait declaration is satisfied by either
@@ -338,8 +349,11 @@ function fnSignature(fn: Node, hasReturn: boolean): TsSignature {
   return { params: tsParams(fn["params"]), returns: hasReturn ? unwrapAnnotation(fn["returnType"]) : null, hasReturn };
 }
 
-/** Adds the public members of a class or interface body to `members` (by name; static and instance kept apart). */
-function collectMembers(decl: Node, members: Map<string, TsMember[]>): void {
+/**
+ * Adds the public members of a class or interface body to `members` (by name; static and instance kept apart). With
+ * `forceStatic` every member is static: the body of a contract's `<X>Static` declaration (ESC-10.2-1).
+ */
+function collectMembers(decl: Node, members: Map<string, TsMember[]>, forceStatic = false): void {
   const body = node(decl["body"]);
   for (const member of nodes(body?.["body"])) {
     const key = node(member["key"]);
@@ -354,7 +368,7 @@ function collectMembers(decl: Node, members: Map<string, TsMember[]>): void {
     if (raw === null) {
       continue;
     }
-    const isStatic = member["static"] === true;
+    const isStatic = forceStatic || member["static"] === true;
     const entry = (name: string): TsMember => {
       const list = members.get(name) ?? [];
       let found = list.find((m) => m.static === isStatic);
@@ -446,9 +460,10 @@ function isLaravelFqcn(value: string): boolean {
 
 /**
  * The FQCN of a contract token initializer: `contract('<FQCN>')` / `contract<T>('<FQCN>')`, or the first
- * `Symbol.for('<FQCN>')` inside it whose argument is an `Illuminate\…` or `Laravel\…` FQCN (`isLaravelFqcn`).
+ * `Symbol.for('<FQCN>')` inside it whose argument is an `Illuminate\…` or `Laravel\…` FQCN (`isLaravelFqcn`); with the
+ * `contract(…)` call node (null for a `Symbol.for`), whose 4th argument is the token's statics record.
  */
-function contractFqcn(init: Node | null): string | null {
+function contractToken(init: Node | null): { readonly fqcn: string; readonly call: Node | null } | null {
   if (init === null) {
     return null;
   }
@@ -459,11 +474,12 @@ function contractFqcn(init: Node | null): string | null {
   if (init.type === "CallExpression") {
     const callee = node(init["callee"]);
     if (callee?.type === "Identifier" && callee["name"] === "contract") {
-      return literal(init["arguments"]);
+      const value = literal(init["arguments"]);
+      return value === null ? null : { fqcn: value, call: init };
     }
     if (callee?.type === "MemberExpression" && nameOf(callee["object"]) === "Symbol" && nameOf(callee["property"]) === "for" && callee["computed"] !== true) {
       const value = literal(init["arguments"]);
-      return value !== null && isLaravelFqcn(value) ? value : null;
+      return value !== null && isLaravelFqcn(value) ? { fqcn: value, call: null } : null;
     }
   }
   for (const [key, child] of Object.entries(init)) {
@@ -471,7 +487,7 @@ function contractFqcn(init: Node | null): string | null {
       continue;
     }
     for (const sub of Array.isArray(child) ? child : [child]) {
-      const found = contractFqcn(node(sub));
+      const found = contractToken(node(sub));
       if (found !== null) {
         return found;
       }
@@ -480,10 +496,56 @@ function contractFqcn(init: Node | null): string | null {
   return null;
 }
 
+/**
+ * The static constant names of a contract token: the keys of its statics record, the 4th argument of
+ * `contract(fqcn, members, parents, statics)` (ESC-10.2-1), after parentheses, `as`, `satisfies`, `<T>` and `!`; none
+ * without one or for `undefined`. Anything else (an identifier, a spread, a computed or non-string key, a method or
+ * accessor) is a tool failure naming the file and FQCN.
+ */
+function staticsKeys(call: Node | null, file: string, fqcn: string): string[] {
+  const fail = (found: string): never => {
+    throw new Error(`${file}: the statics of ${fqcn} (contract's 4th argument) must be an object literal with plain keys, after parentheses, \`as\`, \`satisfies\`, \`<T>\` and \`!\`; found ${found}`);
+  };
+  const args = call === null ? [] : nodes(call["arguments"]);
+  if (args.slice(0, 4).some((arg) => arg.type === "SpreadElement")) {
+    return fail("SpreadElement");
+  }
+  const raw = args[3];
+  if (raw === undefined || (raw.type === "Identifier" && raw["name"] === "undefined")) {
+    return [];
+  }
+  let arg: Node | null = raw;
+  while (arg !== null && (arg.type === "ParenthesizedExpression" || arg.type === "TSAsExpression" || arg.type === "TSSatisfiesExpression" || arg.type === "TSTypeAssertion" || arg.type === "TSNonNullExpression")) {
+    arg = node(arg["expression"]);
+  }
+  if (arg === null || arg.type !== "ObjectExpression") {
+    return fail(arg === null ? "nothing" : arg.type);
+  }
+  const keys: string[] = [];
+  for (const property of nodes(arg["properties"])) {
+    const plain = property.type === "Property" && property["kind"] === "init" && property["method"] !== true;
+    if (!plain) {
+      return fail(property.type !== "Property" ? property.type : "a method or accessor");
+    }
+    if (property["computed"] === true) {
+      return fail("a computed key");
+    }
+    const key = node(property["key"]);
+    const name = key?.type === "Identifier" ? key["name"] : key?.type === "Literal" ? key["value"] : null;
+    if (typeof name !== "string") {
+      return fail("an unsupported key");
+    }
+    keys.push(name);
+  }
+  return keys;
+}
+
 interface Registration {
   readonly fqcn: string;
   readonly file: string;
   readonly local: string;
+  /** A contract token's static constant names (`staticsKeys`); null for a `registerClass` registration. */
+  readonly statics: readonly string[] | null;
 }
 
 interface ParsedPackage {
@@ -522,7 +584,7 @@ function literalKeys(members: unknown): LiteralKey[] {
 function parsePackage(declarations: readonly DeclarationFile[], sources: readonly SourceFile[]): ParsedPackage {
   const parsed: ParsedPackage = { registrations: new Map(), declarations: new Map(), sources: new Map(), functions: new Map(), typeKeys: new Map() };
   // Contract tokens (AD-1): registrations unless a registerClass of the same FQCN exists.
-  const contracts = new Map<string, Registration>();
+  const contracts = new Map<string, { readonly file: string; readonly local: string; readonly call: Node | null }>();
   for (const { file, text } of [...sources].sort((a, b) => compareUnits(a.file, b.file))) {
     const statements = parse(file, text, "ts");
     parsed.sources.set(file, { statements, text });
@@ -531,10 +593,9 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
       if (variable !== null && variable.type === "VariableDeclaration" && variable["kind"] === "const") {
         for (const declarator of nodes(variable["declarations"])) {
           const local = nameOf(declarator["id"]);
-          const token = contractFqcn(node(declarator["init"]));
-          const fqcn = token === null ? null : normaliseFqcn(token);
-          if (local !== null && fqcn !== null && !contracts.has(fqcn)) {
-            contracts.set(fqcn, { fqcn, file, local });
+          const token = contractToken(node(declarator["init"]));
+          if (local !== null && token !== null && !contracts.has(normaliseFqcn(token.fqcn))) {
+            contracts.set(normaliseFqcn(token.fqcn), { file, local, call: token.call });
           }
         }
         continue;
@@ -542,13 +603,14 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
       // Story 6.6's recogniser, so a registration here is one the scan accepts; keyed without the leading `\`.
       const registration = recogniseRegistration(statement)?.registration ?? null;
       if (registration !== null && !parsed.registrations.has(registration.fqcn)) {
-        parsed.registrations.set(registration.fqcn, { fqcn: registration.fqcn, file, local: registration.name });
+        parsed.registrations.set(registration.fqcn, { fqcn: registration.fqcn, file, local: registration.name, statics: null });
       }
     }
   }
-  for (const [fqcn, registration] of contracts) {
+  // A token's statics are read only when no registerClass replaces it.
+  for (const [fqcn, { file, local, call }] of contracts) {
     if (!parsed.registrations.has(fqcn)) {
-      parsed.registrations.set(fqcn, registration);
+      parsed.registrations.set(fqcn, { fqcn, file, local, statics: staticsKeys(call, file, fqcn) });
     }
   }
   for (const { file, text } of [...declarations].sort((a, b) => compareUnits(a.file, b.file))) {
@@ -598,13 +660,33 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
   return parsed;
 }
 
-/** The merged public members of every class / interface named `local` in a declaration file. */
-function classMembers(statements: readonly Node[], local: string): Map<string, TsMember[]> {
+/**
+ * The merged public members of every class / interface named `local` in a declaration file. For a contract token
+ * (`statics` not null; ESC-10.2-1) the members of every class / interface named `<local>Static` are added as static,
+ * and each statics constant as a static property (its type unchecked), merged with a static member of that name.
+ */
+function classMembers(statements: readonly Node[], local: string, statics: readonly string[] | null): Map<string, TsMember[]> {
   const members = new Map<string, TsMember[]>();
   for (const statement of statements) {
     const decl = declarationOf(statement);
-    if (decl !== null && (decl.type === "ClassDeclaration" || decl.type === "TSInterfaceDeclaration") && nameOf(decl["id"]) === local) {
+    if (decl === null || (decl.type !== "ClassDeclaration" && decl.type !== "TSInterfaceDeclaration")) {
+      continue;
+    }
+    const name = nameOf(decl["id"]);
+    if (name === local) {
       collectMembers(decl, members);
+    } else if (statics !== null && name === `${local}Static`) {
+      collectMembers(decl, members, true);
+    }
+  }
+  for (const name of statics ?? []) {
+    const list = members.get(name) ?? [];
+    const found = list.find((m) => m.static);
+    if (found === undefined) {
+      list.push({ name, static: true, signatures: [], property: { type: null, optional: false }, matched: false });
+      members.set(name, list);
+    } else if (found.property === null) {
+      found.property = { type: null, optional: false };
     }
   }
   return members;
@@ -1054,7 +1136,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       continue;
     }
     matched++;
-    const members = classMembers(pkg.declarations.get(registration.file) ?? [], registration.local);
+    const members = classMembers(pkg.declarations.get(registration.file) ?? [], registration.local, registration.statics);
     const defaults = classDefaults(pkg.sources.get(registration.file), registration.local);
     const unmatched: UpstreamRecord[] = [];
     // Option pairs (AD-26) on a non-trait declaration whose neither form is declared: one `missing` is reported per name.

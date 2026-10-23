@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-23-2026 12:09
+last_updated: 10-23-2026 15:25
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1506,20 +1506,21 @@ action_items:
     ref: "decisions/ESC-10.1-6.md"
   - id: "epic-10-item-3-api-surface-statics"
     epic: 10
-    action: "tools/api-surface counts a contract's static members: the constants in a
-      token's statics record (contract() statics argument) and the members of a same-file
-      interface <X>Static, as that FQCN's static members; tests; no committed rows,
-      schema or citation file changes (decisions/ESC-10.2-1.md)"
+    action: "tools/api-surface counts a contract's static members: the constants in
+      a token's statics record (contract() statics argument) and the members of a
+      same-file interface <X>Static, as that FQCN's static members; tests; no committed
+      rows, schema or citation file changes (decisions/ESC-10.2-1.md)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-10.2-1.md"
   - id: "epic-10-item-4-async-surface"
     epic: 10
-    action: "tools/async-surface: Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\Pipeline\\Pipeline
-      join the thenable type list, so send, through and via get thenable lines and lint
-      treats a Pipeline as a thenable (ESC-10.2-2); if the tool checks a tag's reason,
-      accept @asyncRoot callback on a contract method whose implementations are DIV-1
-      async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md, decisions/ESC-10.2-6.md)"
+    action: "tools/async-surface: Illuminate\\Contracts\\Pipeline\\Pipeline and Illuminate\\
+      Pipeline\\Pipeline join the thenable type list, so send, through and via get
+      thenable lines and lint treats a Pipeline as a thenable (ESC-10.2-2); if the
+      tool checks a tag's reason, accept @asyncRoot callback on a contract method
+      whose implementations are DIV-1 async callbacks (ESC-10.2-6); tests (decisions/ESC-10.2-2.md,
+      decisions/ESC-10.2-6.md)"
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-10.2-2.md"
@@ -1529,8 +1530,8 @@ action_items:
       DoubleTarget take a double's methods from the target token, every token in its
       parents closure and each one's builtins (Symbol.for('xaravel.contract.builtins');
       absent means none), each once, so a double of a child contract or of a contract
-      with built-in PHP parents can configure every inherited method as a PHP mock can;
-      Xaravel Tests in each package; no assertion removed or weakened (decisions/ESC-10.2-4.md)"
+      with built-in PHP parents can configure every inherited method as a PHP mock
+      can; Xaravel Tests in each package; no assertion removed or weakened (decisions/ESC-10.2-4.md)"
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-10.2-4.md"
