@@ -17,13 +17,25 @@
 //       `--php <bin>`) against `<dir>/{framework,ai,mcp,boost}`, locked
 //       installs whose sources equal the snapshot's.
 //
+//       After the repositories it runs the script twice more for each PSR
+//       package AD-22 gives to `@xaravel/contracts/psr` (`PSR_PACKAGES`:
+//       psr/container, psr/log, psr/simple-cache; ESC-10.1-4), in its
+//       interfaces mode, against the framework install's
+//       `vendor/<package>/<PSR-4 dir>`: every interface the package declares,
+//       and nothing else. The version and the PSR-4 directory come from the
+//       committed `conformance/oracle/locks/framework/composer.lock`
+//       (`psrPins`); the script fails unless the installed version is the
+//       lock's. A PSR pass that prints a function, or a FQCN outside its
+//       package's namespace, fails the run.
+//
 //   … --check
 //       builds the files in memory and compares them byte for byte with the
 //       committed ones, one `api surface drift: <file> …` line per difference
 //       (it differs, is missing, or is committed but not generated), and
 //       validates the citation files (`checkCitations`). It writes nothing.
 //
-// A class's Component is `componentForFqcn`. A function's is `kebab(<Dir>)`
+// A class's Component is `componentForFqcn`, whose `PSR_NAMESPACES` fallback
+// gives the PSR passes' interfaces to `contracts`. A function's is `kebab(<Dir>)`
 // for `framework/src/Illuminate/<Dir>/…`, else the repository name. A FQCN or
 // Component the map does not know fails the run, and nothing is written.
 //
@@ -64,6 +76,25 @@ const KEYS: Readonly<Record<SurfaceKind, readonly string[]>> = {
   function: ["fqcn", "kind", "member", "static", "parameters", "returns", "nullable"],
 };
 const CITATION_KEYS = ["component", "fqcn", "member", "citation"] as const;
+/** The framework install's lock, which pins the PSR packages. */
+export const FRAMEWORK_LOCK = "conformance/oracle/locks/framework/composer.lock";
+/** The PSR packages whose interfaces the export adds (ESC-10.1-4), with the PSR-4 prefix each must declare. */
+export const PSR_PACKAGES = [
+  { package: "psr/container", prefix: "Psr\\Container\\" },
+  { package: "psr/log", prefix: "Psr\\Log\\" },
+  { package: "psr/simple-cache", prefix: "Psr\\SimpleCache\\" },
+] as const;
+
+/** A PSR package as the framework lock pins it: `dir` is its PSR-4 directory, without a trailing slash. */
+export interface PsrPin {
+  package: string;
+  prefix: string;
+  version: string;
+  dir: string;
+}
+
+/** One source the script reflects: an Upstream repository, or a PSR package in interfaces mode. */
+type Pass = { label: UpstreamName; repo: UpstreamName; psr: null } | { label: string; repo: null; psr: PsrPin };
 
 export interface SurfaceOptions {
   image?: string;
@@ -128,6 +159,38 @@ export function classLists(root: string): Map<UpstreamName, string[]> {
   return out;
 }
 
+/** The PSR packages' versions and PSR-4 directories from `conformance/oracle/locks/framework/composer.lock` under `root`. */
+export function psrPins(root: string): PsrPin[] {
+  const file = join(root, FRAMEWORK_LOCK);
+  if (!existsSync(file)) {
+    throw new Error(`${FRAMEWORK_LOCK} is missing`);
+  }
+  const lock = JSON.parse(readFileSync(file, "utf8")) as unknown;
+  const packages = isObject(lock) ? [...(Array.isArray(lock["packages"]) ? lock["packages"] : []), ...(Array.isArray(lock["packages-dev"]) ? lock["packages-dev"] : [])] : [];
+  return PSR_PACKAGES.map(({ package: name, prefix }) => {
+    const entry = packages.find((candidate): candidate is JsonObject => isObject(candidate) && candidate["name"] === name);
+    if (entry === undefined) {
+      throw new Error(`${FRAMEWORK_LOCK} does not lock ${name}`);
+    }
+    const version = entry["version"];
+    if (typeof version !== "string" || version === "") {
+      throw new Error(`${FRAMEWORK_LOCK}: ${name} has no version`);
+    }
+    const autoload = entry["autoload"];
+    const psr4 = isObject(autoload) && isObject(autoload["psr-4"]) ? autoload["psr-4"] : {};
+    const prefixes = Object.keys(psr4);
+    const dir = psr4[prefix];
+    if (prefixes.length !== 1 || typeof dir !== "string") {
+      throw new Error(`${FRAMEWORK_LOCK}: ${name}'s PSR-4 prefixes are ${prefixes.length === 0 ? "none" : prefixes.join(", ")}, expected only ${prefix}`);
+    }
+    const trimmed = dir.replace(/\/+$/, "");
+    if (trimmed === "" || trimmed.startsWith("/") || trimmed.split("/").includes("..")) {
+      throw new Error(`${FRAMEWORK_LOCK}: ${name}'s PSR-4 directory ${JSON.stringify(dir)} is not a relative path inside the package`);
+    }
+    return { package: name, prefix, version, dir: trimmed };
+  });
+}
+
 /** The 1-based line of the first difference between two texts. */
 function firstDifference(a: string, b: string): number {
   const left = a.split("\n");
@@ -141,14 +204,26 @@ function firstDifference(a: string, b: string): number {
   return length;
 }
 
-/** One run of the PHP script for `repo`; `dir` holds `<repo>.txt`, the class list. */
-function runOnce(root: string, repo: UpstreamName, dir: string, options: SurfaceOptions): string {
+/**
+ * The script's arguments for `pass`, with `upstream` the directory holding the four installs and `classes` the one
+ * holding the class lists: a repository's pass reflects `<repo>.txt`; a PSR pass runs the interfaces mode against the
+ * framework install's `vendor/<package>/<PSR-4 dir>`.
+ */
+function passArgs(pass: Pass, upstream: string, classes: string): string[] {
+  if (pass.psr !== null) {
+    const base = `${upstream}/framework/vendor`;
+    return ["--interfaces", pass.psr.package, pass.psr.version, `${base}/autoload.php`, `${base}/${pass.psr.package}/${pass.psr.dir}`];
+  }
+  return [`${upstream}/${pass.repo}/vendor/autoload.php`, `${upstream}/${pass.repo}/src`, `${classes}/${pass.repo}.txt`];
+}
+
+/** One run of the PHP script for `pass`; `dir` holds `<repo>.txt`, each repository's class list. */
+function runOnce(root: string, pass: Pass, dir: string, options: SurfaceOptions): string {
   const script = resolve(root, API_SURFACE_SCRIPT);
   if (options.local !== undefined) {
-    const base = join(resolve(options.local), repo);
-    const proc = Bun.spawnSync([options.php ?? "php", script, join(base, "vendor", "autoload.php"), join(base, "src"), join(dir, `${repo}.txt`)], { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+    const proc = Bun.spawnSync([options.php ?? "php", script, ...passArgs(pass, resolve(options.local), dir)], { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
     if (proc.exitCode !== 0) {
-      throw new Error(`api-surface.php failed for ${repo} (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
+      throw new Error(`api-surface.php failed for ${pass.label} (exit ${proc.exitCode ?? "signal"}): ${proc.stderr.toString().trim()}`);
     }
     return proc.stdout.toString();
   }
@@ -160,10 +235,10 @@ function runOnce(root: string, repo: UpstreamName, dir: string, options: Surface
         { host: script, container: IMAGE_SCRIPT },
         { host: dir, container: IMAGE_CLASSES },
       ],
-      ["php", IMAGE_SCRIPT, `${IMAGE_UPSTREAM_DIR}/${repo}/vendor/autoload.php`, `${IMAGE_UPSTREAM_DIR}/${repo}/src`, `${IMAGE_CLASSES}/${repo}.txt`],
+      ["php", IMAGE_SCRIPT, ...passArgs(pass, IMAGE_UPSTREAM_DIR, IMAGE_CLASSES)],
     );
   } catch (error) {
-    throw new Error(`api-surface.php failed for ${repo}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    throw new Error(`api-surface.php failed for ${pass.label}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -176,14 +251,14 @@ function renderLine(kind: SurfaceKind, value: JsonObject): string {
   return renderJson(ordered);
 }
 
-/** Parses one pass of `repo` into Component-assigned lines; throws naming the repository and line. */
-function parsePass(stdout: string, repo: UpstreamName, components: ReadonlySet<string>, map: ReturnType<typeof readMap>, schema: JsonObject): Line[] {
+/** Parses one pass into Component-assigned lines; throws naming the pass (repository or PSR package) and line. */
+function parsePass(stdout: string, pass: Pass, components: ReadonlySet<string>, map: ReturnType<typeof readMap>, schema: JsonObject): Line[] {
   if (stdout !== "" && !stdout.endsWith("\n")) {
-    throw new Error(`${repo}: api-surface.php output does not end with a newline`);
+    throw new Error(`${pass.label}: api-surface.php output does not end with a newline`);
   }
   const lines = stdout === "" ? [] : stdout.slice(0, -1).split("\n");
   return lines.map((text, index) => {
-    const at = `${repo} line ${index + 1}`;
+    const at = `${pass.label} line ${index + 1}`;
     let value: unknown;
     try {
       value = JSON.parse(text);
@@ -194,6 +269,10 @@ function parsePass(stdout: string, repo: UpstreamName, components: ReadonlySet<s
       throw new Error(`${at}: not a JSON object`);
     }
     let file: string | null = null;
+    if (value["kind"] === "function" && pass.psr !== null) {
+      const name = value["fqcn"];
+      throw new Error(`${at}: a PSR pass exports interfaces only, not function ${typeof name === "string" ? name : renderJson(name ?? null)}`);
+    }
     if (value["kind"] === "function") {
       if (typeof value["file"] !== "string") {
         throw new Error(`${at}: a function line needs its "file"`);
@@ -207,20 +286,23 @@ function parsePass(stdout: string, repo: UpstreamName, components: ReadonlySet<s
     }
     const kind = value["kind"] as SurfaceKind;
     const fqcn = value["fqcn"] as string;
+    if (pass.psr !== null && !fqcn.startsWith(pass.psr.prefix)) {
+      throw new Error(`${at}: ${fqcn} is not in ${pass.psr.package}'s namespace ${pass.psr.prefix}`);
+    }
     let component: string | null;
     if (file === null) {
       component = componentForFqcn(map, fqcn);
       if (component === null) {
         throw new Error(`${at}: ${fqcn} has no Component in conformance/component-map`);
       }
-    } else if (repo === "framework") {
+    } else if (pass.repo === "framework") {
       const dir = /^Illuminate\/([^/]+)\//.exec(file);
       if (dir === null) {
         throw new Error(`${at}: function ${fqcn} is in ${file}, not under src/Illuminate/<Dir>/`);
       }
       component = kebab(dir[1]!);
     } else {
-      component = repo;
+      component = pass.repo!;
     }
     if (!components.has(component)) {
       throw new Error(`${at}: ${fqcn}'s Component ${component} is not in conformance/component-map`);
@@ -234,8 +316,9 @@ function compareLines(a: Line, b: Line): number {
 }
 
 /**
- * The file text per Component (Components sorted), from two passes per repository. Throws NondeterminismError when
- * a repository's passes differ, and an Error on an unowned FQCN, an unknown Component, a bad or duplicate line.
+ * The file text per Component (Components sorted), from two passes per repository and then per PSR package. Throws
+ * NondeterminismError when a source's passes differ, and an Error on an unowned FQCN, an unknown Component, a bad or
+ * duplicate line, or a PSR package the framework lock does not pin as expected.
  */
 export function buildSurface(root: string, options: SurfaceOptions = {}): Map<string, string> {
   const script = resolve(root, API_SURFACE_SCRIPT);
@@ -256,6 +339,7 @@ export function buildSurface(root: string, options: SurfaceOptions = {}): Map<st
       checkLocalCopy(upstreamPath(root, name, "."), join(local, name), name);
     }
   }
+  const pins = psrPins(root);
   const schema = readSurfaceSchema(root);
   const map = readMap(root);
   const components = new Set(map.records.map((record) => record.component));
@@ -269,13 +353,14 @@ export function buildSurface(root: string, options: SurfaceOptions = {}): Map<st
     }
     // The image runs as an unprivileged user, which must read the mounted lists.
     chmodSync(dir, 0o755);
-    for (const { name } of UPSTREAM_REPOS) {
-      const first = runOnce(root, name, dir, options);
-      const second = runOnce(root, name, dir, options);
+    const passes: Pass[] = [...UPSTREAM_REPOS.map(({ name }): Pass => ({ label: name, repo: name, psr: null })), ...pins.map((pin): Pass => ({ label: pin.package, repo: null, psr: pin }))];
+    for (const pass of passes) {
+      const first = runOnce(root, pass, dir, options);
+      const second = runOnce(root, pass, dir, options);
       if (first !== second) {
-        throw new NondeterminismError(`api surface not deterministic: ${name} (first difference at line ${firstDifference(first, second)})`);
+        throw new NondeterminismError(`api surface not deterministic: ${pass.label} (first difference at line ${firstDifference(first, second)})`);
       }
-      lines.push(...parsePass(first, name, components, map, schema));
+      lines.push(...parsePass(first, pass, components, map, schema));
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

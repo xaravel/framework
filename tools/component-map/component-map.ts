@@ -275,7 +275,23 @@ export function componentForTest(map: ComponentMap, path: string): TestOwner | n
   return found === undefined ? null : { component: found.component, tags: [...found.entry.tags] };
 }
 
-/** The Component owning `fqcn`: an exact class first, then the longest namespace prefix; null when none does. */
+/**
+ * The PSR namespaces AD-22 gives to `@xaravel/contracts/psr`, owned by `contracts` though no Upstream `src/` declares
+ * them (ESC-10.1-4): `oracle:api-surface` exports their interfaces into `conformance/api-surface/contracts.jsonl`.
+ * Nothing else under `Psr\` has a Component: the other PSR packages the framework lock pins (psr/clock,
+ * psr/event-dispatcher, psr/http-*, psr/cache, psr/link) are left out on purpose, because AD-22 and ESC-10.1-4 name
+ * only these three.
+ */
+export const PSR_NAMESPACES: Readonly<Record<string, string>> = {
+  "Psr\\Container\\": "contracts",
+  "Psr\\Log\\": "contracts",
+  "Psr\\SimpleCache\\": "contracts",
+};
+
+/**
+ * The Component owning `fqcn`: an exact class first, then the longest namespace prefix, then `PSR_NAMESPACES`; null
+ * when none does.
+ */
 export function componentForFqcn(map: ComponentMap, fqcn: string): string | null {
   const name = fqcn.replace(/^\\/, "");
   for (const record of map.records) {
@@ -293,7 +309,15 @@ export function componentForFqcn(map: ComponentMap, fqcn: string): string | null
       }
     }
   }
-  return owner;
+  if (owner !== null) {
+    return owner;
+  }
+  for (const [ns, component] of Object.entries(PSR_NAMESPACES)) {
+    if (name.startsWith(ns)) {
+      return component;
+    }
+  }
+  return null;
 }
 
 /** The Component owning container alias `alias`, or null when none does. */

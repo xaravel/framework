@@ -4,6 +4,7 @@
 // FR-6, AD-15, PRD §5.1).
 //
 //   php api-surface.php <autoload.php> <src dir> <classes file>
+//   php api-surface.php --interfaces <package> <version> <autoload.php> <src dir>
 //
 // Loads <autoload.php>, then reflects every FQCN listed (one per line) in
 // <classes file> and every user function whose file is under <src dir>. It
@@ -40,6 +41,17 @@
 // interfaces and traits (and theirs), whatever the load order. tools/oracle/api-surface.ts
 // re-renders, validates and sorts the lines (docs/ops/oracle.md, API surface).
 //
+// The interfaces mode (ESC-10.1-4) exports a Composer package that is not
+// Upstream source, such as psr/log: it first checks that
+// Composer\InstalledVersions reports <package> installed at <version> (else
+// `api-surface: <package> is installed at <v>, the lock pins <version>`), then
+// reflects every interface a non-blade `.php` file under <src dir> declares
+// (PHP tokenizer), sorted; none at all fails the run (`api-surface: <package>
+// declares no interface under <src dir>`). Each must load as an interface (else
+// `api-surface: <FQCN> is not an interface`). Classes, traits, enums and
+// functions are not exported, and there is no class-list cross-check: the
+// list comes from the same scan.
+//
 // Exit codes: 0 success, 1 any failure (the reason is on stderr), 2 usage.
 
 declare(strict_types=1);
@@ -53,12 +65,17 @@ function fail(string $message): never
     exit(1);
 }
 
-if ($argc !== 4) {
-    fwrite(STDERR, "usage: php api-surface.php <autoload.php> <src dir> <classes file>\n");
+$interfaces = $argc === 6 && $argv[1] === '--interfaces';
+if (!$interfaces && ($argc !== 4 || $argv[1] === '--interfaces')) {
+    fwrite(STDERR, "usage: php api-surface.php <autoload.php> <src dir> <classes file>\n       php api-surface.php --interfaces <package> <version> <autoload.php> <src dir>\n");
     exit(2);
 }
 
-[, $autoload, $srcArg, $listFile] = $argv;
+if ($interfaces) {
+    [, , $package, $version, $autoload, $srcArg] = $argv;
+} else {
+    [, $autoload, $srcArg, $listFile] = $argv;
+}
 $srcReal = realpath($srcArg);
 if ($srcReal === false || !is_dir($srcReal)) {
     fail("{$srcArg} is not a directory");
@@ -66,9 +83,11 @@ if ($srcReal === false || !is_dir($srcReal)) {
 if (!is_file($autoload)) {
     fail("{$autoload} does not exist");
 }
-$list = file($listFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-if ($list === false) {
-    fail("cannot read {$listFile}");
+if (!$interfaces) {
+    $list = file($listFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($list === false) {
+        fail("cannot read {$listFile}");
+    }
 }
 
 set_error_handler(static function (int $level, string $message, string $file, int $line): bool {
@@ -226,8 +245,11 @@ function stubbedOf(ReflectionClass $class, array $stubs): array
     return $out;
 }
 
-/** The named class-likes a PHP file declares, by the tokenizer: `class`, `interface`, `trait` or `enum` followed by a name, not after `::` or `new`. */
-function declaredIn(string $code): array
+/**
+ * The named class-likes a PHP file declares, by the tokenizer: `class`, `interface`, `trait` or `enum` (or only the
+ * keywords in $kinds) followed by a name, not after `::` or `new`.
+ */
+function declaredIn(string $code, array $kinds = [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM]): array
 {
     $tokens = array_values(array_filter(
         token_get_all($code),
@@ -248,7 +270,7 @@ function declaredIn(string $code): array
             }
             continue;
         }
-        if (!in_array($token[0], [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM], true) || !is_array($next) || $next[0] !== T_STRING) {
+        if (!in_array($token[0], $kinds, true) || !is_array($next) || $next[0] !== T_STRING) {
             continue;
         }
         $previous = $tokens[$i - 1] ?? null;
@@ -312,6 +334,38 @@ function missedClasses(array $list, string $srcReal): array
     return $missed;
 }
 
+/** The interfaces the non-blade `.php` files under $srcReal declare, by the tokenizer, sorted and unique. */
+function interfacesUnder(string $srcReal): array
+{
+    $out = [];
+    foreach (phpFiles($srcReal) as $path) {
+        $code = file_get_contents($srcReal . '/' . $path);
+        if ($code === false) {
+            fail("cannot read {$path}");
+        }
+        foreach (declaredIn($code, [T_INTERFACE]) as $name) {
+            $out[$name] = true;
+        }
+    }
+    $out = array_keys($out);
+    sort($out, SORT_STRING);
+    return $out;
+}
+
+if ($interfaces) {
+    if (!class_exists(Composer\InstalledVersions::class) || !Composer\InstalledVersions::isInstalled($package)) {
+        fail("{$package} is not installed");
+    }
+    $installed = Composer\InstalledVersions::getPrettyVersion($package);
+    if ($installed !== $version) {
+        fail("{$package} is installed at " . ($installed ?? 'no version') . ", the lock pins {$version}");
+    }
+    $list = interfacesUnder($srcReal);
+    if ($list === []) {
+        fail("{$package} declares no interface under {$srcArg}");
+    }
+}
+
 $stubs = [];
 $lines = [];
 $current = '(none)';
@@ -322,6 +376,9 @@ try {
         $class = new ReflectionClass($fqcn);
         if ($class->getName() !== $fqcn) {
             fail("{$fqcn} is declared as {$class->getName()}");
+        }
+        if ($interfaces && !$class->isInterface()) {
+            fail("{$fqcn} is not an interface");
         }
         if (underSrc($class->getFileName(), $srcReal) === null) {
             fail("{$fqcn} is not declared under {$srcReal} (" . var_export($class->getFileName(), true) . ')');
@@ -363,7 +420,7 @@ try {
         }
     }
 
-    foreach (get_defined_functions()['user'] as $name) {
+    foreach ($interfaces ? [] : get_defined_functions()['user'] as $name) {
         $current = "function {$name}";
         $function = new ReflectionFunction($name);
         $file = underSrc($function->getFileName(), $srcReal);
@@ -383,7 +440,7 @@ try {
     }
 
     $current = 'the class-list cross-check';
-    $missed = missedClasses($list, $srcReal);
+    $missed = $interfaces ? [] : missedClasses($list, $srcReal);
     if ($missed !== []) {
         foreach ($missed as $fqcn => $path) {
             fwrite(STDERR, "api-surface: the class list misses {$fqcn} (declared in {$path})\n");
