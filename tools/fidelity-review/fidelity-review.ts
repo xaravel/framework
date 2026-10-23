@@ -1033,6 +1033,15 @@ export function inItemScope(item: Pick<ActionItem, "id" | "components">, path: s
 }
 
 /**
+ * The Xaravel Test ids an action item is reviewed as assigning: those its own touched Xaravel Tests (the (e) entries in
+ * its scope) declare, in order, without repeats. An item has no manifest, so without them evidence (c) would show no
+ * Oracle fixture for a test the item changes (amendment 2026-10-22; Epic 9 retro item 4, #326).
+ */
+export function itemXaravelTestIds(touched: readonly Pick<XaravelTestEntry, "ids">[]): string[] {
+  return [...new Set(touched.flatMap((entry) => entry.ids))];
+}
+
+/**
  * `input` with evidence (h) filled in: the files another section already shows in full are named, not repeated, and
  * the whole files fill what the prompt cap leaves after every other section.
  */
@@ -3260,7 +3269,8 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     files: storyFiles,
     outOfScopeFiles,
     evidence: {
-      ...gatherEvidence(root, storyFiles, { testIds: [...subject.testIds], xaravelTestIds: [...subject.xaravelTestIds] }),
+      // An action item's assigned ids are those its touched tests declare, so (c) shows their Oracle fixtures.
+      ...gatherEvidence(root, storyFiles, { testIds: [...subject.testIds], xaravelTestIds: args.subject === "item" ? itemXaravelTestIds(xaravelTests) : [...subject.xaravelTestIds] }),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       xaravelTests,
       outOfScopeTests,

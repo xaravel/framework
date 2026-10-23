@@ -28,6 +28,7 @@ import {
   gatherEvidence,
   importedDeclarations,
   inItemScope,
+  itemXaravelTestIds,
   inStoryScope,
   ITEM_NOTE,
   fileInStoryScope,
@@ -1456,6 +1457,13 @@ xaravelTest(
     expect(itemUser).toContain(`## Action item\n\n${ITEM_NOTE}\n\n\`\`\`yaml\nid: x\n\`\`\``);
     expect(itemUser).toContain("The action item assigns no Ported Test IDs.");
     expect(itemUser).not.toContain("## Manifest");
+    // An item's assigned Xaravel Test ids are those its touched tests declare, so evidence (c) shows the Oracle fixtures
+    // of a test it changes, as a manifest's ids do for a Story (Epic 9 retro item 4, #326: XT-runtime-22's fixture).
+    expect(itemXaravelTestIds([{ ids: ["XT-runtime-22"] }, { ids: ["XT-runtime-22", "XT-runtime-23"] }, { ids: [] }])).toEqual(["XT-runtime-22", "XT-runtime-23"]);
+    const itemFixtures = gatherEvidence(root, [], { testIds: [], xaravelTestIds: itemXaravelTestIds([{ ids: ["XT-runtime-22"] }]) });
+    expect([...itemFixtures.errorFixtures, ...itemFixtures.presentFixtures].map((entry) => entry.label.split(" ")[0])).toContain("XT-runtime-22");
+    const noIds = gatherEvidence(root, [], { testIds: [], xaravelTestIds: itemXaravelTestIds([]) });
+    expect([noIds.errorFixtures, noIds.presentFixtures]).toEqual([[], []]);
   },
   180_000,
 );
