@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-22-2026 20:06
+last_updated: 10-22-2026 20:33
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1438,10 +1438,10 @@ action_items:
     action: "packages/runtime: test registrations, overlays and statics visible inside
       interleave units opened from a test frame; brands that do not leak between concurrent
       test frames; frameSlot writes on an ended unit throw; base registerClass refuses
-      a key a live test frame holds; app = null code and docblock agree; document #private
-      and constructor-at-mixin limits; fix the int-given bigint message; each with
-      an XT case that fails today (findings L1-L5, L15, L16; the S2 Oracle rows are
-      Story 9.13, decisions/MAINT-2026-10-22-epic-9-item-3-split.md)"
+      a key a live test frame holds; app = null code and docblock agree; document
+      #private and constructor-at-mixin limits; fix the int-given bigint message;
+      each with an XT case that fails today (findings L1-L5, L15, L16; the S2 Oracle
+      rows are Story 9.13, decisions/MAINT-2026-10-22-epic-9-item-3-split.md)"
     owner: "orchestrator"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
@@ -1452,7 +1452,7 @@ action_items:
       them), handles an out-of-range or NaN depth as PHP does, and the 9.6 truth table
       drives plain-number floats (findings L6-L8)"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-9-retro-2026-10-22.md"
   - id: "epic-9-retro-item-5-grader-runtime-protocols"
     epic: 9
