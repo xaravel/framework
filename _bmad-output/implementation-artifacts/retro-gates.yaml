@@ -68,3 +68,4 @@ epic-9:
   waiting_on_maintainer:
     - epic-9-retro-item-6-grader-float-and-error-equality
     - epic-9-retro-item-7-registry-per-application
+    - epic-9-retro-item-5-grader-runtime-protocols
