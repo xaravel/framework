@@ -1,6 +1,7 @@
 // Illuminate\Contracts\Support\MessageBag, from laravel/framework v13.37.0.
 // PHP's built-in `Countable` parent is no contract token: the interface extends the structural
-// form from `src/structural/`, and the token records no parent for it.
+// form from `src/structural/`, and the token records no parent for it; it lists `count` as a built-in
+// (decisions/ESC-10.2-4.md), so a test double can configure it.
 import { contract } from "../Contract";
 import { Arrayable } from "./Arrayable";
 import type { Countable } from "../structural/Countable";
@@ -71,4 +72,6 @@ export const MessageBag = contract<MessageBag, typeof MessageBagBrand>(
     setFormat: ["format"],
   },
   [Arrayable],
+  {},
+  ["count"],
 );

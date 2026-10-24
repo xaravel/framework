@@ -1,6 +1,7 @@
 // Illuminate\Contracts\Validation\ParameterizedRule, from laravel/framework v13.37.0.
 // PHP's built-in `Stringable` parent is no contract token: the interface extends the structural
-// form from `src/structural/`, and the token records no parent for it.
+// form from `src/structural/`, and the token records no parent for it; it lists `__toString` as a built-in
+// (decisions/ESC-10.2-4.md), so a test double can configure it.
 import { contract } from "../Contract";
 import type { PhpArrayLike } from "../structural/PhpArrayLike";
 import type { Stringable } from "../structural/Stringable";
@@ -19,4 +20,7 @@ export const ParameterizedRule = contract<ParameterizedRule, typeof Parameterize
   {
     toArray: [],
   },
+  [],
+  {},
+  ["__toString"],
 );
