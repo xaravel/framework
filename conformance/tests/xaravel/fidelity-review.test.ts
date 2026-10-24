@@ -62,6 +62,7 @@ import {
   RECORD_KIND,
   RECORDS_HEADING,
   readActionItem,
+  staleTestProblem,
   renderRecord,
   RETRO_ITEM_ID,
   REVIEWER_TIMEOUT_MS,
@@ -458,6 +459,21 @@ xaravelTest(
     const refused = await runFidelity(["review", "--item", itemId, "--spec", itemSpec, "--root", itemRepo.dir, "--loop-cli", "claude"], itemFakes.env);
     expect([refused.code, refused.err.at(-1)]).toEqual([1, `fidelity-review: action item ${itemId} names no packages/<component>, so it has no scope to review; nothing recorded`]);
     expect(itemFakes.calls("codex").length).toBe(1);
+    // Another component's test the item's own change made stale joins its scope with --stale-test
+    // (MAINT-2026-10-24-stale-cross-scope-tests); only an item review takes it, and a bad path runs no reviewer.
+    const staleTest = "packages/support/tests/xaravel/stale.test.ts";
+    write(itemRepo.dir, staleTest, "// re-pointed at the one source\n");
+    expect((await runFidelity(["review", "--story", "9.1", "--stale-test", staleTest, "--root", itemRepo.dir, "--loop-cli", "claude"], {})).err[0]).toBe("--stale-test needs --item: only an action item may update another component's stale test");
+    expect((await runFidelity(["status", "--item", itemId, "--spec", itemSpec, "--stale-test", staleTest, "--root", itemRepo.dir], {})).err[0]).toBe("unknown argument --stale-test");
+    const badStale = await runFidelity(["review", "--item", itemId, "--spec", itemSpec, "--stale-test", "conformance/tests/xaravel/x.test.ts", "--root", itemRepo.dir, "--loop-cli", "claude"], itemFakes.env);
+    expect([badStale.code, badStale.err.at(-1)]).toEqual([1, "fidelity-review: --stale-test conformance/tests/xaravel/x.test.ts is not a file under packages/<component>/tests/; nothing recorded"]);
+    const staleFakes = fakes({ codex: [pass("gpt-fake-1")], claude: [pass("claude-fake-1")] });
+    const staleRun = await runFidelity(["review", "--item", itemId, "--spec", itemSpec, "--stale-test", staleTest, "--stale-test", staleTest, "--root", itemRepo.dir, "--loop-cli", "claude"], staleFakes.env);
+    expect(staleRun.code).toBe(0);
+    const staleStdin = staleFakes.calls("codex")[0]!.stdin;
+    expect(staleStdin).toContain(`stale_tests: ["${staleTest}"]`);
+    expect(staleStdin).toContain("+// re-pointed at the one source");
+    expect(staleStdin).not.toContain(`Left out as outside the Story's scope (ESC-9.10-4): \`${staleTest}\``);
 
     const claudeArgv = claudeCall!.argv;
     const flag = (name: string): string => claudeArgv[claudeArgv.indexOf(name) + 1]!;
@@ -1713,6 +1729,27 @@ xaravelTest(
     expect(readActionItem(root, statusOf({ id: grader, action: "packages/nowhere: x" }), grader)).toBe(`action item ${grader} names packages/nowhere, which does not exist`);
     const scoped = { id: grader, components: ["assert", "mockery"] };
     expect(["packages/assert/src/Assert.ts", "packages/mockery/tests/x.test.ts", "packages/runtime/src/Registry.ts", "tools/fidelity-review/fidelity-review.ts", "conformance/tests/xaravel/fidelity-review.test.ts"].map((path) => inItemScope(scoped, path))).toEqual([true, true, false, false, false]);
+    // A stale test (MAINT-2026-10-24-stale-cross-scope-tests) gives an item that names no package its scope, and only
+    // that exact file joins it.
+    const lintItem = readActionItem(root, statusOf({ id: grader, action: "tools/lint-rules: one thenable list (S4)" }), grader, ["packages/contracts/tests/xaravel/async.test.ts"]);
+    expect(typeof lintItem === "string" ? lintItem : [lintItem.components, lintItem.staleTests]).toEqual([[], ["packages/contracts/tests/xaravel/async.test.ts"]]);
+    expect(typeof lintItem === "string" ? "" : lintItem.text).toEndWith('\nstale_tests: ["packages/contracts/tests/xaravel/async.test.ts"]');
+    expect(typeof graderItem === "string" ? "" : graderItem.text).not.toContain("stale_tests");
+    const staleScoped = { id: grader, components: [], staleTests: ["packages/contracts/tests/xaravel/async.test.ts"] };
+    expect(["packages/contracts/tests/xaravel/async.test.ts", "packages/contracts/tests/xaravel/other.test.ts", "packages/contracts/src/async/index.ts"].map((path) => inItemScope(staleScoped, path))).toEqual([true, false, false]);
+    const staleRoot = tempDir("xaravel-fidelity-stale-");
+    for (const file of ["packages/contracts/tests/xaravel/async.test.ts", "packages/assert/tests/xaravel/x.test.ts"]) {
+      mkdirSync(join(staleRoot, file, ".."), { recursive: true });
+      writeFileSync(join(staleRoot, file), "");
+    }
+    mkdirSync(join(staleRoot, "conformance"));
+    writeFileSync(join(staleRoot, "conformance", "protected-paths"), "/packages/assert/\n");
+    expect(staleTestProblem(staleRoot, "packages/contracts/tests/xaravel/async.test.ts")).toBeNull();
+    expect(staleTestProblem(staleRoot, "packages/assert/tests/xaravel/x.test.ts")).toBe("--stale-test packages/assert/tests/xaravel/x.test.ts is a Protected Path, which needs a Maintainer ruling (MAINT-2026-10-24-stale-cross-scope-tests)");
+    expect(staleTestProblem(staleRoot, "packages/contracts/tests/xaravel/gone.test.ts")).toBe("--stale-test packages/contracts/tests/xaravel/gone.test.ts does not exist");
+    for (const bad of ["packages/contracts/src/async/index.ts", "packages/contracts/tests/../src/x.ts", "conformance/tests/xaravel/x.test.ts", "/packages/contracts/tests/x.test.ts", "packages/contracts/tests/"]) {
+      expect(staleTestProblem(staleRoot, bad)).toBe(`--stale-test ${bad} is not a file under packages/<component>/tests/`);
+    }
     const itemUser = buildPrompt({ ...promptBase, subject: "item", storyId: grader, manifestText: "id: x", evidence: NO_EVIDENCE }).user;
     expect(itemUser.startsWith(`# Retrospective action item ${grader}: tree `)).toBe(true);
     expect(itemUser).toContain(`## Action item\n\n${ITEM_NOTE}\n\n\`\`\`yaml\nid: x\n\`\`\``);
