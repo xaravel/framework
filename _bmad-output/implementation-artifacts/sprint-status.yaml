@@ -140,7 +140,7 @@ development_status:
   10-2-port-the-contracts-for-the-core-and-service-namespaces: done
   10-3-port-the-contracts-for-the-web-and-application-namespaces: done
   10-4-container-alias-table-and-canonical-tokens: done
-  10-5-xaravel-only-contracts: in-progress  # ESC-10.5-1 ruled (decisions/ESC-10.5-1.md): AD-25 now gives Upstream hook order; ESC-10.5-2 ruled (decisions/ESC-10.5-2.md); resume XT-contracts-13 and -15 and run the Fidelity Review again
+  10-5-xaravel-only-contracts: done
   10-6-contracts-complete-and-protected: backlog
   epic-10-retrospective: optional
 

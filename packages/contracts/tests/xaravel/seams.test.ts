@@ -1,11 +1,11 @@
 // Xaravel Tests for Story 10.5: the three Xaravel-only seams of `@xaravel/contracts` (AD-27). XT-contracts-13 checks
 // `@xaravel/contracts/async` (AD-6): the thenable list against the `tools/lint-rules/thenables.ts` array it replaces,
-// `NotPromise<T>` with the repo's pinned `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on
+// that `bun run async-surface`'s `thenableTypes(REPO)` returns it (ESC-10.5-2), `NotPromise<T>` with the repo's pinned `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on
 // every package's `src/`. XT-contracts-14 checks the compiled-view ABI in `@xaravel/contracts/view` (AD-11): the
 // `RenderContext` and `RenderLoop` fields against the View `Factory`'s per-render properties and `addLoop`'s entry, and
 // `BladeHelper` against every `$__env-><method>` Upstream's Blade compilers emit and the default echo format.
-// XT-contracts-15 checks `@xaravel/contracts/testing`'s hook order (AD-25) against `InteractsWithTestCaseLifecycle`,
-// under ESC-10.5-1 Option 1.
+// XT-contracts-15 checks `@xaravel/contracts/testing`'s hook order (AD-25, as corrected by the approved ESC-10.5-1)
+// against `InteractsWithTestCaseLifecycle`.
 //
 // Each Upstream-derived part also compares with a literal copy, which runs without the snapshot. The snapshot is
 // gitignored and synced by `bun run upstream:sync`, which CI's `check` job runs under `XARAVEL_UPSTREAM=require`
@@ -208,9 +208,26 @@ const CHECK_FIXTURES: readonly CheckFixture[] = [
   },
 ];
 
+/**
+ * Runs `await thenableTypes(REPO)` from `tools/async-surface/async-surface.ts` in a child `bun` with `cwd` REPO, and
+ * prints whether it is the contracts module's own `THENABLE_TYPES` (imported by its resolved path) or the tool's.
+ */
+async function toolThenableSource(): Promise<{ code: number; stdout: string; output: string }> {
+  const script = [
+    `const { thenableTypes } = await import(${JSON.stringify(join(REPO, "tools", "async-surface", "async-surface.ts"))});`,
+    `const lint = await import(${JSON.stringify(join(REPO, "tools", "lint-rules", "thenables.ts"))});`,
+    `const contracts = await import(${JSON.stringify(join(REPO, "packages", "contracts", "src", "async", "index.ts"))});`,
+    "const list = await thenableTypes(process.cwd());",
+    "console.log(JSON.stringify({ contracts: list === contracts.THENABLE_TYPES, tool: list === lint.THENABLE_TYPES, length: list.length }));",
+  ].join("\n");
+  const proc = Bun.spawn([process.execPath, "-e", script], { cwd: REPO, stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  return { code, stdout, output: `${stdout}${stderr}` };
+}
+
 xaravelTest(
   "XT-contracts-13",
-  "@xaravel/contracts/async exports THENABLE_TYPES, frozen, the 26 FQCNs of tools/lint-rules/thenables.ts's list in its order with every thenable the Story's AC names, the list async-surface's thenableTypes() prefers when @xaravel/contracts/async resolves from its root, here resolved from the contracts package and a dependent package to a non-empty string array (resolution from the repository root waits on ESC-10.5-2), and NotPromise<T>, which is T for a non-thenable and never for a Promise or PromiseLike and distributes over a union, so a sync map(fn: () => NotPromise<U>) rejects an async callback (AD-6.8, AD-27.2); the PromiseLike check reports a class with an instance then member (method, async, generic, getter, setter, field, optional field, constructor parameter property, quoted or computed name, class expression, anonymous generic class expression, nested or returned for mixin) and no PromiseLike in its own implements list, ignores static members, object literals, .then( calls, comments, strings, templates and regexes, and reports nothing for any packages/*/src file (ESC-6.1-1 item 2)",
+  "@xaravel/contracts/async exports THENABLE_TYPES, frozen, the 26 FQCNs of tools/lint-rules/thenables.ts's list in its order with every thenable the Story's AC names, the list async-surface's thenableTypes(REPO) returns from the repository root (the contracts module's own array, not the tool's, ESC-10.5-2 approved), with @xaravel/contracts/async resolving from the contracts package and a dependent package to src/async/index.ts, and NotPromise<T>, which is T for a non-thenable and never for a Promise or PromiseLike and distributes over a union, so a sync map(fn: () => NotPromise<U>) rejects an async callback (AD-6.8, AD-27.2); the PromiseLike check reports a class with an instance then member (method, async, generic, getter, setter, field, optional field, constructor parameter property, quoted or computed name, class expression, anonymous generic class expression, nested or returned for mixin) and no PromiseLike in its own implements list, ignores static members, object literals, .then( calls, comments, strings, templates and regexes, and reports nothing for any packages/*/src file (ESC-6.1-1 item 2)",
   async () => {
     // The list: frozen, the tool's list in order, every AC name.
     Assert.assertTrue(Object.isFrozen(THENABLE_TYPES));
@@ -221,14 +238,17 @@ xaravelTest(
       Assert.assertTrue(THENABLE_TYPES.includes(name), name);
     }
 
-    // What async-surface reads: the subpath resolves from a package to src/async/index.ts, whose list is a non-empty string array.
+    // What async-surface reads: the subpath resolves from a package to src/async/index.ts.
+    const contractsAsync = join(REPO, "packages", "contracts", "src", "async", "index.ts");
     for (const from of [PACKAGE, join(REPO, "packages", "support")]) {
-      const path = Bun.resolveSync("@xaravel/contracts/async", from);
-      Assert.assertSame(join(REPO, "packages", "contracts", "src", "async", "index.ts"), path, relative(REPO, from));
-      const mod = (await import(path)) as { THENABLE_TYPES?: unknown };
-      const list = mod.THENABLE_TYPES;
-      Assert.assertTrue(Array.isArray(list) && list.length > 0 && list.every((item) => typeof item === "string"), "a non-empty string array");
+      Assert.assertSame(contractsAsync, Bun.resolveSync("@xaravel/contracts/async", from), relative(REPO, from));
     }
+
+    // The tool's own return value from the repository root (ESC-10.5-2), in a child `bun` run from REPO, so this test
+    // never imports the tool or its parser.
+    const reads = await toolThenableSource();
+    Assert.assertSame(0, reads.code, reads.output);
+    Assert.assertSame(JSON.stringify({ contracts: true, tool: false, length: 26 }), reads.stdout.trim().split("\n").at(-1) ?? "", reads.output);
 
     // NotPromise, compiled.
     const [ok, rejected] = await compileEach("xaravel-contracts-async-", [NOT_PROMISE_OK, NOT_PROMISE_ASYNC]);
@@ -446,7 +466,7 @@ xaravelTest(
 // ---------------------------------------------------------------------------------------------------------------------
 // XT-contracts-15: @xaravel/contracts/testing
 
-/** The hook order under ESC-10.5-1 Option 1: Upstream's. */
+/** The hook order AD-25 states, as corrected by the approved ESC-10.5-1: Upstream's. */
 const HOOK_ORDER: readonly string[] = ["createApplication", "setUp<Trait>", "afterApplicationCreated", "test", "tearDown<Trait>", "beforeApplicationDestroyed"];
 
 /** The hook order `InteractsWithTestCaseLifecycle.php` runs, parsed from its source. */
@@ -484,7 +504,7 @@ function upstreamHookOrder(): string[] {
 
 xaravelTest(
   "XT-contracts-15",
-  "@xaravel/contracts/testing exports TEST_HOOK_ORDER, frozen, createApplication → setUp<Trait> → afterApplicationCreated → test → tearDown<Trait> → beforeApplicationDestroyed, the order Upstream's InteractsWithTestCaseLifecycle runs (setUpTheTestEnvironment's refreshApplication, setUpTraits and afterApplicationCreated callbacks, and setUpTraits registering each tearDown<Trait> as an earlier beforeApplicationDestroyed callback), under ESC-10.5-1 Option 1 in place of AD-25's wording (AD-27.2)",
+  "@xaravel/contracts/testing exports TEST_HOOK_ORDER, frozen, createApplication → setUp<Trait> → afterApplicationCreated → test → tearDown<Trait> → beforeApplicationDestroyed, the order Upstream's InteractsWithTestCaseLifecycle runs (setUpTheTestEnvironment's refreshApplication, setUpTraits and afterApplicationCreated callbacks, and setUpTraits registering each tearDown<Trait> as an earlier beforeApplicationDestroyed callback), as AD-25's Hook order line states it since the approved ESC-10.5-1 (AD-25, AD-27.2)",
   () => {
     Assert.assertTrue(Object.isFrozen(TEST_HOOK_ORDER));
     Assert.assertSame(JSON.stringify(HOOK_ORDER), JSON.stringify(TEST_HOOK_ORDER));
