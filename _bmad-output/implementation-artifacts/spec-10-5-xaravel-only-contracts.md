@@ -2,7 +2,7 @@
 title: 'Story 10.5: Xaravel-only contracts'
 type: 'feature'
 created: '2026-10-24'
-status: 'done'
+status: 'in-review'
 baseline_revision: '2482c9a75b477055687b8717c45cf90440562e7d'
 review_loop_iteration: 0
 followup_review_recommended: false

@@ -1,9 +1,10 @@
 // Xaravel Tests for Story 10.5: the three Xaravel-only seams of `@xaravel/contracts` (AD-27). XT-contracts-13 checks
 // `@xaravel/contracts/async` (AD-6): the thenable list against the `tools/lint-rules/thenables.ts` array it replaces,
-// that `bun run async-surface`'s `thenableTypes(REPO)` returns it (ESC-10.5-2), `NotPromise<T>` with the repo's pinned `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on
-// every package's `src/`. XT-contracts-14 checks the compiled-view ABI in `@xaravel/contracts/view` (AD-11): the
-// `RenderContext` and `RenderLoop` fields against the View `Factory`'s per-render properties and `addLoop`'s entry, and
-// `BladeHelper` against every `$__env-><method>` Upstream's Blade compilers emit and the default echo format.
+// that `bun run async-surface`'s `thenableTypes(REPO)` returns it (ESC-10.5-2), `NotPromise<T>` with the repo's pinned
+// `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on every package's `src/`. XT-contracts-14
+// checks the compiled-view ABI in `@xaravel/contracts/view` (AD-11): the `RenderContext` and `RenderLoop` fields
+// against the View `Factory`'s per-render properties and `addLoop`'s entry, and `BladeHelper` against every
+// `$__env-><method>` Upstream's Blade compilers emit and the default echo format.
 // XT-contracts-15 checks `@xaravel/contracts/testing`'s hook order (AD-25, as corrected by the approved ESC-10.5-1)
 // against `InteractsWithTestCaseLifecycle`.
 //
