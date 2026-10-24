@@ -56,7 +56,7 @@ function double(...targets: unknown[]): object {
   return (Double.for as (...args: unknown[]) => object)(...targets);
 }
 
-xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double of it (or of an intersection of such tokens) is instanceof every contract in the parents' closure and nothing else; its doubled methods stay the tokens' own (ESC-10.1-6)", () => {
+xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double of it (or of an intersection of such tokens) is instanceof every contract in the parents' closure and nothing else; it doubles the parents' methods too (ESC-10.1-6; ESC-10.2-4 supersedes the own-list rule)", () => {
   // Child: Child -> Parent -> Root.
   const Root = token("XtM\\Root", ["root"]);
   const Parent = token("XtM\\Parent", ["parent"], () => [Root]);
@@ -65,9 +65,9 @@ xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double
   const child = double(Child);
   expect([child instanceof (Child as never), child instanceof (Parent as never), child instanceof (Root as never), child instanceof (Unrelated as never)]).toEqual([true, true, true, false]);
   expect(brandsOf(child)).toEqual(["XtM\\Child", "XtM\\Parent", "XtM\\Root"]);
-  // Only brands are added: the doubled methods are the child's own list.
+  // ESC-10.2-4 supersedes ESC-10.1-6's interim own-list rule: the parents' methods are doubled too.
   const proto = Object.getPrototypeOf(child) as object;
-  expect([Object.hasOwn(proto, "child"), Object.hasOwn(proto, "parent"), Object.hasOwn(proto, "root")]).toEqual([true, false, false]);
+  expect([Object.hasOwn(proto, "child"), Object.hasOwn(proto, "parent"), Object.hasOwn(proto, "root")]).toEqual([true, true, true]);
   // Parent brands are non-enumerable configurable getters, as the own brand is.
   const descriptor = Object.getOwnPropertyDescriptor(proto, Symbol.for("XtM\\Root"))!;
   expect([descriptor.enumerable, descriptor.configurable, typeof descriptor.get]).toEqual([false, true, "function"]);
@@ -89,7 +89,7 @@ xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double
   // A bare symbol parent is its own brand.
   expect((double(token("XtM\\WithSymbol", [], () => [Symbol.for("X\\Base")])) as Record<symbol, unknown>)[Symbol.for("X\\Base")]).toBe(true);
 
-  // Intersection: every parent of both tokens; the doubled methods are the two tokens' own, never a parent's.
+  // Intersection: every parent of both tokens; the doubled methods are the two tokens' and their parents' (ESC-10.2-4).
   const BaseA = token("XtM\\BaseA", ["ba"]);
   const BaseB = token("XtM\\BaseB", ["bb"]);
   const TokA = token("XtM\\TokA", ["fa"], () => [BaseA]);
@@ -98,7 +98,7 @@ xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double
   expect([TokA, TokB, BaseA, BaseB, Unrelated].map((t) => both instanceof (t as never))).toEqual([true, true, true, true, false]);
   expect(brandsOf(both)).toEqual(["XtM\\BaseA", "XtM\\BaseB", "XtM\\TokA", "XtM\\TokB"]);
   const bothProto = Object.getPrototypeOf(both) as object;
-  expect(["fa", "fb", "ba", "bb"].map((method) => Object.hasOwn(bothProto, method))).toEqual([true, true, false, false]);
+  expect(["fa", "fb", "ba", "bb"].map((method) => Object.hasOwn(bothProto, method))).toEqual([true, true, true, true]);
 
   // Not an iterable, or an entry that is not a contract.
   expect(messageOf(() => double(token("XtM\\Bad", [], () => 42)))).toBe("TypeError: XtM\\Bad: [Symbol.for('xaravel.contract.parents')] must be an iterable of contract tokens");

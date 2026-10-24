@@ -6,8 +6,10 @@
 // The `php*` helpers other than the two comparisons are the grader's PHP value
 // layer over the AD-9 value model, exported so @xaravel/mockery reads values
 // exactly as the grader does (Epic 4 retrospective A1). XT-conformance-7 allows
-// no subpath export, so they sit on the index. So does `contractParentBrands`,
-// the parents walk both packages' test doubles share (ESC-10.1-6).
+// no subpath export, so they sit on the index. So do `contractParentBrands`,
+// `contractMethods` and `defineContractProtocols`, the parents walk, the
+// contract methods and their JS protocols both packages' test doubles share
+// (ESC-10.1-6, ESC-10.2-4).
 import {
   arrayEntries as phpArrayEntries,
   isBrandedArray as phpIsBrandedArray,
@@ -32,7 +34,7 @@ import { Constraint } from "./Framework/Constraint";
 import { Exception } from "./Framework/Exception/Exception";
 import { SkippedWithMessageException } from "./Framework/Exception/SkippedWithMessageException";
 import { ExpectationFailedException } from "./Framework/ExpectationFailedException";
-import { contractParentBrands } from "./Framework/MockObject/Generator/ContractParents";
+import { contractMethods, contractParentBrands, defineContractProtocols } from "./Framework/MockObject/Generator/ContractParents";
 import { MockBuilder } from "./Framework/MockObject/MockBuilder";
 import { TestCase } from "./Framework/TestCase";
 import { objectHandle as phpObjectHandle } from "./exporter/Exporter";
@@ -43,7 +45,9 @@ for (const exported of [
   AssertionFailedError,
   ComparisonFailure,
   Constraint,
+  contractMethods,
   contractParentBrands,
+  defineContractProtocols,
   Exception,
   ExpectationFailedException,
   MockBuilder,
@@ -77,7 +81,9 @@ export {
   AssertionFailedError,
   ComparisonFailure,
   Constraint,
+  contractMethods,
   contractParentBrands,
+  defineContractProtocols,
   Exception,
   ExpectationFailedException,
   MockBuilder,
@@ -100,6 +106,7 @@ export {
   xaravelTest,
 };
 export type { ClassOrInterface } from "./Framework/Assert";
+export type { ContractMethod, ContractProtocols } from "./Framework/MockObject/Generator/ContractParents";
 export type { InvocationMocker } from "./Framework/MockObject/Runtime/Interface/InvocationMocker";
 export type { InvocationStubber } from "./Framework/MockObject/Runtime/Interface/InvocationStubber";
 export type { MockObject } from "./Framework/MockObject/Runtime/Interface/MockObject";

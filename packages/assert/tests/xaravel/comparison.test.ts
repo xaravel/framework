@@ -237,7 +237,7 @@ xaravelTest("XT-assert-3", "@xaravel/assert has no graded-package edge or import
 
   // Assigning to an export, an exported function or its prototype throws.
   const exported = Object.entries(api);
-  expect(exported.map(([name]) => name).sort()).toEqual(["Assert", "AssertionFailedError", "ComparisonFailure", "Constraint", "Exception", "ExpectationFailedException", "MockBuilder", "SkippedWithMessageException", "TestCase", "contractParentBrands", "phpArrayEntries", "phpClassNameOf", "phpIsArray", "phpIsBrandedArray", "phpIsObject", "phpIsResource", "phpLooseEquals", "phpObjectHandle", "phpObjectProps", "phpStrictEquals", "phpToString", "phpVarExport", "portedTest", "recordAssertion", "xaravelTest"]);
+  expect(exported.map(([name]) => name).sort()).toEqual(["Assert", "AssertionFailedError", "ComparisonFailure", "Constraint", "Exception", "ExpectationFailedException", "MockBuilder", "SkippedWithMessageException", "TestCase", "contractMethods", "contractParentBrands", "defineContractProtocols", "phpArrayEntries", "phpClassNameOf", "phpIsArray", "phpIsBrandedArray", "phpIsObject", "phpIsResource", "phpLooseEquals", "phpObjectHandle", "phpObjectProps", "phpStrictEquals", "phpToString", "phpVarExport", "portedTest", "recordAssertion", "xaravelTest"]);
   for (const [name, value] of exported) {
     expect(() => {
       (api as Record<string, unknown>)[name] = () => true;
