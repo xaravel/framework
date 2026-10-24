@@ -3,6 +3,9 @@ decision: approved
 decided_by: Maintainer
 date: 2026-10-24
 escalation_sha256: "adbbf439ff173df5c297b170ccb441f764dd3954ae43ce801f904d0ad159f340"
+fidelity_waiver:
+  subject: "epic-10-item-6-structural-thenables"
+  items: [F-7]
 ---
 
 # ESC-10.3-2: approved, option 1 (a structural type stands for the thenable its header names)
@@ -35,3 +38,14 @@ The change is action item **`epic-10-item-6-structural-thenables`**, owner orche
 - The tool change gets the other review layers, and merges under the first amendment like any orchestrator Infrastructure change.
 
 Story 10.3 resumes after the item is done.
+
+## Waiver and clarification (2026-10-24, after #367)
+
+- **F-7 is waived for `epic-10-item-6-structural-thenables`** (`decisions/MAINT-2026-10-23-fidelity-waivers.md`).
+  - The item's `--item` Fidelity Review had reviewer 2 pass every item and reviewer 1 reject F-7 only.
+  - The reject was for the `contracts.jsonl` rows, Upstream sources and contract files that XT-contracts-5 and -8 read, which the prompt does not carry. That is the evidence gap waived for Story 10.2 (ESC-10.2-9, ESC-10.2-10).
+  - A fail on any other item still blocks.
+- **A structural file's own methods get no `thenable` line.** An example is `PendingDispatch.onQueue()` returning `this`. The narrowing the item made is confirmed:
+  - a structural type is a contract's subset of an Upstream class (AD-1.2);
+  - that class's own surface, `then()` included, belongs to the port that registers it (`@xaravel/foundation`, `@xaravel/bus`);
+  - only a contract method that returns a structural thenable gets a line.
