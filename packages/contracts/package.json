@@ -54,7 +54,9 @@
     "./session": "./src/session/index.ts",
     "./session/middleware": "./src/session/middleware/index.ts",
     "./view": "./src/view/index.ts",
-    "./aliases": "./src/aliases/index.ts"
+    "./aliases": "./src/aliases/index.ts",
+    "./async": "./src/async/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"
