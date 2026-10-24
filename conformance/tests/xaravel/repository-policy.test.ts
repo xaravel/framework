@@ -818,6 +818,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     "bun install --frozen-lockfile --ignore-scripts",
     // ESC-10.2-8: the Xaravel Tests whose expectations come from the Upstream snapshot run against it, not skip.
     "bun run upstream:sync",
+    // MAINT-2026-10-24-epic-10-items item 7: the synced snapshot is verified against the pin, with no network.
+    "bun run upstream:check",
     // Story 5.9: every Xaravel Test under the harness; UNDECLARED, LATE and FAIL results gate the merge (FR-115, AD-15).
     // It is the job's only test run: every test file is one the harness runs (XT-conformance-119), so a plain
     // `bun run test` would run them all a second time.

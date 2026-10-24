@@ -312,6 +312,22 @@ export function parseDecision(file: string, text: string): DecisionResult {
   if (!parsed.body.split("\n").some((line) => line.trim() !== "" && !isHeading(line))) {
     violations.push(bad("rationale", "is missing; the body after the frontmatter needs at least one line that is neither blank nor a heading"));
   }
+  // A Maintainer waiver (tools/fidelity-review `WAIVER_FIELD`, ESC-10.2-9): an unquoted `subject: 9.10` is the number
+  // 9.1 and would waive the wrong Story, so the subject must be a quoted string (MAINT-2026-10-24-epic-10-items).
+  if ("fidelity_waiver" in parsed.fields) {
+    const waiver = parsed.fields["fidelity_waiver"];
+    const fields = typeof waiver === "object" && waiver !== null && !Array.isArray(waiver) ? (waiver as Record<string, unknown>) : null;
+    const subject = fields?.["subject"];
+    const items = fields?.["items"];
+    if (fields === null) {
+      violations.push(bad("fidelity_waiver", `must be a mapping of subject and items, ${describe(waiver)}`));
+    } else if (typeof subject !== "string" || subject.trim() === "") {
+      violations.push(bad("fidelity_waiver.subject", `must be the Story or action item id as a quoted string (an unquoted 9.10 reads as 9.1), ${describe(subject)}`));
+    }
+    if (fields !== null && (!Array.isArray(items) || items.length === 0 || !items.every((item) => typeof item === "string" && /^F-[1-9]\d*$/.test(item)))) {
+      violations.push(bad("fidelity_waiver.items", `must be a non-empty list of checklist ids F-<n>, ${describe(items)}`));
+    }
+  }
   if (violations.length > 0 || id === null) {
     return { decision: null, violations };
   }

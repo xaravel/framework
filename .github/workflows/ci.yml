@@ -9,7 +9,8 @@
 # committed request, naming the file (Story 3.3, FR-6, AD-15). It needs no
 # install, so it stays fast, and it is a required check on main
 # (decisions/MAINT-2026-10-18-epic-3-items.md, Epic 3 retro S2): a forged
-# fixture cannot merge. `check` syncs the Upstream snapshot first and runs the
+# fixture cannot merge. `check` syncs and checks the Upstream snapshot first
+# (decisions/MAINT-2026-10-24-epic-10-items.md item 7) and runs the
 # Xaravel Tests with XARAVEL_UPSTREAM=require, so a test whose expectations come
 # from conformance/upstream/ fails there instead of skipping when it is missing
 # (decisions/ESC-10.2-8.md). It runs the other repository gates: `bun test`,
@@ -173,6 +174,8 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
       - name: Sync the Upstream snapshot
         run: bun run upstream:sync
+      - name: Check the Upstream snapshot
+        run: bun run upstream:check
       - name: Run every test file under the harness
         run: bun run harness --xaravel
         env:

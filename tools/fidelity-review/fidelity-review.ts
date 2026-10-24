@@ -3544,7 +3544,8 @@ export interface FidelityWaiver {
 /**
  * The waivers for `subject` (ESC-10.2-9): each `decisions/ESC-*.md` with `decided_by: Maintainer` whose Escalation is
  * `approved` and current (`escalationStatus`), and whose `fidelity_waiver` is `{ subject, items }` with `subject` equal
- * to `subject` and `items` a non-empty list of checklist ids. A malformed waiver grants nothing.
+ * to `subject` and `items` a non-empty list of checklist ids. A malformed waiver grants nothing, and so does a `subject`
+ * that is not a YAML string (MAINT-2026-10-24-epic-10-items).
  */
 export function fidelityWaivers(root: string, subject: string): FidelityWaiver[] {
   const dir = join(root, "decisions");
@@ -3570,7 +3571,8 @@ export function fidelityWaivers(root: string, subject: string): FidelityWaiver[]
     }
     const waiver = fields[WAIVER_FIELD];
     const items = waiver["items"];
-    if (String(waiver["subject"]) !== subject || !Array.isArray(items) || items.length === 0 || !items.every((item) => typeof item === "string" && /^F-[1-9]\d*$/.test(item))) {
+    // Only a quoted subject counts: an unquoted `9.10` is the number 9.1 (`escalations:check` refuses it too).
+    if (typeof waiver["subject"] !== "string" || waiver["subject"] !== subject || !Array.isArray(items) || items.length === 0 || !items.every((item) => typeof item === "string" && /^F-[1-9]\d*$/.test(item))) {
       continue;
     }
     try {

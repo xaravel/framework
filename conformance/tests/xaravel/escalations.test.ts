@@ -478,6 +478,22 @@ xaravelTest("XT-conformance-27", "a decision file requires decision: approved | 
   });
   expect((await runCli(["digest", "ESC-9.1-01"])).code).toBe(2);
   expect((await runCli(["digest"])).code).toBe(2);
+
+  // A Maintainer waiver's subject is a quoted string, and its items checklist ids (MAINT-2026-10-24-epic-10-items).
+  const waived = (waiver: string) => {
+    const text = decision("approved");
+    expect(text).toContain('decided_by: "Maintainer"\n');
+    return text.replace('decided_by: "Maintainer"\n', `decided_by: "Maintainer"\nfidelity_waiver:\n${waiver}`);
+  };
+  expect(check(waived('  subject: "9.10"\n  items: [F-7]\n'))).toEqual([]);
+  expect(check(waived('  subject: "epic-10-item-6-structural-thenables"\n  items: [F-2, F-7]\n'))).toEqual([]);
+  expect(check(waived("  subject: 9.10\n  items: [F-7]\n"))).toEqual([
+    `invalid decision: ${dec("ESC-9.1-1")}: fidelity_waiver.subject must be the Story or action item id as a quoted string (an unquoted 9.10 reads as 9.1), got 9.1 (AD-16)`,
+  ]);
+  expect(check(waived('  subject: ""\n  items: [F-7]\n'))[0]).toContain(": fidelity_waiver.subject must be ");
+  expect(check(waived('  subject: "9.1"\n  items: []\n'))[0]).toContain(": fidelity_waiver.items must be a non-empty list of checklist ids F-<n>");
+  expect(check(waived('  subject: "9.1"\n  items: [all]\n'))[0]).toContain(": fidelity_waiver.items must be ");
+  expect(check(decision("approved").replace('decided_by: "Maintainer"\n', 'decided_by: "Maintainer"\nfidelity_waiver: F-7\n'))[0]).toContain(": fidelity_waiver must be a mapping of subject and items");
 });
 
 xaravelTest("XT-conformance-28", "escalationStatus(id) is open with no decision file, and approved or rejected only once a valid decision file exists (FR-114, AD-16.9)", async () => {

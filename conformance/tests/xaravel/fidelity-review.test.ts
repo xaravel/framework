@@ -2122,9 +2122,12 @@ xaravelTest(
       decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: []\n'),
       decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: [all]\n'),
       decisionText(""),
+      // An unquoted `9.10` is the number 9.1: it waives neither Story (MAINT-2026-10-24-epic-10-items).
+      decisionText("fidelity_waiver:\n  subject: 9.10\n  items: [F-7]\n"),
     ]) {
       writeDecision(bad);
       expect(fidelityWaivers(waiverRoot, "9.1")).toEqual([]);
+      expect(fidelityWaivers(waiverRoot, "9.10")).toEqual([]);
     }
     // A reject on another tree does not stand on this one, and a reject in one slot leaves the other slot's count alone.
     // The records after it must address its findings (`prior`, ESC-8.8-1 item 3); one that omits them is malformed.

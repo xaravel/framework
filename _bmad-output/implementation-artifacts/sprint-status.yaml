@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 12:51
+last_updated: 10-24-2026 13:40
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1556,12 +1556,13 @@ action_items:
     ref: "decisions/ESC-10.3-2.md"
   - id: "epic-10-retro-item-1-phase-1-exit"
     epic: 10
-    action: "Sign the Phase 1 exit: merge decisions/PHASE-1-EXIT.md so the after-phase:1
-      entry in conformance/protected-paths makes packages/contracts/** Protected,
-      as Story 10.6 AC2 requires (finding S1)"
+    action: "At the Phase 1 exit, after Epic 16's retrospective: sign decisions/PHASE-1-EXIT.md
+      so the after-phase:1 entry in conformance/protected-paths makes packages/contracts/**
+      Protected (Story 10.6 AC2; finding S1, accepted as activating at the Phase 1
+      exit by design)"
     owner: "Maintainer"
     status: open
-    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
   - id: "epic-10-retro-item-2-token-php-value"
     epic: 10
     action: "Rule what a contract token is as a PHP value: its string conversion (Symbol.toPrimitive
@@ -1569,8 +1570,8 @@ action_items:
       value model, encoders, exporter and assert read it (today an array; PHP's X::class
       is a string) (findings L1, L2)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
   - id: "epic-10-retro-item-3-harden-contract-and-aliases"
     epic: 10
     action: "packages/contracts: validateAliasTable normalises table entries as queries
@@ -1611,8 +1612,8 @@ action_items:
       602 give the corrected AD-25 hook order (decisions/ESC-10.5-1.md) (findings
       S2, S3)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
   - id: "epic-10-retro-item-7-deferred-tool-defects"
     epic: 10
     action: "Rule on three deferred tool defects: an unquoted fidelity_waiver subject
@@ -1620,8 +1621,8 @@ action_items:
       with no reviewer run under a waiver, against MAINT-2026-10-23-fidelity-waivers.md
       rule 4; CI's check job runs upstream:sync with no upstream:check (finding P3)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
   - id: "epic-10-retro-item-8-remove-scratch-artifacts"
     epic: 10
     action: "Remove committed scratch artifacts under _bmad-output/implementation-artifacts/:
@@ -1639,3 +1640,17 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-10-token-class-string"
+    epic: 10
+    action: "packages/runtime and packages/assert (packages/mockery if it prints a token):
+      a contract token is its Upstream FQCN class-string as a PHP value. jsonEncode,
+      phpSerialize and phpVarExport write it as that string; assert's exporter and
+      ==/=== read it as that string, so assertSame(Arrayable, its FQCN string) passes;
+      JS coercion is unchanged (Symbol.toPrimitive gives the brand). Uses item 4's
+      isContractToken, so it runs after item 4. XT cases for each encoder, the exporter
+      and assertSame, declaring consequence AD-9.8. One approved tools/ change: a tools/lint-rules rule that refuses
+      string-coercing a token in packages/*/src (messages use fqcn(token)), with tests
+      (AD-9 Contract tokens; decisions/MAINT-2026-10-24-epic-10-items.md item 2)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
