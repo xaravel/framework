@@ -2,7 +2,8 @@
 title: 'Story 10.6: Contracts complete and Protected'
 type: 'feature'
 created: '2026-10-24'
-status: 'ready-for-dev'
+status: 'in-progress'
+baseline_revision: '79600b6b0dcda998ca162804f46111cb4e173029'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
