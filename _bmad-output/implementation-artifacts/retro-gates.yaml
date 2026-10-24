@@ -69,3 +69,14 @@ epic-9:
     - epic-9-retro-item-6-grader-float-and-error-equality
     - epic-9-retro-item-7-registry-per-application
     - epic-9-retro-item-5-grader-runtime-protocols
+epic-10:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-10-retro-item-1-phase-1-exit
+    - epic-10-retro-item-2-token-php-value
+    - epic-10-retro-item-6-reconcile-planning-text
+    - epic-10-retro-item-7-deferred-tool-defects

@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 01:26
+last_updated: 10-24-2026 12:51
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -142,7 +142,7 @@ development_status:
   10-4-container-alias-table-and-canonical-tokens: done
   10-5-xaravel-only-contracts: done
   10-6-contracts-complete-and-protected: done
-  epic-10-retrospective: optional
+  epic-10-retrospective: done
 
   epic-11: backlog
   11-1-macroable-trait: backlog
@@ -1554,3 +1554,88 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-10.3-2.md"
+  - id: "epic-10-retro-item-1-phase-1-exit"
+    epic: 10
+    action: "Sign the Phase 1 exit: merge decisions/PHASE-1-EXIT.md so the after-phase:1
+      entry in conformance/protected-paths makes packages/contracts/** Protected,
+      as Story 10.6 AC2 requires (finding S1)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-2-token-php-value"
+    epic: 10
+    action: "Rule what a contract token is as a PHP value: its string conversion (Symbol.toPrimitive
+      gives the brand for every hint, so interpolation throws) and how the runtime
+      value model, encoders, exporter and assert read it (today an array; PHP's X::class
+      is a string) (findings L1, L2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-3-harden-contract-and-aliases"
+    epic: 10
+    action: "packages/contracts: validateAliasTable normalises table entries as queries
+      are (leading backslash, case-insensitive contract prefix); refuse an extra token
+      that collides with an exported FQCN or is not a contract token; contract() rejects
+      case-insensitive duplicate members, duplicate or self parents and a member also
+      listed as a builtin; decide and test a static-brand class under instanceof;
+      XT cases for each and for canonicalToken on a non-abstract value (findings L3-L6,
+      L9)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-4-one-token-predicate"
+    epic: 10
+    action: "packages/runtime, packages/contracts, packages/assert and packages/mockery:
+      one isContractToken predicate exported beside tokenFqcn in packages/runtime
+      and used by contracts, assert and Mockery; one CONTRACT_PARENTS declaration;
+      the same brand-getter descriptor and nameless-token display in both doubles;
+      no assertion removed or weakened (findings L7, L8)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-5-api-surface-blind-spots"
+    epic: 10
+    action: "tools/api-surface: check AD-26 options key types and refuse a union member
+      standing for the options object; check a reserved-word parameter's mapped name;
+      walk an interface's extends so a dropped parent is reported; tests in conformance/tests/xaravel/api-surface.test.ts;
+      api-surface:gate contracts still passes or an Escalation is raised for a real
+      mismatch (finding S6)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-6-reconcile-planning-text"
+    epic: 10
+    action: "Reconcile the planning text with Epic 10's rulings: AD-1 and Story 10.4's
+      AC say what canonicalToken returns for a service with no contract and for unrelated
+      sibling contracts (decisions/ESC-10.4-1.md); Story 10.5's AC and epics.md line
+      602 give the corrected AD-25 hook order (decisions/ESC-10.5-1.md) (findings
+      S2, S3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-7-deferred-tool-defects"
+    epic: 10
+    action: "Rule on three deferred tool defects: an unquoted fidelity_waiver subject
+      parses as a number (fidelity-review.ts fidelityWaivers); review() reports current
+      with no reviewer run under a waiver, against MAINT-2026-10-23-fidelity-waivers.md
+      rule 4; CI's check job runs upstream:sync with no upstream:check (finding P3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-8-remove-scratch-artifacts"
+    epic: 10
+    action: "Remove committed scratch artifacts under _bmad-output/implementation-artifacts/:
+      retro-9-consequence-rows-attempt.patch, bmad-build-auto-result-epic-9-retro-item-3-scope-registry-gaps.md
+      and bmad-build-auto-result-retro-5-story-check-fixtures-gaps.md, after checking
+      nothing links to them (finding P5)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+  - id: "epic-10-retro-item-9-one-thenable-list"
+    epic: 10
+    action: "tools/lint-rules: the lint plugin reads its thenable list from @xaravel/contracts/async,
+      as tools/async-surface does, and tools/lint-rules/thenables.ts keeps no copy
+      (finding S4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
