@@ -28,4 +28,4 @@ Protected Paths are unchanged. `--stale-test` refuses a Protected Path, which to
 
 ## Epic 10 item 9
 
-`epic-10-retro-item-9-one-thenable-list` resumes under this rule. The lint plugin reads its thenable list from `@xaravel/contracts/async`, and `tools/lint-rules/thenables.ts` keeps no copy. XT-contracts-13 is re-pinned to assert that the plugin's list is the contracts module's array, the same 26 FQCNs in the same order, read from that one source rather than by parsing a second list. The item leaves `waiting_on_maintainer` and stays `in-progress`.
+`epic-10-retro-item-9-one-thenable-list` resumes under this rule. The lint plugin reads its thenable list from `@xaravel/contracts/async`, and `tools/lint-rules/thenables.ts` keeps no copy. XT-contracts-13 (`packages/contracts/tests/xaravel/seams.test.ts`, passed as `--stale-test`) is re-pinned to assert that the plugin's list is the contracts module's array, the same 26 FQCNs in the same order, read from that one source rather than by parsing a second list. The item leaves `waiting_on_maintainer` and stays `in-progress`.
