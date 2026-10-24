@@ -2,7 +2,7 @@
 div: 1
 title: "Async IO Terminals"
 cites: ["AD-6", "AD-1"]
-sources: ["decisions/ESC-10.2-3.md"]
+sources: ["decisions/ESC-10.2-3.md", "decisions/ESC-10.3-1.md"]
 fewer_assertions: []
 ---
 
@@ -35,3 +35,4 @@ fewer_assertions: []
 - **DIV-1.2** Async callbacks use the async companions. Where an Upstream callback passed to a sync API performs IO, the Ported Test calls the matching companion (`eachAsync`, `mapAsync`, `filterAsync`, `rejectAsync`, `firstAsync`, `everyAsync`, `containsAsync` or `partitionAsync`) and awaits it. The assertions on its result are unchanged.
 - **DIV-1.3** Lazy database collections are async. `instanceof LazyCollection` on the result of `cursor()` or `lazy()` becomes `instanceof AsyncLazyCollection`, and iterating it uses `for await`.
 - **DIV-1.4** A validator's message bag is its last completed run's. `Validator::getMessageBag()` (`MessageProvider`, sync) returns the bag of the last awaited `validate()`, `passes()`, `fails()` or `errors()` run, and an empty bag before one; Upstream runs the rules on first access, which is async under AD-6. A Ported Test that reads a validator's message bag before running it awaits `passes()` first, marked with this clause (ESC-10.2-3).
+- **DIV-1.5** A view's creators run before its render. `View\Factory::make()` and `file()` stay sync and return the View (AD-11): when the `creating: <name>` event has listeners, they start its dispatch at once, in Upstream's order, and the View keeps that dispatch, which `render()` awaits before the composers and the template run. A creator still runs before every composer and before the render. Upstream's creators finish before `make()` returns, so data an async creator sets is not visible to code that reads the View synchronously between `make()` and `render()`. A Ported Test that reads such data before rendering awaits `render()` first, marked with this clause (ESC-10.3-1).
