@@ -127,7 +127,7 @@ function copyStatics(name: string, statics: unknown): Readonly<Record<string, Co
   return Object.freeze(Object.fromEntries(entries));
 }
 
-/** The built-in parents' methods by PHP name, in the order each parent lists them (ESC-10.2-4). */
+/** The built-in parents' methods by PHP name (ESC-10.2-4); a contract passes them in each parent's order. */
 const BUILTIN_METHODS: ReadonlySet<string> = new Set(["count", "offsetExists", "offsetGet", "offsetSet", "offsetUnset", "getIterator", "__toString"]);
 
 /** A frozen copy of `builtins`; throws a `TypeError` for a non-list, an unknown name or a duplicate. */
