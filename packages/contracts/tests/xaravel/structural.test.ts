@@ -4,12 +4,13 @@
 // object to `Support\Responsable::toResponse`, and fails with TS2345 when the class lacks a structural member or an
 // async function, or one that may return a Promise, is passed as a sync-only (`SyncClosure`) callback. Every concrete
 // class the Upstream contract files name maps to a `src/structural/` type, which the port imports where the class is
-// in a signature.
+// in a signature. The Upstream-reading helpers are shared with XT-contracts-8 (`support/contract-namespaces.ts`).
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { env } from "node:process";
 import { Assert, xaravelTest } from "@xaravel/assert";
+import { concreteNames, inSignature, kebab, PHP_BUILTINS, structuralFiles, usedInSignature } from "./support/contract-namespaces";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 const PACKAGE = resolve(import.meta.dir, "..", "..");
@@ -33,91 +34,6 @@ function specifiers(text: string): string[] {
 
 /** The 19 Upstream namespaces Story 10.2 ports. */
 const NAMESPACES = ["Support", "Container", "Config", "Foundation", "Pipeline", "Events", "Bus", "Queue", "Cache", "Redis", "Encryption", "Hashing", "Filesystem", "Process", "Translation", "Validation", "Debug", "Concurrency", "JsonSchema"];
-
-/** PHP's built-in classes and interfaces an Upstream contract file names, each with its Xaravel form. */
-const PHP_BUILTINS: Readonly<Record<string, string>> = {
-  Closure: "the structural `Closure` function type (or `SyncClosure`)",
-  DateTimeInterface: "the structural `DateTimeInterface`",
-  DateInterval: "src/psr/SimpleCache/DateInterval.ts",
-  UnitEnum: "the structural `UnitEnum`",
-  Throwable: "the JS `Error`",
-  Countable: "the structural `Countable`",
-  ArrayAccess: "the structural `ArrayAccess`",
-  IteratorAggregate: "the structural `IteratorAggregate`",
-  Stringable: "the structural `Stringable`",
-  stdClass: "the structural `StdClass`",
-  Exception: "@xaravel/runtime/php's `Exception`",
-  RuntimeException: "@xaravel/runtime/php's `RuntimeException`",
-  InvalidArgumentException: "@xaravel/runtime/php's `InvalidArgumentException`",
-  LogicException: "@xaravel/runtime/php's `LogicException`",
-};
-
-/** The kebab-case subpath of an Upstream namespace (`JsonSchema` → `json-schema`). */
-function kebab(ns: string): string {
-  return ns.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-}
-
-/**
- * The FQCN → import path (relative to a contract file) of each structural type: the FQCN that opens its header
- * comment. `DateInterval` and `CarbonInterval` are `src/psr/SimpleCache/DateInterval.ts`.
- */
-function structuralFiles(): Map<string, string> {
-  const files = new Map<string, string>([
-    ["DateInterval", "../psr/SimpleCache/DateInterval"],
-    ["Carbon\\CarbonInterval", "../psr/SimpleCache/DateInterval"],
-  ]);
-  for (const entry of readdirSync(join(PACKAGE, "src", "structural")).filter((name) => name.endsWith(".ts"))) {
-    const header = /^\/\/ ([A-Za-z][\w]*(?:\\[\w]+)+)/.exec(readFileSync(join(PACKAGE, "src", "structural", entry), "utf8"));
-    if (header?.[1] !== undefined) {
-      files.set(header[1], `../structural/${entry.replace(/\.ts$/, "")}`);
-    }
-  }
-  return files;
-}
-
-/**
- * The concrete classes an Upstream contract file names, each with its local name: its `use` lines, and the fully
- * qualified `\Illuminate\…`, `\Symfony\…`, `\Psr\Http\…` and `\Carbon\…` names in its text, except
- * `Illuminate\Contracts\…` and the PSR interfaces `@xaravel/contracts/psr` ports. `@throws` lines are left out: an
- * exception a contract documents is no type it names in a signature, and its own package ports it.
- */
-function concreteNames(source: string): Map<string, string> {
-  const names = new Map<string, string>();
-  for (const match of source.matchAll(/^use\s+([\w\\]+)(?:\s+as\s+(\w+))?;/gm)) {
-    const name = match[1] ?? "";
-    names.set(name, match[2] ?? name.slice(name.lastIndexOf("\\") + 1));
-  }
-  for (const line of source.split("\n").filter((text) => !text.includes("@throws"))) {
-    for (const match of line.matchAll(/\\((?:Illuminate|Symfony|Psr\\Http|Carbon)\\[\w\\]+)/g)) {
-      const name = match[1] ?? "";
-      names.set(name, names.get(name) ?? name);
-    }
-  }
-  for (const name of names.keys()) {
-    if (name.startsWith("Illuminate\\Contracts\\") || /^Psr\\(Container|SimpleCache|Log)\\/.test(name)) {
-      names.delete(name);
-    }
-  }
-  return names;
-}
-
-/** Whether `name` (or its `use` alias `local`) is in a `@param` / `@return` line or a `function` declaration. */
-function inSignature(source: string, name: string, local: string): boolean {
-  const word = new RegExp(`(?<![\\w\\\\])${local}\\b`);
-  return source.split("\n").some((line) => (/@param|@return|\bfunction\b/.test(line) && (line.includes(`\\${name}`) || word.test(line))));
-}
-
-/**
- * Whether a port names `local` in a method signature: a line declaring a method (`name(`, or `name<…>(`), outside
- * comments and import lines.
- */
-function usedInSignature(port: string, local: string): boolean {
-  const word = new RegExp(`(?<![\\w$])${local}\\b`);
-  return port.split("\n").some((line) => {
-    const text = line.trim();
-    return !/^(\/\/|\/\*|\*|import\b)/.test(text) && /\w+\s*(<[^>]*>)?\s*\(/.test(text) && word.test(text);
-  });
-}
 
 /** The fixture's shared part: a dispatcher and a responsable, and a request-shaped object literal. */
 const PRELUDE = `import type { Dispatcher } from "@xaravel/contracts/bus";
