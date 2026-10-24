@@ -163,7 +163,7 @@ type PhpunitMock = Record<string, (...args: unknown[]) => unknown> & { method(na
 
 xaravelTest(
   "XT-contracts-5",
-  "each of the 19 core and service subpaths of @xaravel/contracts exports exactly its Illuminate\\Contracts namespace's interface tokens and exception classes by Upstream short name; each token's fqcn() and brand are its FQCN, its instance methods and parameter names are its committed rows', its constant rows are the token's frozen statics with Upstream's values and its static method rows its file's <X>Static interface (ESC-10.2-1), its built-ins are its Upstream built-in parents' methods (ESC-10.2-4), and its parents are Upstream's contract parents in order, so a branded class, a Mockery double and a PHPUnit mock of a child are instanceof every parent and a parent's double is not the child, and doubles of MessageBag and ValidatedData configure their built-ins; marker tokens are brand-only and checkable with hasBrand (AD-1.1); the exception classes are registered under their FQCN with their runtime base, and async-surface.json lists exactly the spec's async methods with their roots and the Pipeline's thenable methods (AD-6)",
+  "each of the 19 core and service subpaths of @xaravel/contracts exports exactly its Illuminate\\Contracts namespace's interface tokens and exception classes by Upstream short name; each token's fqcn() and brand are its FQCN, its instance methods and parameter names are its committed rows', its constant rows are the token's frozen statics with Upstream's values and its static method rows its file's <X>Static interface (ESC-10.2-1), its built-ins are its Upstream built-in parents' methods (ESC-10.2-4), and its parents are Upstream's contract parents in order, so a branded class, a Mockery double and a PHPUnit mock of a child are instanceof every parent and a parent's double is not the child, and doubles of MessageBag and ValidatedData configure their built-ins; marker tokens are brand-only and checkable with hasBrand (AD-1.1); the exception classes are registered under their FQCN with their runtime base, and async-surface.json lists exactly the spec's async methods with their roots, the Pipeline's thenable methods and QueueingDispatcher.batch's structural PendingBatch thenable (AD-6, ESC-10.3-2)",
   () => {
     const expectedAsync = coreAsyncTable();
     const actualAsync = new Map<string, string>();
@@ -366,11 +366,13 @@ xaravelTest(
     Assert.assertSame("r", String(phpunitRule as unknown as { toString(): string }));
 
     // Pipeline (ESC-10.2-2): a declared thenable, so send/through/via have thenable lines and then keeps its root.
+    // QueueingDispatcher.batch returns the structural PendingBatch, which stands for its header's thenable (ESC-10.3-2).
     const pipelineThenable: (value: pipeline.Pipeline) => PromiseLike<unknown> = (value) => value;
     Assert.assertNotNull(pipelineThenable);
     const thenable = "Illuminate\\Contracts\\Pipeline\\Pipeline";
     Assert.assertSame(
       JSON.stringify([
+        ["Bus\\QueueingDispatcher.batch", "Illuminate\\Bus\\PendingBatch"],
         ["Pipeline\\Pipeline.send", thenable],
         ["Pipeline\\Pipeline.through", thenable],
         ["Pipeline\\Pipeline.via", thenable],

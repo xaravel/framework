@@ -745,3 +745,99 @@ function registerClass(fqcn: string, value: object): void {
     }
   },
 );
+
+// XT-conformance-264 (epic-10-item-6-structural-thenables, ESC-10.3-2)
+
+const PENDING_DISPATCH = "Illuminate\\Foundation\\Bus\\PendingDispatch";
+
+xaravelTest(
+  "XT-conformance-264",
+  "a structural type stands for the FQCN its header names: a binding <Name> reached from another module, declared in …/packages/contracts/src/structural/<Name>.ts, exported under that name and registered by nothing, resolves to <FQCN> when the file's first line is // <FQCN>, or // <FQCN> followed by a space and <FQCN> is shaped as a class name; a registerClass or contract token of the same local wins; a header on another line, a non-FQCN header, a name mismatch, a path outside packages/contracts/src/structural or the file's own binding resolve to null; packages/contracts gains exactly the Console\\Kernel.queue and Bus\\QueueingDispatcher.batch thenable lines (ESC-10.3-2; AD-6)",
+  () => {
+    const dir = tempDir("xaravel-async-surface-structural-");
+    const contracts = join(dir, "packages", "contracts", "src");
+    write(dir, {
+      "packages/contracts/src/Contract.ts": CONTRACT_STAND,
+      "packages/contracts/src/structural/PendingDispatch.ts": String.raw`// Illuminate\Foundation\Bus\PendingDispatch, as a contract names it (AD-1.2): a subset of its public methods.
+export interface PendingDispatch {
+  onQueue(queue: string | null): this;
+}
+`,
+      "packages/contracts/src/structural/StreamInterface.ts": String.raw`// Psr\Http\Message\StreamInterface (psr/http-message), as a contract names it (AD-1.2).
+export interface StreamInterface {
+  getSize(): number | null;
+}
+`,
+      "packages/contracts/src/structural/Leading.ts": String.raw`// \Illuminate\Bus\PendingBatch, with a leading backslash.
+export interface Leading {
+  add(jobs: unknown): this;
+}
+`,
+      // Not a class name: prose, the FQCN on line 2, no comment, no space after `//`, no terminator.
+      "packages/contracts/src/structural/Prose.ts": "// PHP's built-in `Countable` interface.\nexport interface Prose {\n  count(): number;\n}\n",
+      "packages/contracts/src/structural/Second.ts": "\n// Illuminate\\Bus\\PendingBatch, on line 2.\nexport interface Second {\n  add(jobs: unknown): this;\n}\n",
+      "packages/contracts/src/structural/Bare.ts": "export interface Bare {\n  add(jobs: unknown): this;\n}\n",
+      "packages/contracts/src/structural/Tight.ts": "//Illuminate\\Bus\\PendingBatch, without a space.\nexport interface Tight {\n  add(jobs: unknown): this;\n}\n",
+      "packages/contracts/src/structural/Unterminated.ts": "// Illuminate\\Bus\\PendingBatch\nexport interface Unterminated {\n  add(jobs: unknown): this;\n}\n",
+      // Name mismatch: the file's name is not the export's, or the export is another local under the file's name.
+      "packages/contracts/src/structural/Foo.ts": "// Illuminate\\Bus\\PendingBatch, under another name.\nexport interface Bar {\n  add(jobs: unknown): this;\n}\n",
+      "packages/contracts/src/structural/Aliased.ts": "// Illuminate\\Bus\\PendingBatch, as an alias.\ninterface Impl {\n  add(jobs: unknown): this;\n}\nexport type { Impl as Aliased };\n",
+      // Outside `packages/contracts/src/structural`.
+      "packages/contracts/src/console/Outside.ts": "// Illuminate\\Bus\\PendingBatch, outside structural.\nexport interface Outside {\n  add(jobs: unknown): this;\n}\n",
+      "packages/other/src/structural/Elsewhere.ts": "// Illuminate\\Bus\\PendingBatch, in another package.\nexport interface Elsewhere {\n  add(jobs: unknown): this;\n}\n",
+      // A registration and a contract token of the same local win over the header.
+      "packages/contracts/src/structural/Registered.ts": String.raw`// Illuminate\Bus\PendingBatch, but registered.
+export class Registered {}
+registerClass("A\\B", Registered);
+function registerClass(fqcn: string, value: object): void {
+  void [fqcn, value];
+}
+`,
+      "packages/contracts/src/structural/Token.ts": String.raw`// Illuminate\Bus\PendingBatch, but a token.
+import { contract } from "../Contract";
+export const Token = contract("X\\Token", {});
+`,
+      "packages/contracts/src/index.ts": 'export * from "./structural/PendingDispatch";\nexport { StreamInterface as Stream } from "./structural/StreamInterface";\n',
+      "packages/contracts/src/console/Kernel.ts": 'import type { PendingDispatch } from "../structural/PendingDispatch";\nexport interface Kernel {\n  queue(command: string): PendingDispatch;\n}\n',
+      "packages/other/src/Use.ts": 'import type { Elsewhere } from "./structural/Elsewhere";\nexport type Used = Elsewhere;\n',
+    });
+    const kernel = join(contracts, "console", "Kernel.ts");
+    expect(registeredFqcn(kernel, "../structural/PendingDispatch", "PendingDispatch")).toBe(PENDING_DISPATCH);
+    expect(registeredFqcn(kernel, null, "PendingDispatch")).toBe(PENDING_DISPATCH);
+    expect(registeredFqcn(kernel, "../index", "PendingDispatch")).toBe(PENDING_DISPATCH);
+    expect(registeredFqcn(kernel, "../index", "Stream")).toBe("Psr\\Http\\Message\\StreamInterface");
+    expect(registeredFqcn(kernel, "../structural/StreamInterface", "StreamInterface")).toBe("Psr\\Http\\Message\\StreamInterface");
+    expect(registeredFqcn(kernel, "../structural/Leading", "Leading")).toBe("Illuminate\\Bus\\PendingBatch");
+    expect(isThenableFqcn(registeredFqcn(kernel, null, "PendingDispatch"), THENABLE_TYPES)).toBe(PENDING_DISPATCH);
+    for (const name of ["Prose", "Second", "Bare", "Tight", "Unterminated", "Aliased"]) {
+      expect(registeredFqcn(kernel, `../structural/${name}`, name)).toBeNull();
+    }
+    expect(registeredFqcn(kernel, "../structural/Foo", "Bar")).toBeNull();
+    expect(registeredFqcn(kernel, "./Outside", "Outside")).toBeNull();
+    expect(registeredFqcn(join(dir, "packages", "other", "src", "Use.ts"), "./structural/Elsewhere", "Elsewhere")).toBeNull();
+    expect(registeredFqcn(join(dir, "packages", "other", "src", "Use.ts"), null, "Elsewhere")).toBeNull();
+    expect(registeredFqcn(kernel, "../structural/Registered", "Registered")).toBe("A\\B");
+    expect(registeredFqcn(kernel, "../structural/Token", "Token")).toBe("X\\Token");
+    // The bare-specifier route real consumers use: the subpath barrels' type-only re-exports, through Bun.resolveSync
+    // from a real repository file that resolves @xaravel/contracts.
+    const consumer = join(root, "packages", "contracts", "tests", "xaravel", "web.test.ts");
+    expect(registeredFqcn(consumer, "@xaravel/contracts/console", "PendingDispatch")).toBe(PENDING_DISPATCH);
+    expect(registeredFqcn(consumer, "@xaravel/contracts/bus", "PendingBatch")).toBe("Illuminate\\Bus\\PendingBatch");
+    // The file's own binding (its `this` and self-references) is not reached from another module, so it stays null.
+    expect(registeredFqcn(join(contracts, "structural", "PendingDispatch.ts"), null, "PendingDispatch")).toBeNull();
+
+    // The real `packages/contracts`: the CLI's check passes, and its thenable lines are exactly the Pipeline's three
+    // and the two structural ones.
+    const real = cli(root, ["--check", "contracts"]);
+    expect(real.stderr).toBe("");
+    expect(real.exitCode).toBe(0);
+    const committed = readFileSync(join(root, "packages", "contracts", "async-surface.json"), "utf8").split("\n").map((text) => text.replace(/,$/, ""));
+    expect(committed.filter((text) => text.includes('"thenable"')).sort()).toEqual(
+      [
+        JSON.stringify({ method: "Kernel.queue", file: "src/console/Kernel.ts", thenable: PENDING_DISPATCH }),
+        JSON.stringify({ method: "QueueingDispatcher.batch", file: "src/bus/QueueingDispatcher.ts", thenable: "Illuminate\\Bus\\PendingBatch" }),
+        ...["send", "through", "via"].map((method) => JSON.stringify({ method: `Pipeline.${method}`, file: "src/pipeline/Pipeline.ts", thenable: PIPELINE })),
+      ].sort(),
+    );
+  },
+);

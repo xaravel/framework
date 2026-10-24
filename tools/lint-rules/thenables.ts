@@ -10,6 +10,16 @@
 // ESC-10.1-3; ESC-10.2-2), and `isThenableFqcn` compares that FQCN with the
 // list.
 //
+// A structural type (AD-1.2) has no runtime value, so nothing registers it; it
+// stands for the class its header names (ESC-10.3-2): a binding `<Name>` declared
+// in a file whose path ends in `packages/contracts/src/structural/<Name>.ts`,
+// that exports `<Name>` under that name and registers nothing for it, resolves
+// to `<FQCN>` when the file's first line is `// <FQCN>,…` or `// <FQCN> …` and
+// `<FQCN>` is shaped as a class name (a leading `\` is dropped). A registration
+// or contract token of the same local wins. The rule applies only when the name
+// is reached from another module (an import, a re-export or `export *`), so a
+// structural file's own `this` and self-references stay unresolved.
+//
 // A contract token counts only at the top level (`const`, exported or not),
 // when the callee is the identifier `contract` bound by a named import
 // `contract` (from any specifier) and its first argument is a string literal
@@ -30,7 +40,7 @@
 // export; `export default class X` / `export default X` and `export * as ns`
 // are not. Scope is not tracked: a type parameter or inner-scope binding that
 // shadows an imported name resolves through the import. A name that does not
-// resolve to a registered FQCN is no thenable.
+// resolve to a registered FQCN (or a structural header FQCN) is no thenable.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseSync } from "oxc-parser";
@@ -145,6 +155,8 @@ interface ModuleInfo {
   readonly reexports: ReadonlyMap<string, { readonly specifier: string; readonly imported: string }>;
   /** `export * from "<specifier>"`, in order. */
   readonly stars: readonly string[];
+  /** The FQCN a first line `// <FQCN>,…` or `// <FQCN> …` names (without a leading `\`), or null (always null from `moduleInfoOf`). */
+  readonly header: string | null;
 }
 
 const modules = new Map<string, { readonly mtimeMs: number; readonly info: ModuleInfo }>();
@@ -208,7 +220,15 @@ export function moduleInfoOf(statements: readonly unknown[]): ModuleInfo {
       registrations.set(name, fqcn);
     }
   }
-  return { registrations, imports, exports, reexports, stars };
+  return { registrations, imports, exports, reexports, stars, header: null };
+}
+
+/** The FQCN a source text's first line names as `// <FQCN>,…` or `// <FQCN> …` (without a leading `\`), or null. */
+function headerFqcn(text: string): string | null {
+  const first = text.split("\n", 1)[0] ?? "";
+  const match = /^\/\/ ([^ ,]+)[ ,]/.exec(first);
+  const fqcn = match?.[1] ?? null;
+  return fqcn !== null && isFqcn(fqcn) ? normaliseFqcn(fqcn) : null;
 }
 
 /** An expression without the parentheses, `as`, `<T>` assertions, `satisfies` and `!` around it. */
@@ -274,8 +294,9 @@ function moduleInfo(path: string): ModuleInfo | null {
     return cached.info;
   }
   const lang = path.endsWith(".d.ts") ? "dts" : path.endsWith(".tsx") ? "tsx" : "ts";
-  const result = parseSync(path, readFileSync(path, "utf8"), { lang });
-  const info = moduleInfoOf(list(prop(result.program, "body")));
+  const text = readFileSync(path, "utf8");
+  const result = parseSync(path, text, { lang });
+  const info = { ...moduleInfoOf(list(prop(result.program, "body"))), header: headerFqcn(text) };
   modules.set(path, { mtimeMs, info });
   return info;
 }
@@ -304,8 +325,23 @@ export function resolveSpecifier(fromFile: string, specifier: string): string | 
   }
 }
 
-/** The FQCN registered for the binding `local` of `file`: registered there, or imported (followed). */
-function localFqcn(file: string, local: string, visited: Set<string>): string | null {
+/**
+ * The FQCN a structural type stands for (ESC-10.3-2): `file` is `…/packages/contracts/src/structural/<local>.ts`, it
+ * exports `<local>` under that name, and its first line names the FQCN (`headerFqcn`); otherwise null.
+ */
+function structuralFqcn(file: string, local: string, info: ModuleInfo): string | null {
+  if (info.header === null || info.exports.get(local) !== local) {
+    return null;
+  }
+  const segments = file.split(/[\\/]/);
+  return segments.length >= 5 && segments.slice(-5, -1).join("/") === "packages/contracts/src/structural" && segments.at(-1) === `${local}.ts` ? info.header : null;
+}
+
+/**
+ * The FQCN registered for the binding `local` of `file`: registered there, imported (followed), or, when `exported`
+ * (reached through another module's import or re-export), a structural type's header FQCN.
+ */
+function localFqcn(file: string, local: string, visited: Set<string>, exported = false): string | null {
   const info = moduleInfo(file);
   if (info === null) {
     return null;
@@ -315,7 +351,10 @@ function localFqcn(file: string, local: string, visited: Set<string>): string | 
     return registered;
   }
   const binding = info.imports.get(local);
-  if (binding === undefined || binding.imported === null) {
+  if (binding === undefined) {
+    return exported ? structuralFqcn(file, local, info) : null;
+  }
+  if (binding.imported === null) {
     return null;
   }
   const target = resolveSpecifier(file, binding.specifier);
@@ -335,7 +374,7 @@ function exportedFqcn(file: string, name: string, visited: Set<string>): string 
   }
   const local = info.exports.get(name);
   if (local !== undefined) {
-    return localFqcn(file, local, visited);
+    return localFqcn(file, local, visited, true);
   }
   const reexport = info.reexports.get(name);
   if (reexport !== undefined) {
