@@ -69,3 +69,18 @@ epic-9:
     - epic-9-retro-item-6-grader-float-and-error-equality
     - epic-9-retro-item-7-registry-per-application
     - epic-9-retro-item-5-grader-runtime-protocols
+epic-10:
+  # No retrospective yet; items come from Maintainer rulings (ESC-10.1-4, ESC-10.1-6, ESC-10.2-1, -2, -4, -6, ESC-10.3-2).
+  # epic-10-item-6-structural-thenables: built and verified (harness differ=0, typecheck, lint, async-surface --check),
+  # saved on the branch planning/retro-10-structural-thenables. Its --item Fidelity Review is not current: reviewer 1
+  # rejects F-7 only, for evidence XT-contracts-5/-8 read that the prompt does not carry (the gap waived for Story 10.2,
+  # ESC-10.2-9/-10); reviewer 2 passes. Only the Maintainer waives a Fidelity item. Also to confirm: a structural file's
+  # own `this` (PendingDispatch.onQueue and the like) gets no thenable line. Spec:
+  # _bmad-output/implementation-artifacts/spec-retro-10-structural-thenables.md (on that branch).
+  verdict: null
+  attempts: 0
+  doc: null
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-10-item-6-structural-thenables
