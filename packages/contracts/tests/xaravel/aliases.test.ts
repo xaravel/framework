@@ -17,41 +17,11 @@ import { registerTestClass } from "@xaravel/runtime/registry";
 import { runInRootFrame } from "@xaravel/runtime/scope";
 import { CLASS_FQCN, contract, type ContractToken } from "@xaravel/contracts";
 import { aliasResolver, type AliasTable, canonicalToken, CORE_CONTAINER_ALIASES, PROVIDER_ALIASES, PROVIDER_BINDINGS, validateAliasTable } from "@xaravel/contracts/aliases";
-import * as auth from "@xaravel/contracts/auth";
 import * as cache from "@xaravel/contracts/cache";
-import * as foundation from "@xaravel/contracts/foundation";
 import * as mail from "@xaravel/contracts/mail";
-import * as support from "@xaravel/contracts/support";
 import * as psr from "@xaravel/contracts/psr";
-import * as broadcasting from "@xaravel/contracts/broadcasting";
-import * as bus from "@xaravel/contracts/bus";
-import * as concurrency from "@xaravel/contracts/concurrency";
-import * as config from "@xaravel/contracts/config";
-import * as consoleNs from "@xaravel/contracts/console";
-import * as container from "@xaravel/contracts/container";
-import * as cookie from "@xaravel/contracts/cookie";
-import * as database from "@xaravel/contracts/database";
-import * as debug from "@xaravel/contracts/debug";
-import * as encryption from "@xaravel/contracts/encryption";
-import * as events from "@xaravel/contracts/events";
-import * as filesystem from "@xaravel/contracts/filesystem";
-import * as hashing from "@xaravel/contracts/hashing";
-import * as http from "@xaravel/contracts/http";
-import * as image from "@xaravel/contracts/image";
-import * as jsonSchema from "@xaravel/contracts/json-schema";
-import * as log from "@xaravel/contracts/log";
-import * as notifications from "@xaravel/contracts/notifications";
-import * as pagination from "@xaravel/contracts/pagination";
-import * as pipeline from "@xaravel/contracts/pipeline";
-import * as processNs from "@xaravel/contracts/process";
-import * as queue from "@xaravel/contracts/queue";
-import * as redis from "@xaravel/contracts/redis";
-import * as routing from "@xaravel/contracts/routing";
-import * as session from "@xaravel/contracts/session";
-import * as translation from "@xaravel/contracts/translation";
-import * as validation from "@xaravel/contracts/validation";
-import * as view from "@xaravel/contracts/view";
-import { closure, REPO, shortName, type Token, typeErrorOf, upstreamOrWarn, upstreamPath } from "./support/contract-namespaces";
+import * as support from "@xaravel/contracts/support";
+import { closure, PACKAGE, REPO, shortName, type Token, typeErrorOf, upstreamOrWarn, upstreamPath } from "./support/contract-namespaces";
 
 const ILLUMINATE = join(REPO, "conformance", "upstream", "framework", "src", "Illuminate");
 
@@ -96,13 +66,19 @@ const CANONICAL: Readonly<Record<string, string>> = {
 /** The 12 core keys the spec names as their own canonical key. */
 const OWN_KEYS: readonly string[] = ["blade.compiler", "cache.psr6", "db", "db.connection", "db.schema", "files", "hash", "image", "queue.failer", "redirect", "request", "session"];
 
-/** The test's own view of the contract tokens, read from the subpath modules it imports. */
+/** Every subpath module `packages/contracts/package.json` exports, except `./aliases` itself. */
+const MODULES: readonly object[] = await Promise.all(
+  Object.keys((JSON.parse(readFileSync(join(PACKAGE, "package.json"), "utf8")) as { exports: Record<string, string> }).exports)
+    .filter((subpath) => subpath !== "./aliases")
+    .map(async (subpath) => (await import(`@xaravel/contracts${subpath.slice(1)}`)) as object),
+);
+
+/** The test's own view of the contract tokens: each module's frozen non-function exports with an own string `CLASS_FQCN`, by FQCN. */
 const TOKENS: ReadonlyMap<string, Token> = (() => {
-  const modules: object[] = [auth, cache, foundation, mail, support, psr, broadcasting, bus, concurrency, config, consoleNs, container, cookie, database, debug, encryption, events, filesystem, hashing, http, image, jsonSchema, log, notifications, pagination, pipeline, processNs, queue, redis, routing, session, translation, validation, view];
   const tokens = new Map<string, Token>();
-  for (const module of modules) {
+  for (const module of MODULES) {
     for (const value of Object.values(module)) {
-      if (typeof value === "object" && value !== null && Object.hasOwn(value, CLASS_FQCN)) {
+      if (typeof value === "object" && value !== null && Object.isFrozen(value) && Object.hasOwn(value, CLASS_FQCN) && typeof (value as Record<symbol, unknown>)[CLASS_FQCN] === "string") {
         tokens.set((value as Record<symbol, string>)[CLASS_FQCN] ?? "", value as Token);
       }
     }
@@ -174,9 +150,14 @@ function upstreamBindings(core: Readonly<Record<string, readonly string[]>>): Re
       if (Object.hasOwn(core, key)) {
         continue;
       }
-      const built = /\bnew\s+(\\?[\w\\]+)/.exec(source.slice(match.index))?.[1] ?? "";
-      Assert.assertNotSame("", built, `${file}: ${key}`);
-      bindings[key] = resolveName(built);
+      // The closure's text: up to the next `$this->app->` registration call, or the end of the file. A call such as
+      // `$this->app->isDownForMaintenance()` inside the closure (`queue.worker`) does not end it.
+      const rest = source.slice(match.index + match[0].length);
+      const next = /\$this->app->(?:singleton|bind|scoped|instance|alias|extend)\w*\(/.exec(rest)?.index ?? rest.length;
+      const built = /\bnew\s+(\\?[\w\\]+)/.exec(rest.slice(0, next))?.[1] ?? null;
+      Assert.assertNotNull(built, `${file}: ${key}'s closure builds no class with new`);
+      Assert.assertFalse(Object.hasOwn(bindings, key), `${file}: ${key} is bound twice`);
+      bindings[key] = resolveName(built ?? "");
     }
   }
   return bindings;
@@ -212,10 +193,10 @@ function table(parts: Partial<AliasTable>): AliasTable {
 
 xaravelTest(
   "XT-contracts-10",
-  "@xaravel/contracts/aliases exports Upstream's container aliases verbatim as frozen data: CORE_CONTAINER_ALIASES is registerCoreContainerAliases' 40 keys and their aliases in Upstream order, PROVIDER_BINDINGS the 15 string abstracts the service providers bind outside the core keys, each to the class its closure builds, and PROVIDER_ALIASES the providers' class-to-class alias() calls in file and line order (AD-1.3, AD-1.4)",
+  "@xaravel/contracts/aliases exports Upstream's container aliases verbatim as frozen data: CORE_CONTAINER_ALIASES is registerCoreContainerAliases' 40 keys and their aliases in Upstream order, PROVIDER_BINDINGS the 15 string abstracts the service providers bind outside the core keys, each to the class its closure builds, and PROVIDER_ALIASES the providers' class-to-class alias() calls in file and line order (AD-1.4)",
   () => {
     Assert.assertSame(40, Object.keys(CORE_CONTAINER_ALIASES).length);
-    Assert.assertSame(JSON.stringify(BINDING_KEYS), JSON.stringify(Object.keys(PROVIDER_BINDINGS)));
+    Assert.assertEquals([...BINDING_KEYS], Object.keys(PROVIDER_BINDINGS));
     Assert.assertSame(5, PROVIDER_ALIASES.length);
 
     // Frozen, every level.
@@ -231,15 +212,15 @@ xaravelTest(
 
     // No FQCN keeps a leading `\`.
     const names = [...Object.values(CORE_CONTAINER_ALIASES).flat(), ...Object.values(PROVIDER_BINDINGS), ...PROVIDER_ALIASES.flat()];
-    Assert.assertSame("[]", JSON.stringify(names.filter((name) => name.startsWith("\\"))));
+    Assert.assertEquals([], names.filter((name) => name.startsWith("\\")));
 
     if (!upstreamOrWarn("aliases.test.ts")) {
       return;
     }
     const core = upstreamCore();
-    Assert.assertSame(JSON.stringify(Object.entries(core)), JSON.stringify(Object.entries(CORE_CONTAINER_ALIASES)));
-    Assert.assertSame(JSON.stringify(Object.entries(upstreamBindings(core))), JSON.stringify(Object.entries(PROVIDER_BINDINGS)));
-    Assert.assertSame(JSON.stringify(upstreamAliases()), JSON.stringify(PROVIDER_ALIASES));
+    Assert.assertEquals(Object.entries(core), Object.entries(CORE_CONTAINER_ALIASES).map(([key, aliases]) => [key, [...aliases]]));
+    Assert.assertEquals(Object.entries(upstreamBindings(core)), Object.entries(PROVIDER_BINDINGS));
+    Assert.assertEquals(upstreamAliases(), PROVIDER_ALIASES.map((pair) => [...pair]));
   },
 );
 
@@ -254,7 +235,23 @@ xaravelTest(
     for (const key of [...OWN_KEYS, ...BINDING_KEYS]) {
       Assert.assertSame(key, canonicalToken(key), key);
     }
-    Assert.assertSame(40 + 15 + 3, Object.keys(CANONICAL).length + OWN_KEYS.length + BINDING_KEYS.length);
+
+    // The literal table, the own keys and the bindings cover every service once.
+    const listed = [...Object.keys(CANONICAL), ...OWN_KEYS, ...BINDING_KEYS];
+    Assert.assertSame(listed.length, new Set(listed).size, "CANONICAL, OWN_KEYS and BINDING_KEYS overlap");
+    const serviceKeys = [...Object.keys(CORE_CONTAINER_ALIASES), ...Object.keys(PROVIDER_BINDINGS), "Illuminate\\Broadcasting\\BroadcastManager", "Illuminate\\Bus\\Dispatcher", "Illuminate\\Notifications\\ChannelManager"];
+    Assert.assertEquals([...serviceKeys].sort(), [...listed].sort());
+
+    // Canonical tokens are fixed points.
+    for (const key of serviceKeys) {
+      Assert.assertSame(canonicalToken(key), canonicalToken(canonicalToken(key)), key);
+    }
+
+    // The code's token index has every token the package exports.
+    Assert.assertNotEmpty([...TOKENS.keys()]);
+    for (const [name, token] of TOKENS) {
+      Assert.assertSame(token, aliasResolver(table({ CORE_CONTAINER_ALIASES: { probe: ["App\\Probe", name] } }))("probe"), name);
+    }
 
     // Every alias reaches its key's canonical token, so one instance.
     for (const [key, aliases] of Object.entries(CORE_CONTAINER_ALIASES)) {
@@ -334,7 +331,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-contracts-12",
-  "validateAliasTable(table) throws LogicException naming the alias for an alias of itself (Upstream Container::alias's message), an alias two services list, an alias in a ported contract namespace that @xaravel/contracts does not export, and an alias of a service with neither a contract nor a string key, which has no canonical contract (ESC-10.4-1 Option 1); aliasResolver validates its table, and Upstream's table validates (AD-1.3, AD-1.4)",
+  "validateAliasTable(table) throws LogicException naming the alias for an alias of itself (Upstream Container::alias's message), an alias two services list, an alias in a ported contract namespace that @xaravel/contracts does not export, and an alias of a service with neither a contract nor a string key, which has no canonical contract (ESC-10.4-1 Option 1); aliasResolver validates its table, and Upstream's table validates (AD-1.4)",
   () => {
     Assert.assertSame("(nothing thrown)", logicMessage(() => validateAliasTable({ CORE_CONTAINER_ALIASES, PROVIDER_BINDINGS, PROVIDER_ALIASES })));
 

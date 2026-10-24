@@ -139,7 +139,7 @@ development_status:
   10-1-token-brand-and-contract-t-mechanism: done
   10-2-port-the-contracts-for-the-core-and-service-namespaces: done
   10-3-port-the-contracts-for-the-web-and-application-namespaces: done
-  10-4-container-alias-table-and-canonical-tokens: in-progress
+  10-4-container-alias-table-and-canonical-tokens: blocked  # ESC-10.4-1 (canonical token rule, AD-1.4) and ESC-10.4-2 (Fidelity Review evidence: Upstream sources); both orchestrator-rulable
   10-5-xaravel-only-contracts: backlog
   10-6-contracts-complete-and-protected: backlog
   epic-10-retrospective: optional
