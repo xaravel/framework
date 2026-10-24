@@ -16,6 +16,9 @@
 //       (MAINT-2026-10-16, amendment 2026-10-22). The item has no manifest:
 //       its sprint status entry stands in for one, and its scope is the paths
 //       a Story of each `packages/<component>` its action names may edit.
+//       `review --item` also takes `--stale-test <path>`, repeated: another
+//       component's test the item's own change made stale, which joins that
+//       scope (`staleTestProblem`, MAINT-2026-10-24-stale-cross-scope-tests).
 //
 // The reviewed tree. `reviewTree(root, mode, spec)` is the git tree id a
 // verdict is bound to: the repository without the bookkeeping set ESC-8.8-1
@@ -134,6 +137,7 @@ import { compareUnits, type InventoryEntry } from "../inventory/inventory";
 import { FIXTURES_DIR, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
 import { allowedPath, covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
+import { activePhases, isProtected, parseList } from "../protected-paths/protected-paths";
 import { readWorkingInventory } from "../pin-bump/pin-bump";
 import { readUpstream } from "../upstream/upstream";
 import { SPINE_FILE, spineRules } from "../xt-coverage/consequences";
@@ -354,7 +358,7 @@ export interface Prompt {
 export const NO_TEXTUAL_CHANGE = "(no textual change)";
 /** The note above an action item's sprint status entry, in place of a manifest (MAINT-2026-10-16, amendment 2026-10-22). */
 export const ITEM_NOTE =
-  "This change is a retrospective action item, reviewed as a Story is (MAINT-2026-10-16, amendment 2026-10-22). It has no manifest: its sprint status entry below states its intent and the findings it answers, and wherever the checklist says the Story, read this item. Its scope is the paths a Story of each listed component may edit.";
+  "This change is a retrospective action item, reviewed as a Story is (MAINT-2026-10-16, amendment 2026-10-22). It has no manifest: its sprint status entry below states its intent and the findings it answers, and wherever the checklist says the Story, read this item. Its scope is the paths a Story of each listed component may edit, plus each `stale_tests` path. A `stale_tests` file is another component's test that the item's own change made stale (MAINT-2026-10-24-stale-cross-scope-tests): it may only be pointed at the single source the item leaves, so a removed or weakened assertion there fails F-2 or F-3.";
 /** The user-text section that lists the latest reject's findings. */
 export const PRIOR_HEADING = "## Findings of the latest reject (ESC-8.8-1)";
 /** That section's text when there is none. */
@@ -1153,15 +1157,18 @@ export interface ActionItem {
   readonly id: string;
   /** Each `packages/<component>` its `action` names, in order, without repeats. */
   readonly components: readonly string[];
+  /** Other components' tests its own change made stale (`--stale-test`, MAINT-2026-10-24-stale-cross-scope-tests). */
+  readonly staleTests: readonly string[];
   /** The entry as the prompt shows it, in place of a manifest. */
   readonly text: string;
 }
 
 /**
  * The action item `id` from the sprint status text `statusText`, or the reason it cannot be reviewed: no such item, or
- * an action that names no `packages/<component>`, or one whose `packages/<component>` does not exist under `root`.
+ * an action that names no `packages/<component>` and is given no `staleTests`, or one whose `packages/<component>` does
+ * not exist under `root`. `staleTests` (already checked by `staleTestProblem`) join its scope.
  */
-export function readActionItem(root: string, statusText: string, id: string): ActionItem | string {
+export function readActionItem(root: string, statusText: string, id: string, staleTests: readonly string[] = []): ActionItem | string {
   let data: unknown;
   try {
     data = Bun.YAML.parse(statusText);
@@ -1175,7 +1182,7 @@ export function readActionItem(root: string, statusText: string, id: string): Ac
   }
   const action = typeof entry["action"] === "string" ? entry["action"] : "";
   const components = [...new Set([...action.matchAll(/\bpackages\/([a-z0-9][a-z0-9-]*)/g)].map((match) => match[1]!))];
-  if (components.length === 0) {
+  if (components.length === 0 && staleTests.length === 0) {
     return `action item ${id} names no packages/<component>, so it has no scope to review`;
   }
   const missing = components.filter((component) => !existsSync(join(root, "packages", component)));
@@ -1183,13 +1190,40 @@ export function readActionItem(root: string, statusText: string, id: string): Ac
     return `action item ${id} names ${missing.map((component) => `packages/${component}`).join(", ")}, which does not exist`;
   }
   const field = (name: string): string => `${name}: ${JSON.stringify(entry[name] ?? null)}`;
-  const text = [field("id"), field("epic"), field("owner"), field("status"), field("ref"), field("action"), `components: ${JSON.stringify(components)}`].join("\n");
-  return { id, components, text };
+  const lines = [field("id"), field("epic"), field("owner"), field("status"), field("ref"), field("action"), `components: ${JSON.stringify(components)}`];
+  if (staleTests.length > 0) {
+    lines.push(`stale_tests: ${JSON.stringify(staleTests)}`);
+  }
+  return { id, components, staleTests, text: lines.join("\n") };
 }
 
-/** Whether `path` is one an action item's change may hold: one a Story of any of its components may edit (`allowedPath`). */
-export function inItemScope(item: Pick<ActionItem, "id" | "components">, path: string): boolean {
-  return item.components.some((component) => allowedPath({ storyId: item.id, component }, path));
+/** A test path `--stale-test` may name (MAINT-2026-10-24-stale-cross-scope-tests): under `packages/<c>/tests/`. */
+export const STALE_TEST_PATH = /^packages\/[a-z0-9][a-z0-9-]*\/tests\/(?:[^/\0]+\/)*[^/\0]+$/;
+
+/**
+ * Why `path` cannot be a `--stale-test`, or null: it must be a repo-relative file under `packages/<c>/tests/`, with no `.`
+ * or `..` segment, that exists under `root` and is not a Protected Path there (a Protected test still needs a ruling).
+ */
+export function staleTestProblem(root: string, path: string): string | null {
+  if (!STALE_TEST_PATH.test(path) || path.split("/").some((segment) => segment === "." || segment === "..")) {
+    return `--stale-test ${path} is not a file under packages/<component>/tests/`;
+  }
+  if (!existsSync(join(root, path))) {
+    return `--stale-test ${path} does not exist`;
+  }
+  const listFile = join(root, "conformance", "protected-paths");
+  if (existsSync(listFile) && isProtected(parseList(readFileSync(listFile, "utf8")), activePhases(root), path)) {
+    return `--stale-test ${path} is a Protected Path, which needs a Maintainer ruling (MAINT-2026-10-24-stale-cross-scope-tests)`;
+  }
+  return null;
+}
+
+/**
+ * Whether `path` is one an action item's change may hold: one a Story of any of its components may edit (`allowedPath`),
+ * or one of its stale tests.
+ */
+export function inItemScope(item: Pick<ActionItem, "id" | "components"> & Partial<Pick<ActionItem, "staleTests">>, path: string): boolean {
+  return item.components.some((component) => allowedPath({ storyId: item.id, component }, path)) || (item.staleTests ?? []).includes(path);
 }
 
 /**
@@ -3968,7 +4002,8 @@ export interface RunResult {
 export const USAGE = [
   "Usage: bun tools/fidelity-review/fidelity-review.ts review --story <id> [--spec <file>] [--base <rev>] [--loop-cli claude|codex] [--root <dir>]",
   "       bun tools/fidelity-review/fidelity-review.ts status --story <id> [--spec <file>] [--root <dir>]",
-  "  For a retrospective action item, pass --item <action item id> and --spec <file> in place of --story.",
+  "  For a retrospective action item, pass --item <action item id> and --spec <file> in place of --story. A review of an item",
+  "  may also pass --stale-test <path>, repeated, for each other component's test its own change made stale.",
   "  The loop CLI is --loop-cli, else XARAVEL_LOOP_CLI, else claude when CLAUDECODE is set.",
 ].join("\n");
 
@@ -3984,6 +4019,8 @@ interface Args {
   readonly base: string | null;
   readonly loopCli: string | null;
   readonly root: string;
+  /** `--stale-test` paths, in order, without repeats (item reviews only). */
+  readonly staleTests: readonly string[];
 }
 
 function parseArgs(argv: readonly string[]): Args {
@@ -3991,8 +4028,9 @@ function parseArgs(argv: readonly string[]): Args {
   if (command !== "review" && command !== "status") {
     throw new UsageError(command === undefined ? "missing subcommand review or status" : `unknown subcommand ${command}`);
   }
-  const allowed = command === "review" ? ["--story", "--item", "--spec", "--base", "--loop-cli", "--root"] : ["--story", "--item", "--spec", "--root"];
+  const allowed = command === "review" ? ["--story", "--item", "--spec", "--base", "--loop-cli", "--root", "--stale-test"] : ["--story", "--item", "--spec", "--root"];
   const values = new Map<string, string>();
+  const staleTests: string[] = [];
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]!;
     if (!allowed.includes(arg)) {
@@ -4001,6 +4039,12 @@ function parseArgs(argv: readonly string[]): Args {
     const value = argv[++i];
     if (value === undefined || value === "" || value.startsWith("--")) {
       throw new UsageError(`${arg} needs a value`);
+    }
+    if (arg === "--stale-test") {
+      if (!staleTests.includes(value)) {
+        staleTests.push(value);
+      }
+      continue;
     }
     values.set(arg, value);
   }
@@ -4015,6 +4059,9 @@ function parseArgs(argv: readonly string[]): Args {
     if (!values.has("--spec")) {
       throw new UsageError("--item needs --spec: an action item's spec cannot be found from its id");
     }
+  }
+  if (staleTests.length > 0 && itemId === undefined) {
+    throw new UsageError("--stale-test needs --item: only an action item may update another component's stale test");
   }
   const storyId = itemId ?? values.get("--story");
   if (storyId === undefined) {
@@ -4031,6 +4078,7 @@ function parseArgs(argv: readonly string[]): Args {
     base: values.get("--base") ?? null,
     loopCli: values.get("--loop-cli") ?? null,
     root: resolve(values.get("--root") ?? resolve(import.meta.dir, "..", "..")),
+    staleTests,
   };
 }
 
@@ -4093,7 +4141,13 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     if (!existsSync(statusPath)) {
       return stop(`${SPRINT_STATUS} does not exist`);
     }
-    const item = readActionItem(root, readFileSync(statusPath, "utf8"), storyId);
+    for (const path of args.staleTests) {
+      const problem = staleTestProblem(root, path);
+      if (problem !== null) {
+        return stop(problem);
+      }
+    }
+    const item = readActionItem(root, readFileSync(statusPath, "utf8"), storyId, args.staleTests);
     if (typeof item === "string") {
       return stop(item);
     }
