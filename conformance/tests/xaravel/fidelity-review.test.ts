@@ -27,6 +27,9 @@ import {
   EXCERPT_CAP,
   fidelityVerdicts,
   fidelityWaivers,
+  evidenceGapNotes,
+  evidenceGapReject,
+  CORE_ITEMS,
   type FidelityWaiver,
   waivedReject,
   fileImports,
@@ -266,7 +269,7 @@ function fakes(plans: { claude?: Step[]; codex?: Step[] }, missing: ("claude" | 
   };
 }
 
-function answers(results: Record<string, "pass" | "fail" | "n/a"> = {}, findings: Record<string, { path: string; detail: string }[]> = {}): Record<string, unknown>[] {
+function answers(results: Record<string, "pass" | "fail" | "n/a"> = {}, findings: Record<string, { path: string; detail: string; kind?: string }[]> = {}): Record<string, unknown>[] {
   return IDS.map((id) => ({ id, result: results[id] ?? "pass", note: `checked ${id}`, findings: findings[id] ?? [] }));
 }
 
@@ -1443,22 +1446,21 @@ xaravelTest(
     expect(wholeFileEvidence(dataRoot, [{ filename: "a/source.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000).map((item) => item.path)).toEqual(["a/source.ts"]);
     // One over the limit shows the lines the test's string literals select, most selective first, each literal whole
     // or not at all within the limit, in file order; a literal matching nearly every line is left out.
-    const common = Array.from({ length: 2_000 }, (_, index) => `{"kind":"method","n":${index},"pad":"${"x".repeat(30)}"}`);
+    const common = Array.from({ length: 6_000 }, (_, index) => `{"kind":"method","n":${index},"pad":"${"x".repeat(30)}"}`);
     const dataText = [`{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface"}`, ...common.slice(0, 1_000), `{"fqcn":"Psr\\\\Log\\\\LogLevel","kind":"class"}`, ...common.slice(1_000)].join("\n");
     expect(dataText.length).toBeGreaterThan(WHOLE_FILE_CAP);
     const excerpt = dataFileExcerpt(dataText, 'const NS = "Psr\\\\Log\\\\";\nrow.kind === "method";\nconst no = "absent";\n')!;
-    expect(excerpt).toEqual({ text: `{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface"}\n{"fqcn":"Psr\\\\Log\\\\LogLevel","kind":"class"}\n`, lines: 2, of: 2_002, literals: ["Psr\\\\Log\\\\"] });
+    expect(excerpt).toEqual({ text: `{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface"}\n{"fqcn":"Psr\\\\Log\\\\LogLevel","kind":"class"}\n`, lines: 2, of: 6_002, literals: ["Psr\\\\Log\\\\"] });
     expect(dataFileExcerpt(dataText, 'const no = "absent";\n')).toBeNull();
-    // The ESC-10.1-5 case: XT-contracts-4 reads contracts.jsonl (over the limit), so (h) shows every PSR row it reads.
-    expect(read(contractsRows).length).toBeGreaterThan(WHOLE_FILE_CAP);
+    // The ESC-10.1-5 case: XT-contracts-4 reads contracts.jsonl. Under the 200,000-character limit
+    // (MAINT-2026-10-24-evidence-gaps) it is shown whole, so (h) shows every PSR row it reads, and every other row.
+    expect(read(contractsRows).length).toBeLessThanOrEqual(WHOLE_FILE_CAP);
     const psrWhole = wholeFileEvidence(root, registryPatch(psrTest), new Map(), 400_000);
     const rowsEntry = psrWhole.find((item) => item.path === contractsRows)!;
-    expect(rowsEntry.reason).toStartWith(`read by ${psrTest}; excerpt: the `);
-    expect(rowsEntry.reason).toContain('"Psr\\\\Container\\\\", ');
-    expect(rowsEntry.text!.length).toBeLessThanOrEqual(WHOLE_FILE_CAP);
+    expect(rowsEntry.reason).toBe(`read by ${psrTest}`);
+    expect(rowsEntry.text).toBe(read(contractsRows));
     const psrRows = read(contractsRows).split("\n").filter((line) => line.startsWith('{"fqcn":"Psr\\\\'));
     expect(psrRows.length).toBe(28);
-    expect(psrRows.filter((line) => !rowsEntry.text!.split("\n").includes(line))).toEqual([]);
     expect(psrWhole.findIndex((item) => item.path === contractsRows)).toBeLessThan(psrWhole.findIndex((item) => item.path === psrTest));
     // ESC-10.2-7 (c): a file a changed test copies into a fixture (copyFileSync's source) is shown like a data file.
     expect(dataFileReads("a/b/c.test.ts", 'copyFileSync(join(import.meta.dir, "one.json"), join(tmp, "one.json"));\ncopyFileSync(join(tmp, "x"), "y");', (path) => dataKnown.has(path))).toEqual(["a/b/one.json"]);
@@ -1743,6 +1745,19 @@ xaravelTest(
     const waivedRerunFakes = fakes({});
     expect(await review(waiverRepo.dir, waivedRerunFakes.env, "--loop-cli", "claude", "--base", waiverRepo.base)).toMatchObject({ code: 0, out: [`current: ${waivedDetail}`] });
     expect([waivedRerunFakes.calls("claude").length, waivedRerunFakes.calls("codex").length]).toEqual([0, 0]);
+    // An evidence gap (MAINT-2026-10-24-evidence-gaps): a reject that fails F-7 on missing evidence only counts, with no
+    // waiver; `review` exits 0 and prints the note, and story:check's approvals pass.
+    const gapRepo = makeRepo();
+    const gapTree = reviewTree(gapRepo.dir, "worktree", SPEC);
+    const gapFakes = fakes({ codex: [{ kind: "answer", answer: { items: answers({ "F-7": "fail", "F-9": "n/a" }, { "F-7": [{ ...finding, kind: "missing-evidence" }] }) } }] });
+    const gapReview = await review(gapRepo.dir, gapFakes.env, "--loop-cli", "claude");
+    expect(gapReview.code).toBe(0);
+    expect(gapReview.out).toContain(`evidence gap noted: reviewer 1 F-7 ${finding.path}: ${finding.detail}`);
+    expect(readFileSync(gapRepo.spec, "utf8")).toContain(`- **F-7** \`${finding.path}\`: ${finding.detail} _(missing evidence)_`);
+    commitAll(gapRepo.dir);
+    expect(renderClause(approvalsClause(gapRepo.dir, "9.1"))).toEqual([
+      `PASS approvals: 1 pass verdict and reviewer 1's reject noted as an evidence gap (F-7: missing evidence only) for tree ${gapTree} (reviewer 1: codex/gpt-fake-1 reject, reviewer 2: claude/claude-fake-1 pass)`,
+    ]);
     // Rejects standing in both slots: both are printed, a finding's path is one line, and stderr speaks of both.
     const bothRepo = makeRepo();
     const bothTree = reviewTree(bothRepo.dir, "worktree", SPEC);
@@ -1973,6 +1988,31 @@ xaravelTest(
     expect(bothWaived.detail).toBe(`reviewer 1's and reviewer 2's rejects waived by decisions/ESC-9.1-1.md (F-2) for tree ${t} (reviewer 1: codex/codex-m reject, reviewer 2: claude/claude-m reject)`);
     expect(waivedCount([twoFails, otherReject], waive(["F-2"])).pass).toBe(false);
     expect(waivedCount([record(1, "claude", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] }), record(2, "claude")], waive(["F-2"])).pass).toBe(false);
+    // An evidence gap (MAINT-2026-10-24-evidence-gaps): a reject whose fail items are outside F-2, F-3 and F-8 and hold
+    // only missing-evidence findings counts as a pass, in one slot or both, and the detail notes it; a defect finding,
+    // a finding with no kind, or a core item still fails, and so does the cross-model rule.
+    const gapFinding = { ...finding, kind: "missing-evidence" };
+    const gapRecord = (reviewer: 1 | 2, cli: "claude" | "codex", item: string, found: Record<string, unknown>[] = [gapFinding]) =>
+      record(reviewer, cli, { verdict: "reject", items: answers({ [item]: "fail" }, { [item]: found as { path: string; detail: string }[] }) as unknown as VerdictRecord["items"] });
+    const gapOne = waivedCount([gapRecord(1, "codex", "F-7"), record(2, "claude")], []);
+    expect(gapOne.pass).toBe(true);
+    expect(gapOne.detail).toBe(`1 pass verdict and reviewer 1's reject noted as an evidence gap (F-7: missing evidence only) for tree ${t} (reviewer 1: codex/codex-m reject, reviewer 2: claude/claude-m pass)`);
+    expect(evidenceGapNotes(gapOne.slots)).toEqual([`evidence gap noted: reviewer 1 F-7 ${finding.path}: ${finding.detail}`]);
+    expect(waivedCount([gapRecord(1, "codex", "F-7"), gapRecord(2, "claude", "F-1")], []).detail).toBe(
+      `reviewer 1's reject noted as an evidence gap (F-7: missing evidence only) and reviewer 2's reject noted as an evidence gap (F-1: missing evidence only) for tree ${t} (reviewer 1: codex/codex-m reject, reviewer 2: claude/claude-m reject)`,
+    );
+    expect(waivedCount([gapRecord(1, "codex", "F-7"), otherReject], waive(["F-2"])).pass).toBe(true);
+    for (const core of CORE_ITEMS) {
+      expect([core, waivedCount([gapRecord(1, "codex", core), record(2, "claude")], []).pass]).toEqual([core, false]);
+    }
+    expect(waivedCount([gapRecord(1, "codex", "F-7", [{ ...finding, kind: "defect" }]), record(2, "claude")], []).pass).toBe(false);
+    expect(waivedCount([gapRecord(1, "codex", "F-7", [gapFinding, finding]), record(2, "claude")], []).pass).toBe(false);
+    expect(waivedCount([gapRecord(1, "claude", "F-7"), record(2, "claude")], []).pass).toBe(false);
+    expect(evidenceGapReject(record(1, "codex"))).toBe(false);
+    expect(evidenceGapReject(null)).toBe(false);
+    // A finding's kind is checked: absent is allowed (an older record, a defect), any other value is not.
+    expect(parseVerdict(ITEMS, { items: answers({ "F-7": "fail" }, { "F-7": [{ ...finding, kind: "maybe" }] }) })).toMatchObject({ ok: false, errors: [`F-7: findings[0] kind "maybe" is not defect or missing-evidence`] });
+    expect(parseVerdict(ITEMS, { items: answers({ "F-7": "fail" }, { "F-7": [gapFinding] }) })).toMatchObject({ ok: true });
     expect(waivedReject(rejectRecord, waive(["F-2"]))).toBe(true);
     expect(waivedReject(record(1, "codex"), waive(["F-2"]))).toBe(false);
     expect(waivedReject(null, waive(["F-2"]))).toBe(false);
