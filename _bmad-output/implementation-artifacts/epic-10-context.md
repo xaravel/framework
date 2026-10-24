@@ -17,50 +17,79 @@ Port every `Illuminate\Contracts\*` interface, plus the Xaravel-only seams, into
 
 ## Requirements & Constraints
 
-- **Xaravel Component.** Every acceptance criterion is verified by an `XT-contracts-<n>` Xaravel Test; there are no Ported Tests. XT ids are allocated per Story manifest (10.1: XT-contracts-1..4 and -18; 10.2: 5..7; 10.3: 8..9; 10.4: 10..12; 10.5: 13..15; 10.6: 16..17), so a new one takes the next free number after 18; never reuse one.
-- **API surface.** The API-surface diff compares the interfaces with Upstream `Illuminate\Contracts\*` and the PSR interfaces, and must show zero unexplained members.
-- **Dependencies.** `@xaravel/contracts` depends only on `@xaravel/runtime` (XT-conformance-8 asserts exactly `{ "@xaravel/runtime": "workspace:*" }`). It never imports an implementation package; every other package may depend on it.
-- **Container behaviour.** Autowiring uses declared injection tokens, never type hints. Abstracts are `string | token | class` as Upstream, including string aliases. `app('cache')`, `app(CacheManager)` and `app(Cache\Factory)` resolve to one instance. Facades and helpers resolve through these tokens and aliases.
-- **Protection.** Once `decisions/PHASE-1-EXIT.md` merges, the `after-phase:1` marker in `conformance/protected-paths` makes `packages/contracts/**` Protected; any later Story PR touching it fails CI.
-- **Story 10.6 closing gate.** `api-surface:gate contracts` passes, `docs/` lists every contract with its Upstream FQCN, and `async-surface.json` is committed. The API-surface mappings (camelCase, options objects, DIV-12 renames, defaults, nullability) are re-checked against real code; a misreading mapping raises an Escalation, never an `additions.jsonl` or `exceptions.jsonl` line.
+- **Xaravel Component.** Every acceptance criterion is verified by an `XT-contracts-<n>` Xaravel Test; there are no Ported Tests. XT ids are allocated per Story manifest (10.1: 1..4 and 18; 10.2: 5..7; 10.3: 8..9; 10.4: 10..12; 10.5: 13..15; 10.6: 16..17). A new one takes the next free number after 18; never reuse one.
+- **API surface.** The API-surface diff compares the interfaces with Upstream `Illuminate\Contracts\*` and the PSR interfaces, and must show zero unexplained members. `exceptions.jsonl` and `additions.jsonl` are Protected and change only through Maintainer review.
+- **Dependencies.** `@xaravel/contracts` depends only on `@xaravel/runtime` (XT-conformance-8 asserts exactly `{ "@xaravel/runtime": "workspace:*" }`). It never imports an implementation package, and every other package may depend on it.
+- **Container behaviour.** Autowiring uses declared injection tokens, never type hints. Abstracts are `string | token | class` as Upstream, including string aliases. `app('cache')`, `app(CacheManager)` and `app(Cache\Factory)` resolve to one instance.
+- **Protection.** `conformance/protected-paths` lists `/packages/contracts/ after-phase:1`. Once `decisions/PHASE-1-EXIT.md` merges, `packages/contracts/**` is Protected, and any later Story PR that touches it fails CI.
+- **Story 10.6 closing gate.**
+  - `api-surface:gate contracts` passes, `docs/` lists every contract with its Upstream FQCN, and `async-surface.json` is committed.
+  - This is the first Component gate on real code, so the API-surface mappings are re-checked against the gate's matched and extra members: camelCase, options objects, DIV-12 renames, defaults and nullability.
+  - A mapping that misreads real code raises an Escalation. It never gets an `additions.jsonl` or `exceptions.jsonl` line.
 
 ## Technical Decisions
 
-- **Token and brand (AD-1, AD-9, ESC-10.1-1).**
-  - Each contract exports an `interface` and a runtime token (object or function) under the same Upstream name.
+- **Token and brand.**
+  - Each contract exports an `interface` and a runtime token under the same Upstream name.
   - `Token.brand` is `Symbol.for('<Upstream FQCN>')`, typed as the contract's own `unique symbol`. The interface requires `readonly [Token.brand]: true`, so `implements` without the brand fails to compile.
-  - `Symbol.hasInstance` reads the brand through the prototype chain; `Symbol.toPrimitive` returns the brand key, so `get [Token]()` and `get [Token.brand]()` are the same property.
-  - Every brand, including markers, is a prototype getter `get [Token.brand]() { return true as const }`, emitted by generators. `hasBrand(classOrInstance, Token)` checks without instantiating; marker contracts (`ShouldQueue`, `ShouldBroadcast`) are brand-only tokens (DIV-9).
-- **Token metadata (ESC-4.5-1 item 3, ESC-4.7-1 item 5, ESC-10.1-1, ESC-10.1-6).**
-  - Method names at `Symbol.for('xaravel.contract.methods')`; parameter names at `Symbol.for('xaravel.contract.parameters')` as a frozen `{ <method>: [<param>, …] }` record (each list frozen too). Both come from the committed API surface, not hand-written.
-  - `contract<T, B>(fqcn, members, parents?)`: tokens pass their Upstream parent tokens, kept as a frozen array at `Symbol.for('xaravel.contract.parents')`. Every token Stories 10.2/10.3 generate must pass its Upstream parents, so PHPUnit and Mockery doubles of a child contract carry every brand in the chain.
-  - The grader still reads parameters from `Symbol.for('xaravel.api.signature')`.
-- **Statics and built-in parents (ESC-10.2-1, ESC-10.2-4).**
-  - `contract()` takes an optional `statics` record of Upstream constants, kept as frozen own properties on the token (`Filesystem.VISIBILITY_PUBLIC === 'public'`; Story 10.3 has `PasswordBroker`'s five constants).
-  - A contract with a static interface method also exports `interface <X>Static` in the same file; implementers satisfy it on the constructor side. The API-surface tool counts both as the FQCN's static members.
-  - `contract()` takes an optional `builtins` list of PHP built-in parent methods by PHP name (`count`; `offsetExists/Get/Set/Unset`; `getIterator`; `__toString`), kept at `Symbol.for('xaravel.contract.builtins')` (absent means none). Doubles take methods from the token, its parents closure and each one's builtins, so `methods` stays equal to the token's own API-surface rows.
-- **Identity of tokens (ESC-10.1-3).** `fqcn(token)` returns a frozen non-function token's own non-writable `Symbol.for('xaravel.class.fqcn')` string, which `contract<T>()` sets. `resolveClass` never resolves a token name as a class. App/package contracts use `contract<T>('<FQCN>')` and behave like framework tokens. Abstract classes are tokens as they are. Importing a contract with `import type` for injection is a lint error.
-- **Subpaths (AD-1, AD-3, ESC-10.1-2).** Each contract lives at the kebab-case subpath of its Upstream namespace (`Illuminate\Contracts\Mail\Mailer` → `@xaravel/contracts/mail`), mapped to `./src/<sub>/index.ts`. `SUBPATH_EXPORTS` already approves: the 33 top-level namespaces at the Pin (including `log`, `image`, `json-schema`, `concurrency`), the nested `auth/access`, `auth/middleware`, `database/eloquent`, `database/events`, `database/query`, `session/middleware`, and `psr`, `aliases`, `async`, `view`, `testing`. Each Story adds the `exports` entry for the subpaths it builds; any other subpath still needs a Maintainer-approved change.
-- **PSR (AD-22, ESC-10.1-4).** `@xaravel/contracts/psr` holds `Psr\Container`, `Psr\SimpleCache`, `Psr\Log`. Their rows are in `conformance/api-surface/contracts.jsonl` and are gated like every contract. IO contracts are async per AD-6 (`CacheInterface` is async).
-- **Async shape of contract methods (AD-5, AD-6, DIV-1).**
-  - Every async method carries `@asyncRoot <Contract.method>`; `@asyncRoot callback` also covers a contract method whose implementations are DIV-1 async callbacks (rule objects' `passes`/`validate`/`__invoke`, listeners, pipes, job handlers), which return a Promise (ESC-10.2-6).
-  - `Foundation\Application::register()` and `registerConfiguredProviders()` are async (registering on a booted app boots the provider); `registerDeferredProvider()` and `loadDeferredProviders()` stay sync (ESC-10.2-5).
-  - `Pipeline::then(destination)` keeps its name plus a `PromiseLike` overload; Pipeline is on the thenable list, so `send`/`through`/`via` get `thenable` lines in `async-surface.json` (ESC-10.2-2).
-  - `MessageProvider::getMessageBag()` stays sync for every provider; a validator's bag is its last completed run's (DIV-1.4).
-- **Concrete types inside contracts.** Where Upstream names a concrete class (`Request`, `Response`, `Collection`), declare a structural interface inside contracts; never import the implementation.
-- **Alias table (AD-1).** `@xaravel/contracts/aliases` holds `registerCoreContainerAliases` and each provider's string bindings verbatim as data (alias string → FQCN string). The canonical token is the most specific contract a service is aliased to (`CacheManager` → `Cache\Factory`); providers bind only it. `canonicalToken(abstract)` returns it, and validation fails naming any alias without a canonical contract.
-- **Names and signatures (AD-3, AD-26).** Keep Upstream interface, method and parameter names, methods camelCase; named exports, one public class per file. More than one optional parameter → also accept a single options object keyed by camelCase PHP parameter names. `__toString` → `toString()` + `[Symbol.toPrimitive]`; `ArrayAccess` → `offsetGet/Set/Exists/Unset`; `IteratorAggregate`/`Countable` → `[Symbol.iterator]`/`count()`; `__invoke` stays `__invoke`; enums are classes with static instances, never TS `enum`.
-- **Values and identity (AD-9, AD-10).** `null` is the only absent value; never declare `undefined` returns. Accept PHP arrays in all three forms; by-reference parameters take `Ref<T>`. Use `fqcn()`, never `constructor.name`; framework class files end with `registerClass(...)`; never `sideEffects: false`.
-- **Injection (DIV-3).** `inject({ <paramName>: <Spec>, … })` as a TC39 decorator or closure wrapper; specs are tokens/classes, `String`/`Number`/`Boolean`, `primitive`, contextual descriptors, `oneOf(...)`; metadata on `Symbol.metadata`.
-- **Xaravel-only contracts (AD-27).** The only cross-package seams contracts may define; a new seam needs an Escalation.
-  - `async`: thenable type list and `NotPromise<T>`; the `async-surface` tool reads its list from here; every framework class with `then` declares `implements PromiseLike<…>` (ESC-6.1-1).
-  - `view`: `RenderContext` and the `Blade.directive` emitted-helper ABI.
-  - `testing`: hook order `createApplication` → `afterApplicationCreated` → `setUp<Trait>` → test → `tearDown<Trait>` → `beforeApplicationDestroyed`.
+  - `Symbol.hasInstance` reads the brand through the prototype chain.
+  - Every brand, markers included, is a generated prototype getter `get [Token.brand]() { return true as const }`.
+  - `hasBrand(classOrInstance, Token)` checks a brand without instantiating. Marker contracts (`ShouldQueue`, `ShouldBroadcast`) are brand-only tokens (DIV-9).
+- **Token metadata.** All of it comes from the committed API surface, never written by hand.
+  - Method names are at `Symbol.for('xaravel.contract.methods')`.
+  - Parameter names are at `Symbol.for('xaravel.contract.parameters')`, as frozen per-method lists.
+  - Upstream parent tokens are a frozen array at `Symbol.for('xaravel.contract.parents')`, so test doubles of a child carry every brand in the chain.
+  - `statics` holds Upstream constants as frozen own properties. A static interface method gets an extra `interface <X>Static`.
+  - `builtins` lists PHP built-in parent methods (`count`, `offset*`, `getIterator`, `__toString`) at `Symbol.for('xaravel.contract.builtins')`.
+  - The grader reads parameters from `Symbol.for('xaravel.api.signature')`.
+- **Identity.**
+  - `fqcn(token)` reads the token's own frozen `Symbol.for('xaravel.class.fqcn')`.
+  - `resolveClass` never resolves a token name as a class.
+  - App contracts use `contract<T>('<FQCN>')`.
+  - Importing a contract with `import type` for injection is a lint error.
+- **Subpaths.**
+  - Each contract lives at the kebab-case subpath of its Upstream namespace, mapped to `./src/<sub>/index.ts`.
+  - `SUBPATH_EXPORTS` approves the 33 top-level namespaces, the nested `auth/access`, `auth/middleware`, `database/{eloquent,events,query}` and `session/middleware`, and `psr`, `aliases`, `async`, `view`, `testing`.
+  - Any other subpath needs Maintainer approval.
+  - `psr` holds `Psr\Container`, `Psr\SimpleCache` and `Psr\Log`, gated like every contract. IO contracts are async (`CacheInterface` is async).
+- **Concrete types.** Where Upstream names a concrete class, `src/structural/<Name>.ts` declares a structural interface. Its first line is `// <FQCN> …`, which the shared thenable resolver uses to treat the type as that FQCN. A structural file's own methods get no `thenable` line.
+- **Async shape (AD-6, DIV-1).**
+  - Every async method carries `@asyncRoot <Contract.method>`. `@asyncRoot callback` covers DIV-1 async callbacks such as rules, listeners, pipes and job handlers.
+  - `Application::register()` and `registerConfiguredProviders()` are async. `registerDeferredProvider()` and `loadDeferredProviders()` stay sync.
+  - `Pipeline::then` keeps a `PromiseLike` overload.
+  - `MessageProvider::getMessageBag()` stays sync.
+  - `View\Factory::make()` and `file()` stay sync. `render()` awaits the creator dispatch that `make()` started (DIV-1.5).
+- **Alias table and canonical tokens (AD-1).**
+  - `@xaravel/contracts/aliases` holds `registerCoreContainerAliases` and the provider string bindings verbatim, as data.
+  - `canonicalToken(abstract)` returns the contract alias that no other contract alias of the same service extends. If several unrelated ones remain, the first in Upstream's order wins (`'mailer'` → `Mail\Mailer`).
+  - A service with no contract alias keeps its Upstream string key as canonical (`'db'`, `'files'`, `'migrator'`).
+  - `validateAliasTable` fails, naming the alias, on any of these:
+    - an alias listed under two services;
+    - an alias of itself;
+    - an alias in a ported namespace that has no token;
+    - an alias of a service with neither a contract nor a string key.
+- **Names and values (AD-3, AD-9, AD-26).**
+  - Keep Upstream names, with methods in camelCase.
+  - A method with more than one optional parameter also accepts an options object.
+  - PHP built-ins map as follows: `__toString` → `toString()` + `[Symbol.toPrimitive]`, `ArrayAccess` → `offset*`, `IteratorAggregate`/`Countable` → `[Symbol.iterator]`/`count()`. `__invoke` stays.
+  - Enums are classes, never TS `enum`.
+  - `null` is the only absent value. By-reference parameters take `Ref<T>`.
+- **Xaravel-only contracts (AD-27).** These are the only cross-package seams contracts may define, and a new one needs an Escalation.
+  - `async` holds the thenable list (26 FQCNs) and `NotPromise<T>`. `async-surface` reads the list from `packages/contracts` first. Every framework class with `then` declares `implements PromiseLike<…>`.
+  - `view` holds `RenderContext` and the `Blade.directive` emitted-helper ABI.
+  - `testing` holds `TEST_HOOK_ORDER`, which follows Laravel:
+    1. `createApplication` runs.
+    2. Each `setUp<Trait>` runs and registers its `tearDown<Trait>` as a `beforeApplicationDestroyed` callback.
+    3. `afterApplicationCreated` runs.
+    4. The test runs.
+    5. The `beforeApplicationDestroyed` callbacks run in registration order.
 
 ## Cross-Story Dependencies
 
-- Done: Epic 9 runtime (including Story 9.14, token `fqcn()`), Story 10.1 (token, brand, metadata, parents, `contract<T>()`, `hasBrand`, PSR), Story 10.2 (core and service namespaces), action items `epic-10-item-1..5` (PSR API surface, double parent brands, API-surface statics, async-surface Pipeline/callback tags, double inherited methods), and the `contracts` consequence row.
-- Story 10.3 follows 10.2's patterns (statics, builtins, parents, async tags). XT-contracts tests that read `conformance/upstream/` fail rather than skip under `XARAVEL_UPSTREAM=require`, which CI sets after `bun run upstream:sync` (ESC-10.2-8).
-- Fidelity Review: only the Maintainer can waive a checklist item, per Story, in an Escalation decision's `fidelity_waiver` frontmatter. A reject that fails only waived items counts as a pass. Story 10.2's F-7 waiver does not carry over to other Stories.
-- Stories 10.2–10.5 build on 10.1's mechanism. Story 10.4 needs 10.2 and 10.3's contracts to resolve canonical tokens. Story 10.5 changes Story 6.4's async-surface tool to read the thenable list from contracts. Story 10.6 closes the epic last.
-- Downstream: Container (Epic 17) resolves through the alias table; Mockery and PHPUnit doubles read the token metadata and parents; all Phase 1–8 packages depend on these interfaces.
+- Done: Epic 9 runtime, Stories 10.1 to 10.5, and action items `epic-10-item-1..6`. Only Story 10.6 remains. It closes the Epic and depends on all of the earlier work.
+- XT-contracts tests that read `conformance/upstream/` fail rather than skip under `XARAVEL_UPSTREAM=require`, which CI sets after `bun run upstream:sync`.
+- Fidelity Review waivers are set per Story, in an Escalation decision's `fidelity_waiver` frontmatter. Stories 10.2 and 10.3 had F-7 waived. A waiver never carries over to another Story.
+- Gaps deferred downstream:
+  - The `Eloquent\Builder` thenable is answered by `@xaravel/database`.
+  - Classes bound by provider bindings resolve to their key, which the Container (Epic 17) handles.
+- Downstream users: the Container resolves through the alias table, Mockery and PHPUnit doubles read the token metadata, and every Phase 1–8 package depends on these interfaces.

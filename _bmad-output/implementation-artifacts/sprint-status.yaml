@@ -141,7 +141,7 @@ development_status:
   10-3-port-the-contracts-for-the-web-and-application-namespaces: done
   10-4-container-alias-table-and-canonical-tokens: done
   10-5-xaravel-only-contracts: done
-  10-6-contracts-complete-and-protected: backlog
+  10-6-contracts-complete-and-protected: in-progress
   epic-10-retrospective: optional
 
   epic-11: backlog
