@@ -106,12 +106,20 @@
 // other failure is retried once on the same CLI, then the reviewer fails
 // closed. No model API is called directly and no API key is read.
 //
-// Exit codes: `review` 0 when both reviewers recorded `pass`, 1 when a
+// A Maintainer waiver (ESC-10.2-9). An approved, current `decisions/ESC-*.md`
+// decided by the Maintainer may carry `fidelity_waiver: { subject, items }`:
+// for that Story or action item, a reject whose only `fail` items are `items`
+// counts beside the other reviewer's `pass` (`fidelityWaivers`,
+// `waivedReject`). Only the Maintainer writes one; the orchestrator never does.
+//
+// Exit codes: `review` 0 when both reviewers recorded `pass` (or one did and a
+// waiver covers the other's reject, standing or new), 1 when a
 // `reject` was recorded or a reviewer produced no verdict (or the review could
 // not run, a standing reject included), 2 on a usage error. `status` 0 when `current`, else 1.
 import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { isAbsolute, join, posix, relative, resolve } from "node:path";
+import { escalationStatus } from "../escalations/escalations";
 import { compareUnits, type InventoryEntry } from "../inventory/inventory";
 import { FIXTURES_DIR, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
@@ -3304,14 +3312,79 @@ function runStart(entries: readonly RecordEntry[], index: number): number {
   return start;
 }
 
+/** The decision frontmatter field that holds a Maintainer waiver (ESC-10.2-9). */
+export const WAIVER_FIELD = "fidelity_waiver";
+
+/** A Maintainer waiver of checklist items in one Story's or action item's Fidelity Review (ESC-10.2-9). */
+export interface FidelityWaiver {
+  /** The decision that grants it, `decisions/ESC-<id>.md`. */
+  readonly decision: string;
+  /** The Story id or action item id it applies to. */
+  readonly subject: string;
+  /** The checklist item ids (`F-<n>`) whose `fail` it accepts. */
+  readonly items: readonly string[];
+}
+
+/**
+ * The waivers for `subject` (ESC-10.2-9): each `decisions/ESC-*.md` with `decided_by: Maintainer` whose Escalation is
+ * `approved` and current (`escalationStatus`), and whose `fidelity_waiver` is `{ subject, items }` with `subject` equal
+ * to `subject` and `items` a non-empty list of checklist ids. A malformed waiver grants nothing.
+ */
+export function fidelityWaivers(root: string, subject: string): FidelityWaiver[] {
+  const dir = join(root, "decisions");
+  if (!existsSync(dir)) {
+    return [];
+  }
+  const out: FidelityWaiver[] = [];
+  for (const name of readdirSync(dir).filter((file) => /^ESC-.+\.md$/.test(file)).sort(compareUnits)) {
+    const text = readFileSync(join(dir, name), "utf8").replace(/\r\n/g, "\n");
+    const lines = text.split("\n");
+    const end = lines[0] === "---" ? lines.indexOf("---", 1) : -1;
+    if (end === -1) {
+      continue;
+    }
+    let fields: unknown;
+    try {
+      fields = Bun.YAML.parse(lines.slice(1, end).join("\n"));
+    } catch {
+      continue;
+    }
+    if (!isRecord(fields) || fields["decided_by"] !== "Maintainer" || !isRecord(fields[WAIVER_FIELD])) {
+      continue;
+    }
+    const waiver = fields[WAIVER_FIELD];
+    const items = waiver["items"];
+    if (String(waiver["subject"]) !== subject || !Array.isArray(items) || items.length === 0 || !items.every((item) => typeof item === "string" && /^F-[1-9]\d*$/.test(item))) {
+      continue;
+    }
+    try {
+      if (escalationStatus(name.slice(0, -3), root) !== "approved") {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    out.push({ decision: `decisions/${name}`, subject, items: items as string[] });
+  }
+  return out;
+}
+
+/** Whether `record` is a `reject` whose every `fail` item `waivers` accept (ESC-10.2-9). */
+export function waivedReject(record: VerdictRecord | null, waivers: readonly FidelityWaiver[]): boolean {
+  const waived = new Set(waivers.flatMap((waiver) => waiver.items));
+  return record !== null && record.verdict === "reject" && waived.size > 0 && record.items.every((item) => item.result !== "fail" || waived.has(item.id));
+}
+
 /**
  * The counting rule: per reviewer slot, its standing reject on `tree` when it has one (a later `pass` on the same tree
  * never overrides it, ESC-8.8-1), else the last record whose `tree` is `tree`. It passes when slots 1 and 2 are both
  * `pass`, and slot 1 ran on another CLI than the loop's or recorded why it fell back. A malformed record fails it, and
  * so does a counted record whose items do not answer the checklist or decide its verdict, or whose `prior` is not the
- * answers to `priorFindings` of the records before its run (the contiguous records with its tree and date).
+ * answers to `priorFindings` of the records before its run (the contiguous records with its tree and date). A
+ * Maintainer waiver (`waivers`, ESC-10.2-9) lets one slot's reject count as a pass when it fails only waived items;
+ * the other slot must still be a `pass`.
  */
-export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, checklist: readonly ChecklistItem[]): VerdictCount {
+export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, checklist: readonly ChecklistItem[], waivers: readonly FidelityWaiver[] = []): VerdictCount {
   const malformedResult = (bad: readonly { line: number; problem: string }[]): VerdictCount => ({ pass: false, detail: `${bad.length} malformed Fidelity Review record(s)`, items: bad.map((entry) => `record at line ${entry.line} ${entry.problem}`), slots: [null, null] });
   const malformed = entries.filter((entry) => entry.record === null);
   if (malformed.length > 0) {
@@ -3351,6 +3424,13 @@ export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, 
   if (passes === 2 && crossModel) {
     const who = slots.map((record, index) => `reviewer ${index + 1}: ${record!.cli}/${record!.model}`).join(", ");
     return { pass: true, detail: `2 pass verdicts for tree ${tree} (${who})`, items: [], slots };
+  }
+  // One reject that fails only waived items counts, beside a real pass (ESC-10.2-9).
+  const waived = slots.findIndex((record) => waivedReject(record, waivers));
+  if (passes === 1 && waived !== -1 && crossModel) {
+    const who = slots.map((record, index) => `reviewer ${index + 1}: ${record!.cli}/${record!.model} ${record!.verdict}`).join(", ");
+    const by = waivers.map((waiver) => `${waiver.decision} (${waiver.items.join(", ")})`).join(", ");
+    return { pass: true, detail: `1 pass verdict and reviewer ${waived + 1}'s reject waived by ${by} for tree ${tree} (${who})`, items: [], slots };
   }
   const items = slots.map((record, index) => (record === null ? `reviewer ${index + 1}: none for tree ${tree}` : `reviewer ${index + 1}: ${record.verdict} at tree ${record.tree}`));
   for (const reject of standing) {
@@ -3784,7 +3864,13 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const entries = parseRecords(readFileSync(spec, "utf8"));
   const reviewed = reviewTree(root, "worktree", spec);
   const standing = standingRejects(entries, reviewed);
+  const waivers = fidelityWaivers(root, storyId);
   if (standing.length > 0) {
+    // A standing reject the Maintainer waived already counts (ESC-10.2-9): nothing to re-run.
+    const count = fidelityVerdicts(entries, reviewed, items, waivers);
+    if (count.pass) {
+      return { code: 0, out: [...out, `current: ${count.detail}`], err };
+    }
     for (const { reviewer, entry } of standing) {
       out.push(`STANDING reviewer ${reviewer}: reject at tree ${entry.record!.tree}`);
       for (const item of entry.record!.items) {
@@ -3926,7 +4012,12 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   out.push(...missing);
   out.push(`recorded ${records.length} verdict(s) in ${display(root, spec)} for tree ${diff.tree}`);
-  const passed = records.length === 2 && records.every((record) => record.verdict === "pass");
+  // Both pass, or one passes and the other rejects only on items the Maintainer waived (ESC-10.2-9).
+  const passes = records.filter((record) => record.verdict === "pass").length;
+  const passed = records.length === 2 && (passes === 2 || (passes === 1 && records.some((record) => waivedReject(record, waivers))));
+  if (passed && passes === 1) {
+    out.push(`waived: ${waivers.map((waiver) => `${waiver.decision} (${waiver.items.join(", ")})`).join(", ")}`);
+  }
   return { code: passed ? 0 : 1, out, err };
 }
 
@@ -3934,7 +4025,7 @@ function status(args: Args): RunResult {
   const spec = specPath(args.root, args.spec, args.storyId);
   const entries = parseRecords(readFileSync(spec, "utf8"));
   const tree = reviewTree(args.root, "worktree", spec);
-  const count = fidelityVerdicts(entries, tree, parseChecklist(readFileSync(join(args.root, CHECKLIST_FILE), "utf8")));
+  const count = fidelityVerdicts(entries, tree, parseChecklist(readFileSync(join(args.root, CHECKLIST_FILE), "utf8")), fidelityWaivers(args.root, args.storyId));
   if (count.pass) {
     return { code: 0, out: [`current: ${count.detail}`], err: [] };
   }

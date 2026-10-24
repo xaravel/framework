@@ -54,7 +54,9 @@
 //                  spec, each manifest's `status:` line): per reviewer slot the last
 //                  record for that tree counts, and reviewer 1 ran on the
 //                  other CLI from the loop's or recorded why it fell back
-//                  (`fidelityVerdicts`, tools/fidelity-review). It reads no
+//                  (`fidelityVerdicts`, tools/fidelity-review). A Maintainer
+//                  waiver lets one reject that fails only the waived items
+//                  count beside a pass (`fidelityWaivers`, ESC-10.2-9). It reads no
 //                  GitHub review and needs no `GH_TOKEN`. No spec, two specs,
 //                  a malformed record or no HEAD commit fails;
 //   escalations    no `conformance/escalations/ESC-<id>-<n>.md` is `open`
@@ -94,7 +96,7 @@ import { FIXTURES_DIR, readNondeterminism, verifyFixture } from "../oracle/fixtu
 import { committedRequests, verificationKey } from "../oracle/verify";
 import { checkApiSurfaceGates, coveringIds, covers, parseManifest, readGateCriteria, STORIES_DIR, type GateCriterion, type Manifest } from "../ownership/ownership";
 import { readExpectations, readWorkingInventory } from "../pin-bump/pin-bump";
-import { CHECKLIST_FILE, fidelityVerdicts, findStorySpec, parseChecklist, parseRecords, reviewTree, type ChecklistItem } from "../fidelity-review/fidelity-review";
+import { CHECKLIST_FILE, fidelityVerdicts, fidelityWaivers, findStorySpec, parseChecklist, parseRecords, reviewTree, type ChecklistItem } from "../fidelity-review/fidelity-review";
 import { GitHub } from "../protected-paths/protected-paths";
 
 export const CLAUSES = ["manifest", "tests", "xaravel-tests", "fixtures", "api-surface", "approvals", "escalations", "full-run"] as const;
@@ -404,7 +406,7 @@ export function approvalsClause(root: string, storyId: string): ClauseResult {
   } catch (error) {
     return fail("approvals", `cannot check: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const count = fidelityVerdicts(parseRecords(readFileSync(spec, "utf8")), tree, checklist);
+  const count = fidelityVerdicts(parseRecords(readFileSync(spec, "utf8")), tree, checklist, fidelityWaivers(root, storyId));
   return count.pass ? pass("approvals", count.detail) : fail("approvals", count.detail, count.items);
 }
 

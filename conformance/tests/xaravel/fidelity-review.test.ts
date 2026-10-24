@@ -26,6 +26,9 @@ import {
   decisionEvidence,
   EXCERPT_CAP,
   fidelityVerdicts,
+  fidelityWaivers,
+  type FidelityWaiver,
+  waivedReject,
   fileImports,
   gatherEvidence,
   importedDeclarations,
@@ -81,6 +84,7 @@ import {
   type PriorFinding,
   type VerdictRecord,
 } from "../../../tools/fidelity-review/fidelity-review";
+import { escalationDigest } from "../../../tools/escalations/escalations";
 import { approvalsClause, renderClause } from "../../../tools/story-check/story-check";
 import { SPINE_FILE, spineRules } from "../../../tools/xt-coverage/consequences";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -1721,6 +1725,24 @@ xaravelTest(
     expect(standing.map((entry) => [entry.reviewer, entry.entry.record!.verdict, entry.laterPasses.length])).toEqual([[1, "reject", 0]]);
     expect(standingRejects(parseRecords(rerunSpec), "f".repeat(40))).toEqual([]);
     commitAll(repo.dir, "bookkeeping");
+    // A Maintainer waiver of F-2 (ESC-10.2-9): the same reject now counts beside the pass, so `review` exits 0 and says
+    // so, `status` is current, story:check's approvals pass, and a re-run on the tree runs no reviewer and exits 0.
+    const waiverRepo = makeRepo();
+    const waivedEscalation = "---\ntest_ids:\n  - XT-support-1\ntrigger: protected-path\nproposed: x\nevidence: y\n---\n\n# ESC-9.1-1\n";
+    write(waiverRepo.dir, "conformance/escalations/ESC-9.1-1.md", waivedEscalation);
+    write(waiverRepo.dir, "decisions/ESC-9.1-1.md", `---\ndecision: approved\ndecided_by: Maintainer\ndate: 2026-10-23\nescalation_sha256: "${escalationDigest(waivedEscalation)}"\nfidelity_waiver:\n  subject: "9.1"\n  items: [F-2]\n---\n\nF-2 is waived.\n`);
+    const waiverTree = reviewTree(waiverRepo.dir, "worktree", SPEC);
+    const waiverFakes = fakes({ codex: [{ kind: "answer", answer: { items: answers({ "F-2": "fail", "F-9": "n/a" }, { "F-2": [finding] }) } }] });
+    const waivedReview = await review(waiverRepo.dir, waiverFakes.env, "--loop-cli", "claude");
+    expect(waivedReview.code).toBe(0);
+    expect(waivedReview.out).toContain("waived: decisions/ESC-9.1-1.md (F-2)");
+    const waivedDetail = `1 pass verdict and reviewer 1's reject waived by decisions/ESC-9.1-1.md (F-2) for tree ${waiverTree} (reviewer 1: codex/gpt-fake-1 reject, reviewer 2: claude/claude-fake-1 pass)`;
+    expect(await status(waiverRepo.dir)).toMatchObject({ code: 0, out: [`current: ${waivedDetail}`] });
+    commitAll(waiverRepo.dir);
+    expect(renderClause(approvalsClause(waiverRepo.dir, "9.1"))).toEqual([`PASS approvals: ${waivedDetail}`]);
+    const waivedRerunFakes = fakes({});
+    expect(await review(waiverRepo.dir, waivedRerunFakes.env, "--loop-cli", "claude", "--base", waiverRepo.base)).toMatchObject({ code: 0, out: [`current: ${waivedDetail}`] });
+    expect([waivedRerunFakes.calls("claude").length, waivedRerunFakes.calls("codex").length]).toEqual([0, 0]);
     // Rejects standing in both slots: both are printed, a finding's path is one line, and stderr speaks of both.
     const bothRepo = makeRepo();
     const bothTree = reviewTree(bothRepo.dir, "worktree", SPEC);
@@ -1931,6 +1953,46 @@ xaravelTest(
       `reviewer 2: pass at tree ${t}`,
       `reviewer 1: the later pass at tree ${t} (record at line ${laterLine}) does not count: the reject at line ${rejectLine} stands until the reviewed tree changes (ESC-8.8-1)`,
     ]);
+    // A Maintainer waiver (ESC-10.2-9): one reject that fails only waived items counts beside a pass, standing or not;
+    // a reject that also fails an unwaived item, two waived rejects, or the cross-model rule failing still fail.
+    const waive = (items: string[]): FidelityWaiver[] => [{ decision: "decisions/ESC-9.1-1.md", subject: "9.1", items }];
+    const waivedCount = (list: VerdictRecord[], waivers: FidelityWaiver[]) => fidelityVerdicts(parseRecords(appendRecords("# spec\n", list.map((entry) => renderRecord(entry, ITEMS)))), t, ITEMS, waivers);
+    const waivedRun = waivedCount([rejectRecord, record(2, "claude")], waive(["F-2"]));
+    expect(waivedRun.pass).toBe(true);
+    expect(waivedRun.detail).toBe(`1 pass verdict and reviewer 1's reject waived by decisions/ESC-9.1-1.md (F-2) for tree ${t} (reviewer 1: codex/codex-m reject, reviewer 2: claude/claude-m pass)`);
+    expect(fidelityVerdicts(parseRecords(reRolledText), t, ITEMS, waive(["F-2"])).pass).toBe(true);
+    expect(waivedCount([rejectRecord, record(2, "claude")], waive(["F-3"])).pass).toBe(false);
+    expect(waivedCount([rejectRecord, record(2, "claude")], []).pass).toBe(false);
+    const twoFails = record(1, "codex", { verdict: "reject", items: answers({ "F-2": "fail", "F-3": "fail" }, { "F-2": [finding], "F-3": [finding] }) as unknown as VerdictRecord["items"] });
+    expect(waivedCount([twoFails, record(2, "claude")], waive(["F-2"])).pass).toBe(false);
+    expect(waivedCount([twoFails, record(2, "claude")], waive(["F-2", "F-3"])).pass).toBe(true);
+    const otherReject = record(2, "claude", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] });
+    expect(waivedCount([rejectRecord, otherReject], waive(["F-2"])).pass).toBe(false);
+    expect(waivedCount([record(1, "claude", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] }), record(2, "claude")], waive(["F-2"])).pass).toBe(false);
+    expect(waivedReject(rejectRecord, waive(["F-2"]))).toBe(true);
+    expect(waivedReject(record(1, "codex"), waive(["F-2"]))).toBe(false);
+    expect(waivedReject(null, waive(["F-2"]))).toBe(false);
+    // `fidelityWaivers` reads a waiver only from an approved, current ESC decision the Maintainer decided.
+    const waiverRoot = tempDir("xaravel-fidelity-waivers-");
+    const escalationText = "---\ntest_ids:\n  - XT-support-1\ntrigger: protected-path\nproposed: x\nevidence: y\n---\n\n# ESC-9.1-1\n";
+    mkdirSync(join(waiverRoot, "conformance", "escalations"), { recursive: true });
+    mkdirSync(join(waiverRoot, "decisions"));
+    writeFileSync(join(waiverRoot, "conformance", "escalations", "ESC-9.1-1.md"), escalationText);
+    const decisionText = (fields: string, digest = escalationDigest(escalationText)) => `---\ndecision: approved\ndecided_by: Maintainer\ndate: 2026-10-23\nescalation_sha256: "${digest}"\n${fields}---\n\nWaived.\n`;
+    const writeDecision = (text: string) => writeFileSync(join(waiverRoot, "decisions", "ESC-9.1-1.md"), text);
+    writeDecision(decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: [F-7]\n'));
+    expect(fidelityWaivers(waiverRoot, "9.1")).toEqual([{ decision: "decisions/ESC-9.1-1.md", subject: "9.1", items: ["F-7"] }]);
+    expect(fidelityWaivers(waiverRoot, "9.2")).toEqual([]);
+    for (const bad of [
+      decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: [F-7]\n', "0".repeat(64)),
+      decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: [F-7]\n').replace("decided_by: Maintainer", "decided_by: orchestrator"),
+      decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: []\n'),
+      decisionText('fidelity_waiver:\n  subject: "9.1"\n  items: [all]\n'),
+      decisionText(""),
+    ]) {
+      writeDecision(bad);
+      expect(fidelityWaivers(waiverRoot, "9.1")).toEqual([]);
+    }
     // A reject on another tree does not stand on this one, and a reject in one slot leaves the other slot's count alone.
     // The records after it must address its findings (`prior`, ESC-8.8-1 item 3); one that omits them is malformed.
     const p1 = { id: "P-1", reviewer: 1 as const, item: "F-2", path: finding.path, detail: finding.detail, fixed: true, note: "fixed" };
