@@ -10,6 +10,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symli
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
+import { fqcn } from "@xaravel/runtime";
 import { allRows, REPO } from "./support/contract-namespaces";
 
 const PACKAGE = join(REPO, "packages", "contracts");
@@ -115,6 +116,22 @@ const MUTATIONS: readonly Mutation[] = [
     finding: "contracts: mismatch method Illuminate\\Contracts\\Database\\ModelIdentifier::__construct: ",
     detail: "parameter 5 (extra) is extra",
   },
+  {
+    name: "extra member: Store gains a method Upstream lacks",
+    file: "src/cache/Store.ts",
+    search: "  getPrefix(): string;\n",
+    replace: "  getPrefix(): string;\n  sweep(): boolean;\n",
+    finding: "contracts: extra method Illuminate\\Contracts\\Cache\\Store::sweep",
+    detail: null,
+  },
+  {
+    name: "missing member: Store loses flush()",
+    file: "src/cache/Store.ts",
+    search: "  flush(): Promise<boolean>;\n",
+    replace: "",
+    finding: "contracts: missing method Illuminate\\Contracts\\Cache\\Store::flush",
+    detail: null,
+  },
 ];
 
 /** The number of times `needle` occurs in `text`. */
@@ -141,7 +158,7 @@ function section(page: string, title: string): string {
 
 xaravelTest(
   "XT-contracts-16",
-  "@xaravel/contracts is complete: `bun run api-surface:gate contracts` reports 0 unexplained (AD-15); the gate's mappings, re-checked on mutated temp copies of real contract files, catch a dropped AD-26 options overload, a lost `| null`, a changed default, a renamed member and a changed constructor (`__construct`), and no contracts row is a DIV-12 rename or state member (DIV-12); docs/contracts.md lists every Upstream interface and class once with its FQCN, a real subpath and a real runtime export, and cites the Divergences that shape contracts; async-surface.json is committed and current (FR-114)",
+  "@xaravel/contracts is complete: `bun run api-surface:gate contracts` reports 0 unexplained (AD-15); the gate's mappings, re-checked on mutated temp copies of real contract files, catch a dropped AD-26 options overload, a lost `| null`, a changed default, a renamed member and a changed constructor (`__construct`), and no contracts row is a DIV-12 rename or state member (DIV-12); docs/contracts.md lists every Upstream interface and class once with its FQCN, a real subpath and a real runtime export, and cites the Divergences that shape contracts; no additions.jsonl or exceptions.jsonl line explains contracts; async-surface.json is committed and current (AD-6)",
   async () => {
     // The gate on the repo.
     const real = gate(null);
@@ -182,6 +199,13 @@ xaravelTest(
     // DIV-12, checked as data: no contracts row is a rename source, and each pair on a contracts class names a
     // member the rows do not list, so it drops nothing the gate would compare.
     const rows = allRows();
+    // A mapping that misreads real code raises an Escalation, never a citation line (AD-15).
+    for (const citation of ["additions.jsonl", "exceptions.jsonl"]) {
+      const cited = readFileSync(join(REPO, "conformance", "api-surface", citation), "utf8")
+        .split("\n")
+        .filter((line) => line.trim() !== "" && (JSON.parse(line) as { component?: string }).component === "contracts");
+      Assert.assertSame(0, cited.length, `${citation} lines for contracts:\n${cited.join("\n")}`);
+    }
     const fqcns = new Set(rows.filter((row) => row.member === null).map((row) => row.fqcn));
     const renameSources = rows.filter((row) => row.member === "fillable" || row.member === "touches");
     Assert.assertSame("[]", JSON.stringify(renameSources.map((row) => `${row.fqcn}::${row.member ?? ""}`)), "DIV-12 rename sources among the contracts rows");
@@ -202,38 +226,54 @@ xaravelTest(
     // The docs page against the rows and the package's real exports.
     const page = readFileSync(join(PACKAGE, "docs", "contracts.md"), "utf8");
     const exportsMap = (JSON.parse(readFileSync(join(PACKAGE, "package.json"), "utf8")) as { exports: Record<string, string> }).exports;
-    const tableRows = new Map<string, { readonly subpath: string; readonly name: string }[]>();
+    const tableRows = new Map<string, { readonly kind: string; readonly subpath: string; readonly name: string }[]>();
     const unparsed: string[] = [];
     for (const line of section(page, "Reference").split("\n").filter((text) => text.startsWith("| `"))) {
-      const match = /^\| `([^`]+)` \| (?:interface|class) \| `@xaravel\/contracts\/([^`]+)` \| `([^`]+)` \|$/.exec(line);
+      const match = /^\| `([^`]+)` \| (\w+) \| `@xaravel\/contracts\/([^`]+)` \| `([^`]+)` \|$/.exec(line);
       if (match === null) {
         unparsed.push(line);
         continue;
       }
       const list = tableRows.get(match[1] ?? "") ?? [];
-      list.push({ subpath: match[2] ?? "", name: match[3] ?? "" });
+      list.push({ kind: match[2] ?? "", subpath: match[3] ?? "", name: match[4] ?? "" });
       tableRows.set(match[1] ?? "", list);
     }
-    const declarations = rows.filter((row) => row.kind === "interface" || row.kind === "class").map((row) => row.fqcn);
-    const missing = declarations.filter((fqcn) => !tableRows.has(fqcn));
-    const duplicated = declarations.filter((fqcn) => (tableRows.get(fqcn)?.length ?? 0) > 1);
-    const extra = [...tableRows.keys()].filter((fqcn) => !declarations.includes(fqcn));
+    const declarationRows = rows.filter((row) => row.kind === "interface" || row.kind === "class");
+    const declarations = declarationRows.map((row) => row.fqcn);
+    const kinds = new Map(declarationRows.map((row) => [row.fqcn, row.kind]));
+    const missing = declarations.filter((name) => !tableRows.has(name));
+    const duplicated = declarations.filter((name) => (tableRows.get(name)?.length ?? 0) > 1);
+    const extra = [...tableRows.keys()].filter((name) => !declarations.includes(name));
     const unresolved: string[] = [];
-    for (const [fqcn, entries] of tableRows) {
+    for (const [name, entries] of tableRows) {
       for (const entry of entries) {
         if (!Object.hasOwn(exportsMap, `./${entry.subpath}`)) {
-          unresolved.push(`${fqcn}: ./${entry.subpath} is not in package.json exports`);
+          unresolved.push(`${name}: ./${entry.subpath} is not in package.json exports`);
           continue;
         }
         const module = (await import(`@xaravel/contracts/${entry.subpath}`)) as Record<string, unknown>;
-        if (module[entry.name] === undefined) {
-          unresolved.push(`${fqcn}: @xaravel/contracts/${entry.subpath} does not export ${entry.name}`);
+        const value = module[entry.name];
+        if (value === undefined) {
+          unresolved.push(`${name}: @xaravel/contracts/${entry.subpath} does not export ${entry.name}`);
+          continue;
+        }
+        let identity: string;
+        try {
+          identity = fqcn(value as object);
+        } catch (error) {
+          identity = `(no FQCN: ${String(error)})`;
+        }
+        if (identity !== name) {
+          unresolved.push(`${name}: @xaravel/contracts/${entry.subpath}'s ${entry.name} is ${identity}`);
+        }
+        if (kinds.has(name) && entry.kind !== kinds.get(name)) {
+          unresolved.push(`${name}: the table's kind ${entry.kind} is not the row's ${kinds.get(name) ?? ""}`);
         }
       }
     }
     Assert.assertSame(
       "",
-      [...unparsed.map((line) => `unparsed: ${line}`), ...missing.map((fqcn) => `missing: ${fqcn}`), ...duplicated.map((fqcn) => `listed twice: ${fqcn}`), ...extra.map((fqcn) => `extra: ${fqcn}`), ...unresolved].join("\n"),
+      [...unparsed.map((line) => `unparsed: ${line}`), ...missing.map((name) => `missing: ${name}`), ...duplicated.map((name) => `listed twice: ${name}`), ...extra.map((name) => `extra: ${name}`), ...unresolved].join("\n"),
       "docs/contracts.md's reference table against the rows",
     );
     Assert.assertSame(declarations.length, [...tableRows.values()].flat().length, "one table row per declaration");
@@ -364,7 +404,7 @@ async function runPr(root: string, files: readonly string[], reviews: readonly R
 
 xaravelTest(
   "XT-contracts-17",
-  "the committed conformance/protected-paths marks /packages/contracts/ after-phase:1, so once the Maintainer signs decisions/PHASE-1-EXIT.md a Story PR touching packages/contracts/** fails the protected-paths check without the Maintainer's approving review on the head commit, while with no exit file, or an unsigned one, contracts stay editable during Phase 1 (AD-16, FR-112, FR-114)",
+  "the committed conformance/protected-paths marks /packages/contracts/ after-phase:1, so once the Maintainer signs decisions/PHASE-1-EXIT.md a Story PR touching packages/contracts/** fails the protected-paths check without the Maintainer's approving review on the head commit, while with no exit file, or an unsigned one, contracts stay editable during Phase 1, and a signed exit file protects nothing outside the list (AD-16, FR-112)",
   async () => {
     const list = readFileSync(join(REPO, LIST_PATH), "utf8").split("\n");
     Assert.assertContains("/packages/contracts/ after-phase:1", list, `${LIST_PATH} marks contracts after-phase:1`);
@@ -382,6 +422,10 @@ xaravelTest(
 
       const stale = await runPr(signed, [CONTRACT_FILE], [{ user: { login: MAINTAINER }, state: "APPROVED", commit_id: OLD }]);
       Assert.assertSame(1, stale.code, `an approval on an older commit does not count:\n${stale.stdout}${stale.stderr}`);
+
+      const elsewhere = await runPr(signed, ["packages/support/src/Str.ts"], []);
+      Assert.assertSame(0, elsewhere.code, `${elsewhere.stdout}${elsewhere.stderr}`);
+      Assert.assertSame("Protected Paths OK: PR #7 touches no Protected Path.\n", elsewhere.stdout, elsewhere.stderr);
 
       const approved = await runPr(signed, [CONTRACT_FILE], [{ user: { login: MAINTAINER }, state: "APPROVED", commit_id: HEAD }]);
       Assert.assertSame(0, approved.code, `${approved.stdout}${approved.stderr}`);

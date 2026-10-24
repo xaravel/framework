@@ -41,7 +41,7 @@ new ArrayRepository() instanceof Repository; // true: Symbol.hasInstance reads t
   `Symbol.for('xaravel.contract.builtins')`.
 
 Marker contracts (`ShouldQueue`, `ShouldBroadcast`, …) have no methods: a class carries the brand getter, and
-`hasBrand(classOrInstance, Token)` checks it without instantiating the class.
+`hasBrand(classOrInstance, Token)` from `@xaravel/runtime/php` checks it without instantiating the class.
 
 Where Upstream names a concrete class in a signature (`Request`, `Collection`, `Batch`, …), the package declares a
 structural interface in `src/structural/`, re-exported as a type by each subpath that names it, so a contract never
@@ -74,7 +74,15 @@ injecting it is a lint error, because the type import has no runtime token.
 
 Every service has one canonical token. `@xaravel/contracts/aliases` holds Upstream's container aliases verbatim as
 data, and `canonicalToken(abstract)` maps a string key, an FQCN, a token or a registered class to it, so
-`app("cache")`, `app(CacheManager)` and `app(Cache\Factory)` are one instance (AD-1).
+`app("cache")`, `app("Illuminate\\Cache\\CacheManager")` and `app(Factory)`, with `Factory` imported from
+`@xaravel/contracts/cache`, are one instance (AD-1). The subpath also exports the table itself as
+`CORE_CONTAINER_ALIASES`, `PROVIDER_BINDINGS` and `PROVIDER_ALIASES`, `validateAliasTable(table)`, which throws a
+`LogicException` on an inconsistent table, and `aliasResolver(table, tokens?)`, which builds the `canonicalToken` of
+another table; and the types `Abstract`, `AliasTable` and `AliasResolver`.
+
+The package root, `@xaravel/contracts`, exports the token mechanism: `contract()`, the symbol constants `CLASS_FQCN`,
+`CONTRACT_METHODS`, `CONTRACT_PARAMETERS`, `CONTRACT_PARENTS` and `CONTRACT_BUILTINS` (the `Symbol.for` keys above),
+and the types `ContractToken` and `ContractStatic`.
 
 ## Names and values
 
@@ -93,8 +101,8 @@ matched, with the same parameter names, defaults and nullability, and nothing is
 
 ## Reference
 
-One row per Upstream interface or class, with the subpath that exports it and its export name. Every name is both an
-interface (or class) and its runtime token.
+One row per Upstream interface or class, with the subpath that exports it and its export name. An interface's name is
+both its TypeScript interface and its runtime token; a class's name is the class itself.
 
 | Upstream FQCN | Kind | Import | Export |
 | --- | --- | --- | --- |
@@ -268,14 +276,15 @@ Upstream FQCN.
 
 ## Xaravel-only seams
 
-Three subpaths hold the only cross-package seams that have no Upstream interface (AD-27). A new one needs an
+The only cross-package seams with no Upstream interface are added to three subpaths (AD-27): `async` and `testing`
+hold nothing else, and `view` adds its seams, as types only, beside Upstream's View contracts. A new seam needs an
 Escalation.
 
 - `@xaravel/contracts/async` (AD-6): `THENABLE_TYPES`, the frozen list of the Upstream FQCNs of the types that can be
   awaited directly (the query Builders, the Relations, the `Pending*` builders and both Pipelines), which
   `bun run async-surface` reads; and the type `NotPromise<T>`, which a sync API uses to reject an async callback.
 - `@xaravel/contracts/view` (AD-11): the compiled-view ABI. `RenderContext` is what a compiled view's `render(ctx)`
-  takes; `BladeHelper`, `BladeEnvMethod` and `BladeFunction` name the helpers a `Blade.directive` handler's emitted
+  takes, and `RenderLoop` is the shape of one entry of its loop stack (Upstream's `addLoop` entry); `BladeHelper`, `BladeEnvMethod` and `BladeFunction` name the helpers a `Blade.directive` handler's emitted
   source may call.
 - `@xaravel/contracts/testing` (AD-25): `TEST_HOOK_ORDER` and its element type `TestHook`, Laravel's order:
   `createApplication`, each `setUp<Trait>`, `afterApplicationCreated`, the test, then the `beforeApplicationDestroyed`
@@ -295,7 +304,7 @@ protected-paths check unless the Maintainer approves it, so changing a shared in
   dispatch `make()` started (DIV-1.5).
 - **DIV-3** (explicit injection tokens): a contract is injected by its token through `inject`, never by a type hint.
 - **DIV-9** (PHP value model): `null` is the only absent value, marker interfaces are brands checked with
-  `hasBrand`, and by-reference parameters take a `Ref<T>`.
+  `hasBrand`, and by-reference parameters take a `Ref<T>`; both come from `@xaravel/runtime/php`.
 - **DIV-12** (PHP member namespaces): an option pair accepts either form. No contract declares a member DIV-12 renames;
   `ModelIdentifier::useMorphMap()` keeps its method name, and Upstream's protected static `$useMorphMap` state is not
   part of the surface (Xaravel holds it per unit frame, AD-5).
