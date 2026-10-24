@@ -139,7 +139,7 @@ development_status:
   10-1-token-brand-and-contract-t-mechanism: done
   10-2-port-the-contracts-for-the-core-and-service-namespaces: done
   10-3-port-the-contracts-for-the-web-and-application-namespaces: done
-  10-4-container-alias-table-and-canonical-tokens: in-progress  # ESC-10.4-1 and ESC-10.4-2 approved (decisions/ESC-10.4-1.md, decisions/ESC-10.4-2.md, orchestrator rulings); re-run the Fidelity Review on a changed tree with --base a02d058c
+  10-4-container-alias-table-and-canonical-tokens: done
   10-5-xaravel-only-contracts: backlog
   10-6-contracts-complete-and-protected: backlog
   epic-10-retrospective: optional
