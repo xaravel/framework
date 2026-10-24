@@ -30,6 +30,8 @@
 // and says false, as does `new X() instanceof Arrayable`. A JS function cannot be told apart from a class at runtime,
 // and PHP has no class-as-value to compare against, so the case is kept and pinned by XT-contracts-19.
 
+import { isContractToken } from "@xaravel/runtime/registry";
+
 /** The grader's class-name key (ESC-4.3-1 item 1), the same key `@xaravel/runtime/registry` sets on a class. */
 export const CLASS_FQCN: unique symbol = Symbol.for("xaravel.class.fqcn");
 /** A token's method names, read by Mockery's `DoubleTarget` and PHPUnit's `Generator` (ESC-4.5-1 item 3). */
@@ -87,17 +89,6 @@ function copyMembers(name: string, members: unknown): Readonly<Record<string, re
   return Object.freeze(Object.fromEntries(entries));
 }
 
-/** Whether `value` is a contract token: a non-null object with a string own FQCN key and a `Symbol.hasInstance`. */
-function isContractToken(value: unknown): value is ContractToken<object> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Object.prototype.hasOwnProperty.call(value, CLASS_FQCN) &&
-    typeof (value as Record<symbol, unknown>)[CLASS_FQCN] === "string" &&
-    typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function"
-  );
-}
-
 /** A frozen copy of `parents`, in the given order; throws a `TypeError` when it is not a list of contract tokens. */
 function copyParents(name: string, parents: unknown): readonly ContractToken<object>[] {
   if (!Array.isArray(parents)) {
@@ -109,7 +100,7 @@ function copyParents(name: string, parents: unknown): readonly ContractToken<obj
     if (!isContractToken(parent)) {
       throw new TypeError(`contract(): parent ${index} of ${name} is not a contract token`);
     }
-    copy.push(parent);
+    copy.push(parent as ContractToken<object>);
   }
   return Object.freeze(copy);
 }

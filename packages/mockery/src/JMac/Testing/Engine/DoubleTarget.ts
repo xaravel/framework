@@ -5,9 +5,10 @@
 //   `constructor`; its static methods the function-valued members of its constructor chain. TS has no `final`,
 //   visibility or reflection (DIV-6 php-only, ESC-4.8-1 item 3), so every one of them is doubleable.
 // - A contract token, as Mockery takes one (ESC-4.5-1 item 3): a symbol `Symbol.for('<FQCN>')`, or an AD-1 token
-//   object whose `Symbol.hasInstance` reads the brand `Symbol.for('<FQCN>')` (its FQCN is its own
-//   `Symbol.for('xaravel.class.fqcn')`, else the description of its brand: its own registered symbol key outside the
-//   `xaravel.*` protocol keys; a token with neither throws InvalidDoubleTargetException). Its methods are the names at
+//   object as @xaravel/assert's `isContractToken` reads one (MAINT-2026-10-24 Item 4): a frozen, non-function
+//   object whose own `Symbol.for('xaravel.class.fqcn')` is a non-writable string, its FQCN, named by assert's
+//   `contractTokenName`, the rule PHPUnit's doubles share. A token whose FQCN is empty, and an object with a
+//   function `Symbol.hasInstance` (own or inherited) that is no token, throw InvalidDoubleTargetException. Its methods are the names at
 //   `token[Symbol.for('xaravel.contract.methods')]`, with its built-ins and its parents' (below); a bare symbol
 //   carries no list, so any method name is configurable on it, as on a Mockery token mock. A token is an interface:
 //   it has no method bodies.
@@ -29,16 +30,14 @@
 // Parameter names are read from a method's source (`a`, `a = 1` and `...rest` name `$a` and `$rest`; a destructured
 // parameter is named by its position), as @xaravel/assert's test doubles read them (ESC-4.7-1 item 2). A token's
 // methods carry none.
-import { contractMethods, contractParentBrands, type ContractMethod } from "@xaravel/assert";
+import { contractMethods, contractParentBrands, type ContractMethod, contractTokenName, isContractToken } from "@xaravel/assert";
 import { classNameOf, FQCN, isClass } from "../../../support/values";
 import { InvalidDoubleTargetException } from "../Exceptions/InvalidDoubleTargetException";
 
 type AnyClass = abstract new (...args: never[]) => object;
 
-/** An AD-1 contract token object. */
-export interface ContractToken {
-  readonly [Symbol.hasInstance]: (value: unknown) => boolean;
-}
+/** An AD-1 contract token object, as @xaravel/assert's `isContractToken` reads one. */
+export type ContractToken = object;
 
 /** What `Double.for()` takes as a target besides a real instance. */
 export type TargetInput = AnyClass | symbol | ContractToken;
@@ -48,21 +47,25 @@ const IDENTIFIER = /^[A-Za-z_$][\w$]*/;
 /** ClassGenerator's reserved verbs: never a method of a bare symbol token. */
 const RESERVED: ReadonlySet<string> = new Set(["instance", "expects", "allows", "strict", "passthru", "received", "unused", "verify", "constructor"]);
 
-/** A contract token object (not a class, not a symbol). */
-export function isContractToken(value: unknown): value is ContractToken {
-  return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
+/**
+ * Throws InvalidDoubleTargetException for an object that looks like a contract token, a function
+ * `Symbol.hasInstance` (own or inherited), but is no token (`isContractToken`), so neither `Double.for()`'s target nor its options read
+ * it. A refusal, not a predicate: anything else returns.
+ */
+export function refuseMalformedToken(value: unknown): void {
+  if (typeof value !== "object" || value === null || isContractToken(value)) {
+    return;
+  }
+  if (typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
+    throw new InvalidDoubleTargetException("(contract token)", "it is no contract token: a token is a frozen object whose own Symbol.for('xaravel.class.fqcn') is a non-writable string");
+  }
 }
 
-/** A token object's FQCN: its own `Symbol.for('xaravel.class.fqcn')`, else its registered brand's key. */
+/** A token object's FQCN (`contractTokenName`); throws InvalidDoubleTargetException when it is empty. */
 function tokenName(token: ContractToken): string {
-  const fqcn: unknown = (token as unknown as Record<symbol, unknown>)[FQCN];
-  const brand = Object.getOwnPropertySymbols(token).find((key) => {
-    const registered = Symbol.keyFor(key);
-    return registered !== undefined && registered !== "" && !registered.startsWith("xaravel.");
-  });
-  const name = typeof fqcn === "string" && fqcn !== "" ? fqcn : (brand?.description ?? "");
-  if (name === "") {
-    throw new InvalidDoubleTargetException("(contract token)", "it carries no FQCN: neither Symbol.for('xaravel.class.fqcn') nor a brand Symbol.for('<FQCN>')");
+  const name = contractTokenName(token);
+  if (name === null) {
+    throw new InvalidDoubleTargetException("(contract token)", "it carries no FQCN: its Symbol.for('xaravel.class.fqcn') is empty");
   }
   return name;
 }
@@ -169,9 +172,11 @@ export class DoubleTarget {
       target = new DoubleTarget(input.description ?? "", null, input, null, null);
     } else if (isContractToken(input)) {
       const name = tokenName(input);
-      const methods = contractMethods(input, (token) => tokenName(token as ContractToken));
+      const methods = contractMethods(input, tokenName);
       const brand = Symbol.for(name);
-      target = new DoubleTarget(name, null, brand, input, methods, contractParentBrands(input, brand, (token) => tokenName(token as ContractToken)));
+      target = new DoubleTarget(name, null, brand, input, methods, contractParentBrands(input, brand, tokenName));
+    } else {
+      refuseMalformedToken(input);
     }
     if (target !== null) {
       if (typeof input === "symbol") {
@@ -316,7 +321,11 @@ export class DoubleTarget {
     if ((value as Record<symbol, unknown>)[this.brand!] === true) {
       return true;
     }
-    return this.#token !== null && this.#token[Symbol.hasInstance](value);
+    if (this.#token === null) {
+      return false;
+    }
+    const hasInstance: unknown = (this.#token as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance];
+    return typeof hasInstance === "function" && Boolean((hasInstance as (value: unknown) => unknown).call(this.#token, value));
   }
 }
 

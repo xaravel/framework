@@ -16,6 +16,7 @@
 // run's slot (support/slots.ts), the process slot outside a run. A run in which auto-verify was enabled performs
 // VerifiesDoubles' `#[After]` after `Mockery.close()` (Mockery.ts). One `assertTrue` is recorded per double that
 // passes (`PhpUnitIntegration::registerPass`).
+import { isContractToken } from "@xaravel/assert";
 import { InvalidArgumentException } from "../../php/InvalidArgumentException";
 import { LogicException } from "../../php/LogicException";
 import { lookupClass, lookupContract } from "../../support/classes";
@@ -29,7 +30,7 @@ import { ArgumentLabeler } from "./Engine/ArgumentLabeler";
 import { ClassGenerator, type Generated } from "./Engine/ClassGenerator";
 import { DoubleIdentity } from "./Engine/DoubleIdentity";
 import { DoubleState } from "./Engine/DoubleState";
-import { DoubleTarget, isContractToken } from "./Engine/DoubleTarget";
+import { DoubleTarget, refuseMalformedToken } from "./Engine/DoubleTarget";
 import { ExceptionFactory } from "./Engine/ExceptionFactory";
 import { MethodExpectation } from "./Engine/MethodExpectation";
 import { Mode } from "./Engine/Mode";
@@ -46,7 +47,9 @@ export interface DoubleForOptions {
   readonly override?: boolean;
 }
 
+/** Whether `value` is `Double.for()`'s options bag: a plain object, not a contract token; a malformed token throws. */
 function isOptions(value: unknown): value is Record<string, unknown> {
+  refuseMalformedToken(value);
   if (typeof value !== "object" || value === null || isContractToken(value)) {
     return false;
   }

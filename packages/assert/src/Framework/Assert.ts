@@ -74,7 +74,11 @@ import {
 import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
 import { isSkippedTest, SkippedWithMessageException } from "./Exception/SkippedWithMessageException";
 
-/** A class, or an interface token (an object with `Symbol.hasInstance`); see ESC-4.3-1 item 1. */
+/**
+ * A class, or an interface token: a contract token (`isContractToken`: a frozen, non-function object with an own,
+ * non-writable string `Symbol.for('xaravel.class.fqcn')`) whose `Symbol.hasInstance` reads its brand; see ESC-4.3-1
+ * item 1.
+ */
 export type ClassOrInterface = (abstract new (...args: never[]) => unknown) | { readonly [Symbol.hasInstance]: (value: unknown) => boolean };
 
 function message(method: string, position: number, value: unknown): string {

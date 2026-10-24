@@ -23,6 +23,8 @@
 // return what `__toString` returns. The `count` and `offset*` built-ins get no JS protocol, only their methods.
 
 const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
+/** The class-name key (ESC-4.3-1 item 1), the key `@xaravel/runtime/registry` and `contract()` set. */
+const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 
 /** The PHP interface that declares each built-in method, by lower-cased name. */
 const BUILTIN_INTERFACES: ReadonlyMap<string, string> = new Map([
@@ -47,9 +49,41 @@ export interface ContractMethod {
   readonly builtin: boolean;
 }
 
-/** A contract token object: it has a `Symbol.hasInstance` (an AD-1 token). */
+/**
+ * Whether `value` is a contract token (ESC-10.1-3, MAINT-2026-10-24 Item 4): a frozen, non-function object whose own
+ * `Symbol.for('xaravel.class.fqcn')` property is a non-writable string data property. This is the grader side's one
+ * predicate, used by both test doubles; `@xaravel/runtime`'s `isContractToken` is the runtime side's, with the same
+ * definition (AD-15 keeps the grader from importing it), and XT-contracts-20 pins the two equal.
+ */
 export function isContractToken(value: unknown): value is object {
-  return typeof value === "object" && value !== null && typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
+  if (typeof value !== "object" || value === null || !Object.isFrozen(value)) {
+    return false;
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(value, CLASS_FQCN);
+  return descriptor !== undefined && "value" in descriptor && descriptor.writable === false && typeof descriptor.value === "string";
+}
+
+/**
+ * The name of the contract token `token` (`isContractToken`): its own FQCN data property's value, read as the
+ * predicate reads it (an accessor never runs), or null when that is not a non-empty string, a token neither test
+ * double can name. Both doubles use this one rule.
+ */
+export function contractTokenName(token: object): string | null {
+  const descriptor = Object.getOwnPropertyDescriptor(token, CLASS_FQCN);
+  const name: unknown = descriptor !== undefined && "value" in descriptor ? descriptor.value : null;
+  return typeof name === "string" && name !== "" ? name : null;
+}
+
+/**
+ * Defines the brand `brand` on a double's `prototype`: an own getter returning `true`, non-enumerable and not
+ * configurable, the one brand descriptor of both test doubles. Skipped when `prototype` already owns `brand`, as a
+ * shared parent of an intersection does.
+ */
+export function defineContractBrand(prototype: object, brand: symbol): void {
+  if (Object.hasOwn(prototype, brand)) {
+    return;
+  }
+  Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: false });
 }
 
 /** One contract of a parents closure: a token object with its name, or a bare symbol with a null name. */

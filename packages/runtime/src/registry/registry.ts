@@ -129,16 +129,24 @@ export function fqcn(classOrInstance: object): string {
   return name;
 }
 
-/** A contract token's own FQCN key (ESC-10.1-3), else null: only a frozen non-function object's own, non-writable string data property counts. */
-function tokenFqcn(value: object): string | null {
-  if (typeof value !== "object" || !Object.isFrozen(value)) {
-    return null;
+/**
+ * Whether `value` is a contract token (ESC-10.1-3, decisions/MAINT-2026-10-24-epic-10-items.md Item 4): a frozen,
+ * non-function object whose own `Symbol.for('xaravel.class.fqcn')` property is a non-writable string data property,
+ * what `contract()` makes and `fqcn()` reads. This is the runtime side's one predicate, used here and by
+ * `@xaravel/contracts`; `@xaravel/assert`'s `isContractToken` is the grader side's copy, with the same definition (AD-15
+ * keeps the grader from importing this one), and XT-contracts-20 pins the two equal.
+ */
+export function isContractToken(value: unknown): value is object {
+  if (typeof value !== "object" || value === null || !Object.isFrozen(value)) {
+    return false;
   }
   const descriptor = Object.getOwnPropertyDescriptor(value, CLASS_FQCN);
-  if (descriptor === undefined || !("value" in descriptor) || descriptor.writable !== false || typeof descriptor.value !== "string") {
-    return null;
-  }
-  return descriptor.value;
+  return descriptor !== undefined && "value" in descriptor && descriptor.writable === false && typeof descriptor.value === "string";
+}
+
+/** A contract token's own FQCN key (ESC-10.1-3), else null (`isContractToken`). */
+function tokenFqcn(value: object): string | null {
+  return isContractToken(value) ? ((value as Record<symbol, string>)[CLASS_FQCN] as string) : null;
 }
 
 /**

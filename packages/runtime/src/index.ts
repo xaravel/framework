@@ -105,6 +105,6 @@ export {
   toPhpString,
   valueCopy,
 } from "./php/index";
-export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
+export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
 export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
 export { bootTraits, classUsesRecursive, type ClassReference, clearBootedTraits, initializeTraits, type Mixed, mixin } from "./traits/mixin";

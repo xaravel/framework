@@ -98,8 +98,12 @@ xaravelTest(
     const tmp = mkdtempSync(join(tmpdir(), "xaravel-contract-brand-"));
     try {
       copyFileSync(join(REPO, "tsconfig.base.json"), join(tmp, "tsconfig.base.json"));
-      writeFileSync(join(tmp, "tsconfig.json"), JSON.stringify({ extends: "./tsconfig.base.json", compilerOptions: { types: [] }, include: ["fixture.ts"] }, null, 2) + "\n");
+      // The project is configured as every Xaravel package is (`types: ["bun"]`, XT-conformance-9): `contract()` imports
+      // `@xaravel/runtime/registry`'s `isContractToken` (MAINT-2026-10-24 Item 4), and the runtime uses Bun's and
+      // Node's globals and built-in modules.
+      writeFileSync(join(tmp, "tsconfig.json"), JSON.stringify({ extends: "./tsconfig.base.json", compilerOptions: { types: ["bun"] }, include: ["fixture.ts"] }, null, 2) + "\n");
       mkdirSync(join(tmp, "node_modules", "@xaravel"), { recursive: true });
+      symlinkSync(join(REPO, "node_modules", "@types"), join(tmp, "node_modules", "@types"));
       symlinkSync(join(REPO, "packages", "contracts"), join(tmp, "node_modules", "@xaravel", "contracts"));
       const fixture = join(tmp, "fixture.ts");
 

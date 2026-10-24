@@ -15,4 +15,4 @@ import { installClassmapEncoder } from "./registry";
 // PHP's `[]`); its values are strings, so the flag changes nothing else.
 installClassmapEncoder((value) => jsonEncode(value, JSON_THROW_ON_ERROR | JSON_FORCE_OBJECT) as string);
 
-export { fqcn, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry";
+export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry";

@@ -1011,9 +1011,11 @@ xaravelTest("XT-mockery-7", "Double's returns, throws and resolves, its expectat
   const second: any = Double.for(bare);
   expect(second.ping).toBeUndefined();
   expect(Double.for(bare).ping).toBeUndefined();
-  // A token object without an FQCN takes its brand's description; with neither it is no target.
+  // An object with a brand and a Symbol.hasInstance but no frozen own FQCN is no contract token (MAINT-2026-10-24
+  // Item 4), so it is refused, as an object with neither is.
   const branded = { [Symbol.for("XtBranded")]: true, [Symbol.hasInstance]: (): boolean => false };
-  expect(((thrown(() => Double.for(branded).expects("x")) as Error).message)).toContain("`XtBranded`");
+  expect(thrown(() => Double.for(branded))?.constructor).toBe(InvalidDoubleTargetException);
+  expect((thrown(() => Double.for(branded)) as Error).message).toContain("no contract token");
   expect(thrown(() => Double.for({ [Symbol.hasInstance]: (): boolean => false }))?.constructor).toBe(InvalidDoubleTargetException);
   // PHP's (bool) NAN is true.
   expect(Argument.satisfies(() => Number.NaN).matches(1)).toBe(true);

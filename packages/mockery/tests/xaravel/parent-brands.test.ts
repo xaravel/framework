@@ -68,9 +68,10 @@ xaravelTest("XT-mockery-13", "given a contract token with parents, a JMac Double
   // ESC-10.2-4 supersedes ESC-10.1-6's interim own-list rule: the parents' methods are doubled too.
   const proto = Object.getPrototypeOf(child) as object;
   expect([Object.hasOwn(proto, "child"), Object.hasOwn(proto, "parent"), Object.hasOwn(proto, "root")]).toEqual([true, true, true]);
-  // Parent brands are non-enumerable configurable getters, as the own brand is.
+  // Parent brands are non-enumerable, non-configurable getters, as the own brand is and as PHPUnit's doubles define
+  // them (assert's `defineContractBrand`, MAINT-2026-10-24 Item 4).
   const descriptor = Object.getOwnPropertyDescriptor(proto, Symbol.for("XtM\\Root"))!;
-  expect([descriptor.enumerable, descriptor.configurable, typeof descriptor.get]).toEqual([false, true, "function"]);
+  expect([descriptor.enumerable, descriptor.configurable, typeof descriptor.get]).toEqual([false, false, "function"]);
 
   // No key, or null: only the own brand, as before.
   expect(brandsOf(double(token("XtM\\Plain", ["a"])))).toEqual(["XtM\\Plain"]);

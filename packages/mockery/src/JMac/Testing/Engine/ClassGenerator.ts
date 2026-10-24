@@ -20,7 +20,7 @@
 // `[Symbol.toPrimitive]()` return what the intercepted `__toString` returns. The `count` and `offset*` built-ins get
 // no JS protocol, only their methods. A class target has none. The protocols are @xaravel/assert's
 // `defineContractProtocols`, which PHPUnit's doubles share.
-import { defineContractProtocols } from "@xaravel/assert";
+import { defineContractBrand, defineContractProtocols } from "@xaravel/assert";
 import { FQCN } from "../../../support/values";
 import { InvalidDoubleTargetException } from "../Exceptions/InvalidDoubleTargetException";
 import { ReservedNameCollisionException } from "../Exceptions/ReservedNameCollisionException";
@@ -157,10 +157,10 @@ export class ClassGenerator {
         }
       }
       if (target.brand !== null) {
-        Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: true });
+        defineContractBrand(prototype, target.brand);
       }
       for (const brand of target.parentBrands) {
-        Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: true });
+        defineContractBrand(prototype, brand);
       }
     }
     defineBuiltinProtocols(prototype, name, targets);

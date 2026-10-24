@@ -12,11 +12,14 @@
 //   - an interface name, for the Double port's safe defaults and class-name
 //     targets (Story 4.8, ESC-4.8-1 item 1), only through the same lookup:
 //     for an interface it returns the contract token, the symbol
-//     `Symbol.for(fqcn)` or an AD-1 token object (one with `Symbol.hasInstance`).
+//     `Symbol.for(fqcn)` or an AD-1 token object (as @xaravel/assert's
+//     `isContractToken` reads one: frozen, non-function, with an own,
+//     non-writable string `Symbol.for('xaravel.class.fqcn')`).
 //
 // The grader's own exception names compare as PHP's do: case-insensitively, a
 // leading `\` ignored. The lookup receives the name as written, minus a
 // leading `\`; case-folding it is the installer's part of the protocol.
+import { isContractToken } from "@xaravel/assert";
 import { BadMethodCallException } from "../Mockery/Exception/BadMethodCallException";
 import { InvalidArgumentException } from "../Mockery/Exception/InvalidArgumentException";
 import { InvalidCountException } from "../Mockery/Exception/InvalidCountException";
@@ -84,7 +87,7 @@ export function lookupClass(name: string): AnyClass | null {
   return typeof found === "function" && typeof (found as { prototype?: unknown }).prototype === "object" ? (found as AnyClass) : null;
 }
 
-/** The contract token registered for `name` through the class-lookup protocol (a symbol or an AD-1 token object), or null. */
+/** The contract token registered for `name` through the class-lookup protocol (a symbol or an AD-1 token object, as `isContractToken` reads one), or null. */
 export function lookupContract(name: string): symbol | object | null {
   const lookup: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
   if (typeof lookup !== "function") {
@@ -94,5 +97,5 @@ export function lookupContract(name: string): symbol | object | null {
   if (typeof found === "symbol") {
     return found;
   }
-  return typeof found === "object" && found !== null && typeof (found as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function" ? found : null;
+  return isContractToken(found) ? found : null;
 }
