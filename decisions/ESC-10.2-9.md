@@ -26,7 +26,7 @@ Story 10.2's fourth Fidelity Review has one `pass` and one `reject`:
 
 - **Subject:** Story `10.2`.
 - **Items:** `F-7`.
-- **Effect:** a reviewer's reject that fails only F-7 counts beside the other reviewer's `pass` for Story 10.2. A fail on any other item still blocks, and both reviewers still run.
+- **Effect:** for Story 10.2, a reviewer's reject that fails only F-7 counts as a pass, in either slot or both. A fail on any other item still blocks, and both reviewers still run.
 
 ## The route
 

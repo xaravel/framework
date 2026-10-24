@@ -55,8 +55,8 @@
 //                  record for that tree counts, and reviewer 1 ran on the
 //                  other CLI from the loop's or recorded why it fell back
 //                  (`fidelityVerdicts`, tools/fidelity-review). A Maintainer
-//                  waiver lets one reject that fails only the waived items
-//                  count beside a pass (`fidelityWaivers`, ESC-10.2-9). It reads no
+//                  waiver lets a reject that fails only the waived items
+//                  count as a pass (`fidelityWaivers`, ESC-10.2-9). It reads no
 //                  GitHub review and needs no `GH_TOKEN`. No spec, two specs,
 //                  a malformed record or no HEAD commit fails;
 //   escalations    no `conformance/escalations/ESC-<id>-<n>.md` is `open`

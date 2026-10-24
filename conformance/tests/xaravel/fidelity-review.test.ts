@@ -1953,8 +1953,9 @@ xaravelTest(
       `reviewer 2: pass at tree ${t}`,
       `reviewer 1: the later pass at tree ${t} (record at line ${laterLine}) does not count: the reject at line ${rejectLine} stands until the reviewed tree changes (ESC-8.8-1)`,
     ]);
-    // A Maintainer waiver (ESC-10.2-9): one reject that fails only waived items counts beside a pass, standing or not;
-    // a reject that also fails an unwaived item, two waived rejects, or the cross-model rule failing still fail.
+    // A Maintainer waiver (ESC-10.2-9): a reject that fails only waived items counts as a pass, standing or not, in one
+    // slot or both (a carried finding makes the other reviewer fail the item too, ESC-8.8-1 item 3); a reject that also
+    // fails an unwaived item, or the cross-model rule failing, still fail.
     const waive = (items: string[]): FidelityWaiver[] => [{ decision: "decisions/ESC-9.1-1.md", subject: "9.1", items }];
     const waivedCount = (list: VerdictRecord[], waivers: FidelityWaiver[]) => fidelityVerdicts(parseRecords(appendRecords("# spec\n", list.map((entry) => renderRecord(entry, ITEMS)))), t, ITEMS, waivers);
     const waivedRun = waivedCount([rejectRecord, record(2, "claude")], waive(["F-2"]));
@@ -1967,7 +1968,10 @@ xaravelTest(
     expect(waivedCount([twoFails, record(2, "claude")], waive(["F-2"])).pass).toBe(false);
     expect(waivedCount([twoFails, record(2, "claude")], waive(["F-2", "F-3"])).pass).toBe(true);
     const otherReject = record(2, "claude", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] });
-    expect(waivedCount([rejectRecord, otherReject], waive(["F-2"])).pass).toBe(false);
+    const bothWaived = waivedCount([rejectRecord, otherReject], waive(["F-2"]));
+    expect(bothWaived.pass).toBe(true);
+    expect(bothWaived.detail).toBe(`reviewer 1's and reviewer 2's rejects waived by decisions/ESC-9.1-1.md (F-2) for tree ${t} (reviewer 1: codex/codex-m reject, reviewer 2: claude/claude-m reject)`);
+    expect(waivedCount([twoFails, otherReject], waive(["F-2"])).pass).toBe(false);
     expect(waivedCount([record(1, "claude", { verdict: "reject", items: answers({ "F-2": "fail" }, { "F-2": [finding] }) as unknown as VerdictRecord["items"] }), record(2, "claude")], waive(["F-2"])).pass).toBe(false);
     expect(waivedReject(rejectRecord, waive(["F-2"]))).toBe(true);
     expect(waivedReject(record(1, "codex"), waive(["F-2"]))).toBe(false);
