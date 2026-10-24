@@ -4,11 +4,13 @@
 // through its `use` lines. The namespace list is the test's one constant, beside the spec's async table (AD-6, DIV-1),
 // which no committed file carries, and the built-in parents' method lists (ESC-10.2-4).
 //
-// The Upstream snapshot is gitignored and synced by `bun run upstream:sync`; CI's `check` job does not sync it, so the
-// Upstream-derived parts (parents, exception bases, built-ins, constant values) warn and are left to local runs there,
-// as structural.test.ts's XT-contracts-6 does. The row-derived parts always run.
+// The Upstream snapshot is gitignored and synced by `bun run upstream:sync`, which CI's `check` job runs under
+// `XARAVEL_UPSTREAM=require` (ESC-10.2-8). Where the snapshot is missing the Upstream-derived parts (parents, exception
+// bases, built-ins, constant values) fail under that variable and otherwise warn and are skipped, as structural.test.ts's
+// XT-contracts-6 does. The row-derived parts always run.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { env } from "node:process";
 import { Assert, TestCase, xaravelTest } from "@xaravel/assert";
 import { Double } from "@xaravel/mockery";
 import { Exception, hasBrand, InvalidArgumentException, RuntimeException } from "@xaravel/runtime/php";
@@ -40,6 +42,8 @@ import { EntityNotFoundException, ShouldBeEncrypted, ShouldQueue } from "@xarave
 const REPO = join(import.meta.dir, "..", "..", "..", "..");
 const PACKAGE = join(import.meta.dir, "..", "..");
 const UPSTREAM_SYNCED = existsSync(join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts"));
+/** CI's `check` job sets `XARAVEL_UPSTREAM=require`: a missing snapshot fails rather than skips (ESC-10.2-8). */
+const UPSTREAM_REQUIRED = env["XARAVEL_UPSTREAM"] === "require";
 
 /** The 19 namespaces Story 10.2 ports: Upstream namespace → its subpath module. */
 const NAMESPACES: Readonly<Record<string, object>> = {
@@ -289,7 +293,11 @@ xaravelTest(
   () => {
     const expectedAsync = asyncTable();
     const actualAsync = new Map<string, string>();
+    // A missing snapshot fails under XARAVEL_UPSTREAM=require, as CI's `check` job runs (ESC-10.2-8); otherwise it warns.
     if (!UPSTREAM_SYNCED) {
+      if (UPSTREAM_REQUIRED) {
+        Assert.fail("XARAVEL_UPSTREAM=require: conformance/upstream/framework/src/Illuminate/Contracts is missing; run `bun run upstream:sync`");
+      }
       console.warn("namespaces.test.ts: conformance/upstream is not synced; the Upstream-derived checks are skipped");
     }
     const surface = JSON.parse(readFileSync(join(PACKAGE, "async-surface.json"), "utf8")) as {
