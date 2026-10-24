@@ -136,19 +136,30 @@ xaravelTest(
     expect(listedFallback.exitCode).toBe(0);
     expect(readFileSync(SURFACE(fallback), "utf8")).toBe(`[\n${String.raw`{"method":"Repository.where","file":"src/Repository.ts","thenable":"Illuminate\\Database\\Query\\Builder"}`}\n]\n`);
 
-    // ESC-10.5-2: with no root install (Bun's isolated linker), the list resolves as packages/contracts' own subpath.
-    const workspace = tempDir("xaravel-async-surface-workspace-");
-    mkdirSync(join(workspace, "packages", "contracts", "src", "async"), { recursive: true });
-    writeFileSync(join(workspace, "packages", "contracts", "package.json"), `${JSON.stringify({ name: "@xaravel/contracts", type: "module", exports: { "./async": "./src/async/index.ts" } })}\n`);
-    writeFileSync(join(workspace, "packages", "contracts", "src", "async", "index.ts"), 'export const THENABLE_TYPES: readonly string[] = ["X\\\\Workspace"];\n');
-    expect(await thenableTypes(workspace)).toEqual(["X\\Workspace"]);
-
     // A contracts module whose THENABLE_TYPES is empty or not a string[] is not used.
     for (const source of ["export const THENABLE_TYPES: readonly string[] = [];\n", "export const THENABLE_TYPES = [1, 2];\n", "export const OTHER = 1;\n"]) {
       const bad = tempDir("xaravel-async-surface-contracts-");
       installContracts(bad, source);
       expect(await thenableTypes(bad)).toBe(THENABLE_TYPES);
     }
+
+    // With no root link, the list resolves from `<root>/packages/contracts` through the package's own `exports`, as
+    // under Bun's isolated linker (ESC-10.5-2); that package wins over a root link.
+    const workspace = tempDir("xaravel-async-surface-workspace-");
+    write(workspace, {
+      "packages/contracts/package.json": JSON.stringify({ name: "@xaravel/contracts", type: "module", exports: { ".": "./index.ts", "./async": "./async.ts" } }),
+      "packages/contracts/index.ts": "export {};\n",
+      "packages/contracts/async.ts": 'export const THENABLE_TYPES: readonly string[] = ["X\\\\Workspace"];\n',
+    });
+    expect(await thenableTypes(workspace)).toEqual(["X\\Workspace"]);
+    installContracts(workspace, 'export const THENABLE_TYPES: readonly string[] = ["X\\\\Linked"];\n');
+    expect(await thenableTypes(workspace)).toEqual(["X\\Workspace"]);
+
+    // The repository itself reads `@xaravel/contracts/async`'s list, not the tool's.
+    const contractsList = ((await import(join(root, "packages", "contracts", "src", "async", "index.ts"))) as { THENABLE_TYPES: readonly string[] }).THENABLE_TYPES;
+    const repoList = await thenableTypes(root);
+    expect(repoList).toBe(contractsList);
+    expect(repoList).not.toBe(THENABLE_TYPES);
 
     // The tool's list is the Story 6.3 fixture list, by FQCN.
     expect(FALLBACK).toContain("Illuminate\\Database\\Query\\Builder");
