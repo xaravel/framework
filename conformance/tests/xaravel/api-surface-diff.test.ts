@@ -13,7 +13,7 @@ import { afterAll, expect } from "bun:test";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { camel, componentsOf, DIV12_RENAMES, diffComponent, memberName, renderItem, renderMarkdown, type CitationLine, type DiffInput, type Div12Pair, type UpstreamParameter, type UpstreamRecord } from "../../../tools/api-surface/api-surface";
+import { camel, componentsOf, DIV12_RENAMES, diffComponent, memberName, renderItem, renderMarkdown, RESERVED_PARAMETER_NAMES, type CitationLine, type DiffInput, type Div12Pair, type UpstreamParameter, type UpstreamRecord } from "../../../tools/api-surface/api-surface";
 import { citationProblems, defErrors, readSurfaceSchema } from "../../../tools/oracle/api-surface";
 import { checkWorkflows } from "../../../tools/workflow-permissions/workflow-permissions";
 import { xaravelTest } from "../../../packages/assert/src/index";
@@ -149,8 +149,10 @@ function matrixEdgeCases(): void {
   expect(memberName("__call")).toBe("__call");
   expect(memberName("get_id")).toBe("getId");
 
-  // Matched: a reserved Upstream name lets any name pass.
-  expect(single([method("X\\A", "get", [p("key", { type: "string", nullable: false }), p("default", { default: "null", optional: true })])], "get(key: string, fallback?: unknown): unknown;", "get(key: string, fallback: unknown = null) { return fallback ?? key; }")).toEqual([]);
+  // A reserved Upstream name takes its decided name (RESERVED_PARAMETER_NAMES), not any name.
+  expect(single([method("X\\A", "get", [p("key", { type: "string", nullable: false }), p("default", { default: "null", optional: true })])], "get(key: string, fallback?: unknown): unknown;", "get(key: string, fallback: unknown = null) { return fallback ?? key; }")).toEqual([
+    "x: mismatch method X\\A::get: parameter 2 is fallback, Upstream default (reserved word: expected defaultValue)",
+  ]);
   // Parameter name, default (number, string, negative, boolean; [] matches [] and {}), nullability.
   expect(single([method("X\\A", "put", [p("key"), p("seconds")])], "put(key: unknown, ttl: unknown): void;")).toEqual(["x: mismatch method X\\A::put: parameter 2 is ttl, Upstream seconds"]);
   expect(single([method("X\\A", "f", [p("a", { default: "'x'", optional: true }), p("b", { default: "-1", optional: true })])], "f(a?: unknown, b?: unknown): void;\nf(options?: { a?: unknown; b?: unknown }): void;", "f(a = 'y', b = -1) {}")).toEqual([
@@ -175,7 +177,10 @@ function matrixEdgeCases(): void {
   const opts = [p("a"), p("b_c", { optional: true, default: "1" }), p("d", { optional: true, default: "2" })];
   const positional = "f(a: unknown, bC?: number, d?: number): void;\n";
   expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: { bC?: number; d?: number }): void;`)).toEqual([]);
-  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: Opts | null): void;`, "", { declarations: [{ file: "src/A.ts", text: "export type Opts = { bC?: number; d?: number };\n" }] })).toEqual([]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: Opts | null): void;`, "", { declarations: [{ file: "src/A.ts", text: "export type Opts = { bC?: number; d?: number };\n" }] })).toEqual([
+    "x: mismatch method X\\A::f: options overload: parameter 2 is a union, not an options object with keys bC, d (AD-26)",
+  ]);
+  expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: Opts): void;`, "", { declarations: [{ file: "src/A.ts", text: "export type Opts = { bC?: number; d?: number };\n" }] })).toEqual([]);
   expect(single([method("X\\A", "f", opts)], `${positional}f(a: unknown, options?: { bC?: number }): void;`)).toEqual([
     "x: mismatch method X\\A::f: options overload: parameter 2 is not an options object with keys bC, d",
   ]);
@@ -814,5 +819,119 @@ xaravelTest(
         sources: [{ file: "src/F.ts", text: `const S = { A: "a" };\n${token(", {}, [], S")}export class G {}\nregisterClass("X\\\\F", G);\n` }],
       }),
     ).not.toThrow();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// XT-conformance-265 (epic-10-retro-item-5-api-surface-blind-spots, parts 1 and 2)
+
+xaravelTest(
+  "XT-conformance-265",
+  "the AD-26 options form checks each key's nullability against its typed Upstream parameter and refuses a union standing for the options object, and a reserved-word parameter takes its decided name: defaultValue, className, args, or the word and a capitalised suffix (AD-26, AD-15)",
+  () => {
+    const A = "X\\A";
+    // Upstream f(a, ?string b = null, string c = 'x'): positional plus options form.
+    const typed = [p("a"), p("b", { type: "?string", nullable: true, optional: true, default: "null" }), p("c", { type: "string", nullable: false, optional: true, default: "'x'" })];
+    const pos = "f(a: unknown, b?: string | null, c?: string): void;\n";
+    const run = (options: string, extra: Partial<DiffInput> = {}): string[] => single([method(A, "f", typed)], `${pos}f(a: unknown, options?: ${options}): void;`, "", extra);
+    // Key nullable as Upstream: matched.
+    expect(run("{ b?: string | null; c?: string }")).toEqual([]);
+    // Key not nullable, Upstream ?string.
+    expect(run("{ b?: string; c?: string }")).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 key b is not nullable"]);
+    // Key nullable, Upstream string.
+    expect(run("{ b?: string | null; c?: string | null }")).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 key c is nullable, Upstream string"]);
+    // The same rule through a named interface.
+    expect(run("Opts", { declarations: [{ file: "src/A.ts", text: "export interface Opts {\n  b?: string;\n  c?: string;\n}\n" }] })).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 key b is not nullable"]);
+    // Untyped Upstream: no type failure, as positional.
+    const untyped = [p("a"), p("b", { optional: true, default: "null" }), p("c", { nullable: false, optional: true, default: "1" })];
+    expect(single([method(A, "f", untyped)], "f(a: unknown, b?: number, c?: number | null): void;\nf(a: unknown, options?: { b?: number; c?: number | null }): void;")).toEqual([]);
+    // Method-signature key, Upstream callable: not nullable, so matched; the same key against a nullable Upstream fails.
+    const callables = (nullable: boolean): UpstreamParameter[] => [p("a"), p("b", { type: nullable ? "?callable" : "callable", nullable, optional: true, default: "null" }), p("c", { optional: true, default: "1" })];
+    expect(single([method(A, "f", callables(false))], "f(a: unknown, b?: () => void, c?: number): void;\nf(a: unknown, options?: { b?(): void; c?: number }): void;")).toEqual([]);
+    expect(single([method(A, "f", callables(true))], "f(a: unknown, b?: (() => void) | null, c?: number): void;\nf(a: unknown, options?: { b?(): void; c?: number }): void;")).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 key b is not nullable",
+    ]);
+    // Union options: a type literal or a named options type in a union, `| null` included.
+    expect(run("{ b?: string | null; c?: string } | string")).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 is a union, not an options object with keys b, c (AD-26)"]);
+    expect(run("(Opts | null)", { declarations: [{ file: "src/A.ts", text: "export type Opts = { b?: string | null; c?: string };\n" }] })).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 is a union, not an options object with keys b, c (AD-26)",
+    ]);
+    // A union with no options-object member (a positional-only signature) is not an options object, not a union failure.
+    expect(single([method(A, "f", typed)], "f(a: unknown, b?: string | null, c?: string): void;")).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 is not an options object with keys b, c; options overload: parameter 3 (c) is extra",
+    ]);
+    // A getter key is read by its return type, a setter key by its parameter's.
+    expect(run("{ get b(): string | null; c?: string }")).toEqual(["x: mismatch method X\\A::f: options overload: parameter 2 key b is not optional"]);
+    // With two failures each, the options signature ties the positional one, so it is declared first here (the first wins a tie).
+    const first = (options: string): string[] => single([method(A, "f", typed)], `f(a: unknown, options?: ${options}): void;\n${pos}`);
+    expect(first("{ get b(): string; c?: string }")).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 key b is not optional; options overload: parameter 2 key b is not nullable",
+    ]);
+    expect(first("{ b?: string | null; set c(v: string | null) }")).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 key c is not optional; options overload: parameter 2 key c is nullable, Upstream string",
+    ]);
+    // Alias of a union: not an options object (only a type-literal alias is read).
+    expect(run("Opts", { declarations: [{ file: "src/A.ts", text: "export type Opts = { b?: string | null; c?: string } | string;\n" }] })).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 is not an options object with keys b, c",
+    ]);
+    // A variadic tail: the key rule and the union refusal hold before the rest parameter.
+    const withRest = [...typed, p("rest", { optional: true, variadic: true })];
+    const posRest = "f(a: unknown, b?: string | null, c?: string, ...rest: unknown[]): void;\n";
+    expect(single([method(A, "f", withRest)], `${posRest}f(a: unknown, options?: { b?: string | null; c?: string }, ...rest: unknown[]): void;`)).toEqual([]);
+    expect(single([method(A, "f", withRest)], `${posRest}f(a: unknown, options?: { b?: string; c?: string }, ...rest: unknown[]): void;`)).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 key b is not nullable",
+    ]);
+    expect(single([method(A, "f", withRest)], `${posRest}f(a: unknown, options?: { b?: string | null; c?: string } | null, ...rest: unknown[]): void;`)).toEqual([
+      "x: mismatch method X\\A::f: options overload: parameter 2 is a union, not an options object with keys b, c (AD-26)",
+    ]);
+    // A function follows the same rules.
+    const fn = (dts: string): string[] =>
+      diffComponent({
+        component: "x",
+        upstream: [{ fqcn: "X\\f", kind: "function", member: null, static: false, parameters: typed, returns: null, nullable: true }],
+        additions: [],
+        exceptions: [],
+        div12: [],
+        declarations: [{ file: "src/f.ts", text: dts }],
+        sources: [],
+      }).items.map((item) => renderItem("x", item));
+    expect(fn(`export declare function ${pos}export declare function f(a: unknown, options?: { b?: string | null; c?: string }): void;\n`)).toEqual([]);
+    expect(fn(`export declare function ${pos}export declare function f(a: unknown, options?: { b?: string; c?: string } | string): void;\n`)).toEqual([
+      "x: mismatch function X\\f: options overload: parameter 2 is a union, not an options object with keys b, c (AD-26)",
+    ]);
+
+    // Reserved words: the decided table, exactly.
+    expect(RESERVED_PARAMETER_NAMES).toEqual(
+      new Map([
+        ["default", "defaultValue"],
+        ["class", "className"],
+        ["arguments", "args"],
+      ]),
+    );
+    const reserved = (name: string, ts: string): string[] => single([method(A, "g", [p(name)])], `g(${ts}: unknown): void;`);
+    expect(reserved("default", "defaultValue")).toEqual([]);
+    expect(reserved("class", "className")).toEqual([]);
+    expect(reserved("arguments", "args")).toEqual([]);
+    expect(reserved("default", "fallback")).toEqual(["x: mismatch method X\\A::g: parameter 1 is fallback, Upstream default (reserved word: expected defaultValue)"]);
+    expect(reserved("default", "className")).toEqual(["x: mismatch method X\\A::g: parameter 1 is className, Upstream default (reserved word: expected defaultValue)"]);
+    expect(reserved("class", "defaultValue")).toEqual(["x: mismatch method X\\A::g: parameter 1 is defaultValue, Upstream class (reserved word: expected className)"]);
+    // A table word takes only its entry, not the prefix rule.
+    expect(reserved("arguments", "argumentsList")).toEqual(["x: mismatch method X\\A::g: parameter 1 is argumentsList, Upstream arguments (reserved word: expected args)"]);
+    // No table entry: the word and a capitalised suffix.
+    expect(reserved("package", "packageName")).toEqual([]);
+    expect(reserved("new", "newValue")).toEqual([]);
+    expect(reserved("package", "pkg")).toEqual(["x: mismatch method X\\A::g: parameter 1 is pkg, Upstream package (reserved word: expected package<Name>)"]);
+    expect(reserved("package", "packagename")).toEqual(["x: mismatch method X\\A::g: parameter 1 is packagename, Upstream package (reserved word: expected package<Name>)"]);
+    // A reserved word as a rest parameter, and in a function.
+    expect(single([method(A, "g", [p("arguments", { optional: true, variadic: true })])], "g(...args: unknown[]): void;")).toEqual([]);
+    expect(single([method(A, "g", [p("arguments", { optional: true, variadic: true })])], "g(...params: unknown[]): void;")).toEqual([
+      "x: mismatch method X\\A::g: parameter 1 is params, Upstream arguments (reserved word: expected args)",
+    ]);
+    // An options key of a reserved name stays camel(): object keys may be reserved words.
+    const keyed = [p("default", { optional: true, default: "null" }), p("x", { optional: true, default: "1" })];
+    expect(single([method(A, "h", keyed)], "h(defaultValue?: unknown, x?: unknown): void;\nh(options?: { default?: unknown; x?: unknown }): void;")).toEqual([]);
+    expect(single([method(A, "h", keyed)], "h(defaultValue?: unknown, x?: unknown): void;\nh(options?: { defaultValue?: unknown; x?: unknown }): void;")).toEqual([
+      "x: mismatch method X\\A::h: options overload: parameter 1 is not an options object with keys default, x",
+    ]);
   },
 );
