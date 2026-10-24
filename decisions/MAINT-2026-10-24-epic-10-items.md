@@ -2,10 +2,10 @@
 decision: approved
 decided_by: Maintainer
 date: 2026-10-24
-scope: Epic 10 retrospective items 1, 2, 4, 6 and 7
+scope: Epic 10 retrospective items 1, 2, 4, 5 (part 3), 6 and 7
 ---
 
-# Maintainer rulings: Epic 10 items 1, 2, 4, 6 and 7
+# Maintainer rulings: Epic 10 items 1, 2, 4, 5, 6 and 7
 
 The Maintainer gave these rulings on 2026-10-24 in the Maintainer's session, accepting each recommendation. Finding codes are those of `_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md`.
 
@@ -35,6 +35,18 @@ The orchestrator raised this item on 2026-10-24 (#383). As written, it puts one 
 - The rest of the item stands: one `CONTRACT_PARENTS` declaration on each side of the isolation line, and the same brand-getter descriptor and nameless-token display in both doubles. No assertion is removed or weakened.
 
 The item leaves `waiting_on_maintainer`. Its status stays `in-progress`, and the orchestrator resumes it.
+
+## Item 5, part 3: the gate sees declaration parents (S6)
+
+The orchestrator did parts 1 and 2 (#385). Part 3 cannot be done in `tools/api-surface` alone. The Upstream export lists declared members only, its declaration record has no parents, and the Upstream snapshot is not present where the gate runs. The route is the orchestrator's recommendation, approved as this item's one exception to the Protected Paths:
+
+- `tools/oracle/api-surface.php` exports each declaration's parents: an interface's `extends`, and a class's parent and `implements`.
+- `conformance/api-surface/schema.json` adds that field.
+- The Oracle regenerates every `conformance/api-surface/*.jsonl`. The regeneration may add only the new field: any other changed row is reported and stops the item, as an Escalation.
+- The diff in `tools/api-surface` compares a declaration's walked TS heritage with the exported parents, and reports a dropped or extra parent.
+- Tests go in `conformance/tests/xaravel/api-surface-diff.test.ts`. `api-surface:gate contracts` still passes, or an Escalation is raised for any real mismatch it finds.
+
+These three paths (`tools/oracle/api-surface.php`, `conformance/api-surface/schema.json`, `conformance/api-surface/*.jsonl`) are the only Protected Paths the item may change, and only for this. The item leaves `waiting_on_maintainer`. Its status stays `in-progress`, and the orchestrator resumes it.
 
 ## Item 6: the planning text follows Epic 10's rulings (S2, S3)
 
