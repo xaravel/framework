@@ -1,7 +1,6 @@
 // `@xaravel/contracts/async`: the Xaravel-only async seam (AD-6, AD-27). `THENABLE_TYPES` is the list of thenable
-// framework types, which `bun run async-surface`'s `thenableTypes()` prefers when `@xaravel/contracts/async` resolves
-// from its root (resolution from the repository root waits on ESC-10.5-2), and `NotPromise<T>` types the callbacks of
-// sync APIs.
+// framework types, which `bun run async-surface`'s `thenableTypes()` reads, resolving `@xaravel/contracts/async` from
+// `packages/contracts` (ESC-10.5-2), and `NotPromise<T>` types the callbacks of sync APIs.
 // Every framework class with an instance `then` declares `implements PromiseLike<…>` (ESC-6.1-1).
 
 /**
