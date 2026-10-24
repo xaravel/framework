@@ -52,9 +52,28 @@
 // otherwise the word and a capitalised suffix (`packageName`); options keys
 // stay `camel()`.
 //
+// A declaration's parents (epic-10-retro-item-5, part 3) are compared too: the
+// record's `parents` (PHP's whole parent chain and every interface, transitive)
+// against the transitive closure of the registration's TS heritage
+// (`interface … extends`, `class … extends … implements`, identifiers only)
+// read from the package sources, each limited to the class, interface and
+// enum declarations of the Upstream surface in any component (built-ins,
+// traits and unported types drop out), the declaration itself excluded. A
+// heritage name resolves through a registration in the same file, a named or
+// default import from a relative module (`.ts`, `.js` → `.ts`, `/index.ts`;
+// through `export {…} from` and `export * from` re-exports), or an
+// `@xaravel/<c>[/<sub>]` import (the module its `package.json` `exports` or
+// `src/<sub>.ts` / `src/<sub>/index.ts` names, else that package's
+// registration by local name, when unique); an unresolved name contributes
+// nothing. A committed declaration line without a `parents` list is a tool
+// failure. A
+// difference is one `mismatch` on the declaration, `parents: drops <fqcn>, …;
+// adds <fqcn>, …`, and the declaration is not counted matched. A record
+// without `parents` (an inline test record) is not parent-checked.
+//
 // Findings: `missing`, `extra`, `renamed`, `mismatch` (parameter names,
-// defaults, nullability, rest, optional, static, returns; `undefined` in a
-// return type, AD-9), and `div12` (Upstream members DIV-12 says are not
+// defaults, nullability, rest, optional, static, returns, parents; `undefined`
+// in a return type, AD-9), and `div12` (Upstream members DIV-12 says are not
 // expected; never counted). An item is explained by a cited `exceptions.jsonl`
 // (missing, mismatch) or `additions.jsonl` (extra) line, `renamed` by both;
 // citation lines that explain nothing are listed as `stale`. A citation line
@@ -69,8 +88,12 @@
 // and exits 1 if any item is unexplained or any citation problem is found.
 //
 // The walk is syntactic: inherited members, trait members supplied by a mixin,
-// aliases and unregistered exported classes are not seen, and neither is a
-// dropped interface `extends` (the Upstream export carries no parents).
+// aliases and unregistered exported classes are not seen, and a heritage
+// clause through an unregistered type, a qualified name or an expression
+// (`extends mixin(…)`) resolves to nothing. PHP built-in parents (`Countable`,
+// `Stringable`, `ArrayAccess`, …) are never compared, and a contract token's
+// runtime `parents` (contract()'s 3rd argument) is not compared with its
+// `extends`.
 //
 // Exit codes: 0 ok (report mode unless a tool failure; gate mode only when
 // nothing is unexplained and the citation files pass `checkCitations`),
@@ -78,7 +101,7 @@
 // (tsc, unreadable or invalid jsonl, a citation line naming an unknown
 // component, a parse error), 2 usage error.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { join, posix, relative, resolve, sep } from "node:path";
 import { parseSync } from "oxc-parser";
 import { emitDeclarations, nameOf, node, nodes, packageDeclarations, typeNameTail, unwrapAnnotation, type DeclarationFile, type Node } from "../async-surface/async-surface";
 import { checkCitations } from "../oracle/api-surface";
@@ -121,6 +144,8 @@ export interface UpstreamRecord {
   readonly returns?: string | null;
   readonly type?: string | null;
   readonly nullable?: boolean;
+  /** A declaration's parents (`schema.json#/$defs/declaration`): sorted, transitive, built-ins and stubs included. An inline record without it is not parent-checked. */
+  readonly parents?: readonly string[];
 }
 
 /** One `additions.jsonl` / `exceptions.jsonl` line. */
@@ -158,6 +183,12 @@ export interface DiffInput {
   readonly declarations: readonly DeclarationFile[];
   /** The package's `src/**\/*.ts` texts (not `.d.ts`). */
   readonly sources: readonly SourceFile[];
+  /** Every declaration FQCN of the Upstream surface, any component: the only parents compared. Defaults to this component's declarations. */
+  readonly known?: ReadonlySet<string>;
+  /** Another package's `src/**\/*.ts` texts (`packages/<pkg>`), for an `@xaravel/<pkg>` heritage import. Defaults to none. */
+  readonly packageSources?: (pkg: string) => readonly SourceFile[];
+  /** A package's `package.json` `exports` map (`packages/<pkg>`), for an `@xaravel/<pkg>[/<sub>]` heritage import. Defaults to none. */
+  readonly packageExports?: (pkg: string) => Readonly<Record<string, unknown>> | null;
 }
 
 export type Category = "missing" | "extra" | "renamed" | "mismatch" | "div12" | "stale";
@@ -620,8 +651,13 @@ function literalKeys(members: unknown): LiteralKey[] {
   return out;
 }
 
-function parsePackage(declarations: readonly DeclarationFile[], sources: readonly SourceFile[]): ParsedPackage {
-  const parsed: ParsedPackage = { registrations: new Map(), declarations: new Map(), sources: new Map(), functions: new Map(), typeKeys: new Map() };
+/**
+ * A package's parsed sources and registrations: each top-level `registerClass` Story 6.6 accepts, and each contract
+ * token (AD-1) no `registerClass` of the same FQCN replaces. A token's statics are read only with `withStatics` (the
+ * diffed package; another package is read for its heritage only).
+ */
+function sourceRegistrations(sources: readonly SourceFile[], withStatics: boolean): Pick<ParsedPackage, "registrations" | "sources"> {
+  const parsed: Pick<ParsedPackage, "registrations" | "sources"> = { registrations: new Map(), sources: new Map() };
   // Contract tokens (AD-1): registrations unless a registerClass of the same FQCN exists.
   const contracts = new Map<string, { readonly file: string; readonly local: string; readonly call: Node | null }>();
   for (const { file, text } of [...sources].sort((a, b) => compareUnits(a.file, b.file))) {
@@ -649,9 +685,14 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
   // A token's statics are read only when no registerClass replaces it.
   for (const [fqcn, { file, local, call }] of contracts) {
     if (!parsed.registrations.has(fqcn)) {
-      parsed.registrations.set(fqcn, { fqcn, file, local, statics: staticsKeys(call, file, fqcn) });
+      parsed.registrations.set(fqcn, { fqcn, file, local, statics: withStatics ? staticsKeys(call, file, fqcn) : null });
     }
   }
+  return parsed;
+}
+
+function parsePackage(declarations: readonly DeclarationFile[], sources: readonly SourceFile[]): ParsedPackage {
+  const parsed: ParsedPackage = { ...sourceRegistrations(sources, true), declarations: new Map(), functions: new Map(), typeKeys: new Map() };
   for (const { file, text } of [...declarations].sort((a, b) => compareUnits(a.file, b.file))) {
     const statements = parse(file, text, "dts");
     parsed.declarations.set(file, statements);
@@ -786,6 +827,242 @@ function functionDefaults(source: { statements: Node[]; text: string } | undefin
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Heritage (epic-10-retro-item-5, part 3)
+
+/** A package's registrations and parsed sources, as the heritage walk reads them. */
+interface HeritagePackage {
+  readonly registrations: ReadonlyMap<string, Registration>;
+  readonly sources: ReadonlyMap<string, { statements: Node[]; text: string }>;
+  /** Registered FQCNs by file, then by local name. */
+  readonly byFile: ReadonlyMap<string, ReadonlyMap<string, string>>;
+  /** Registered FQCNs by local name, across the package (an `@xaravel/<c>` import resolves only a unique one). */
+  readonly byLocal: ReadonlyMap<string, ReadonlySet<string>>;
+}
+
+/** A resolved heritage name: the package registering it and its FQCN. */
+interface Resolved {
+  readonly pkg: string;
+  readonly fqcn: string;
+}
+
+function heritagePackage(registrations: ReadonlyMap<string, Registration>, sources: ReadonlyMap<string, { statements: Node[]; text: string }>): HeritagePackage {
+  const byFile = new Map<string, Map<string, string>>();
+  const byLocal = new Map<string, Set<string>>();
+  for (const { fqcn, file, local } of registrations.values()) {
+    const inFile = byFile.get(file) ?? new Map<string, string>();
+    if (!inFile.has(local)) {
+      inFile.set(local, fqcn);
+    }
+    byFile.set(file, inFile);
+    byLocal.set(local, (byLocal.get(local) ?? new Set()).add(fqcn));
+  }
+  return { registrations, sources, byFile, byLocal };
+}
+
+/** The names a class / interface `local` of a file extends or implements: `interface … extends`, `class … extends … implements` (identifiers only). */
+function heritageNames(statements: readonly Node[], local: string): string[] {
+  const out: string[] = [];
+  for (const statement of statements) {
+    const decl = declarationOf(statement);
+    if (decl === null || nameOf(decl["id"]) !== local) {
+      continue;
+    }
+    const expressions =
+      decl.type === "TSInterfaceDeclaration"
+        ? nodes(decl["extends"]).map((h) => h["expression"])
+        : decl.type === "ClassDeclaration"
+          ? [decl["superClass"], ...nodes(decl["implements"]).map((h) => h["expression"])]
+          : [];
+    for (const expression of expressions) {
+      const n = node(expression);
+      if (n !== null && n.type === "Identifier" && typeof n["name"] === "string") {
+        out.push(n["name"]);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The transitive TS heritage of registered declarations, read from the package sources and resolved to FQCNs: a
+ * registration in the same file, a named or default import from a relative module (`.ts`, `/index.ts`, through
+ * `export {…} from` and `export * from` re-exports), or an `@xaravel/<c>[/…]` import (that package's registrations by
+ * local name, when unique). An unresolved name contributes nothing.
+ */
+class Heritage {
+  private readonly packages = new Map<string, HeritagePackage | null>();
+  private readonly closures = new Map<string, ReadonlySet<string>>();
+
+  constructor(
+    current: string,
+    currentPackage: HeritagePackage,
+    private readonly load: (pkg: string) => readonly SourceFile[],
+    private readonly exportsOf: (pkg: string) => Readonly<Record<string, unknown>> | null,
+  ) {
+    this.packages.set(current, currentPackage);
+  }
+
+  /** Every FQCN registration `fqcn` of package `pkg` extends or implements, directly or through its parents. */
+  parentsOf(pkg: string, fqcn: string): ReadonlySet<string> {
+    const key = `${pkg}\0${fqcn}`;
+    const done = this.closures.get(key);
+    if (done !== undefined) {
+      return done;
+    }
+    const out = new Set<string>();
+    // In progress: a cycle contributes nothing more.
+    this.closures.set(key, out);
+    const index = this.packageIndex(pkg);
+    const registration = index?.registrations.get(fqcn);
+    if (index !== null && registration !== undefined) {
+      for (const name of heritageNames(index.sources.get(registration.file)?.statements ?? [], registration.local)) {
+        const resolved = this.resolveLocal(pkg, registration.file, name, new Set());
+        if (resolved !== null) {
+          out.add(resolved.fqcn);
+          for (const parent of this.parentsOf(resolved.pkg, resolved.fqcn)) {
+            out.add(parent);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  private packageIndex(pkg: string): HeritagePackage | null {
+    if (!this.packages.has(pkg)) {
+      const sources = this.load(pkg);
+      if (sources.length === 0) {
+        this.packages.set(pkg, null);
+      } else {
+        const { registrations, sources: parsed } = sourceRegistrations(sources, false);
+        this.packages.set(pkg, heritagePackage(registrations, parsed));
+      }
+    }
+    return this.packages.get(pkg) ?? null;
+  }
+
+  /** A name as a file of `pkg` sees it: a registration there, else what its import resolves to. */
+  private resolveLocal(pkg: string, file: string, name: string, seen: Set<string>): Resolved | null {
+    const index = this.packageIndex(pkg);
+    const here = index?.byFile.get(file)?.get(name);
+    if (here !== undefined) {
+      return { pkg, fqcn: here };
+    }
+    for (const statement of index?.sources.get(file)?.statements ?? []) {
+      if (statement.type !== "ImportDeclaration") {
+        continue;
+      }
+      for (const specifier of nodes(statement["specifiers"])) {
+        if (nameOf(specifier["local"]) !== name) {
+          continue;
+        }
+        const imported = specifier.type === "ImportSpecifier" ? nameOf(specifier["imported"]) : specifier.type === "ImportDefaultSpecifier" ? "default" : null;
+        const source = node(statement["source"])?.["value"];
+        return imported === null || typeof source !== "string" ? null : this.resolveSpecifier(pkg, file, source, imported, seen);
+      }
+    }
+    return null;
+  }
+
+  /** Export `name` of module `specifier` imported from a file of `pkg`. */
+  private resolveSpecifier(pkg: string, file: string, specifier: string, name: string, seen: Set<string>): Resolved | null {
+    if (specifier.startsWith(".")) {
+      const target = this.moduleFile(pkg, file, specifier);
+      return target === null ? null : this.resolveExport(pkg, target, name, seen);
+    }
+    const match = /^@xaravel\/([^/]+)(\/.*)?$/.exec(specifier);
+    if (match === null) {
+      return null;
+    }
+    const target = this.packageModule(match[1]!, match[2] ?? "");
+    if (target !== null) {
+      return this.resolveExport(match[1]!, target, name, seen);
+    }
+    // No module file for the specifier: the package's registration of that local name, when unique.
+    const fqcns = name === "default" ? undefined : this.packageIndex(match[1]!)?.byLocal.get(name);
+    return fqcns !== undefined && fqcns.size === 1 ? { pkg: match[1]!, fqcn: [...fqcns][0]! } : null;
+  }
+
+  /**
+   * The source file `@xaravel/<pkg><sub>` names: the target of `.<sub>` (or `.`) in the package's `exports` when it has
+   * one there (a string, or a condition object's `bun`, `import` or `default`), else `src<sub>.ts` or `src<sub>/index.ts`
+   * (`src/index.ts` for the bare package).
+   */
+  private packageModule(pkg: string, sub: string): string | null {
+    const sources = this.packageIndex(pkg)?.sources;
+    if (sources === undefined) {
+      return null;
+    }
+    const entry = this.exportsOf(pkg)?.[`.${sub}`];
+    const conditions = typeof entry === "object" && entry !== null ? (entry as Record<string, unknown>) : null;
+    const target = typeof entry === "string" ? entry : [conditions?.["bun"], conditions?.["import"], conditions?.["default"]].find((value) => typeof value === "string");
+    const candidates = [...(typeof target === "string" ? [posix.normalize(target)] : []), ...(sub === "" ? ["src/index.ts"] : [`src${sub}.ts`, `src${sub}/index.ts`])];
+    return candidates.find((candidate) => sources.has(candidate)) ?? null;
+  }
+
+  /** The source file a relative specifier names: itself when it ends in `.ts`, else `<path>.ts` or `<path>/index.ts`. */
+  private moduleFile(pkg: string, file: string, specifier: string): string | null {
+    const sources = this.packageIndex(pkg)?.sources;
+    const base = posix.normalize(posix.join(posix.dirname(file), specifier));
+    for (const candidate of base.endsWith(".ts") ? [base] : base.endsWith(".js") ? [`${base.slice(0, -".js".length)}.ts`] : [`${base}.ts`, `${base}/index.ts`]) {
+      if (sources?.has(candidate) === true) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /** Export `name` of a file of `pkg`: an `export {…}` (from a module or of a local), a registration there, then each `export * from`. */
+  private resolveExport(pkg: string, file: string, name: string, seen: Set<string>): Resolved | null {
+    const key = `${pkg}\0${file}\0${name}`;
+    if (seen.has(key)) {
+      return null;
+    }
+    seen.add(key);
+    const statements = this.packageIndex(pkg)?.sources.get(file)?.statements ?? [];
+    for (const statement of statements) {
+      const source = node(statement["source"])?.["value"];
+      if (statement.type === "ExportNamedDeclaration") {
+        for (const specifier of nodes(statement["specifiers"])) {
+          const local = nameOf(specifier["local"]);
+          if (nameOf(specifier["exported"]) === name && local !== null) {
+            return typeof source === "string" ? this.resolveSpecifier(pkg, file, source, local, seen) : this.resolveLocal(pkg, file, local, seen);
+          }
+        }
+      } else if (statement.type === "ExportDefaultDeclaration" && name === "default") {
+        const decl = node(statement["declaration"]);
+        const local = decl === null ? null : decl.type === "Identifier" ? nameOf(decl) : nameOf(decl["id"]);
+        return local === null ? null : this.resolveLocal(pkg, file, local, seen);
+      }
+    }
+    const here = name === "default" ? undefined : this.packageIndex(pkg)?.byFile.get(file)?.get(name);
+    if (here !== undefined) {
+      return { pkg, fqcn: here };
+    }
+    for (const statement of statements) {
+      const source = node(statement["source"])?.["value"];
+      if (statement.type === "ExportAllDeclaration" && node(statement["exported"]) === null && typeof source === "string") {
+        const resolved = this.resolveSpecifier(pkg, file, source, name, seen);
+        if (resolved !== null) {
+          return resolved;
+        }
+      }
+    }
+    return null;
+  }
+}
+
+/** A declaration's parent failure, or null: the Upstream parents and the TS heritage, each limited to `known` FQCNs. */
+function parentsFailure(upstream: readonly string[], ts: ReadonlySet<string>, fqcn: string, known: ReadonlySet<string>): string | null {
+  const want = new Set(upstream.filter((parent) => known.has(parent)));
+  const have = new Set([...ts].filter((parent) => known.has(parent) && parent !== fqcn));
+  const drops = [...want].filter((parent) => !have.has(parent)).sort(compareUnits);
+  const adds = [...have].filter((parent) => !want.has(parent)).sort(compareUnits);
+  const parts = [...(drops.length > 0 ? [`drops ${drops.join(", ")}`] : []), ...(adds.length > 0 ? [`adds ${adds.join(", ")}`] : [])];
+  return parts.length === 0 ? null : `parents: ${parts.join("; ")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1194,13 +1471,23 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     }
   }
 
+  // Parents (epic-10-retro-item-5, part 3): the record's against the registration's walked TS heritage.
+  // Traits are left out: Upstream `parents` never lists one.
+  const known = input.known ?? new Set([...declarations].filter(([, { decl }]) => decl.kind !== "trait").map(([fqcn]) => fqcn));
+  const heritage = new Heritage(component, heritagePackage(pkg.registrations, pkg.sources), input.packageSources ?? (() => []), input.packageExports ?? (() => null));
+
   for (const [fqcn, { decl, members: upstreamMembers }] of declarations) {
     const registration = pkg.registrations.get(fqcn);
     if (registration === undefined) {
       add("missing", decl.kind, fqcn, null);
       continue;
     }
-    matched++;
+    const parents = decl.parents === undefined ? null : parentsFailure(decl.parents, heritage.parentsOf(component, fqcn), fqcn, known);
+    if (parents === null) {
+      matched++;
+    } else {
+      add("mismatch", decl.kind, fqcn, null, parents);
+    }
     const members = classMembers(pkg.declarations.get(registration.file) ?? [], registration.local, registration.statics);
     const defaults = classDefaults(pkg.sources.get(registration.file), registration.local);
     const unmatched: UpstreamRecord[] = [];
@@ -1424,6 +1711,11 @@ function readUpstream(root: string, component: string): UpstreamRecord[] {
     if ((value["kind"] === "method" || value["kind"] === "function") && !Array.isArray(value["parameters"])) {
       throw new Error(`${path}:${index + 1}: a ${value["kind"]} needs its parameters`);
     }
+    // A committed declaration always carries its parents (schema.json#/$defs/declaration); only inline input may omit them.
+    const parents = value["parents"];
+    if (member === null && value["kind"] !== "function" && !(Array.isArray(parents) && parents.every((parent) => typeof parent === "string"))) {
+      throw new Error(`${path}:${index + 1}: a declaration needs its parents`);
+    }
     return value as unknown as UpstreamRecord;
   });
 }
@@ -1500,17 +1792,45 @@ export function diffComponents(root: string, components: readonly string[]): Com
   const additions = readCitations(root, "additions", known);
   const exceptions = readCitations(root, "exceptions", known);
   const div12 = readDiv12(root);
+  // The parents compared are declarations of the Upstream surface, any component (epic-10-retro-item-5, part 3).
+  const upstream = new Map<string, UpstreamRecord[]>();
+  for (const component of known) {
+    try {
+      upstream.set(component, readUpstream(root, component));
+    } catch (error) {
+      throw new Error(`${component}: ${(error as Error).message}`);
+    }
+  }
+  const fqcns = new Set([...upstream.values()].flat().filter((record) => record.member === null && record.kind !== "function" && record.kind !== "trait").map((record) => record.fqcn));
+  const loaded = new Map<string, readonly SourceFile[]>();
+  const sourcesOf = (pkg: string): readonly SourceFile[] => {
+    if (!loaded.has(pkg)) {
+      loaded.set(pkg, /^[a-z0-9-]+$/.test(pkg) ? packageSources(root, pkg) : []);
+    }
+    return loaded.get(pkg)!;
+  };
+  const exportsOf = (pkg: string): Readonly<Record<string, unknown>> | null => {
+    const path = join(root, "packages", pkg, "package.json");
+    if (!/^[a-z0-9-]+$/.test(pkg) || !existsSync(path)) {
+      return null;
+    }
+    const exports = (JSON.parse(readFileSync(path, "utf8")) as { exports?: unknown }).exports;
+    return typeof exports === "string" ? { ".": exports } : isObject(exports) ? exports : null;
+  };
   return components.map((component) => {
     const has = withPackage.includes(component);
     try {
       return diffComponent({
         component,
-        upstream: readUpstream(root, component),
+        upstream: upstream.get(component) ?? readUpstream(root, component),
         additions,
         exceptions,
         div12,
         declarations: has ? packageDeclarations(root, component) : [],
         sources: has ? packageSources(root, component) : [],
+        known: fqcns,
+        packageSources: sourcesOf,
+        packageExports: exportsOf,
       });
     } catch (error) {
       throw new Error(`${component}: ${(error as Error).message}`);

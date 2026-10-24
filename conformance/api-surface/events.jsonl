@@ -1,4 +1,4 @@
-{"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"class","member":null,"stubbed":[],"parents":["Illuminate\\Contracts\\Queue\\ShouldQueue"]}
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"property","member":"afterCommit","static":false,"type":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"property","member":"backoff","static":false,"type":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"property","member":"chainCatchCallbacks","static":false,"type":null,"nullable":true}
@@ -72,7 +72,7 @@
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"method","member":"withDeduplicator","static":false,"parameters":[{"name":"deduplicator","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"method","member":"withFakeQueueInteractions","static":false,"parameters":[],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\CallQueuedListener","kind":"method","member":"withoutDelay","static":false,"parameters":[],"returns":null,"nullable":true}
-{"fqcn":"Illuminate\\Events\\Dispatcher","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\Dispatcher","kind":"class","member":null,"stubbed":[],"parents":["Illuminate\\Contracts\\Events\\Dispatcher"]}
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"__call","static":false,"parameters":[{"name":"method","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"parameters","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"__callStatic","static":true,"parameters":[{"name":"method","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"parameters","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"__construct","static":false,"parameters":[{"name":"container","type":"?Illuminate\\Contracts\\Container\\Container","nullable":true,"default":"null","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
@@ -99,12 +99,12 @@
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"setTransactionManagerResolver","static":false,"parameters":[{"name":"resolver","type":"callable","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"subscribe","static":false,"parameters":[{"name":"subscriber","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\Dispatcher","kind":"method","member":"until","static":false,"parameters":[{"name":"event","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"payload","type":null,"nullable":true,"default":"[]","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
-{"fqcn":"Illuminate\\Events\\EventServiceProvider","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\EventServiceProvider","kind":"class","member":null,"stubbed":[],"parents":["Illuminate\\Support\\ServiceProvider"]}
 {"fqcn":"Illuminate\\Events\\EventServiceProvider","kind":"method","member":"register","static":false,"parameters":[],"returns":null,"nullable":true}
-{"fqcn":"Illuminate\\Events\\InvokeQueuedClosure","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\InvokeQueuedClosure","kind":"class","member":null,"stubbed":[],"parents":[]}
 {"fqcn":"Illuminate\\Events\\InvokeQueuedClosure","kind":"method","member":"failed","static":false,"parameters":[{"name":"closure","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"arguments","type":"array","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"catchCallbacks","type":"array","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"exception","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\InvokeQueuedClosure","kind":"method","member":"handle","static":false,"parameters":[{"name":"closure","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"arguments","type":"array","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
-{"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"class","member":null,"stubbed":[],"parents":["Illuminate\\Contracts\\Events\\Dispatcher"]}
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"__call","static":false,"parameters":[{"name":"method","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"parameters","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"__construct","static":false,"parameters":[{"name":"dispatcher","type":"Illuminate\\Contracts\\Events\\Dispatcher","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"dispatch","static":false,"parameters":[{"name":"event","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"payload","type":null,"nullable":true,"default":"[]","optional":true,"variadic":false,"byRef":false},{"name":"halt","type":null,"nullable":true,"default":"false","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
@@ -116,7 +116,7 @@
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"push","static":false,"parameters":[{"name":"event","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"payload","type":null,"nullable":true,"default":"[]","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"subscribe","static":false,"parameters":[{"name":"subscriber","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\NullDispatcher","kind":"method","member":"until","static":false,"parameters":[{"name":"event","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"payload","type":null,"nullable":true,"default":"[]","optional":true,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
-{"fqcn":"Illuminate\\Events\\QueuedClosure","kind":"class","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Events\\QueuedClosure","kind":"class","member":null,"stubbed":[],"parents":[]}
 {"fqcn":"Illuminate\\Events\\QueuedClosure","kind":"property","member":"catchCallbacks","static":false,"type":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\QueuedClosure","kind":"property","member":"closure","static":false,"type":null,"nullable":true}
 {"fqcn":"Illuminate\\Events\\QueuedClosure","kind":"property","member":"connection","static":false,"type":null,"nullable":true}

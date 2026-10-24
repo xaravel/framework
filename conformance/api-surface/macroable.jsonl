@@ -1,4 +1,4 @@
-{"fqcn":"Illuminate\\Support\\Traits\\Macroable","kind":"trait","member":null,"stubbed":[]}
+{"fqcn":"Illuminate\\Support\\Traits\\Macroable","kind":"trait","member":null,"stubbed":[],"parents":[]}
 {"fqcn":"Illuminate\\Support\\Traits\\Macroable","kind":"method","member":"__call","static":false,"parameters":[{"name":"method","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"parameters","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Support\\Traits\\Macroable","kind":"method","member":"__callStatic","static":true,"parameters":[{"name":"method","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"parameters","type":null,"nullable":true,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Illuminate\\Support\\Traits\\Macroable","kind":"method","member":"flushMacros","static":true,"parameters":[],"returns":null,"nullable":true}

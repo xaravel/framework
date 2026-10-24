@@ -10,7 +10,7 @@
 // <classes file> and every user function whose file is under <src dir>. It
 // writes one JSON line per record to stdout:
 //
-//   {"fqcn","kind","member":null,"stubbed":[…]}                 class, interface, trait or enum
+//   {"fqcn","kind","member":null,"stubbed":[…],"parents":[…]}   class, interface, trait or enum
 //   {"fqcn","kind":"method","member","static","parameters","returns","nullable"}
 //   {"fqcn","kind":"property","member","static","type","nullable"}
 //   {"fqcn","kind":"constant"|"case","member","static":true}
@@ -38,7 +38,12 @@
 // A type that fails to autoload (`Class|Interface|Trait "X" not found`) is
 // defined as an empty stub of that kind and the load is retried. A
 // declaration's `stubbed` lists, sorted, every stub among its parent classes,
-// interfaces and traits (and theirs), whatever the load order. tools/oracle/api-surface.ts
+// interfaces and traits (and theirs), whatever the load order. Its `parents`
+// lists, sorted, every class it extends (the whole parent chain) and every
+// interface it implements or extends, directly or inherited: PHP's
+// getParentClass() chain and getInterfaceNames(), PHP's built-in interfaces
+// (Stringable, UnitEnum, …) and stubs included, traits not (epic-10 item 5,
+// decisions/MAINT-2026-10-24-epic-10-items.md). tools/oracle/api-surface.ts
 // re-renders, validates and sorts the lines (docs/ops/oracle.md, API surface).
 //
 // The interfaces mode (ESC-10.1-4) exports a Composer package that is not
@@ -245,6 +250,18 @@ function stubbedOf(ReflectionClass $class, array $stubs): array
     return $out;
 }
 
+/** Every class $class extends and every interface it implements or extends, directly or inherited, sorted. */
+function parentsOf(ReflectionClass $class): array
+{
+    $names = $class->getInterfaceNames();
+    for ($current = $class->getParentClass(); $current !== false; $current = $current->getParentClass()) {
+        $names[] = $current->getName();
+    }
+    $out = array_values(array_unique($names));
+    sort($out, SORT_STRING);
+    return $out;
+}
+
 /**
  * The named class-likes a PHP file declares, by the tokenizer: `class`, `interface`, `trait` or `enum` (or only the
  * keywords in $kinds) followed by a name, not after `::` or `new`.
@@ -384,7 +401,7 @@ try {
             fail("{$fqcn} is not declared under {$srcReal} (" . var_export($class->getFileName(), true) . ')');
         }
         $kind = $class->isEnum() ? 'enum' : ($class->isInterface() ? 'interface' : ($class->isTrait() ? 'trait' : 'class'));
-        $lines[] = ['fqcn' => $fqcn, 'kind' => $kind, 'member' => null, 'stubbed' => stubbedOf($class, $stubs)];
+        $lines[] = ['fqcn' => $fqcn, 'kind' => $kind, 'member' => null, 'stubbed' => stubbedOf($class, $stubs), 'parents' => parentsOf($class)];
         foreach ($class->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->getDeclaringClass()->getName() !== $fqcn) {
                 continue;
