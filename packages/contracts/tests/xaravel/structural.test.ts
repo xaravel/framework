@@ -7,6 +7,7 @@
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { env } from "node:process";
 import { Assert, xaravelTest } from "@xaravel/assert";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -198,11 +199,14 @@ xaravelTest(
 
     // Every concrete class an Upstream contract file names is a structural type (or a PHP built-in's Xaravel form),
     // and the contract file imports it when the class is in a signature. The Upstream snapshot is gitignored and synced
-    // by `bun run upstream:sync`; CI's `check` job does not sync it, so there this part warns and is left to local runs
-    // (`bun run harness`, `story:check`), as scans.test.ts's XT-conformance-248 does.
+    // by `bun run upstream:sync`, which CI's `check` job runs under `XARAVEL_UPSTREAM=require` (ESC-10.2-8): where it is
+    // missing, this part fails under that variable and otherwise warns and is skipped.
     const structural = structuralFiles();
     const upstreamSynced = existsSync(join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts"));
     if (!upstreamSynced) {
+      if (env["XARAVEL_UPSTREAM"] === "require") {
+        Assert.fail("XARAVEL_UPSTREAM=require: conformance/upstream/framework/src/Illuminate/Contracts is missing; run `bun run upstream:sync`");
+      }
       console.warn("structural.test.ts: conformance/upstream is not synced; the Upstream concrete-class check is skipped");
     }
     for (const ns of upstreamSynced ? NAMESPACES : []) {
