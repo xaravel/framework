@@ -1,7 +1,8 @@
 // Illuminate\Contracts\View\Factory, from laravel/framework v13.37.0.
-// Every method is sync. `make` and `file` return the View at once, as AD-11's `view(...)` does; the `creating:`
-// event they dispatch is the open question of conformance/escalations/ESC-10.3-1.md, ported here under its
-// recommended option 1 (the View awaits that dispatch before it renders).
+// Every method is sync. `make` and `file` return the View at once, as AD-11's `view(...)` does; when the `creating:`
+// event has listeners, they start its dispatch, which the View awaits before it renders (DIV-1.5, ESC-10.3-1).
+// Unlike Upstream, data an async creator sets is not visible to code that reads the View synchronously between
+// `make()` and `render()`.
 import { contract } from "../Contract";
 import type { Arrayable } from "../support/Arrayable";
 import type { Closure } from "../structural/Closure";
@@ -16,11 +17,11 @@ export interface Factory {
   /** Determine if a given view exists. */
   exists(view: string): boolean;
 
-  /** Get the evaluated view contents for the given path (ESC-10.3-1, option 1: sync). */
+  /** Get the evaluated view contents for the given path (sync under DIV-1.5, ESC-10.3-1: async creator data is visible only after `render()`). */
   file(path: string, data?: Arrayable | PhpArrayLike, mergeData?: PhpArrayLike): View;
   file(path: string, options?: { data?: Arrayable | PhpArrayLike; mergeData?: PhpArrayLike }): View;
 
-  /** Get the evaluated view contents for the given view (ESC-10.3-1, option 1: sync). */
+  /** Get the evaluated view contents for the given view (sync under DIV-1.5, ESC-10.3-1: async creator data is visible only after `render()`). */
   make(view: string, data?: Arrayable | PhpArrayLike, mergeData?: PhpArrayLike): View;
   make(view: string, options?: { data?: Arrayable | PhpArrayLike; mergeData?: PhpArrayLike }): View;
 
