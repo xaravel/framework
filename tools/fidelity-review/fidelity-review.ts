@@ -109,11 +109,11 @@
 // A Maintainer waiver (ESC-10.2-9). An approved, current `decisions/ESC-*.md`
 // decided by the Maintainer may carry `fidelity_waiver: { subject, items }`:
 // for that Story or action item, a reject whose only `fail` items are `items`
-// counts beside the other reviewer's `pass` (`fidelityWaivers`,
-// `waivedReject`). Only the Maintainer writes one; the orchestrator never does.
+// counts as a pass, in either slot or both (`fidelityWaivers`, `waivedReject`).
+// Only the Maintainer writes one; the orchestrator never does.
 //
-// Exit codes: `review` 0 when both reviewers recorded `pass` (or one did and a
-// waiver covers the other's reject, standing or new), 1 when a
+// Exit codes: `review` 0 when each reviewer recorded `pass` or a reject a
+// waiver covers (standing or new), 1 when a
 // `reject` was recorded or a reviewer produced no verdict (or the review could
 // not run, a standing reject included), 2 on a usage error. `status` 0 when `current`, else 1.
 import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
@@ -3381,8 +3381,8 @@ export function waivedReject(record: VerdictRecord | null, waivers: readonly Fid
  * `pass`, and slot 1 ran on another CLI than the loop's or recorded why it fell back. A malformed record fails it, and
  * so does a counted record whose items do not answer the checklist or decide its verdict, or whose `prior` is not the
  * answers to `priorFindings` of the records before its run (the contiguous records with its tree and date). A
- * Maintainer waiver (`waivers`, ESC-10.2-9) lets one slot's reject count as a pass when it fails only waived items;
- * the other slot must still be a `pass`.
+ * Maintainer waiver (`waivers`, ESC-10.2-9) lets a slot's reject count as a pass when it fails only waived items, in
+ * one slot or both; a fail on any item not waived still fails the count.
  */
 export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, checklist: readonly ChecklistItem[], waivers: readonly FidelityWaiver[] = []): VerdictCount {
   const malformedResult = (bad: readonly { line: number; problem: string }[]): VerdictCount => ({ pass: false, detail: `${bad.length} malformed Fidelity Review record(s)`, items: bad.map((entry) => `record at line ${entry.line} ${entry.problem}`), slots: [null, null] });
@@ -3425,12 +3425,15 @@ export function fidelityVerdicts(entries: readonly RecordEntry[], tree: string, 
     const who = slots.map((record, index) => `reviewer ${index + 1}: ${record!.cli}/${record!.model}`).join(", ");
     return { pass: true, detail: `2 pass verdicts for tree ${tree} (${who})`, items: [], slots };
   }
-  // One reject that fails only waived items counts, beside a real pass (ESC-10.2-9).
-  const waived = slots.findIndex((record) => waivedReject(record, waivers));
-  if (passes === 1 && waived !== -1 && crossModel) {
+  // A reject that fails only waived items counts as a pass (ESC-10.2-9). Both slots may be such rejects: a reject's
+  // findings are carried into the next review, which must fail the item it does not fix (ESC-8.8-1 item 3), so the
+  // other reviewer fails a waived item too.
+  const waived = slots.map((record, index) => (waivedReject(record, waivers) ? index + 1 : 0)).filter((reviewer) => reviewer > 0);
+  if (waived.length > 0 && passes + waived.length === 2 && crossModel) {
     const who = slots.map((record, index) => `reviewer ${index + 1}: ${record!.cli}/${record!.model} ${record!.verdict}`).join(", ");
     const by = waivers.map((waiver) => `${waiver.decision} (${waiver.items.join(", ")})`).join(", ");
-    return { pass: true, detail: `1 pass verdict and reviewer ${waived + 1}'s reject waived by ${by} for tree ${tree} (${who})`, items: [], slots };
+    const what = waived.length === 1 ? `1 pass verdict and reviewer ${waived[0]}'s reject` : "reviewer 1's and reviewer 2's rejects";
+    return { pass: true, detail: `${what} waived by ${by} for tree ${tree} (${who})`, items: [], slots };
   }
   const items = slots.map((record, index) => (record === null ? `reviewer ${index + 1}: none for tree ${tree}` : `reviewer ${index + 1}: ${record.verdict} at tree ${record.tree}`));
   for (const reject of standing) {
@@ -4012,10 +4015,10 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   }
   out.push(...missing);
   out.push(`recorded ${records.length} verdict(s) in ${display(root, spec)} for tree ${diff.tree}`);
-  // Both pass, or one passes and the other rejects only on items the Maintainer waived (ESC-10.2-9).
+  // Each passes, or rejects only on items the Maintainer waived (ESC-10.2-9).
   const passes = records.filter((record) => record.verdict === "pass").length;
-  const passed = records.length === 2 && (passes === 2 || (passes === 1 && records.some((record) => waivedReject(record, waivers))));
-  if (passed && passes === 1) {
+  const passed = records.length === 2 && records.every((record) => record.verdict === "pass" || waivedReject(record, waivers));
+  if (passed && passes < 2) {
     out.push(`waived: ${waivers.map((waiver) => `${waiver.decision} (${waiver.items.join(", ")})`).join(", ")}`);
   }
   return { code: passed ? 0 : 1, out, err };

@@ -25,9 +25,9 @@ The Fidelity Review needs both reviewers to pass. Sometimes one reviewer rejects
    ```
 
    `items` names the checklist items whose `fail` the Maintainer accepts for that Story or action item.
-3. **How it counts.** One reviewer's `reject` counts as a pass when every item it fails is waived. The other reviewer must still record `pass`, and the cross-model rule (ESC-8.5-1) still applies.
+3. **How it counts.** A reviewer's `reject` counts as a pass when every item it fails is waived, in one slot or both. The cross-model rule (ESC-8.5-1) still applies.
    - A reject that also fails an unwaived item still fails.
-   - Two rejects never pass on a waiver.
+   - Both slots may be waived rejects. A reject's findings are carried into the next review, and a carried finding that is not fixed must fail its item (ESC-8.8-1 item 3). So once one reviewer fails a waived item, the other must fail it too. Every item not waived must still pass with both reviewers.
    - `fidelityWaivers` and `waivedReject` in `tools/fidelity-review/fidelity-review.ts` apply this rule. The tool's `review` and `status` use it, and so does `story:check`'s `approvals` clause.
 4. **Not bound to a tree.** A waiver holds for the subject's later reviews too. A merge to `main`, the waiver itself included, changes the reviewed tree, so a waiver bound to one tree would void itself. Each review still runs both reviewers. A new kind of failure, on an item not waived, still blocks.
 5. **Nothing else changes.** The checklist, the verdict schema, the standing-reject rule (ESC-8.8-1) and how reviewers are chosen are unchanged. A waiver is recorded in the spec's verdict line and on `story:check`'s `approvals` line, so it is visible wherever the result is read.

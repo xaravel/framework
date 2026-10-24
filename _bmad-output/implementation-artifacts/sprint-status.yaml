@@ -137,7 +137,7 @@ development_status:
 
   epic-10: in-progress
   10-1-token-brand-and-contract-t-mechanism: done
-  10-2-port-the-contracts-for-the-core-and-service-namespaces: blocked  # ESC-10.2-10 (waiting on the Maintainer): after the F-7 waiver both Fidelity reviewers reject F-7 only on tree 5cb66834, and two rejects never count under the waiver; the 411 contracts.jsonl rows need WHOLE_FILE_CAP raised
+  10-2-port-the-contracts-for-the-core-and-service-namespaces: in-progress  # ESC-10.2-10 ruled (decisions/ESC-10.2-10.md): a reject that fails only the waived F-7 counts as a pass in either slot or both (ESC-10.2-9 waiver); run the Fidelity Review again, then clear the block and continue
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
   10-5-xaravel-only-contracts: backlog
