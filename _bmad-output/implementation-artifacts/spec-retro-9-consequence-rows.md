@@ -81,7 +81,7 @@ deferred: []
   - `low` defer-noted (verification-gap other) `docs/ops/done-check.md:18` says the generator has one row; stale since the runtime row — pre-existing, for the PR that lands the contracts row.
   - `low` moot (blind-hunter) Spec says "reuse spineRules" but test copies parsing — moot.
   - `low` moot (intent-alignment) AD-19-style inline Rule lists count as "no Rule list" — no contracts AD affected today.
-- Attempt saved: `_bmad-output/implementation-artifacts/retro-9-consequence-rows-attempt.patch` (row `contracts: { frs: [], ads: [1, 2, 6, 11, 16, 25, 27] }`, generated file, test); code changes reverted.
+- Attempt saved: `_bmad-output/implementation-artifacts/retro-9-consequence-rows-attempt.patch` (removed by epic 10 item 8; recover it with `git show 8a25e3ba:<that path>`) (row `contracts: { frs: [], ads: [1, 2, 6, 11, 16, 25, 27] }`, generated file, test); code changes reverted.
 
 ## Verification
 
@@ -101,4 +101,4 @@ Blocking condition: intent gap. ESC-9.1-3's general rule ("the FRs and ADs of ev
 4. AD-16.1..9 are shared with `conformance` and already count as covered for `contracts` by `xt:coverage`; is that acceptable?
 5. AD-22 (`@xaravel/contracts/psr`) and AD-26 have table Rules and get no IDs; how should their obligations be covered?
 
-Saved attempt: `retro-9-consequence-rows-attempt.patch` (R1, the literal reading). It applies cleanly to f107215 and passes `consequences.ts --check`, XT-conformance-126, typecheck and lint. Once the Maintainer picks a reading (or states the row), the orchestrator applies it. No Story 10.x is affected yet: Epic 10 is backlog.
+Saved attempt: `retro-9-consequence-rows-attempt.patch` (R1, the literal reading). Removed by epic 10 item 8; it is in commit 8a25e3ba. It applies cleanly to f107215 and passes `consequences.ts --check`, XT-conformance-126, typecheck and lint. Once the Maintainer picks a reading (or states the row), the orchestrator applies it. No Story 10.x is affected yet: Epic 10 is backlog.

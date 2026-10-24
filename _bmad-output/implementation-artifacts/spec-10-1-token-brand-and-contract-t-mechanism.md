@@ -315,7 +315,7 @@ An implementing class carries every brand in its chain, as PHP's `instanceof` ho
 ## Auto Run Result
 
 Status: blocked
-Blocking condition: prerequisite not landed. `decisions/ESC-9.1-3.md` (Maintainer, 2026-10-21) requires a `CONSEQUENCE_SOURCES` row and a generated `conformance/xaravel-consequences/contracts.jsonl` "before that Component's first Story with Xaravel Tests" (action item `epic-9-item-1-consequence-rows`). Story 10.1 is the first `contracts` Story and its manifest lists XT-contracts-1..4, so it cannot start until that row lands. The row itself waits on the Maintainer's reading of the ESC-9.1-3 rule: see the five questions in `spec-retro-9-consequence-rows.md` (the saved literal-reading attempt is `retro-9-consequence-rows-attempt.patch`).
+Blocking condition: prerequisite not landed. `decisions/ESC-9.1-3.md` (Maintainer, 2026-10-21) requires a `CONSEQUENCE_SOURCES` row and a generated `conformance/xaravel-consequences/contracts.jsonl` "before that Component's first Story with Xaravel Tests" (action item `epic-9-item-1-consequence-rows`). Story 10.1 is the first `contracts` Story and its manifest lists XT-contracts-1..4, so it cannot start until that row lands. The row itself waits on the Maintainer's reading of the ESC-9.1-3 rule: see the five questions in `spec-retro-9-consequence-rows.md` (the saved literal-reading attempt was `retro-9-consequence-rows-attempt.patch`, removed by epic 10 item 8; `git show 8a25e3ba:_bmad-output/implementation-artifacts/retro-9-consequence-rows-attempt.patch`).
 
 Stopped at step 1, before planning: no spec, code or tests were written. The compiled `epic-10-context.md` is kept for the resumed run.
 
