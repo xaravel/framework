@@ -128,7 +128,7 @@ The model is read from Claude's `modelUsage` keys, or Codex's `model:` header li
 Two records from one slot are one verdict, never two.
 
 **A Maintainer waiver** ([MAINT-2026-10-23-fidelity-waivers](../../decisions/MAINT-2026-10-23-fidelity-waivers.md), first used by [ESC-10.2-9](../../decisions/ESC-10.2-9.md)) is a third way to pass.
-- **Where it lives:** an approved, current `decisions/ESC-*.md` with `decided_by: Maintainer` may carry `fidelity_waiver: { subject: "<story or item id>", items: [F-<n>, …] }`.
+- **Where it lives:** an approved, current `decisions/ESC-*.md` with `decided_by: Maintainer` may carry `fidelity_waiver: { subject: "<story or item id>", items: [F-<n>, …] }`. Quote the subject: an unquoted `9.10` is the number 9.1 and grants nothing, and `escalations:check` refuses it.
 - **How it counts:** for that subject, a slot's reject counts as a pass when every item it fails is waived, in one slot or both. A carried finding that is not fixed makes the next reviewer fail its item too (ESC-8.8-1 item 3). The cross-model rule still applies.
 - **What still fails:** a reject that also fails an item not waived.
 - **How it reads:** the count says `1 pass verdict and reviewer <n>'s reject waived by <decision> (<items>) for tree <t> (…)`, or `reviewer 1's and reviewer 2's rejects waived by …`. `review` prints `waived: <decision> (<items>)` and exits 0. On a standing reject a waiver covers, it prints `current: …` and exits 0 without running a reviewer.

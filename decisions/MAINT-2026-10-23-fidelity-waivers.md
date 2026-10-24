@@ -31,3 +31,8 @@ The Fidelity Review needs both reviewers to pass. Sometimes one reviewer rejects
    - `fidelityWaivers` and `waivedReject` in `tools/fidelity-review/fidelity-review.ts` apply this rule. The tool's `review` and `status` use it, and so does `story:check`'s `approvals` clause.
 4. **Not bound to a tree.** A waiver holds for the subject's later reviews too. A merge to `main`, the waiver itself included, changes the reviewed tree, so a waiver bound to one tree would void itself. Each review still runs both reviewers. A new kind of failure, on an item not waived, still blocks.
 5. **Nothing else changes.** The checklist, the verdict schema, the standing-reject rule (ESC-8.8-1) and how reviewers are chosen are unchanged. A waiver is recorded in the spec's verdict line and on `story:check`'s `approvals` line, so it is visible wherever the result is read.
+
+## Amendment (2026-10-24, MAINT-2026-10-24-epic-10-items)
+
+- **Rule 2.** `subject` is a quoted YAML string. An unquoted `subject: 9.10` is the number 9.1, so it grants nothing. `escalations:check` reports it as an invalid decision.
+- **Rule 4.** "Each review still runs both reviewers" means each review of a new tree. When both reviewers already have records for the unchanged reviewed tree, and those records count under rule 3, `review` reports `current` and runs no reviewer. Re-running on the same tree is what the standing-reject rule (ESC-8.8-1) forbids. XT-conformance-162 pins this.
