@@ -13,7 +13,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { LogicException } from "@xaravel/runtime/php";
-import { registerTestClass } from "@xaravel/runtime/registry";
+import { isContractToken, registerTestClass } from "@xaravel/runtime/registry";
 import { runInRootFrame } from "@xaravel/runtime/scope";
 import { CLASS_FQCN, contract, type ContractToken } from "@xaravel/contracts";
 import { aliasResolver, type AliasTable, canonicalToken, CORE_CONTAINER_ALIASES, PROVIDER_ALIASES, PROVIDER_BINDINGS, validateAliasTable } from "@xaravel/contracts/aliases";
@@ -73,12 +73,12 @@ const MODULES: readonly object[] = await Promise.all(
     .map(async (subpath) => (await import(`@xaravel/contracts${subpath.slice(1)}`)) as object),
 );
 
-/** The test's own view of the contract tokens: each module's frozen non-function exports with an own string `CLASS_FQCN`, by FQCN. */
+/** The test's own view of the contract tokens: each module's exports that runtime's `isContractToken` accepts, by FQCN. */
 const TOKENS: ReadonlyMap<string, Token> = (() => {
   const tokens = new Map<string, Token>();
   for (const module of MODULES) {
     for (const value of Object.values(module)) {
-      if (typeof value === "object" && value !== null && Object.isFrozen(value) && Object.hasOwn(value, CLASS_FQCN) && typeof (value as Record<symbol, unknown>)[CLASS_FQCN] === "string") {
+      if (isContractToken(value)) {
         tokens.set((value as Record<symbol, string>)[CLASS_FQCN] ?? "", value as Token);
       }
     }
@@ -99,7 +99,7 @@ function show(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
-  if (typeof value === "object" && value !== null && Object.hasOwn(value, CLASS_FQCN)) {
+  if (isContractToken(value)) {
     return `[${(value as Record<symbol, string>)[CLASS_FQCN]}]`;
   }
   return `(${typeof value})`;

@@ -17,7 +17,9 @@
 // an enum case, `new …`) is not evaluated: the caller throws only when that argument is actually omitted.
 //
 // Class names in a return type resolve through `globalThis[Symbol.for('xaravel.class.lookup')]` (Mockery's
-// `support/classes.ts` protocol): `(name) => class | contract token | null`, the name without a leading `\`.
+// `support/classes.ts` protocol): `(name) => class | contract token | null`, the name without a leading `\`. An
+// object it returns counts only when it is a contract token (`isContractToken`).
+import { isContractToken } from "./ContractParents";
 
 const SIGNATURE = Symbol.for("xaravel.api.signature");
 const CLASS_LOOKUP = Symbol.for("xaravel.class.lookup");
@@ -103,10 +105,7 @@ export function lookupClass(name: string): unknown {
   if (typeof found === "function" || typeof found === "symbol") {
     return found;
   }
-  if (typeof found === "object" && found !== null && typeof (found as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function") {
-    return found;
-  }
-  return null;
+  return isContractToken(found) ? found : null;
 }
 
 // ---------------------------------------------------------------------------

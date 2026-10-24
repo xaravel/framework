@@ -7,7 +7,10 @@ import { Matcher } from "./Matcher";
 
 type AnyClass = abstract new (...args: never[]) => object;
 
-/** A class, or an AD-1 contract token: an object whose `Symbol.hasInstance` reads its brand. */
+/**
+ * A class, or an AD-1 contract token: a frozen, non-function object with an own, non-writable string
+ * `Symbol.for('xaravel.class.fqcn')` (@xaravel/assert's `isContractToken`), whose `Symbol.hasInstance` reads its brand.
+ */
 export type TypeTarget = AnyClass | { readonly [Symbol.hasInstance]: (value: unknown) => boolean };
 
 function builtin(name: string, actual: unknown): boolean | null {

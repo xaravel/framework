@@ -72,7 +72,7 @@
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
 import { ConfigurableMethod, markBuiltin, type DeclaringClass } from "../ConfigurableMethod";
-import { contractMethods, contractParentBrands, defineContractProtocols, isContractToken } from "./ContractParents";
+import { contractMethods, contractParentBrands, contractTokenName, defineContractBrand, defineContractProtocols, isContractToken } from "./ContractParents";
 import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
@@ -231,6 +231,18 @@ function ownClassName(ctor: unknown): string | null {
   return ctor.name === "" ? null : ctor.name;
 }
 
+/**
+ * The name of the contract token `token` (`contractTokenName`, the rule both test doubles share). Throws the "needs a
+ * class or a contract token" TypeError for a token whose FQCN is empty, which no double can name.
+ */
+function tokenName(token: object): string {
+  const name = contractTokenName(token);
+  if (name === null) {
+    throw new TypeError("PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got a contract token that carries no FQCN");
+  }
+  return name;
+}
+
 /** The declaring class of the members own to `prototype`: its constructor, and the constructor's parent. */
 function declaringClassOf(prototype: object): DeclaringClass | null {
   const ctor: unknown = (prototype as { constructor?: unknown }).constructor;
@@ -266,10 +278,10 @@ export function readTarget(type: unknown): TargetType {
     return { name: type.description ?? "", parent: null, methods: new Map(), brand: type, parentBrands: [], builtins: new Set() };
   }
   if (isContractToken(type)) {
-    const name = classNameOfClass(type);
+    const name = tokenName(type);
     const methods = new Map<string, ConfigurableMethod>();
     const builtins = new Set<string>();
-    for (const method of contractMethods(type, classNameOfClass)) {
+    for (const method of contractMethods(type, tokenName)) {
       const declaring: DeclaringClass = { name: method.declaringName, type: method.contract, parentName: null, parentType: null };
       const entry = new ConfigurableMethod(method.name, 0, [], declaring);
       methods.set(method.name, entry);
@@ -279,7 +291,7 @@ export function readTarget(type: unknown): TargetType {
       }
     }
     const brand = Symbol.for(name);
-    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, classNameOfClass), builtins };
+    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, tokenName), builtins };
   }
   throw new TypeError(`PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got ${type === null ? "null" : typeof type}`);
 }
@@ -491,10 +503,10 @@ export function testDouble(
   const prototype = Double.prototype as object;
   Object.defineProperty(prototype, DOUBLE, { value: configuration });
   if (target.brand !== null) {
-    Object.defineProperty(prototype, target.brand, { get: () => true, enumerable: false, configurable: false });
+    defineContractBrand(prototype, target.brand);
   }
   for (const brand of target.parentBrands) {
-    Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: false });
+    defineContractBrand(prototype, brand);
   }
   for (const method of doubled) {
     Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, type, method), writable: true, enumerable: false, configurable: true });

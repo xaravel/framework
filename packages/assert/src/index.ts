@@ -9,7 +9,9 @@
 // no subpath export, so they sit on the index. So do `contractParentBrands`,
 // `contractMethods` and `defineContractProtocols`, the parents walk, the
 // contract methods and their JS protocols both packages' test doubles share
-// (ESC-10.1-6, ESC-10.2-4).
+// (ESC-10.1-6, ESC-10.2-4), and `isContractToken`, `contractTokenName` and
+// `defineContractBrand`, the grader's one token predicate, token-name rule and
+// brand descriptor (MAINT-2026-10-24 Item 4).
 import {
   arrayEntries as phpArrayEntries,
   isBrandedArray as phpIsBrandedArray,
@@ -34,7 +36,7 @@ import { Constraint } from "./Framework/Constraint";
 import { Exception } from "./Framework/Exception/Exception";
 import { SkippedWithMessageException } from "./Framework/Exception/SkippedWithMessageException";
 import { ExpectationFailedException } from "./Framework/ExpectationFailedException";
-import { contractMethods, contractParentBrands, defineContractProtocols } from "./Framework/MockObject/Generator/ContractParents";
+import { contractMethods, contractParentBrands, contractTokenName, defineContractBrand, defineContractProtocols, isContractToken } from "./Framework/MockObject/Generator/ContractParents";
 import { MockBuilder } from "./Framework/MockObject/MockBuilder";
 import { TestCase } from "./Framework/TestCase";
 import { objectHandle as phpObjectHandle } from "./exporter/Exporter";
@@ -47,9 +49,12 @@ for (const exported of [
   Constraint,
   contractMethods,
   contractParentBrands,
+  contractTokenName,
+  defineContractBrand,
   defineContractProtocols,
   Exception,
   ExpectationFailedException,
+  isContractToken,
   MockBuilder,
   SkippedWithMessageException,
   TestCase,
@@ -83,9 +88,12 @@ export {
   Constraint,
   contractMethods,
   contractParentBrands,
+  contractTokenName,
+  defineContractBrand,
   defineContractProtocols,
   Exception,
   ExpectationFailedException,
+  isContractToken,
   MockBuilder,
   phpArrayEntries,
   phpClassNameOf,

@@ -12,7 +12,7 @@
 // `CONTRACT_PREFIXES` ignoring ASCII case. Lookups stay case-sensitive, as Upstream's alias keys are strings, so a
 // name that differs from an exported contract's FQCN only in letter case is refused.
 import { LogicException } from "@xaravel/runtime/php";
-import { fqcn } from "@xaravel/runtime/registry";
+import { fqcn, isContractToken } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, CONTRACT_PARENTS, type ContractToken, foldCase } from "../Contract";
 import * as root from "../index";
 import * as auth from "../auth/index";
@@ -126,10 +126,8 @@ function bare(name: string): string {
   return name.startsWith("\\") ? name.slice(1) : name;
 }
 
-/** Whether `value` is a contract token: a frozen, non-function object with an own `CLASS_FQCN` string. */
-function isToken(value: unknown): value is ContractToken<object> {
-  return typeof value === "object" && value !== null && Object.isFrozen(value) && Object.hasOwn(value, CLASS_FQCN) && typeof (value as Record<symbol, unknown>)[CLASS_FQCN] === "string";
-}
+/** Whether `value` is a contract token: runtime's `isContractToken` (MAINT-2026-10-24 Item 4), typed as a token. */
+const isToken = isContractToken as (value: unknown) => value is ContractToken<object>;
 
 /** Every contract token `@xaravel/contracts` exports, by FQCN. */
 const TOKENS: ReadonlyMap<string, ContractToken<object>> = (() => {

@@ -42,6 +42,9 @@ registerClass("App\\Models\\Post", Post);
   unregistered class. Never use `constructor.name` for identity. A `contract<T>()` token gives its own FQCN: a frozen,
   non-function object whose own, non-writable `Symbol.for('xaravel.class.fqcn')` data property is a string. A token is
   never registered, so `resolveClass` does not resolve its name.
+- `isContractToken(value)` says whether a value is such a token, by the same definition `fqcn()` reads. It is the
+  runtime side's one token predicate, and `@xaravel/contracts` uses it. `@xaravel/assert` keeps the grader's copy,
+  which XT-contracts-20 pins equal.
 - `resolveClass(fqcn)` is the class registered under a name. A test class wins over the base registration. A miss
   throws PHP's `Error` `Class "<FQCN>" not found` (see [PHP exceptions](exceptions.md)), naming the class as given:
   as PHP's `new $name` does, a leading `\` stays in the message (`Class "\App\Missing" not found`), though the lookup
