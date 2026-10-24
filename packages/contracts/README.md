@@ -6,6 +6,10 @@ It ports `illuminate/contracts` from Laravel v13.37.0.
 
 Xaravel is an independent open-source project. It is not affiliated with, sponsored by or endorsed by Laravel Holdings Inc.
 
+## Documentation
+
+[docs/contracts.md](docs/contracts.md) explains what a contract is, how to type and inject one, and lists every contract with its Upstream FQCN, the Xaravel-only seams and the Divergences that shape them.
+
 ## Usage
 
 A contract is a TypeScript interface plus a runtime token of the same name, made with `contract()`. The token's `brand` is `Symbol.for('<FQCN>')`, and the interface requires it, so a class that `implements` the contract without the brand getter does not compile:
