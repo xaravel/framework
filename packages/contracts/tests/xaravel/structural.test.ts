@@ -2,8 +2,9 @@
 // imports nothing but `@xaravel/runtime` and its own files, and a temp project built with the repo's pinned `tsc -b`
 // (XT-contracts-2's pattern) passes a local Collection-shaped class to `Bus\Dispatcher::chain` and a Request-shaped
 // object to `Support\Responsable::toResponse`, and fails with TS2345 when the class lacks a structural member or an
-// async function is passed as a sync-only (`SyncClosure`) callback. Every concrete class the Upstream contract files
-// name maps to a `src/structural/` type, which the port imports where the class is in a signature.
+// async function, or one that may return a Promise, is passed as a sync-only (`SyncClosure`) callback. Every concrete
+// class the Upstream contract files name maps to a `src/structural/` type, which the port imports where the class is
+// in a signature.
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
@@ -261,6 +262,13 @@ xaravelTest(
       const asyncCodes = [...asyncCallback.output.matchAll(/error (TS\d+)/g)].map((match) => match[1]);
       Assert.assertSame(JSON.stringify(["TS2345"]), JSON.stringify(asyncCodes), asyncCallback.output);
       Assert.assertStringContainsString("fixture.ts", asyncCallback.output);
+
+      // A callback that may return a Promise (`void | Promise<void>`) is rejected the same way.
+      writeFileSync(fixture, PRELUDE + collectionClass(true) + "\nconst maybeAsync = (): void | Promise<void> => undefined;\nexport const maybeAsyncTerminating = app.terminating(maybeAsync);\n");
+      const unionCallback = await tscBuild(tmp);
+      Assert.assertNotEquals(0, unionCallback.code);
+      const unionCodes = [...unionCallback.output.matchAll(/error (TS\d+)/g)].map((match) => match[1]);
+      Assert.assertSame(JSON.stringify(["TS2345"]), JSON.stringify(unionCodes), unionCallback.output);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

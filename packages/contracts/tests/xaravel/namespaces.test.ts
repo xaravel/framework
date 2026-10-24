@@ -1,8 +1,9 @@
 // Xaravel Test for Story 10.2: the `Illuminate\Contracts` interfaces and exception classes of the core and service
 // namespaces (AD-1.1, AD-6). Every expected name, method list and parameter list comes from the committed API
 // surface's rows, and every parent and exception base from the Upstream PHP file's `extends` / `implements`, read
-// through its `use` lines. The namespace list is the test's one constant, beside the spec's async table (AD-6, DIV-1),
-// which no committed file carries, and the built-in parents' method lists (ESC-10.2-4).
+// through its `use` lines. The namespace list is the test's one constant, beside a copy of the Story spec's async
+// table (AD-6, DIV-1, as amended by ESC-10.2-5), which no package or conformance file carries, and the built-in
+// parents' method lists (ESC-10.2-4).
 //
 // The Upstream snapshot is gitignored and synced by `bun run upstream:sync`, which CI's `check` job runs under
 // `XARAVEL_UPSTREAM=require` (ESC-10.2-8). Where the snapshot is missing the Upstream-derived parts (parents, exception
@@ -461,6 +462,14 @@ xaravelTest(
     Assert.assertSame("(nothing thrown)", typeErrorOf(() => contract("X\\N", {}, [], {})));
     Assert.assertStringContainsString("contract()", typeErrorOf(() => contract("X\\T", {}, [], { brand: 1 })));
     Assert.assertStringContainsString("contract()", typeErrorOf(() => contract("X\\U", {}, [], "x" as never)));
+    const V = contract("X\\V", {}, [], { N: 1, F: false, Z: null });
+    Assert.assertSame(1, V.N);
+    Assert.assertFalse(V.F);
+    Assert.assertNull(V.Z);
+    Assert.assertStringContainsString("must be a string, number, boolean or null", typeErrorOf(() => contract("X\\O", {}, [], { A: {} } as never)));
+    Assert.assertStringContainsString("must be a string, number, boolean or null", typeErrorOf(() => contract("X\\G", {}, [], { A: () => 1 } as never)));
+    Assert.assertStringContainsString("must have string keys", typeErrorOf(() => contract("X\\Y", {}, [], { [Symbol("s")]: 1 } as never)));
+    Assert.assertStringContainsString("must be a { <constant>: <value> } record", typeErrorOf(() => contract("X\\R", {}, [], ["a"] as never)));
 
     // Built-ins (ESC-10.2-4): only the fixed PHP names, each once.
     Assert.assertSame(JSON.stringify(["count"]), JSON.stringify(contract("X\\C", {}, [], {}, ["count"])[CONTRACT_BUILTINS]));
