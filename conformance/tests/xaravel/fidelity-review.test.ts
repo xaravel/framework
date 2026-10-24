@@ -337,7 +337,7 @@ xaravelTest(
     expect(prompt.system).toContain("Do not use any tool, command or file: judge only the material given in this prompt.");
     expect(prompt.user.startsWith(`# Story 9.1: tree ${"a".repeat(40)} against base ${"b".repeat(40)}\n`)).toBe(true);
     expect(prompt.length).toBe(prompt.system.length + prompt.user.length);
-    expect(PROMPT_CAP).toBe(600_000);
+    expect(PROMPT_CAP).toBe(1_000_000);
     const schema = verdictSchema(ITEMS) as { additionalProperties: boolean; required: string[]; properties: { items: { items: { required: string[]; properties: { id: { enum: string[] }; result: { enum: string[] } } } } } };
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toEqual(["items"]);
@@ -676,7 +676,7 @@ xaravelTest(
       ["no spec", (dir) => rmSync(join(dir, SPEC)), "no spec matches _bmad-output/implementation-artifacts/spec-9-1-*.md"],
       ["two specs", (dir) => write(dir, "_bmad-output/implementation-artifacts/spec-9-1-other.md", "x\n"), "2 specs match"],
       ["no baseline", (dir) => write(dir, SPEC, "---\ntitle: x\n---\n"), "has no baseline_revision"],
-      ["too large", (dir) => write(dir, "packages/support/src/Big.ts", `${"x".repeat(PROMPT_CAP)}\n`), "over the 600000 cap, of which section (e), the touched Xaravel Tests, is 0; the diff and its evidence are too large to review"],
+      ["too large", (dir) => write(dir, "packages/support/src/Big.ts", `${"x".repeat(PROMPT_CAP)}\n`), "over the 1000000 cap, of which section (e), the touched Xaravel Tests, is 0; the diff and its evidence are too large to review"],
     ];
     for (const [name, mutate, expected] of refusals) {
       const refused = makeRepo();

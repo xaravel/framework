@@ -138,8 +138,11 @@ export const MANIFEST_STATUS_PLACEHOLDER = "status: (bookkeeping)";
 export const RECORDS_HEADING = "## Fidelity Review";
 /** The `kind` of a verdict record's JSON. */
 export const RECORD_KIND = "fidelity-verdict";
-/** The most characters the prompt (system plus user) may have. */
-export const PROMPT_CAP = 600_000;
+/**
+ * The most characters the prompt (system plus user) may have: about 250,000 to 330,000 tokens, inside Codex's
+ * 475,000-token window and Claude's 1,000,000 (ESC-10.2-8; 600,000 before).
+ */
+export const PROMPT_CAP = 1_000_000;
 /** Each reviewer attempt's timeout. */
 export const REVIEWER_TIMEOUT_MS = 15 * 60 * 1000;
 /** The attempts a reviewer gets on one CLI: a malformed answer, timeout or other failure is retried once. */

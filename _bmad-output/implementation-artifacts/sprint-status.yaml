@@ -137,7 +137,7 @@ development_status:
 
   epic-10: in-progress
   10-1-token-brand-and-contract-t-mechanism: done
-  10-2-port-the-contracts-for-the-core-and-service-namespaces: blocked  # ESC-10.2-8 (waiting on the Maintainer): the Fidelity Review prompt is at its cap, so the Upstream inputs XT-contracts-5 and -6 read are omitted for size; second pass (statics, builtins, Pipeline overload, XT-contracts-5 and -7) built and merged
+  10-2-port-the-contracts-for-the-core-and-service-namespaces: in-progress  # ESC-10.2-8 ruled (decisions/ESC-10.2-8.md): the prompt cap is 1,000,000 and CI's check job syncs the snapshot under XARAVEL_UPSTREAM=require; make XT-contracts-5 and -6 fail rather than skip under it without the snapshot, then run the Fidelity Review again
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
   10-5-xaravel-only-contracts: backlog
