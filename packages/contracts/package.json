@@ -53,7 +53,8 @@
     "./routing": "./src/routing/index.ts",
     "./session": "./src/session/index.ts",
     "./session/middleware": "./src/session/middleware/index.ts",
-    "./view": "./src/view/index.ts"
+    "./view": "./src/view/index.ts",
+    "./aliases": "./src/aliases/index.ts"
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"
