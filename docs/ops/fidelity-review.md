@@ -140,7 +140,7 @@ Each counted record's `prior` is re-checked too ([ESC-8.8-1](../../decisions/ESC
 | Both reviewers recorded `pass` | exit 0 |
 | The spec has a standing reject for the reviewed tree | exit 1, nothing recorded, no reviewer run; stdout has `STANDING reviewer <n>: reject at tree <t>` and that reject's `F-<n> <path>: <detail>` findings, stderr says to fix them (a tree change) or supply the evidence they ask for (ESC-8.8-1) |
 | A `reject` was recorded, or a reviewer produced no verdict (its record is missing; the other reviewer's is still recorded) | exit 1 |
-| An empty diff, a prompt over 600,000 characters, a missing or invalid manifest, a missing or ambiguous spec, no base, a malformed checklist, a git error | exit 1, nothing recorded, no reviewer run |
+| An empty diff, a prompt over 1,000,000 characters, a missing or invalid manifest, a missing or ambiguous spec, no base, a malformed checklist, a git error | exit 1, nothing recorded, no reviewer run |
 | No `--story`, a bad Story id or option, or no loop CLI | usage message, exit 2 |
 
 `bun run fidelity:review status --story <id> [--spec <file>]` prints `current: …` and exits 0 when the counting passes for `reviewTree(root, "worktree")`. Otherwise it exits 1 and prints `stale: …` (verdicts exist, but none for this tree) or `missing: …` (a verdict is missing, a reject, the cross-model rule, or a malformed record), with one line per slot.
@@ -164,7 +164,7 @@ The layer names a Finalize re-check, `bun run fidelity:review status --story <id
 
 ## Cost
 
-Each run is two reviewer calls, each with up to 600,000 characters of prompt (roughly 150,000 to 200,000 tokens), and up to four when both are retried, plus one more when reviewer 1 falls back. They are charged to the CLIs' own plans, not to an API key. Every re-run after a tree change costs the same again.
+Each run is two reviewer calls, each with up to 1,000,000 characters of prompt (roughly 250,000 to 330,000 tokens; the cap was 600,000 until [ESC-10.2-8](../../decisions/ESC-10.2-8.md)), and up to four when both are retried, plus one more when reviewer 1 falls back. They are charged to the CLIs' own plans, not to an API key. Every re-run after a tree change costs the same again.
 
 ## Limits
 

@@ -816,6 +816,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
   expect(check.steps[1]).toEqual(audit.steps[1]!);
   expect(check.steps.map((step) => step.run).filter((run): run is string => run !== undefined)).toEqual([
     "bun install --frozen-lockfile --ignore-scripts",
+    // ESC-10.2-8: the Xaravel Tests whose expectations come from the Upstream snapshot run against it, not skip.
+    "bun run upstream:sync",
     // Story 5.9: every Xaravel Test under the harness; UNDECLARED, LATE and FAIL results gate the merge (FR-115, AD-15).
     // It is the job's only test run: every test file is one the harness runs (XT-conformance-119), so a plain
     // `bun run test` would run them all a second time.
@@ -844,6 +846,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     "bun run mockery:coverage",
   ]);
   expect(check.steps.filter((step) => step.uses !== undefined).length).toBe(2);
+  // ESC-10.2-8: a missing snapshot fails the snapshot-reading tests instead of skipping them.
+  expect(check.steps.find((step) => step.run === "bun run harness --xaravel")!["env"]).toEqual({ XARAVEL_UPSTREAM: "require" });
   expect(check["timeout-minutes"]).toBe(30);
   // `fixtures` verifies every committed Oracle fixture, with no install, nothing to skip it and nothing past a failure (Epic 3 retro S2).
   const fixtures = ci.jobs["fixtures"]!;

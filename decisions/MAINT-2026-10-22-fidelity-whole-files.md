@@ -43,3 +43,7 @@ For Story 9.9, measured from the loop's logs:
 The 2026-10-21 amendment to `decisions/MAINT-2026-10-16-unattended-orchestrator.md` still applies. When a reject asks for evidence the prompt lacks:
 - **The orchestrator first widens (h),** for example by following another kind of import, rather than adding a new case-by-case slice.
 - **Raising `PROMPT_CAP` or `WHOLE_FILE_CAP` is the Maintainer's call.** If evidence a reviewer needs is omitted for size, the Escalation asks the Maintainer instead.
+
+## Amendment (2026-10-23, ESC-10.2-8)
+
+The prompt cap in rule 2 is now 1,000,000 characters, not 600,000. Story 10.2's diff left (h) no room for the Upstream sources and data its tests read. With every one of them shown, its prompt is 943,702 characters. Rules 1 and 3 to 5 and "Future evidence gaps" are unchanged. See `decisions/ESC-10.2-8.md`.

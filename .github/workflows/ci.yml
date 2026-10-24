@@ -9,7 +9,10 @@
 # committed request, naming the file (Story 3.3, FR-6, AD-15). It needs no
 # install, so it stays fast, and it is a required check on main
 # (decisions/MAINT-2026-10-18-epic-3-items.md, Epic 3 retro S2): a forged
-# fixture cannot merge. `check` runs the other repository gates: `bun test`,
+# fixture cannot merge. `check` syncs the Upstream snapshot first and runs the
+# Xaravel Tests with XARAVEL_UPSTREAM=require, so a test whose expectations come
+# from conformance/upstream/ fails there instead of skipping when it is missing
+# (decisions/ESC-10.2-8.md). It runs the other repository gates: `bun test`,
 # the typecheck, the lint, `scaffold:check` and `graph:check` (Epic 1 retro
 # R1), plus the assert and Mockery coverage reports. After the Skip Reasons it
 # runs `divergence:check` (Story 8.1, FR-8, AD-15): a malformed Divergence
@@ -168,8 +171,12 @@ jobs:
           bun-version-file: .bun-version
       - name: Install from the lockfile
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Sync the Upstream snapshot
+        run: bun run upstream:sync
       - name: Run every test file under the harness
         run: bun run harness --xaravel
+        env:
+          XARAVEL_UPSTREAM: require
       - name: Check the Expectations File
         run: bun run expectations:check
       - name: Check the Skip Reasons
