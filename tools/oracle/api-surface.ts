@@ -5,7 +5,9 @@
 //       Upstream repository (framework, ai, mcp, boost), over the FQCNs
 //       tools/component-map's `declaredClasses` lists for it and every user
 //       function its `src/` declares. The two passes must print the same bytes.
-//       Every line is re-rendered in its kind's key order, validated against
+//       Every line is re-rendered in its kind's key order (`KEYS`; a
+//       declaration's ends with `stubbed` and `parents`, epic-10 item 5),
+//       validated against
 //       `conformance/api-surface/schema.json#/$defs/surface`, assigned to its
 //       Component and sorted; the result is
 //       `conformance/api-surface/<component>.jsonl`. Any other `*.jsonl` there
@@ -65,10 +67,10 @@ const KIND_RANK: Readonly<Record<SurfaceKind, number>> = { class: 0, interface: 
 const PARAMETER_KEYS = ["name", "type", "nullable", "default", "optional", "variadic", "byRef"] as const;
 /** Each kind's key order. */
 const KEYS: Readonly<Record<SurfaceKind, readonly string[]>> = {
-  class: ["fqcn", "kind", "member", "stubbed"],
-  interface: ["fqcn", "kind", "member", "stubbed"],
-  trait: ["fqcn", "kind", "member", "stubbed"],
-  enum: ["fqcn", "kind", "member", "stubbed"],
+  class: ["fqcn", "kind", "member", "stubbed", "parents"],
+  interface: ["fqcn", "kind", "member", "stubbed", "parents"],
+  trait: ["fqcn", "kind", "member", "stubbed", "parents"],
+  enum: ["fqcn", "kind", "member", "stubbed", "parents"],
   method: ["fqcn", "kind", "member", "static", "parameters", "returns", "nullable"],
   property: ["fqcn", "kind", "member", "static", "type", "nullable"],
   constant: ["fqcn", "kind", "member", "static"],

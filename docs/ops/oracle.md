@@ -333,7 +333,7 @@ Each takes `--root <dir>`. Exit codes: 0 pass, 1 any failure (fail closed, nothi
 
 `conformance/api-surface/schema.json#/$defs/surface` defines a line; the tool re-renders each line in this key order, compact, LF-terminated:
 
-- a class, interface, trait or enum: `{"fqcn","kind","member":null,"stubbed":[…]}`;
+- a class, interface, trait or enum: `{"fqcn","kind","member":null,"stubbed":[…],"parents":[…]}`;
 - a public method declared by the class itself (trait-imported methods count, inherited ones do not): `{"fqcn","kind":"method","member","static","parameters","returns","nullable"}`;
 - a public property, likewise: `{"fqcn","kind":"property","member","static","type","nullable"}`;
 - a public constant or an enum case: `{"fqcn","kind":"constant"|"case","member","static":true}`;
@@ -342,6 +342,8 @@ Each takes `--root <dir>`. Exit codes: 0 pass, 1 any failure (fail closed, nothi
 A parameter is `{"name","type","nullable","default","optional","variadic","byRef"}`. `type` and `returns` are PHP's type string, or null when untyped; `nullable` is `allowsNull()`, and untyped counts as nullable. `default` is null when there is none, else PHP source: a constant name (an unqualified global constant loses its namespace fallback prefix, so `PHP_INT_MAX`, not `Ns\PHP_INT_MAX`), `new …` as Reflection prints it, `Enum::Case` (the enum's FQCN without a leading backslash, however the default is written), or a compact literal (`null`, `true`, `0`, `'x'`, `[]`, `['*']`, `['a' => 1]`). Any other object in a default, or a `new` default Reflection does not print, fails the run instead of being guessed.
 
 A class's Component is `componentForFqcn`, which maps `Psr\Container\`, `Psr\Log\` and `Psr\SimpleCache\` (`PSR_NAMESPACES`) to `contracts` when no map record owns them. A function's is `kebab(<Dir>)` for `framework/src/Illuminate/<Dir>/…`, else the repository name. An FQCN no Component owns, or a Component missing from the map, fails the run. Lines are sorted by `fqcn`, then kind (declaration or function, case, constant, property, method), then `member`, by UTF-16 code unit. Inherited members are not repeated: each class lists only its own members, and Story 6.5 compares them with the TS class's own members (the port mirrors Upstream's hierarchy). Declaration lines keep member-less classes (exception subclasses, for example) visible.
+
+A declaration's `parents` lists, sorted, every class it extends (its whole `getParentClass()` chain) and every interface it implements or extends, directly or inherited (`getInterfaceNames()`). PHP's built-in interfaces (`Stringable`, `Countable`, `UnitEnum`, `Throwable`, …) and stubs are included, traits are not; an enum lists `UnitEnum` (and `BackedEnum`). Both modes emit it, and `schema.json#/$defs/declaration` requires it. The API-surface diff compares it with the port's walked TS heritage ([api-surface.md](api-surface.md#parents)). The field was added by `epic-10-retro-item-5` part 3 (`decisions/MAINT-2026-10-24-epic-10-items.md`, "Item 5, part 3"): the regeneration that added it changed no other key of any line.
 
 ### Stubs
 

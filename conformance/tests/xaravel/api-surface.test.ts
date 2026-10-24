@@ -140,7 +140,7 @@ function withRoot(body: (fx: Fixture) => void): void {
   }
 }
 
-const decl = (fqcn: string, kind = "class"): string => `{"member":null,"kind":"${kind}","fqcn":${JSON.stringify(fqcn)},"stubbed":[]}`;
+const decl = (fqcn: string, kind = "class"): string => `{"member":null,"kind":"${kind}","fqcn":${JSON.stringify(fqcn)},"stubbed":[],"parents":[]}`;
 const method = (fqcn: string, name: string): string =>
   `{"fqcn":${JSON.stringify(fqcn)},"kind":"method","member":"${name}","static":true,"parameters":[{"byRef":false,"variadic":false,"optional":true,"default":"null","nullable":true,"type":null,"name":"value"}],"returns":"string","nullable":false}`;
 
@@ -251,20 +251,20 @@ const p = (name: string, type: string | null, nullable: boolean, def: string | n
 
 /** The exporter's exact output for the fixture, in its print order. */
 const FIXTURE_LINES = [
-  '{"fqcn":"Fixture\\\\Base","kind":"class","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\Base","kind":"class","member":null,"stubbed":[],"parents":[]}',
   '{"fqcn":"Fixture\\\\Base","kind":"method","member":"inheritedMethod","static":false,"parameters":[],"returns":"void","nullable":false}',
   '{"fqcn":"Fixture\\\\Base","kind":"property","member":"inherited","static":false,"type":null,"nullable":true}',
-  '{"fqcn":"Fixture\\\\Broken","kind":"class","member":null,"stubbed":["Missing\\\\Contract"]}',
+  '{"fqcn":"Fixture\\\\Broken","kind":"class","member":null,"stubbed":["Missing\\\\Contract"],"parents":["Missing\\\\Contract"]}',
   '{"fqcn":"Fixture\\\\Broken","kind":"method","member":"run","static":false,"parameters":[],"returns":"?int","nullable":true}',
-  '{"fqcn":"Fixture\\\\Contracts\\\\Shape","kind":"interface","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\Contracts\\\\Shape","kind":"interface","member":null,"stubbed":[],"parents":[]}',
   '{"fqcn":"Fixture\\\\Contracts\\\\Shape","kind":"method","member":"area","static":false,"parameters":[],"returns":"float","nullable":false}',
   '{"fqcn":"Fixture\\\\Contracts\\\\Shape","kind":"constant","member":"SIDES","static":true}',
-  '{"fqcn":"Fixture\\\\Greets","kind":"trait","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\Greets","kind":"trait","member":null,"stubbed":[],"parents":[]}',
   `{"fqcn":"Fixture\\\\Greets","kind":"method","member":"greet","static":false,"parameters":[${p("who", "string", false, "'world'", true)}],"returns":"string","nullable":false}`,
-  '{"fqcn":"Fixture\\\\Options","kind":"class","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\Options","kind":"class","member":null,"stubbed":[],"parents":[]}',
   `{"fqcn":"Fixture\\\\Options","kind":"method","member":"__construct","static":false,"parameters":[${p("level", "int", false, null, false)}],"returns":null,"nullable":true}`,
   '{"fqcn":"Fixture\\\\Options","kind":"property","member":"level","static":false,"type":"int","nullable":false}',
-  '{"fqcn":"Fixture\\\\Size","kind":"enum","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\Size","kind":"enum","member":null,"stubbed":[],"parents":["BackedEnum","UnitEnum"]}',
   '{"fqcn":"Fixture\\\\Size","kind":"method","member":"cases","static":true,"parameters":[],"returns":"array","nullable":false}',
   `{"fqcn":"Fixture\\\\Size","kind":"method","member":"from","static":true,"parameters":[${p("value", "string|int", false, null, false)}],"returns":"static","nullable":false}`,
   `{"fqcn":"Fixture\\\\Size","kind":"method","member":"tryFrom","static":true,"parameters":[${p("value", "string|int", false, null, false)}],"returns":"?static","nullable":true}`,
@@ -273,8 +273,8 @@ const FIXTURE_LINES = [
   '{"fqcn":"Fixture\\\\Size","kind":"case","member":"Small","static":true}',
   '{"fqcn":"Fixture\\\\Size","kind":"case","member":"Large","static":true}',
   '{"fqcn":"Fixture\\\\Size","kind":"constant","member":"DEFAULT","static":true}',
-  '{"fqcn":"Fixture\\\\SubBroken","kind":"class","member":null,"stubbed":["Missing\\\\Contract"]}',
-  '{"fqcn":"Fixture\\\\Widget","kind":"class","member":null,"stubbed":[]}',
+  '{"fqcn":"Fixture\\\\SubBroken","kind":"class","member":null,"stubbed":["Missing\\\\Contract"],"parents":["Fixture\\\\Broken","Missing\\\\Contract"]}',
+  '{"fqcn":"Fixture\\\\Widget","kind":"class","member":null,"stubbed":[],"parents":["Fixture\\\\Base","Fixture\\\\Contracts\\\\Shape"]}',
   `{"fqcn":"Fixture\\\\Widget","kind":"method","member":"__construct","static":false,"parameters":[${p("size", "int", false, "PHP_INT_MAX", true)}],"returns":null,"nullable":true}`,
   `{"fqcn":"Fixture\\\\Widget","kind":"method","member":"make","static":true,"parameters":[${[p("name", "?string", true, null, false), p("size", "Fixture\\Size", false, "Fixture\\Size::Small", true), p("tags", "array", false, "['*']", true), p("rest", null, true, null, true, true)].join(",")}],"returns":"static","nullable":false}`,
   '{"fqcn":"Fixture\\\\Widget","kind":"method","member":"area","static":false,"parameters":[],"returns":"float","nullable":false}',
@@ -308,14 +308,14 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
     expect(Object.keys(files)).toEqual(["additions.jsonl", "ai.jsonl", "auth.jsonl", "boost.jsonl", "contracts.jsonl", "exceptions.jsonl", "macroable.jsonl", "mcp.jsonl", "support.jsonl"]);
     expect(files["additions.jsonl"]).toBe("");
     expect(files["exceptions.jsonl"]).toBe("");
-    expect(files["ai.jsonl"]).toBe('{"fqcn":"Laravel\\\\Ai\\\\Agent","kind":"interface","member":null,"stubbed":[]}\n');
-    expect(files["macroable.jsonl"]).toBe('{"fqcn":"Illuminate\\\\Support\\\\Traits\\\\Macroable","kind":"trait","member":null,"stubbed":[]}\n');
+    expect(files["ai.jsonl"]).toBe('{"fqcn":"Laravel\\\\Ai\\\\Agent","kind":"interface","member":null,"stubbed":[],"parents":[]}\n');
+    expect(files["macroable.jsonl"]).toBe('{"fqcn":"Illuminate\\\\Support\\\\Traits\\\\Macroable","kind":"trait","member":null,"stubbed":[],"parents":[]}\n');
     // Key order re-rendered, sorted by fqcn, then kind rank (declaration, constant, property, method), then member; the
     // function's Component is its directory's, and its `file` is dropped.
     const param = '{"name":"value","type":null,"nullable":true,"default":"null","optional":true,"variadic":false,"byRef":false}';
     expect(files["support.jsonl"]).toBe(
       [
-        '{"fqcn":"Illuminate\\\\Support\\\\Str","kind":"class","member":null,"stubbed":[]}',
+        '{"fqcn":"Illuminate\\\\Support\\\\Str","kind":"class","member":null,"stubbed":[],"parents":[]}',
         '{"fqcn":"Illuminate\\\\Support\\\\Str","kind":"constant","member":"INVISIBLE","static":true}',
         '{"fqcn":"Illuminate\\\\Support\\\\Str","kind":"property","member":"cache","static":true,"type":"array","nullable":false}',
         `{"fqcn":"Illuminate\\\\Support\\\\Str","kind":"method","member":"lower","static":true,"parameters":[${param}],"returns":"string","nullable":false}`,
@@ -367,6 +367,7 @@ xaravelTest("XT-conformance-80", "the export writes conformance/api-surface/<com
       ],
       ["not JSON", (repo, classes) => (repo === "boost" ? "Deprecated: something\n" : cannedOutput(repo, classes)), "boost line 1: not JSON"],
       ["schema", (repo, classes) => (repo === "ai" ? '{"fqcn":"Laravel\\\\Ai\\\\Agent","kind":"interface","member":null}\n' : cannedOutput(repo, classes)), 'ai line 1: fails the surface schema: $: missing "stubbed"'],
+      ["no parents", (repo, classes) => (repo === "ai" ? '{"fqcn":"Laravel\\\\Ai\\\\Agent","kind":"interface","member":null,"stubbed":[]}\n' : cannedOutput(repo, classes)), 'ai line 1: fails the surface schema: $: missing "parents"'],
       ["extra key", (repo, classes) => cannedOutput(repo, classes).replace('"static":true}', '"static":true,"value":1}'), 'framework line 6: fails the surface schema: $: unexpected key "value"'],
       ["duplicate", (repo, classes) => (repo === "boost" ? cannedOutput(repo, classes).repeat(2) : cannedOutput(repo, classes)), "Laravel\\Boost\\Boost (class) is exported twice"],
     ];
@@ -450,6 +451,28 @@ phpTest("XT-conformance-198", "api-surface.php reflects the fixture: declared me
   const declarations = (stdout: string): string[] => stdout.split("\n").filter((line) => line.includes('"stubbed":["'));
   expect(declarations(reversed.stdout)).toEqual([...declarations(result.stdout)].reverse());
   expect(declarations(result.stdout).length).toBe(2);
+  // `parents` (epic-10-retro-item-5, part 3): the whole parent chain and every interface, sorted. SubBroken's is
+  // transitive (Broken's stub interface through Broken), Size's keeps PHP's built-in interfaces, Widget's lists Base and
+  // Shape but not the trait Greets it uses, and an interface, trait or class with neither has [].
+  const parents = Object.fromEntries(
+    result.stdout
+      .split("\n")
+      .filter((line) => line.includes('"member":null,"stubbed"'))
+      .map((line) => JSON.parse(line) as { fqcn: string; parents: string[] })
+      .map((line) => [line.fqcn, line.parents]),
+  );
+  expect(parents).toEqual({
+    "Fixture\\Base": [],
+    "Fixture\\Broken": ["Missing\\Contract"],
+    "Fixture\\Contracts\\Shape": [],
+    "Fixture\\Greets": [],
+    "Fixture\\Options": [],
+    "Fixture\\Size": ["BackedEnum", "UnitEnum"],
+    "Fixture\\SubBroken": ["Fixture\\Broken", "Missing\\Contract"],
+    "Fixture\\Widget": ["Fixture\\Base", "Fixture\\Contracts\\Shape"],
+  });
+  // The schema requires it on a declaration.
+  expect(defErrors({ fqcn: "Fixture\\Base", kind: "class", member: null, stubbed: [] }, "surface", schema)).toEqual(['$: missing "parents"']);
   // The class-list cross-check (Story 6.5): a list that omits a loaded trait (Greets, used by Widget) and a class
   // (Options) fails, naming both with their files under src/, sorted, and prints nothing on stdout.
   const omitted = runFixture(FIXTURE_CLASSES.filter((fqcn) => fqcn !== "Fixture\\Greets" && fqcn !== "Fixture\\Options"));
@@ -670,10 +693,10 @@ xaravelTest("XT-conformance-260", "after the repositories, the export runs two i
     const param = '{"name":"value","type":null,"nullable":true,"default":"null","optional":true,"variadic":false,"byRef":false}';
     expect(surfaceFiles(fx.dir)["contracts.jsonl"]).toBe(
       [
-        '{"fqcn":"Psr\\\\Container\\\\ContainerInterface","kind":"interface","member":null,"stubbed":[]}',
-        '{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface","member":null,"stubbed":[]}',
+        '{"fqcn":"Psr\\\\Container\\\\ContainerInterface","kind":"interface","member":null,"stubbed":[],"parents":[]}',
+        '{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"interface","member":null,"stubbed":[],"parents":[]}',
         `{"fqcn":"Psr\\\\Log\\\\LoggerInterface","kind":"method","member":"log","static":true,"parameters":[${param}],"returns":"string","nullable":false}`,
-        '{"fqcn":"Psr\\\\SimpleCache\\\\CacheInterface","kind":"interface","member":null,"stubbed":[]}',
+        '{"fqcn":"Psr\\\\SimpleCache\\\\CacheInterface","kind":"interface","member":null,"stubbed":[],"parents":[]}',
         "",
       ].join("\n"),
     );
@@ -765,9 +788,10 @@ phpTest("XT-conformance-261", "api-surface.php's interfaces mode exports only th
   const result = runInterfaces("fixture/psr", "1.0.0");
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
+  // The interfaces mode emits `parents` too: ErrorLike extends PHP's Throwable, which extends Stringable.
   const lines = [
-    '{"fqcn":"PsrFixture\\\\Errors\\\\ErrorLike","kind":"interface","member":null,"stubbed":[]}',
-    '{"fqcn":"PsrFixture\\\\LoggerLike","kind":"interface","member":null,"stubbed":[]}',
+    '{"fqcn":"PsrFixture\\\\Errors\\\\ErrorLike","kind":"interface","member":null,"stubbed":[],"parents":["Stringable","Throwable"]}',
+    '{"fqcn":"PsrFixture\\\\LoggerLike","kind":"interface","member":null,"stubbed":[],"parents":[]}',
     `{"fqcn":"PsrFixture\\\\LoggerLike","kind":"method","member":"log","static":false,"parameters":[${[p("level", null, true, null, false), p("message", "Stringable|string", false, null, false), p("context", "array", false, "[]", true)].join(",")}],"returns":"void","nullable":false}`,
     '{"fqcn":"PsrFixture\\\\LoggerLike","kind":"constant","member":"LEVEL","static":true}',
   ];

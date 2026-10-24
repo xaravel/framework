@@ -44,15 +44,16 @@
       "items": { "$ref": "#/$defs/parameter" }
     },
     "declaration": {
-      "description": "A class, interface, trait or enum. stubbed lists the missing types the exporter defined as empty stubs to load it.",
+      "description": "A class, interface, trait or enum. stubbed lists the missing types the exporter defined as empty stubs to load it. parents lists, sorted, every class it extends (its whole parent chain) and every interface it implements or extends, directly or inherited, PHP's built-in interfaces and stubs included, traits not.",
       "type": "object",
-      "required": ["fqcn", "kind", "member", "stubbed"],
+      "required": ["fqcn", "kind", "member", "stubbed", "parents"],
       "additionalProperties": false,
       "properties": {
         "fqcn": { "$ref": "#/$defs/fqcn" },
         "kind": { "enum": ["class", "interface", "trait", "enum"] },
         "member": { "const": null },
-        "stubbed": { "type": "array", "items": { "$ref": "#/$defs/fqcn" } }
+        "stubbed": { "type": "array", "items": { "$ref": "#/$defs/fqcn" } },
+        "parents": { "type": "array", "items": { "$ref": "#/$defs/fqcn" } }
       }
     },
     "method": {

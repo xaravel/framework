@@ -446,7 +446,7 @@ xaravelTest(
     expect(citationProblems(readFileSync(join(FIXTURES, "exceptions.jsonl"), "utf8"), "exceptions.jsonl", "exception", schema)).toEqual([]);
 
     // A component with no package (no packages/<c>/package.json) has no declarations: everything is missing.
-    write(dir, { "conformance/api-surface/other.jsonl": `${JSON.stringify({ fqcn: "Other\\Thing", kind: "class", member: null, stubbed: [] })}\n${JSON.stringify({ fqcn: "Other\\Thing", kind: "constant", member: "X", static: true })}\n` });
+    write(dir, { "conformance/api-surface/other.jsonl": `${JSON.stringify({ fqcn: "Other\\Thing", kind: "class", member: null, stubbed: [], parents: [] })}\n${JSON.stringify({ fqcn: "Other\\Thing", kind: "constant", member: "X", static: true })}\n` });
     const other = cli(dir, ["--details", "other"]);
     expect(other.exitCode).toBe(0);
     expect(other.stdout).toBe(["other: missing class Other\\Thing", "api-surface other: 2 Upstream, 0 matched, 1 missing, 0 renamed, 0 extra, 0 mismatched, 0 div12; 1 unexplained (AD-15)", ""].join("\n"));
@@ -494,7 +494,7 @@ xaravelTest(
     // Every remaining item explained: mismatches and the missing function by exceptions (a member line, a class-level
     // null line, a function's null line), the renamed one by both files. Lines for another (known) component are ignored.
     write(dir, {
-      "conformance/api-surface/other.jsonl": `${JSON.stringify({ fqcn: "Other\\Thing", kind: "class", member: null, stubbed: [] })}\n`,
+      "conformance/api-surface/other.jsonl": `${JSON.stringify({ fqcn: "Other\\Thing", kind: "class", member: null, stubbed: [], parents: [] })}\n`,
       "conformance/api-surface/exceptions.jsonl":
         line("demo", "Demo\\Missing", null, "deferred:demo-missing") +
         line("demo", R, null, "DIV-3") +
@@ -934,4 +934,178 @@ xaravelTest(
       "x: mismatch method X\\A::h: options overload: parameter 1 is not an options object with keys default, x",
     ]);
   },
+);
+
+// ---------------------------------------------------------------------------
+// XT-conformance-266 (epic-10-retro-item-5, part 3: declaration parents)
+
+xaravelTest(
+  "XT-conformance-266",
+  "a declaration's exported parents are compared with the transitive TS heritage of its registration, resolved through the same file, relative imports and re-exports, or an @xaravel/<c> import, each limited to Upstream declarations: a dropped or extra parent is one explainable mismatch on the declaration, which is then not matched (epic-10-retro-item-5, AD-15)",
+  () => {
+    const A = "X\\A";
+    const B = "X\\B";
+    const C = "X\\C";
+    const iface = (fqcn: string, parents?: string[]): UpstreamRecord => ({ fqcn, kind: "interface", member: null, ...(parents === undefined ? {} : { parents }) });
+    const token = (local: string, fqcn: string, heritage = ""): string => `export interface ${local}${heritage} {}\nexport const ${local} = contract("${fqcn.replace(/\\/g, "\\\\")}");\n`;
+    const run = (upstream: UpstreamRecord[], files: Readonly<Record<string, string>>, extra: Partial<DiffInput> = {}): { items: string[]; matched: number } => {
+      const diff = diffComponent({ component: "x", upstream, additions: [], exceptions: [], div12: [], declarations: [], sources: Object.entries(files).map(([file, text]) => ({ file, text })), ...extra });
+      return { items: diff.items.map((item) => renderItem("x", item)), matched: diff.matched };
+    };
+
+    // Kept parent: B extends A on both sides; both matched.
+    expect(run([iface(A, []), iface(B, [A])], { "src/A.ts": token("A", A), "src/B.ts": `import { A } from "./A";\n${token("B", B, " extends A")}` })).toEqual({ items: [], matched: 2 });
+    // Dropped parent: Upstream B extends A, TS B extends nothing.
+    const dropped = run([iface(A, []), iface(B, [A])], { "src/A.ts": token("A", A), "src/B.ts": token("B", B) });
+    expect(dropped).toEqual({ items: ["x: mismatch interface X\\B: parents: drops X\\A"], matched: 1 });
+    // Explained by an exceptions line for B, like any declaration mismatch.
+    expect(run([iface(A, []), iface(B, [A])], { "src/A.ts": token("A", A), "src/B.ts": token("B", B) }, { exceptions: [{ component: "x", fqcn: B, member: null, citation: "DIV-1" }] }).items).toEqual([
+      "x: mismatch interface X\\B: parents: drops X\\A (explained: DIV-1)",
+    ]);
+    // Extra parent: Upstream B has none, TS B extends A, and A is in the surface.
+    expect(run([iface(A, []), iface(B, [])], { "src/A.ts": token("A", A), "src/B.ts": `import { A } from "./A";\n${token("B", B, " extends A")}` })).toEqual({ items: ["x: mismatch interface X\\B: parents: adds X\\A"], matched: 1 });
+    // Both at once, each list sorted.
+    expect(run([iface(A, []), iface(B, []), iface(C, [B])], { "src/A.ts": token("A", A), "src/B.ts": token("B", B), "src/C.ts": `import { A } from "./A";\n${token("C", C, " extends A")}` }).items).toEqual([
+      "x: mismatch interface X\\C: parents: drops X\\B; adds X\\A",
+    ]);
+    // Transitive: Upstream C parents [A, B]; TS C extends B, B extends A (one file, then across files).
+    expect(run([iface(A, []), iface(B, [A]), iface(C, [A, B])], { "src/all.ts": token("A", A) + token("B", B, " extends A") + token("C", C, " extends B") })).toEqual({ items: [], matched: 3 });
+    expect(
+      run([iface(A, []), iface(B, [A]), iface(C, [A, B])], {
+        "src/A.ts": token("A", A),
+        "src/B.ts": `import { A } from "./A.ts";\n${token("B", B, " extends A")}`,
+        "src/C.ts": `import { B as Base } from "./B";\n${token("C", C, " extends Base")}`,
+      }).items,
+    ).toEqual([]);
+    // Through an index.ts re-export (`export *` and `export {…} from`), a default import, and a class's extends and implements.
+    const classes = {
+      "src/contracts/A.ts": token("A", A),
+      "src/contracts/B.ts": token("B", B),
+      "src/contracts/index.ts": 'export * from "./A";\nexport { B as Bee } from "./B";\n',
+      "src/Base.ts": 'export default class Base {}\nregisterClass("X\\\\Base", Base);\n',
+      "src/C.ts": 'import { A, Bee } from "./contracts";\nimport Base from "./Base";\nexport class C extends Base implements A, Bee {}\nregisterClass("X\\\\C", C);\n',
+    };
+    const base: UpstreamRecord = { fqcn: "X\\Base", kind: "class", member: null, parents: [] };
+    expect(run([iface(A, []), iface(B, []), base, { fqcn: C, kind: "class", member: null, parents: [A, B, "X\\Base"] }], classes).items).toEqual([]);
+    // Cross-package: `@xaravel/other` resolves by local name in that package's sources, when unique.
+    const other = (sources: Readonly<Record<string, string>>) => (pkg: string) => (pkg === "other" ? Object.entries(sources).map(([file, text]) => ({ file, text })) : []);
+    const crossFiles = { "src/B.ts": `import { A } from "@xaravel/other/contracts";\n${token("B", B, " extends A")}` };
+    const known = new Set([A, B]);
+    expect(run([iface(B, [A])], crossFiles, { known, packageSources: other({ "src/deep/A.ts": token("A", A) }) }).items).toEqual([]);
+    // Transitive through the other package: its A extends Z (in the surface, any component).
+    const Z = "X\\Z";
+    expect(run([iface(B, [A, Z])], crossFiles, { known: new Set([A, B, Z]), packageSources: other({ "src/A.ts": `import { Z } from "./Z";\n${token("A", A, " extends Z")}`, "src/Z.ts": token("Z", Z) }) }).items).toEqual([]);
+    // Not unique there, or no such package: unresolved, so it contributes nothing (and the Upstream parent is dropped).
+    expect(run([iface(B, [A])], crossFiles, { known, packageSources: other({ "src/A.ts": token("A", A), "src/Two.ts": token("A", "X\\Other") }) }).items).toEqual(["x: mismatch interface X\\B: parents: drops X\\A"]);
+    expect(run([iface(B, [A])], crossFiles, { known }).items).toEqual(["x: mismatch interface X\\B: parents: drops X\\A"]);
+    // An unresolved name (an unregistered import, a qualified name, an expression, a non-@xaravel package) is ignored.
+    expect(
+      run([iface(A, []), iface(B, [])], {
+        "src/B.ts": `import { Q } from "./Q";\nimport * as ns from "./A";\nimport { R } from "some-lib";\n${token("B", B, " extends Q, ns.A, R")}`,
+        "src/Q.ts": "export interface Q {}\n",
+        "src/A.ts": token("A", A),
+      }).items,
+    ).toEqual([]);
+    // Built-in or unported parents are not in the surface: ignored on both sides.
+    expect(run([iface(B, ["Countable", "Stringable"])], { "src/B.ts": `import { Stringable } from "@xaravel/runtime/php";\n${token("B", B, " extends Stringable")}` }, { packageSources: (pkg) => (pkg === "runtime" ? [{ file: "src/php/Stringable.ts", text: token("Stringable", "Stringable") }] : []) }).items).toEqual([]);
+    // `known` defaults to this component's declarations, and covers any component when given.
+    expect(run([iface(B, [A])], { "src/B.ts": token("B", B) }).items).toEqual([]);
+    expect(run([iface(B, [A])], { "src/B.ts": token("B", B) }, { known }).items).toEqual(["x: mismatch interface X\\B: parents: drops X\\A"]);
+    // A record without `parents` (an inline record) is not parent-checked; a self-reference and a cycle end the walk.
+    expect(run([iface(A), iface(B)], { "src/all.ts": token("A", A) + token("B", B, " extends A") })).toEqual({ items: [], matched: 2 });
+    expect(run([iface(A, [B]), iface(B, [A])], { "src/all.ts": token("A", A, " extends B") + token("B", B, " extends A") })).toEqual({ items: [], matched: 2 });
+
+    // An `@xaravel/<c>/<sub>` import resolves through that subpath's module, so a local name the package declares more
+    // than once is picked by subpath; an aliased re-export resolves too, and the `exports` map is followed when present.
+    const CF = "X\\CacheFactory";
+    const QF = "X\\QueueFactory";
+    const factories = other({
+      "src/cache/Factory.ts": token("Factory", CF),
+      "src/cache/index.ts": 'export { Factory } from "./Factory";\n',
+      "src/queue/Factory.ts": token("Factory", QF),
+      "src/queue/index.ts": 'export { Factory } from "./Factory";\n',
+      "src/index.ts": 'export { Factory as CacheFactory } from "./cache/Factory";\n',
+      "src/jobs/index.ts": 'export * from "../queue";\n',
+    });
+    const factoryKnown = new Set([B, CF, QF]);
+    const viaSub = (specifier: string, local: string, extra: Partial<DiffInput> = {}): string[] =>
+      run([iface(B, [QF])], { "src/B.ts": `import { ${local} } from "${specifier}";\n${token("B", B, ` extends ${local.split(" as ").at(-1)!}`)}` }, { known: factoryKnown, packageSources: factories, ...extra }).items;
+    expect(viaSub("@xaravel/other/queue", "Factory")).toEqual([]);
+    expect(viaSub("@xaravel/other/cache", "Factory")).toEqual(["x: mismatch interface X\\B: parents: drops X\\QueueFactory; adds X\\CacheFactory"]);
+    expect(viaSub("@xaravel/other", "CacheFactory")).toEqual(["x: mismatch interface X\\B: parents: drops X\\QueueFactory; adds X\\CacheFactory"]);
+    expect(viaSub("@xaravel/other/j", "Factory", { packageExports: (pkg) => (pkg === "other" ? { "./j": "./src/jobs/index.ts" } : null) })).toEqual([]);
+    // A relative `.js` specifier (TS ESM style) names its `.ts` source.
+    expect(run([iface(A, []), iface(B, [A])], { "src/A.ts": token("A", A), "src/B.ts": `import { A } from "./A.js";\n${token("B", B, " extends A")}` }).items).toEqual([]);
+    // Traits are not compared (Upstream parents never list one): a port whose heritage models a trait is not `adds`.
+    const T: UpstreamRecord = { fqcn: "X\\T", kind: "trait", member: null, parents: [] };
+    expect(run([T, { fqcn: C, kind: "class", member: null, parents: [] }], { "src/T.ts": 'export class T {}\nregisterClass("X\\\\T", T);\n', "src/C.ts": 'import { T } from "./T";\nexport class C extends T {}\nregisterClass("X\\\\C", C);\n' })).toEqual({ items: [], matched: 2 });
+
+    // The gate on a CLI fixture root: a dropped parent fails it until an exceptions line explains it. Polygon is in
+    // another component's file, so it is compared; Countable is not in the surface.
+    const dir = demoRoot();
+    const Sq = String.raw`Demo\Contracts\Square`;
+    const Sh = String.raw`Demo\Contracts\Shape`;
+    const Po = String.raw`Geometry\Polygon`;
+    const contractDecl = 'declare function contract<T>(fqcn: string): symbol & { readonly type?: T };\n';
+    write(dir, {
+      "packages/demo/src/shapes/Shape.ts": `${contractDecl}export interface Shape {}\nexport const Shape = contract<Shape>("Demo\\\\Contracts\\\\Shape");\n`,
+      "packages/demo/src/shapes/index.ts": 'export * from "./Shape";\n',
+      "packages/demo/src/Square.ts": `import { Shape } from "./shapes";\n${contractDecl}export interface Square extends Shape {}\nexport const Square = contract<Square>("Demo\\\\Contracts\\\\Square");\n`,
+      "conformance/api-surface/geometry.jsonl": `${JSON.stringify({ fqcn: Po, kind: "interface", member: null, stubbed: [], parents: [] })}\n`,
+    });
+    const demoJsonl = readFileSync(join(dir, "conformance", "api-surface", "demo.jsonl"), "utf8");
+    write(dir, {
+      "conformance/api-surface/demo.jsonl":
+        demoJsonl +
+        `${JSON.stringify({ fqcn: Sh, kind: "interface", member: null, stubbed: [], parents: [] })}\n` +
+        `${JSON.stringify({ fqcn: Sq, kind: "interface", member: null, stubbed: [], parents: ["Countable", Sh, Po].sort() })}\n`,
+    });
+    const failing = cli(dir, ["--gate", "demo"]);
+    expect(failing.exitCode).toBe(1);
+    expect(failing.stdout).toBe([`demo: mismatch interface ${Sq}: parents: drops ${Po}`, ...UNEXPLAINED, "api-surface:gate demo: 8 unexplained (AD-15)", ""].join("\n"));
+    const exceptions = readFileSync(join(FIXTURES, "exceptions.jsonl"), "utf8");
+    write(dir, { "conformance/api-surface/exceptions.jsonl": line("demo", Sq, null, "DIV-1") + exceptions });
+    const explained = cli(dir, ["--details", "demo"]);
+    expect(explained.stdout).toContain(`demo: mismatch interface ${Sq}: parents: drops ${Po} (explained: DIV-1)\n`);
+    const gate = cli(dir, ["--gate", "demo"]);
+    expect(gate.stdout).toBe([...UNEXPLAINED, "api-surface:gate demo: 7 unexplained (AD-15)", ""].join("\n"));
+    // A committed declaration line without `parents` (or with a non-list) is a tool failure, not a skipped check.
+    for (const parents of [{}, { parents: null }]) {
+      write(dir, { "conformance/api-surface/geometry.jsonl": `${JSON.stringify({ fqcn: Po, kind: "interface", member: null, stubbed: [], ...parents })}\n` });
+      const noParents = cli(dir, ["demo"]);
+      expect(noParents.exitCode).toBe(1);
+      expect(noParents.stderr).toContain("api-surface: geometry: conformance/api-surface/geometry.jsonl:1: a declaration needs its parents");
+    }
+
+    // Two packages through the real loader: packages/b's B imports A from `@xaravel/a/contracts` (packages/a's `exports`).
+    const two = tempDir("xaravel-api-surface-two-");
+    const AF = String.raw`Two\A`;
+    const BF = String.raw`Two\B`;
+    const tsconfig = JSON.parse(readFileSync(join(FIXTURES, "demo", "tsconfig.json"), "utf8")) as { compilerOptions: Record<string, unknown> };
+    tsconfig.compilerOptions["outDir"] = "../../.cache/tsc/b";
+    tsconfig.compilerOptions["tsBuildInfoFile"] = "../../.cache/tsc/b/tsconfig.tsbuildinfo";
+    const bSource = (heritage: string): string => `import type { A } from "@xaravel/a/contracts";\n${contractDecl}export interface B${heritage} {}\nexport const B = contract<B>("Two\\\\B");\n`;
+    write(two, {
+      "packages/a/package.json": JSON.stringify({ name: "@xaravel/a", private: true, type: "module", exports: { "./contracts": "./src/contracts/index.ts" } }),
+      "packages/a/src/contracts/A.ts": `${contractDecl}export interface A {}\nexport const A = contract<A>("Two\\\\A");\n`,
+      "packages/a/src/contracts/index.ts": 'export * from "./A";\n',
+      "packages/a/src/Other.ts": `${contractDecl}export interface A {}\nexport const A = contract<A>("Two\\\\Other");\n`,
+      "packages/b/package.json": JSON.stringify({ name: "@xaravel/b", private: true, type: "module", exports: { ".": "./src/B.ts" } }),
+      "packages/b/tsconfig.json": JSON.stringify(tsconfig),
+      "packages/b/src/ambient.d.ts": 'declare module "@xaravel/a/contracts" {\n  export interface A {}\n}\n',
+      "packages/b/src/B.ts": bSource(" extends A"),
+      "conformance/api-surface/a.jsonl": `${JSON.stringify({ fqcn: AF, kind: "interface", member: null, stubbed: [], parents: [] })}\n${JSON.stringify({ fqcn: String.raw`Two\Other`, kind: "interface", member: null, stubbed: [], parents: [] })}\n`,
+      "conformance/api-surface/b.jsonl": `${JSON.stringify({ fqcn: BF, kind: "interface", member: null, stubbed: [], parents: [AF] })}\n`,
+      "conformance/api-surface/additions.jsonl": "",
+      "conformance/api-surface/exceptions.jsonl": "",
+      "conformance/scans/div12-pairs.jsonl": "",
+    });
+    cpSync(join(root, "conformance", "api-surface", "schema.json"), join(two, "conformance", "api-surface", "schema.json"));
+    const kept = cli(two, ["--gate", "b"]);
+    expect([kept.exitCode, kept.stdout, kept.stderr]).toEqual([0, "api-surface:gate b: 0 unexplained (AD-15)\n", ""]);
+    write(two, { "packages/b/src/B.ts": bSource("") });
+    const droppedTwo = cli(two, ["--gate", "b"]);
+    expect([droppedTwo.exitCode, droppedTwo.stdout]).toEqual([1, `b: mismatch interface ${BF}: parents: drops ${AF}\napi-surface:gate b: 1 unexplained (AD-15)\n`]);
+  },
+  TIMEOUT,
 );
