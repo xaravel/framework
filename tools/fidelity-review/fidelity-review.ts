@@ -75,7 +75,10 @@
 // files read as data (`dataFileReads`, `copyFileSync` sources included; one over `WHOLE_FILE_CAP` as the lines
 // the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), and the Upstream sources they read
 // through a computed path under the snapshot (`upstreamReadDirs`): each one of a class a changed file names
-// (`upstreamSourcesNamed`), and one that does not fit as its declaration lines (`phpDeclarationLines`; ESC-10.2-7), each
+// (`upstreamSourcesNamed`), and one that does not fit as its declaration lines (`phpDeclarationLines`; ESC-10.2-7); a
+// path constant the test imports resolves in its module (`importedPathConsts`), and the classes the test names or whose
+// method it cites (`upstreamCitedSources`) come first, then the files its directory walk selects by name
+// (`upstreamWalkedSources`), one that does not fit with the methods the test points at (`phpMethodBodies`; ESC-10.4-2), each
 // once, filling what the prompt cap leaves after the other sections; a file another section shows in full is
 // named, not repeated, and one that does not fit is named as omitted for size.
 // Everything is read from the working tree. A missing evidence file is named
@@ -826,21 +829,54 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     }
   };
   const readers = new Map<string, string>();
+  const texts = new Map(changedTexts);
   for (const [path, text] of changedTexts) {
     if (TS_FILE.test(path) && isTestPath(path)) {
-      for (const dir of upstreamReadDirs(path, text, isDir)) {
+      // A test may reach the snapshot through a path constant it imports (`REPO`; ESC-10.4-2).
+      for (const dir of upstreamReadDirs(path, text, isDir, (target) => (exists(target) ? read(target) : null))) {
         if (!readers.has(dir)) {
           readers.set(dir, path);
         }
       }
     }
   }
-  const upstream = new Set<string>();
-  for (const source of upstreamSourcesNamed(root, [...readers.keys()], changedTexts)) {
-    if (!listed.has(source.path) && !changed.some((file) => file.filename === source.path)) {
-      add(1, source.path, `read by ${readers.get(source.dir)!} from ${source.dir}/: the Upstream source of ${source.fqcn}, which ${source.by} names`);
-      upstream.add(source.path);
+  // Each Upstream source shown, with the methods its reading test points at: one that does not fit shows their bodies
+  // with its declaration lines (ESC-10.4-2).
+  const upstream = new Map<string, string[]>();
+  const addUpstream = (path: string, reason: string, methods: (text: string) => string[]): void => {
+    if (!listed.has(path) && !changed.some((file) => file.filename === path)) {
+      add(1, path, reason);
+      const text = tiers[1]!.at(-1)!.text;
+      upstream.set(path, text === null ? [] : methods(text));
     }
+  };
+  const named = upstreamSourcesNamed(root, [...readers.keys()], changedTexts);
+  const namedReason = (source: UpstreamSource): string => `read by ${readers.get(source.dir)!} from ${source.dir}/: the Upstream source of ${source.fqcn}, which ${source.by} names`;
+  const namedMethods = (source: UpstreamSource) => (text: string) => upstreamMethodsCited(text, source.fqcn, texts.get(readers.get(source.dir)!) ?? "");
+  // The sources a reading test points at come first: a class it names itself, or one whose method it cites
+  // (`Container::alias`). Then the files its directory walk selects by name, then the other classes the change names.
+  for (const source of named) {
+    const testText = texts.get(readers.get(source.dir)!) ?? "";
+    const short = source.fqcn.split("\\").at(-1)!;
+    if (testText.includes(source.fqcn) || testText.includes(source.fqcn.replace(/\\/g, "\\\\")) || new RegExp(`(?<![\\w\\\\])${escapeRegExp(short)}::\\w`).test(testText)) {
+      addUpstream(source.path, namedReason(source), namedMethods(source));
+    }
+  }
+  const fqcnOf = (path: string): string => path.replace(/^.*?\/src\//, "").replace(/\.php$/, "").split("/").join("\\");
+  for (const [dir, reader] of readers) {
+    const testText = texts.get(reader) ?? "";
+    for (const cited of upstreamCitedSources(root, [dir], testText)) {
+      addUpstream(cited.path, `read by ${reader} from ${dir}/: the Upstream source of ${fqcnOf(cited.path)}, whose ${cited.citation} the test cites`, (text) => upstreamMethodsCited(text, fqcnOf(cited.path), testText));
+    }
+  }
+  for (const [dir, reader] of readers) {
+    const testText = texts.get(reader) ?? "";
+    for (const walked of upstreamWalkedSources(root, [dir], testText)) {
+      addUpstream(walked.path, `read by ${reader} from ${dir}/: an Upstream file whose name ends with "${walked.suffix}", which its directory walk selects`, (text) => upstreamMethodsCited(text, fqcnOf(walked.path), testText));
+    }
+  }
+  for (const source of named) {
+    addUpstream(source.path, namedReason(source), namedMethods(source));
   }
   let frontier = changedTexts.filter(([path]) => TS_FILE.test(path));
   for (let depth = 0; depth < WHOLE_FILE_DEPTH; depth++) {
@@ -866,7 +902,8 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   // is reserved first, when it all fits, and handed back as each whole file fits; otherwise each takes what is left.
   const declarations = new Map<string, string>();
   for (const entry of entries) {
-    const text = upstream.has(entry.path) && entry.text !== null && !shown.has(entry.path) ? phpDeclarationLines(entry.text) : "";
+    const methods = upstream.get(entry.path) ?? [];
+    const text = upstream.has(entry.path) && entry.text !== null && !shown.has(entry.path) ? phpDeclarationLines(entry.text) + (methods.length === 0 ? "" : `\n${phpMethodBodies(entry.text, methods)}`) : "";
     if (text !== "") {
       declarations.set(entry.path, text);
     }
@@ -885,7 +922,9 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     if (!reserved) {
       left -= text.length + 20;
     }
-    return { ...entry, reason: `${entry.reason}; its declaration lines only, the file ${omitted.note!}`, text, note: null };
+    const methods = upstream.get(entry.path) ?? [];
+    const only = methods.length === 0 ? "its declaration lines only" : `its declaration lines and the method${methods.length === 1 ? "" : "s"} ${methods.join(", ")} only`;
+    return { ...entry, reason: `${entry.reason}; ${only}, the file ${omitted.note!}`, text, note: null };
   };
   return entries.map((entry) => {
     const section = shown.get(entry.path);
@@ -1960,8 +1999,8 @@ function pathPrefixes(expr: string, path: string, bindings: ReadonlyMap<string, 
  * (`pathPrefixes`, through the file's `const`s at any depth), when that is `UPSTREAM_SNAPSHOT_DIR` or under it and `isDir`
  * accepts it. A path that resolves to a file exactly is a data file read (`dataFileReads`), not listed here.
  */
-export function upstreamReadDirs(path: string, text: string, isDir: (path: string) => boolean): string[] {
-  const bindings = constBindings(text);
+export function upstreamReadDirs(path: string, text: string, isDir: (path: string) => boolean, read: (path: string) => string | null = () => null): string[] {
+  const bindings = new Map([...importedPathConsts(path, text, read), ...constBindings(text)]);
   const out = new Set<string>();
   for (const match of text.matchAll(SOURCE_READ)) {
     for (const prefix of pathPrefixes(firstArgument(text, match.index + match[0].length), path, bindings)) {
@@ -1972,6 +2011,159 @@ export function upstreamReadDirs(path: string, text: string, isDir: (path: strin
     }
   }
   return [...out].sort(compareUnits);
+}
+
+/**
+ * The constant paths the file `path` binds by name from a relative repository module (ESC-10.4-2), such as
+ * `import { REPO } from "./support/contract-namespaces"` where that module has
+ * `export const REPO = resolve(import.meta.dir, "..", …)`: each imported top-level `const` that `pathPrefixes` resolves
+ * completely in its own module (`import.meta.dir` there is the module's directory), as a string literal relative to
+ * `path`'s directory, by its local name. A name that does not resolve, or a module `read` cannot read, is left out.
+ */
+export function importedPathConsts(path: string, text: string, read: (path: string) => string | null): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const match of text.matchAll(/^import\s[^;]*?\bfrom\s*["'][^"']+["']/gm)) {
+    const bindings = importBindings(match[0]);
+    if (bindings === null) {
+      continue;
+    }
+    let module: string | null = null;
+    let source: string | null = null;
+    for (const candidate of resolveCandidates(path, bindings.from)) {
+      source = candidate.startsWith("..") ? null : read(candidate);
+      if (source !== null) {
+        module = candidate;
+        break;
+      }
+    }
+    if (module === null || source === null) {
+      continue;
+    }
+    const moduleBindings = constBindings(source);
+    for (const [imported, local] of bindings.names) {
+      const prefix = imported === "*" ? undefined : pathPrefixes(imported, module, moduleBindings).find((candidate) => candidate.complete);
+      if (prefix !== undefined) {
+        out.set(local, [`"./${posix.relative(posix.dirname(path), posix.normalize(prefix.path))}"`]);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The Upstream files a changed test's directory walk selects by file name (ESC-10.4-2): under each of `dirs`, every file
+ * whose name ends with a `<name>.php` suffix the test passes to `.endsWith(…)` as a string literal
+ * (`readdirSync(ILLUMINATE, { recursive: true }).filter((path) => path.endsWith("ServiceProvider.php"))`), in path order,
+ * with the suffix that selects it. None when the test names no such suffix. A bare `".php"` selects no file: such a
+ * walk reads the classes the change names (`upstreamSourcesNamed`).
+ */
+export function upstreamWalkedSources(root: string, dirs: readonly string[], text: string): { path: string; dir: string; suffix: string }[] {
+  const suffixes = [...new Set([...text.matchAll(/\.endsWith\(\s*(["'])([A-Za-z0-9_]+\.php)\1\s*\)/g)].map((match) => match[2]!))];
+  if (suffixes.length === 0) {
+    return [];
+  }
+  const out = new Map<string, { path: string; dir: string; suffix: string }>();
+  for (const dir of dirs) {
+    let names: string[];
+    try {
+      names = readdirSync(join(root, dir), { recursive: true, encoding: "utf8" });
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const path = `${dir}/${name.split("\\").join("/")}`;
+      const suffix = suffixes.find((candidate) => posix.basename(path).endsWith(candidate));
+      if (suffix !== undefined && !out.has(path)) {
+        try {
+          if (statSync(join(root, path)).isFile()) {
+            out.set(path, { path, dir, suffix });
+          }
+        } catch {
+          // Gone between the listing and the check.
+        }
+      }
+    }
+  }
+  return [...out.values()].sort((a, b) => compareUnits(a.path, b.path));
+}
+
+/**
+ * The Upstream files whose method a changed test cites as `<Class>::<method>` (ESC-10.4-2), as a test that asserts
+ * Upstream's message cites the method that throws it (`Container::alias`): under each of `dirs`, every `<Class>.php`
+ * whose class implements that method with a body (an interface's or abstract declaration is not one), in path order,
+ * with the citation that selects it.
+ */
+export function upstreamCitedSources(root: string, dirs: readonly string[], text: string): { path: string; dir: string; citation: string }[] {
+  const citations = [...new Set([...text.matchAll(/(?<![\w\\])([A-Z][A-Za-z0-9_]*)::([a-z_]\w*)\b/g)].map((match) => match[0]))];
+  if (citations.length === 0) {
+    return [];
+  }
+  const out = new Map<string, { path: string; dir: string; citation: string }>();
+  for (const dir of dirs) {
+    let names: string[];
+    try {
+      names = readdirSync(join(root, dir), { recursive: true, encoding: "utf8" }).map((name) => name.split("\\").join("/"));
+    } catch {
+      continue;
+    }
+    for (const citation of citations) {
+      const [short, method] = citation.split("::") as [string, string];
+      for (const name of names.filter((candidate) => posix.basename(candidate) === `${short}.php`).sort(compareUnits)) {
+        const path = `${dir}/${name}`;
+        let source: string;
+        try {
+          source = readFileSync(join(root, path), "utf8");
+        } catch {
+          continue;
+        }
+        const declared = new RegExp(`^[ \\t]*(?:(?:public|protected|private|static|final)\\s+)*function\\s+&?${escapeRegExp(method)}\\s*\\([^;{]*(?:\\{|$)`, "m");
+        if (!out.has(path) && declared.test(source)) {
+          out.set(path, { path, dir, citation });
+        }
+      }
+    }
+  }
+  return [...out.values()].sort((a, b) => compareUnits(a.path, b.path));
+}
+
+/**
+ * The methods of the Upstream class `fqcn` a test's text points at (ESC-10.4-2): each name a regular expression in the
+ * test matches as a declaration (`/function registerCoreContainerAliases\(\)/`), and each `<short name>::<method>`
+ * the test writes (`Container::alias` in a title that cites its message), kept when `phpText` declares that method.
+ */
+export function upstreamMethodsCited(phpText: string, fqcn: string, testText: string): string[] {
+  const short = fqcn.split("\\").at(-1)!;
+  const names = [...testText.matchAll(/\bfunction\s+(\w+)\\\(/g), ...testText.matchAll(new RegExp(`(?<![\\w\\\\])${escapeRegExp(short)}::(\\w+)`, "g"))].map((match) => match[1]!);
+  return [...new Set(names)].filter((name) => new RegExp(`\\bfunction\\s+&?${escapeRegExp(name)}\\s*\\(`).test(phpText));
+}
+
+/**
+ * The text of each named method of a PHP source (ESC-10.4-2), in file order: its docblock, its declaration and its body,
+ * up to the `}` at the declaration's indentation (PSR-12).
+ */
+export function phpMethodBodies(text: string, methods: readonly string[]): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const declaration = /^(\s*)(?:(?:public|protected|private|static|final|abstract)\s+)*function\s+&?(\w+)\s*\(/.exec(lines[i]!);
+    if (declaration === null || !methods.includes(declaration[2]!)) {
+      continue;
+    }
+    let from = i;
+    if (lines[from - 1]?.trim() === "*/") {
+      while (from > 0 && !lines[from - 1]!.trim().startsWith("/**")) {
+        from--;
+      }
+      from = Math.max(from - 1, 0);
+    }
+    let to = i;
+    while (to + 1 < lines.length && lines[to] !== `${declaration[1]}}` && !(to === i && lines[to]!.trimEnd().endsWith(";"))) {
+      to++;
+    }
+    out.push(lines.slice(from, to + 1).join("\n"));
+    i = to;
+  }
+  return out.length === 0 ? "" : `${out.join("\n\n")}\n`;
 }
 
 /** A PHP class name with its namespace, as Upstream writes it or as a TypeScript string literal escapes it (`Illuminate\\Contracts\\…`). */

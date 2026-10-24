@@ -75,7 +75,12 @@ import {
   standingRejects,
   testUnits,
   UPSTREAM_SNAPSHOT_DIR,
+  importedPathConsts,
+  phpMethodBodies,
+  upstreamCitedSources,
+  upstreamMethodsCited,
   upstreamReadDirs,
+  upstreamWalkedSources,
   upstreamSourcesNamed,
   usedDeclarations,
   verdictSchema,
@@ -1541,6 +1546,90 @@ xaravelTest(
     expect(upTight[1]!.text).toBe(phpDeclarationLines(arrayablePhp));
     expect(upTight[1]!.reason).toStartWith(`${reader("Illuminate\\Contracts\\Support\\Arrayable", "packages/x/src/support/Arrayable.ts")}; its declaration lines only, the file omitted for size: ${arrayablePhp.length} characters`);
     expect(upTight[1]!.note).toBeNull();
+    // ESC-10.4-2: a test that reaches the snapshot through a path constant it imports (`REPO`), walks it for files
+    // whose name ends with a `.php` suffix, and cites an Upstream method as `<Class>::<method>` gets those files too,
+    // ahead of the other classes the change names; one that does not fit shows its declaration lines and the methods
+    // the test points at (a regex that matches the declaration, or the citation).
+    const aliasRoot = tempDir("fidelity-upstream-aliases-");
+    const illuminate = `${UPSTREAM_SNAPSHOT_DIR}/framework/src/Illuminate`;
+    const aliasMethod = '    /**\n     * Alias a type.\n     */\n    public function alias($abstract, $alias)\n    {\n        if ($alias === $abstract) {\n            throw new LogicException("[{$abstract}] is aliased to itself.");\n        }\n    }\n';
+    const containerPhp = `<?php\n\nnamespace Illuminate\\Container;\n\nclass Container\n{\n${aliasMethod}\n    public function other()\n    {\n    }\n}\n`;
+    const coreMethod = "    public function registerCoreContainerAliases()\n    {\n        foreach (['app' => [self::class]] as $key => $aliases) {\n        }\n    }\n";
+    const applicationPhp = `<?php\n\nnamespace Illuminate\\Foundation;\n\nuse Illuminate\\Container\\Container;\n\nclass Application extends Container\n{\n${coreMethod}\n    public function boot()\n    {\n    }\n}\n`;
+    const aliasesTest = "packages/x/tests/aliases.test.ts";
+    const aliasFiles: Record<string, string> = {
+      [`${illuminate}/Container/Container.php`]: containerPhp,
+      [`${illuminate}/Contracts/Container/Container.php`]: "<?php\n\nnamespace Illuminate\\Contracts\\Container;\n\ninterface Container\n{\n    public function alias($abstract, $alias);\n}\n",
+      [`${illuminate}/Foundation/Application.php`]: applicationPhp,
+      [`${illuminate}/Auth/AuthServiceProvider.php`]: "<?php\n\nnamespace Illuminate\\Auth;\n\nclass AuthServiceProvider\n{\n}\n",
+      [`${illuminate}/Bus/BusServiceProvider.php`]: "<?php\n\nnamespace Illuminate\\Bus;\n\nclass BusServiceProvider\n{\n}\n",
+      [`${illuminate}/Bus/Batch.php`]: "<?php\n\nnamespace Illuminate\\Bus;\n\nclass Batch\n{\n}\n",
+      [`${illuminate}/Support/Collection.php`]: "<?php\n\nnamespace Illuminate\\Support;\n\nclass Collection\n{\n}\n",
+      "packages/x/tests/support/paths.ts": 'export const REPO = resolve(import.meta.dir, "..", "..", "..", "..");\nexport function upstreamPath(name: string): string {\n  return join(REPO, "conformance", "upstream", "framework", "src", ...name.split("\\\\")) + ".php";\n}\n',
+      "packages/x/src/table.ts": 'export const T = { batch: ["Illuminate\\\\Bus\\\\Batch"] };\n',
+      [aliasesTest]: [
+        'import { REPO, upstreamPath } from "./support/paths";',
+        'const ILLUMINATE = join(REPO, "conformance", "upstream", "framework", "src", "Illuminate");',
+        'const providers = (readdirSync(ILLUMINATE, { recursive: true }) as string[]).filter((path) => path.endsWith("ServiceProvider.php"));',
+        'const core = /function registerCoreContainerAliases\\(\\)/.exec(readFileSync(upstreamPath("Illuminate\\\\Foundation\\\\Application"), "utf8"));',
+        "// Upstream Container::alias's message.",
+        "",
+      ].join("\n"),
+    };
+    for (const [path, text] of Object.entries(aliasFiles)) {
+      mkdirSync(dirname(join(aliasRoot, path)), { recursive: true });
+      writeFileSync(join(aliasRoot, path), text);
+    }
+    const aliasText = aliasFiles[aliasesTest]!;
+    const aliasRead = (path: string) => aliasFiles[path] ?? null;
+    const isAliasDir = (path: string) => existsSync(join(aliasRoot, path)) && !/\.(php|ts)$/.test(path);
+    // The imported `REPO` resolves in its own module, relative to the test; a function (`upstreamPath`) is not a path.
+    expect([...importedPathConsts(aliasesTest, aliasText, aliasRead)]).toEqual([["REPO", ['"./../../.."']]]);
+    expect(importedPathConsts(aliasesTest, aliasText, () => null).size).toBe(0);
+    expect(upstreamReadDirs(aliasesTest, aliasText, isAliasDir)).toEqual([]);
+    expect(upstreamReadDirs(aliasesTest, aliasText, isAliasDir, aliasRead)).toEqual([illuminate]);
+    // The walk's suffix selects the providers, and no suffix selects nothing.
+    expect(upstreamWalkedSources(aliasRoot, [illuminate], aliasText)).toEqual([
+      { path: `${illuminate}/Auth/AuthServiceProvider.php`, dir: illuminate, suffix: "ServiceProvider.php" },
+      { path: `${illuminate}/Bus/BusServiceProvider.php`, dir: illuminate, suffix: "ServiceProvider.php" },
+    ]);
+    expect(upstreamWalkedSources(aliasRoot, [illuminate], 'readdirSync(ILLUMINATE).filter((path) => path.endsWith(".php") || path.endsWith(".json"));')).toEqual([]);
+    // `Container::alias` selects the class that implements it, not the interface that declares it.
+    expect(upstreamCitedSources(aliasRoot, [illuminate], aliasText)).toEqual([{ path: `${illuminate}/Container/Container.php`, dir: illuminate, citation: "Container::alias" }]);
+    expect(upstreamCitedSources(aliasRoot, [illuminate], "no citation")).toEqual([]);
+    expect(upstreamMethodsCited(applicationPhp, "Illuminate\\Foundation\\Application", aliasText)).toEqual(["registerCoreContainerAliases"]);
+    expect(upstreamMethodsCited(containerPhp, "Illuminate\\Container\\Container", aliasText)).toEqual(["alias"]);
+    expect(upstreamMethodsCited(containerPhp, "Illuminate\\Container\\Container", "function tokenOf(name: string) {}")).toEqual([]);
+    expect(phpMethodBodies(containerPhp, ["alias"])).toBe(aliasMethod);
+    expect(phpMethodBodies(applicationPhp, ["registerCoreContainerAliases", "missing"])).toBe(coreMethod);
+    expect(phpMethodBodies(applicationPhp, [])).toBe("");
+    // In (h): what the test names or cites, then what its walk selects, then the other named classes; Collection,
+    // which nothing names, is left out.
+    const aliasChanged = [aliasesTest, "packages/x/src/table.ts"].map((filename) => ({ filename, status: "added", patch: "@@ -0,0 +1 @@\n+x" }));
+    const aliasWhole = wholeFileEvidence(aliasRoot, aliasChanged, new Map(), 400_000);
+    const from = `read by ${aliasesTest} from ${illuminate}/: `;
+    const walkedBy = `${from}an Upstream file whose name ends with "ServiceProvider.php", which its directory walk selects`;
+    expect(aliasWhole.map((item) => [item.path, item.reason])).toEqual([
+      [`${illuminate}/Foundation/Application.php`, `${from}the Upstream source of Illuminate\\Foundation\\Application, which ${aliasesTest} names`],
+      [`${illuminate}/Container/Container.php`, `${from}the Upstream source of Illuminate\\Container\\Container, whose Container::alias the test cites`],
+      [`${illuminate}/Auth/AuthServiceProvider.php`, walkedBy],
+      [`${illuminate}/Bus/BusServiceProvider.php`, walkedBy],
+      [`${illuminate}/Bus/Batch.php`, `${from}the Upstream source of Illuminate\\Bus\\Batch, which packages/x/src/table.ts names`],
+      ["packages/x/tests/support/paths.ts", `imported by ${aliasesTest}`],
+      [aliasesTest, "changed"],
+      ["packages/x/src/table.ts", "changed"],
+    ]);
+    expect(aliasWhole[1]!.text).toBe(containerPhp);
+    // Under a tight budget each source shows its declaration lines, with the bodies of the methods the test points at.
+    const aliasHeadings = aliasWhole.reduce((sum, item) => sum + item.path.length + item.reason.length + 220, 0);
+    const aliasShort = (path: string, methods: string[]) => phpDeclarationLines(aliasFiles[path]!) + (methods.length === 0 ? "" : `\n${phpMethodBodies(aliasFiles[path]!, methods)}`);
+    const aliasShorts = aliasWhole.slice(0, 5).map((item, i) => aliasShort(item.path, i === 0 ? ["registerCoreContainerAliases"] : i === 1 ? ["alias"] : []));
+    const aliasTight = wholeFileEvidence(aliasRoot, aliasChanged, new Map(), aliasHeadings + aliasShorts.reduce((sum, text) => sum + text.length + 20, 0));
+    expect(aliasTight[0]!.text).toBe(`${phpDeclarationLines(applicationPhp)}\n${coreMethod}`);
+    expect(aliasTight[0]!.reason).toStartWith(`${from}the Upstream source of Illuminate\\Foundation\\Application, which ${aliasesTest} names; its declaration lines and the method registerCoreContainerAliases only, the file omitted for size`);
+    expect(aliasTight[1]!.text).toContain('throw new LogicException("[{$abstract}] is aliased to itself.");');
+    expect(aliasTight[1]!.text).not.toContain("function other()");
+    expect(aliasTight[2]!.reason).toContain("; its declaration lines only, the file omitted for size");
     // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
     // file named without its text means.
     const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
