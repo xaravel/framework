@@ -138,7 +138,7 @@ development_status:
   epic-10: in-progress
   10-1-token-brand-and-contract-t-mechanism: done
   10-2-port-the-contracts-for-the-core-and-service-namespaces: done
-  10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
+  10-3-port-the-contracts-for-the-web-and-application-namespaces: in-progress
   10-4-container-alias-table-and-canonical-tokens: backlog
   10-5-xaravel-only-contracts: backlog
   10-6-contracts-complete-and-protected: backlog
