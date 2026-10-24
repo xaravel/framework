@@ -8,10 +8,11 @@
 // The Upstream snapshot is gitignored and synced by `bun run upstream:sync`, which CI's `check` job runs under
 // `XARAVEL_UPSTREAM=require` (ESC-10.2-8). Where the snapshot is missing the Upstream-derived parts (parents, exception
 // bases, built-ins, constant values) fail under that variable and otherwise warn and are skipped, as structural.test.ts's
-// XT-contracts-6 does. The row-derived parts always run.
-import { existsSync, readFileSync } from "node:fs";
+// XT-contracts-6 does. The row-derived parts always run. The helpers are shared with XT-contracts-6 and -8
+// (`support/contract-namespaces.ts`). The async checks cover the 19 namespaces' subpath files and their structural
+// files; Story 10.3's are XT-contracts-8's.
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { env } from "node:process";
 import { Assert, TestCase, xaravelTest } from "@xaravel/assert";
 import { Double } from "@xaravel/mockery";
 import { Exception, hasBrand, InvalidArgumentException, RuntimeException } from "@xaravel/runtime/php";
@@ -39,12 +40,29 @@ import * as support from "@xaravel/contracts/support";
 import * as translation from "@xaravel/contracts/translation";
 import * as validation from "@xaravel/contracts/validation";
 import { EntityNotFoundException, ShouldBeEncrypted, ShouldQueue } from "@xaravel/contracts/queue";
-
-const REPO = join(import.meta.dir, "..", "..", "..", "..");
-const PACKAGE = join(import.meta.dir, "..", "..");
-const UPSTREAM_SYNCED = existsSync(join(REPO, "conformance", "upstream", "framework", "src", "Illuminate", "Contracts"));
-/** CI's `check` job sets `XARAVEL_UPSTREAM=require`: a missing snapshot fails rather than skips (ESC-10.2-8). */
-const UPSTREAM_REQUIRED = env["XARAVEL_UPSTREAM"] === "require";
+import {
+  asyncSurface,
+  asyncTable,
+  brandedClass,
+  BUILTIN_METHODS,
+  BUILTINS,
+  closure,
+  CORE_NAMESPACES,
+  CORE_STRUCTURAL_ASYNC,
+  coreScoped,
+  exportFor,
+  kebab,
+  mockeryDouble,
+  PACKAGE,
+  renderTable,
+  rowsOf,
+  shortName,
+  type Token,
+  typeErrorOf,
+  upstreamConstants,
+  upstreamDeclaration,
+  upstreamOrWarn,
+} from "./support/contract-namespaces";
 
 /** The 19 namespaces Story 10.2 ports: Upstream namespace → its subpath module. */
 const NAMESPACES: Readonly<Record<string, object>> = {
@@ -69,34 +87,12 @@ const NAMESPACES: Readonly<Record<string, object>> = {
   JsonSchema: jsonSchema,
 };
 
-/** PHP's built-in parents, which are no contract token (the interface extends their structural form). */
-const BUILTINS: ReadonlySet<string> = new Set(["Countable", "ArrayAccess", "IteratorAggregate", "Stringable", "Throwable"]);
-
-/** Each built-in parent's methods, PHP names, in the order a token lists them (ESC-10.2-4); `Throwable` has none. */
-const BUILTIN_METHODS: Readonly<Record<string, readonly string[]>> = {
-  Countable: ["count"],
-  ArrayAccess: ["offsetExists", "offsetGet", "offsetSet", "offsetUnset"],
-  IteratorAggregate: ["getIterator"],
-  Stringable: ["__toString"],
-  Throwable: [],
-};
-
 /** The runtime's PHP exception classes an exception row may extend. */
 const BASES: Readonly<Record<string, abstract new (...args: never[]) => object>> = { Exception, RuntimeException, InvalidArgumentException };
 
 /** `<Contract>.<method>` → its `@asyncRoot`, the spec's async table (AD-6, DIV-1); every other method is sync. */
-function asyncTable(): Map<string, string> {
-  const table = new Map<string, string>();
-  const same = (ns: string, contract: string, methods: string): void => {
-    for (const method of methods.split(" ")) {
-      table.set(`${ns}\\${contract}.${method}`, `${ns}\\${contract}.${method}`);
-    }
-  };
-  const to = (ns: string, contract: string, methods: string, root: string): void => {
-    for (const method of methods.split(" ")) {
-      table.set(`${ns}\\${contract}.${method}`, root);
-    }
-  };
+function coreAsyncTable(): Map<string, string> {
+  const { table, same, to } = asyncTable();
   same("Cache", "Store", "get many put putMany increment decrement forever touch forget flush");
   for (const method of "put increment decrement forever touch forget".split(" ")) {
     table.set(`Cache\\Repository.${method}`, `Cache\\Store.${method}`);
@@ -137,126 +133,13 @@ function asyncTable(): Map<string, string> {
   to("Foundation", "MaintenanceMode", "activate", "Cache\\Store.put");
   to("Foundation", "MaintenanceMode", "deactivate", "Cache\\Store.forget");
   to("Foundation", "MaintenanceMode", "active data", "Cache\\Store.get");
+  // A render is a compiled template module's `Promise<string>` (AD-11; Story 10.3).
+  to("Support", "Renderable", "render", "callback");
   return table;
 }
 
 /** The structural types (AD-1.2) whose async methods mirror a contract's: file → `<Ns>\\<Contract>`. */
-const STRUCTURAL_ASYNC: Readonly<Record<string, string>> = {
-  "src/structural/ValidationValidator.ts": "Validation\\Validator",
-  "src/structural/RedisConnection.ts": "Redis\\Connection",
-};
-
-interface Row {
-  readonly fqcn: string;
-  readonly kind: string;
-  readonly member: string | null;
-  readonly static?: boolean;
-  readonly parameters?: readonly { readonly name: string }[];
-}
-
-type Token = Record<symbol, unknown> & { readonly brand: symbol };
-
-/** The committed API surface's rows under `Illuminate\Contracts\<ns>\`, in file order. */
-function rowsOf(ns: string): Row[] {
-  const text = readFileSync(join(REPO, "conformance", "api-surface", "contracts.jsonl"), "utf8");
-  return text
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line) as Row)
-    .filter((row) => row.fqcn.startsWith(`Illuminate\\Contracts\\${ns}\\`) && !row.fqcn.slice(`Illuminate\\Contracts\\${ns}\\`.length).includes("\\"));
-}
-
-/** The short name of `name`, its last `\` segment. */
-function shortName(name: string): string {
-  return name.slice(name.lastIndexOf("\\") + 1);
-}
-
-/** The kebab-case subpath of an Upstream namespace (`JsonSchema` → `json-schema`). */
-function kebab(ns: string): string {
-  return ns.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-}
-
-/** The path of an Upstream contract file. */
-function upstreamPath(name: string): string {
-  return join(REPO, "conformance", "upstream", "framework", "src", ...name.split("\\")) + ".php";
-}
-
-/** An Upstream interface's `const NAME = '<string>';` values, by name. */
-function upstreamConstants(name: string): Map<string, string> {
-  const constants = new Map<string, string>();
-  for (const match of readFileSync(upstreamPath(name), "utf8").matchAll(/^\s*(?:public\s+)?const\s+(\w+)\s*=\s*'([^']*)';/gm)) {
-    constants.set(match[1] ?? "", match[2] ?? "");
-  }
-  return constants;
-}
-
-/** An Upstream contract file's declaration: its `extends` and `implements` lists, each name resolved to an FQCN. */
-function upstreamDeclaration(name: string): { readonly extends: string[]; readonly implements: string[] } {
-  const source = readFileSync(upstreamPath(name), "utf8");
-  const namespace = /^namespace\s+([^;]+);/m.exec(source)?.[1] ?? "";
-  const uses = new Map<string, string>();
-  for (const match of source.matchAll(/^use\s+([\w\\]+)(?:\s+as\s+(\w+))?;/gm)) {
-    uses.set(match[2] ?? shortName(match[1] ?? ""), match[1] ?? "");
-  }
-  const resolve = (local: string): string => {
-    const trimmed = local.trim();
-    if (trimmed.startsWith("\\")) {
-      return trimmed.slice(1);
-    }
-    return uses.get(trimmed) ?? `${namespace}\\${trimmed}`;
-  };
-  const list = (text: string | undefined): string[] => (text === undefined ? [] : text.split(",").map((part) => part.trim()).filter((part) => part !== "").map(resolve));
-  const declaration = new RegExp(`^(?:abstract\\s+|final\\s+)?(?:interface|class)\\s+${shortName(name)}\\b([^{]*)\\{`, "m").exec(source);
-  Assert.assertNotNull(declaration, name);
-  const head = declaration?.[1] ?? "";
-  const extendsList = /\bextends\s+([\w\\,\s]+?)(?=\bimplements\b|$)/.exec(head)?.[1];
-  const implementsList = /\bimplements\s+([\w\\,\s]+)$/.exec(head.trim())?.[1];
-  return { extends: list(extendsList), implements: list(implementsList) };
-}
-
-/** The runtime export for an FQCN: an `Illuminate\Contracts\<ns>` subpath's, or `@xaravel/contracts/psr`'s. */
-function exportFor(name: string): unknown {
-  if (name.startsWith("Psr\\")) {
-    return (psr as unknown as Record<string, unknown>)[shortName(name)];
-  }
-  const ns = name.split("\\")[2] ?? "";
-  const module = NAMESPACES[ns];
-  Assert.assertNotNull(module ?? null, `${name}: namespace ${ns} is not one of the 19`);
-  return (module as Record<string, unknown>)[shortName(name)];
-}
-
-/** `token` and every contract in its parents' closure, depth-first, each once. */
-function closure(token: Token): Token[] {
-  const seen: Token[] = [];
-  const walk = (current: Token): void => {
-    if (seen.includes(current)) {
-      return;
-    }
-    seen.push(current);
-    for (const parent of current[CONTRACT_PARENTS] as readonly Token[]) {
-      walk(parent);
-    }
-  };
-  walk(token);
-  return seen;
-}
-
-/** A class whose prototype carries the brand getter of each of `tokens`. */
-function brandedClass(tokens: readonly Token[]): new () => object {
-  class Branded {}
-  for (const token of tokens) {
-    Object.defineProperty(Branded.prototype, token.brand, { get: () => true, configurable: true });
-  }
-  return Branded;
-}
-
-/**
- * A Mockery double of `token`. `override: true` is Double's named argument for a target declaring one of its reserved
- * names (`Container::instance`), and `instance()` is then the target-shaped double.
- */
-function mockeryDouble(token: Token): unknown {
-  return (Double.for(token as never, { override: true }) as { instance(): unknown }).instance();
-}
+const STRUCTURAL_ASYNC = CORE_STRUCTURAL_ASYNC;
 
 /** A class carrying `ShouldQueue`'s brand only. */
 class J {
@@ -272,16 +155,6 @@ class DiscoveredListener {
   }
 }
 
-/** The `TypeError` message `fn` throws, or "(nothing thrown)". */
-function typeErrorOf(fn: () => unknown): string {
-  try {
-    fn();
-  } catch (error) {
-    return error instanceof TypeError ? error.message : `not a TypeError: ${String(error)}`;
-  }
-  return "(nothing thrown)";
-}
-
 /** A Mockery double's configuration API. */
 type MockeryDouble = Record<string, (...args: unknown[]) => unknown> & { allows(method: string): { returns(...values: unknown[]): unknown } };
 
@@ -292,21 +165,11 @@ xaravelTest(
   "XT-contracts-5",
   "each of the 19 core and service subpaths of @xaravel/contracts exports exactly its Illuminate\\Contracts namespace's interface tokens and exception classes by Upstream short name; each token's fqcn() and brand are its FQCN, its instance methods and parameter names are its committed rows', its constant rows are the token's frozen statics with Upstream's values and its static method rows its file's <X>Static interface (ESC-10.2-1), its built-ins are its Upstream built-in parents' methods (ESC-10.2-4), and its parents are Upstream's contract parents in order, so a branded class, a Mockery double and a PHPUnit mock of a child are instanceof every parent and a parent's double is not the child, and doubles of MessageBag and ValidatedData configure their built-ins; marker tokens are brand-only and checkable with hasBrand (AD-1.1); the exception classes are registered under their FQCN with their runtime base, and async-surface.json lists exactly the spec's async methods with their roots and the Pipeline's thenable methods (AD-6)",
   () => {
-    const expectedAsync = asyncTable();
+    const expectedAsync = coreAsyncTable();
     const actualAsync = new Map<string, string>();
     // A missing snapshot fails under XARAVEL_UPSTREAM=require, as CI's `check` job runs (ESC-10.2-8); otherwise it warns.
-    if (!UPSTREAM_SYNCED) {
-      if (UPSTREAM_REQUIRED) {
-        Assert.fail("XARAVEL_UPSTREAM=require: conformance/upstream/framework/src/Illuminate/Contracts is missing; run `bun run upstream:sync`");
-      }
-      console.warn("namespaces.test.ts: conformance/upstream is not synced; the Upstream-derived checks are skipped");
-    }
-    const surface = JSON.parse(readFileSync(join(PACKAGE, "async-surface.json"), "utf8")) as {
-      readonly method: string;
-      readonly file: string;
-      readonly root?: string;
-      readonly thenable?: string;
-    }[];
+    const upstreamSynced = upstreamOrWarn("namespaces.test.ts");
+    const surface = asyncSurface();
     const thenables = new Map<string, string>();
     let staticMethodRows = 0;
     const consumed = new Set<(typeof surface)[number]>();
@@ -324,7 +187,7 @@ xaravelTest(
 
       for (const declaration of declarations) {
         const name = declaration.fqcn;
-        const upstream = UPSTREAM_SYNCED ? upstreamDeclaration(name) : null;
+        const upstream = upstreamSynced ? upstreamDeclaration(name) : null;
         if (declaration.kind === "class") {
           classCount++;
           const ExceptionClass = exported[shortName(name)] as new (...args: never[]) => Error;
@@ -404,7 +267,7 @@ xaravelTest(
         const parents = token[CONTRACT_PARENTS] as readonly unknown[];
         Assert.assertTrue(Object.isFrozen(parents), name);
         if (upstream !== null) {
-          const expectedParents = upstream.extends.filter((parent) => !BUILTINS.has(parent)).map(exportFor);
+          const expectedParents = upstream.extends.filter((parent) => !BUILTINS.has(parent)).map((parent) => exportFor(parent, NAMESPACES, psr));
           Assert.assertSame(expectedParents.length, parents.length, name);
           expectedParents.forEach((parent, index) => {
             Assert.assertNotNull(parent ?? null, `${name} parent ${index}`);
@@ -522,12 +385,12 @@ xaravelTest(
     Assert.assertFalse(hasBrand(J, ShouldBeEncrypted));
     Assert.assertTrue(new J() instanceof ShouldQueue);
 
-    // async-surface.json: exactly the table's methods, each with its root (AD-6).
-    const render = (table: Map<string, string>): string => JSON.stringify([...table].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
-    Assert.assertSame(render(expectedAsync), render(actualAsync));
+    // async-surface.json: exactly the table's methods, each with its root (AD-6), over the 19 namespaces' files.
+    Assert.assertSame(renderTable(expectedAsync), renderTable(actualAsync));
 
-    // A structural type that mirrors a contract's async methods carries the contract's roots; every entry outside
-    // the PSR files is a contract's or one of these, so none goes unchecked.
+    // A structural type that mirrors a contract's async methods carries the contract's roots; every entry in the 19
+    // namespaces' subpath directories or these structural files is a contract's or one of these, so none goes
+    // unchecked (Story 10.3's subpaths and structural files are XT-contracts-8's).
     for (const [file, contract] of Object.entries(STRUCTURAL_ASYNC)) {
       for (const entry of surface.filter((line) => line.file === file)) {
         consumed.add(entry);
@@ -535,7 +398,8 @@ xaravelTest(
         Assert.assertSame(expectedAsync.get(`${contract}.${method}`) ?? "(not async)", entry.root ?? "(no root)", `${file} ${entry.method}`);
       }
     }
-    for (const entry of surface.filter((line) => !line.file.startsWith("src/psr/"))) {
+    Assert.assertSame(JSON.stringify(CORE_NAMESPACES), JSON.stringify(Object.keys(NAMESPACES)));
+    for (const entry of surface.filter((line) => coreScoped(line.file))) {
       Assert.assertTrue(consumed.has(entry), `${entry.file} ${entry.method} is not a ported contract's async method`);
     }
   },

@@ -33,7 +33,27 @@
     "./validation": "./src/validation/index.ts",
     "./debug": "./src/debug/index.ts",
     "./concurrency": "./src/concurrency/index.ts",
-    "./json-schema": "./src/json-schema/index.ts"
+    "./json-schema": "./src/json-schema/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./auth/access": "./src/auth/access/index.ts",
+    "./auth/middleware": "./src/auth/middleware/index.ts",
+    "./broadcasting": "./src/broadcasting/index.ts",
+    "./console": "./src/console/index.ts",
+    "./cookie": "./src/cookie/index.ts",
+    "./database": "./src/database/index.ts",
+    "./database/eloquent": "./src/database/eloquent/index.ts",
+    "./database/events": "./src/database/events/index.ts",
+    "./database/query": "./src/database/query/index.ts",
+    "./http": "./src/http/index.ts",
+    "./image": "./src/image/index.ts",
+    "./log": "./src/log/index.ts",
+    "./mail": "./src/mail/index.ts",
+    "./notifications": "./src/notifications/index.ts",
+    "./pagination": "./src/pagination/index.ts",
+    "./routing": "./src/routing/index.ts",
+    "./session": "./src/session/index.ts",
+    "./session/middleware": "./src/session/middleware/index.ts",
+    "./view": "./src/view/index.ts"
   },
   "dependencies": {
     "@xaravel/runtime": "workspace:*"
