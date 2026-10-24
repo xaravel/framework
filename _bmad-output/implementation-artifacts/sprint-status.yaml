@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 13:40
+last_updated: 10-24-2026 14:00
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1582,7 +1582,7 @@ action_items:
       XT cases for each and for canonicalToken on a non-abstract value (findings L3-L6,
       L9)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
   - id: "epic-10-retro-item-4-one-token-predicate"
     epic: 10
@@ -1592,8 +1592,8 @@ action_items:
       the same brand-getter descriptor and nameless-token display in both doubles;
       no assertion removed or weakened (findings L7, L8)"
     owner: "orchestrator"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-10-retro-2026-10-24.md"
+    status: in-progress
+    ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
   - id: "epic-10-retro-item-5-api-surface-blind-spots"
     epic: 10
     action: "tools/api-surface: check AD-26 options key types and refuse a union member
@@ -1646,8 +1646,8 @@ action_items:
       a contract token is its Upstream FQCN class-string as a PHP value. jsonEncode,
       phpSerialize and phpVarExport write it as that string; assert's exporter and
       ==/=== read it as that string, so assertSame(Arrayable, its FQCN string) passes;
-      JS coercion is unchanged (Symbol.toPrimitive gives the brand). Uses item 4's
-      isContractToken, so it runs after item 4. XT cases for each encoder, the exporter
+      JS coercion is unchanged (Symbol.toPrimitive gives the brand). Runs after item
+      4: runtime uses runtime's isContractToken, assert its grader-side copy (AD-15). XT cases for each encoder, the exporter
       and assertSame, declaring consequence AD-9.8. One approved tools/ change: a tools/lint-rules rule that refuses
       string-coercing a token in packages/*/src (messages use fqcn(token)), with tests
       (AD-9 Contract tokens; decisions/MAINT-2026-10-24-epic-10-items.md item 2)"

@@ -6,9 +6,14 @@
 // the service for which `@xaravel/contracts` exports a token. The service's canonical token is the contract alias that
 // no other contract alias of the service has in its parents closure, the first in Upstream order when several
 // qualify; a service with no contract alias keeps its string key, the key Upstream binds.
+//
+// A table's names are read as queries are: one leading `\` is dropped from each key, alias, binding and abstract
+// before the services are built, and a name is in a ported contract namespace when it starts with one of
+// `CONTRACT_PREFIXES` ignoring ASCII case. Lookups stay case-sensitive, as Upstream's alias keys are strings, so a
+// name that differs from an exported contract's FQCN only in letter case is refused.
 import { LogicException } from "@xaravel/runtime/php";
 import { fqcn } from "@xaravel/runtime/registry";
-import { CLASS_FQCN, CONTRACT_PARENTS, type ContractToken } from "../Contract";
+import { CLASS_FQCN, CONTRACT_PARENTS, type ContractToken, foldCase } from "../Contract";
 import * as root from "../index";
 import * as auth from "../auth/index";
 import * as authAccess from "../auth/access/index";
@@ -113,6 +118,14 @@ const MODULES: readonly object[] = [
 /** The FQCN prefixes of the namespaces `@xaravel/contracts` ports: an alias under one of them must have a token. */
 const CONTRACT_PREFIXES: readonly string[] = ["Illuminate\\Contracts\\", "Psr\\Container\\", "Psr\\SimpleCache\\", "Psr\\Log\\"];
 
+/** `CONTRACT_PREFIXES` folded (`foldCase`), for the case-insensitive prefix test. */
+const FOLDED_PREFIXES: readonly string[] = CONTRACT_PREFIXES.map(foldCase);
+
+/** `name` without one leading `\`, as a query is read. */
+function bare(name: string): string {
+  return name.startsWith("\\") ? name.slice(1) : name;
+}
+
 /** Whether `value` is a contract token: a frozen, non-function object with an own `CLASS_FQCN` string. */
 function isToken(value: unknown): value is ContractToken<object> {
   return typeof value === "object" && value !== null && Object.isFrozen(value) && Object.hasOwn(value, CLASS_FQCN) && typeof (value as Record<symbol, unknown>)[CLASS_FQCN] === "string";
@@ -130,6 +143,56 @@ const TOKENS: ReadonlyMap<string, ContractToken<object>> = (() => {
   }
   return tokens;
 })();
+
+/**
+ * Whether `value` is a contract token all the way down: a token (`isToken`) with a function `Symbol.hasInstance` and a
+ * `CONTRACT_PARENTS` list whose every entry is such a token. `checking` holds the tokens being walked, so a cycle ends.
+ */
+function isDeepToken(value: unknown, checking: Set<unknown> = new Set()): value is ContractToken<object> {
+  if (!isToken(value) || typeof (value as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] !== "function") {
+    return false;
+  }
+  if (checking.has(value)) {
+    return true;
+  }
+  checking.add(value);
+  const parents: unknown = (value as Record<symbol, unknown>)[CONTRACT_PARENTS];
+  return Array.isArray(parents) && Array.from(parents as unknown[]).every((parent) => isDeepToken(parent, checking));
+}
+
+/** The package tokens by folded FQCN (`foldCase`), for the collision and case-variant tests. */
+const FOLDED_TOKENS: ReadonlyMap<string, ContractToken<object>> = new Map([...TOKENS].map(([name, token]) => [foldCase(name), token]));
+
+/**
+ * The package tokens with `extraTokens` added. Throws a `TypeError` naming the index for an extra value that is not a
+ * contract token (`isDeepToken`). Every token reachable from an extra token, itself and its parents' closure, whose
+ * folded FQCN is already known (a package token, or one met earlier among the extras) must be that same object, else
+ * a `LogicException` names its FQCN; the package's own token, or the same object again, is accepted.
+ */
+function withExtraTokens(extraTokens: readonly ContractToken<object>[]): Map<string, ContractToken<object>> {
+  const tokens = new Map(TOKENS);
+  const known = new Map(FOLDED_TOKENS);
+  for (let index = 0; index < extraTokens.length; index++) {
+    const token: unknown = extraTokens[index];
+    if (!isDeepToken(token)) {
+      throw new TypeError(`extra token ${index} is not a contract token.`);
+    }
+    for (const reached of parentsClosure(token)) {
+      const name = reached[CLASS_FQCN];
+      const folded = foldCase(name);
+      const existing = known.get(folded);
+      if (existing === undefined) {
+        known.set(folded, reached);
+      } else if (existing !== reached) {
+        throw new LogicException(
+          FOLDED_TOKENS.has(folded) ? `[${name}] is a contract that @xaravel/contracts exports; an extra token may not replace it.` : `[${name}] is named by two extra tokens.`,
+        );
+      }
+    }
+    tokens.set(token[CLASS_FQCN], token);
+  }
+  return tokens;
+}
 
 /** `token` and every contract in its parents' closure, each once. */
 function parentsClosure(token: ContractToken<object>): Set<ContractToken<object>> {
@@ -155,7 +218,10 @@ interface Service {
   readonly aliases: string[];
 }
 
-/** The services of `table`, and each name (key or alias) → its service; throws for a self alias or a shared alias. */
+/**
+ * The services of `table`, and each name (key or alias) → its service, each name without one leading `\`; throws for a
+ * self alias or a shared alias.
+ */
 function servicesOf(table: AliasTable): { readonly services: Service[]; readonly byName: Map<string, Service> } {
   const services: Service[] = [];
   const byName = new Map<string, Service>();
@@ -186,15 +252,17 @@ function servicesOf(table: AliasTable): { readonly services: Service[]; readonly
   };
 
   for (const [key, aliases] of Object.entries(table.CORE_CONTAINER_ALIASES)) {
-    const service = open(key, true);
+    const service = open(bare(key), true);
     for (const name of aliases) {
-      alias(service, name);
+      alias(service, bare(name));
     }
   }
   for (const [key, name] of Object.entries(table.PROVIDER_BINDINGS)) {
-    alias(open(key, true), name);
+    alias(open(bare(key), true), bare(name));
   }
-  for (const [abstract, name] of table.PROVIDER_ALIASES) {
+  for (const [rawAbstract, rawName] of table.PROVIDER_ALIASES) {
+    const abstract = bare(rawAbstract);
+    const name = bare(rawName);
     if (abstract === name) {
       throw new LogicException(`[${name}] is aliased to itself.`);
     }
@@ -205,10 +273,7 @@ function servicesOf(table: AliasTable): { readonly services: Service[]; readonly
 
 /** The canonical token of each service of `table` (ESC-10.4-1 Option 1), by every name the service has. */
 function canonicalIndex(table: AliasTable, extraTokens: readonly ContractToken<object>[]): Map<string, ContractToken<object> | string> {
-  const tokens = new Map(TOKENS);
-  for (const token of extraTokens) {
-    tokens.set(token[CLASS_FQCN], token);
-  }
+  const tokens = withExtraTokens(extraTokens);
   const { services, byName } = servicesOf(table);
   const canonical = new Map<Service, ContractToken<object> | string>();
   for (const service of services) {
@@ -218,7 +283,10 @@ function canonicalIndex(table: AliasTable, extraTokens: readonly ContractToken<o
       const token = tokens.get(name);
       if (token !== undefined) {
         contracts.push(token);
-      } else if (CONTRACT_PREFIXES.some((prefix) => name.startsWith(prefix))) {
+      } else if (FOLDED_TOKENS.has(foldCase(name))) {
+        const exported = (FOLDED_TOKENS.get(foldCase(name)) as ContractToken<object>)[CLASS_FQCN];
+        throw new LogicException(`[${name}] differs only in letter case from the exported contract [${exported}]; alias lookups are case-sensitive.`);
+      } else if (FOLDED_PREFIXES.some((prefix) => foldCase(name).startsWith(prefix))) {
         throw new LogicException(`[${name}] names a contract that @xaravel/contracts does not export.`);
       }
     }
@@ -240,18 +308,22 @@ function canonicalIndex(table: AliasTable, extraTokens: readonly ContractToken<o
 }
 
 /**
- * Validates an alias table: throws `LogicException` naming the alias for an alias of itself, an alias two services
- * list, an `Illuminate\Contracts\`, `Psr\Container\`, `Psr\SimpleCache\` or `Psr\Log\` FQCN with no token, and an
- * alias of a service that has neither a contract alias nor a string key. `tokens` adds contract tokens that
- * `@xaravel/contracts` does not export (an application's own contracts).
+ * Validates an alias table, each name read without one leading `\`: throws `LogicException` naming the alias for an
+ * alias of itself, an alias two services list, an `Illuminate\Contracts\`, `Psr\Container\`, `Psr\SimpleCache\` or
+ * `Psr\Log\` FQCN (prefix matched ignoring case) with no token, and an alias of a service that has neither a contract
+ * alias nor a string key. `tokens` adds contract tokens that `@xaravel/contracts` does not export (an application's
+ * own contracts): a value that is not a contract token, its parents checked recursively, throws a `TypeError` naming
+ * its index, and a token whose FQCN equals, ignoring case, one the package exports or another extra token's throws a
+ * `LogicException` naming the FQCN (the same object listed twice is not a collision).
  */
 export function validateAliasTable(table: AliasTable, tokens: readonly ContractToken<object>[] = []): void {
   canonicalIndex(table, tokens);
 }
 
 /**
- * The `canonicalToken` function of `table`, which it validates first (`validateAliasTable`). `tokens` adds contract
- * tokens that `@xaravel/contracts` does not export (an application's own contracts).
+ * The `canonicalToken` function of `table`, which it validates first, with its `tokens`, and throws as
+ * `validateAliasTable` does. `tokens` adds contract tokens that `@xaravel/contracts` does not export (an application's
+ * own contracts). Lookups are case-sensitive; a string query drops one leading `\`, as the table's names do.
  */
 export function aliasResolver(table: AliasTable, tokens: readonly ContractToken<object>[] = []): AliasResolver {
   const index = canonicalIndex(table, tokens);
@@ -267,6 +339,6 @@ export function aliasResolver(table: AliasTable, tokens: readonly ContractToken<
  * The canonical token of `abstract` in Upstream's alias table: a `ContractToken`, or the service's string key when it
  * has no contract; an abstract no service lists is returned unchanged, as Upstream's `Container::getAlias` does. A
  * string may be a key or an FQCN with or without a leading `\`; a token or class goes through `fqcn()`, which throws
- * for an unregistered class (AD-10).
+ * for an unregistered class (AD-10); any other value, such as `{}` or `42`, throws `fqcn()`'s error (XT-contracts-19).
  */
 export const canonicalToken: AliasResolver = aliasResolver(table);

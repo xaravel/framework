@@ -18,6 +18,17 @@
 // `ArrayAccess`, `IteratorAggregate`, `Stringable`) lists those methods' PHP names at
 // `Symbol.for('xaravel.contract.builtins')`, so both test doubles can configure them (`builtins`, ESC-10.2-4); a token
 // without built-in parents has no such key.
+//
+// `contract()` refuses what PHP refuses in an interface declaration: two methods whose names are equal ignoring ASCII
+// case (PHP folds method and class names ASCII-only), and a parent listed twice or naming the contract itself. It also
+// keeps the token's own representation rule: a method is listed once, as a member or as a builtin, so a member that is
+// also listed as a builtin is refused (PHP itself lets an interface redeclare a built-in parent's method).
+//
+// `x instanceof Token` asks the value question: it is true for any object or function carrying the brand as an own or
+// inherited property (XT-contracts-1). So a class with a static brand, `class X { static [Arrayable.brand] = true }`,
+// passes `X instanceof Arrayable` as a value, while `hasBrand(X, Arrayable)`, the class question, reads the prototype
+// and says false, as does `new X() instanceof Arrayable`. A JS function cannot be told apart from a class at runtime,
+// and PHP has no class-as-value to compare against, so the case is kept and pinned by XT-contracts-19.
 
 /** The grader's class-name key (ESC-4.3-1 item 1), the same key `@xaravel/runtime/registry` sets on a class. */
 export const CLASS_FQCN: unique symbol = Symbol.for("xaravel.class.fqcn");
@@ -103,6 +114,46 @@ function copyParents(name: string, parents: unknown): readonly ContractToken<obj
   return Object.freeze(copy);
 }
 
+/** `name` with ASCII `A`–`Z` lower-cased and every other character kept, as PHP folds class and method names. */
+export function foldCase(name: string): string {
+  return name.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
+/**
+ * Throws a `TypeError` for two members with the same name, a parent listed twice or naming the contract itself
+ * (PHP's rules), and a member also listed as a builtin (the token's rule: a method is listed once, as a member or as a
+ * builtin). Every comparison ignores ASCII case only (`foldCase`).
+ */
+function checkDeclaration(name: string, parameters: Readonly<Record<string, readonly string[]>>, parents: readonly ContractToken<object>[], builtins: readonly string[]): void {
+  const methods = new Set<string>();
+  for (const method of Object.keys(parameters)) {
+    const folded = foldCase(method);
+    if (methods.has(folded)) {
+      throw new TypeError(`contract(): ${name}::${method}() is declared twice in ${name} (method names are case-insensitive)`);
+    }
+    methods.add(folded);
+  }
+  const own = foldCase(name);
+  const seen = new Set<string>();
+  for (let index = 0; index < parents.length; index++) {
+    const parentName = (parents[index] as ContractToken<object>)[CLASS_FQCN];
+    const folded = foldCase(parentName);
+    if (folded === own) {
+      throw new TypeError(`contract(): ${name} cannot extend itself (parent ${index})`);
+    }
+    if (seen.has(folded)) {
+      throw new TypeError(`contract(): parent ${index} of ${name}, ${parentName}, is listed twice`);
+    }
+    seen.add(folded);
+  }
+  const builtinNames = new Set(builtins.map((method) => foldCase(method)));
+  for (const method of Object.keys(parameters)) {
+    if (builtinNames.has(foldCase(method))) {
+      throw new TypeError(`contract(): ${name}::${method}() is also listed in the builtins of ${name}`);
+    }
+  }
+}
+
 /** The keys a token sets itself; a statics key may not name one. */
 const TOKEN_KEYS: ReadonlySet<string> = new Set(["brand"]);
 
@@ -156,6 +207,12 @@ function copyBuiltins(name: string, builtins: unknown): readonly string[] {
  * empty (ESC-10.2-4). `B` is the contract's phantom `unique symbol`, the type of `brand`. TypeScript has no partial
  * inference, so a contract that passes statics with explicit `T` and `B` must also pass their type as `S`, as
  * `filesystem/Filesystem.ts` does.
+ *
+ * Throws a `TypeError` for a bad FQCN, members, parents, statics or builtins, and, ignoring ASCII case, for two
+ * members of the same name, a parent listed twice (the same token, or equal FQCNs), a parent whose FQCN is the
+ * contract's own, and a member whose name is a listed builtin's. The token's `instanceof`
+ * accepts any object or function carrying the brand, own or inherited, so a class with a static brand passes as a
+ * value; `hasBrand(Class, Token)` reads the class's prototype instead.
  */
 export function contract<T extends object, B extends symbol = symbol, const S extends Readonly<Record<string, ContractStatic>> = Record<never, never>>(
   fqcn: string,
@@ -169,6 +226,7 @@ export function contract<T extends object, B extends symbol = symbol, const S ex
   const parentTokens = copyParents(name, parents);
   const constants = copyStatics(name, statics);
   const builtinMethods = copyBuiltins(name, builtins);
+  checkDeclaration(name, parameters, parentTokens, builtinMethods);
   const brand = Symbol.for(name);
   const token = {
     ...constants,
