@@ -599,7 +599,7 @@ Nothing else re-implements these.
   - `AppKey` exposes `raw`, `configString` and `previous`.
 - **AD-24 queued payload envelope:** Laravel's JSON envelope verbatim, with `data.command = phpSerialize(job)` and `ModelIdentifier` for models. On restore, unserialize sync, then `await restoreModels`. One `JobPayload` codec serves every queued type.
 - **AD-25 test lifecycle:**
-  - Hook order: `createApplication` → `afterApplicationCreated` → `setUp<Trait>` → test → `tearDown<Trait>` → `beforeApplicationDestroyed` → frame end.
+  - Hook order: `createApplication` → `setUp<Trait>` per trait, each registering its `tearDown<Trait>` as a `beforeApplicationDestroyed` callback → `afterApplicationCreated` → test → `beforeApplicationDestroyed` callbacks in registration order, so the `tearDown<Trait>` ones first → frame end (ESC-10.5-1).
   - The test frame opens first, and the app is sealed before the body runs. The shared-app opt-in is allowed.
   - Pest-style app tests: arrow bodies are a lint error, and `PendingTestResponse` / `PendingCommand` are thenables.
   - The Testbench `TestCase` extends Foundation's and only adds hooks.
@@ -3405,11 +3405,11 @@ So that `app('cache')`, `app(CacheManager)` and `app(Cache\Factory)` resolve to 
 
 **Given** a service with several aliases
 **When** `canonicalToken(abstract)` runs on any of them (a string alias, a concrete class FQCN, or another contract)
-**Then** it returns the single most specific contract token, as AD-1 specifies.
+**Then** it returns the service's canonical abstract, as AD-1 specifies: the most specific contract token; among unrelated contracts, the first in Upstream's order; for a service with no contract, its Upstream string key (ESC-10.4-1).
 
-**Given** an alias with no canonical contract
+**Given** an alias listed under two services, an alias of itself, an alias whose FQCN is in a ported contract namespace but has no token, or an alias of a service with neither a contract nor a string key
 **When** the table is validated
-**Then** validation fails and names the alias.
+**Then** validation fails and names the alias (ESC-10.4-1).
 
 ### Story 10.5: Xaravel-only contracts
 
@@ -3431,7 +3431,7 @@ So that View, Testing and the async tooling agree on them before they are built 
 
 **Given** `@xaravel/contracts/testing`
 **When** it is imported
-**Then** it exports the hook-order contract: `createApplication` → `afterApplicationCreated` → `setUp<Trait>` → test → `tearDown<Trait>` → `beforeApplicationDestroyed`.
+**Then** it exports the hook-order contract, Laravel's `InteractsWithTestCaseLifecycle` order: `createApplication` → `setUp<Trait>` per trait, each registering its `tearDown<Trait>` as a `beforeApplicationDestroyed` callback → `afterApplicationCreated` → test → `beforeApplicationDestroyed` callbacks in registration order, so the `tearDown<Trait>` ones first (ESC-10.5-1).
 
 ### Story 10.6: Contracts complete and Protected
 
