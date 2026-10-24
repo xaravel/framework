@@ -502,7 +502,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
 - **Binds:** FR-96..FR-101, FR-73, FR-107, NFR-7, DIV-11
 - **Prevents:** Testing and Testbench designing two lifecycles; NFR-7 resets that nobody owns; `this`-less test bodies.
 - **Rule:**
-  - **Hook order.** `@xaravel/contracts/testing` fixes the order of the hooks: `createApplication` → `afterApplicationCreated` → `setUp<Trait>` per trait → test → `tearDown<Trait>` → `beforeApplicationDestroyed` → test frame ends.
+  - **Hook order.** `@xaravel/contracts/testing` fixes the order of the hooks, as Laravel's `InteractsWithTestCaseLifecycle` runs them: `createApplication` → `setUp<Trait>` per trait, each registering its `tearDown<Trait>` as a `beforeApplicationDestroyed` callback → `afterApplicationCreated` → test → `beforeApplicationDestroyed` callbacks in registration order, so the `tearDown<Trait>` ones first → test frame ends (ESC-10.5-1).
   - **Frame order.** The harness opens the test frame first, through the runtime protocol. `createApplication` then builds and boots a fresh Application inside it, as in Laravel, writing to that Application's unsealed base. The Application is sealed before the test body runs. The `RefreshDatabase` lease (AD-20) and `setUp<Trait>` writes belong to the test frame.
   - **Shared-app opt-in.** A suite that doesn't vary config before boot may instead boot one Application in `beforeAll`, outside any test frame. Each test frame then overlays it.
   - **Resets.** All NFR-7 state is frame-scoped, so discarding the test frame resets it. Each item has a Xaravel Test proving its reset.
