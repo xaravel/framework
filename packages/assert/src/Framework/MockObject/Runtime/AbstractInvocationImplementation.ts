@@ -8,9 +8,11 @@
 // gets it (ConfigurableMethod: the signature row's defaults, Story 9.11; with
 // no row, `null` at every position). No return value is type-checked against
 // the declared return type (the Story 9.11 decision for ESC-4.7-1 item 2).
+// `toString` names a double's built-in `__toString` (ESC-10.2-4) when it has
+// one and no configurable `toString`.
 import { Constraint } from "../../Constraint";
 import { isThrowable } from "../../Throwable";
-import type { ConfigurableMethod } from "../ConfigurableMethod";
+import { isBuiltin, type ConfigurableMethod } from "../ConfigurableMethod";
 import { MethodCannotBeConfiguredException } from "../Exception/MethodCannotBeConfiguredException";
 import { MethodNameAlreadyConfiguredException } from "../Exception/MethodNameAlreadyConfiguredException";
 import { MethodNameNotConfiguredException } from "../Exception/MethodNameNotConfiguredException";
@@ -47,6 +49,7 @@ export abstract class AbstractInvocationImplementation implements InvocationStub
       throw new MethodNameAlreadyConfiguredException();
     }
     if (typeof constraint === "string") {
+      constraint = this.#builtinToStringAlias(constraint);
       const name = constraint.toLowerCase();
       if (!this.configurableMethods.some((method) => method.name().toLowerCase() === name)) {
         throw new MethodCannotBeConfiguredException(constraint);
@@ -56,6 +59,19 @@ export abstract class AbstractInvocationImplementation implements InvocationStub
     }
     this.matcher.setMethodNameRule(new MethodName(constraint));
     return this;
+  }
+
+  /**
+   * `toString` names the built-in `__toString` (ESC-10.2-4: one any token of the closure lists as a built-in, read
+   * through `isBuiltin`, which the double's `toString()` calls) when there is one and no configurable `toString`;
+   * any other name is itself.
+   */
+  #builtinToStringAlias(name: string): string {
+    if (name.toLowerCase() !== "tostring" || this.configurableMethods.some((method) => method.name().toLowerCase() === "tostring")) {
+      return name;
+    }
+    const builtin = this.configurableMethods.find((method) => method.name().toLowerCase() === "__tostring" && isBuiltin(method));
+    return builtin === undefined ? name : builtin.name();
   }
 
   will(stub: Stub): this {

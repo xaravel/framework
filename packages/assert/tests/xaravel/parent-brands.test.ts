@@ -51,7 +51,7 @@ function messageOf(fn: () => unknown): string {
   return "(nothing thrown)";
 }
 
-xaravelTest("XT-assert-22", "given a contract token with parents, a PHPUnit double of it is instanceof every contract in the parents' closure and nothing else; its doubled methods stay the token's own (ESC-10.1-6)", () => {
+xaravelTest("XT-assert-22", "given a contract token with parents, a PHPUnit double of it is instanceof every contract in the parents' closure and nothing else; it doubles the parents' methods too (ESC-10.1-6; ESC-10.2-4 supersedes the own-list rule)", () => {
   const test = new TestCase();
   const make = (target: unknown, mock: boolean): object => (mock ? test.createMock(target as never) : test.createStub(target as never)) as object;
 
@@ -64,9 +64,9 @@ xaravelTest("XT-assert-22", "given a contract token with parents, a PHPUnit doub
     const double = make(Child, mock);
     expect([double instanceof (Child as never), double instanceof (Parent as never), double instanceof (Root as never), double instanceof (Unrelated as never)]).toEqual([true, true, true, false]);
     expect(brandsOf(double)).toEqual(["Xt\\Child", "Xt\\Parent", "Xt\\Root"]);
-    // Only brands are added: the doubled methods are the child's own list.
+    // ESC-10.2-4 supersedes ESC-10.1-6's interim own-list rule: the parents' methods are doubled too.
     const proto = Object.getPrototypeOf(double) as object;
-    expect([Object.hasOwn(proto, "child"), Object.hasOwn(proto, "parent"), Object.hasOwn(proto, "root")]).toEqual([true, false, false]);
+    expect([Object.hasOwn(proto, "child"), Object.hasOwn(proto, "parent"), Object.hasOwn(proto, "root")]).toEqual([true, true, true]);
     // Parent brands are non-enumerable, non-configurable getters, as the own brand is.
     const descriptor = Object.getOwnPropertyDescriptor(proto, Symbol.for("Xt\\Root"))!;
     expect([descriptor.enumerable, descriptor.configurable, typeof descriptor.get]).toEqual([false, false, "function"]);

@@ -7,7 +7,9 @@
 // AD-1 token object), a class-name string (resolved through the class-lookup protocol) or a real instance (its
 // class is the target, and `passthru()` copies it). A trailing plain object is PHP's named arguments: `{ override:
 // true }` stands for `override: true`. Several targets must all be tokens (interfaces). The double `instanceof` its
-// class target, and carries each token's brand.
+// class target, and carries each token's brand. On a double with a token's built-in `__toString` and no target that
+// lists methods declaring `toString` (a bare symbol declares every name), `expects('toString')` /
+// `allows('toString')` configure `__toString`, which the double's `toString()` calls (ESC-10.2-4).
 //
 // Auto-verification (VerifiesDoubles, ESC-4.8-1 item 2). `enableAutoVerify()` (VerifiesDoubles' `#[Before]`) makes
 // every double created afterwards pending, and `verifyAll()` checks and drains them. The state lives in the Mockery
@@ -259,6 +261,18 @@ export class Double {
   /** @internal `expects()` (required) and `allows()`. */
   static registerExpectation(double: object, method: string, required: boolean): MethodExpectation {
     const state = stateOrThrow(double);
+    // ESC-10.2-4: `toString` names the built-in `__toString` the double's `toString()` calls.
+    // A bare-symbol target declares every name, so only a target that lists methods can declare its own `toString`.
+    if (method === "toString" && !state.targetCandidates().some((target) => !target.acceptsAnyMethod() && target.declares("toString"))) {
+      const builtin = state
+        .targetCandidates()
+        .filter((target) => target.builtins().has("__tostring"))
+        .flatMap((target) => target.instanceMethods())
+        .find((name) => name.toLowerCase() === "__tostring");
+      if (builtin !== undefined) {
+        method = builtin;
+      }
+    }
     assertConfigurable(state, method);
     const expectation = new MethodExpectation(method, required);
     state.registerExpectation(expectation);

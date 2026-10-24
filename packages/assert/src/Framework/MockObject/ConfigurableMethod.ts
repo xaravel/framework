@@ -26,6 +26,19 @@ export interface DeclaringClass {
   readonly parentType: unknown;
 }
 
+/** The methods a double of a contract token takes as built-ins (ESC-10.2-4). Internal: not on the index. */
+const BUILTINS = new WeakSet<ConfigurableMethod>();
+
+/** @internal Marks `method` as a contract token's built-in (`contractMethods`' `builtin`, the union over the closure). */
+export function markBuiltin(method: ConfigurableMethod): void {
+  BUILTINS.add(method);
+}
+
+/** @internal Whether `method` is a contract token's built-in. */
+export function isBuiltin(method: ConfigurableMethod): boolean {
+  return BUILTINS.has(method);
+}
+
 export class ConfigurableMethod {
   static readonly [CLASS_FQCN]: string = "PHPUnit\\Framework\\MockObject\\ConfigurableMethod";
 

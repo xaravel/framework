@@ -8,21 +8,28 @@
 //   object whose `Symbol.hasInstance` reads the brand `Symbol.for('<FQCN>')` (its FQCN is its own
 //   `Symbol.for('xaravel.class.fqcn')`, else the description of its brand: its own registered symbol key outside the
 //   `xaravel.*` protocol keys; a token with neither throws InvalidDoubleTargetException). Its methods are the names at
-//   `token[Symbol.for('xaravel.contract.methods')]`; a bare symbol carries no list, so any method name is
-//   configurable on it, as on a Mockery token mock. A token is an interface: it has no method bodies.
+//   `token[Symbol.for('xaravel.contract.methods')]`, with its built-ins and its parents' (below); a bare symbol
+//   carries no list, so any method name is configurable on it, as on a Mockery token mock. A token is an interface:
+//   it has no method bodies.
 //   A token's parents (ESC-10.1-6): the contracts at `token[Symbol.for('xaravel.contract.parents')]` (each a token
 //   object or a bare symbol; absent or `null` is none) and their parents in turn, walked depth-first, each contract
 //   once, cycle-safe. Each parent's brand is read by the same rule as a target's own (a bare symbol is its own
 //   brand), and the generated class carries them all (`parentBrands`), so a double of a child contract is
-//   `instanceof` every contract it extends, as a PHP mock of a child interface is. Only brands are added: the
-//   doubled methods stay the token's own list. The parents are read once, when the target is first read (a token's
-//   parents are fixed, as contract() freezes them). The walk is @xaravel/assert's `contractParentBrands`, which
-//   PHPUnit's doubles share, with this file's `tokenName` naming each token.
+//   `instanceof` every contract it extends, as a PHP mock of a child interface is. The parents are read once, when
+//   the target is first read (a token's parents are fixed, as contract() freezes them). The walk is
+//   @xaravel/assert's `contractParentBrands`, which PHPUnit's doubles share, with this file's `tokenName` naming
+//   each token.
+//   A token's methods (ESC-10.2-4) are @xaravel/assert's `contractMethods`, which PHPUnit's doubles share: its own,
+//   then its built-ins (`Symbol.for('xaravel.contract.builtins')`, PHP names), then each parent's own and built-ins,
+//   each name once (the first wins, case-insensitively; a name any of them lists as a built-in is one).
+//   `declaringClassName` gives the parent token that lists an inherited method, or a built-in's PHP interface
+//   (`Countable`, `ArrayAccess`, `IteratorAggregate`, `Stringable`), so the signature lookup is asked for that FQCN;
+//   `builtins()` names the built-ins ClassGenerator wires to JS's iterator and string protocols.
 //
 // Parameter names are read from a method's source (`a`, `a = 1` and `...rest` name `$a` and `$rest`; a destructured
 // parameter is named by its position), as @xaravel/assert's test doubles read them (ESC-4.7-1 item 2). A token's
 // methods carry none.
-import { contractParentBrands } from "@xaravel/assert";
+import { contractMethods, contractParentBrands, type ContractMethod } from "@xaravel/assert";
 import { classNameOf, FQCN, isClass } from "../../../support/values";
 import { InvalidDoubleTargetException } from "../Exceptions/InvalidDoubleTargetException";
 
@@ -36,7 +43,6 @@ export interface ContractToken {
 /** What `Double.for()` takes as a target besides a real instance. */
 export type TargetInput = AnyClass | symbol | ContractToken;
 
-const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
 const STATIC_SKIP: ReadonlySet<string> = new Set(["length", "name", "prototype", "caller", "arguments"]);
 const IDENTIFIER = /^[A-Za-z_$][\w$]*/;
 /** ClassGenerator's reserved verbs: never a method of a bare symbol token. */
@@ -134,14 +140,20 @@ export class DoubleTarget {
   readonly #token: ContractToken | null;
   /** A token's method names, or null for a bare symbol (any name). */
   readonly #tokenMethods: readonly string[] | null;
+  /** The FQCN that declares each of a token's methods (the token, a parent token, or a built-in's PHP interface). */
+  readonly #declaringNames: ReadonlyMap<string, string>;
+  /** The lower-cased names a token takes as built-ins. */
+  readonly #builtins: ReadonlySet<string>;
 
-  private constructor(name: string, ctor: AnyClass | null, brand: symbol | null, token: ContractToken | null, tokenMethods: readonly string[] | null, parentBrands: readonly symbol[] = []) {
+  private constructor(name: string, ctor: AnyClass | null, brand: symbol | null, token: ContractToken | null, tokenMethods: readonly ContractMethod[] | null, parentBrands: readonly symbol[] = []) {
     this.name = name;
     this.ctor = ctor;
     this.brand = brand;
     this.parentBrands = Object.freeze([...parentBrands]);
     this.#token = token;
-    this.#tokenMethods = tokenMethods;
+    this.#tokenMethods = tokenMethods === null ? null : Object.freeze(tokenMethods.map((method) => method.name));
+    this.#declaringNames = new Map((tokenMethods ?? []).map((method) => [method.name, method.declaringName]));
+    this.#builtins = new Set((tokenMethods ?? []).filter((method) => method.builtin).map((method) => method.name.toLowerCase()));
   }
 
   /** The target for a class, a symbol or a token object, or null when `input` is none of them. */
@@ -157,19 +169,7 @@ export class DoubleTarget {
       target = new DoubleTarget(input.description ?? "", null, input, null, null);
     } else if (isContractToken(input)) {
       const name = tokenName(input);
-      const declared: unknown = (input as unknown as Record<symbol, unknown>)[CONTRACT_METHODS];
-      const methods: string[] = [];
-      if (declared !== undefined && declared !== null) {
-        if (typeof (declared as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
-          throw new TypeError(`${name}: [Symbol.for('xaravel.contract.methods')] must be an iterable of method names`);
-        }
-        for (const method of declared as Iterable<unknown>) {
-          if (typeof method !== "string") {
-            throw new TypeError(`${name}: [Symbol.for('xaravel.contract.methods')] must hold method names, got ${typeof method}`);
-          }
-          methods.push(method);
-        }
-      }
+      const methods = contractMethods(input, (token) => tokenName(token as ContractToken));
       const brand = Symbol.for(name);
       target = new DoubleTarget(name, null, brand, input, methods, contractParentBrands(input, brand, (token) => tokenName(token as ContractToken)));
     }
@@ -270,10 +270,18 @@ export class DoubleTarget {
     return null;
   }
 
-  /** The FQCN of the class that declares `method` (Reflection's `getDeclaringClass()`); a token's own name. */
+  /** The lower-cased names of a token's built-ins (`getiterator`, `__tostring`, …); empty for a class and a bare symbol. */
+  builtins(): ReadonlySet<string> {
+    return this.#builtins;
+  }
+
+  /**
+   * The FQCN of the class that declares `method` (Reflection's `getDeclaringClass()`); for a token, the token or
+   * parent token that lists it, or a built-in's PHP interface (else the token's own name).
+   */
   declaringClassName(method: string): string {
     if (this.ctor === null) {
-      return this.name;
+      return this.#declaringNames.get(method) ?? this.name;
     }
     for (let prototype: unknown = this.ctor.prototype; typeof prototype === "object" && prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
       if (Object.hasOwn(prototype, method)) {

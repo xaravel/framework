@@ -13,6 +13,14 @@
 // name: then `override` gives a bare class, which Double wraps in an OverriddenDouble, and without it
 // ReservedNameCollisionException is thrown. Several targets must all be tokens (InvalidDoubleTargetException).
 // Instances are made with `Object.create`, so no constructor and no field initializer runs (ESC-4.8-1 item 3).
+// A token's built-ins (`DoubleTarget.builtins()`, ESC-10.2-4) get JS's protocols: with `getIterator`, the
+// prototype's `[Symbol.iterator]()` iterates what the intercepted `getIterator` returns (null iterates nothing; a
+// value that is not iterable throws PHP's TypeError); with `__toString`, its `toString()` (unless a target that lists
+// methods declares a `toString`; a bare symbol, which declares every name, does not count) and
+// `[Symbol.toPrimitive]()` return what the intercepted `__toString` returns. The `count` and `offset*` built-ins get
+// no JS protocol, only their methods. A class target has none. The protocols are @xaravel/assert's
+// `defineContractProtocols`, which PHPUnit's doubles share.
+import { defineContractProtocols } from "@xaravel/assert";
 import { FQCN } from "../../../support/values";
 import { InvalidDoubleTargetException } from "../Exceptions/InvalidDoubleTargetException";
 import { ReservedNameCollisionException } from "../Exceptions/ReservedNameCollisionException";
@@ -41,6 +49,24 @@ function defineInterceptor(prototype: object, name: string): void {
     },
   }[name]!;
   Object.defineProperty(prototype, name, { value: interceptor, writable: true, enumerable: false, configurable: true });
+}
+
+/**
+ * The JS protocols of the targets' built-ins (ESC-10.2-4), through @xaravel/assert's `defineContractProtocols`:
+ * `[Symbol.iterator]` through the built-in `getIterator`, and `toString` (unless a target that lists methods declares
+ * `toString`; a bare symbol declares every name) and `[Symbol.toPrimitive]` through the built-in `__toString`.
+ */
+function defineBuiltinProtocols(prototype: object, className: string, targets: readonly DoubleTarget[]): void {
+  const builtin = (lower: string): string | null =>
+    targets
+      .filter((target) => target.builtins().has(lower))
+      .flatMap((target) => target.instanceMethods())
+      .find((method) => method.toLowerCase() === lower) ?? null;
+  defineContractProtocols(prototype, className, {
+    getIterator: builtin("getiterator"),
+    toString: builtin("__tostring"),
+    wireToString: !targets.some((target) => !target.acceptsAnyMethod() && target.declares("toString")),
+  });
 }
 
 function isOverridable(name: string): boolean {
@@ -137,6 +163,7 @@ export class ClassGenerator {
         Object.defineProperty(prototype, brand, { get: () => true, enumerable: false, configurable: true });
       }
     }
+    defineBuiltinProtocols(prototype, name, targets);
     const control = collisions.length === 0;
     if (control) {
       for (const verb of ["instance", "expects", "allows", "strict", "passthru"]) {

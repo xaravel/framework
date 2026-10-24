@@ -16,10 +16,25 @@
 //   depth-first, each contract once, cycle-safe. The double class also
 //   carries each parent's brand getter, so a double of a child contract is
 //   `instanceof` every contract it extends, as a PHP mock of a child
-//   interface is. Only brands are added: the doubled methods stay the
-//   target token's own list. The walk is `contractParentBrands`
-//   (ContractParents.ts), which @xaravel/mockery's doubles share; it runs
-//   each time a double is made (Mockery reads a token's parents once).
+//   interface is. The walk is `contractParentBrands` (ContractParents.ts),
+//   which @xaravel/mockery's doubles share; it runs each time a double is
+//   made (Mockery reads a token's parents once).
+//   A token's methods (ESC-10.2-4): `contractMethods` (ContractParents.ts,
+//   shared with Mockery) lists its own, then its built-ins
+//   (`Symbol.for('xaravel.contract.builtins')`, PHP names), then each parent's
+//   own and built-ins, each name once (the first wins, case-insensitively),
+//   so a double of a child contract configures an inherited method as a PHP
+//   mock does. An inherited method is declared by the parent token that lists
+//   it; a built-in by its PHP interface (`Countable`, `ArrayAccess`,
+//   `IteratorAggregate`, `Stringable`). With the built-in `getIterator`, the
+//   double's `[Symbol.iterator]()` iterates what `getIterator` returns (null
+//   iterates nothing; a value that is not iterable throws PHP's TypeError);
+//   with the built-in `__toString`, its `toString()` (unless it doubles a
+//   `toString`) and `[Symbol.toPrimitive]()` return what `__toString` returns,
+//   and `method('toString')` configures `__toString`. The `count` and
+//   `offset*` built-ins get no JS protocol, only their methods. A built-in
+//   stays one when a token redeclares it as a plain method. A class target
+//   has no built-ins.
 // - Names in messages. The target's `Symbol.for("xaravel.class.fqcn")`, else
 //   its JS `name`; a symbol's `description`.
 // - Doubled methods. Each is an own member of the double class's prototype
@@ -56,8 +71,8 @@
 //   `createStub` of it (`testDouble(type, false, [], [], false, …)`).
 import { randomBytes } from "node:crypto";
 import { classNameOfClass } from "../../../comparison/PhpValues";
-import { ConfigurableMethod, type DeclaringClass } from "../ConfigurableMethod";
-import { contractParentBrands, isContractToken } from "./ContractParents";
+import { ConfigurableMethod, markBuiltin, type DeclaringClass } from "../ConfigurableMethod";
+import { contractMethods, contractParentBrands, defineContractProtocols, isContractToken } from "./ContractParents";
 import type { SignatureRow } from "./Signature";
 import { MethodNamedMethodException } from "../Exception/MethodNamedMethodException";
 import { Invocation } from "../Runtime/Invocation";
@@ -67,7 +82,6 @@ import { AnyInvokedCount } from "../Runtime/Rule/AnyInvokedCount";
 import { InvocationOrder } from "../Runtime/Rule/InvocationOrder";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
-const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
 /** The double's InvocationHandler, on the instance. */
 const HANDLER = Symbol("PHPUnit\\Framework\\MockObject\\InvocationHandler");
 /** The double's configuration, on the double class's prototype. */
@@ -96,6 +110,8 @@ export interface TargetType {
   readonly brand: symbol | null;
   /** The brands of every contract a token extends, own brand excluded; empty for a class and a bare symbol. */
   readonly parentBrands: readonly symbol[];
+  /** The lower-cased names of the methods a token takes as built-ins (`getiterator`, `__tostring`, …); empty for a class and a bare symbol. */
+  readonly builtins: ReadonlySet<string>;
 }
 
 function isNative(fn: unknown): boolean {
@@ -244,29 +260,26 @@ export function readTarget(type: unknown): TargetType {
         methods.set(key, configurable(key, descriptor.value as (...args: never[]) => unknown, declaring));
       }
     }
-    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null, parentBrands: [] };
+    return { name: classNameOfClass(type), parent: type as AnyClass, methods, brand: null, parentBrands: [], builtins: new Set() };
   }
   if (typeof type === "symbol") {
-    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type, parentBrands: [] };
+    return { name: type.description ?? "", parent: null, methods: new Map(), brand: type, parentBrands: [], builtins: new Set() };
   }
   if (isContractToken(type)) {
     const name = classNameOfClass(type);
     const methods = new Map<string, ConfigurableMethod>();
-    const declaring: DeclaringClass = { name, type, parentName: null, parentType: null };
-    const declared: unknown = (type as Record<symbol, unknown>)[CONTRACT_METHODS];
-    if (declared !== undefined && declared !== null) {
-      if (typeof (declared as { [Symbol.iterator]?: unknown })[Symbol.iterator] !== "function") {
-        throw new TypeError(`${name}: [Symbol.for('xaravel.contract.methods')] must be an iterable of method names`);
-      }
-      for (const method of declared as Iterable<unknown>) {
-        if (typeof method !== "string") {
-          throw new TypeError(`${name}: [Symbol.for('xaravel.contract.methods')] must hold method names, got ${typeof method}`);
-        }
-        methods.set(method, new ConfigurableMethod(method, 0, [], declaring));
+    const builtins = new Set<string>();
+    for (const method of contractMethods(type, classNameOfClass)) {
+      const declaring: DeclaringClass = { name: method.declaringName, type: method.contract, parentName: null, parentType: null };
+      const entry = new ConfigurableMethod(method.name, 0, [], declaring);
+      methods.set(method.name, entry);
+      if (method.builtin) {
+        markBuiltin(entry);
+        builtins.add(method.name.toLowerCase());
       }
     }
     const brand = Symbol.for(name);
-    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, classNameOfClass) };
+    return { name, parent: null, methods, brand, parentBrands: contractParentBrands(type, brand, classNameOfClass), builtins };
   }
   throw new TypeError(`PHPUnit\\Framework\\MockObject: a test double needs a class or a contract token, got ${type === null ? "null" : typeof type}`);
 }
@@ -420,6 +433,20 @@ function doubledMethod(className: string, target: unknown, method: ConfigurableM
   return fn;
 }
 
+/**
+ * The JS protocols of a token's built-ins (ESC-10.2-4), through ContractParents' `defineContractProtocols`:
+ * `[Symbol.iterator]` through the doubled `getIterator`, and `toString` (unless a `toString` is doubled) and
+ * `[Symbol.toPrimitive]` through the doubled `__toString`.
+ */
+function defineBuiltinProtocols(prototype: object, className: string, builtins: ReadonlySet<string>, doubled: readonly ConfigurableMethod[]): void {
+  const doubledName = (lower: string): string | null => doubled.find((method) => method.name().toLowerCase() === lower)?.name() ?? null;
+  defineContractProtocols(prototype, className, {
+    getIterator: builtins.has("getiterator") ? doubledName("getiterator") : null,
+    toString: builtins.has("__tostring") ? doubledName("__tostring") : null,
+    wireToString: doubledName("tostring") === null,
+  });
+}
+
 function apiMethod(name: string, fn: (this: object, ...args: never[]) => unknown): PropertyDescriptor {
   Object.defineProperty(fn, "name", { value: name });
   return { value: fn, writable: true, enumerable: false, configurable: true };
@@ -472,6 +499,7 @@ export function testDouble(
   for (const method of doubled) {
     Object.defineProperty(prototype, method.name(), { value: doubledMethod(target.name, type, method), writable: true, enumerable: false, configurable: true });
   }
+  defineBuiltinProtocols(prototype, doubleName, target.builtins, doubled);
   Object.defineProperty(
     prototype,
     "method",
