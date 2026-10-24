@@ -47,3 +47,7 @@ The 2026-10-21 amendment to `decisions/MAINT-2026-10-16-unattended-orchestrator.
 ## Amendment (2026-10-23, ESC-10.2-8)
 
 The prompt cap in rule 2 is now 1,000,000 characters, not 600,000. Story 10.2's diff left (h) no room for the Upstream sources and data its tests read. With every one of them shown, its prompt is 943,702 characters. Rules 1 and 3 to 5 and "Future evidence gaps" are unchanged. See `decisions/ESC-10.2-8.md`.
+
+## Amendment (2026-10-24, MAINT-2026-10-24-evidence-gaps)
+
+`WHOLE_FILE_CAP` in rule 3 is now 200,000 characters, not 60,000. Under "Future evidence gaps", a reject whose only fails are missing-evidence findings outside F-2, F-3 and F-8 no longer needs an Escalation. It counts as a pass and is noted (`decisions/MAINT-2026-10-24-evidence-gaps.md`). Raising either cap again is still the Maintainer's call.
