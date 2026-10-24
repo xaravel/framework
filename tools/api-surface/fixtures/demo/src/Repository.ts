@@ -30,9 +30,9 @@ export class Repository {
     this.cacheKey = Object.keys(config)[0] ?? null;
   }
 
-  /** Upstream `get(string $key, $default = null)`: `default` is reserved, so any name passes; matched. */
-  get(key: string, fallback: unknown = null): unknown {
-    return key === "" ? fallback : key;
+  /** Upstream `get(string $key, $default = null)`: `default` is reserved, so it takes its decided name `defaultValue`; matched. */
+  get(key: string, defaultValue: unknown = null): unknown {
+    return key === "" ? defaultValue : key;
   }
 
   /** Upstream `touch(string $key, $seconds)`: mismatch, parameter name. */
@@ -58,9 +58,9 @@ export class Repository {
     return options.strict === true ? keys.slice(0, options.ttl ?? 1) : keys;
   }
 
-  /** Upstream `pull(string $key, int $ttl = 1, bool $strict = false)`: positional, and the options form through a named interface in a union, matched. */
+  /** Upstream `pull(string $key, int $ttl = 1, bool $strict = false)`: positional, and the options form through a named interface (never a union, AD-26), matched. */
   pull(key: string, ttl?: number, strict?: boolean): string;
-  pull(key: string, options?: PullOptions | null): string;
+  pull(key: string, options?: PullOptions): string;
   pull(key: string, ttl: number | PullOptions | null = 1, strict = false): string {
     const options = typeof ttl === "number" ? { ttl, strict } : ttl;
     return options === null ? key : `${key}${options.ttl ?? 0}`;

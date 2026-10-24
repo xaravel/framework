@@ -39,7 +39,18 @@
 // Xaravel form and is `missing` when neither is declared. A member with two or
 // more optional non-variadic Upstream parameters needs a positional and an
 // options-form signature (AD-26 "also accepts"; options failures are prefixed
-// `options overload: `).
+// `options overload: `). The options parameter's type is a type literal, or an
+// interface / type alias that is one, never a union (`| null` included); each
+// key is optional and, when the Upstream parameter is typed, nullable exactly
+// when it is (a method-signature key is not nullable; a getter's return and a
+// setter's parameter are read). Like a positional parameter's, a key's type is
+// checked for nullability only, not its base type, and syntactically: an alias
+// such as `Maybe<T> = T | null` is not resolved. A parameter whose Upstream
+// name is a reserved word takes its decided name: `RESERVED_PARAMETER_NAMES`,
+// the names Epic 10's contracts ported (spec-10-1/10-2: `default` →
+// `defaultValue`; spec-10-3: `class` → `className`, `arguments` → `args`),
+// otherwise the word and a capitalised suffix (`packageName`); options keys
+// stay `camel()`.
 //
 // Findings: `missing`, `extra`, `renamed`, `mismatch` (parameter names,
 // defaults, nullability, rest, optional, static, returns; `undefined` in a
@@ -58,7 +69,8 @@
 // and exits 1 if any item is unexplained or any citation problem is found.
 //
 // The walk is syntactic: inherited members, trait members supplied by a mixin,
-// aliases and unregistered exported classes are not seen.
+// aliases and unregistered exported classes are not seen, and neither is a
+// dropped interface `extends` (the Upstream export carries no parents).
 //
 // Exit codes: 0 ok (report mode unless a tool failure; gate mode only when
 // nothing is unexplained and the citation files pass `checkCitations`),
@@ -200,6 +212,30 @@ const RESERVED = new Set(
     "private protected public arguments eval"
   ).split(" "),
 );
+
+/**
+ * The decided Xaravel names of the reserved-word parameters Epic 10 ported (spec-10-1 and 10-2: `default`; spec-10-3:
+ * `arguments`, `class`). Any other reserved word maps to the word followed by a capitalised descriptive suffix
+ * (`packageName`, `newValue`; `reservedNameFailure`).
+ */
+export const RESERVED_PARAMETER_NAMES: ReadonlyMap<string, string> = new Map([
+  ["default", "defaultValue"],
+  ["class", "className"],
+  ["arguments", "args"],
+]);
+
+/**
+ * The name failure of a TS parameter for an Upstream parameter whose `camel()` name `word` is a reserved word, or null
+ * when the name is the decided one: the `RESERVED_PARAMETER_NAMES` entry exactly, otherwise `<word>` followed by an
+ * upper-case ASCII letter (`^<word>[A-Z]`).
+ */
+function reservedNameFailure(upstream: string, word: string, name: string, position: number): string | null {
+  const decided = RESERVED_PARAMETER_NAMES.get(word);
+  if (decided !== undefined ? name === decided : name.length > word.length && name.startsWith(word) && /[A-Z]/.test(name[word.length]!)) {
+    return null;
+  }
+  return `parameter ${position} is ${name}, Upstream ${upstream} (reserved word: expected ${decided ?? `${word}<Name>`})`;
+}
 
 // ---------------------------------------------------------------------------
 // Type helpers
@@ -567,15 +603,18 @@ function compareUnits(a: string, b: string): number {
 interface LiteralKey {
   readonly name: string;
   readonly optional: boolean;
+  /** Whether the key admits null (`admitsNull` of its type, a getter's return or a setter's parameter; a method signature is a function type, so never). */
+  readonly nullable: boolean;
 }
 
-/** The keys of a type literal or interface body. */
+/** The keys of a type literal or interface body, with their nullability. */
 function literalKeys(members: unknown): LiteralKey[] {
   const out: LiteralKey[] = [];
   for (const member of nodes(members)) {
     const name = member["computed"] === true ? null : nameOf(member["key"]);
     if (name !== null) {
-      out.push({ name, optional: member["optional"] === true });
+      const nullable = member.type !== "TSMethodSignature" ? admitsNull(member["typeAnnotation"]) : member["kind"] === "get" ? admitsNull(member["returnType"]) : member["kind"] === "set" ? admitsNull(nodes(member["params"])[0]?.["typeAnnotation"]) : false;
+      out.push({ name, optional: member["optional"] === true, nullable });
     }
   }
   return out;
@@ -820,7 +859,12 @@ function literalsEqual(php: Literal, ts: Literal): boolean {
 function paramFailures(p: UpstreamParameter, t: TsParam, position: number, fallback: SourceDefault | null): string[] {
   const out: string[] = [];
   const expected = camel(p.name);
-  if (!RESERVED.has(expected) && t.name !== expected) {
+  if (RESERVED.has(expected)) {
+    const failure = reservedNameFailure(p.name, expected, t.name, position);
+    if (failure !== null) {
+      out.push(failure);
+    }
+  } else if (t.name !== expected) {
     out.push(`parameter ${position} is ${t.name}, Upstream ${p.name}`);
   }
   if (p.variadic && !t.rest) {
@@ -892,14 +936,14 @@ function returnFailures(up: UpstreamRecord, sig: TsSignature): string[] {
   return out;
 }
 
-/** The key lists of a TS type that is (or has a union member, or names an interface / type alias that is) a type literal. */
+/**
+ * The key lists of a TS type that is (or names an interface / type alias that is) a type literal. A union is none: no
+ * union stands for the options object (AD-26), and `optionsFailures` reports it.
+ */
 function literalKeyLists(value: unknown, typeKeys: Map<string, LiteralKey[][]>): LiteralKey[][] {
   const n = stripParens(value);
   if (n === null) {
     return [];
-  }
-  if (n.type === "TSUnionType") {
-    return nodes(n["types"]).flatMap((member) => literalKeyLists(member, typeKeys));
   }
   if (n.type === "TSTypeLiteral") {
     return [literalKeys(n["members"])];
@@ -909,6 +953,12 @@ function literalKeyLists(value: unknown, typeKeys: Map<string, LiteralKey[][]>):
     return name === null ? [] : (typeKeys.get(name) ?? []);
   }
   return [];
+}
+
+/** Whether a TS type is a union with a member (through parentheses) that is a type literal or names an interface / type-literal alias. */
+function unionOfOptions(value: unknown, typeKeys: Map<string, LiteralKey[][]>): boolean {
+  const n = stripParens(value);
+  return n !== null && n.type === "TSUnionType" && nodes(n["types"]).some((member) => literalKeyLists(member, typeKeys).length > 0);
 }
 
 /** The failures of one signature against an Upstream method or function, positional form. */
@@ -941,8 +991,9 @@ function defaultsFor(sig: TsSignature, ctx: CheckContext): readonly (SourceDefau
 
 /**
  * The failures of one signature in the AD-26 options form: the required parameters positionally, then one optional
- * options object whose keys are exactly the optional parameters' names, each optional, then a rest parameter when
- * Upstream ends with a variadic one.
+ * options object (a type literal, or an interface / type alias that is one; never a union) whose keys are exactly the
+ * optional parameters' names, each optional and, when the Upstream parameter is typed, nullable exactly when it is,
+ * then a rest parameter when Upstream ends with a variadic one.
  */
 function optionsFailures(params: readonly UpstreamParameter[], sig: TsSignature, ctx: CheckContext): string[] {
   const required = params.filter((p) => !p.optional);
@@ -956,6 +1007,8 @@ function optionsFailures(params: readonly UpstreamParameter[], sig: TsSignature,
   const match = options === undefined || options.rest ? undefined : literalKeyLists(options.type, ctx.typeKeys).find((list) => sorted(list.map((key) => key.name)) === sorted(keys));
   if (options === undefined) {
     out.push(`parameter ${position} (options) is missing`);
+  } else if (!options.rest && unionOfOptions(options.type, ctx.typeKeys)) {
+    out.push(`parameter ${position} is a union, not an options object with keys ${keys.join(", ")} (AD-26)`);
   } else if (match === undefined) {
     out.push(`parameter ${position} is not an options object with keys ${keys.join(", ")}`);
   } else {
@@ -964,6 +1017,18 @@ function optionsFailures(params: readonly UpstreamParameter[], sig: TsSignature,
     }
     for (const key of match.filter((k) => !k.optional)) {
       out.push(`parameter ${position} key ${key.name} is not optional`);
+    }
+    // Each key's type, by the positional rule: nullable exactly when the Upstream parameter is, when it is typed.
+    for (const key of match) {
+      const up = optional.find((q) => camel(q.name) === key.name);
+      if (up === undefined || up.type === null) {
+        continue;
+      }
+      if (up.nullable && !key.nullable) {
+        out.push(`parameter ${position} key ${key.name} is not nullable`);
+      } else if (!up.nullable && key.nullable) {
+        out.push(`parameter ${position} key ${key.name} is nullable, Upstream ${up.type}`);
+      }
     }
   }
   let next = required.length + 1;
