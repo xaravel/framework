@@ -10,10 +10,10 @@
 // `XARAVEL_UPSTREAM=require` (ESC-10.2-8). Where it is missing, the Upstream-derived parts fail under that variable
 // and otherwise warn and are skipped. The row-derived parts always run.
 //
-// `View\Factory::make()` and `file()` are ported sync under ESC-10.3-1's recommended option 1, which waits on the
-// Maintainer. `Console\Kernel::queue()` returns the structural `PendingDispatch`, a thenable the async-surface tool
-// cannot see through a structural type, so its `thenable` line is ESC-10.3-2's; this test checks the method is sync
-// and returns that type.
+// `View\Factory::make()` and `file()` are ported sync under the ESC-10.3-1 ruling (they stay sync, DIV-1.5).
+// `Console\Kernel::queue()` returns the structural `PendingDispatch`, which stands for the thenable its
+// header names (ESC-10.3-2), so its line is a `thenable` line; this test checks the method is sync, returns that type,
+// and is the namespaces' only thenable line.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -205,11 +205,12 @@ function thrownBy(fn: () => unknown): { readonly error: unknown; readonly messag
 
 xaravelTest(
   "XT-contracts-8",
-  "each of the 20 web and application subpaths of @xaravel/contracts exports exactly its Illuminate\\Contracts namespace's interface tokens and classes by Upstream short name; each token's fqcn() and brand are its FQCN, its instance methods and parameter names are its committed rows', its constant rows are frozen statics with Upstream's values (PasswordBroker) and its static method rows its file's <X>Static interface (Castable), no token has built-ins, and its parents are Upstream's contract parents in order (ContextLogProcessor's Monolog parent is none), so a branded class, a Mockery double and a PHPUnit mock of a child are instanceof every parent; ModelIdentifier and ViewCompilationException are registered classes, ModelIdentifier keeping Upstream's properties in their declared (phpSerialize, AD-23) order, its constructor values, useCollectionClass and getClass, its morph-map flag held per frame, and reading the morph map with no Relation registered failing as PHP's autoloader does (the registered-Relation round trip is blocked-by:database); every concrete class an Upstream file names is a src/structural/ type, a contract token, or Eloquent's Relation, which ModelIdentifier resolves through the Class Registry at call time, and the port imports the type where the class is in a signature; the brand-only tokens are checkable with hasBrand; and async-surface.json lists exactly the spec's async methods with their roots, SessionHandlerInterface's four included, with Console\\Kernel.queue sync (AD-1.1, AD-1.2, AD-6)",
+  "each of the 20 web and application subpaths of @xaravel/contracts exports exactly its Illuminate\\Contracts namespace's interface tokens and classes by Upstream short name; each token's fqcn() and brand are its FQCN, its instance methods and parameter names are its committed rows', its constant rows are frozen statics with Upstream's values (PasswordBroker) and its static method rows its file's <X>Static interface (Castable), no token has built-ins, and its parents are Upstream's contract parents in order (ContextLogProcessor's Monolog parent is none), so a branded class, a Mockery double and a PHPUnit mock of a child are instanceof every parent; ModelIdentifier and ViewCompilationException are registered classes, ModelIdentifier keeping Upstream's properties in their declared (phpSerialize, AD-23) order, its constructor values, useCollectionClass and getClass, its morph-map flag held per frame, and reading the morph map with no Relation registered failing as PHP's autoloader does (the registered-Relation round trip is blocked-by:database); every concrete class an Upstream file names is a src/structural/ type, a contract token, or Eloquent's Relation, which ModelIdentifier resolves through the Class Registry at call time, and the port imports the type where the class is in a signature; the brand-only tokens are checkable with hasBrand; and async-surface.json lists exactly the spec's async methods with their roots, SessionHandlerInterface's four included, with Console\\Kernel.queue sync and its only thenable line, the structural PendingDispatch's (AD-1.1, AD-1.2, AD-6, ESC-10.3-2)",
   () => {
     const upstreamSynced = upstreamOrWarn("web.test.ts");
     const expectedAsync = webAsyncTable();
     const actualAsync = new Map<string, string>();
+    const actualThenables = new Map<string, string>();
     const surface = asyncSurface();
     const consumed = new Set<(typeof surface)[number]>();
 
@@ -328,11 +329,16 @@ xaravelTest(
           }
         }
 
-        // The async methods of this contract, by its async-surface.json entries; a thenable line has no root.
+        // The async methods of this contract, by its async-surface.json entries; a thenable line has no root and goes
+        // to the thenable map instead.
         for (const entry of surface.filter((line) => line.file === file)) {
           consumed.add(entry);
-          Assert.assertSame(undefined, entry.thenable, `${file} ${entry.method} has a thenable line; Console\\Kernel.queue's is ESC-10.3-2's`);
-          actualAsync.set(`${ns}\\${entry.method}`, entry.root ?? "(no root)");
+          if (entry.thenable !== undefined) {
+            Assert.assertSame(undefined, entry.root, `${file} ${entry.method} has a thenable line and a root`);
+            actualThenables.set(`${ns}\\${entry.method}`, entry.thenable);
+          } else {
+            actualAsync.set(`${ns}\\${entry.method}`, entry.root ?? "(no root)");
+          }
         }
       }
     }
@@ -427,12 +433,16 @@ xaravelTest(
       }
     }
 
-    // Console\Kernel::queue returns the structural PendingDispatch, a thenable (AD-6), and is sync; its `thenable` line
-    // waits on ESC-10.3-2.
+    // Console\Kernel::queue returns the structural PendingDispatch, a thenable (AD-6), and is sync; its header names the
+    // thenable, so it has the namespaces' only `thenable` line (ESC-10.3-2) and no root.
     const kernel = readFileSync(join(PACKAGE, "src", "console", "Kernel.ts"), "utf8");
     Assert.assertMatchesRegularExpression(/^\s*queue\(command: string, parameters\?: PhpArrayLike\): PendingDispatch;$/m, kernel);
     Assert.assertStringStartsWith("// Illuminate\\Foundation\\Bus\\PendingDispatch,", readFileSync(join(PACKAGE, "src", "structural", "PendingDispatch.ts"), "utf8"));
     Assert.assertFalse(actualAsync.has("Console\\Kernel.queue"));
+    Assert.assertSame(
+      JSON.stringify([["Console\\Kernel.queue", "Illuminate\\Foundation\\Bus\\PendingDispatch"]]),
+      JSON.stringify([...actualThenables].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+    );
 
     // The session-handler root's structural type carries its own roots.
     for (const [file, owner] of Object.entries(STRUCTURAL_ASYNC)) {

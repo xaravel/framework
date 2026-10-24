@@ -284,6 +284,14 @@ function edgeCases(): void {
       [],
     ],
     "packages/demo/src/then/PipelineReturn.ts": ['import type { Pipeline } from "./pipeline";\n\nexport async function find(): Promise<Pipeline | null> {\n  return null;\n}\n', x(THEN)],
+    // A structural type (ESC-10.3-2): `PendingDispatch`, declared in `packages/contracts/src/structural/PendingDispatch.ts`
+    // and registered by nothing, stands for the class its header's first line names, the listed
+    // `Illuminate\Foundation\Bus\PendingDispatch`.
+    "packages/contracts/src/structural/PendingDispatch.ts": [
+      "// Illuminate\\Foundation\\Bus\\PendingDispatch, as a contract names it (AD-1.2): a subset of its public methods.\n\n/** A job dispatch not yet sent. */\nexport interface PendingDispatch {\n  onQueue(queue: string | null): this;\n}\n",
+      [],
+    ],
+    "packages/demo/src/then/StructuralReturn.ts": ['import type { PendingDispatch } from "../../../contracts/src/structural/PendingDispatch";\n\nexport async function queue(): Promise<PendingDispatch | null> {\n  return null;\n}\n', x(THEN)],
     "packages/demo/src/then/Awaited.ts": [
       'import { Builder } from "../support";\n\nexport class Repository {\n  async find(): Promise<readonly string[]> {\n    return await new Builder().get();\n  }\n\n  query(): Builder {\n    return new Builder();\n  }\n\n  async count(): Promise<number> {\n    const make = (): Builder => new Builder();\n    return make.length;\n  }\n}\n',
       [],
@@ -391,6 +399,7 @@ function edgeCases(): void {
     ["packages/demo/src/then/AsResolved.ts", "Illuminate\\Database\\Query\\Builder"],
     ["packages/demo/src/then/SameFile.ts", "Illuminate\\Http\\Client\\PendingRequest"],
     ["packages/demo/src/then/PipelineReturn.ts", "Illuminate\\Contracts\\Pipeline\\Pipeline"],
+    ["packages/demo/src/then/StructuralReturn.ts", "Illuminate\\Foundation\\Bus\\PendingDispatch"],
     ["packages/demo/src/then/Let.ts", "Lazy"],
   ] as const) {
     expect(thenMessage(path)).toBe(`an async function returns the thenable \`${name}\` unawaited, so the Promise resolves to its terminal's result; await it or drop \`async\` (AD-6)`);
