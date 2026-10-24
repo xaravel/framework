@@ -564,12 +564,22 @@ function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string");
 }
 
-/** The thenable FQCNs: `@xaravel/contracts/async`'s `THENABLE_TYPES` when it resolves from `root`, else the tool's list. */
+/**
+ * The thenable FQCNs: `@xaravel/contracts/async`'s `THENABLE_TYPES` when it resolves from `root`, or from
+ * `root/packages/contracts` (the package's own subpath, which Bun's isolated linker does not place at the root,
+ * ESC-10.5-2); else the tool's list.
+ */
 export async function thenableTypes(root: string): Promise<readonly string[]> {
-  let path: string;
-  try {
-    path = Bun.resolveSync("@xaravel/contracts/async", root);
-  } catch {
+  let path: string | null = null;
+  for (const from of [root, join(root, "packages", "contracts")]) {
+    try {
+      path = Bun.resolveSync("@xaravel/contracts/async", from);
+      break;
+    } catch {
+      // Not resolvable from here: try the next place.
+    }
+  }
+  if (path === null) {
     return THENABLE_TYPES;
   }
   try {

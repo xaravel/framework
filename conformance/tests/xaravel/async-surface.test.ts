@@ -136,6 +136,13 @@ xaravelTest(
     expect(listedFallback.exitCode).toBe(0);
     expect(readFileSync(SURFACE(fallback), "utf8")).toBe(`[\n${String.raw`{"method":"Repository.where","file":"src/Repository.ts","thenable":"Illuminate\\Database\\Query\\Builder"}`}\n]\n`);
 
+    // ESC-10.5-2: with no root install (Bun's isolated linker), the list resolves as packages/contracts' own subpath.
+    const workspace = tempDir("xaravel-async-surface-workspace-");
+    mkdirSync(join(workspace, "packages", "contracts", "src", "async"), { recursive: true });
+    writeFileSync(join(workspace, "packages", "contracts", "package.json"), `${JSON.stringify({ name: "@xaravel/contracts", type: "module", exports: { "./async": "./src/async/index.ts" } })}\n`);
+    writeFileSync(join(workspace, "packages", "contracts", "src", "async", "index.ts"), 'export const THENABLE_TYPES: readonly string[] = ["X\\\\Workspace"];\n');
+    expect(await thenableTypes(workspace)).toEqual(["X\\Workspace"]);
+
     // A contracts module whose THENABLE_TYPES is empty or not a string[] is not used.
     for (const source of ["export const THENABLE_TYPES: readonly string[] = [];\n", "export const THENABLE_TYPES = [1, 2];\n", "export const OTHER = 1;\n"]) {
       const bad = tempDir("xaravel-async-surface-contracts-");
