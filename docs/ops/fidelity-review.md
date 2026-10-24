@@ -127,6 +127,13 @@ The model is read from Claude's `modelUsage` keys, or Codex's `model:` header li
 
 Two records from one slot are one verdict, never two.
 
+**A Maintainer waiver** ([MAINT-2026-10-23-fidelity-waivers](../../decisions/MAINT-2026-10-23-fidelity-waivers.md), first used by [ESC-10.2-9](../../decisions/ESC-10.2-9.md)) is a third way to pass.
+- **Where it lives:** an approved, current `decisions/ESC-*.md` with `decided_by: Maintainer` may carry `fidelity_waiver: { subject: "<story or item id>", items: [F-<n>, …] }`.
+- **How it counts:** for that subject, one slot's reject counts when every item it fails is waived, beside the other slot's `pass`. The cross-model rule still applies.
+- **What still fails:** a reject that also fails an unwaived item, or two rejects.
+- **How it reads:** the count says `1 pass verdict and reviewer <n>'s reject waived by <decision> (<items>) for tree <t> (…)`. `review` prints `waived: <decision> (<items>)` and exits 0. On a standing reject a waiver covers, it prints `current: …` and exits 0 without running a reviewer.
+- **Who writes it:** only the Maintainer. The orchestrator never does.
+
 **A reject stands** ([ESC-8.8-1](../../decisions/ESC-8.8-1.md)). A slot's standing reject on a tree is its last `reject` record for that tree (`standingRejects`). It stands until its findings are fixed, which changes the reviewed tree, or the evidence it asks for is supplied: a later `pass` in the same slot on the same tree never overrides it, and the count adds an item `reviewer <n>: the later pass at tree <t> (record at line <l>) does not count: the reject at line <r> stands until the reviewed tree changes (ESC-8.8-1)`. `review` refuses to re-run on that tree (see below). There is no flag to override it. Evidence a reject asks for must be supplied outside the bookkeeping paths: a change to code, tests or this tool's prompt, all in the binding tree. Evidence written in the spec, sprint status or a manifest's `status:` line changes no binding tree, so it does not lift a reject. A malformed record (bad JSON, an unknown field value, or a `verdict` that disagrees with its items) fails the count, naming the record's line. Each counted record's items are also re-validated with `parseVerdict` against the root's checklist (every id once, a non-empty note, findings on every `fail`), and its `verdict` must be the one they decide; a record that fails is malformed.
 
 Each counted record's `prior` is re-checked too ([ESC-8.8-1](../../decisions/ESC-8.8-1.md) item 3). Its run is the contiguous records with its `tree` and `date` (one `review`'s records share both); the findings it should have addressed are `priorFindings` of the records before that run, for its tree. Its `prior` must hold each of them, with the same reviewer, item, path and detail, and no other, and pass the `addressed` rules (a finding `fixed: false` makes its item `fail`). Otherwise it is malformed: `record at line <l> does not address the findings of the latest reject before its run (ESC-8.8-1): it omits P-1 (reviewer 1, F-2) <path>: <detail>`.
@@ -137,7 +144,7 @@ Each counted record's `prior` is re-checked too ([ESC-8.8-1](../../decisions/ESC
 
 | Situation | Result |
 | --- | --- |
-| Both reviewers recorded `pass` | exit 0 |
+| Both reviewers recorded `pass`, or one did and a Maintainer waiver covers the other's reject (prints `waived: …`) | exit 0 |
 | The spec has a standing reject for the reviewed tree | exit 1, nothing recorded, no reviewer run; stdout has `STANDING reviewer <n>: reject at tree <t>` and that reject's `F-<n> <path>: <detail>` findings, stderr says to fix them (a tree change) or supply the evidence they ask for (ESC-8.8-1) |
 | A `reject` was recorded, or a reviewer produced no verdict (its record is missing; the other reviewer's is still recorded) | exit 1 |
 | An empty diff, a prompt over 1,000,000 characters, a missing or invalid manifest, a missing or ambiguous spec, no base, a malformed checklist, a git error | exit 1, nothing recorded, no reviewer run |

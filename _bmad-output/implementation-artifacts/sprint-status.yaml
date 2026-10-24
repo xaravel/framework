@@ -137,7 +137,7 @@ development_status:
 
   epic-10: in-progress
   10-1-token-brand-and-contract-t-mechanism: done
-  10-2-port-the-contracts-for-the-core-and-service-namespaces: blocked  # ESC-10.2-9 (conformance/escalations/ESC-10.2-9.md): the third pass makes XT-contracts-5 and -6 fail under XARAVEL_UPSTREAM=require without the snapshot; Fidelity Review at tree 8e9e2330 splits (reviewer 2 pass, reviewer 1 F-7 reject: contracts.jsonl rows over WHOLE_FILE_CAP shown only as an excerpt); raising the cap is the Maintainer's call
+  10-2-port-the-contracts-for-the-core-and-service-namespaces: in-progress  # ESC-10.2-9 ruled (decisions/ESC-10.2-9.md): the Maintainer waives F-7 for Story 10.2 (MAINT-2026-10-23-fidelity-waivers); run the Fidelity Review again, and a reject that fails only F-7 counts beside a pass; then clear the block and continue
   10-3-port-the-contracts-for-the-web-and-application-namespaces: backlog
   10-4-container-alias-table-and-canonical-tokens: backlog
   10-5-xaravel-only-contracts: backlog

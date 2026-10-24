@@ -85,7 +85,7 @@ F. **Next Story.** Read STATUS. Pick the first Story in file order whose status 
    - On `done`: set the Story to `done` in sprint status. When it was the last Story of its epic, set the epic to `done` too. Run whatever verification the repo has at this point (`bun install`, `bun test`, `tsc`, oxlint and the harness, once they exist). Commit everything, open a PR and merge it (section 4). Outcome `progress`.
    - On `blocked`: keep the spec file and any Escalation, and set the Story `blocked` in sprint status with the reason. Commit, open a PR and merge it, so the block is recorded on `main`. Comment on ISSUE with the blocking condition. Outcome `progress`.
 
-G. **Escalations you may rule on.** If an open Escalation in `conformance/escalations/` has no decision file, and the MAINT ruling lets the orchestrator decide it, write the decision on a `planning/esc-<id>` branch, unblock the Story, and open and merge the PR. Outcome `progress`.
+G. **Escalations you may rule on.** If an open Escalation in `conformance/escalations/` has no decision file, and the MAINT ruling lets the orchestrator decide it, write the decision on a `planning/esc-<id>` branch, unblock the Story, and open and merge the PR. Outcome `progress`. Never write `decided_by: Maintainer` or a `fidelity_waiver` in a decision: only the Maintainer waives a Fidelity Review item (`decisions/MAINT-2026-10-23-fidelity-waivers.md`). Never propose a waiver as an Escalation's recommended option.
 
 H. **Paused at a checkpoint.** If the only thing stopping F is a closed checkpoint, comment on ISSUE once (skip it if your last comment already says this): `🤖 Paused after the epic <N> retrospective (<doc link>). Reply "go" on this issue to start epic <N+1>.` Outcome `idle`.
 
