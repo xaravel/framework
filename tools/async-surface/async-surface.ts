@@ -564,12 +564,30 @@ function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string");
 }
 
-/** The thenable FQCNs: `@xaravel/contracts/async`'s `THENABLE_TYPES` when it resolves from `root`, else the tool's list. */
+/**
+ * Where `@xaravel/contracts/async` resolves: from `<root>/packages/contracts` (the package resolves its own subpath
+ * through its `exports`; Bun's isolated linker links no `@xaravel/*` package into the root's `node_modules`), else
+ * from `root`, else `null` (ESC-10.5-2).
+ */
+function contractsAsyncPath(root: string): string | null {
+  const contracts = join(root, "packages", "contracts");
+  for (const from of existsSync(join(contracts, "package.json")) ? [contracts, root] : [root]) {
+    try {
+      return Bun.resolveSync("@xaravel/contracts/async", from);
+    } catch {
+      // Not from here: try the next directory.
+    }
+  }
+  return null;
+}
+
+/**
+ * The thenable FQCNs: `@xaravel/contracts/async`'s `THENABLE_TYPES` when it resolves from `<root>/packages/contracts`
+ * or from `root`, else the tool's list.
+ */
 export async function thenableTypes(root: string): Promise<readonly string[]> {
-  let path: string;
-  try {
-    path = Bun.resolveSync("@xaravel/contracts/async", root);
-  } catch {
+  const path = contractsAsyncPath(root);
+  if (path === null) {
     return THENABLE_TYPES;
   }
   try {

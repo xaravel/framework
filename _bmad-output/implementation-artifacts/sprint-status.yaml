@@ -140,7 +140,7 @@ development_status:
   10-2-port-the-contracts-for-the-core-and-service-namespaces: done
   10-3-port-the-contracts-for-the-web-and-application-namespaces: done
   10-4-container-alias-table-and-canonical-tokens: done
-  10-5-xaravel-only-contracts: blocked  # ESC-10.5-1 (test hook order: Upstream vs AD-25, needs an AD-25 correction) and ESC-10.5-2 (async-surface resolves @xaravel/contracts/async from the repo root, a Protected Path change)
+  10-5-xaravel-only-contracts: blocked  # ESC-10.5-1 (test hook order: Upstream vs AD-25, needs an AD-25 correction); ESC-10.5-2 ruled (decisions/ESC-10.5-2.md: async-surface resolves @xaravel/contracts/async from packages/contracts)
   10-6-contracts-complete-and-protected: backlog
   epic-10-retrospective: optional
 
