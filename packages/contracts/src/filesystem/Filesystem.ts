@@ -1,7 +1,7 @@
 // Illuminate\Contracts\Filesystem\Filesystem, from laravel/framework v13.37.0.
-// Upstream's constants `VISIBILITY_PUBLIC = 'public'` and `VISIBILITY_PRIVATE = 'private'` are static: a TypeScript
-// interface and a contract token cannot declare them, so they are left out here pending
-// conformance/escalations/ESC-10.2-1.md. A PHP stream `resource` is the structural `PhpResource`.
+// Upstream's constants `VISIBILITY_PUBLIC = 'public'` and `VISIBILITY_PRIVATE = 'private'` are the token's frozen
+// statics, so `Filesystem.VISIBILITY_PUBLIC === 'public'` as PHP's `Filesystem::VISIBILITY_PUBLIC` is
+// (decisions/ESC-10.2-1.md). A PHP stream `resource` is the structural `PhpResource`.
 import { contract } from "../Contract";
 import type { File } from "../structural/File";
 import type { PhpArrayLike } from "../structural/PhpArrayLike";
@@ -154,7 +154,10 @@ export interface Filesystem {
   deleteDirectory(directory: string): Promise<boolean>;
 }
 
-export const Filesystem = contract<Filesystem, typeof FilesystemBrand>(
+/** Upstream's interface constants, the token's statics (ESC-10.2-1). */
+type FilesystemStatics = { readonly VISIBILITY_PUBLIC: "public"; readonly VISIBILITY_PRIVATE: "private" };
+
+export const Filesystem = contract<Filesystem, typeof FilesystemBrand, FilesystemStatics>(
   "Illuminate\\Contracts\\Filesystem\\Filesystem",
   {
     allDirectories: ["directory"],
@@ -181,4 +184,6 @@ export const Filesystem = contract<Filesystem, typeof FilesystemBrand>(
     size: ["path"],
     writeStream: ["path", "resource", "options"],
   },
+  [],
+  { VISIBILITY_PUBLIC: "public", VISIBILITY_PRIVATE: "private" },
 );

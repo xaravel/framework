@@ -1,6 +1,7 @@
 // Illuminate\Contracts\Pipeline\Pipeline, from laravel/framework v13.37.0.
-// Upstream's `then(Closure $destination)` keeps its name, so a pipeline is structurally a thenable: await
-// `pipeline.then(destination)`, never the pipeline itself.
+// Upstream's `then(Closure $destination)` keeps its name, and a Pipeline is a declared thenable
+// (decisions/ESC-10.2-2.md): the interface also declares the `PromiseLike` form of `then`, so it is
+// `PromiseLike`-compatible, and an awaited pipeline runs with an identity destination (the Pipeline Story's to build).
 import { contract } from "../Contract";
 import type { Closure } from "../structural/Closure";
 
@@ -24,6 +25,11 @@ export interface Pipeline {
    * @asyncRoot callback
    */
   then(destination: Closure): Promise<unknown>;
+  /** Await the pipeline: it runs with an identity destination and settles with its result (ESC-10.2-2). */
+  then<R1 = unknown, R2 = never>(
+    onfulfilled?: ((value: unknown) => R1 | PromiseLike<R1>) | null,
+    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
+  ): PromiseLike<R1 | R2>;
 }
 
 export const Pipeline = contract<Pipeline, typeof PipelineBrand>(
