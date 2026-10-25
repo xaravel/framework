@@ -2,8 +2,8 @@
 title: 'A contract token is its FQCN class-string as a PHP value; a lint rule refuses string-coercing one (epic-10-retro-item-10)'
 type: 'feature'
 created: '2026-10-24'
-status: 'in-progress'
-baseline_revision: '51c2b332d8998baa314f1a8913f355d3e2d56206'
+status: 'in-review'
+baseline_revision: '9a4d239c47a5d66c0759f38292dc2360bb325958'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -79,6 +79,13 @@ deferred: []
 - Given the full `bun run harness`, `bun run typecheck` and `bun run lint`, when run, then there are no differences and no errors.
 
 ## Spec Change Log
+
+### 2026-10-24 — resume after #397
+
+- **Trigger:** the build stopped (#396) because XT-contracts-12 (`packages/contracts/tests/xaravel/aliases.test.ts:369`) had the same token-not-string `assertSame` check as XT-contracts-11/19. The Maintainer approved the same identity re-pin for it ("Item 10's route", item 1, *Added after #396*, PR #397).
+- **Amended:** the scope in Boundaries reads with XT-contracts-12 beside XT-contracts-11 and XT-contracts-19 (all three in `aliases.test.ts` / `hardening.test.ts`). Line 369 now calls the file's `assertSameAbstract` helper. No other `packages/contracts` line changes. The I/O matrix's jsonEncode row reads `"Illuminate\\Contracts\\Support\\Arrayable"`: an FQCN has no `/`, so the token encodes exactly as `json_encode` writes its FQCN string under every flag (XT-runtime-41), and `JSON_UNESCAPED_SLASHES` changes nothing.
+- **Known-bad state avoided:** merging the item with XT-contracts-12 left as an `assertSame`, which a resolver returning the FQCN string would pass.
+- **KEEP:** the whole built change on this branch; only the one re-pin is added.
 
 ## Review Triage Log
 

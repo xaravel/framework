@@ -366,6 +366,6 @@ xaravelTest(
     // A string key with no contract, and a provider alias set with a contract, are valid.
     Assert.assertSame("(nothing thrown)", logicMessage(() => validateAliasTable(table({ CORE_CONTAINER_ALIASES: { k: ["App\\K"] }, PROVIDER_ALIASES: [["App\\M", "Illuminate\\Contracts\\Cache\\Factory"]] }))));
     const typed: ContractToken<object> = cache.Factory;
-    Assert.assertSame(typed, aliasResolver(table({ PROVIDER_ALIASES: [["App\\M", "Illuminate\\Contracts\\Cache\\Factory"]] }))("App\\M"));
+    assertSameAbstract(typed, aliasResolver(table({ PROVIDER_ALIASES: [["App\\M", "Illuminate\\Contracts\\Cache\\Factory"]] }))("App\\M"));
   },
 );
