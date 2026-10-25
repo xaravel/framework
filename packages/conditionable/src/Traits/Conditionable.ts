@@ -2,7 +2,9 @@
 // Conditionable)` (AD-26 Traits row).
 //
 // Logic. Ported one-for-one from Upstream. PHP checks `?callable $callback` / `?callable $default` on entry, so a
-// non-null argument that is not a closure (a class stands for a class-string) throws PHP's `TypeError` on every branch. A `value` that is a PHP Closure (a
+// non-null argument that is neither a closure nor an invokable object (an instance of a class whose `__invoke` is a
+// function, called as `object.__invoke(instance, value)`) throws PHP's `TypeError` on every branch; a class stands for a
+// class-string, and a plain object with an `__invoke` key is a PHP array, so both are rejected. A `value` that is a PHP Closure (a
 // function that is not a class: not `class` source, no FQCN brand, not a native constructor) is called with the
 // instance and replaced by its result. `arguments.length` stands in for `func_num_args()`: with no argument the method
 // returns a `HigherOrderWhenProxy` (`unless` negating the condition it captures), and with one it returns the proxy
@@ -24,8 +26,12 @@ import { classNameOf, isThenable } from "../support/values";
 
 /** A condition: the value itself, or a closure the instance is passed to, whose result is the value. Never a Promise (DIV-1.6). */
 type Condition<S, V> = NotPromise<V> | ((self: S) => NotPromise<V>);
-/** A callback or default: called with the instance and the condition's value. */
-type Callback<S, V, R> = (self: S, value: V) => R;
+/**
+ * A callback or default: called with the instance and the condition's value. A closure, or an invokable object (an
+ * instance of a class with an `__invoke` method), whose `__invoke` is called. The type cannot tell a class instance
+ * from a plain object literal `{ __invoke }`; a plain object is a PHP array, rejected at run time.
+ */
+type Callback<S, V, R> = ((self: S, value: V) => R) | { __invoke(self: S, value: V): R };
 /** What a callback's result `r` makes the method return: `r ?? this`. */
 type Result<R, S> = Exclude<R, null | undefined | void> | S;
 
@@ -83,13 +89,25 @@ function typeNameOf(value: unknown): string {
   return classNameOf(object);
 }
 
-/** PHP's `?callable` parameter check on entry: `null` (`undefined` read as `null`) or a closure, else PHP's `TypeError`. */
+/**
+ * PHP's `?callable` parameter check on entry: `null` (`undefined` read as `null`), a closure, or an invokable object,
+ * else PHP's `TypeError`. An invokable object is an instance of a class (an object `typeNameOf` names by its class, not
+ * `array`, `float` or `string`) whose `__invoke` is a function; it is returned wrapped as a function calling
+ * `object.__invoke(self, value)`, with the object as `this`, as Macroable's `callMacro` does. A plain object with an
+ * `__invoke` key is a PHP array, which is callable only as `[object, 'method']`, so it is rejected.
+ */
 function callableArgument(self: object, method: string, position: number, name: string, value: unknown): ((self: unknown, value: unknown) => unknown) | null {
   if (value === null || value === undefined) {
     return null;
   }
   if (typeof value !== "function") {
-    throw new PhpTypeError(`${classNameOf(self)}::${method}(): Argument #${position} ($${name}) must be of type ?callable, ${typeNameOf(value)} given`);
+    const type = typeNameOf(value);
+    if (typeof value === "object" && type !== "array" && type !== "float" && type !== "string" && typeof (value as { __invoke?: unknown }).__invoke === "function") {
+      const invokable = value as { __invoke(self: unknown, value: unknown): unknown };
+
+      return (instance: unknown, argument: unknown): unknown => invokable.__invoke(instance, argument);
+    }
+    throw new PhpTypeError(`${classNameOf(self)}::${method}(): Argument #${position} ($${name}) must be of type ?callable, ${type} given`);
   }
   // A class (a function that is not a closure) stands for a PHP class-string, which is not callable.
   if (!isClosure(value)) {
