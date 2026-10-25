@@ -125,7 +125,7 @@ function install(target: object, name: string, descriptor: PropertyDescriptor, s
  */
 type Builtin =
   | { readonly kind: "function"; readonly fn: (...args: unknown[]) => unknown }
-  | { readonly kind: "accessor"; readonly get: () => unknown; readonly set: ((value: unknown) => void) | undefined };
+  | { readonly kind: "accessor"; readonly get: () => unknown; readonly set: ((value: unknown) => void) | null };
 
 /** The JavaScript member `name` resolves to on `stop`, or `null` (see `Builtin`). */
 function builtinOf(stop: object, name: string): Builtin | null {
@@ -142,7 +142,7 @@ function builtinOf(stop: object, name: string): Builtin | null {
     if (descriptor !== undefined) {
       const get: unknown = Reflect.get(descriptor, "get");
       const set: unknown = Reflect.get(descriptor, "set");
-      return typeof get === "function" ? { kind: "accessor", get: get as () => unknown, set: typeof set === "function" ? (set as (value: unknown) => void) : undefined } : null;
+      return typeof get === "function" ? { kind: "accessor", get: get as () => unknown, set: typeof set === "function" ? (set as (value: unknown) => void) : null } : null;
     }
   }
   return null;
@@ -156,17 +156,18 @@ function hasEntry(receiver: unknown, name: string): boolean {
   if (typeof receiver !== "function") {
     return false;
   }
+  let table: FrameSlot<MacroTable>;
   try {
-    usingClass(receiver);
+    table = macros(receiver);
   } catch {
     return false;
   }
-  return macros(receiver).get().has(name);
+  return table.get().has(name);
 }
 
 /** The class of an instance-side receiver, or `null` for a primitive, `null` or `undefined`. */
 function classOf(receiver: unknown): unknown {
-  return (typeof receiver === "object" && receiver !== null) || typeof receiver === "function" ? (receiver as { constructor?: unknown }).constructor : null;
+  return (typeof receiver === "object" && receiver !== null) || typeof receiver === "function" ? ((receiver as { constructor?: unknown }).constructor ?? null) : null;
 }
 
 /**
@@ -200,7 +201,7 @@ function dispatcher(name: string, builtin: Builtin | null, classOfReceiver: (rec
     get(this: unknown): unknown {
       return hasEntry(classOfReceiver(this), name) ? forwarder : Reflect.apply(get, this, []);
     },
-    set,
+    set: set ?? undefined,
   };
 }
 

@@ -627,6 +627,10 @@ xaravelTest(
       Assert.assertSame("Glyph(a)", statics.apply("a"), "a static apply macro runs");
       Assert.assertSame("Glyph()", statics.bind(), "a static bind macro runs");
       Assert.assertSame("Glyph()", statics.toString(), "a static toString macro runs");
+      const objectStatics = Glyph as unknown as ObjectNamed;
+      Assert.assertSame("Glyph()", objectStatics.valueOf(), "a static valueOf macro, a name Function.prototype inherits from Object.prototype, runs");
+      Assert.assertSame("Glyph(x)", objectStatics.hasOwnProperty("x"), "a static hasOwnProperty macro runs");
+      Assert.assertSame("SubGlyph(z)", (SubGlyph as unknown as ObjectNamed).hasOwnProperty("z"), "a static hasOwnProperty macro on a subclass");
       const subStatics = SubGlyph as unknown as FunctionNamed;
       Assert.assertSame("SubGlyph(3)", subStatics.call(3), "a static call on a subclass binds the subclass");
       Assert.assertSame("SubGlyph()", subStatics.apply(), "a static apply on a subclass");
@@ -648,6 +652,8 @@ xaravelTest(
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\SubGlyph::valueOf does not exist.", () => sub.valueOf(), "a flushed valueOf macro on a subclass");
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Glyph::call does not exist.", () => statics.call(), "a flushed static call macro");
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\SubGlyph::bind does not exist.", () => subStatics.bind(), "a flushed static bind macro on a subclass");
+      assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Glyph::valueOf does not exist.", () => objectStatics.valueOf(), "a flushed static valueOf macro");
+      assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Glyph::hasOwnProperty does not exist.", () => objectStatics.hasOwnProperty("x"), "a flushed static hasOwnProperty macro");
     });
 
     // A later frame, and no frame, that never registered the names: JavaScript's own members run, so nothing leaks.
@@ -669,6 +675,10 @@ xaravelTest(
       Assert.assertSame("function", typeof statics.bind(null), `${where}: Glyph.bind is Function.prototype's and returns a bound function`);
       Assert.assertStringContainsString("class", String(statics.toString()), `${where}: Glyph.toString is Function.prototype's`);
       Assert.assertSame("function", typeof (SubGlyph as unknown as FunctionNamed).bind(null), `${where}: SubGlyph.bind is Function.prototype's`);
+      const objectStatics = Glyph as unknown as ObjectNamed;
+      Assert.assertTrue(objectStatics.valueOf() === Glyph, `${where}: Glyph.valueOf is Object.prototype's`);
+      Assert.assertTrue(objectStatics.hasOwnProperty("prototype") === true && objectStatics.hasOwnProperty("nope") === false, `${where}: Glyph.hasOwnProperty is Object.prototype's`);
+      Assert.assertTrue((SubGlyph as unknown as ObjectNamed).hasOwnProperty("prototype") === true, `${where}: SubGlyph.hasOwnProperty is Object.prototype's`);
       Assert.assertFalse(Glyph.hasMacro("toString"), `${where}: toString is not registered`);
     };
     inTest(() => isolated("a later test frame"));
@@ -797,6 +807,8 @@ xaravelTest(
       return `${side}(${args.map(String).join(",")})`;
     };
     inTest(() => {
+      const instancePrototypeBefore = Object.getPrototypeOf(new Proto()) as unknown;
+      const classPrototypeBefore = Object.getPrototypeOf(Proto) as unknown;
       for (const name of ["__proto__", "caller", "arguments"]) {
         Proto.macro(name, whose);
       }
@@ -807,8 +819,8 @@ xaravelTest(
       Assert.assertSame("static()", (Proto as unknown as { __proto__: () => unknown }).__proto__(), "a static __proto__ macro runs");
       Assert.assertSame("static(3)", (Proto as unknown as { caller: (n: number) => unknown }).caller(3), "a static caller macro runs");
       Assert.assertSame("static()", (Proto as unknown as { arguments: () => unknown }).arguments(), "a static arguments macro runs");
-      Assert.assertTrue(Object.getPrototypeOf(proto) === Proto.prototype, "the instance's prototype is unchanged");
-      Assert.assertTrue(Object.getPrototypeOf(statics) === Object.getPrototypeOf(Proto), "the class's prototype is unchanged");
+      Assert.assertTrue(Object.getPrototypeOf(proto) === instancePrototypeBefore, "the instance's prototype is unchanged");
+      Assert.assertTrue(Object.getPrototypeOf(statics) === classPrototypeBefore, "the class's prototype is unchanged");
       const target = {};
       const moved = new Proto() as unknown as AccessorNamed;
       moved.__proto__ = target;
@@ -833,6 +845,7 @@ xaravelTest(
     };
     inTest(() => isolatedAccessors("a later test frame"));
     isolatedAccessors("no active frame");
+    runInFrame("unit", () => isolatedAccessors("a root unit frame"));
 
     // A using class below another using class: Outer's dispatcher shadows Inner's install and reads the receiver's table.
     inTest(() => {
