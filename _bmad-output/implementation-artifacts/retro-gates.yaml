@@ -91,6 +91,4 @@ epic-12:
   doc: _bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-12-retro-item-3-dual-helper-async-edges
-    - epic-12-retro-item-4-conditionable-reverification-ac
+  waiting_on_maintainer: []

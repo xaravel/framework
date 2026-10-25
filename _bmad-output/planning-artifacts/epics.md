@@ -5427,6 +5427,10 @@ So that model queries behave as in Laravel (FR-61).
 **When** it is awaited
 **Then** the static call forwards to a new Builder through a generated delegating method, not a Proxy (AD-26), and resolves to a hydrated `User` or `null`.
 
+**Given** `User.query().when(true).orderBy('name')`
+**When** the Eloquent Builder serves `orderBy` and the other query-builder methods it forwards through `__call`
+**Then** each forwarded method is reachable on the `HigherOrderWhenProxy` that `when()` / `unless()` return, as a member DIV-12.12 generates, so the higher-order form chains as it does in Laravel, with an XT case (Epic 12 retro item 4).
+
 **Given** `firstOrFail()` / `findOrFail()` with no match
 **When** they run
 **Then** they throw `ModelNotFoundException`, with Upstream's message and the model's FQCN.

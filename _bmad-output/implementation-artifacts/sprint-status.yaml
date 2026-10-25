@@ -1779,8 +1779,8 @@ action_items:
       callable strings and [object, method] arrays or reject them under a DIV clause
       (findings L1, L3)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-12-items.md"
   - id: "epic-12-retro-item-4-conditionable-reverification-ac"
     epic: 12
     action: "epics.md: add to a Database Story (the first Eloquent Builder Story,
@@ -1790,5 +1790,5 @@ action_items:
       Story say how methods Builder serves through __call reach HigherOrderWhenProxy
       generated members (DIV-12.12) (findings S1, L4, L6)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-12-items.md"
