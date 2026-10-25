@@ -241,8 +241,8 @@ interface MixinMethod {
 /**
  * The methods PHP's `getMethods(IS_PUBLIC | IS_PROTECTED)` lists for `mixin`'s class `klass`, in its order, by name: the
  * function-valued members its prototype chain and its static side declare below `Object.prototype`, `Object` and
- * `Function.prototype`. A `constructor` member, the prototype's class link in JavaScript and never a method, is skipped
- * on both sides (DIV-12.11); any other name the mixin declares counts, `toString` included.
+ * `Function.prototype`. The prototype's `constructor`, JavaScript's class link and never a method, is skipped (DIV-12.11);
+ * any other name the mixin declares counts, `toString` and a static method named `constructor` included.
  */
 function mixinMethods(mixin: object, klass: unknown): Map<string, MixinMethod> {
   const methods = new Map<string, MixinMethod>();
@@ -257,7 +257,7 @@ function mixinMethods(mixin: object, klass: unknown): Map<string, MixinMethod> {
   for (let holder: unknown = klass; typeof holder === "function" && holder !== Object && holder !== Function.prototype; holder = Object.getPrototypeOf(holder)) {
     for (const key of Object.getOwnPropertyNames(holder)) {
       const descriptor = Object.getOwnPropertyDescriptor(holder, key)!;
-      if (key !== "constructor" && !methods.has(key) && "value" in descriptor && typeof descriptor.value === "function") {
+      if (!methods.has(key) && "value" in descriptor && typeof descriptor.value === "function") {
         methods.set(key, { method: descriptor.value as (...args: unknown[]) => unknown, isStatic: true });
       }
     }
@@ -301,8 +301,8 @@ export class Macroable {
    * Mix another object into the class: each public or protected method of the object's class (its prototype chain
    * and its static side) is called, and its result is registered as a macro of the same name; with `replace` false, a
    * macro that already exists is kept. A prototype method is called with `this` the object; a static method with
-   * `this` the object's class, as PHP's `static::`. A `constructor` member, prototype or static, is skipped; a method named
-   * `prototype`, `name` or `length` throws as `macro()` does (DIV-12.11).
+   * `this` the object's class, as PHP's `static::`. The prototype's `constructor` is skipped; a method named `prototype`,
+   * `name` or `length`, or a static method named `constructor`, throws as `macro()` does (DIV-12.11).
    */
   static mixin(mixin: object, replace: boolean = true): null {
     guardWrite("mix in macros");
