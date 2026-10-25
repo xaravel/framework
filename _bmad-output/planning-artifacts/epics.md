@@ -3923,8 +3923,8 @@ So that per-consumer dependencies work as in Laravel (FR-19, AD-4).
 **And** descriptors whose service belongs to a later Component raise `BlockedByComponentError(<c>)` when that Component isn't installed.
 
 **Given** the first Component-owned resolution that can fail
-**When** `BlockedByComponentError` is defined
-**Then** it lives in `@xaravel/runtime`, is registered as a framework class, has `name` `BlockedByComponentError`, and its message starts `BlockedByComponentError(<c>)`, where `<c>` is the owning Component's package name from the component map; that is the form the harness matches (ESC-5.3-1).
+**When** it raises `BlockedByComponentError`
+**Then** it uses the class already in `@xaravel/runtime` (ESC-12.1-2), which is registered as a framework class, has `name` `BlockedByComponentError`, and has a message starting `BlockedByComponentError(<c>)`, where `<c>` is the owning Component's package name from the component map; that is the form the harness matches (ESC-5.3-1).
 
 ### Story 17.3: Calling, extending, tagging and resolving hooks
 
