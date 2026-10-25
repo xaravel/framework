@@ -29,5 +29,9 @@
     "@xaravel/console": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }

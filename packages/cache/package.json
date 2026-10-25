@@ -37,5 +37,9 @@
     "@xaravel/redis": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }
