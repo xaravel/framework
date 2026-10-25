@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 15:10
+last_updated: 10-25-2026 16:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1810,15 +1810,16 @@ action_items:
   - id: "epic-13-item-2-reflection-contracts"
     epic: 13
     action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-13-1-second.md):
-      packages/runtime: a table from a contract token's FQCN to the token, written by
-      contract(...), read by interface_exists and new ReflectionClass(<token FQCN>) (ESC-13.1-7);
-      ReflectionEnum (isBacked, getBackingType) and enum_exists in @xaravel/runtime/php, reading
-      a backed enum's static backingType (spine AD-26, ESC-13.1-8); packages/assert: assertInstanceOf
-      / assertNotInstanceOf accept a class-string resolved through the Class Registry or
-      the token table, else UnknownClassOrInterfaceException (ESC-13.1-9); tools/expectations/reasons.ts:
-      blocked-by:<c> also valid when <c> is in the same Phase and its first Story's Epic
-      is later than the line's Component's, with its comment and docs (ESC-13.1-10). An
-      XT case for each; no assertion removed or weakened; lands before Story 13.1 resumes"
+      packages/runtime: a table from a contract token's FQCN to the token, written
+      by contract(...), read by interface_exists and new ReflectionClass(<token FQCN>)
+      (ESC-13.1-7); ReflectionEnum (isBacked, getBackingType) and enum_exists in @xaravel/runtime/php,
+      reading a backed enum's static backingType (spine AD-26, ESC-13.1-8); packages/assert:
+      assertInstanceOf / assertNotInstanceOf accept a class-string resolved through
+      the Class Registry or the token table, else UnknownClassOrInterfaceException
+      (ESC-13.1-9); tools/expectations/reasons.ts: blocked-by:<c> also valid when
+      <c> is in the same Phase and its first Story's Epic is later than the line's
+      Component's, with its comment and docs (ESC-13.1-10). An XT case for each; no
+      assertion removed or weakened; lands before Story 13.1 resumes"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"
