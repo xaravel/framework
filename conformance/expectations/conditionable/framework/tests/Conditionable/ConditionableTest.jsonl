@@ -1,2 +1,2 @@
-{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testUnless","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testWhen","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testUnless","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-2"}
+{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testWhen","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-2"}

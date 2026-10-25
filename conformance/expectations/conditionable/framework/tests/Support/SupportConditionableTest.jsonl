@@ -1,6 +1,6 @@
 {"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessConditionCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessDefaultCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-1"}
 {"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenConditionCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenDefaultCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-1"}
