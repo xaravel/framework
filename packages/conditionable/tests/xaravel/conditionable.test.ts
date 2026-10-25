@@ -1,7 +1,7 @@
 // Xaravel Tests for Story 12.1: `Conditionable` as a runtime trait with Upstream's closure values and higher-order proxy
-// (XT-conditionable-1), its AD-6 dual-helper behaviour and DIV-1.6's thenable conditions (XT-conditionable-2), and the
-// package's close gate (XT-conditionable-3). Registrations into the Class Registry are process-wide, so every FQCN here
-// is used by this file only.
+// (XT-conditionable-1), its AD-6 dual-helper behaviour and DIV-1.6's thenable conditions (XT-conditionable-2), the
+// package's close gate (XT-conditionable-3), and invokable objects as callbacks (XT-conditionable-4, Epic 12 retro item
+// 1). Registrations into the Class Registry are process-wide, so every FQCN here is used by this file only.
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -12,6 +12,7 @@ import { classUsesRecursive, Error as PhpError, fqcn, looseEquals, mixin, regist
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 const PACKAGE = join(REPO, "packages", "conditionable");
 const LOGGER = "Xaravel\\Tests\\Conditionable\\Logger";
+const MOCK_FIXTURE = join(PACKAGE, "tests", "xaravel", "fixtures", "invokable-mock.fixture.ts");
 
 class Logger extends mixin(null, Conditionable) {
   values: unknown[] = [];
@@ -486,4 +487,123 @@ xaravelTest(
     Assert.assertStringContainsString("(docs/conditionable.md)", readme, "README.md links docs/conditionable.md");
   },
   300000,
+);
+
+/** An invokable class: PHP's `?callable` accepts its instances. Records each call and its `this`. */
+class Invokable {
+  calls: Array<{ receiver: unknown; self: unknown; value: unknown }> = [];
+
+  constructor(private readonly returns: unknown = null) {}
+
+  __invoke(self: Logger, value: unknown): unknown {
+    this.calls.push({ receiver: this, self, value });
+
+    return this.returns;
+  }
+}
+
+registerClass("Xaravel\\Tests\\Conditionable\\Invokable", Invokable);
+
+/** An invokable class whose `__invoke` is async. */
+class AsyncInvokable {
+  async __invoke(_self: Logger, value: unknown): Promise<string> {
+    return `async:${String(value)}`;
+  }
+}
+
+registerClass("Xaravel\\Tests\\Conditionable\\AsyncInvokable", AsyncInvokable);
+
+/** An instance whose `__invoke` is not a function: not callable. */
+class NotInvokable {
+  __invoke = 5;
+}
+
+registerClass("Xaravel\\Tests\\Conditionable\\NotInvokable", NotInvokable);
+
+xaravelTest(
+  "XT-conditionable-4",
+  "an invokable object (an instance of a class whose __invoke is a function) is a `?callable` callback or default for `when` / `unless`, called as object.__invoke(instance, value) with the object as this and its result (an async __invoke's own Promise included) `?? this`; it is not called when its branch is not taken, nor when it is the condition; a plain object with an __invoke key is a PHP array and an instance whose __invoke is not a function is rejected with PHP's ?callable TypeError; a Mockery double of an invokable class is called through its __invoke",
+  async () => {
+    // An invokable callback: `__invoke(logger, value)` with the object as `this`, its result returned.
+    const logger = new Logger();
+    const callback = new Invokable("result");
+    Assert.assertSame("result", logger.when(true, callback));
+    Assert.assertSame(1, callback.calls.length);
+    Assert.assertSame(callback, callback.calls[0]?.receiver);
+    Assert.assertSame(logger, callback.calls[0]?.self);
+    Assert.assertSame(true, callback.calls[0]?.value);
+    Assert.assertSame("result", logger.unless(false, callback));
+    Assert.assertSame(false, callback.calls[1]?.value);
+
+    // A null result returns the instance.
+    const returnsNull = new Invokable();
+    Assert.assertSame(logger, logger.when("yes", returnsNull));
+    Assert.assertSame("yes", returnsNull.calls[0]?.value);
+    Assert.assertSame(logger, logger.unless(0, returnsNull));
+    Assert.assertSame(2, returnsNull.calls.length);
+
+    // An invokable default.
+    const fallback = new Invokable();
+    Assert.assertSame(logger, logger.unless(true, null, fallback));
+    Assert.assertSame(1, fallback.calls.length);
+    Assert.assertSame(fallback, fallback.calls[0]?.receiver);
+    Assert.assertSame(logger, fallback.calls[0]?.self);
+    Assert.assertSame(true, fallback.calls[0]?.value);
+    Assert.assertSame("default", logger.when(false, null, new Invokable("default")));
+
+    // Not taken: the instance, `__invoke` not called.
+    const untouched = new Invokable("never");
+    Assert.assertSame(logger, logger.when(false, untouched));
+    Assert.assertSame(logger, logger.unless(true, untouched));
+    Assert.assertSame(logger, logger.when(true, (self: Logger) => self, untouched));
+    Assert.assertSame(0, untouched.calls.length);
+
+    // An async `__invoke`: its own Promise, returned as is (DIV-1.6).
+    const viaCallback = logger.when(true, new AsyncInvokable());
+    Assert.assertInstanceOf(Promise, viaCallback);
+    Assert.assertSame("async:true", await viaCallback);
+    const viaDefault = logger.unless(1, null, new AsyncInvokable());
+    Assert.assertInstanceOf(Promise, viaDefault);
+    Assert.assertSame("async:1", await viaDefault);
+    // The very Promise `__invoke` returns, not a wrapper.
+    const held = Promise.resolve("held");
+    Assert.assertSame(held, logger.when(true, new Invokable(held)));
+    Assert.assertSame(held, logger.unless(true, null, new Invokable(held)));
+
+    // An unregistered class that inherits `__invoke`.
+    const inherited = new (class extends Invokable {})("inherited");
+    Assert.assertSame("inherited", logger.when("v", inherited));
+    Assert.assertSame(logger, inherited.calls[0]?.self);
+    Assert.assertSame("v", inherited.calls[0]?.value);
+
+    // An invokable condition is not called: PHP calls `$value` only when it is a Closure, so it is a truthy value.
+    const condition = new Invokable("never");
+    const seen: unknown[] = [];
+    logger.when(condition, (self: Logger, value: unknown) => {
+      seen.push(self, value);
+    });
+    Assert.assertSame([logger, condition], seen);
+    Assert.assertSame(logger, logger.unless(condition, () => "never"));
+    Assert.assertSame(0, condition.calls.length);
+
+    // A plain or null-prototype object with an `__invoke` key is a PHP array, which is callable only as [object, 'method'].
+    const plain = new Logger();
+    assertThrows(PhpTypeError, `${LOGGER}::when(): Argument #2 ($callback) must be of type ?callable, array given`, () => plain.when(true, { __invoke: () => 1 } as never));
+    assertThrows(PhpTypeError, `${LOGGER}::when(): Argument #2 ($callback) must be of type ?callable, array given`, () => plain.when(false, { __invoke: () => 1 } as never));
+    const bare = Object.assign(Object.create(null) as object, { __invoke: () => 1 });
+    assertThrows(PhpTypeError, `${LOGGER}::unless(): Argument #3 ($default) must be of type ?callable, array given`, () => plain.unless(true, null, bare as never));
+    // An instance whose `__invoke` is not a function, checked on entry on every branch.
+    const notInvokable = "Xaravel\\Tests\\Conditionable\\NotInvokable";
+    assertThrows(PhpTypeError, `${LOGGER}::when(): Argument #2 ($callback) must be of type ?callable, ${notInvokable} given`, () => plain.when(true, new NotInvokable() as never));
+    assertThrows(PhpTypeError, `${LOGGER}::when(): Argument #2 ($callback) must be of type ?callable, ${notInvokable} given`, () => plain.when(false, new NotInvokable() as never));
+    assertThrows(PhpTypeError, `${LOGGER}::unless(): Argument #3 ($default) must be of type ?callable, ${notInvokable} given`, () => plain.unless(false, null, new NotInvokable() as never));
+    Assert.assertSame([], plain.values);
+
+    // A Mockery double of an invokable class: its `__invoke` is called with (instance, value), each once() met. In its
+    // own process: Mockery's generated-class counter is process-wide, and other packages' tests expect its names.
+    const fixture = spawnSync(process.execPath, ["--no-env-file", MOCK_FIXTURE], { cwd: REPO, encoding: "utf8", timeout: 60000, env: { ...process.env, NO_COLOR: "1" } });
+    Assert.assertSame(0, fixture.status, outputOf(fixture));
+    Assert.assertSame({ viaCallback: "mocked", viaDefault: "logger", viaUnless: "unless", verify: null }, JSON.parse(fixture.stdout) as unknown, outputOf(fixture));
+  },
+  120000,
 );
