@@ -148,8 +148,8 @@ development_status:
   11-1-macroable-trait: done  # ESC-11.1-6 option 1 (only a test frame takes a macro write); Fidelity Review passed at tree b40cdac
   epic-11-retrospective: done
 
-  epic-12: in-progress
-  12-1-conditionable-trait: in-progress  # Maintainer rulings 2026-10-25: ESC-12.1-1 option 1 (DIV-12.12), ESC-12.1-2 option 1 (action item epic-12-item-1 first), ESC-12.1-3 option 2 (DIV-12.13, positional only); intent gap settled in decisions/MAINT-2026-10-25-story-12-1-replan.md (F-9 typing, DIV-1.6). Resume from 12-1-attempt-1.patch
+  epic-12: done
+  12-1-conditionable-trait: done
   epic-12-retrospective: optional
 
   epic-13: backlog
