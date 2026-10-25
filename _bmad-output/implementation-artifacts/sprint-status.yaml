@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 00:06
+last_updated: 10-25-2026 00:25
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1738,5 +1738,5 @@ action_items:
       item 6); imports, the barrel, docs and tests follow; no behaviour change; lands
       before Epic 12 adds Conditionable"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
