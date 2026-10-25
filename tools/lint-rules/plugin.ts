@@ -1613,7 +1613,9 @@ const PASCAL_CASE = /^[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*$/;
  *
  * Limits: a token reached through another variable, a parameter, a property, a function's return or a re-export is
  * not seen, and neither is a coercion that does not read as one here (`[token].join()`, `` `${[token]}` ``,
- * `String.raw`, `Reflect.apply(String, …)`). A local binding that shadows an imported token's name is still read as
+ * `String.raw`, `Reflect.apply(String, …)`). Nor is a `+` whose other operand is not a string or template literal
+ * (`token + name`, `token + token`), a unary `+token`, or `Number(token)`: each throws at runtime, loudly, as a
+ * symbol does. A local binding that shadows an imported token's name is still read as
  * the token. The rule needs no type information.
  */
 const noTokenStringCoercion = rule("Disallow string-coercing a contract token in package source; name it with fqcn() (AD-9.8).", (context, path) => {

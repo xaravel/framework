@@ -10,7 +10,7 @@ import { fqcn } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, contract, type ContractToken } from "@xaravel/contracts";
 import { aliasResolver, type AliasTable, canonicalToken, validateAliasTable } from "@xaravel/contracts/aliases";
 import * as support from "@xaravel/contracts/support";
-import { typeErrorOf } from "./support/contract-namespaces";
+import { assertSameAbstract, typeErrorOf } from "./support/contract-namespaces";
 
 /** The message of the `LogicException` `fn` throws, `(nothing thrown)` when it returns, or a note naming another error. */
 function logicMessage(fn: () => unknown): string {
@@ -35,17 +35,6 @@ function thrownBy(fn: () => unknown): unknown {
 /** A three-part table with the given parts, the rest empty. */
 function table(parts: Partial<AliasTable>): AliasTable {
   return { CORE_CONTAINER_ALIASES: {}, PROVIDER_BINDINGS: {}, PROVIDER_ALIASES: [], ...parts };
-}
-
-/**
- * `actual`, a resolver's result, is `expected` by JS identity (decisions/MAINT-2026-10-24-epic-10-items.md, Item 10's
- * route, item 1): a contract token is now `assertSame` to its FQCN string, as `Arrayable::class` is in PHP (AD-9.8), so
- * the token-not-string check is the `typeof` and `===` checks after the PHP one.
- */
-function assertSameAbstract(expected: unknown, actual: unknown, message = ""): void {
-  Assert.assertSame(expected, actual, message);
-  Assert.assertSame(typeof expected, typeof actual, message);
-  Assert.assertTrue(expected === actual, message);
 }
 
 xaravelTest(

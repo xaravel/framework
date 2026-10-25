@@ -7,8 +7,19 @@
 // @xaravel/contracts depends on this package, so the token here is a stand-in built as `contract()` builds one:
 // frozen, with an own non-writable `Symbol.for('xaravel.class.fqcn')` and a `Symbol.toPrimitive` giving its brand.
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { JSON_FORCE_OBJECT, JSON_PRETTY_PRINT, JSON_UNESCAPED_SLASHES, jsonEncode, jsonLastError, phpSerialize, stdClass } from "@xaravel/runtime/php";
+import {
+  JSON_ERROR_SYNTAX,
+  JSON_FORCE_OBJECT,
+  JSON_PRETTY_PRINT,
+  JSON_UNESCAPED_SLASHES,
+  jsonDecode,
+  jsonEncode,
+  jsonLastError,
+  phpSerialize,
+  stdClass,
+} from "@xaravel/runtime/php";
 import { fqcn, isContractToken } from "@xaravel/runtime/registry";
+import { currentFrame, runInFrame } from "@xaravel/runtime/scope";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
 const FQCN = "Illuminate\\Contracts\\Support\\Arrayable";
@@ -26,29 +37,37 @@ function token(name: string): object {
 
 xaravelTest(
   "XT-runtime-41",
-  "a contract token is its FQCN class-string as a PHP value (AD-9.8, MAINT-2026-10-24 Item 2): jsonEncode writes it as json_encode writes that string under each flag, alone, in a list and as a map or object value, recording no error; phpSerialize writes s:<len>:\"<FQCN>\"; in one slot each, so a later object back-reference counts it; JS coercion still gives the brand",
+  "a contract token is its FQCN class-string as a PHP value (AD-9.8, MAINT-2026-10-24 Item 2): jsonEncode writes it as json_encode writes that string under each flag, alone, in a list and as a map or object value, recording no error in a unit frame that held an earlier error; phpSerialize writes s:<len>:\"<FQCN>\"; in one slot each, so a later object back-reference counts it; JS coercion still gives the brand",
   () => {
     const Arrayable = token(FQCN);
     const Jsonable = token("Illuminate\\Contracts\\Support\\Jsonable");
     Assert.assertTrue(isContractToken(Arrayable));
     Assert.assertSame(FQCN, fqcn(Arrayable));
 
-    // jsonEncode: the string's encoding, with the flags.
+    // jsonEncode: the string's encoding, with the flags. The record lives in a unit frame (ESC-9.8-1 part 2), and an
+    // earlier error is recorded first, so the 0 after encoding a token is the encode's own record.
     // json_encode escapes each backslash; an FQCN has no `/`, so no flag changes the string's bytes.
-    Assert.assertSame('"Illuminate\\\\Contracts\\\\Support\\\\Arrayable"', jsonEncode(Arrayable));
-    Assert.assertSame(jsonEncode(FQCN), jsonEncode(Arrayable));
-    Assert.assertSame(0, jsonLastError());
-    for (const flags of [JSON_UNESCAPED_SLASHES, JSON_PRETTY_PRINT, JSON_FORCE_OBJECT, JSON_PRETTY_PRINT | JSON_FORCE_OBJECT]) {
-      Assert.assertSame(jsonEncode(FQCN, flags), jsonEncode(Arrayable, flags));
-      Assert.assertSame(jsonEncode([FQCN, "Illuminate\\Contracts\\Support\\Jsonable"], flags), jsonEncode([Arrayable, Jsonable], flags));
-    }
-    Assert.assertSame('{"0":"Illuminate\\\\Contracts\\\\Support\\\\Arrayable"}', jsonEncode([Arrayable], JSON_FORCE_OBJECT));
-    Assert.assertSame(jsonEncode([FQCN, "Illuminate\\Contracts\\Support\\Jsonable"]), jsonEncode([Arrayable, Jsonable]));
-    Assert.assertSame(jsonEncode({ a: FQCN }), jsonEncode({ a: Arrayable }));
-    Assert.assertSame(`{"a":${jsonEncode(FQCN)}}`, jsonEncode({ a: Arrayable }));
+    Assert.assertSame(null, currentFrame());
     const holder = Object.assign(new stdClass(), { t: Arrayable });
-    Assert.assertSame(`{"t":${jsonEncode(FQCN, JSON_UNESCAPED_SLASHES)}}`, jsonEncode(holder, JSON_UNESCAPED_SLASHES));
-    Assert.assertSame(0, jsonLastError());
+    runInFrame("unit", () => {
+      Assert.assertSame(null, jsonDecode("["));
+      Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+      Assert.assertSame('"Illuminate\\\\Contracts\\\\Support\\\\Arrayable"', jsonEncode(Arrayable));
+      Assert.assertSame(0, jsonLastError());
+      Assert.assertSame(jsonEncode(FQCN), jsonEncode(Arrayable));
+      for (const flags of [JSON_UNESCAPED_SLASHES, JSON_PRETTY_PRINT, JSON_FORCE_OBJECT, JSON_PRETTY_PRINT | JSON_FORCE_OBJECT]) {
+        Assert.assertSame(jsonEncode(FQCN, flags), jsonEncode(Arrayable, flags));
+        Assert.assertSame(jsonEncode([FQCN, "Illuminate\\Contracts\\Support\\Jsonable"], flags), jsonEncode([Arrayable, Jsonable], flags));
+      }
+      Assert.assertSame('{"0":"Illuminate\\\\Contracts\\\\Support\\\\Arrayable"}', jsonEncode([Arrayable], JSON_FORCE_OBJECT));
+      Assert.assertSame(jsonEncode([FQCN, "Illuminate\\Contracts\\Support\\Jsonable"]), jsonEncode([Arrayable, Jsonable]));
+      Assert.assertSame(jsonEncode({ a: FQCN }), jsonEncode({ a: Arrayable }));
+      Assert.assertSame(`{"a":${jsonEncode(FQCN)}}`, jsonEncode({ a: Arrayable }));
+      Assert.assertSame(null, jsonDecode("["));
+      Assert.assertSame(JSON_ERROR_SYNTAX, jsonLastError());
+      Assert.assertSame(`{"t":${jsonEncode(FQCN, JSON_UNESCAPED_SLASHES)}}`, jsonEncode(holder, JSON_UNESCAPED_SLASHES));
+      Assert.assertSame(0, jsonLastError());
+    });
 
     // phpSerialize: a string, one slot each.
     const serialized = `s:38:"${FQCN}";`;

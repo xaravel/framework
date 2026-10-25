@@ -10,6 +10,7 @@ import { fqcn } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, CONTRACT_METHODS, CONTRACT_PARAMETERS, CONTRACT_PARENTS } from "@xaravel/contracts";
 import * as psr from "@xaravel/contracts/psr";
 import { CacheException, ContainerExceptionInterface, InvalidArgumentException, LoggerInterface, NotFoundExceptionInterface } from "@xaravel/contracts/psr";
+import { assertSameAbstract } from "./support/contract-namespaces";
 
 interface Row {
   readonly fqcn: string;
@@ -144,7 +145,7 @@ xaravelTest(
       const expected = expectedParents[shortName(name)] ?? [];
       Assert.assertTrue(Object.isFrozen(parents), name);
       Assert.assertSame(expected.length, parents.length, name);
-      expected.forEach((parent, index) => Assert.assertSame(parent, parents[index], name));
+      expected.forEach((parent, index) => assertSameAbstract(parent, parents[index], name));
     }
 
     // Doubles of a child contract are instances of its parent; a double of the parent is not one of the child.

@@ -3,7 +3,7 @@ title: 'A contract token is its FQCN class-string as a PHP value; a lint rule re
 type: 'feature'
 created: '2026-10-24'
 status: 'in-progress'
-baseline_revision: '9a4d239c47a5d66c0759f38292dc2360bb325958'
+baseline_revision: '1b036b9ad99750db5d2038e3dc23b9761f8804e4'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -71,6 +71,8 @@ deferred: []
 - `packages/mockery/src/Mockery/Expectation.ts`, `support/values.ts`, `JMac/Testing/Diagnostics/ValueFormatter.ts` -- `_matchArg` and display -- route item 3.
 - `tools/lint-rules/plugin.ts`, `disables.ts`, fixtures; `.oxlintrc.json` one rule line; the three lint tests' pins and XT-conformance-267 (failing and passing fixtures per matrix row) -- the approved tools change.
 - `packages/contracts/tests/xaravel/aliases.test.ts`, `hardening.test.ts` -- identity re-pins -- route item 1.
+- `packages/contracts/tests/xaravel/psr.test.ts`, `namespaces.test.ts`, `web.test.ts`, `contract.test.ts`, `token-predicate.test.ts`, and any other non-Protected XT check whose expected value is a token -- identity re-pins under the general rule (Change Log, resume after #401).
+- The `[patch]` rows held at the last HALT (Change Log, resume after #401) -- Mockery `_matchArg` and `EqualsMatcher`, `classString` via `contractTokenName`, the added tests, the rule's Limits, XT-runtime-41's Scope Frame.
 - New XT tests declaring AD-9.8: XT-runtime-41 (both encoders), XT-assert-101 (exporter, varExport, assertSame/assertEquals/assertNotSame incl. nested and failure text), XT-mockery-16 (matrix rows).
 
 **Acceptance Criteria:**
@@ -86,6 +88,21 @@ deferred: []
 - **Amended:** the scope in Boundaries reads with XT-contracts-12 beside XT-contracts-11 and XT-contracts-19 (all three in `aliases.test.ts` / `hardening.test.ts`). Line 369 now calls the file's `assertSameAbstract` helper. No other `packages/contracts` line changes. The I/O matrix's jsonEncode row reads `"Illuminate\\Contracts\\Support\\Arrayable"`: an FQCN has no `/`, so the token encodes exactly as `json_encode` writes its FQCN string under every flag (XT-runtime-41), and `JSON_UNESCAPED_SLASHES` changes nothing.
 - **Known-bad state avoided:** merging the item with XT-contracts-12 left as an `assertSame`, which a resolver returning the FQCN string would pass.
 - **KEEP:** the whole built change on this branch; only the one re-pin is added.
+
+### 2026-10-24 — resume after #401
+
+- **Trigger:** the review found five more token-identity checks in `packages/contracts` (XT-contracts-4, -5, -8, -18, -20, rows below), and the build stopped a third time (#399). The Maintainer replaced the line-by-line list with one general rule ("Item 10's route", item 1, *Added after #399, as a general rule*, PR #401).
+- **Amended:** the `packages/contracts` scope in Boundaries now reads as that rule: in any Xaravel Test (`xaravelTest`, an `XT-*` id) under `packages/<c>/tests/**` that is not a Protected Path, an `assertSame` or `assertEquals` whose expected value is a contract token re-pins to JS identity with the `assertSameAbstract` pattern (the PHP check, then the same `typeof`, then `===`). Ported Tests (`portedTest`) and Protected test files (`conformance/**`, `packages/assert/**`, `packages/mockery/**`) are not covered; a check of this kind in one of them stops the item. Known sites: `psr.test.ts:147`, `namespaces.test.ts:274`, `web.test.ts:308`, `contract.test.ts:215-216,221-222`, `token-predicate.test.ts:59` (its `bareParent` is a frozen object with a non-writable `CLASS_FQCN`, so a token to both predicates). The implementer sweeps every non-Protected `packages/*/tests/**` file again for any other such check, and the PR lists every check re-pinned under this rule. No assertion is removed.
+- **Also applied this pass** (the triage rows marked `[patch]`, held at the last HALT):
+  - Mockery `_matchArg` must not throw on a token without `Symbol.hasInstance`: a token expected that cannot answer `instanceof` falls through to `==` on its FQCN string.
+  - JMac `EqualsMatcher` compares a token expected strictly, as a class-string (`===` on the FQCN), as Upstream JMac does.
+  - `classString` reads the name through `contractTokenName`, not a second token-name rule.
+  - Tests for nested canonicalizing in `varExport`/the exporter, an `InvokedCount` message naming a token, `with(FQCN)` against a token argument, and a nested `with([token])`.
+  - The lint rule's Limits list the uncaught forms: `+` with a non-literal operand, unary `+`, `Number(token)`.
+  - XT-runtime-41's `jsonLastError()` checks run inside a Scope Frame and first record a non-zero error, so the `0` after encoding a token is meaningful (reviewer 2's first F-7 finding).
+- **Recorded, no code:** `packages/runtime` has no `var_export` port (`packages/runtime/src/php/` has none). The ruling's "`phpVarExport` (`packages/runtime`)" is assert's `exporter/VarExport.ts`, exported as `phpVarExport`, which XT-assert-101 covers (reviewer 2's second F-7 finding).
+- **Baseline:** `baseline_revision` moved to `1b036b9a`, the `origin/main` this branch last merged, so the review diff is exactly the item's change.
+- **KEEP:** the whole built change on this branch.
 
 ## Review Triage Log
 
@@ -138,36 +155,28 @@ Mockery `_matchArg` order for a token, following Upstream with `$expected` the c
 
 ## Auto Run Result
 
-Status: in-progress (waiting on the Maintainer for the third time; resume at step 4, review). The spec stays `in-progress`, not `blocked`, so the next run resumes it.
-Blocking condition: five more token-identity checks in `packages/contracts`, beyond the route's XT-contracts-11, 12 and 19 re-pins. They check a contract's parents with `assertSame(parentToken, parents[i])`. Under AD-9.8 each would also pass if `contract()` stored a parent as its FQCN string:
+Status: in-progress (built after #401; resume at step 4, review). The Fidelity Review runs again, as the tree changed.
 
-- XT-contracts-4 (`psr.test.ts:147`)
-- XT-contracts-5 (`namespaces.test.ts:274`)
-- XT-contracts-8 (`web.test.ts:308`)
-- XT-contracts-18 (`contract.test.ts:215-216,221-222`)
-- XT-contracts-20 (`token-predicate.test.ts:59`)
+Applied this pass, on the general rule and the held `[patch]` rows (Change Log, resume after #401):
+- Identity re-pins, every one through the one shared helper `assertSameAbstract` (`packages/contracts/tests/xaravel/support/contract-namespaces.ts`; the local copies in `aliases.test.ts` and `hardening.test.ts` now import it):
+  - XT-contracts-4: `psr.test.ts:148`, each parent of each PSR contract.
+  - XT-contracts-5: `namespaces.test.ts:275`, each Upstream `extends` parent.
+  - XT-contracts-8: `web.test.ts:309`, each Upstream `extends` parent.
+  - XT-contracts-18: `contract.test.ts:216-217,222-223`, `P` and `Q` before and after mutating `given`.
+  - XT-contracts-20: `token-predicate.test.ts:59`, `bareParent`.
+  - Kept from earlier passes: XT-contracts-11, -12 (`aliases.test.ts`) and XT-contracts-19 (`hardening.test.ts`).
+- Sweep: a temporary probe in `IsIdentical` / `IsEqual` logged every `assertSame` / `assertEquals` family call whose expected value is a contract token, over `bun test packages` and the five `conformance/tests/xaravel` files that touch contracts. After the re-pins, every hit in a non-Protected file goes through `assertSameAbstract`. The other hits are `packages/assert/tests/xaravel/operands.ts` (the Oracle matrix's `'Countable'` / `'Traversable'` operands, which stand for PHP strings, so not a JS-identity check) and XT-assert-101's own cases. No hit in `conformance/tests`. The probe was removed.
+- Mockery `_matchArg`: a token expected without a function `Symbol.hasInstance` skips the `instanceof` step and falls through to `==` on its FQCN.
+- JMac `EqualsMatcher`: reads both sides through `classString` first, so a token compares strictly as its class-string.
+- `classString` reads the name through `contractTokenName`. A token it cannot name (an empty FQCN) stays the object it is.
+- Tests added. XT-assert-101: nested canonicalizing (`serialize`'s `classString` is observed; removing it fails the test) and `InvokedCount` messages naming a token (`shortenedExport`'s `classString` is observed). XT-mockery-16: `with(FQCN)` against a token argument, nested `with([token])`, a token with no `Symbol.hasInstance` (removing the guard throws a TypeError), and `EqualsMatcher` (the old code matched a plain object with the same keys).
+- The lint rule's Limits list `+` with a non-literal operand, unary `+` and `Number(token)`.
+- XT-runtime-41: the `jsonLastError()` checks run in a unit frame, after a recorded `JSON_ERROR_SYNTAX`.
 
-The route ("Item 10's route", `decisions/MAINT-2026-10-24-epic-10-items.md`, *Added after #396*) says any other such check stops the item. Both the edge-case and verification-gap reviewers found them; the 2026-10-24 sweep missed them because it looked only at resolver results.
-
-Recommended ruling: one general rule in place of another line-by-line list. Every `assertSame`/`assertEquals` in `packages/contracts/tests` whose expected value is a contract token re-pins to JS identity through an `assertSameAbstract`-style helper: PHP `assertSame`, then the same `typeof`, then `===`. No assertion is removed. A grep of `packages/*/tests` and `conformance/tests` for token operands found these five and no others outside `packages/contracts`.
-
-State on this branch (`planning/retro-10-token-class-string`, `[orchestrator wip]` commits, pushed, not merged):
-- The full build, including the XT-contracts-12 re-pin.
+Verification:
 - `bun run typecheck` and `bun run lint` are clean.
-- `bun run harness --xaravel` shows 368 passed, 0 failed, 5 skipped.
-- Full `bun run harness` gives `differ=0` on 2 of 3 runs. On the other run, XT-conformance-134, a test that spawns `tsc -b` and that this item does not touch, timed out under load.
-
-Fidelity Review at tree `a3bf3e0e0a666ba8cc8d0f12608987dd55de9770`:
-- Reviewer 1: pass.
-- Reviewer 2: reject, on two F-7 missing-evidence findings only. That counts as a pass with the evidence gaps noted (`decisions/MAINT-2026-10-24-evidence-gaps.md`).
-- The tree changes when the re-pins land, so the review runs again then.
-
-Patches the next pass applies (triage rows above):
-- Mockery `_matchArg` must not throw on a token without `Symbol.hasInstance`.
-- JMac `EqualsMatcher` compares a token expected strictly, as a class-string.
-- `classString` reads through `contractTokenName`.
-- Tests for nested canonicalizing, an `InvokedCount` message, `with(FQCN)` against a token argument, and nested `with([token])`.
-- The lint rule's Limits list the uncaught `+`/`Number` forms.
+- `bun run harness --xaravel`: 368 passed, 0 failed, 5 skipped.
+- `bun run harness`: `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`.
 
 ## Fidelity Review
 

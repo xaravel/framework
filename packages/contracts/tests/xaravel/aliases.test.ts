@@ -21,7 +21,7 @@ import * as cache from "@xaravel/contracts/cache";
 import * as mail from "@xaravel/contracts/mail";
 import * as psr from "@xaravel/contracts/psr";
 import * as support from "@xaravel/contracts/support";
-import { closure, PACKAGE, REPO, shortName, type Token, typeErrorOf, upstreamOrWarn, upstreamPath } from "./support/contract-namespaces";
+import { assertSameAbstract, closure, PACKAGE, REPO, shortName, type Token, typeErrorOf, upstreamOrWarn, upstreamPath } from "./support/contract-namespaces";
 
 const ILLUMINATE = join(REPO, "conformance", "upstream", "framework", "src", "Illuminate");
 
@@ -103,17 +103,6 @@ function show(value: unknown): string {
     return `[${(value as Record<symbol, string>)[CLASS_FQCN]}]`;
   }
   return `(${typeof value})`;
-}
-
-/**
- * `actual`, a resolver's result, is `expected` by JS identity (decisions/MAINT-2026-10-24-epic-10-items.md, Item 10's
- * route, item 1): a contract token is now `assertSame` to its FQCN string, as `Arrayable::class` is in PHP (AD-9.8), so
- * the token-not-string check is the `typeof` and `===` checks after the PHP one.
- */
-function assertSameAbstract(expected: unknown, actual: unknown, message = ""): void {
-  Assert.assertSame(expected, actual, message);
-  Assert.assertSame(typeof expected, typeof actual, message);
-  Assert.assertTrue(expected === actual, message);
 }
 
 /** An Upstream PHP file's namespace and `use` lines, and a resolver of a local class name to its FQCN. */

@@ -408,7 +408,7 @@ export class Expectation {
    * a class matches an instance of it, and a class-name string an object of that class; else PHP `==`. A contract
    * token is its FQCN class-string (AD-9.8, MAINT-2026-10-24 Item 10's route, item 3), so it takes Upstream's string
    * path (1.6.15 `967a801b`): an object that is an `instanceof` it, else `$expected == $actual` on the string, which
-   * the FQCN string and the token itself pass.
+   * the FQCN string and the token itself pass. A token without `Symbol.hasInstance` skips the `instanceof` step.
    */
   protected _matchArg(expected: unknown, actual: unknown): boolean {
     if (expected === actual) {
@@ -418,7 +418,9 @@ export class Expectation {
       return expected.match(actual);
     }
     if (isContractToken(expected)) {
-      if (!isContractToken(actual) && isPhpObject(actual) && actual instanceof (expected as unknown as abstract new () => object)) {
+      // A token that cannot answer `instanceof` (no `Symbol.hasInstance`) falls through to `==` on its string.
+      const answers = typeof (expected as { [Symbol.hasInstance]?: unknown })[Symbol.hasInstance] === "function";
+      if (answers && !isContractToken(actual) && isPhpObject(actual) && actual instanceof (expected as unknown as abstract new () => object)) {
         return true;
       }
       return phpLooseEquals(classString(expected), actual);

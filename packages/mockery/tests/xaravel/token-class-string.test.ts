@@ -13,6 +13,7 @@ import { expect } from "bun:test";
 import { xaravelTest } from "@xaravel/assert";
 import { Double, Mockery, NoMatchingExpectationException } from "../../src/index";
 import { ValueFormatter } from "../../src/JMac/Testing/Diagnostics/ValueFormatter";
+import { EqualsMatcher } from "../../src/JMac/Testing/Matching/EqualsMatcher";
 import { formatArgument, getDebugType, phpString } from "../../src/support/values";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
@@ -22,12 +23,20 @@ const ARRAYABLE = "Illuminate\\Contracts\\Support\\Arrayable";
 function token(fqcn: string, methods: readonly string[]): object {
   const brand = Symbol.for(fqcn);
   return Object.freeze({
+    ...bareToken(fqcn),
+    [Symbol.hasInstance]: (value: unknown): boolean => typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[brand] === true,
+    [Symbol.for("xaravel.contract.methods")]: Object.freeze([...methods]),
+  });
+}
+
+/** A stand-in contract token with no `Symbol.hasInstance`, as XT-contracts-20's `bareParent` is: it cannot answer `instanceof`. */
+function bareToken(fqcn: string): object {
+  const brand = Symbol.for(fqcn);
+  return Object.freeze({
     brand,
     [CLASS_FQCN]: fqcn,
-    [Symbol.for("xaravel.contract.methods")]: Object.freeze([...methods]),
     [Symbol.for("xaravel.contract.parents")]: Object.freeze([]),
     [Symbol.toPrimitive]: (): symbol => brand,
-    [Symbol.hasInstance]: (value: unknown): boolean => typeof value === "object" && value !== null && (value as Record<symbol, unknown>)[brand] === true,
   });
 }
 
@@ -49,7 +58,7 @@ function outcome(fn: () => unknown): unknown {
 
 xaravelTest(
   "XT-mockery-16",
-  "with(token) matches as Mockery 1.6.15's _matchArg matches with(<FQCN>::class), a contract token being its class-string (AD-9.8, MAINT-2026-10-24 Item 10's route item 3): the token itself, the FQCN string and an object that is an instanceof the token match; an unrelated object, a PHP array and another string do not, and nor does another token; a token argument prints as its quoted FQCN in a no-match message, alone and in an array, getDebugType gives string and ValueFormatter describes it as var_export does that string",
+  "with(token) matches as Mockery 1.6.15's _matchArg matches with(<FQCN>::class), a contract token being its class-string (AD-9.8, MAINT-2026-10-24 Item 10's route item 3): the token itself, the FQCN string and an object that is an instanceof the token match; an unrelated object, a PHP array and another string do not, and nor does another token; with(<FQCN>) matches a token argument, a nested with([token]) matches by `==` on the strings, and a token with no Symbol.hasInstance skips the instanceof step without throwing; JMac's EqualsMatcher compares a token strictly as its class-string; a token argument prints as its quoted FQCN in a no-match message, alone and in an array, getDebugType gives string and ValueFormatter describes it as var_export does that string",
   () => {
     const Arrayable = token(ARRAYABLE, ["toArray"]);
     const Jsonable = token("Illuminate\\Contracts\\Support\\Jsonable", ["toJson"]);
@@ -75,6 +84,38 @@ xaravelTest(
     expect(outcome(() => mock.run(Jsonable))).toBe(unmatched("'Illuminate\\Contracts\\Support\\Jsonable'"));
     expect(outcome(() => mock.run([Arrayable]))).toBe(unmatched(`[0 => '${ARRAYABLE}']`));
     Mockery.close();
+
+    // with(<FQCN string>) against a token argument: the token is that string, so it matches; another token does not.
+    const byName = Mockery.mock(XtTokenService) as unknown as typeof mock;
+    byName.shouldReceive("run").with(ARRAYABLE).andReturn("by name");
+    expect(outcome(() => byName.run(Arrayable))).toBe("by name");
+    expect(outcome(() => byName.run(Jsonable))).toBe(unmatched("'Illuminate\\Contracts\\Support\\Jsonable'"));
+    Mockery.close();
+
+    // A nested with([token]): PHP `==` on the arrays, each token its string.
+    const nested = Mockery.mock(XtTokenService) as unknown as typeof mock;
+    nested.shouldReceive("run").with([Arrayable]).andReturn("nested");
+    expect(outcome(() => nested.run([Arrayable]))).toBe("nested");
+    expect(outcome(() => nested.run([ARRAYABLE]))).toBe("nested");
+    expect(outcome(() => nested.run([Jsonable]))).toBe(unmatched("[0 => 'Illuminate\\Contracts\\Support\\Jsonable']"));
+    Mockery.close();
+
+    // A token with no Symbol.hasInstance cannot answer instanceof: it skips that step, never throws, and matches by `==`.
+    const Bare = bareToken(ARRAYABLE);
+    const bare = Mockery.mock(XtTokenService) as unknown as typeof mock;
+    bare.shouldReceive("run").with(Bare).andReturn("bare");
+    expect(outcome(() => bare.run(ARRAYABLE))).toBe("bare");
+    expect(outcome(() => bare.run(Arrayable))).toBe("bare");
+    expect(outcome(() => bare.run(new XtTokenService()))).toBe(unmatched("object(XtTokenService)"));
+    expect(outcome(() => bare.run(new Branded()))).toBe(unmatched("object(Branded)"));
+    Mockery.close();
+
+    // JMac's EqualsMatcher compares a token as its class-string strictly, as Upstream compares a class-string (`===`),
+    // never as the frozen object it is in JS (a plain object of the same own keys does not match it).
+    const equals = new EqualsMatcher(Arrayable);
+    expect([equals.matches(Arrayable), equals.matches(ARRAYABLE), equals.matches(true), equals.matches(Jsonable), equals.matches([Arrayable]), equals.matches({ brand: Symbol.for(ARRAYABLE) })]).toEqual([true, true, false, false, false, false]);
+    expect([new EqualsMatcher(ARRAYABLE).matches(Arrayable), new EqualsMatcher([Arrayable]).matches([ARRAYABLE]), new EqualsMatcher(true).matches(Arrayable)]).toEqual([true, true, false]);
+    expect(equals.explainMismatch(true)).toBe("expected 'Illuminate\\\\Contracts\\\\Support\\\\Arrayable', got true");
 
     // The display helpers read a token as its string.
     expect(phpString(Arrayable)).toBe(ARRAYABLE);

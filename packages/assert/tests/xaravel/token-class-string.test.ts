@@ -9,6 +9,8 @@
 // The grader never imports @xaravel/contracts (AD-2), so every token here is a stand-in built as `contract()` builds
 // one: frozen, with an own `Symbol.for('xaravel.class.fqcn')` and a `Symbol.toPrimitive` giving its brand.
 import { expect } from "bun:test";
+import { Invocation } from "../../src/Framework/MockObject/Runtime/Invocation";
+import { InvokedCount } from "../../src/Framework/MockObject/Runtime/Rule/InvokedCount";
 import { Assert, classString, phpLooseEquals, phpStrictEquals, phpVarExport, xaravelTest } from "../../src/index";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
@@ -34,7 +36,7 @@ function failure(fn: () => void): string {
 
 xaravelTest(
   "XT-assert-101",
-  "the grader reads a contract token as its FQCN class-string (AD-9.8, MAINT-2026-10-24 Item 2): classString gives a token's FQCN and any other value as it is; phpStrictEquals and phpLooseEquals compare a token as that string; assertSame and assertEquals pass a token against its FQCN, itself and, nested, in arrays, and fail a token against another with the two-strings message and diff; assertNotSame fails a token against its FQCN; the exporter and varExport print a token as the quoted string, alone and nested; a token's PHP type is unchanged, so assertIsString still fails it",
+  "the grader reads a contract token as its FQCN class-string (AD-9.8, MAINT-2026-10-24 Item 2): classString gives a token's FQCN and any other value as it is; phpStrictEquals and phpLooseEquals compare a token as that string; assertSame and assertEquals pass a token against its FQCN, itself and, nested, in arrays, and fail a token against another with the two-strings message and diff; assertNotSame fails a token against its FQCN; the exporter and varExport print a token as the quoted string, alone and nested, and the canonicalizing comparator sorts nested tokens by that string's serialized form; an InvokedCount message names a token argument as the quoted string; a token's PHP type is unchanged, so assertIsString still fails it",
   () => {
     const Arrayable = token(ARRAYABLE);
     const Jsonable = token(JSONABLE);
@@ -92,6 +94,26 @@ xaravelTest(
     expect(failure(() => Assert.assertNotSame(Arrayable, ARRAYABLE))).toBe("Failed asserting that two strings are not identical.");
     expect(failure(() => Assert.assertNotSame(Arrayable, Arrayable))).toBe(failure(() => Assert.assertNotSame(ARRAYABLE, ARRAYABLE)));
     expect(failure(() => Assert.assertNotEquals(Arrayable, ARRAYABLE))).toBe(`Failed asserting that '${ARRAYABLE}' is not equal to '${ARRAYABLE}'.`);
+
+    // Canonicalizing sorts nested arrays by their serialized form, so a nested token must serialize as its string:
+    // `s:38:"…Arrayable"` sorts after `s:12:"Illuminate\B"`, so both sides reach the same order only then.
+    expect(failure(() => Assert.assertEqualsCanonicalizing([[Arrayable], ["Illuminate\\B"]], [["Illuminate\\B"], [ARRAYABLE]]))).toBe("(pass)");
+    expect(failure(() => Assert.assertEqualsCanonicalizing([[Jsonable], [Arrayable]], [[ARRAYABLE], [JSONABLE]]))).toBe("(pass)");
+    expect(failure(() => Assert.assertEqualsCanonicalizing([{ k: Jsonable }, { k: Arrayable }], [{ k: ARRAYABLE }, { k: JSONABLE }]))).toBe("(pass)");
+    expect(failure(() => Assert.assertEqualsCanonicalizing([[Jsonable], [Arrayable]], [[ARRAYABLE], [ARRAYABLE]]))).toBe(
+      failure(() => Assert.assertEqualsCanonicalizing([[JSONABLE], [ARRAYABLE]], [[ARRAYABLE], [ARRAYABLE]])),
+    );
+
+    // The shortened exporter (an invocation's text): an InvokedCount message names a token argument as the string.
+    const once = new InvokedCount(1);
+    const call = new Invocation("XtService", "run", [Arrayable, [Jsonable]], {});
+    once.invoked(call);
+    expect(failure(() => once.invoked(call))).toBe(
+      `XtService::run('${ARRAYABLE}', [...]) was not expected to be called more than once, actually called 2 times.`,
+    );
+    expect(failure(() => once.invoked(new Invocation("XtService", "run", [Arrayable], {})))).toBe(
+      `XtService::run('${ARRAYABLE}') was not expected to be called more than once, actually called 3 times.`,
+    );
 
     // varExport: the string, escaped as var_export escapes it, alone and nested.
     expect(phpVarExport(Arrayable)).toBe("'Illuminate\\\\Contracts\\\\Support\\\\Arrayable'");
