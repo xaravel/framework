@@ -155,6 +155,33 @@ Invalid input throws a `TypeError` naming AD-4:
 - an `undefined` or `null` value;
 - a decorator kind other than `class` or `method`.
 
+### Spec values
+
+A map's value is a class, a contract token, `String`, `Number` or `Boolean`, or one of the runtime's Spec values
+(DIV-3.1 to DIV-3.4), all exported from the package root:
+
+- `primitive` is an untyped PHP parameter (`mixed`), never coerced. Reflection reads it as builtin.
+- `self`, `parent` and `static` stand for PHP's relative hints. `static` is exported under that name; import it as
+  `import { static as static_ } from "@xaravel/runtime"`. Reflection keeps their names unresolved.
+- `variadic(spec)` is a variadic parameter whose elements are `spec`. A missing, `null` or `variadic` Spec throws a
+  `TypeError`.
+- `oneOf(a, b, …)` is a union. It needs at least two members; a member may be an `allOf(...)` (a DNF type), but a
+  nested `oneOf` or a `variadic` throws a `TypeError`.
+- `allOf(a, b, …)` is an intersection of two or more classes or tokens; anything else throws a `TypeError`.
+
+Each is a frozen null-prototype object carrying a private brand, so an object of the same shape is not a Spec value.
+`inject` stores them as given and does not interpret them; [reflection.md](reflection.md) describes how PHP's
+reflection classes read them.
+
+### `returns`
+
+TypeScript erases return types too. `returns(spec, fn)` declares a closure's PHP return hint (DIV-3.4): it writes the
+Spec under `Symbol.for('xaravel.returns')` in `fn`'s own `Symbol.metadata` object, the one `inject(map, fn)` writes
+into, so the two coexist in either order, and returns `fn` itself. `readReturnMetadata(fn)` gives the Spec, or `null`.
+The Spec is a class, a token, `String`, `Number`, `Boolean`, `primitive`, `oneOf(...)`, `allOf(...)`, `self`,
+`parent` or `static`. A `null` or `undefined` Spec, a `variadic(...)`, or a `fn` that is not a function throws a
+`TypeError` beginning `returns(): `.
+
 ## Not supported
 
 - `insteadof`. None of Upstream's traits needs it.
@@ -166,4 +193,5 @@ Invalid input throws a `TypeError` naming AD-4:
   instance of the using class, since that instance never had the trait's private field. Port a trait's private
   state as a plain field.
 - Eloquent's `#[Boot]` / `#[Initialize]` attributes, which belong to Model's own loop.
-- Interpreting `inject` specs, which is the Container's job (Epic 18).
+- Interpreting `inject` specs for injection, which is the Container's job (Epic 18). Reflection reads them
+  ([reflection.md](reflection.md)).

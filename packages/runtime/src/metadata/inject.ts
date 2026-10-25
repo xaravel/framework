@@ -13,9 +13,10 @@ import "./polyfill";
 
 /**
  * `Symbol.metadata`: native, else the polyfill's `Symbol.for('Symbol.metadata')`, which is also where Bun attaches a
- * decorated class's metadata when `Symbol` could not be polyfilled (a frozen `Symbol`, ESC-9.9-1).
+ * decorated class's metadata when `Symbol` could not be polyfilled (a frozen `Symbol`, ESC-9.9-1). Internal: `returns.ts`
+ * and `php/attributes.ts` share it; the package entries do not export it.
  */
-const METADATA: symbol = (Symbol as { metadata?: symbol }).metadata ?? Symbol.for("Symbol.metadata");
+export const METADATA: symbol = (Symbol as { metadata?: symbol }).metadata ?? Symbol.for("Symbol.metadata");
 
 /** The key the map is stored under in a `Symbol.metadata` object. */
 const INJECT = Symbol.for("xaravel.inject");
@@ -29,8 +30,8 @@ export type InjectMap = Readonly<Record<string, unknown>>;
 /** What `inject(map)` returns: a TC39 class or method decorator. */
 export type InjectDecorator = (value: unknown, context: DecoratorContext) => void;
 
-type Fn = (...args: never[]) => unknown;
-type MetadataHolder = Record<PropertyKey, unknown>;
+export type Fn = (...args: never[]) => unknown;
+export type MetadataHolder = Record<PropertyKey, unknown>;
 
 function invalid(detail: string): TypeError {
   return new TypeError(`inject(): ${detail} (AD-4)`);
@@ -68,8 +69,8 @@ function jsonQuote(key: string): string {
   return `"${key.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
 }
 
-/** `fn`'s own `Symbol.metadata` object, created (inheriting any it already reads) when it has none. */
-function ownMetadata(fn: Fn): MetadataHolder {
+/** `fn`'s own `Symbol.metadata` object, created (inheriting any it already reads) when it has none. Internal (`returns.ts`). */
+export function ownMetadata(fn: Fn): MetadataHolder {
   if (Object.hasOwn(fn, METADATA)) {
     const own: unknown = (fn as unknown as MetadataHolder)[METADATA];
     if (typeof own === "object" && own !== null) {
