@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 10:27
+last_updated: 10-25-2026 11:15
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -150,7 +150,7 @@ development_status:
 
   epic-12: done
   12-1-conditionable-trait: done
-  epic-12-retrospective: optional
+  epic-12-retrospective: done
 
   epic-13: backlog
   13-1-reflector-and-reflectsclosures: backlog
@@ -1752,3 +1752,43 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-12.1-2.md"
+  - id: "epic-12-retro-item-1-invokable-callbacks"
+    epic: 12
+    action: "packages/conditionable: callableArgument accepts an object whose __invoke
+      is a function as a when / unless callback or default, as PHP ?callable does
+      and as packages/macroable/src/Traits/Macroable.ts:229 reads one, and calls it
+      through __invoke(self, value); XT-conditionable cases for an invokable callback
+      and default, docs/conditionable.md updated; no assertion removed or weakened
+      (finding L2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
+  - id: "epic-12-retro-item-2-remove-scratch-note"
+    epic: 12
+    action: "Remove the committed scratch note _bmad-output/implementation-artifacts/bmad-build-auto-result-retro-11-builtin-names.md,
+      whose item is done (#425); mentions in done specs and decisions stay as history
+      (finding P2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
+  - id: "epic-12-retro-item-3-dual-helper-async-edges"
+    epic: 12
+    action: "Rule (a) whether when(false, async ...) returning this synchronously,
+      and an async callback resolving to null giving null rather than the target,
+      are recorded under DIV-1.6 or changed; (b) whether when / unless accept PHP
+      callable strings and [object, method] arrays or reject them under a DIV clause
+      (findings L1, L3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
+  - id: "epic-12-retro-item-4-conditionable-reverification-ac"
+    epic: 12
+    action: "epics.md: add to a Database Story (the first Eloquent Builder Story,
+      or Story 38.6 beside testImplodeModels) the re-verification of ConditionableTest::testWhen
+      and ::testUnless with component: conditionable, replacing the setUp throw with
+      the Capsule setup and declaring TestConditionableModel; and have the Builder
+      Story say how methods Builder serves through __call reach HigherOrderWhenProxy
+      generated members (DIV-12.12) (findings S1, L4, L6)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"

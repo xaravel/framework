@@ -85,3 +85,12 @@ epic-11:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-11-retro-item-7-macroable-boot-write
+epic-12:
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-12-retro-item-3-dual-helper-async-edges
+    - epic-12-retro-item-4-conditionable-reverification-ac
