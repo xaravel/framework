@@ -1809,17 +1809,17 @@ action_items:
     ref: "decisions/MAINT-2026-10-25-story-13-1.md"
   - id: "epic-13-item-2-reflection-contracts"
     epic: 13
-    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-13-1-second.md):
-      packages/runtime: a table from a contract token's FQCN to the token, written
-      by contract(...), read by interface_exists and new ReflectionClass(<token FQCN>)
-      (ESC-13.1-7); ReflectionEnum (isBacked, getBackingType) and enum_exists in @xaravel/runtime/php,
-      reading a backed enum's static backingType (spine AD-26, ESC-13.1-8); packages/assert:
-      assertInstanceOf / assertNotInstanceOf accept a class-string resolved through
-      the Class Registry or the token table, else UnknownClassOrInterfaceException
-      (ESC-13.1-9); tools/expectations/reasons.ts: blocked-by:<c> also valid when
-      <c> is in the same Phase and its first Story's Epic is later than the line's
-      Component's, with its comment and docs (ESC-13.1-10). An XT case for each; no
-      assertion removed or weakened; lands before Story 13.1 resumes"
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-13-1-second.md),
+      in scope packages/runtime, packages/contracts and packages/assert: packages/runtime:
+      a table from a contract token's FQCN to the token, with a runtime export that
+      packages/contracts' contract(...) calls to record each token, read by interface_exists
+      and new ReflectionClass(<token FQCN>) (ESC-13.1-7); ReflectionEnum (isBacked, getBackingType)
+      and enum_exists in @xaravel/runtime/php, reading a backed enum's static backingType
+      (spine AD-26, ESC-13.1-8); packages/assert: assertInstanceOf / assertNotInstanceOf
+      accept a class-string resolved through the Class Registry or the token table,
+      else UnknownClassOrInterfaceException (ESC-13.1-9). An XT case for each; no assertion
+      removed or weakened; lands before Story 13.1 resumes. The reasons.ts part (ESC-13.1-10)
+      landed in the Maintainer's PR and is not part of this item"
     owner: "orchestrator"
     status: in-progress
     ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"
