@@ -479,7 +479,7 @@ const TOKEN_CLEAN: readonly (readonly [string, string])[] = [
 
 xaravelTest(
   "XT-conformance-267",
-  "xaravel/no-token-string-coercion, an error in the root .oxlintrc.json and a spine rule, fails a contract token string-coerced in packages/<p>/src/ or installer/src/ (a template-literal substitution, String(token), token.toString(), + with a string or template operand, +=): a PascalCase name imported from @xaravel/contracts or a subpath, a PascalCase member of a namespace import of one, or a const bound to contract(...); fqcn(token) in a template, a tagged template, a camelCase or SCREAMING_CASE import, a type-only import and the same coercions outside package source lint clean, and the repository itself is clean (AD-9.8, AD-16.4)",
+  "xaravel/no-token-string-coercion, an error in the root .oxlintrc.json and a spine rule, fails a contract token string-coerced in packages/<p>/src/ or installer/src/ (a template-literal substitution, String(token), token.toString(), + with a string or template operand, +=): a PascalCase name imported from @xaravel/contracts or a subpath, a PascalCase member of a namespace import of one, or a const bound to contract(...); fqcn(token) in a template, a tagged template, a camelCase or SCREAMING_CASE import, a type-only import (an `import type` or an inline `type` specifier) and the same coercions outside package source lint clean, and the repository itself is clean (AD-9.8, AD-16.4)",
   () => {
     // The config, the plugin and the spine list.
     const config = JSON.parse(readFileSync(join(root, CONFIG), "utf8")) as { rules: Record<string, unknown> };
@@ -532,6 +532,7 @@ xaravelTest(
       "packages/demo/src/Tagged.ts": [`${head}declare function tag(s: TemplateStringsArray, ...v: unknown[]): string;\nexport const s = tag\`\${Arrayable}\`;\n`, []],
       "packages/demo/src/Camel.ts": [`${head}export const s = [\`\${canonicalToken}\`, \`\${CLASS_FQCN}\`];\n`, []],
       "packages/demo/src/TypeOnly.ts": ['// @ts-expect-error TS2307\nimport type { Arrayable } from "@xaravel/contracts";\nexport type S = `${Arrayable & string}`;\n', []],
+      "packages/demo/src/InlineTypeOnly.ts": ['// @ts-expect-error TS2307\nimport { type Arrayable } from "@xaravel/contracts";\nexport const s = `${Arrayable}`;\n', []],
       "packages/demo/src/Let.ts": [`${head}let L = make("App\\\\L");\nL = make("App\\\\M");\nexport const s = String(L);\n`, []],
       "packages/demo/src/Computed.ts": [`${ns}export const s = \`\${support["Arrayable"]}\`;\n`, []],
       "packages/demo/src/Other.ts": ['// @ts-expect-error TS2307\nimport { Arrayable } from "@xaravel/contractsx";\nexport const s = `${Arrayable}`;\n', []],

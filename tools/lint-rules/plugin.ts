@@ -162,7 +162,7 @@ export const MESSAGES = {
     `inject keys (${keys.join(", ")}) differ from the parameters (${params.join(", ")}); key names and order must be the parameter names in order (AD-4)`,
   dynamicColumnDefault: (field: string): string => `model column default \`${field}\` is not a constant expression; a column default must be a constant (AD-7)`,
   tokenStringCoercion: (name: string): string =>
-    `the contract token \`${name}\` is string-coerced, which throws: its Symbol.toPrimitive gives the brand symbol; name it with fqcn(${name}) (AD-9.8)`,
+    `the contract token \`${name}\` is string-coerced, which throws or gives a wrong string; name it with fqcn(${name}) (AD-9.8)`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -1598,8 +1598,9 @@ const PASCAL_CASE = /^[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*$/;
 
 /**
  * `no-token-string-coercion`: a contract token is never string-coerced in `packages/<p>/src/` or `installer/src/`
- * (AD-9.8). Its `Symbol.toPrimitive` gives the brand symbol for every hint (AD-1, ESC-10.1-1), so the coercion throws
- * `TypeError: Cannot convert a symbol to a string`; a message names a token with `fqcn(token)`.
+ * (AD-9.8). Its `Symbol.toPrimitive` gives the brand symbol for every hint (AD-1, ESC-10.1-1), so a template, `String()`
+ * or `+` throws `TypeError: Cannot convert a symbol to a string`, and `token.toString()` gives `[object Object]`, a
+ * wrong string: each throws or gives a wrong string. A message names a token with `fqcn(token)`.
  *
  * Syntactic, as the plugin's other rules are. A token is
  *   - a value imported by name from `@xaravel/contracts` or a subpath whose imported name is PascalCase (any local
@@ -1615,8 +1616,10 @@ const PASCAL_CASE = /^[A-Z](?=[A-Za-z0-9]*[a-z])[A-Za-z0-9]*$/;
  * not seen, and neither is a coercion that does not read as one here (`[token].join()`, `` `${[token]}` ``,
  * `String.raw`, `Reflect.apply(String, …)`). Nor is a `+` whose other operand is not a string or template literal
  * (`token + name`, `token + token`), a unary `+token`, or `Number(token)`: each throws at runtime, loudly, as a
- * symbol does. A local binding that shadows an imported token's name is still read as
- * the token. The rule needs no type information.
+ * symbol does. `new String(token)` and `"x".concat(token)` are not caught either. A local binding that shadows an
+ * imported token's name is still read as the token, and so is any PascalCase value export of `@xaravel/contracts`
+ * that is not a token (an exception class, say): a false positive, which a disable comment or a rename clears. The
+ * rule needs no type information.
  */
 const noTokenStringCoercion = rule("Disallow string-coercing a contract token in package source; name it with fqcn() (AD-9.8).", (context, path) => {
   if (!isPackageSource(path)) {
