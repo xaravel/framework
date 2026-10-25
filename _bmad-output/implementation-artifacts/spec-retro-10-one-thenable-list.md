@@ -2,8 +2,8 @@
 title: 'Epic 10 item 9: one thenable list, read by the lint plugin from @xaravel/contracts/async'
 type: 'refactor'
 created: '2026-10-24'
-status: 'ready-for-dev'
-baseline_revision: 'e3a8265d3f417f01abede9e40e0b240a5be2321e'
+status: 'in-progress'
+baseline_revision: '6a3c33afe0aa905a35f699925801f78d1d44ac99'
 review_loop_iteration: 0
 followup_review_recommended: false
 context: []
@@ -67,7 +67,7 @@ Action item `epic-10-retro-item-9-one-thenable-list` (finding S4, `_bmad-output/
 
 ## Spec Change Log
 
-- 2026-10-24, resumed after #395: `decisions/MAINT-2026-10-24-stale-cross-scope-tests.md`, "Item 9's second stop", approves one change in `conformance/**`: `conformance/tests/xaravel/async-surface.test.ts:162` becomes `expect(repoList).toBe(THENABLE_TYPES)`. Added it to Boundaries, the Code Map and Tasks; status back to `ready-for-dev`, baseline moved to `main` at e3a8265d3f417f01abede9e40e0b240a5be2321e. The earlier blocked run's result stays below for the record.
+- 2026-10-24, resumed after #395: `decisions/MAINT-2026-10-24-stale-cross-scope-tests.md`, "Item 9's second stop", approves one change in `conformance/**`: `conformance/tests/xaravel/async-surface.test.ts:162` becomes `expect(repoList).toBe(THENABLE_TYPES)`. Added it to Boundaries, the Code Map and Tasks; status back to `ready-for-dev`, baseline moved to this branch's resume commit 6a3c33afe0aa905a35f699925801f78d1d44ac99 (`main` at e3a8265d3f417f01abede9e40e0b240a5be2321e plus this spec edit). The earlier blocked run's result stays below for the record.
 
 ## Review Triage Log
 
