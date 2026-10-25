@@ -77,3 +77,4 @@ epic-10:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-10-retro-item-1-phase-1-exit
+    - epic-10-retro-item-9-one-thenable-list
