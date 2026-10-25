@@ -85,4 +85,3 @@ epic-11:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-11-retro-item-7-macroable-boot-write
-    - epic-11-retro-item-5-builtin-names-and-static-mixins
