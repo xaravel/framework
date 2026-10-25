@@ -3965,6 +3965,11 @@ So that concurrent requests never share container state (FR-19, NFR-4, AD-5).
 **And** inside a test frame the write goes to that frame's overlay
 **And** `instance()` always writes to the innermost unit frame's overlay, which is read first.
 
+**Given** an Application that is not yet `sealed` and no open unit frame
+**When** a base-only write (a binding, or a macro through `@xaravel/macroable`) is made during register or boot
+**Then** `@xaravel/runtime` routes it to the active Application's base, through a seam this Story adds (`decisions/ESC-11.1-2.md`)
+**And** this Story's PR takes `epic-11-retro-item-7-macroable-boot-write` out of epic 11's `waiting_on_maintainer`, so the orchestrator routes Macroable's half (MAINT-2026-10-24-epic-11-items).
+
 **Given** a base singleton whose constructor resolves a frame-owned binding (a request-like fixture)
 **When** dev mode is on
 **Then** resolution throws, naming both bindings (AD-5).
