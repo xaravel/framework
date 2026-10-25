@@ -1,1 +1,1 @@
-export { Macroable } from "./Support/Traits/Macroable";
+export { Macroable } from "./Traits/Macroable";
