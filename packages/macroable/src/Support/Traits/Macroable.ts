@@ -7,14 +7,19 @@
 // (the layer `mixin` builds). It is never a module variable or a plain static field. A table is never mutated in place:
 // a write sets a fresh copy, so a unit never changes a table it reads through from an enclosing unit.
 //
-// Writes (`macro`, `mixin`, `flushMacros`) are base-only writes (DIV-11.2, AD-5). A write passes only when the
-// innermost frame (`currentFrame()`) is a `test` frame, which holds it and discards it when the test ends. Every other
-// frame throws `ScopeFrameException`: a `request`, `job`, `command` or other root or nested non-test `unit` frame, and
-// a narrow frame, under a test frame too; with no active frame a write throws, as `frameStatic`'s writes do
-// (decisions/ESC-11.1-5.md, decisions/ESC-11.1-6.md). Two limits are follow-ups, not divergences: a write before the
-// Application is `sealed` goes to no Application base until the Story that adds the `sealed` state adds that seam
-// (decisions/ESC-11.1-2.md), and whether a unit or narrow frame nested in a test frame may write to the test's
-// overlay is decided once `@xaravel/runtime/scope` exposes the frame chain's kinds (decisions/ESC-11.1-3.md).
+// Writes (`macro`, `mixin`, `flushMacros`) are base-only writes (DIV-11.2, AD-5). A write passes only when the active
+// frame chain (`frameKinds()`, decisions/ESC-11.1-3.md) holds a `test` frame and no `request`, `job` or `command` frame:
+// a test frame, and a unit or narrow frame nested in one at any depth, which writes to the test frame's overlay
+// (decisions/ESC-11.1-5.md, second bullet; decisions/ESC-11.1-6.md left these nested cases to the frame-chain read).
+// `frameStatic` routes the write as AD-5.8 does: from a unit or narrow frame nested in a test frame at any depth it lands
+// in the nearest enclosing test frame (decisions/MAINT-2026-10-24-ad-5-8-any-depth.md), and it is discarded when that
+// test ends. A `test` frame nested in another test is the nearest test frame for its own writes, so its macros end
+// with it. Every other chain throws `ScopeFrameException`: a `request`, `job` or `command` frame anywhere in the
+// chain, a test frame opened inside one included (DIV-11.2); a chain with no test frame, such as a root `unit` frame
+// or an `interleave` unit, whose origin the read does not follow (ESC-11.1-5, first bullet); and no active frame, as
+// `frameStatic`'s writes do (decisions/ESC-11.1-2.md). One limit is a follow-up, not a
+// divergence: a write before the Application is `sealed` goes to no Application base until the Story that adds the
+// `sealed` state adds that seam (decisions/ESC-11.1-2.md).
 //
 // Dispatch. PHP resolves a missing method at call time through `__call` / `__callStatic`; without a Proxy (AD-7,
 // AD-26) `macro(name)` makes `name` a real member of the using class once, on its prototype and on its static side,
@@ -23,7 +28,7 @@
 // that was never registered has no member, so calling it is a JS `TypeError`, not `BadMethodCallException`; such a
 // call goes through `__callStatic` / `__call` instead (DIV-12.10).
 import { BadMethodCallException, Error as PhpError, fqcn, registerClass } from "@xaravel/runtime";
-import { currentFrame, type FrameSlot, frameStatic, ScopeFrameException } from "@xaravel/runtime/scope";
+import { frameKinds, type FrameSlot, frameStatic, ScopeFrameException } from "@xaravel/runtime/scope";
 
 /** Any class, abstract or not. */
 type AnyClass = abstract new (...args: never[]) => unknown;
@@ -33,8 +38,10 @@ type MacroTable = ReadonlyMap<string, unknown>;
 
 /** The `frameStatic` key of a using class's macro table: Upstream's `static::$macros`. */
 const MACROS: unique symbol = Symbol("Illuminate\\Support\\Traits\\Macroable::$macros");
-/** The only frame kind, as the innermost frame, in which a macro write passes (DIV-11.2, ESC-11.1-6). */
+/** The frame kind a chain must hold for a macro write to pass (ESC-11.1-5); a narrow frame is never of this kind. */
 const WRITABLE_KIND = "test";
+/** The frame kinds under which a macro write throws, anywhere in the chain (DIV-11.2, ESC-11.1-3). */
+const BARRIER_KINDS: ReadonlySet<string> = new Set(["request", "job", "command"]);
 /** Prototype members every object has, never registered by `mixin`. */
 const OBJECT_KEYS: ReadonlySet<string> = new Set(Object.getOwnPropertyNames(Object.prototype));
 /** Static members every function has, never registered by `mixin`. */
@@ -58,12 +65,16 @@ function macros(klass: object): FrameSlot<MacroTable> {
 
 /** Throws `ScopeFrameException` where a macro write may not happen (DIV-11.2, AD-5); see the header. */
 function guardWrite(what: string): void {
-  const frame = currentFrame();
-  if (frame === null) {
+  const kinds = frameKinds();
+  if (kinds.length === 0) {
     throw new ScopeFrameException(`Cannot ${what} with no active Scope Frame; run the code inside runInFrame()`);
   }
-  if (frame.kind !== WRITABLE_KIND) {
-    throw new ScopeFrameException(`Cannot ${what} inside a ${frame.kind} frame: macros are base-only writes, held only directly inside a test frame (DIV-11.2, ESC-11.1-6)`);
+  const barrier = kinds.find((kind) => BARRIER_KINDS.has(kind));
+  if (barrier !== undefined) {
+    throw new ScopeFrameException(`Cannot ${what} inside a ${barrier} frame: macros are base-only writes, and a ${barrier} frame takes none (DIV-11.2, ESC-11.1-3)`);
+  }
+  if (!kinds.includes(WRITABLE_KIND)) {
+    throw new ScopeFrameException(`Cannot ${what} inside a ${kinds[0]} frame: macros are base-only writes, held only inside a test frame (DIV-11.2, ESC-11.1-5)`);
   }
 }
 
@@ -148,8 +159,9 @@ function mixinMethods(mixin: object): Map<string, (...args: unknown[]) => unknow
 export class Macroable {
   /**
    * Register a custom macro. A function macro is called with `this` bound to the instance (instance call) or the
-   * called class (static call); an arrow function, as a PHP `static function`, keeps its own `this`. Throws
-   * `ScopeFrameException` unless the innermost frame is a `test` frame, and with no active frame (DIV-11.2).
+   * called class (static call); an arrow function, as a PHP `static function`, keeps its own `this`. Passes only when
+   * the active frame chain holds a `test` frame and no `request`, `job` or `command` frame, and lands in the nearest
+   * test frame; throws `ScopeFrameException` otherwise, and with no active frame (DIV-11.2; see the header).
    */
   static macro(name: string, macro: unknown): null {
     guardWrite(`register the macro ${name}`);

@@ -20,6 +20,8 @@ deferred:
     location: >-
       packages/macroable/src/Support/Traits/Macroable.ts:60
     severity: medium
+    resolved: >-
+      Resolved by epic-11-retro-item-1-frame-chain-read (spec-retro-11-frame-chain-read.md): @xaravel/runtime/scope exports frameKinds(), runInNarrowFrame refuses the kind test, and guardWrite passes a write only when the chain holds a test frame and no request, job or command frame (XT-runtime-42, XT-macroable-2). A write from a unit or narrow frame nested in a test frame at any depth lands in the nearest test frame, by the runtime's ownerOf under the amended AD-5.8 (decisions/MAINT-2026-10-24-ad-5-8-any-depth.md); a test frame nested in another test holds its own writes.
   - summary: >-
       PORTING.md:26 (decided) says callers type a macro through module augmentation, which oxlint's no-unsafe-declaration-merging rejects for classes; Story 11.1 types macros with `declare` members instead.
     evidence: |-
@@ -144,6 +146,7 @@ deferred:
 - 2026-10-24, resume after rulings: ESC-11.1-1 approved DIV-12.10 (`decisions/ESC-11.1-1.md`), so `testCallingUndefinedMacroThrowsException` is adapted to `__callStatic` and its line becomes `pass` with `adapted: "DIV-12.10"`. ESC-11.1-4 put the grader devDependencies and `bun.lock` on `main`, so the Story's `package.json` diff is empty. ESC-11.1-2 and ESC-11.1-3 approved option 1: XT-macroable-2 stands as it is, and the boot-time and nested-frame cases are follow-ups for the Epic 11 retrospective. The docs, source comments and XT-macroable-3 stop calling those Escalations open. Baseline moved to `main` at dbb449749ff1e35022d4b946ceeee68bbfe011d3 so the review diff carries the whole Story.
 - 2026-10-24, implementation: the fixtures type their macros with `declare` members rather than interface merging, which oxlint's `no-unsafe-declaration-merging` rejects.
 - 2026-10-24, resume after the ESC-11.1-6 ruling: the saved implementation (cd664b42) is applied and the patch file deleted. `guardWrite` now passes a write only when `currentFrame().kind` is `test` and throws `ScopeFrameException` in every other frame. XT-macroable-2's root-`unit` case and its unit-nested-in-a-test case assert the throw (for `macro`, `flushMacros` and `mixin`), plus a narrow frame nested in a test frame; its consequence string, the source header and `docs/macroable.md`'s registration note and Divergences say macros register only directly inside a test frame for now. The deferred narrow-frame entry is narrowed to what is left: a frame of kind `test` nested in a request/job/command unit.
+- 2026-10-24, epic-11-retro-item-1-frame-chain-read: `deferred[0]` is resolved. `guardWrite` reads `frameKinds()` and passes a write only when the chain holds a `test` frame and no `request`, `job` or `command` frame, so a unit or narrow frame nested in a test frame writes (ESC-11.1-5, second bullet) and a test frame opened inside a request, job or command throws (DIV-11.2). The write lands in the nearest test frame at any depth, by the runtime's `ownerOf` under the amended AD-5.8 (`decisions/MAINT-2026-10-24-ad-5-8-any-depth.md`); a test frame nested in another test holds its own writes.
 
 ## Review Triage Log
 

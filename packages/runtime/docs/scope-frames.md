@@ -12,16 +12,22 @@ is exported from `@xaravel/runtime/scope` and from the package root. It is synch
 - `runInRootFrame(kind, fn, app?)` always opens a root unit, which sees no enclosing frame's slots. Production kernels
   and `interleave` use it.
 - `runInNarrowFrame(kind, slots, fn)` opens a narrow frame (`DB.transaction`, a Concurrency task, `Context.scope`). It
-  overrides only the `slots` it declares, and every other read and write passes through to the enclosing unit.
+  overrides only the `slots` it declares, and every other read and write passes through to the enclosing unit. The
+  kind `test` is reserved for test units: `runInNarrowFrame("test", …)` throws `TypeError`.
 - `currentFrame()` is the active `Frame` (`{ kind, app }`), or `null` outside any frame.
+- `frameKinds()` is the kinds of the active frame chain, innermost first, unit and narrow frames alike, as a frozen
+  array; `[]` outside any frame. It walks parents only: an `interleave` unit's origin is never followed, so there it is
+  `["unit"]`. A `test` kind in it is always a test unit. It stores nothing (decisions/ESC-11.1-3.md).
 - `frameSlot(key, init)` returns a `FrameSlot` (`FrameSlot<T>`), a per-frame value with `get()` and `set(value)`. Its key is a
   `FrameSlotKey` (a string or a symbol). `get()` reads the nearest frame up the chain that holds the key, else runs
   `init()` once per owning frame. Outside any frame, `get()` returns `init()` without storing it, and `set()` throws
   `ScopeFrameException`. Once the owning unit has ended (a `bindToFrame` callback that outlives it), `set()` throws
   `ScopeFrameException` `Cannot write the frame slot <key> to the unit frame after it has ended`. `get()` still reads a
   value stored before the end, and otherwise returns `init()` without storing it.
-- `REQUEST_SLOT`, `ROUTE_SLOT` and `CSP_NONCE_SLOT` are the three slots a child of a `test` unit keeps for itself. Its
-  other writes land in the test frame. A child of any other unit keeps its own writes and reads its parent's values
+- `REQUEST_SLOT`, `ROUTE_SLOT` and `CSP_NONCE_SLOT` are the three slots a unit nested in a `test` unit keeps for
+  itself, at any depth (a unit inside a child of the test included). Its other writes land in the nearest enclosing test
+  frame (AD-5.8, `decisions/MAINT-2026-10-24-ad-5-8-any-depth.md`). Parents only count: an `interleave` unit's origin
+  does not make it nested. A unit with no test frame up its parents keeps its own writes and reads its parent's values
   until it writes them.
 - `frameDefer(promise)` adds to the innermost unit's defer list. The unit ends only after the list drains, and a sync
   body that leaves deferred promises throws `ScopeFrameException`.
@@ -37,12 +43,15 @@ port can catch it as one (see [PHP exceptions](exceptions.md)).
   `app` `null` names no Application, so `currentApplication()` in it is the default (AD-5.3). The runtime never
   imports Foundation: an Application is any object.
 - `frameOverlay(app)` is a `FrameOverlay`, the active unit's overlay for one Application, with `has`, `get` and `set`.
-  Two Applications writing the same key in one unit each read only their own value.
+  Two Applications writing the same key in one unit each read only their own value. For a non-test unit nested in a
+  `test` unit at any depth, the overlay is the nearest test frame's.
 - `frameStatic(Class, key, init)` holds one Upstream static setter (`Model.unguard`, `Carbon.setTestNow`) per unit,
-  and discards it when the unit ends.
+  and discards it when the unit ends. A non-test unit nested in a `test` unit at any depth holds no statics of its own:
+  they are the nearest test frame's, and end with it.
 
-A write goes where an undeclared slot write goes (AD-5.8): through narrow frames, from a child of a `test` unit into the
-test frame, else into the unit. A write to an ended unit throws.
+A write goes where an undeclared slot write goes (AD-5.8): through narrow frames, from a unit nested in a `test` unit at
+any depth into the nearest test frame, else into the unit. A `test` unit nested in another test is the nearest test
+frame for its own writes, so it holds them and discards them when it ends. A write to an ended unit throws.
 
 ## Propagation
 
