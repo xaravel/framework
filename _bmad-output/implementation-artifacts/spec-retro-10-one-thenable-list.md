@@ -2,8 +2,8 @@
 title: 'Epic 10 item 9: one thenable list, read by the lint plugin from @xaravel/contracts/async'
 type: 'refactor'
 created: '2026-10-24'
-status: 'blocked'
-baseline_revision: 'ab8e77b56267662dec1d569592663bacce3ac884'
+status: 'ready-for-dev'
+baseline_revision: 'e3a8265d3f417f01abede9e40e0b240a5be2321e'
 review_loop_iteration: 0
 followup_review_recommended: false
 context: []
@@ -27,7 +27,7 @@ Action item `epic-10-retro-item-9-one-thenable-list` (finding S4, `_bmad-output/
 
 **Always:** One array object: `thenables.THENABLE_TYPES === contracts.THENABLE_TYPES`. XT-contracts-13 still asserts 26 entries, the same FQCNs in the same order (identity implies it), every AC thenable, frozen, and that async-surface's `thenableTypes(REPO)` returns the contracts module's own array. Update the header comments of `thenables.ts`, `plugin.ts` (where it describes the list) and the docs that name where the list lives (`docs/ops/lint.md`, `docs/ops/async-surface.md`). Remove the blocked-attempt note `bmad-build-auto-result-retro-10-one-thenable-list.md`.
 
-**Never:** Change any `packages/contracts` file other than `tests/xaravel/seams.test.ts`; change `tools/async-surface/**`, `conformance/**` or any other component; remove or weaken any assertion; edit the item's `action`, `owner` or `epic`. No new Test IDs.
+**Never:** Change any `packages/contracts` file other than `tests/xaravel/seams.test.ts`; change `tools/async-surface/**`, `conformance/**` (except the one approved line below) or any other component; remove or weaken any assertion; edit the item's `action`, `owner` or `epic`. No new Test IDs.
 
 ## I/O & Edge-Case Matrix
 
@@ -48,6 +48,7 @@ Action item `epic-10-retro-item-9-one-thenable-list` (finding S4, `_bmad-output/
 - `packages/contracts/tests/xaravel/seams.test.ts:121-126` `toolThenables()` (text parse, to delete), `:218-231` `toolThenableSource()` child script printing `{contracts, tool, length}`, `:233-261` XT-contracts-13 body and its title string (mentions "tools/lint-rules/thenables.ts's list" and "not the tool's").
 - `tools/async-surface/async-surface.ts:584-601` -- read-only; fallback returns lint's `THENABLE_TYPES`, which becomes the same object.
 - `conformance/tests/xaravel/async-surface.test.ts:16,22,133` and `lint-signatures.test.ts:19,140-147` -- read-only consumers; must pass unchanged.
+- `conformance/tests/xaravel/async-surface.test.ts:162` (XT-conformance-134) -- the one approved change in `conformance/**` (`decisions/MAINT-2026-10-24-stale-cross-scope-tests.md`, "Item 9's second stop"): `expect(repoList).not.toBe(THENABLE_TYPES)` becomes `expect(repoList).toBe(THENABLE_TYPES)`. Nothing else in the file changes, comments included.
 - `docs/ops/lint.md:54`, `docs/ops/async-surface.md:42` -- where the list lives.
 
 ## Tasks & Acceptance
@@ -56,6 +57,7 @@ Action item `epic-10-retro-item-9-one-thenable-list` (finding S4, `_bmad-output/
 - `tools/lint-rules/thenables.ts` -- drop the literal; re-export from contracts; update header -- removes the copy (S4).
 - `packages/contracts/tests/xaravel/seams.test.ts` -- remove `toolThenables()`; in XT-contracts-13 assert `THENABLE_TYPES.length === 26`; child script prints `{ contracts: list === contracts.THENABLE_TYPES, lint: lint.THENABLE_TYPES === contracts.THENABLE_TYPES, length: list.length }`, expected `{"contracts":true,"lint":true,"length":26}`; title names the lint plugin's list as the contracts array -- stale test re-pinned to the one source.
 - `docs/ops/lint.md`, `docs/ops/async-surface.md` -- say the list is `@xaravel/contracts/async`'s, re-exported by `tools/lint-rules/thenables.ts`.
+- `conformance/tests/xaravel/async-surface.test.ts:162` -- `not.toBe(THENABLE_TYPES)` becomes `toBe(THENABLE_TYPES)`, the one line the Maintainer approved -- XT-conformance-134 pins the repository, contracts and lint lists as one array.
 - `_bmad-output/implementation-artifacts/bmad-build-auto-result-retro-10-one-thenable-list.md` -- delete.
 
 **Acceptance Criteria:**
@@ -64,6 +66,8 @@ Action item `epic-10-retro-item-9-one-thenable-list` (finding S4, `_bmad-output/
 - Given the repo, when `bun run harness`, `bun run typecheck` and `bun run lint` run, then all pass with no differences.
 
 ## Spec Change Log
+
+- 2026-10-24, resumed after #395: `decisions/MAINT-2026-10-24-stale-cross-scope-tests.md`, "Item 9's second stop", approves one change in `conformance/**`: `conformance/tests/xaravel/async-surface.test.ts:162` becomes `expect(repoList).toBe(THENABLE_TYPES)`. Added it to Boundaries, the Code Map and Tasks; status back to `ready-for-dev`, baseline moved to `main` at e3a8265d3f417f01abede9e40e0b240a5be2321e. The earlier blocked run's result stays below for the record.
 
 ## Review Triage Log
 
