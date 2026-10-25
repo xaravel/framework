@@ -94,4 +94,5 @@ epic-12:
   waiting_on_maintainer: []
 epic-13:
   # No retrospective yet; this entry only routes epic 13's Maintainer-ruled items.
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-13-item-2-reflection-contracts
