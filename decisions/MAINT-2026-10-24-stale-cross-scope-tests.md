@@ -29,3 +29,9 @@ Protected Paths are unchanged. `--stale-test` refuses a Protected Path, which to
 ## Epic 10 item 9
 
 `epic-10-retro-item-9-one-thenable-list` resumes under this rule. The lint plugin reads its thenable list from `@xaravel/contracts/async`, and `tools/lint-rules/thenables.ts` keeps no copy. XT-contracts-13 (`packages/contracts/tests/xaravel/seams.test.ts`, passed as `--stale-test`) is re-pinned to assert that the plugin's list is the contracts module's array, the same 26 FQCNs in the same order, read from that one source rather than by parsing a second list. The item leaves `waiting_on_maintainer` and stays `in-progress`.
+
+### Item 9's second stop (added 2026-10-24, after #394)
+
+The rebuilt item passed XT-contracts-13, the lint tests, typecheck and lint. It then failed XT-conformance-134 at `conformance/tests/xaravel/async-surface.test.ts:162`, `expect(repoList).not.toBe(THENABLE_TYPES)`. That line checked that the repository reads the contracts list rather than the lint tool's own copy. Once the tool keeps no copy, its `THENABLE_TYPES` is the contracts array, so `not.toBe` cannot hold. The file is a Protected Path, which this rule leaves out, so the item waited.
+
+The Maintainer approves one change, as an exception for this item: line 162 becomes `expect(repoList).toBe(THENABLE_TYPES)`. Line 161 already pins `repoList` to the contracts module's array. With the new line 162, the test asserts that the repository's list, the contracts list and the lint list are one array. That is item 9's goal, and it is stricter than before. Nothing else in `conformance/tests/**` may change for this item. The standing rule still excludes Protected test files. The item leaves `waiting_on_maintainer` again and stays `in-progress`.

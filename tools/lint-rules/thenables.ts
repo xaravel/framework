@@ -1,8 +1,9 @@
 // The thenable types (AD-6): awaiting one runs its terminal, so an `async`
 // function must not return one unawaited. Story 6.3's
 // `xaravel/no-async-thenable-return` rule and Story 6.4's `async-surface` tool
-// (which uses this list as its fixture list until `@xaravel/contracts/async`,
-// Story 10.5, supplies it) both match a type by its qualified name, never by
+// (whose fallback reads this module's list) both use `THENABLE_TYPES`, the one
+// list, which `@xaravel/contracts/async` (Story 10.5) exports and this module
+// re-exports, and both match a type by its qualified name, never by
 // its short name (Retro 6 item 12; MAINT-2026-10-19 item 7): `registeredFqcn`
 // follows a name through its import, and through re-exports, to the source
 // module that registers it with `registerClass('<FQCN>', X)` (AD-10) or
@@ -46,36 +47,8 @@ import { dirname, resolve } from "node:path";
 import { parseSync } from "oxc-parser";
 import { isFqcn, normaliseFqcn, recogniseRegistration, type Node } from "../registration/recognise";
 
-/** The Upstream FQCNs of the thenable types: the Query and Eloquent Builders, the Relation classes, the `Pending*` builders and the Pipeline contract and class. */
-export const THENABLE_TYPES: readonly string[] = [
-  "Illuminate\\Database\\Query\\Builder",
-  "Illuminate\\Database\\Eloquent\\Builder",
-  "Illuminate\\Database\\Eloquent\\Relations\\Relation",
-  "Illuminate\\Database\\Eloquent\\Relations\\BelongsTo",
-  "Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasMany",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasManyThrough",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasOne",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasOneOrManyThrough",
-  "Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough",
-  "Illuminate\\Database\\Eloquent\\Relations\\MorphMany",
-  "Illuminate\\Database\\Eloquent\\Relations\\MorphOne",
-  "Illuminate\\Database\\Eloquent\\Relations\\MorphOneOrMany",
-  "Illuminate\\Database\\Eloquent\\Relations\\MorphTo",
-  "Illuminate\\Database\\Eloquent\\Relations\\MorphToMany",
-  "Illuminate\\Http\\Client\\PendingRequest",
-  "Illuminate\\Foundation\\Bus\\PendingDispatch",
-  "Illuminate\\Foundation\\Bus\\PendingClosureDispatch",
-  "Illuminate\\Foundation\\Bus\\PendingChain",
-  "Illuminate\\Bus\\PendingBatch",
-  "Illuminate\\Broadcasting\\PendingBroadcast",
-  "Illuminate\\Testing\\PendingCommand",
-  "Laravel\\Mcp\\Server\\Testing\\PendingTestResponse",
-  // A pipeline keeps Upstream's `then(destination)`, so it is a declared thenable (ESC-10.2-2).
-  "Illuminate\\Contracts\\Pipeline\\Pipeline",
-  "Illuminate\\Pipeline\\Pipeline",
-];
+// The one thenable list: `@xaravel/contracts/async`'s frozen `THENABLE_TYPES`, re-exported as the same array object.
+export { THENABLE_TYPES } from "../../packages/contracts/src/async/index";
 
 /** A local binding an import declaration creates: a named import (`imported` is the exported name) or a namespace (`imported` null). */
 export interface ImportBinding {

@@ -1153,7 +1153,8 @@ const noAsyncThenableReturn = rule("Disallow returning a thenable unawaited from
   /**
    * The thenable a type or class name refers to (`X`, or `ns.X` through `import * as ns`), or null: a same-file
    * structural thenable by its name, else a name whose import (or same-file registration) resolves to a registered
-   * FQCN in `THENABLE_TYPES`, by that FQCN. Never by short name (MAINT-2026-10-19 item 7).
+   * FQCN in `THENABLE_TYPES` (`@xaravel/contracts/async`'s list, re-exported by `./thenables`), by that FQCN.
+   * Never by short name (MAINT-2026-10-19 item 7).
    */
   const thenableName = (name: Node | null | undefined): string | null => {
     if (name === undefined || name === null) {

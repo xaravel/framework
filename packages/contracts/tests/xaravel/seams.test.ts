@@ -1,7 +1,7 @@
 // Xaravel Tests for Story 10.5: the three Xaravel-only seams of `@xaravel/contracts` (AD-27). XT-contracts-13 checks
-// `@xaravel/contracts/async` (AD-6): the thenable list against the `tools/lint-rules/thenables.ts` array it replaces,
-// that `bun run async-surface`'s `thenableTypes(REPO)` returns it (ESC-10.5-2), `NotPromise<T>` with the repo's pinned
-// `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on every package's `src/`. XT-contracts-14
+// `@xaravel/contracts/async` (AD-6): the thenable list's 26 FQCNs in order, that `tools/lint-rules/thenables.ts`
+// re-exports the same array, that `bun run async-surface`'s `thenableTypes(REPO)` returns it (ESC-10.5-2),
+// `NotPromise<T>` with the repo's pinned `tsc -b`, and the PromiseLike check (`support/thenables.ts`) on fixtures and on every package's `src/`. XT-contracts-14
 // checks the compiled-view ABI in `@xaravel/contracts/view` (AD-11): the `RenderContext` and `RenderLoop` fields
 // against the View `Factory`'s per-render properties and `addLoop`'s entry, and `BladeHelper` against every
 // `$__env-><method>` Upstream's Blade compilers emit and the default echo format.
@@ -118,12 +118,35 @@ const AC_THENABLES: readonly string[] = [
   "Laravel\\Mcp\\Server\\Testing\\PendingTestResponse",
 ];
 
-/** The string literals of `THENABLE_TYPES`' array literal in `tools/lint-rules/thenables.ts`, read as text. */
-function toolThenables(): string[] {
-  const source = readFileSync(join(REPO, "tools", "lint-rules", "thenables.ts"), "utf8");
-  const literal = /export const THENABLE_TYPES: readonly string\[\] = \[([\s\S]*?)\n\];/.exec(source)?.[1] ?? "";
-  return [...literal.matchAll(/^\s*("(?:[^"\\]|\\.)*"),?$/gm)].map((match) => JSON.parse(match[1] ?? '""') as string);
-}
+/** The 26 thenable FQCNs `@xaravel/contracts/async` exports, in its order. */
+const EXPECTED_THENABLES: readonly string[] = [
+  "Illuminate\\Database\\Query\\Builder",
+  "Illuminate\\Database\\Eloquent\\Builder",
+  "Illuminate\\Database\\Eloquent\\Relations\\Relation",
+  "Illuminate\\Database\\Eloquent\\Relations\\BelongsTo",
+  "Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasMany",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasManyThrough",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasOne",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasOneOrManyThrough",
+  "Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough",
+  "Illuminate\\Database\\Eloquent\\Relations\\MorphMany",
+  "Illuminate\\Database\\Eloquent\\Relations\\MorphOne",
+  "Illuminate\\Database\\Eloquent\\Relations\\MorphOneOrMany",
+  "Illuminate\\Database\\Eloquent\\Relations\\MorphTo",
+  "Illuminate\\Database\\Eloquent\\Relations\\MorphToMany",
+  "Illuminate\\Http\\Client\\PendingRequest",
+  "Illuminate\\Foundation\\Bus\\PendingDispatch",
+  "Illuminate\\Foundation\\Bus\\PendingClosureDispatch",
+  "Illuminate\\Foundation\\Bus\\PendingChain",
+  "Illuminate\\Bus\\PendingBatch",
+  "Illuminate\\Broadcasting\\PendingBroadcast",
+  "Illuminate\\Testing\\PendingCommand",
+  "Laravel\\Mcp\\Server\\Testing\\PendingTestResponse",
+  "Illuminate\\Contracts\\Pipeline\\Pipeline",
+  "Illuminate\\Pipeline\\Pipeline",
+];
 
 const NOT_PROMISE_OK = `import type { NotPromise } from "@xaravel/contracts/async";
 
@@ -211,7 +234,8 @@ const CHECK_FIXTURES: readonly CheckFixture[] = [
 
 /**
  * Runs `await thenableTypes(REPO)` from `tools/async-surface/async-surface.ts` in a child `bun` with `cwd` REPO, and
- * prints whether it is the contracts module's own `THENABLE_TYPES` (imported by its resolved path) or the tool's.
+ * prints whether it is the contracts module's own `THENABLE_TYPES` (imported by its resolved path), and whether
+ * `tools/lint-rules/thenables.ts` re-exports that same array as its `THENABLE_TYPES`.
  */
 async function toolThenableSource(): Promise<{ code: number; stdout: string; output: string }> {
   const script = [
@@ -219,7 +243,7 @@ async function toolThenableSource(): Promise<{ code: number; stdout: string; out
     `const lint = await import(${JSON.stringify(join(REPO, "tools", "lint-rules", "thenables.ts"))});`,
     `const contracts = await import(${JSON.stringify(join(REPO, "packages", "contracts", "src", "async", "index.ts"))});`,
     "const list = await thenableTypes(process.cwd());",
-    "console.log(JSON.stringify({ contracts: list === contracts.THENABLE_TYPES, tool: list === lint.THENABLE_TYPES, length: list.length }));",
+    "console.log(JSON.stringify({ contracts: list === contracts.THENABLE_TYPES, lint: lint.THENABLE_TYPES === contracts.THENABLE_TYPES, length: list.length }));",
   ].join("\n");
   const proc = Bun.spawn([process.execPath, "-e", script], { cwd: REPO, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
@@ -228,13 +252,12 @@ async function toolThenableSource(): Promise<{ code: number; stdout: string; out
 
 xaravelTest(
   "XT-contracts-13",
-  "@xaravel/contracts/async exports THENABLE_TYPES, frozen, the 26 FQCNs of tools/lint-rules/thenables.ts's list in its order with every thenable the Story's AC names, the list async-surface's thenableTypes(REPO) returns from the repository root (the contracts module's own array, not the tool's, ESC-10.5-2 approved), with @xaravel/contracts/async resolving from the contracts package and a dependent package to src/async/index.ts, and NotPromise<T>, which is T for a non-thenable and never for a Promise or PromiseLike and distributes over a union, so a sync map(fn: () => NotPromise<U>) rejects an async callback (AD-6.8, AD-27.2); the PromiseLike check reports a class with an instance then member (method, async, generic, getter, setter, field, optional field, constructor parameter property, quoted or computed name, class expression, anonymous generic class expression, nested or returned for mixin) and no PromiseLike in its own implements list, ignores static members, object literals, .then( calls, comments, strings, templates and regexes, and reports nothing for any packages/*/src file (ESC-6.1-1 item 2)",
+  "@xaravel/contracts/async exports THENABLE_TYPES, frozen, 26 FQCNs in order with every thenable the Story's AC names, the one list: tools/lint-rules/thenables.ts re-exports the same array, and it is the list async-surface's thenableTypes(REPO) returns from the repository root (the contracts module's own array, ESC-10.5-2 approved), with @xaravel/contracts/async resolving from the contracts package and a dependent package to src/async/index.ts, and NotPromise<T>, which is T for a non-thenable and never for a Promise or PromiseLike and distributes over a union, so a sync map(fn: () => NotPromise<U>) rejects an async callback (AD-6.8, AD-27.2); the PromiseLike check reports a class with an instance then member (method, async, generic, getter, setter, field, optional field, constructor parameter property, quoted or computed name, class expression, anonymous generic class expression, nested or returned for mixin) and no PromiseLike in its own implements list, ignores static members, object literals, .then( calls, comments, strings, templates and regexes, and reports nothing for any packages/*/src file (ESC-6.1-1 item 2)",
   async () => {
-    // The list: frozen, the tool's list in order, every AC name.
+    // The list: frozen, the 26 expected FQCNs in order, every AC name; thenables.ts re-exports this array (checked below).
     Assert.assertTrue(Object.isFrozen(THENABLE_TYPES));
-    const tool = toolThenables();
-    Assert.assertSame(26, tool.length, "tools/lint-rules/thenables.ts lists 26 thenables");
-    Assert.assertSame(JSON.stringify(tool), JSON.stringify(THENABLE_TYPES));
+    Assert.assertSame(26, THENABLE_TYPES.length, "@xaravel/contracts/async lists 26 thenables");
+    Assert.assertSame(JSON.stringify(EXPECTED_THENABLES), JSON.stringify(THENABLE_TYPES));
     for (const name of AC_THENABLES) {
       Assert.assertTrue(THENABLE_TYPES.includes(name), name);
     }
@@ -245,11 +268,11 @@ xaravelTest(
       Assert.assertSame(contractsAsync, Bun.resolveSync("@xaravel/contracts/async", from), relative(REPO, from));
     }
 
-    // The tool's own return value from the repository root (ESC-10.5-2), in a child `bun` run from REPO, so this test
-    // never imports the tool or its parser.
+    // The tool's own return value from the repository root (ESC-10.5-2), and thenables.ts's export, in a child `bun`
+    // run from REPO, so this test never imports the tools or their parser.
     const reads = await toolThenableSource();
     Assert.assertSame(0, reads.code, reads.output);
-    Assert.assertSame(JSON.stringify({ contracts: true, tool: false, length: 26 }), reads.stdout.trim().split("\n").at(-1) ?? "", reads.output);
+    Assert.assertSame(JSON.stringify({ contracts: true, lint: true, length: 26 }), reads.stdout.trim().split("\n").at(-1) ?? "", reads.output);
 
     // NotPromise, compiled.
     const [ok, rejected] = await compileEach("xaravel-contracts-async-", [NOT_PROMISE_OK, NOT_PROMISE_ASYNC]);

@@ -159,7 +159,7 @@ xaravelTest(
     const contractsList = ((await import(join(root, "packages", "contracts", "src", "async", "index.ts"))) as { THENABLE_TYPES: readonly string[] }).THENABLE_TYPES;
     const repoList = await thenableTypes(root);
     expect(repoList).toBe(contractsList);
-    expect(repoList).not.toBe(THENABLE_TYPES);
+    expect(repoList).toBe(THENABLE_TYPES);
 
     // The tool's list is the Story 6.3 fixture list, by FQCN.
     expect(FALLBACK).toContain("Illuminate\\Database\\Query\\Builder");
