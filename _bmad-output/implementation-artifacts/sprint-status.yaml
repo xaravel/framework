@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 12:00
+last_updated: 10-25-2026 12:06
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1769,7 +1769,7 @@ action_items:
       whose item is done (#425); mentions in done specs and decisions stay as history
       (finding P2)"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-12-retro-2026-10-25.md"
   - id: "epic-12-retro-item-3-dual-helper-async-edges"
     epic: 12
