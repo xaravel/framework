@@ -338,3 +338,11 @@ Blocking condition: intent gap. The intent contract's write routing ("Any other 
 - **Verification on the patched tree:** `bun run harness --story 11.1` checked=16 differ=0; XT-macroable-1..3 pass; full `bun run harness` checked=21817 differ=0 (7 Variants not run locally); `typecheck`, `lint`, `api-surface:gate macroable`, `expectations:check`, `expectations:reasons`, `escalations:check`, `divergence:check`, `graph:check` clean.
 - **Saved:** the full implementation is commit cd664b42 on `story/11.1-impl`, and [spec-11-1-attempt-2.patch](spec-11-1-attempt-2.patch); the code is reverted on `story/11.1`. Resuming under option 1: `guardWrite` throws outside a test frame's chain, XT-macroable-2's root-`unit` case expects `ScopeFrameException`, and the docs say macros register only in test frames until ESC-11.1-2's seam lands; then the Fidelity Review re-runs on the changed tree. Delete the patch file in the PR that applies it.
 - **Residual risk:** the narrow-frame / nested-unit case (deferred) waits on ESC-11.1-3's runtime read.
+
+### 2026-10-24 resume (after the ESC-11.1-5 ruling)
+
+Status: blocked
+Blocking condition: contract. ESC-11.1-5 rules that a macro write throws in a root `unit` frame but goes to the test frame's overlay from a unit or narrow frame nested in a test frame. `currentFrame()` shows only the innermost frame's kind, so the two can't be told apart until ESC-11.1-3's frame-chain read lands in `@xaravel/runtime`, and the ruling's two bullets disagree about a nested `unit` frame. Raised `conformance/escalations/ESC-11.1-6.md` (`contract`, XT-macroable-2). Option 1, recommended: until that read lands, a write passes only when the innermost frame is a `test` frame.
+
+- **Not changed:** the implementation stays saved on `story/11.1-impl` (cd664b42) and in [spec-11-1-attempt-2.patch](spec-11-1-attempt-2.patch); `story/11.1` carries only the Escalation and this record. The patch applies cleanly to `main` at c27e34d4.
+- **On resume:** apply the patch, change `guardWrite` and XT-macroable-2's root-`unit` and nested-unit cases as the ESC-11.1-6 ruling says, narrow the intent contract's write routing, update docs/macroable.md's registration note, then re-run the review and the Fidelity Review on the changed tree. Delete the patch file in the PR that applies it.
