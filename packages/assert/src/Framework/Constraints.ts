@@ -32,6 +32,7 @@ import { Constraint, describeByTypeForContainers, valueToTypeStringFragment } fr
 import { ExpectationFailedException } from "./ExpectationFailedException";
 import { EmptyStringException } from "./Exception/EmptyStringException";
 import { UnknownClassOrInterfaceException } from "./Exception/UnknownClassOrInterfaceException";
+import { isContractToken } from "./MockObject/Generator/ContractParents";
 
 function isArray(value: unknown): value is object {
   return typeof value === "object" && value !== null && isPhpArray(value);
@@ -296,7 +297,29 @@ export class IsType extends Constraint {
   }
 }
 
-/** Checks a class or interface argument; a string names no class here (no global class table). */
+/** The runtime's class and interface name lookup (`@xaravel/runtime`'s `php/classLookup.ts`, ESC-13.1-9). */
+const CLASS_LOOKUP = Symbol.for("xaravel.class.lookup");
+
+/**
+ * The class or contract token the class-string `type` names, as PHPUnit's `assertInstanceOf` takes any existing class
+ * or interface name (ESC-13.1-9): read through `globalThis[Symbol.for('xaravel.class.lookup')]`, which a loaded
+ * `@xaravel/runtime` publishes (the grader imports no runtime, AD-2), and kept only when it is a function or a contract
+ * token (`isContractToken`). Throws `UnknownClassOrInterfaceException` when nothing is published or the name names
+ * neither, as PHPUnit throws when `class_exists` and `interface_exists` are both false.
+ */
+export function resolveClassString(type: string): object {
+  const lookup: unknown = (globalThis as Record<symbol, unknown>)[CLASS_LOOKUP];
+  const found: unknown = typeof lookup === "function" ? (lookup as (name: string) => unknown)(type) : null;
+  if (typeof found === "function" || isContractToken(found)) {
+    return found as object;
+  }
+  throw new UnknownClassOrInterfaceException(type);
+}
+
+/**
+ * Checks a class or interface argument. A string throws `UnknownClassOrInterfaceException`: only `assertInstanceOf` and
+ * `assertNotInstanceOf` resolve a class-string, through `resolveClassString`, first.
+ */
 export function classOrInterface(type: unknown): { kind: "class" | "interface"; name: string; test: (value: unknown) => boolean } {
   if (typeof type === "string") {
     throw new UnknownClassOrInterfaceException(type);

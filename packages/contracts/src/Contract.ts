@@ -8,9 +8,11 @@
 // The token is a frozen, non-function object (both test doubles take every function as a class). Its `brand` is
 // `Symbol.for('<FQCN>')`, the key `@xaravel/runtime`'s `hasBrand` and `jsonEncode` and the grader already read, and its
 // `Symbol.toPrimitive` returns that key, so `get [Token]()` and `get [Token.brand]()` name the same property. It is not
-// a class, so it is never passed to `registerClass` (ESC-10.1-3). Its parents, the contracts it extends, are kept at
-// `Symbol.for('xaravel.contract.parents')` for the test doubles, which define every brand in the chain (ESC-10.1-6);
-// `instanceof` still reads only the token's own brand.
+// a class, so it is never passed to `registerClass` (ESC-10.1-3); `contract()` records it with `@xaravel/runtime`'s
+// `registerContractToken` instead (ESC-13.1-7), so its FQCN resolves to it as PHP's interface name does
+// (`interfaceExists`, `new ReflectionClass('<FQCN>')`), the first token made under a name staying recorded. Its
+// parents, the contracts it extends, are kept at `Symbol.for('xaravel.contract.parents')` for the test doubles, which
+// define every brand in the chain (ESC-10.1-6); `instanceof` still reads only the token's own brand.
 //
 // A token also carries Upstream's interface constants as frozen own properties, so `Filesystem.VISIBILITY_PUBLIC` is
 // `'public'` as PHP's `Filesystem::VISIBILITY_PUBLIC` is (`statics`, ESC-10.2-1); a static interface method is the
@@ -30,7 +32,7 @@
 // and says false, as does `new X() instanceof Arrayable`. A JS function cannot be told apart from a class at runtime,
 // and PHP has no class-as-value to compare against, so the case is kept and pinned by XT-contracts-19.
 
-import { isContractToken } from "@xaravel/runtime/registry";
+import { isContractToken, registerContractToken } from "@xaravel/runtime/registry";
 
 /** The grader's class-name key (ESC-4.3-1 item 1), the same key `@xaravel/runtime/registry` sets on a class. */
 export const CLASS_FQCN: unique symbol = Symbol.for("xaravel.class.fqcn");
@@ -191,7 +193,8 @@ function copyBuiltins(name: string, builtins: unknown): readonly string[] {
 }
 
 /**
- * Makes the runtime token of the contract `fqcn` (a leading `\` is dropped). `members` maps each method name to its
+ * Makes the runtime token of the contract `fqcn` (a leading `\` is dropped), and records it under that FQCN with
+ * `registerContractToken` (ESC-13.1-7; the first token made under a name, ignoring case, stays recorded). `members` maps each method name to its
  * parameter names, and `parents` lists the contract tokens it extends (Upstream's `extends`, ESC-10.1-6); the token
  * keeps frozen copies of both. `statics` holds Upstream's interface constants, set as frozen own properties
  * (ESC-10.2-1), and `builtins` the PHP names of the built-in parents' methods, kept at `CONTRACT_BUILTINS` when not
@@ -234,5 +237,7 @@ export function contract<T extends object, B extends symbol = symbol, const S ex
       return brand;
     },
   };
-  return Object.freeze(token) as unknown as ContractToken<T, B> & Readonly<S>;
+  const frozen = Object.freeze(token);
+  registerContractToken(frozen);
+  return frozen as unknown as ContractToken<T, B> & Readonly<S>;
 }

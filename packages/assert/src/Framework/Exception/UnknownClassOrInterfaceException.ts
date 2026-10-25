@@ -1,6 +1,8 @@
-// PHPUnit 13.4.3's `UnknownClassOrInterfaceException` (Story 4.3). A class name
-// given as a string names no class here: the grader has no class table
-// (ESC-4.3-1 item 1). Internal to the grader. PHP: `UnknownClassOrInterfaceException
+// PHPUnit 13.4.3's `UnknownClassOrInterfaceException` (Story 4.3). Thrown for a
+// class name given as a string that names no class or interface: the grader has
+// no class table of its own (ESC-4.3-1 item 1), and only `assertInstanceOf` /
+// `assertNotInstanceOf` resolve a string, through the runtime's published lookup
+// (ESC-13.1-9). Internal to the grader. PHP: `UnknownClassOrInterfaceException
 // extends InvalidArgumentException` (PHPUnit's abstract one, not ported here, which
 // `extends Exception`), so it extends the grader's PHPUnit `Exception`, which reaches
 // the runtime's `RuntimeException` once linked (Story 9.11).

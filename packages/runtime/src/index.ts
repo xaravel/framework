@@ -2,6 +2,8 @@
 import "./metadata/polyfill";
 // Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
 import "./php/phpClasses";
+// Publishes the class and interface name lookup on `Symbol.for('xaravel.class.lookup')` (ESC-13.1-9).
+import "./php/classLookup";
 export { BlockedByComponentError } from "./BlockedByComponentError";
 export {
   bindToFrame,
@@ -52,6 +54,7 @@ export {
   RangeException,
   ReflectionAttribute,
   ReflectionClass,
+  ReflectionEnum,
   ReflectionException,
   ReflectionFunction,
   ReflectionIntersectionType,
@@ -64,8 +67,10 @@ export {
   UnderflowException,
   UnexpectedValueException,
   ValueError,
+  enumExists,
   float,
   hasBrand,
+  interfaceExists,
   isFloat,
   isNumeric,
   JSON_BIGINT_AS_STRING,
@@ -119,7 +124,7 @@ export {
   toPhpString,
   valueCopy,
 } from "./php/index";
-export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
+export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerContractToken, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
 export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
 export { readReturnMetadata, returns } from "./metadata/returns";
 export { allOf, oneOf, parent, primitive, self, static, variadic } from "./metadata/specs";

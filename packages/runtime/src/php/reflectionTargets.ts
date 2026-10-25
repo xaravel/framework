@@ -1,6 +1,6 @@
 // What `ReflectionClass` and `ReflectionMethod` reflect (DIV-3.2): a class, or a contract token, which PHP sees as an
 // interface. Internal: the package entries do not export it.
-import { fqcn, isContractToken, type RegisteredClass, resolveClass } from "../registry/registry";
+import { fqcn, isContractToken, type RegisteredClass, resolveClass, resolveContractToken } from "../registry/registry";
 import { phpTypeName } from "./phpType";
 import { TypeError as PhpTypeError } from "./TypeError";
 import { ReflectionException } from "./ReflectionException";
@@ -21,17 +21,31 @@ export function registeredName(klass: unknown): string | null {
 }
 
 /**
+ * The class registered under the name `name`, else the contract token recorded under it (`registerContractToken`,
+ * ESC-13.1-7), as PHP resolves a class or interface name. Throws `ReflectionException` `Class "<name>" does not exist`,
+ * the name as given, when neither holds it.
+ */
+export function resolveReflectionName(name: string): ReflectionTarget {
+  try {
+    return resolveClass(name);
+  } catch {
+    const token = resolveContractToken(name);
+    if (token === null) {
+      throw new ReflectionException(`Class "${name}" does not exist`);
+    }
+    return token;
+  }
+}
+
+/**
  * The class or token `objectOrClass` names: a class as it is, a contract token as it is, a registered FQCN string's
- * class, else an object's class. A string the Registry does not hold throws `ReflectionException`
- * `Class "<name>" does not exist`; any other value throws PHP's `TypeError` `<who> must be of type object|string, <type> given`, `who` naming the PHP argument.
+ * class or a recorded token FQCN's token (`resolveReflectionName`), else an object's class. A string that names
+ * neither throws `ReflectionException` `Class "<name>" does not exist`; any other value throws PHP's `TypeError`
+ * `<who> must be of type object|string, <type> given`, `who` naming the PHP argument.
  */
 export function reflectionTarget(objectOrClass: unknown, who: string): ReflectionTarget {
   if (typeof objectOrClass === "string") {
-    try {
-      return resolveClass(objectOrClass);
-    } catch {
-      throw new ReflectionException(`Class "${objectOrClass}" does not exist`);
-    }
+    return resolveReflectionName(objectOrClass);
   }
   if (typeof objectOrClass === "function" || isContractToken(objectOrClass)) {
     return objectOrClass as ReflectionTarget;

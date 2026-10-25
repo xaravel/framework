@@ -2,6 +2,8 @@
 import "../metadata/polyfill";
 // Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
 import "./phpClasses";
+// Publishes the class and interface name lookup on `Symbol.for('xaravel.class.lookup')` (ESC-13.1-9).
+import "./classLookup";
 export { ArgumentCountError } from "./ArgumentCountError";
 export { ArithmeticError } from "./ArithmeticError";
 export { Attribute } from "./Attribute";
@@ -9,6 +11,7 @@ export { attribute, type AttributeDecorator } from "./attributes";
 export { BadFunctionCallException } from "./BadFunctionCallException";
 export { BadMethodCallException } from "./BadMethodCallException";
 export { DivisionByZeroError } from "./DivisionByZeroError";
+export { enumExists, interfaceExists } from "./classExistence";
 export { DomainException } from "./DomainException";
 export { Error } from "./Error";
 export { ErrorException } from "./ErrorException";
@@ -23,6 +26,7 @@ export { OverflowException } from "./OverflowException";
 export { RangeException } from "./RangeException";
 export { ReflectionAttribute } from "./ReflectionAttribute";
 export { ReflectionClass } from "./ReflectionClass";
+export { ReflectionEnum } from "./ReflectionEnum";
 export { ReflectionException } from "./ReflectionException";
 export { ReflectionFunction } from "./ReflectionFunction";
 export { ReflectionIntersectionType } from "./ReflectionIntersectionType";
