@@ -1,0 +1,1070 @@
+diff --git a/conformance/expectations/conditionable/framework/tests/Conditionable/ConditionableTest.jsonl b/conformance/expectations/conditionable/framework/tests/Conditionable/ConditionableTest.jsonl
+index 39a8a0f5..9cb45564 100644
+--- a/conformance/expectations/conditionable/framework/tests/Conditionable/ConditionableTest.jsonl
++++ b/conformance/expectations/conditionable/framework/tests/Conditionable/ConditionableTest.jsonl
+@@ -1,2 +1,2 @@
+-{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testUnless","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testWhen","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testUnless","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-2"}
++{"id":"Illuminate\\Tests\\Conditionable\\ConditionableTest::testWhen","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-2"}
+diff --git a/conformance/expectations/conditionable/framework/tests/Support/SupportConditionableTest.jsonl b/conformance/expectations/conditionable/framework/tests/Support/SupportConditionableTest.jsonl
+index 5aba8dad..c4baf21f 100644
+--- a/conformance/expectations/conditionable/framework/tests/Support/SupportConditionableTest.jsonl
++++ b/conformance/expectations/conditionable/framework/tests/Support/SupportConditionableTest.jsonl
+@@ -1,6 +1,6 @@
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessConditionCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessDefaultCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenConditionCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenDefaultCallback","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+-{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessConditionCallback","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessDefaultCallback","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testUnlessProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-1"}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenConditionCallback","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenDefaultCallback","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
++{"id":"Illuminate\\Tests\\Support\\SupportConditionableTest::testWhenProxy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-12.1-1"}
+diff --git a/packages/conditionable/README.md b/packages/conditionable/README.md
+index 1873b6d7..df4bdb76 100644
+--- a/packages/conditionable/README.md
++++ b/packages/conditionable/README.md
+@@ -6,6 +6,19 @@ It ports `illuminate/conditionable` from Laravel v13.37.0.
+ 
+ Xaravel is an independent open-source project. It is not affiliated with, sponsored by or endorsed by Laravel Holdings Inc.
+ 
++## Documentation
++
++See [docs/conditionable.md](docs/conditionable.md) for `when`, `unless` and `HigherOrderWhenProxy`, and for the Divergences from Laravel.
++
++```ts
++import { Conditionable } from "@xaravel/conditionable";
++import { mixin, registerClass } from "@xaravel/runtime";
++
++class Report extends mixin(null, Conditionable) {}
++
++registerClass("App\\Support\\Report", Report);
++```
++
+ ## Dependencies
+ 
+ - `@xaravel/contracts` (workspace): allowed for every package (AD-2).
+diff --git a/packages/conditionable/async-surface.json b/packages/conditionable/async-surface.json
+new file mode 100644
+index 00000000..e3262be2
+--- /dev/null
++++ b/packages/conditionable/async-surface.json
+@@ -0,0 +1,4 @@
++[
++{"method":"Conditionable.unless","file":"src/Traits/Conditionable.ts","root":"callback"},
++{"method":"Conditionable.when","file":"src/Traits/Conditionable.ts","root":"callback"}
++]
+diff --git a/packages/conditionable/docs/conditionable.md b/packages/conditionable/docs/conditionable.md
+new file mode 100644
+index 00000000..292a8eed
+--- /dev/null
++++ b/packages/conditionable/docs/conditionable.md
+@@ -0,0 +1,92 @@
++# Conditionable
++
++`@xaravel/conditionable` ports Laravel 13's `Illuminate\Support\Traits\Conditionable` trait and `Illuminate\Support\HigherOrderWhenProxy`. Laravel's documentation uses `when` and `unless` on query builders, collections, strings, requests and many other classes. This page covers the trait those classes share.
++
++## Using the trait
++
++Traits are runtime mixins in Xaravel. Mix `Conditionable` into a class with `mixin` from `@xaravel/runtime`:
++
++```ts
++import { Conditionable } from "@xaravel/conditionable";
++import { mixin, registerClass } from "@xaravel/runtime";
++
++export class Report extends mixin(null, Conditionable) {
++  lines: string[] = [];
++
++  add(line: string): this {
++    this.lines.push(line);
++    return this;
++  }
++}
++
++registerClass("App\\Support\\Report", Report);
++```
++
++`classUsesRecursive(Report)` names the trait by its Laravel FQCN, `Illuminate\Support\Traits\Conditionable`.
++
++## `when` and `unless`
++
++`when(value, callback, defaultValue)` calls `callback(this, value)` when `value` is truthy. Otherwise it calls `defaultValue(this, value)` when one is given. `unless(value, callback, defaultValue)` does the reverse: it calls `callback` when `value` is falsy.
++
++```ts
++const report = new Report()
++  .when(user.isAdmin(), (report) => report.add("Admin section"))
++  .unless(filters.length === 0, (report) => report.add("Filtered"), (report) => report.add("All rows"));
++```
++
++- **Truthiness follows PHP.** `"0"`, `""`, `0`, an empty array, `null` and `false` are falsy, and everything else is truthy, including an empty object.
++- **A closure value** is called with the instance, and its result is the value: `report.when((r) => r.lines.length > 0, …)`. A class passed as `value` is not called; it is the value itself.
++- **The result** is what the callback returns. When the callback returns `null` (or nothing), or when no callback runs, the instance is returned, so the chain continues.
++- **A `null` callback** with a truthy value throws PHP's `Error`, `Value of type null is not callable`, as Laravel does.
++
++`defaultValue` is Laravel's `$default`; `default` is a reserved word in JavaScript.
++
++### Named arguments
++
++As every Xaravel method with more than one optional parameter does, `when` and `unless` also accept one options object keyed by Laravel's parameter names. It stands for PHP's named arguments:
++
++```ts
++report.when({ value: user.isAdmin(), callback: (r) => r.add("Admin section") });
++report.unless({ value: ready, default: (r) => r.add("Pending") }); // Laravel: unless($ready, default: …)
++```
++
++An object is read as options only when it is the only argument, is a plain object, has only the keys `value`, `callback` and `default`, has `callback` or `default`, and each of those is a function or `null`. Any other object is the `value` (see [Divergences](#divergences)).
++
++### Async callbacks
++
++`when` and `unless` are dual helpers (DIV-1). They stay synchronous for synchronous callbacks, and return a Promise when the value closure, `callback` or `defaultValue` returns a Promise. The Promise resolves to what the synchronous call would return:
++
++```ts
++const report = await new Report().when(user.isAdmin(), async (r) => r.add(await loadAdminSection()));
++```
++
++- A Promise passed as the condition, or returned by the value closure, is awaited. It is never tested for truthiness.
++- A callback that returns a query builder or another thenable that is not a Promise stays synchronous: `query.when(term, (q) => q.where("title", term))` returns the builder, and the query does not run. When the call is async for another reason, its Promise adopts the thenable, as every Promise does.
++
++## Higher-order calls
++
++With no callback, `when` and `unless` return a `HigherOrderWhenProxy`. It applies the next method call or property read to the instance only when the condition holds:
++
++- `when(value)` holds `value` as the condition. `unless(value)` holds its negation.
++- `when()` and `unless()` hold no condition yet. The next call or read captures one: its result becomes the condition, negated for `unless()`, and the proxy is returned again.
++
++In Laravel you write `$report->when($admin)->add('Admin section')`. In Xaravel the proxy forwards through its `__call(method, parameters)` and `__get(key)` methods, which are Laravel's magic methods ported as explicit ones:
++
++```ts
++report.when(isAdmin).__call("add", ["Admin section"]); // the report's add() result, or the report when !isAdmin
++
++const proxy = report.when().__call("hasLines", []); // captures the condition
++proxy.__call("add", ["Summary"]); // runs only when hasLines() was truthy
++
++report.unless().__get("archived"); // captures !report.archived
++```
++
++When the condition is false, `__call` returns the instance without calling the method, and `__get` returns the instance without reading the property. `condition(value)` sets the proxy's condition, and `negateConditionOnCapture()` makes the next capture negate its result. Both return the proxy.
++
++## Divergences
++
++- **Dual helper (DIV-1).** `when` and `unless` return a Promise only when an async callback (the value closure, `callback` or `defaultValue`) returns one, and a Promise condition is awaited. A thenable that is not a native Promise is a plain value.
++- **No magic members on the proxy (DIV-12).** Laravel's proxy answers any method or property of its target through `__call` / `__get`. Xaravel has no Proxy outside `Model` (AD-7, AD-26), so call `proxy.__call(method, parameters)` and `proxy.__get(key)`. Whether the proxy should get generated delegating members, so that `report.when(isAdmin).add(…)` works, is open (ESC-12.1-1).
++- **`HigherOrderWhenProxy` state (DIV-12).** `condition()` and `negateConditionOnCapture()` keep their method names; the protected state they set is held under other names, as JavaScript has one namespace per object.
++- **The options form overlaps a condition (open, ESC-12.1-3).** `when` / `unless` have no required parameter, so a single plain object shaped like `{ value, callback, default }` is read as options, where Laravel would read a PHP array of that shape as the condition. The narrow rule above keeps every other object a value.
++- **`ConditionableTest` on Eloquent (open, ESC-12.1-2).** Laravel's tests of `when` / `unless` on an Eloquent query builder wait on the Database Component. This is not a behaviour difference.
+diff --git a/packages/conditionable/src/HigherOrderWhenProxy.ts b/packages/conditionable/src/HigherOrderWhenProxy.ts
+new file mode 100644
+index 00000000..3a463a70
+--- /dev/null
++++ b/packages/conditionable/src/HigherOrderWhenProxy.ts
+@@ -0,0 +1,93 @@
++// Laravel's `Illuminate\Support\HigherOrderWhenProxy` (Story 12.1), what `when()` / `unless()` return when they are
++// called with no callback.
++//
++// Upstream answers any property read or method call on the proxy through PHP's `__get` / `__call`. Xaravel has no
++// Proxy outside `Model` and installs no forwarding members (AD-7, AD-26), so the two magic methods are ported as
++// explicit methods: `proxy.__call('log', ['one'])` is Upstream's `$proxy->log('one')`, and `proxy.__get('toggle')` is
++// `$proxy->toggle`. How a bare `proxy.log('one')` reaches the target is open (conformance/escalations/ESC-12.1-1.md).
++//
++// `condition` and `negateConditionOnCapture` are both a method and protected state in Upstream. JavaScript has one
++// namespace per object, so the methods keep the names and the state is held under `conditionState` and
++// `negateConditionOnCaptureState` (DIV-12.2; PORTING.md § DIV-12 pair list).
++import { normalizeNull, registerClass, toBool } from "@xaravel/runtime";
++
++/**
++ * A proxy that applies the next property read or method call to its target only when a condition holds. With no
++ * condition yet, the next read or call captures one instead: its result becomes the condition.
++ */
++export class HigherOrderWhenProxy<T = unknown> {
++  /** The target being conditionally operated on. */
++  protected target: T;
++
++  /** The condition for proxying (Upstream's `$condition`). */
++  protected conditionState: unknown = null;
++
++  /** Indicates whether the proxy has a condition. */
++  protected hasCondition: boolean = false;
++
++  /** Determine whether the condition should be negated (Upstream's `$negateConditionOnCapture`). */
++  protected negateConditionOnCaptureState: boolean | null = null;
++
++  /** Create a new proxy instance. */
++  constructor(target: T) {
++    this.target = target;
++  }
++
++  /** Set the condition on the proxy. */
++  condition(condition: unknown): this {
++    [this.conditionState, this.hasCondition] = [normalizeNull(condition), true];
++
++    return this;
++  }
++
++  /** Indicate that the condition should be negated. */
++  negateConditionOnCapture(): this {
++    this.negateConditionOnCaptureState = true;
++
++    return this;
++  }
++
++  /**
++   * Proxy accessing an attribute onto the target: Upstream's `$proxy->{$key}`. With no condition, the attribute's value
++   * becomes the condition (negated when `negateConditionOnCapture()` was called) and the proxy is returned. Otherwise the
++   * attribute's value when the condition is truthy, and the target when it is not.
++   */
++  __get(key: string): unknown {
++    if (!this.hasCondition) {
++      const condition = this.read(key);
++
++      return this.condition(toBool(this.negateConditionOnCaptureState) ? !toBool(condition) : condition);
++    }
++
++    return toBool(this.conditionState) ? this.read(key) : this.target;
++  }
++
++  /**
++   * Proxy a method call on the target: Upstream's `$proxy->{$method}(...$parameters)`. With no condition, the call's
++   * result becomes the condition (negated when `negateConditionOnCapture()` was called) and the proxy is returned.
++   * Otherwise the call's result when the condition is truthy, and the target, without calling it, when it is not.
++   */
++  __call(method: string, parameters: unknown[]): unknown {
++    if (!this.hasCondition) {
++      const condition = this.call(method, parameters);
++
++      return this.condition(toBool(this.negateConditionOnCaptureState) ? !toBool(condition) : condition);
++    }
++
++    return toBool(this.conditionState) ? this.call(method, parameters) : this.target;
++  }
++
++  /** `$this->target->{$key}`, with `undefined` read as `null` (AD-9). */
++  private read(key: string): unknown {
++    return normalizeNull((this.target as Record<string, unknown>)[key]);
++  }
++
++  /** `$this->target->{$method}(...$parameters)`, with an `undefined` result read as `null` (AD-9). */
++  private call(method: string, parameters: readonly unknown[]): unknown {
++    const target = this.target as Record<string, (...args: unknown[]) => unknown>;
++
++    return normalizeNull(target[method]!(...parameters));
++  }
++}
++
++registerClass("Illuminate\\Support\\HigherOrderWhenProxy", HigherOrderWhenProxy);
+diff --git a/packages/conditionable/src/Traits/Conditionable.ts b/packages/conditionable/src/Traits/Conditionable.ts
+new file mode 100644
+index 00000000..242a6b39
+--- /dev/null
++++ b/packages/conditionable/src/Traits/Conditionable.ts
+@@ -0,0 +1,324 @@
++// Laravel's `Illuminate\Support\Traits\Conditionable` (Story 12.1), as a runtime trait: `class X extends mixin(Base,
++// Conditionable)` (AD-26 Traits row).
++//
++// Logic. Ported one-for-one from Upstream. A `value` that is a function (not a class) is called with the instance and
++// replaced by its result, as Upstream calls a `Closure`. `arguments.length` stands in for `func_num_args()`: with no
++// argument the method returns a `HigherOrderWhenProxy` (`unless` negating the condition it captures), and with one it
++// returns the proxy holding that condition. Otherwise the value is tested with PHP truthiness (`toBool`), and the
++// callback's (or default's) result is returned, or the instance when that result is `null` (AD-9: `undefined` too).
++//
++// Dual helper (AD-6, DIV-1). `when` / `unless` return a Promise only when a callback returns a native Promise
++// (`instanceof Promise`): the `value` closure, `callback` or `default`. The Promise resolves to what the sync path
++// returns; a Promise condition is awaited, never tested for truthiness. A thenable that is not a Promise (a query
++// Builder) is an ordinary value, so `when(c, (q) => q.where(…))` stays sync. On the async path a thenable result is
++// adopted by the Promise, as every Promise adopts a thenable. The types are overloads: an async callback gives
++// `Promise<…>`, a sync one `R | this`; no signature declares `T | Promise<T>`.
++//
++// Named arguments (AD-26). `when` / `unless` have three optional parameters, so they also accept one options object,
++// `when({ value, callback, default })`. It is detected narrowly (`readOptions`): the only argument, a plain object that
++// is not a contract token, whose own keys are a non-empty subset of `value`, `callback` and `default` with at least one
++// of `callback` / `default`, each of which is a function or `null`. Any other object is a `value`. A PHP array condition
++// of exactly that shape is therefore read as options (conformance/escalations/ESC-12.1-3.md).
++import { Error as PhpError, isContractToken, registerClass, toBool } from "@xaravel/runtime";
++import type { NotPromise } from "@xaravel/contracts/async";
++import { HigherOrderWhenProxy } from "../HigherOrderWhenProxy";
++
++/** A condition: the value itself, or a closure the instance is passed to, whose result is the value. */
++type Value<S, V> = V | ((self: S) => V);
++/** A condition that settles later: a Promise, or a closure returning one. */
++type AsyncValue<S, V> = Promise<V> | ((self: S) => Promise<V>);
++/** A callback or default: called with the instance and the condition's value. */
++type Callback<S, V, R> = (self: S, value: V) => R;
++/** What a callback's result `r` makes the method return: `r ?? this`. */
++type Result<R, S> = Exclude<R, null | undefined | void> | S;
++/** The options form (AD-26) of `when` / `unless`, keyed by the camelCase PHP parameter names. */
++type ValueOptions<S, V, R, D> = { value?: Value<S, V>; callback?: Callback<S, V, R> | null; default?: Callback<S, V, D> | null };
++/** An options object whose `key` is given, as `T`. */
++type Given<K extends string, T> = { [P in K]: T };
++/** The options form with a condition that settles later. */
++type AsyncValueOptions<S, V, R, D> = { value: AsyncValue<S, V>; callback?: Callback<S, V, R> | null; default?: Callback<S, V, D> | null };
++
++/** The keys of the options form (AD-26), the camelCase PHP parameter names. */
++const OPTION_KEYS: ReadonlySet<string> = new Set(["value", "callback", "default"]);
++
++/** The arguments of a `when` / `unless` call, read from either form. */
++interface Arguments {
++  /** `func_num_args()`. */
++  readonly count: number;
++  readonly value: unknown;
++  readonly callback: unknown;
++  readonly defaultValue: unknown;
++}
++
++/** The options form of a call with `count` arguments whose first is `options`, or null when it is positional (see the header). */
++function readOptions(count: number, options: unknown): Arguments | null {
++  if (count !== 1) {
++    return null;
++  }
++  if (typeof options !== "object" || options === null || isContractToken(options)) {
++    return null;
++  }
++  const prototype: unknown = Object.getPrototypeOf(options);
++  if (prototype !== Object.prototype && prototype !== null) {
++    return null;
++  }
++  const keys = Reflect.ownKeys(options);
++  if (keys.length === 0 || !keys.every((key) => typeof key === "string" && OPTION_KEYS.has(key))) {
++    return null;
++  }
++  if (!Object.hasOwn(options, "callback") && !Object.hasOwn(options, "default")) {
++    return null;
++  }
++  const record = options as Record<string, unknown>;
++  for (const key of ["callback", "default"]) {
++    if (Object.hasOwn(record, key) && record[key] !== null && typeof record[key] !== "function") {
++      return null;
++    }
++  }
++  // PHP fills a skipped parameter with its default and counts up to the last one passed: at least 2 here.
++  return {
++    count: Object.hasOwn(record, "default") ? 3 : 2,
++    value: record["value"] ?? null,
++    callback: record["callback"] ?? null,
++    defaultValue: record["default"] ?? null,
++  };
++}
++
++/** The arguments of a call, in the options form or positionally (`undefined` read as `null`, AD-9). */
++function readArguments(count: number, value: unknown, callback: unknown, defaultValue: unknown): Arguments {
++  return readOptions(count, value) ?? { count, value: value ?? null, callback: callback ?? null, defaultValue: defaultValue ?? null };
++}
++
++/** PHP's `$value instanceof Closure`: a function that is not a class. */
++function isClosure(value: unknown): value is (self: unknown) => unknown {
++  return typeof value === "function" && !/^class\b/.test(Function.prototype.toString.call(value));
++}
++
++/** `$callable($self, $value)`; a value that is not callable throws PHP's `Error`, as Upstream's call does. */
++function invoke(callable: unknown, self: unknown, value: unknown): unknown {
++  if (typeof callable !== "function") {
++    throw new PhpError(callable === null ? "Value of type null is not callable" : "Value not callable");
++  }
++  return (callable as (self: unknown, value: unknown) => unknown)(self, value);
++}
++
++/** `$result ?? $this`, awaited first when the result is a Promise (AD-6). */
++function orSelf(result: unknown, self: unknown): unknown {
++  if (result instanceof Promise) {
++    return result.then((settled: unknown) => settled ?? self);
++  }
++  return result ?? self;
++}
++
++/** The body of `when` (`negate` false) and `unless` (`negate` true), from the condition's value on. */
++function settle(self: unknown, negate: boolean, args: Arguments, value: unknown): unknown {
++  if (args.count === 0) {
++    const proxy = new HigherOrderWhenProxy(self);
++
++    return negate ? proxy.negateConditionOnCapture() : proxy;
++  }
++
++  if (args.count === 1) {
++    return new HigherOrderWhenProxy(self).condition(negate ? !toBool(value) : value);
++  }
++
++  if (negate ? !toBool(value) : toBool(value)) {
++    return orSelf(invoke(args.callback, self, value), self);
++  } else if (toBool(args.defaultValue)) {
++    return orSelf(invoke(args.defaultValue, self, value), self);
++  }
++
++  return self;
++}
++
++/** `when` / `unless` called with `count` arguments: resolves a closure value, awaits a Promise condition (AD-6), then settles. */
++function conditional(self: unknown, negate: boolean, count: number, value: unknown, callback: unknown, defaultValue: unknown): unknown {
++  const args = readArguments(count, value, callback, defaultValue);
++  const resolved: unknown = isClosure(args.value) ? args.value(self) : args.value;
++
++  if (resolved instanceof Promise) {
++    return resolved.then((settled: unknown) => settle(self, negate, args, settled));
++  }
++
++  return settle(self, negate, args, resolved);
++}
++
++/**
++ * Laravel's `Conditionable` trait: `when()` and `unless()` apply a callback only when a condition holds, so a fluent
++ * chain can branch without leaving the chain. Use it as `class X extends mixin(Base, Conditionable)`.
++ */
++export class Conditionable {
++  /** With no argument: a `HigherOrderWhenProxy` whose next property read or method call captures the condition. */
++  when(): HigherOrderWhenProxy<this>;
++  /**
++   * The options form (AD-26), with a `value` that settles later: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, R = never, D = never>(options: AsyncValueOptions<this, V, R, D> & Given<"callback", Callback<this, V, R> | null>): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with a `value` that settles later and a `default`: a Promise of what the sync form
++   * returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, R = never, D = never>(options: AsyncValueOptions<this, V, R, D> & Given<"default", Callback<this, V, D> | null>): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with an async `callback`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, R, D = never>(options: ValueOptions<this, V, Promise<R>, D> & Given<"callback", Callback<this, V, Promise<R>>>): Promise<Result<R | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with an async `default`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, D, R = never>(options: ValueOptions<this, V, R, Promise<D>> & Given<"default", Callback<this, V, Promise<D>>>): Promise<Result<Awaited<R> | D, this>>;
++  /** The options form (AD-26), with a sync `callback`: `when(value, callback, default)`. */
++  when<V, R = never, D = never>(options: ValueOptions<this, V, NotPromise<R>, NotPromise<D>> & Given<"callback", Callback<this, V, NotPromise<R>> | null>): Result<R | D, this>;
++  /** The options form (AD-26), with a sync `default` and no `callback`: `when(value, null, default)`. */
++  when<V, R = never, D = never>(options: ValueOptions<this, V, NotPromise<R>, NotPromise<D>> & Given<"default", Callback<this, V, NotPromise<D>> | null>): Result<R | D, this>;
++  /**
++   * With only a condition that settles later: a Promise of the `HigherOrderWhenProxy` holding its value.
++   *
++   * @asyncRoot callback
++   */
++  when<V>(value: AsyncValue<this, V>): Promise<HigherOrderWhenProxy<this>>;
++  /** With only a condition: a `HigherOrderWhenProxy` that applies the next property read or method call when it is truthy. */
++  when<V>(value: Value<this, V>): HigherOrderWhenProxy<this>;
++  /**
++   * With a condition that settles later: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, R = never, D = never>(
++    value: AsyncValue<this, V>,
++    callback: Callback<this, V, R> | null,
++    defaultValue?: Callback<this, V, D> | null,
++  ): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * With an async `callback`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, R, D = never>(
++    value: Value<this, V>,
++    callback: Callback<this, V, Promise<R>>,
++    defaultValue?: Callback<this, V, D> | null,
++  ): Promise<Result<R | Awaited<D>, this>>;
++  /**
++   * With an async `default`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  when<V, D, R = never>(
++    value: Value<this, V>,
++    callback: Callback<this, V, R> | null,
++    defaultValue: Callback<this, V, Promise<D>>,
++  ): Promise<Result<Awaited<R> | D, this>>;
++  /**
++   * Apply the callback if the given "value" is (or resolves to) truthy. A `value` closure is called with the instance,
++   * and its result is the value. When the value is truthy, returns `callback(this, value)`; otherwise, when a `default`
++   * is given, `default(this, value)`; a `null` result, or no callback run, returns the instance.
++   */
++  when<V, R = never, D = never>(
++    value?: Value<this, V>,
++    callback?: Callback<this, V, NotPromise<R>> | null,
++    defaultValue?: Callback<this, V, NotPromise<D>> | null,
++  ): Result<R | D, this>;
++  /** The options form (AD-26) of `when(value, callback, default)`, keyed by the PHP parameter names. */
++  when<V, R = never, D = never>(options?: ValueOptions<this, V, NotPromise<R>, NotPromise<D>>): Result<R | D, this>;
++  // `arguments.length` stands in for Upstream's `func_num_args()`.
++  when(value: unknown = null, callback: unknown = null, defaultValue: unknown = null): unknown {
++    return conditional(this, false, arguments.length, value, callback, defaultValue);
++  }
++
++  /** With no argument: a `HigherOrderWhenProxy` whose next property read or method call captures the negated condition. */
++  unless(): HigherOrderWhenProxy<this>;
++  /**
++   * The options form (AD-26), with a `value` that settles later: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, R = never, D = never>(options: AsyncValueOptions<this, V, R, D> & Given<"callback", Callback<this, V, R> | null>): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with a `value` that settles later and a `default`: a Promise of what the sync form
++   * returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, R = never, D = never>(options: AsyncValueOptions<this, V, R, D> & Given<"default", Callback<this, V, D> | null>): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with an async `callback`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, R, D = never>(options: ValueOptions<this, V, Promise<R>, D> & Given<"callback", Callback<this, V, Promise<R>>>): Promise<Result<R | Awaited<D>, this>>;
++  /**
++   * The options form (AD-26), with an async `default`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, D, R = never>(options: ValueOptions<this, V, R, Promise<D>> & Given<"default", Callback<this, V, Promise<D>>>): Promise<Result<Awaited<R> | D, this>>;
++  /** The options form (AD-26), with a sync `callback`: `unless(value, callback, default)`. */
++  unless<V, R = never, D = never>(options: ValueOptions<this, V, NotPromise<R>, NotPromise<D>> & Given<"callback", Callback<this, V, NotPromise<R>> | null>): Result<R | D, this>;
++  /** The options form (AD-26), with a sync `default` and no `callback`: `unless(value, null, default)`. */
++  unless<V, R = never, D = never>(options: ValueOptions<this, V, NotPromise<R>, NotPromise<D>> & Given<"default", Callback<this, V, NotPromise<D>> | null>): Result<R | D, this>;
++  /**
++   * With only a condition that settles later: a Promise of the `HigherOrderWhenProxy` holding its negated value.
++   *
++   * @asyncRoot callback
++   */
++  unless<V>(value: AsyncValue<this, V>): Promise<HigherOrderWhenProxy<this>>;
++  /** With only a condition: a `HigherOrderWhenProxy` that applies the next property read or method call when it is falsy. */
++  unless<V>(value: Value<this, V>): HigherOrderWhenProxy<this>;
++  /**
++   * With a condition that settles later: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, R = never, D = never>(
++    value: AsyncValue<this, V>,
++    callback: Callback<this, V, R> | null,
++    defaultValue?: Callback<this, V, D> | null,
++  ): Promise<Result<Awaited<R> | Awaited<D>, this>>;
++  /**
++   * With an async `callback`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, R, D = never>(
++    value: Value<this, V>,
++    callback: Callback<this, V, Promise<R>>,
++    defaultValue?: Callback<this, V, D> | null,
++  ): Promise<Result<R | Awaited<D>, this>>;
++  /**
++   * With an async `default`: a Promise of what the sync form returns.
++   *
++   * @asyncRoot callback
++   */
++  unless<V, D, R = never>(
++    value: Value<this, V>,
++    callback: Callback<this, V, R> | null,
++    defaultValue: Callback<this, V, Promise<D>>,
++  ): Promise<Result<Awaited<R> | D, this>>;
++  /**
++   * Apply the callback if the given "value" is (or resolves to) falsy. A `value` closure is called with the instance,
++   * and its result is the value. When the value is falsy, returns `callback(this, value)`; otherwise, when a `default`
++   * is given, `default(this, value)`; a `null` result, or no callback run, returns the instance.
++   */
++  unless<V, R = never, D = never>(
++    value?: Value<this, V>,
++    callback?: Callback<this, V, NotPromise<R>> | null,
++    defaultValue?: Callback<this, V, NotPromise<D>> | null,
++  ): Result<R | D, this>;
++  /** The options form (AD-26) of `unless(value, callback, default)`, keyed by the PHP parameter names. */
++  unless<V, R = never, D = never>(options?: ValueOptions<this, V, NotPromise<R>, NotPromise<D>>): Result<R | D, this>;
++  // `arguments.length` stands in for Upstream's `func_num_args()`.
++  unless(value: unknown = null, callback: unknown = null, defaultValue: unknown = null): unknown {
++    return conditional(this, true, arguments.length, value, callback, defaultValue);
++  }
++}
++
++registerClass("Illuminate\\Support\\Traits\\Conditionable", Conditionable);
+diff --git a/packages/conditionable/src/index.ts b/packages/conditionable/src/index.ts
+index cb0ff5c3..fbfdd5c5 100644
+--- a/packages/conditionable/src/index.ts
++++ b/packages/conditionable/src/index.ts
+@@ -1 +1,2 @@
+-export {};
++export { HigherOrderWhenProxy } from "./HigherOrderWhenProxy";
++export { Conditionable } from "./Traits/Conditionable";
+diff --git a/packages/conditionable/tests/ported/framework/tests/Support/SupportConditionableTest.test.ts b/packages/conditionable/tests/ported/framework/tests/Support/SupportConditionableTest.test.ts
+new file mode 100644
+index 00000000..11aa98e3
+--- /dev/null
++++ b/packages/conditionable/tests/ported/framework/tests/Support/SupportConditionableTest.test.ts
+@@ -0,0 +1,161 @@
++// Ported from framework/tests/Support/SupportConditionableTest.php (Laravel v13.37.0), Story 12.1.
++//
++// The closures use no `$this`, so they are arrow functions (PORTING.md § Mechanical expression rule / By hand), typed
++// with the narrowest type the call site gives. `ConditionableLogger` is the Upstream fixture, registered in `setUp`
++// with `registerTestClass`. `in_array` is loose, so `has` compares with `looseEquals`.
++//
++// `testWhenProxy` and `testUnlessProxy` are not ported: they reach the target's `log` / `has` methods and `toggle`
++// property through the proxy's PHP `__call` / `__get`, which Xaravel has no form for, and the fixture's `$toggle`
++// property and `toggle()` method cannot share one JavaScript name (conformance/escalations/ESC-12.1-1.md). So the
++// fixture here leaves out `$toggle` and `toggle()`, which only those two tests use.
++import { portedTest, TestCase } from "@xaravel/assert";
++import { Conditionable } from "@xaravel/conditionable";
++import { looseEquals, mixin, registerTestClass } from "@xaravel/runtime";
++
++const ID = "Illuminate\\Tests\\Support\\SupportConditionableTest";
++
++class ConditionableLogger extends mixin(null, Conditionable) {
++  values: unknown[] = [];
++
++  // `public $toggle = false;` and `toggle()` are left out (ESC-12.1-1).
++
++  log(...values: unknown[]): this {
++    this.values.push(...values);
++
++    return this;
++  }
++
++  has(value: unknown): boolean {
++    return this.values.some((item) => looseEquals(item, value));
++  }
++}
++
++class SupportConditionableTest extends TestCase {
++  setUp(): void {
++    registerTestClass("Illuminate\\Tests\\Support\\ConditionableLogger", ConditionableLogger);
++  }
++}
++
++portedTest(`${ID}::testWhenConditionCallback`, { case: SupportConditionableTest }, async function () {
++  // With static condition
++  let logger = new ConditionableLogger().when(
++    2,
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("when", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["when", 2], logger.values);
++
++  // With callback condition
++  logger = new ConditionableLogger()
++    .log("init")
++    .when(
++      (logger: ConditionableLogger) => {
++        return logger.has("init");
++      },
++      (logger: ConditionableLogger, condition: unknown) => {
++        logger.log("when", condition);
++      },
++      (logger: ConditionableLogger, condition: unknown) => {
++        logger.log("default", condition);
++      },
++    );
++
++  this.assertSame(["init", "when", true], logger.values);
++});
++
++portedTest(`${ID}::testWhenDefaultCallback`, { case: SupportConditionableTest }, async function () {
++  // With static condition
++  let logger = new ConditionableLogger().when(
++    null,
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("when", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["default", null], logger.values);
++
++  // With callback condition
++  logger = new ConditionableLogger().when(
++    (logger: ConditionableLogger) => {
++      return logger.has("missing");
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("when", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["default", false], logger.values);
++});
++
++portedTest(`${ID}::testUnlessConditionCallback`, { case: SupportConditionableTest }, async function () {
++  // With static condition
++  let logger = new ConditionableLogger().unless(
++    null,
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("unless", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["unless", null], logger.values);
++
++  // With callback condition
++  logger = new ConditionableLogger().unless(
++    (logger: ConditionableLogger) => {
++      return logger.has("missing");
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("unless", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["unless", false], logger.values);
++});
++
++portedTest(`${ID}::testUnlessDefaultCallback`, { case: SupportConditionableTest }, async function () {
++  // With static condition
++  let logger = new ConditionableLogger().unless(
++    2,
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("unless", condition);
++    },
++    (logger: ConditionableLogger, condition: unknown) => {
++      logger.log("default", condition);
++    },
++  );
++
++  this.assertSame(["default", 2], logger.values);
++
++  // With callback condition
++  logger = new ConditionableLogger()
++    .log("init")
++    .unless(
++      (logger: ConditionableLogger) => {
++        return logger.has("init");
++      },
++      (logger: ConditionableLogger, condition: unknown) => {
++        logger.log("unless", condition);
++      },
++      (logger: ConditionableLogger, condition: unknown) => {
++        logger.log("default", condition);
++      },
++    );
++
++  this.assertSame(["init", "default", true], logger.values);
++});
+diff --git a/packages/conditionable/tests/xaravel/conditionable.test.ts b/packages/conditionable/tests/xaravel/conditionable.test.ts
+new file mode 100644
+index 00000000..eb1af25f
+--- /dev/null
++++ b/packages/conditionable/tests/xaravel/conditionable.test.ts
+@@ -0,0 +1,302 @@
++// Xaravel Tests for Story 12.1: `Conditionable` as a runtime trait with Upstream's closure values and higher-order proxy
++// (XT-conditionable-1), its AD-6 dual-helper behaviour (XT-conditionable-2) and the package's close gate
++// (XT-conditionable-3). Registrations into the Class Registry are process-wide, so every FQCN here is used by this file
++// only.
++import { spawnSync, type SpawnSyncReturns } from "node:child_process";
++import { existsSync, readFileSync } from "node:fs";
++import { join, resolve } from "node:path";
++import { Assert, xaravelTest } from "@xaravel/assert";
++import { Conditionable, HigherOrderWhenProxy } from "@xaravel/conditionable";
++import { classUsesRecursive, Error as PhpError, fqcn, looseEquals, mixin, registerClass } from "@xaravel/runtime";
++
++const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
++const PACKAGE = join(REPO, "packages", "conditionable");
++
++class Logger extends mixin(null, Conditionable) {
++  values: unknown[] = [];
++
++  flag: unknown = false;
++
++  log(...values: unknown[]): this {
++    this.values.push(...values);
++
++    return this;
++  }
++
++  has(value: unknown): boolean {
++    return this.values.some((item) => looseEquals(item, value));
++  }
++}
++
++registerClass("Xaravel\\Tests\\Conditionable\\Logger", Logger);
++
++/** What the proxy's `__call` returned, as the type the check expects (the proxy types its results `unknown`). */
++function as<T>(value: unknown): T {
++  return value as T;
++}
++
++xaravelTest(
++  "XT-conditionable-1",
++  "`when(value, callback, default)` / `unless(...)` follow Upstream: a closure value is called with the instance and its result decides the branch by PHP truthiness; a null callback result returns the instance; with no callback they return a HigherOrderWhenProxy whose __call / __get capture and apply conditions (unless() negating on capture); the AD-26 options form is read narrowly; classUsesRecursive names the trait's FQCN",
++  () => {
++    // The value closure is called with the instance; its result is the condition, passed on to the callback.
++    const seen: unknown[] = [];
++    const logger = new Logger().log("init");
++    const result = logger.when(
++      (self: Logger) => {
++        seen.push(self);
++        return self.has("init") ? "yes" : "";
++      },
++      (self: Logger, value: unknown) => {
++        seen.push(self, value);
++        return "callback-result";
++      },
++    );
++    Assert.assertSame("callback-result", result);
++    Assert.assertSame([logger, logger, "yes"], seen);
++
++    // PHP truthiness: "0", "", 0, an empty array and null are falsy; "a", [0] and an object are truthy.
++    for (const falsy of ["0", "", 0, [], null, false]) {
++      Assert.assertSame(["default", falsy], new Logger().when((_self: Logger) => falsy, (self: Logger) => self.log("when"), (self: Logger, value: unknown) => self.log("default", value)).values);
++      Assert.assertSame(["unless", falsy], new Logger().unless(falsy, (self: Logger, value: unknown) => self.log("unless", value)).values);
++    }
++    for (const truthy of ["a", "0.0", [0], 1, { a: 1 }]) {
++      Assert.assertSame(["when", truthy], new Logger().when(truthy, (self: Logger, value: unknown) => self.log("when", value)).values);
++    }
++
++    // A falsy value with no default returns the instance; a null or undefined callback result returns it too.
++    const plain = new Logger();
++    Assert.assertSame(plain, plain.when(false, () => "never"));
++    Assert.assertSame(plain, plain.when(true, () => null));
++    Assert.assertSame(plain, plain.when(true, () => {}));
++    Assert.assertSame(plain, plain.unless(true, null));
++    Assert.assertSame(plain, plain.when(false, null));
++    Assert.assertSame("default-result", plain.when(0, null, () => "default-result"));
++
++    // Upstream calls a null callback when the value is truthy: PHP's Error.
++    let thrown: unknown = null;
++    try {
++      plain.when(true, null);
++    } catch (error) {
++      thrown = error;
++    }
++    Assert.assertInstanceOf(PhpError, thrown);
++    Assert.assertSame("Value of type null is not callable", (thrown as Error).message);
++
++    // A class is not a closure: it is the value itself.
++    Assert.assertSame(["when", Logger], new Logger().when(Logger, (self: Logger, value: unknown) => self.log("when", value)).values);
++
++    // No argument: a proxy with no condition; the next call captures it.
++    const proxy = new Logger().log("init").when();
++    Assert.assertInstanceOf(HigherOrderWhenProxy, proxy);
++    Assert.assertSame("Illuminate\\Support\\HigherOrderWhenProxy", fqcn(proxy));
++    const captured = as<HigherOrderWhenProxy<Logger>>(proxy.__call("has", ["init"]));
++    Assert.assertSame(proxy, captured);
++    Assert.assertSame(["init", "three"], as<Logger>(captured.__call("log", ["three"])).values);
++
++    const missing = new Logger().log("init");
++    Assert.assertSame(missing, as<HigherOrderWhenProxy<Logger>>(missing.when().__call("has", ["missing"])).__call("log", ["four"]));
++    Assert.assertSame(["init"], missing.values);
++
++    // __get captures a property's value as the condition, then applies or skips the next read or call.
++    const flagged = new Logger();
++    flagged.flag = "1";
++    Assert.assertSame(["five"], as<Logger>(as<HigherOrderWhenProxy<Logger>>(flagged.when().__get("flag")).__call("log", ["five"])).values);
++    flagged.flag = "0";
++    Assert.assertSame(flagged, as<HigherOrderWhenProxy<Logger>>(flagged.when().__get("flag")).__get("values"));
++
++    // unless(): the captured condition is negated (PHP `!`).
++    const negated = new Logger().log("init");
++    Assert.assertSame(negated, as<HigherOrderWhenProxy<Logger>>(negated.unless().__call("has", ["init"])).__call("log", ["three"]));
++    Assert.assertSame(["init", "four"], as<Logger>(as<HigherOrderWhenProxy<Logger>>(negated.unless().__call("has", ["missing"])).__call("log", ["four"])).values);
++    negated.flag = false;
++    Assert.assertSame(["init", "four", "five"], as<Logger>(as<HigherOrderWhenProxy<Logger>>(negated.unless().__get("flag")).__call("log", ["five"])).values);
++
++    // One argument: the proxy holds the condition (negated by unless); a false condition returns the target uncalled.
++    const one = new Logger();
++    Assert.assertSame(["a"], as<Logger>(one.when(true).__call("log", ["a"])).values);
++    Assert.assertSame(one, one.when(false).__call("log", ["b"]));
++    Assert.assertSame(one, one.unless(true).__call("log", ["c"]));
++    Assert.assertSame(["a", "d"], as<Logger>(one.unless(false).__call("log", ["d"])).values);
++    Assert.assertSame(["a", "d", "e"], as<Logger>(one.when((self: Logger) => self.has("a")).__call("log", ["e"])).values);
++    Assert.assertSame(one, one.unless((self: Logger) => self.has("a")).__call("log", ["f"]));
++    Assert.assertSame(["a", "d", "e"], one.when("1").__get("values"));
++    Assert.assertSame(one, one.when("0").__get("values"));
++    // condition() and negateConditionOnCapture() return the proxy.
++    const bare = new HigherOrderWhenProxy(one);
++    Assert.assertSame(bare, bare.negateConditionOnCapture());
++    Assert.assertSame(bare, bare.condition(false));
++    Assert.assertSame(one, bare.__call("log", ["g"]));
++
++    // The options form (AD-26) is `when(value, callback, default)`.
++    Assert.assertSame(["when", true], new Logger().when({ value: true, callback: (self: Logger, value: unknown) => self.log("when", value) }).values);
++    Assert.assertSame(["default", 0], new Logger().when({ value: 0, callback: null, default: (self: Logger, value: unknown) => self.log("default", value) }).values);
++    Assert.assertSame(["default", null], new Logger().when({ default: (self: Logger, value: unknown) => self.log("default", value) }).values);
++    Assert.assertSame(["unless", false], new Logger().unless({ value: (_self: Logger) => false, callback: (self: Logger, value: unknown) => self.log("unless", value) }).values);
++    // Any other object is a value: a plain object with other keys, `{ value }` alone, a non-callable `callback`, or a
++    // second argument.
++    Assert.assertSame(["when", { a: 1 }], new Logger().when({ a: 1 }, (self: Logger, value: unknown) => self.log("when", value)).values);
++    Assert.assertInstanceOf(HigherOrderWhenProxy, new Logger().when({ a: 1 }));
++    Assert.assertInstanceOf(HigherOrderWhenProxy, new Logger().when({ value: true }));
++    Assert.assertInstanceOf(HigherOrderWhenProxy, new Logger().when({ callback: "strrev" }));
++    Assert.assertInstanceOf(HigherOrderWhenProxy, new Logger().when({ value: true, callback: () => 1, extra: 1 }));
++    Assert.assertSame("second", new Logger().when({ value: false, callback: () => "first" }, () => "second"));
++
++    // The trait is registered under its Upstream FQCN.
++    Assert.assertContains("Illuminate\\Support\\Traits\\Conditionable", Object.values(classUsesRecursive(Logger)));
++    Assert.assertSame("Illuminate\\Support\\Traits\\Conditionable", fqcn(Conditionable));
++  },
++);
++
++/** A thenable that is not a Promise, as a query Builder is: `then` must never be called by `when`. */
++class FakeBuilder {
++  thenCalls = 0;
++
++  then(resolve: (value: string) => void): void {
++    this.thenCalls++;
++    resolve("ran");
++  }
++}
++
++xaravelTest(
++  "XT-conditionable-2",
++  "`when` / `unless` are AD-6 dual helpers (DIV-1): an async callback, default or value closure makes them return a Promise of the sync result, a Promise condition is awaited rather than tested for truthiness, a sync callback returns its result (not a Promise), a thenable that is not a Promise stays sync and unawaited, and async-surface.json lists Conditionable.when / unless with root callback",
++  async () => {
++    const logger = new Logger();
++
++    // An async callback: a Promise of its result, or of the instance for a null result.
++    const viaCallback = logger.when(true, async () => 1);
++    Assert.assertInstanceOf(Promise, viaCallback);
++    Assert.assertSame(1, await viaCallback);
++    Assert.assertSame(logger, await logger.when(true, async () => null));
++    Assert.assertSame(logger, await logger.unless(false, async () => {}));
++
++    // An async default.
++    const viaDefault = logger.unless(true, null, async (self: Logger, value: unknown) => self.log("default", value));
++    Assert.assertInstanceOf(Promise, viaDefault);
++    Assert.assertSame(logger, await viaDefault);
++    Assert.assertSame(["default", true], logger.values);
++
++    // An async value closure: the default runs only after the value settles, with the settled value.
++    const order: string[] = [];
++    const viaValue = new Logger().when(
++      async (_self: Logger) => {
++        order.push("value");
++        await Promise.resolve();
++        order.push("settled");
++        return false;
++      },
++      () => {
++        order.push("callback");
++        return "callback";
++      },
++      (_self: Logger, value: unknown) => {
++        order.push(`default:${String(value)}`);
++        return "default";
++      },
++    );
++    Assert.assertInstanceOf(Promise, viaValue);
++    order.push("returned");
++    Assert.assertSame("default", await viaValue);
++    Assert.assertSame(["value", "returned", "settled", "default:false"], order);
++
++    // A Promise condition is awaited, never truthy: a Promise of false takes the default.
++    Assert.assertSame("default", await new Logger().when(Promise.resolve(false), () => "callback", () => "default"));
++    Assert.assertSame("callback", await new Logger().unless(Promise.resolve(0), () => "callback"));
++
++    // With only an async condition: a Promise of the proxy holding its settled value.
++    const proxied = new Logger();
++    const proxy = await proxied.when(async (_self: Logger) => false);
++    Assert.assertInstanceOf(HigherOrderWhenProxy, proxy);
++    Assert.assertSame(proxied, proxy.__call("log", ["never"]));
++    Assert.assertSame([], proxied.values);
++    const negatedProxy = await proxied.unless(async () => 0);
++    Assert.assertSame(["yes"], as<Logger>(negatedProxy.__call("log", ["yes"])).values);
++
++    // The options form takes the same path.
++    Assert.assertSame(2, await new Logger().when({ value: true, callback: async () => 2 }));
++
++    // A rejection propagates.
++    let rejected: unknown = null;
++    try {
++      await logger.when(true, async () => {
++        throw new RangeError("boom");
++      });
++    } catch (error) {
++      rejected = error;
++    }
++    Assert.assertInstanceOf(RangeError, rejected);
++
++    // A sync callback returns its result as is.
++    const sync = logger.when(true, () => "sync");
++    Assert.assertNotInstanceOf(Promise, sync);
++    Assert.assertSame("sync", sync);
++
++    // A thenable that is not a Promise is an ordinary value: returned sync, its `then` never called.
++    const builder = new FakeBuilder();
++    const kept: unknown = logger.when(true, () => builder);
++    Assert.assertSame(builder, kept);
++    Assert.assertSame(0, builder.thenCalls);
++    Assert.assertSame(logger, logger.when(builder, () => null));
++    Assert.assertSame(0, builder.thenCalls);
++
++    // The committed async surface lists both methods with the `callback` root.
++    const surface = readFileSync(join(PACKAGE, "async-surface.json"), "utf8");
++    Assert.assertStringContainsString('{"method":"Conditionable.when","file":"src/Traits/Conditionable.ts","root":"callback"}', surface);
++    Assert.assertStringContainsString('{"method":"Conditionable.unless","file":"src/Traits/Conditionable.ts","root":"callback"}', surface);
++  },
++);
++
++/** Spawns `bun run <script> …args` from the repository root, without colour. */
++function bunRun(script: string, args: readonly string[]): SpawnSyncReturns<string> {
++  return spawnSync(process.execPath, ["run", script, ...args], { cwd: REPO, encoding: "utf8", timeout: 240000, env: { ...process.env, NO_COLOR: "1" } });
++}
++
++/** A run's stdout and stderr, with its spawn error, for a failure message. */
++function outputOf(run: SpawnSyncReturns<string>): string {
++  return `${run.error === undefined ? "" : `${String(run.error)}\n`}${run.stdout ?? ""}${run.stderr ?? ""}`;
++}
++
++/** The `## <title>` section of a markdown page, or "" when it has none. */
++function section(page: string, title: string): string {
++  const start = page.indexOf(`\n## ${title}\n`);
++  if (start === -1) {
++    return "";
++  }
++  const next = page.indexOf("\n## ", start + 1);
++  return page.slice(start, next === -1 ? page.length : next);
++}
++
++xaravelTest(
++  "XT-conditionable-3",
++  "@xaravel/conditionable is complete: `bun run api-surface:gate conditionable` reports 0 unexplained (AD-15); docs/conditionable.md documents when, unless and the proxy and has a Divergences section citing DIV-1 and DIV-12 and the open ESC-12.1-1..3, every DIV it cites exists, and the README links the docs page",
++  () => {
++    const gate = bunRun("api-surface:gate", ["conditionable"]);
++    Assert.assertSame(0, gate.status, outputOf(gate));
++    Assert.assertStringContainsString("api-surface:gate conditionable: 0 unexplained (AD-15)", gate.stdout ?? "", outputOf(gate));
++
++    const page = readFileSync(join(PACKAGE, "docs", "conditionable.md"), "utf8");
++    for (const name of ["when(", "unless(", "HigherOrderWhenProxy", "__call(", "__get("]) {
++      Assert.assertStringContainsString(name, page, `docs/conditionable.md documents ${name}`);
++    }
++    const divergences = section(page, "Divergences");
++    Assert.assertNotSame("", divergences, "docs/conditionable.md has a ## Divergences section");
++    for (const cited of ["DIV-1", "DIV-12", "ESC-12.1-1", "ESC-12.1-2", "ESC-12.1-3"]) {
++      Assert.assertStringContainsString(cited, divergences);
++    }
++    for (const match of divergences.matchAll(/\bDIV-(\d+)\b/g)) {
++      Assert.assertTrue(existsSync(join(REPO, "decisions", `DIV-${match[1] ?? ""}.md`)), `DIV-${match[1] ?? ""} is cited but does not exist`);
++    }
++    for (const match of divergences.matchAll(/\bDIV-(\d+)\.(\d+)\b/g)) {
++      const record = readFileSync(join(REPO, "decisions", `DIV-${match[1] ?? ""}.md`), "utf8");
++      Assert.assertStringContainsString(`**${match[0]}**`, record, `${match[0]} is cited but is not a clause of decisions/DIV-${match[1] ?? ""}.md`);
++    }
++    for (const match of divergences.matchAll(/\bESC-12\.1-(\d+)\b/g)) {
++      Assert.assertTrue(existsSync(join(REPO, "conformance", "escalations", `ESC-12.1-${match[1] ?? ""}.md`)), `${match[0]} is cited but does not exist`);
++    }
++
++    const readme = readFileSync(join(PACKAGE, "README.md"), "utf8");
++    Assert.assertStringContainsString("(docs/conditionable.md)", readme, "README.md links docs/conditionable.md");
++  },
++  300000,
++);
