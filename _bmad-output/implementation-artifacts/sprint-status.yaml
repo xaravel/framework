@@ -148,8 +148,8 @@ development_status:
   11-1-macroable-trait: done  # ESC-11.1-6 option 1 (only a test frame takes a macro write); Fidelity Review passed at tree b40cdac
   epic-11-retrospective: done
 
-  epic-12: backlog
-  12-1-conditionable-trait: backlog
+  epic-12: in-progress
+  12-1-conditionable-trait: in-progress
   epic-12-retrospective: optional
 
   epic-13: backlog
