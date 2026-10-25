@@ -31,7 +31,14 @@ The orchestrator stopped item 10 (#392) for two scope questions and asked one ab
 
 1. **XT-contracts-11 and XT-contracts-19 are re-pinned to token identity.** `aliases.test.ts` and `hardening.test.ts` in `packages/contracts/tests/xaravel/` used `assertSame(token, fqcnString)` to check that a resolver returns a token, not a string. Under this item's ruling that check passes for the string too, as PHP's would. Each such check becomes a JS identity check: the result is `===` the token object and its `typeof` is not `"string"`. The property each test pins stays as strict, and no other assertion changes. This is the item's one change in `packages/contracts`, and it falls outside the stale-test rule (`MAINT-2026-10-24-stale-cross-scope-tests.md`), because the check itself changes.
 
-   *Added after #396:* XT-contracts-12 (`aliases.test.ts:369`, `assertSame(typed, aliasResolver(...)("App\\M"))`) has the same check. It gets the same identity re-pin. The orchestrator searched `packages/*/tests` and `conformance/tests` and found no other check of this kind. Any other check the build turns up still stops the item.
+   *Added after #396:* XT-contracts-12 (`aliases.test.ts:369`, `assertSame(typed, aliasResolver(...)("App\\M"))`) has the same check. It gets the same identity re-pin. The orchestrator searched `packages/*/tests` and `conformance/tests` and found no other check of this kind.
+
+   *Added after #399, as a general rule:* the item's review then found five more: XT-contracts-4, -5, -8, -18 and -20, each an `assertSame(parentToken, parents[i])`. One rule now covers every check of this kind, and the item no longer stops for one:
+   - **What:** in a Xaravel Test (`xaravelTest`, an `XT-*` id) under `packages/<c>/tests/**` that is not a Protected Path, an `assertSame` or `assertEquals` whose expected value is a contract token.
+   - **How:** re-pinned to JS identity, using the item's `assertSameAbstract` pattern: the actual value is `===` the token, and its `typeof` is not `"string"`. No assertion is removed. The re-pinned check is as strict as before.
+   - **Not covered:** Ported Tests (`portedTest`), which keep PHP semantics, since `assertSame(Foo::class, $x)` passing for the string is what PHP does. Also not covered: any Protected test file, including `conformance/**` and `packages/assert/**` and `packages/mockery/**`, which still stops the item.
+
+   The PR lists every check re-pinned under this rule.
 2. **`.oxlintrc.json` enables the new lint rule.** That is the only change allowed in that Protected file.
 3. **Mockery's `with(token)` follows Upstream Mockery.** A token is its class-string, so `with(Arrayable)` matches as Mockery 1.6's `Expectation::_matchArg` matches `with(Arrayable::class)`: identical or loosely equal values, the FQCN string itself, and an object that is an `instanceof` that class. The orchestrator confirms this against the Mockery source at the version the Oracle installs. Any difference stops the item with an Escalation.
 
