@@ -367,7 +367,7 @@ The two passes of each repository (and of each PSR package) must print identical
 
 ### Citation files
 
-`conformance/api-surface/additions.jsonl` (`#/$defs/addition`) lists members a package exports that Upstream lacks; `exceptions.jsonl` (`#/$defs/exception`) lists Upstream members a package does not export. Both are Protected, written by hand through Maintainer review, and committed empty. Each line is `{"component","fqcn","member","citation"}`, with `member` a string or null, in that key order. Every line needs a `citation` (spine AD-15): an addition cites `FR-<n>` or `DIV-<1..12>[.<clause>]`, an exception cites `DIV-…` or `deferred:<item>`. Lines are sorted by `component`, `fqcn`, `member`, with no duplicates. `checkCitations` (run by `--check`) reports every problem.
+`conformance/api-surface/additions.jsonl` (`#/$defs/addition`) lists members a package exports that Upstream lacks; `exceptions.jsonl` (`#/$defs/exception`) lists Upstream members a package does not export. Both are Protected and written by hand through Maintainer review. Both were committed empty; `exceptions.jsonl` gained its first lines with ESC-12.1-3, and XT-conformance-82 checks that each `DIV-<n>.<k>` citation names a clause its record declares. Each line is `{"component","fqcn","member","citation"}`, with `member` a string or null, in that key order. Every line needs a `citation` (spine AD-15): an addition cites `FR-<n>` or `DIV-<1..12>[.<clause>]`, an exception cites `DIV-…` or `deferred:<item>`. Lines are sorted by `component`, `fqcn`, `member`, with no duplicates. `checkCitations` (run by `--check`) reports every problem.
 
 ### The drift check in CI
 

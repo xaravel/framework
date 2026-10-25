@@ -603,7 +603,7 @@ phpTest("XT-conformance-200", "the real api-surface.php run twice on the fixture
 // ---------------------------------------------------------------------------
 // XT-conformance-82
 
-xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist empty and Protected, and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15.5, AD-16.1)", () => {
+xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist and are Protected (additions empty, exceptions only from Maintainer rulings citing a declared DIV clause), and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15.5, AD-16.1)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   for (const name of ["additions.jsonl", "exceptions.jsonl", "schema.json", "support.jsonl"]) {
@@ -612,7 +612,16 @@ xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist emp
     expect([path, isProtected(entries, phases, path)]).toEqual([path, true]);
   }
   expect(statSync(join(root, API_SURFACE_DIR, "additions.jsonl")).size).toBe(0);
-  expect(statSync(join(root, API_SURFACE_DIR, "exceptions.jsonl")).size).toBe(0);
+  // exceptions.jsonl started empty; its lines come only from Maintainer rulings (first: ESC-12.1-3), and each
+  // DIV-<n>.<k> citation must name a clause its record declares.
+  for (const text of readFileSync(join(root, API_SURFACE_DIR, "exceptions.jsonl"), "utf8").split("\n").filter((l) => l !== "")) {
+    const citation = (JSON.parse(text) as JsonObject)["citation"];
+    const clause = typeof citation === "string" ? /^DIV-(\d+)\.(\d+)$/.exec(citation) : null;
+    if (clause !== null) {
+      const record = readFileSync(join(root, "decisions", `DIV-${clause[1]}.md`), "utf8");
+      expect([clause[0], record.includes(`**${clause[0]}**`)]).toEqual([clause[0], true]);
+    }
+  }
   expect(checkCitations(root)).toEqual([]);
 
   const line = (citation: string | null, member: string | null = "hxRedirect", component = "http", fqcn = "Illuminate\\Http\\RedirectResponse"): JsonObject =>
