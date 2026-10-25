@@ -12,7 +12,9 @@
 // with its getters and `instanceof`; the defaults of `Exception`, `Error` and `ErrorException`; constructions with a
 // bad argument, and the arguments PHP's coercive mode coerces, decisions/ESC-9.10-2.md), and contain no Laravel code
 // and no Upstream fixture.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+//
+// XT-runtime-43 is action item epic-12-item-1-blocked-by-component-error (ESC-12.1-2).
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
@@ -497,5 +499,133 @@ xaravelTest(
       Assert.assertSame(expectedThrow.message, (error as Error).message, `rejected #${index}`);
     }
     Assert.assertSame(58, output.results.length);
+  },
+);
+
+/** The part of the harness's junit reader and comparer (`conformance/harness/`) XT-runtime-43 uses. */
+interface HarnessJunit {
+  parseJunit: (xml: string) => Map<string, { outcome: string; type: string | null; message: string | null }>;
+}
+interface HarnessCompare {
+  blockedComponent: (junit: { outcome: string; type: string | null; message: string | null }) => string | null;
+}
+
+xaravelTest(
+  "XT-runtime-43",
+  "BlockedByComponentError is a registered JS Error, not a PHP throwable, named BlockedByComponentError, whose message BlockedByComponentError(<c>)[: <detail>] bun's junit report records as the harness's blocked-by form; a component that is not lowercase kebab, or a detail that is not a string or null, throws a TypeError (ESC-5.3-1, ESC-12.1-2)",
+  async () => {
+    const { BlockedByComponentError } = root;
+    // The harness may not import a graded package (AD-15); the runtime's test loads the harness at run time instead.
+    const { parseJunit } = (await import(join(REPO, "conformance", "harness", "junit.ts"))) as HarnessJunit;
+    const { blockedComponent } = (await import(join(REPO, "conformance", "harness", "compare.ts"))) as HarnessCompare;
+
+    // Bare.
+    const bare = new BlockedByComponentError("database");
+    Assert.assertSame("BlockedByComponentError(database)", bare.message);
+    Assert.assertSame("BlockedByComponentError", bare.name);
+    Assert.assertSame("database", bare.component);
+    Assert.assertTrue(bare instanceof globalThis.Error);
+    Assert.assertTrue(bare instanceof BlockedByComponentError);
+
+    // With detail.
+    const detailed = new BlockedByComponentError("json-schema", "Illuminate\\JsonSchema is not installed");
+    Assert.assertSame("BlockedByComponentError(json-schema): Illuminate\\JsonSchema is not installed", detailed.message);
+    Assert.assertSame("json-schema", detailed.component);
+    Assert.assertSame("BlockedByComponentError(json-schema)", new BlockedByComponentError("json-schema", null).message);
+
+    // Every Component in the component map constructs, and its message yields it back through the harness's pattern.
+    const components = readFileSync(join(REPO, "conformance", "component-map"), "utf8")
+      .split("\n")
+      .filter((line) => line.trim() !== "" && !line.startsWith("#"))
+      .map((line) => (JSON.parse(line) as { component: string }).component);
+    Assert.assertTrue(components.length > 0, "the component map lists Components");
+    for (const component of components) {
+      const error = new BlockedByComponentError(component);
+      Assert.assertSame(component, blockedComponent({ outcome: "failed", type: error.name, message: error.message }), component);
+    }
+
+    // The message matches the harness's pattern and yields the component.
+    for (const error of [bare, detailed]) {
+      Assert.assertSame(error.component, blockedComponent({ outcome: "failed", type: error.name, message: error.message }), error.message);
+    }
+
+    // Bad component, and bad detail.
+    const badComponents: readonly unknown[] = ["", "Database", "a b", "(x)", "database-", "-database", "1database", null, 5, undefined];
+    for (const component of badComponents) {
+      const error = thrownBy(() => new BlockedByComponentError(component as string));
+      Assert.assertInstanceOf(globalThis.TypeError, error, `component ${String(component)}`);
+      Assert.assertFalse(error instanceof php.TypeError, `component ${String(component)} is not PHP's TypeError`);
+      Assert.assertStringStartsWith("BlockedByComponentError():", (error as Error).message, `component ${String(component)}`);
+    }
+    const badDetails: readonly (readonly [string, unknown])[] = [["5", 5], ["{}", {}], ["false", false]];
+    for (const [label, detail] of badDetails) {
+      const error = thrownBy(() => new BlockedByComponentError("database", detail as string));
+      Assert.assertInstanceOf(globalThis.TypeError, error, `detail ${label}`);
+      Assert.assertFalse(error instanceof php.TypeError, `detail ${label} is not PHP's TypeError`);
+      Assert.assertStringStartsWith("BlockedByComponentError():", (error as Error).message, `detail ${label}`);
+    }
+
+    // Registry.
+    Assert.assertSame("Xaravel\\Runtime\\BlockedByComponentError", fqcn(BlockedByComponentError));
+    Assert.assertSame("Xaravel\\Runtime\\BlockedByComponentError", fqcn(bare));
+    Assert.assertSame(BlockedByComponentError, resolveClass("Xaravel\\Runtime\\BlockedByComponentError"));
+
+    // Not PHP.
+    Assert.assertFalse(bare instanceof php.Exception);
+    Assert.assertFalse(bare instanceof php.Error);
+    const published = (globalThis as Record<symbol, Record<string, abstract new (...args: never[]) => unknown>>)[PHP_CLASSES]!;
+    Assert.assertFalse(bare instanceof published["Exception"]!);
+    Assert.assertFalse(bare instanceof published["Error"]!);
+
+    // Bun's junit report: a test that throws it from setUp-time code fails with type BlockedByComponentError.
+    const dir = mkdtempSync(join(tmpdir(), "xt-runtime-43-"));
+    try {
+      const entry = JSON.stringify(join(PACKAGE_DIR, "src", "index.ts"));
+      const assertEntry = JSON.stringify(join(REPO, "packages", "assert", "src", "index.ts"));
+      writeFileSync(
+        join(dir, "blocked.test.ts"),
+        [
+          `import { beforeEach, describe, test } from "bun:test";`,
+          `import { BlockedByComponentError } from ${entry};`,
+          `import { portedTest, TestCase } from ${assertEntry};`,
+          `class BlockedCase extends TestCase {`,
+          `  setUp(): void { throw new BlockedByComponentError("database", "Illuminate\\\\Database is not installed"); }`,
+          `  tearDown(): void { throw new Error("tearDown also failed"); }`,
+          `}`,
+          `portedTest("Illuminate\\\\Tests\\\\Blocked::testPorted", { case: BlockedCase }, function () {});`,
+          `test("bare", () => { throw new BlockedByComponentError("database"); });`,
+          `describe("set up", () => {`,
+          `  beforeEach(() => { throw new BlockedByComponentError("json-schema", "Illuminate\\\\JsonSchema is not installed"); });`,
+          `  test("detailed", () => {});`,
+          `});`,
+        ].join("\n"),
+      );
+      const outfile = join(dir, "junit.xml");
+      const run = Bun.spawnSync([process.execPath, "--no-env-file", "test", "--reporter=junit", `--reporter-outfile=${outfile}`, "./blocked.test.ts"], { cwd: dir, stdout: "pipe", stderr: "pipe", timeout: 60_000 });
+      Assert.assertNotSame(0, run.exitCode, "the blocked tests fail");
+      Assert.assertTrue(existsSync(outfile), `no junit report: ${run.stderr.toString()}`);
+      const cases = parseJunit(readFileSync(outfile, "utf8"));
+      const bareCase = cases.get("bare") ?? null;
+      Assert.assertNotNull(bareCase, run.stderr.toString());
+      Assert.assertSame("failed", bareCase!.outcome);
+      Assert.assertSame("BlockedByComponentError", bareCase!.type);
+      Assert.assertStringStartsWith("BlockedByComponentError(database)", bareCase!.message ?? "");
+      Assert.assertSame("database", blockedComponent(bareCase!));
+      const setUpCase = [...cases.entries()].find(([name]) => name.endsWith("detailed"))?.[1] ?? null;
+      Assert.assertNotNull(setUpCase, [...cases.keys()].join(", "));
+      Assert.assertSame("failed", setUpCase!.outcome);
+      Assert.assertSame("BlockedByComponentError", setUpCase!.type);
+      Assert.assertStringStartsWith("BlockedByComponentError(json-schema): Illuminate\\JsonSchema is not installed", setUpCase!.message ?? "");
+      Assert.assertSame("json-schema", blockedComponent(setUpCase!));
+      // The documented route: a portedTest whose case's setUp throws it; tearDown's later error does not replace it.
+      const portedCase = [...cases.entries()].find(([name]) => name.endsWith("Blocked::testPorted"))?.[1] ?? null;
+      Assert.assertNotNull(portedCase, [...cases.keys()].join(", "));
+      Assert.assertSame("failed", portedCase!.outcome);
+      Assert.assertSame("BlockedByComponentError", portedCase!.type);
+      Assert.assertStringStartsWith("BlockedByComponentError(database)", portedCase!.message ?? "");
+      Assert.assertSame("database", blockedComponent(portedCase!));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   },
 );
