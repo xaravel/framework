@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 20:37
+last_updated: 10-24-2026 22:17
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -146,7 +146,7 @@ development_status:
 
   epic-11: done
   11-1-macroable-trait: done  # ESC-11.1-6 option 1 (only a test frame takes a macro write); Fidelity Review passed at tree b40cdac
-  epic-11-retrospective: optional
+  epic-11-retrospective: done
 
   epic-12: backlog
   12-1-conditionable-trait: backlog
@@ -1655,3 +1655,68 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-24-epic-10-items.md"
+  - id: "epic-11-retro-item-1-frame-chain-read"
+    epic: 11
+    action: "packages/runtime and packages/macroable: @xaravel/runtime/scope exports
+      a read of the active frame chain's kinds (frameKinds() innermost first, or insideFrameKind(kinds))
+      with XT-runtime cases (decisions/ESC-11.1-3.md); guardWrite lets a macro write
+      through when the chain reaches a test frame with no request, job or command
+      frame between it and the innermost frame, and throws ScopeFrameException otherwise
+      (DIV-11.2; ESC-11.1-5, ESC-11.1-6); a unit or narrow frame nested in a test
+      frame writes to its overlay; XT-macroable-2's nested cases, the docs' registration
+      note and the spec's deferred entry follow; no assertion removed or weakened
+      (finding S1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+  - id: "epic-11-retro-item-2-boot-time-macro-route"
+    epic: 11
+    action: "Route the boot-time macro write: add to the AC of the Story that adds
+      the Application's sealed state (17.4 or 51.1) the runtime seam for a write to
+      the active Application's base before sealed (decisions/ESC-11.1-2.md), and decide
+      how Macroable's half (macro, mixin and flushMacros before sealed write to that
+      base, with an XT-macroable-2 boot-time case) lands, since that Story may not
+      edit packages/macroable (finding S2)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+  - id: "epic-11-retro-item-3-porting-macroable-row"
+    epic: 11
+    action: "Reconcile PORTING.md:26 (Macroable row, Protected): callers type a macro
+      with declare / declare static members on their class, as Story 11.1 and packages/macroable/docs/macroable.md
+      do, since oxlint's no-unsafe-declaration-merging rejects module augmentation
+      of a class (finding S3)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+  - id: "epic-11-retro-item-4-remove-scratch-note"
+    epic: 11
+    action: "Remove _bmad-output/implementation-artifacts/bmad-build-auto-result-retro-10-token-class-string.md
+      and its link in epic-10-retro-2026-10-24.md, since its item is done (#404) (finding
+      P4)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+  - id: "epic-11-retro-item-5-builtin-names-and-static-mixins"
+    epic: 11
+    action: "packages/macroable: a macro whose name is inherited from Object.prototype
+      or Function.prototype installs its dispatcher on the using class so it runs
+      as PHP's __call / __callStatic would, while a member the class or its parents
+      declare still wins; a name that is a class's own built-in (prototype, name,
+      length) throws a clear error or waits on the Maintainer rather than being ignored;
+      mixin invokes a mixin's static method with this the mixin's class; docs/macroable.md
+      says what holds; XT-macroable cases for each; no assertion removed or weakened
+      (findings L1, L2)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+  - id: "epic-11-retro-item-6-ad3-sub-path"
+    epic: 11
+    action: "Rule what AD-3's src/<Upstream sub-path>/ means for a Component: the
+      Upstream file path under the Component's folder (src/Traits/Macroable.ts) or
+      the namespace path (src/Support/Traits/Macroable.ts, as Story 11.1 ships), and
+      whether packages/contracts' lower-case folders conform, before Epic 12 adds
+      a second trait package (finding L4)"
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
