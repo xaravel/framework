@@ -23,7 +23,7 @@
 // (Story 9.11, ESC-4.1-1, ESC-9.11-2, DIV-9.4; PhpValues' `phpNumberType`).
 // `==` reads a marked float as its plain `number`.
 // `undefined` and `symbol` are not PHP values (AD-9); each equals only itself.
-import { isMarkedFloat, phpNumberType, unmarkFloat } from "./PhpValues";
+import { classString, isMarkedFloat, phpNumberType, unmarkFloat } from "./PhpValues";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 const PHP_PROPS = Symbol.for("xaravel.php.props");
@@ -400,9 +400,9 @@ class Comparison {
   }
 
   loose(left: unknown, right: unknown): boolean {
-    // A marked float is `==` as the plain `number` it stands for.
-    const a = unmarkFloat(left);
-    const b = unmarkFloat(right);
+    // A contract token is `==` as its class-string (AD-9.8); a marked float as the plain `number` it stands for.
+    const a = unmarkFloat(classString(left));
+    const b = unmarkFloat(classString(right));
     if (isForeign(a) || isForeign(b)) {
       return Object.is(a, b);
     }
@@ -484,7 +484,10 @@ class Comparison {
     return true;
   }
 
-  strict(a: unknown, b: unknown): boolean {
+  strict(left: unknown, right: unknown): boolean {
+    // A contract token is `===` as its class-string (AD-9.8).
+    const a = classString(left);
+    const b = classString(right);
     if (isForeign(a) || isForeign(b)) {
       return Object.is(a, b);
     }

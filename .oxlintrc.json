@@ -21,7 +21,8 @@
     "xaravel/no-boot-only-write": "error",
     "xaravel/no-arrow-test-body": "error",
     "xaravel/no-inject-param-mismatch": "error",
-    "xaravel/no-dynamic-column-default": "error"
+    "xaravel/no-dynamic-column-default": "error",
+    "xaravel/no-token-string-coercion": "error"
   },
   "ignorePatterns": [
     "_bmad/**",

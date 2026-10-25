@@ -16,6 +16,7 @@
 //   - Countable: an object branded `Symbol.for('Countable')` with a `count()` method;
 //   - Traversable: an object (not an array) with `[Symbol.iterator]`, iterating its values;
 //   - ArrayAccess: an object branded `Symbol.for('ArrayAccess')` with an `offsetExists()` method.
+import { isContractToken } from "../Framework/MockObject/Generator/ContractParents";
 import { arrayEntries, isBuiltIn, isPhpArray, numericValue } from "./PhpComparison";
 
 export const PHP_RESOURCE = Symbol.for("xaravel.php.resource");
@@ -32,6 +33,16 @@ export function isMarkedFloat(value: unknown): value is object {
 /** A marked float as the plain `number` it stands for; any other value as it is. */
 export function unmarkFloat(value: unknown): unknown {
   return isMarkedFloat(value) ? Number(value) : value;
+}
+
+/**
+ * A contract token as its own FQCN class-string, as PHP's `Arrayable::class` is (AD-9.8,
+ * decisions/MAINT-2026-10-24-epic-10-items.md Item 2); any other value as it is. The grader reads a PHP value through
+ * this only for `==`, `===`, its exporter and `varExport`; `gettype`, `isScalar` and the type assertions still see the
+ * token as the object it is in JS.
+ */
+export function classString(value: unknown): unknown {
+  return isContractToken(value) ? (Object.getOwnPropertyDescriptor(value, CLASS_FQCN)!.value as string) : value;
 }
 
 /**

@@ -105,6 +105,17 @@ function show(value: unknown): string {
   return `(${typeof value})`;
 }
 
+/**
+ * `actual`, a resolver's result, is `expected` by JS identity (decisions/MAINT-2026-10-24-epic-10-items.md, Item 10's
+ * route, item 1): a contract token is now `assertSame` to its FQCN string, as `Arrayable::class` is in PHP (AD-9.8), so
+ * the token-not-string check is the `typeof` and `===` checks after the PHP one.
+ */
+function assertSameAbstract(expected: unknown, actual: unknown, message = ""): void {
+  Assert.assertSame(expected, actual, message);
+  Assert.assertSame(typeof expected, typeof actual, message);
+  Assert.assertTrue(expected === actual, message);
+}
+
 /** An Upstream PHP file's namespace and `use` lines, and a resolver of a local class name to its FQCN. */
 function resolverOf(source: string): (local: string) => string {
   const namespace = /^namespace\s+([^;]+);/m.exec(source)?.[1] ?? "";
@@ -230,10 +241,10 @@ xaravelTest(
   () => {
     // The spec's literal canonical table.
     for (const [service, name] of Object.entries(CANONICAL)) {
-      Assert.assertSame(tokenOf(name), canonicalToken(service), service);
+      assertSameAbstract(tokenOf(name), canonicalToken(service), service);
     }
     for (const key of [...OWN_KEYS, ...BINDING_KEYS]) {
-      Assert.assertSame(key, canonicalToken(key), key);
+      assertSameAbstract(key, canonicalToken(key), key);
     }
 
     // The literal table, the own keys and the bindings cover every service once.
@@ -244,47 +255,47 @@ xaravelTest(
 
     // Canonical tokens are fixed points.
     for (const key of serviceKeys) {
-      Assert.assertSame(canonicalToken(key), canonicalToken(canonicalToken(key)), key);
+      assertSameAbstract(canonicalToken(key), canonicalToken(canonicalToken(key)), key);
     }
 
     // The code's token index has every token the package exports.
     Assert.assertNotEmpty([...TOKENS.keys()]);
     for (const [name, token] of TOKENS) {
-      Assert.assertSame(token, aliasResolver(table({ CORE_CONTAINER_ALIASES: { probe: ["App\\Probe", name] } }))("probe"), name);
+      assertSameAbstract(token, aliasResolver(table({ CORE_CONTAINER_ALIASES: { probe: ["App\\Probe", name] } }))("probe"), name);
     }
 
     // Every alias reaches its key's canonical token, so one instance.
     for (const [key, aliases] of Object.entries(CORE_CONTAINER_ALIASES)) {
       for (const alias of aliases) {
-        Assert.assertSame(canonicalToken(key), canonicalToken(alias), `${key}: ${alias}`);
-        Assert.assertSame(canonicalToken(key), canonicalToken(`\\${alias}`), `${key}: \\${alias}`);
+        assertSameAbstract(canonicalToken(key), canonicalToken(alias), `${key}: ${alias}`);
+        assertSameAbstract(canonicalToken(key), canonicalToken(`\\${alias}`), `${key}: \\${alias}`);
         const token = TOKENS.get(alias);
         if (token !== undefined) {
-          Assert.assertSame(canonicalToken(key), canonicalToken(token as never), `${key}: the ${alias} token`);
+          assertSameAbstract(canonicalToken(key), canonicalToken(token as never), `${key}: the ${alias} token`);
         }
       }
     }
     for (const [key, built] of Object.entries(PROVIDER_BINDINGS)) {
-      Assert.assertSame(key, canonicalToken(built), `${key}: ${built}`);
+      assertSameAbstract(key, canonicalToken(built), `${key}: ${built}`);
     }
     for (const [abstract, alias] of PROVIDER_ALIASES) {
-      Assert.assertSame(canonicalToken(abstract), canonicalToken(alias), `${abstract}: ${alias}`);
+      assertSameAbstract(canonicalToken(abstract), canonicalToken(alias), `${abstract}: ${alias}`);
     }
 
     // The matrix rows.
     const cacheFactory = tokenOf("Cache\\Factory");
-    Assert.assertSame(cacheFactory, canonicalToken("cache"));
-    Assert.assertSame(cacheFactory, canonicalToken("Illuminate\\Cache\\CacheManager"));
-    Assert.assertSame(cacheFactory, canonicalToken("\\Illuminate\\Cache\\CacheManager"));
-    Assert.assertSame(tokenOf("Foundation\\Application"), canonicalToken(psr.ContainerInterface));
-    Assert.assertSame(tokenOf("Mail\\Mailer"), canonicalToken("mailer"));
-    Assert.assertSame(tokenOf("Mail\\Mailer"), canonicalToken(mail.MailQueue));
-    Assert.assertSame("blade.compiler", canonicalToken("blade.compiler"));
-    Assert.assertSame("blade.compiler", canonicalToken("Illuminate\\View\\Compilers\\BladeCompiler"));
-    Assert.assertSame("migrator", canonicalToken("migrator"));
-    Assert.assertSame("nope", canonicalToken("nope"));
-    Assert.assertSame(support.Arrayable, canonicalToken(support.Arrayable));
-    Assert.assertSame("\\nope", canonicalToken("\\nope"));
+    assertSameAbstract(cacheFactory, canonicalToken("cache"));
+    assertSameAbstract(cacheFactory, canonicalToken("Illuminate\\Cache\\CacheManager"));
+    assertSameAbstract(cacheFactory, canonicalToken("\\Illuminate\\Cache\\CacheManager"));
+    assertSameAbstract(tokenOf("Foundation\\Application"), canonicalToken(psr.ContainerInterface));
+    assertSameAbstract(tokenOf("Mail\\Mailer"), canonicalToken("mailer"));
+    assertSameAbstract(tokenOf("Mail\\Mailer"), canonicalToken(mail.MailQueue));
+    assertSameAbstract("blade.compiler", canonicalToken("blade.compiler"));
+    assertSameAbstract("blade.compiler", canonicalToken("Illuminate\\View\\Compilers\\BladeCompiler"));
+    assertSameAbstract("migrator", canonicalToken("migrator"));
+    assertSameAbstract("nope", canonicalToken("nope"));
+    assertSameAbstract(support.Arrayable, canonicalToken(support.Arrayable));
+    assertSameAbstract("\\nope", canonicalToken("\\nope"));
 
     // A class argument goes through fqcn(): a registered class reaches its service's token, an unregistered one throws.
     const AppContract = contract<object>("App\\Contract");
@@ -294,9 +305,9 @@ xaravelTest(
     class Unregistered {}
     runInRootFrame("test", () => {
       registerTestClass("App\\Probe", Probe);
-      Assert.assertSame(AppContract, resolve(Probe));
-      Assert.assertSame(AppContract, resolve("probe"));
-      Assert.assertSame(AppContract, resolve(AppContract));
+      assertSameAbstract(AppContract, resolve(Probe));
+      assertSameAbstract(AppContract, resolve("probe"));
+      assertSameAbstract(AppContract, resolve(AppContract));
     });
     Assert.assertSame("fqcn(): the class is not registered; end its file with registerClass('<FQCN>', <Class>)", typeErrorOf(() => resolve(Unregistered)));
 

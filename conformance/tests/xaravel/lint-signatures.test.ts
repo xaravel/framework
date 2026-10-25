@@ -125,10 +125,13 @@ xaravelTest(
     // The config and the plugin: seven more rules, errors at the top level, spine rules, after Story 6.2's six.
     const config = JSON.parse(readFileSync(join(root, CONFIG), "utf8")) as { jsPlugins: unknown; rules: Record<string, unknown>; overrides?: unknown };
     expect(config.jsPlugins).toEqual(["./tools/lint-rules/plugin.ts"]);
-    expect(RULE_NAMES.slice(6)).toEqual(RULES.map(([name]) => name));
-    expect(RULE_NAMES).toHaveLength(13);
+    // Epic 10 retro item 10's no-token-string-coercion follows them (XT-conformance-267).
+    expect(RULE_NAMES.slice(6, 13)).toEqual(RULES.map(([name]) => name));
+    expect(RULE_NAMES).toHaveLength(14);
+    expect(RULE_NAMES.at(-1)).toBe("no-token-string-coercion");
     expect(Object.keys(plugin.rules)).toEqual([...RULE_NAMES]);
-    expect(SPINE_RULES.slice(-7)).toEqual(RULES.map(([name]) => name));
+    expect(SPINE_RULES.slice(-8, -1)).toEqual(RULES.map(([name]) => name));
+    expect(SPINE_RULES.at(-1)).toBe("no-token-string-coercion");
     for (const [name] of RULES) {
       expect(config.rules[`xaravel/${name}`]).toBe("error");
     }
