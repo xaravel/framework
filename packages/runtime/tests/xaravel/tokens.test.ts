@@ -2,11 +2,14 @@
 // (decisions/MAINT-2026-10-24-epic-10-items.md, Item 2 and "Item 10's route"): as a PHP value a contract token is its
 // FQCN class-string, as PHP's `Arrayable::class` is (AD-9.8), so `jsonEncode` and `phpSerialize` write it as that
 // string. It needs no Oracle fixture: each expected encoding is the codec's own encoding of the FQCN string, and the
-// literal bytes PHP writes for that string.
+// literal bytes PHP writes for that string. Runtime has no var_export port: the ruling's `phpVarExport` is assert's
+// (`packages/assert/src/exporter/VarExport.ts`, exported as `phpVarExport`, covered by XT-assert-101), so this test pins
+// that neither runtime entry point exports one and that assert's writes a token as the quoted FQCN.
 //
 // @xaravel/contracts depends on this package, so the token here is a stand-in built as `contract()` builds one:
 // frozen, with an own non-writable `Symbol.for('xaravel.class.fqcn')` and a `Symbol.toPrimitive` giving its brand.
-import { Assert, xaravelTest } from "@xaravel/assert";
+import { Assert, phpVarExport, xaravelTest } from "@xaravel/assert";
+import * as runtimeRoot from "@xaravel/runtime";
 import {
   JSON_ERROR_SYNTAX,
   JSON_FORCE_OBJECT,
@@ -18,6 +21,7 @@ import {
   phpSerialize,
   stdClass,
 } from "@xaravel/runtime/php";
+import * as runtimePhp from "@xaravel/runtime/php";
 import { fqcn, isContractToken } from "@xaravel/runtime/registry";
 import { currentFrame, runInFrame } from "@xaravel/runtime/scope";
 
@@ -37,7 +41,7 @@ function token(name: string): object {
 
 xaravelTest(
   "XT-runtime-41",
-  "a contract token is its FQCN class-string as a PHP value (AD-9.8, MAINT-2026-10-24 Item 2): jsonEncode writes it as json_encode writes that string under each flag, alone, in a list and as a map or object value, recording no error in a unit frame that held an earlier error; phpSerialize writes s:<len>:\"<FQCN>\"; in one slot each, so a later object back-reference counts it; JS coercion still gives the brand",
+  "a contract token is its FQCN class-string as a PHP value (AD-9.8, MAINT-2026-10-24 Item 2): jsonEncode writes it as json_encode writes that string under each flag, alone, in a list and as a map or object value, recording no error in a unit frame that held an earlier error; phpSerialize writes s:<len>:\"<FQCN>\"; in one slot each, so a later object back-reference counts it; runtime exports no var_export port, and the one there is (assert's phpVarExport) writes the quoted FQCN; JS coercion still gives the brand",
   () => {
     const Arrayable = token(FQCN);
     const Jsonable = token("Illuminate\\Contracts\\Support\\Jsonable");
@@ -80,6 +84,16 @@ xaravelTest(
     const shared = new stdClass();
     Assert.assertSame(`a:4:{i:0;${serialized}i:1;${serialized}i:2;O:8:"stdClass":0:{}i:3;r:4;}`, phpSerialize([Arrayable, Arrayable, shared, shared]));
     Assert.assertSame(phpSerialize([FQCN, FQCN, shared, shared]), phpSerialize([Arrayable, Arrayable, shared, shared]));
+
+    // var_export: runtime has no port of its own, at either entry point; the port is assert's phpVarExport.
+    for (const entry of [runtimeRoot, runtimePhp] as readonly Record<string, unknown>[]) {
+      for (const name of Object.keys(entry)) {
+        Assert.assertFalse(/var_?export/i.test(name), name);
+      }
+    }
+    // var_export doubles each backslash in a single-quoted string.
+    Assert.assertSame(`'Illuminate\\\\Contracts\\\\Support\\\\Arrayable'`, phpVarExport(Arrayable));
+    Assert.assertSame(phpVarExport(FQCN), phpVarExport(Arrayable));
 
     // JS coercion is unchanged: the brand, never the FQCN.
     Assert.assertSame((Arrayable as { brand: symbol }).brand, (Arrayable as { [Symbol.toPrimitive]: () => symbol })[Symbol.toPrimitive]());
