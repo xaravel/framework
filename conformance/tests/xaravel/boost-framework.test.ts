@@ -1304,8 +1304,10 @@ function snapshot(dir: string, hash: boolean, skip: (rel: string) => boolean = (
   return out;
 }
 
+// Auto maintenance is off: since git 2.47, `commit` starts `maintenance run --auto` detached, and its
+// `.git/objects/maintenance.lock` can come and go while XT-boost-6 walks the fixture's `.git/` (ENOENT on lstat).
 function git(cwd: string, ...args: string[]): string {
-  const result = Bun.spawnSync(["git", "-c", "user.name=XT", "-c", "user.email=xt@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+  const result = Bun.spawnSync(["git", "-c", "user.name=XT", "-c", "user.email=xt@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], { cwd, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
   if (result.exitCode !== 0) {
     throw new Error(`git ${args.join(" ")}: ${result.stderr.toString()}`);
   }
