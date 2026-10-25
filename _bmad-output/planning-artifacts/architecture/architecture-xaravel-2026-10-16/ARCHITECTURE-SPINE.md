@@ -520,7 +520,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   | PHP construct | Xaravel form |
   | --- | --- |
   | Named arguments | Any function with more than one optional parameter also accepts a single options object keyed by the camelCase PHP parameter names. `Envelope`, `Content`, `Attribute.make` and `Headers` are documented object-first. |
-  | Backed / pure enums | A class with static instances, `cases()`, `from()`, `tryFrom()`; no TS `enum` |
+  | Backed / pure enums | A class with static instances, `cases()`, `from()`, `tryFrom()`; a backed enum also declares `static backingType`, `'string'` or `'int'` (ESC-13.1-8); no TS `enum` |
   | PHP attributes (`#[X]`) | TC39 decorator `@X(...)`, same name and arguments; container attributes become AD-4 Spec descriptors |
   | `__call` / `__callStatic` forwarding (managers, `ForwardsCalls`, Eloquent statics) | Explicit generated delegating methods typed by the target contract; no Proxy outside `Model` |
   | `__get` / `__set` outside `Model` | None (DIV-12). For example, `request.input('title')`, `this.route('post')`. |
