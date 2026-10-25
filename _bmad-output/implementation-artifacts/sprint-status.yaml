@@ -145,7 +145,7 @@ development_status:
   epic-10-retrospective: done
 
   epic-11: in-progress
-  11-1-macroable-trait: blocked  # ESC-11.1-5 (divergence): the spec lets a non-test unit frame hold macro writes, AD-5 says they throw outside test frames; option 1 (follow AD-5) recommended. Reviewed implementation saved on story/11.1-impl (cd664b42)
+  11-1-macroable-trait: in-progress  # ESC-11.1-5 approved, option 1 (orchestrator ruling: macro writes throw in every frame whose nearest unit is not a test frame, per AD-5). Reviewed implementation saved on story/11.1-impl (cd664b42)
   epic-11-retrospective: optional
 
   epic-12: backlog
