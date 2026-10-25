@@ -145,7 +145,7 @@ development_status:
   epic-10-retrospective: done
 
   epic-11: in-progress
-  11-1-macroable-trait: blocked  # ESC-11.1-6 (contract): ESC-11.1-5's rule needs the frame-chain read of ESC-11.1-3 to tell a root unit frame from one nested in a test frame; option 1 (only a test frame takes the write until then) recommended. Reviewed implementation saved on story/11.1-impl (cd664b42)
+  11-1-macroable-trait: in-progress  # ESC-11.1-6 approved, option 1 (orchestrator ruling: only a test frame takes a macro write until the frame-chain read of ESC-11.1-3 lands). Reviewed implementation saved on story/11.1-impl (cd664b42)
   epic-11-retrospective: optional
 
   epic-12: backlog
