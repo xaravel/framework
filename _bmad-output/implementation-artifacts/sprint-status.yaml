@@ -145,7 +145,7 @@ development_status:
   epic-10-retrospective: done
 
   epic-11: in-progress
-  11-1-macroable-trait: in-progress  # ESC-11.1-1 and ESC-11.1-4 ruled by the Maintainer; ESC-11.1-2 and ESC-11.1-3 approved (orchestrator rulings: boot-time macro writes and nested request/job/command frames are follow-ups for the Epic 11 retrospective to route). Implementation saved on story/11.1-impl
+  11-1-macroable-trait: blocked  # ESC-11.1-5 (divergence): the spec lets a non-test unit frame hold macro writes, AD-5 says they throw outside test frames; option 1 (follow AD-5) recommended. Reviewed implementation saved on story/11.1-impl (cd664b42)
   epic-11-retrospective: optional
 
   epic-12: backlog
