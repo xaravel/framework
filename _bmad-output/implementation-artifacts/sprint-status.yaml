@@ -149,7 +149,7 @@ development_status:
   epic-11-retrospective: done
 
   epic-12: in-progress
-  12-1-conditionable-trait: in-progress
+  12-1-conditionable-trait: blocked  # ESC-12.1-1 (proxy members, divergence), ESC-12.1-2 (BlockedByComponentError for blocked-by:database, contract), ESC-12.1-3 (options form vs condition, divergence) wait on the Maintainer; intent gap: dual-helper typing vs F-9 (spec Review Triage Log)
   epic-12-retrospective: optional
 
   epic-13: backlog
