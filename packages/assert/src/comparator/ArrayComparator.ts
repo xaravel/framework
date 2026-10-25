@@ -5,7 +5,7 @@
 // (`ksort`) first.
 import { arrayEntries, type Entries, isPhpArray, type Key } from "../comparison/PhpComparison";
 import { phpCompare, smartCompare } from "../comparison/PhpOrder";
-import { classNameOf, isPhpObject, phpNumberType } from "../comparison/PhpValues";
+import { classNameOf, classString, isPhpObject, phpNumberType } from "../comparison/PhpValues";
 import { exportValue, shortenedExport } from "../exporter/Exporter";
 import { serialize } from "../exporter/VarExport";
 import { ComparisonFailure } from "../Framework/ComparisonFailure";
@@ -84,8 +84,9 @@ export class ArrayComparator extends Comparator {
     ignoreCase: boolean,
     processed: Processed,
   ): void {
-    let expectedList = [...expectedEntries];
-    let actualList = [...actualEntries];
+    // A contract token element is its class-string (AD-9.8), for the sort, the comparator and the export alike.
+    let expectedList = expectedEntries.map(([key, value]) => [key, classString(value)] as const);
+    let actualList = actualEntries.map(([key, value]) => [key, classString(value)] as const);
     let list = false;
     if (canonicalize) {
       list = isList(expectedList) && isList(actualList);

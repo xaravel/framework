@@ -10,7 +10,7 @@ import { fqcn } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, contract, type ContractToken } from "@xaravel/contracts";
 import { aliasResolver, type AliasTable, canonicalToken, validateAliasTable } from "@xaravel/contracts/aliases";
 import * as support from "@xaravel/contracts/support";
-import { typeErrorOf } from "./support/contract-namespaces";
+import { assertSameAbstract, typeErrorOf } from "./support/contract-namespaces";
 
 /** The message of the `LogicException` `fn` throws, `(nothing thrown)` when it returns, or a note naming another error. */
 function logicMessage(fn: () => unknown): string {
@@ -52,7 +52,7 @@ xaravelTest(
     );
     Assert.assertSame("[App\\Thing] is aliased to itself.", logicMessage(() => validateAliasTable(table({ PROVIDER_ALIASES: [["\\App\\Thing", "App\\Thing"]] }))));
     Assert.assertSame("[App\\Thing] is aliased to itself.", logicMessage(() => validateAliasTable(table({ CORE_CONTAINER_ALIASES: { "\\App\\Thing": ["App\\Thing"] } }))));
-    Assert.assertSame(support.Arrayable, aliasResolver(table({ CORE_CONTAINER_ALIASES: { "\\Illuminate\\Contracts\\Support\\Arrayable": ["x"] } }))("x"));
+    assertSameAbstract(support.Arrayable, aliasResolver(table({ CORE_CONTAINER_ALIASES: { "\\Illuminate\\Contracts\\Support\\Arrayable": ["x"] } }))("x"));
 
     // L3 case: the contract-prefix test is case-insensitive; the name is reported as written.
     Assert.assertSame(
@@ -68,12 +68,12 @@ xaravelTest(
 
     // L3 resolve: a core alias written with a leading `\` reaches its token; lookups stay case-sensitive.
     const resolve = aliasResolver(table({ CORE_CONTAINER_ALIASES: { s: ["\\Illuminate\\Contracts\\Support\\Arrayable"] } }));
-    Assert.assertSame(support.Arrayable, resolve("Illuminate\\Contracts\\Support\\Arrayable"));
-    Assert.assertSame(support.Arrayable, resolve("\\Illuminate\\Contracts\\Support\\Arrayable"));
-    Assert.assertSame(support.Arrayable, resolve("s"));
-    Assert.assertSame("S", resolve("S"));
+    assertSameAbstract(support.Arrayable, resolve("Illuminate\\Contracts\\Support\\Arrayable"));
+    assertSameAbstract(support.Arrayable, resolve("\\Illuminate\\Contracts\\Support\\Arrayable"));
+    assertSameAbstract(support.Arrayable, resolve("s"));
+    assertSameAbstract("S", resolve("S"));
     const bareBinding = aliasResolver(table({ PROVIDER_BINDINGS: { "\\App\\Key": "\\App\\Built" } }));
-    Assert.assertSame("App\\Key", bareBinding("App\\Built"));
+    assertSameAbstract("App\\Key", bareBinding("App\\Built"));
 
     // L4 collision: an extra token may not replace a package token, in any letter case.
     for (const name of ["Illuminate\\Contracts\\Support\\Arrayable", "illuminate\\contracts\\support\\ARRAYABLE"]) {
@@ -84,7 +84,7 @@ xaravelTest(
 
     // The package's own token as an extra is accepted, while an extra whose parent is a twin of a package token is not.
     Assert.assertSame("(nothing thrown)", logicMessage(() => validateAliasTable(table({}), [support.Arrayable])));
-    Assert.assertSame(support.Arrayable, aliasResolver(table({ CORE_CONTAINER_ALIASES: { s: ["Illuminate\\Contracts\\Support\\Arrayable"] } }), [support.Arrayable])("s"));
+    assertSameAbstract(support.Arrayable, aliasResolver(table({ CORE_CONTAINER_ALIASES: { s: ["Illuminate\\Contracts\\Support\\Arrayable"] } }), [support.Arrayable])("s"));
     const twinParent = contract<object>("App\\Contracts\\ViaTwin", {}, [contract("Illuminate\\Contracts\\Support\\Arrayable")]);
     Assert.assertSame(
       "[Illuminate\\Contracts\\Support\\Arrayable] is a contract that @xaravel/contracts exports; an extra token may not replace it.",
@@ -98,7 +98,7 @@ xaravelTest(
     Assert.assertSame("[App\\Contracts\\Twice] is named by two extra tokens.", logicMessage(() => validateAliasTable(table({}), [First, contract<object>("App\\Contracts\\Twice")])));
     Assert.assertSame("(nothing thrown)", logicMessage(() => validateAliasTable(table({}), [First, First])));
     const twiceTable = table({ CORE_CONTAINER_ALIASES: { twice: ["App\\Contracts\\Twice"] } });
-    Assert.assertSame(First, aliasResolver(twiceTable, [First, First])("twice"));
+    assertSameAbstract(First, aliasResolver(twiceTable, [First, First])("twice"));
 
     // L4 non-token: a TypeError naming the index, never a raw property error from the parents walk.
     const nonTokens: unknown[] = [

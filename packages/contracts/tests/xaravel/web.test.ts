@@ -45,6 +45,7 @@ import * as sessionMiddleware from "@xaravel/contracts/session/middleware";
 import * as support from "@xaravel/contracts/support";
 import * as view from "@xaravel/contracts/view";
 import {
+  assertSameAbstract,
   asyncSurface,
   asyncTable,
   brandedClass,
@@ -305,7 +306,7 @@ xaravelTest(
           Assert.assertSame(expectedParents.length, parents.length, name);
           expectedParents.forEach((parent, index) => {
             Assert.assertNotNull(parent ?? null, `${name} parent ${index}`);
-            Assert.assertSame(parent, parents[index], name);
+            assertSameAbstract(parent, parents[index], name);
           });
         }
 

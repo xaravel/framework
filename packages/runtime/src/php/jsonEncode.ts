@@ -38,6 +38,7 @@
 // classmap encoder), so loading it first in a fresh process is safe. Its class files (`JsonException` through
 // `jsonConstants.ts`, PHP's `TypeError`, and the value-model classes `casts.ts` loads for `arrayEntries`) import only
 // `registry/registry.ts`, never `registry/index.ts`; brands are still read by `Symbol.for` key.
+import { fqcn, isContractToken } from "../registry/registry";
 import { arrayEntries } from "./casts";
 import { gcvt } from "./gcvt";
 import { hasBrand } from "./hasBrand";
@@ -179,6 +180,10 @@ function encodeValue(value: unknown, encoder: Encoder): boolean {
   if (value === null) {
     encoder.out += "null";
     return true;
+  }
+  // A contract token is its FQCN class-string as a PHP value, as `Arrayable::class` is (AD-9.8).
+  if (isContractToken(value)) {
+    return encodeString(fqcn(value), encoder.flags, encoder);
   }
   // 9.6's classification: a marked float, a PHP array (Array, branded PhpArray, plain object), else an object.
   const type = phpType(value);

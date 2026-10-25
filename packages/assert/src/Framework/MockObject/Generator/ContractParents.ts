@@ -1,3 +1,4 @@
+// Keep this file import-free: comparison/PhpValues.ts imports it, so any import here risks an import cycle.
 // The parents walk of a contract token (ESC-10.1-6) and the methods a double of it takes (ESC-10.2-4), shared by
 // PHPUnit's Generator here and by @xaravel/mockery's DoubleTarget, so both test doubles of a contract carry the same
 // brands and the same methods (Epic 4 lesson: one implementation).

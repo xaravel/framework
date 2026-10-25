@@ -24,7 +24,7 @@
 //
 // PHP's warnings and notices (a missing `__sleep` name) are not reproduced: PHP still returns the string, and so does
 // `phpSerialize`. Enums, `Serializable` and PHP references have no AD-9 value, so `E:`, `C:` and `R:` are never written.
-import { fqcn } from "../registry/registry";
+import { fqcn, isContractToken } from "../registry/registry";
 import { arrayEntries, floatValue, phpType } from "./casts";
 import { Exception } from "./Exception";
 import { gcvt } from "./gcvt";
@@ -118,6 +118,10 @@ function serializeObject(o: object, state: State): string {
 function serializeValue(v: unknown, state: State): string {
   // Every value takes the next slot (php_add_var_hash), an emitted r: included.
   state.slots++;
+  // A contract token is its FQCN class-string as a PHP value, as `Arrayable::class` is (AD-9.8).
+  if (isContractToken(v)) {
+    return serializeString(fqcn(v));
+  }
   switch (phpType(v)) {
     case "null":
       return "N;";

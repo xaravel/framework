@@ -1,12 +1,16 @@
 // `JMac\Testing\Matching\EqualsMatcher` (jasonmccreary/double v1.0.1): the implicit matcher of a literal passed to
 // `with()`. Two arrays match when their keys are identical and in the same order and each value matches; an expected
-// object matches by PHP `==`; anything else by `===`. The comparisons are @xaravel/assert's.
-import { phpLooseEquals, phpStrictEquals } from "@xaravel/assert";
+// object matches by PHP `==`; anything else by `===`. A contract token is its FQCN class-string (AD-9.8), so a token
+// expected or given is compared as that string, strictly, as Upstream compares a class-string. The comparisons are
+// @xaravel/assert's.
+import { classString, phpLooseEquals, phpStrictEquals } from "@xaravel/assert";
 import { arrayEntries, FQCN, isPhpArray, isPhpObject } from "../../../support/values";
 import { ValueFormatter } from "../Diagnostics/ValueFormatter";
 import { Matcher } from "./Matcher";
 
-function equals(expected: unknown, actual: unknown): boolean {
+function equals(expectedGiven: unknown, actualGiven: unknown): boolean {
+  const expected = classString(expectedGiven);
+  const actual = classString(actualGiven);
   if (isPhpArray(expected) && isPhpArray(actual)) {
     const expectedEntries = arrayEntries(expected);
     const actualEntries = arrayEntries(actual);

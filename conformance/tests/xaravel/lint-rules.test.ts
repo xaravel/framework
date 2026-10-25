@@ -126,6 +126,7 @@ xaravelTest("XT-conformance-132", "the committed fixture for each xaravel rule f
     "no-arrow-test-body",
     "no-inject-param-mismatch",
     "no-dynamic-column-default",
+    "no-token-string-coercion",
   ]);
   expect(plugin.meta.name).toBe("xaravel");
   expect(Object.keys(plugin.rules)).toEqual([...RULE_NAMES]);
@@ -460,3 +461,95 @@ function disableCases(): void {
     expect(findDisables(dropped).violations.map((violation) => `${violation.path}: ${violation.message}`)).toEqual([`.oxlintrc.json: does not set ${name} (a spine rule must be "error")`]);
   }
 }
+
+// XT-conformance-267
+
+/** Where the token rule's failing fixture fails, and where it and the passing fixture lint clean. */
+const TOKEN_RULE = "no-token-string-coercion";
+const TOKEN_FAILING: readonly string[] = ["packages/demo/src/TokenStringCoercion.ts", "packages/demo/src/Sub/TokenStringCoercion.ts", "installer/src/TokenStringCoercion.ts"];
+const TOKEN_CLEAN: readonly (readonly [string, string])[] = [
+  ["passing-token.ts", "packages/demo/src/PassingToken.ts"],
+  ["passing-token.ts", "installer/src/PassingToken.ts"],
+  ["token-string-coercion.ts", "packages/demo/tests/TokenStringCoercion.ts"],
+  ["token-string-coercion.ts", "packages/demo/tests/xaravel/TokenStringCoercion.ts"],
+  ["token-string-coercion.ts", "tools/x/TokenStringCoercion.ts"],
+  ["token-string-coercion.ts", "conformance/tests/x/TokenStringCoercion.ts"],
+  ["token-string-coercion.ts", "skeleton/app/TokenStringCoercion.ts"],
+];
+
+xaravelTest(
+  "XT-conformance-267",
+  "xaravel/no-token-string-coercion, an error in the root .oxlintrc.json and a spine rule, fails a contract token string-coerced in packages/<p>/src/ or installer/src/ (a template-literal substitution, String(token), token.toString(), + with a string or template operand, +=): a PascalCase name imported from @xaravel/contracts or a subpath, a PascalCase member of a namespace import of one, or a const bound to contract(...); fqcn(token) in a template, a tagged template, a camelCase or SCREAMING_CASE import, a type-only import (an `import type` or an inline `type` specifier) and the same coercions outside package source lint clean, and the repository itself is clean (AD-9.8, AD-16.4)",
+  () => {
+    // The config, the plugin and the spine list.
+    const config = JSON.parse(readFileSync(join(root, CONFIG), "utf8")) as { rules: Record<string, unknown> };
+    expect(config.rules[`xaravel/${TOKEN_RULE}`]).toBe("error");
+    expect(RULE_NAMES.at(-1)).toBe(TOKEN_RULE);
+    expect(Object.keys(plugin.rules).at(-1)).toBe(TOKEN_RULE);
+    expect(SPINE_RULES.at(-1)).toBe(TOKEN_RULE);
+
+    // The committed fixtures: each failing placement names the rule six times (the five matrix rows and `+=`), each
+    // clean placement nothing.
+    const dir = tempDir("xaravel-lint-267-");
+    for (const placement of TOKEN_FAILING) {
+      place(dir, "token-string-coercion.ts", placement);
+    }
+    for (const [fixture, placement] of TOKEN_CLEAN) {
+      place(dir, fixture, placement);
+    }
+    const run = oxlint(CONFIG, [dir]);
+    expect(run.exitCode).toBe(1);
+    expect(byFile(run, dir)).toEqual(Object.fromEntries(TOKEN_FAILING.map((placement) => [placement, Array.from({ length: 6 }, () => `xaravel(${TOKEN_RULE})`)])));
+    const lines = run.output.split("\n").filter((text) => text.endsWith(`[Error/xaravel(${TOKEN_RULE})]`));
+    expect(lines).toHaveLength(18);
+    for (const line of lines) {
+      expect(line).toContain("(AD-9.8)");
+      expect(line).toContain("fqcn(");
+    }
+    expect(lines.filter((line) => line.includes("the contract token `support.Arrayable`"))).toHaveLength(3);
+    expect(lines.filter((line) => line.includes("the contract token `Local`"))).toHaveLength(3);
+
+    // The spellings and near-misses, one file each, with the exact diagnostics.
+    const x = (count = 1): string[] => Array.from({ length: count }, () => `xaravel(${TOKEN_RULE})`);
+    const head = '// @ts-expect-error TS2307\nimport { Arrayable, Jsonable as J, contract as make, CLASS_FQCN, canonicalToken } from "@xaravel/contracts";\n';
+    const ns = '// @ts-expect-error TS2307\nimport * as support from "@xaravel/contracts/support";\n';
+    const cases: Readonly<Record<string, readonly [string, readonly string[]]>> = {
+      "packages/demo/src/Template.ts": [`${head}export const s = \`a \${Arrayable} b\`;\n`, x()],
+      "packages/demo/src/Alias.ts": [`${head}export const s = \`\${J}\`;\n`, x()],
+      "packages/demo/src/Wrapped.ts": [`${head}export const s = \`\${(Arrayable as object)!}\`;\n`, x()],
+      "packages/demo/src/StringCall.ts": [`${head}export const s = String(Arrayable);\n`, x()],
+      "packages/demo/src/ToString.ts": [`${head}export const s: string = Arrayable.toString();\n`, x()],
+      "packages/demo/src/PlusLeft.ts": [`${head}export const s = Arrayable + "x";\n`, x()],
+      "packages/demo/src/PlusTemplate.ts": [`${head}export const s = \`x\` + Arrayable;\n`, x()],
+      "packages/demo/src/PlusChain.ts": [`${head}export const f = (n: number): string => n + "x" + Arrayable;\n`, x()],
+      "packages/demo/src/PlusAssign.ts": [`${head}export function f(): string {\n  let s = "x";\n  s += Arrayable;\n  return s;\n}\n`, x()],
+      "packages/demo/src/Namespace.ts": [`${ns}export const s = [\`\${support.Arrayable}\`, String(support.Jsonable)];\n`, x(2)],
+      "packages/demo/src/MadeConst.ts": [`${head}export function f(): string {\n  return \`\${Later}\`;\n}\nconst Later = make("App\\\\Later");\n`, x()],
+      "packages/demo/src/MadeNs.ts": [`${ns.replace("support", "contracts").replace("/support", "")}const T = contracts.contract("App\\\\T");\nexport const s = String(T);\n`, x()],
+      // Near-misses: fqcn(), a tagged template, camelCase and SCREAMING_CASE imports, a type-only import, a `let`, a
+      // computed namespace member, another module, a number `+`, comparisons.
+      "packages/demo/src/Fqcn.ts": [`${head}declare function fqcn(v: object): string;\nexport const s = \`\${fqcn(Arrayable)}\` + fqcn(J);\n`, []],
+      "packages/demo/src/Tagged.ts": [`${head}declare function tag(s: TemplateStringsArray, ...v: unknown[]): string;\nexport const s = tag\`\${Arrayable}\`;\n`, []],
+      "packages/demo/src/Camel.ts": [`${head}export const s = [\`\${canonicalToken}\`, \`\${CLASS_FQCN}\`];\n`, []],
+      "packages/demo/src/TypeOnly.ts": ['// @ts-expect-error TS2307\nimport type { Arrayable } from "@xaravel/contracts";\nexport type S = `${Arrayable & string}`;\n', []],
+      "packages/demo/src/InlineTypeOnly.ts": ['// @ts-expect-error TS2307\nimport { type Arrayable } from "@xaravel/contracts";\nexport const s = `${Arrayable}`;\n', []],
+      "packages/demo/src/Let.ts": [`${head}let L = make("App\\\\L");\nL = make("App\\\\M");\nexport const s = String(L);\n`, []],
+      "packages/demo/src/Computed.ts": [`${ns}export const s = \`\${support["Arrayable"]}\`;\n`, []],
+      "packages/demo/src/Other.ts": ['// @ts-expect-error TS2307\nimport { Arrayable } from "@xaravel/contractsx";\nexport const s = `${Arrayable}`;\n', []],
+      "packages/demo/src/Compare.ts": [`${head}export const s = Arrayable === J ? 1 + 2 : 3;\n`, []],
+      "packages/demo/tests/InTests.ts": [`${head}export const s = \`\${Arrayable}\`;\n`, []],
+      "tools/x/InTools.ts": [`${head}export const s = String(Arrayable);\n`, []],
+    };
+    const edge = tempDir("xaravel-lint-267-edge-");
+    write(edge, Object.fromEntries(Object.entries(cases).map(([path, [text]]) => [path, text])));
+    const edgeRun = oxlint(CONFIG, [edge]);
+    const found = byFile(edgeRun, edge);
+    const actual = Object.fromEntries(Object.keys(cases).map((path) => [path, (found[path] ?? []).filter((rule) => rule.startsWith("xaravel("))]));
+    expect(actual).toEqual(Object.fromEntries(Object.entries(cases).map(([path, [, rules]]) => [path, [...rules]])));
+
+    // The repository's own package source is clean under the rule.
+    const repo = oxlint(CONFIG, ["packages", "installer"]);
+    expect(repo.diagnostics.filter(([, rule]) => rule === `xaravel(${TOKEN_RULE})`)).toEqual([]);
+  },
+  120_000,
+);

@@ -41,6 +41,7 @@ import * as translation from "@xaravel/contracts/translation";
 import * as validation from "@xaravel/contracts/validation";
 import { EntityNotFoundException, ShouldBeEncrypted, ShouldQueue } from "@xaravel/contracts/queue";
 import {
+  assertSameAbstract,
   asyncSurface,
   asyncTable,
   brandedClass,
@@ -271,7 +272,7 @@ xaravelTest(
           Assert.assertSame(expectedParents.length, parents.length, name);
           expectedParents.forEach((parent, index) => {
             Assert.assertNotNull(parent ?? null, `${name} parent ${index}`);
-            Assert.assertSame(parent, parents[index], name);
+            assertSameAbstract(parent, parents[index], name);
           });
         }
 
