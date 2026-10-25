@@ -1,0 +1,20 @@
+---
+status: blocked
+---
+
+# BMad Build Auto Result
+
+Status: blocked
+Blocking condition: intent gap. Action item `epic-10-retro-item-10-token-class-string` can't be done within the scope its `action` names (`packages/runtime`, `packages/assert`, `packages/mockery`, and one `tools/lint-rules` rule with its tests).
+
+1. **The grader change takes away a check in `packages/contracts` tests.** Under the item, assert's `===` reads a token as its FQCN string, so `assertSame(token, x)` also passes when `x` is that FQCN string. XT-contracts-11 (`packages/contracts/tests/xaravel/aliases.test.ts:233-299`, e.g. `assertSame(cacheFactory, canonicalToken("cache"))`, `assertSame(support.Arrayable, canonicalToken(support.Arrayable))`) and XT-contracts-19 (`hardening.test.ts:45-101`, e.g. `assertSame(support.Arrayable, resolve("Illuminate\\Contracts\\Support\\Arrayable"))`) check that `canonicalToken` / `aliasResolver` return the token and not the string, which is the consequence they declare (AD-1.3, AD-1.4). After the change, a resolver that returned the string unchanged would still pass both tests. Keeping them strict means re-pinning them, for example with an identity check plus `isContractToken`. That changes `packages/contracts/**`, a component the action does not name. On a `planning/retro-10-*` branch this is a `planning scope:` violation, so the item waits (`decisions/MAINT-2026-10-16-unattended-orchestrator.md`, amendment 2026-10-22, "Outside the scope"). Merging the item without the re-pin would weaken those Xaravel Tests.
+2. **Turning the lint rule on needs `.oxlintrc.json`.** Rules are enabled only in its `"rules"` block (`"xaravel/<name>": "error"`). `.oxlintrc.json` is a Protected Path outside `tools/`, and the ruling approves `tools/lint-rules` and its tests as the item's only change outside `packages/`. The rule-list pins in `conformance/tests/xaravel/lint-rules.test.ts:116-130`, `lint-signatures.test.ts:128-131` and `lint.test.ts:174-191` (with `SPINE_RULES` in `tools/lint-rules/disables.ts`) also change. These read as "its tests", but `.oxlintrc.json` is not covered.
+3. **Note, not blocking.** `phpVarExport` is not in `packages/runtime`. It is assert's `varExport` (`packages/assert/src/exporter/VarExport.ts:73`, exported as `phpVarExport` at `packages/assert/src/index.ts:43,72`), which Mockery wraps. So the ruling's "`phpVarExport` (`packages/runtime`)" lands in assert, which is in scope.
+
+`decisions/MAINT-2026-10-24-stale-cross-scope-tests.md` (merged during this run) doesn't cover either part. Those tests don't pin something the item removes or moves (its rule 1); they need a stronger assertion, not a new target. `.oxlintrc.json` is a Protected Path, which that ruling leaves to the Maintainer.
+
+Recommended: widen the item to name `packages/contracts` (only to re-pin XT-contracts-11 and XT-contracts-19 so they check token identity, with no assertion removed) and `.oxlintrc.json` (only to enable the new rule). Then build the item as ruled. A related parity question to settle in the same ruling, recommended as "yes, as PHP does": should Mockery's `with(Arrayable)` also match an Arrayable instance through `_matchArg`'s `instanceof` branch (`packages/mockery/src/Mockery/Expectation.ts:427`), which today runs only for a string expected value?
+
+Investigation notes for the build: `jsonEncode` (`packages/runtime/src/php/jsonEncode.ts:179-184`, before `phpType`) and `phpSerialize` (`phpSerialize.ts:120-121`, after the slot count and before the object table) take a token check. `phpType` itself must stay as it is, because callers cast `as string`. Assert normalizes a token to its FQCN beside `unmarkFloat` at `Exporter.ts:108,193`, `VarExport.ts:28,87`, `PhpComparison.ts:400,493`, `Constraints.ts:47-131`, `ArrayComparator.ts:17-35,58,117`, `PhpValues.ts:89,175`, but not in `classOrInterface`. Mockery's own printers are in `support/values.ts:112-275`, `ValueFormatter.ts:10-16` and `MethodExpectation.ts:36-43`. No `packages/*/src` code string-coerces a token today. Next free XT ids: runtime-41, assert-101, mockery-16, conformance-267.
+
+No code was changed.
