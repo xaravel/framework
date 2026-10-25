@@ -153,7 +153,7 @@ development_status:
   epic-12-retrospective: done
 
   epic-13: in-progress
-  13-1-reflector-and-reflectsclosures: in-progress  # Maintainer rulings 2026-10-25 (decisions/MAINT-2026-10-25-story-13-1.md): ESC-13.1-1..6 all option 1 (DIV-3.2-3.4, DIV-9.14, DIV-12.14-12.15); action item epic-13-item-1-runtime-reflection lands first
+  13-1-reflector-and-reflectsclosures: blocked  # ESC-13.1-7 (token FQCN lookup), ESC-13.1-8 (enum model), ESC-13.1-9 (assertInstanceOf class-strings), ESC-13.1-10 (same-Phase blocked-by:collections) wait on the Maintainer; implementation saved on story/13.1-impl
   epic-13-retrospective: optional
 
   epic-14: backlog
