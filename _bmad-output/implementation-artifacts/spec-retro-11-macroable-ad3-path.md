@@ -4,7 +4,7 @@ type: 'refactor'
 created: '2026-10-25'
 status: 'done'
 baseline_revision: 'b02b935266084c42a7c9dbae3778d96d27f19a7e'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - '{project-root}/decisions/MAINT-2026-10-24-epic-11-items.md'
@@ -84,6 +84,10 @@ deferred:
   - `[false]` `[reject]` (intent-alignment) No automated check pins the AD-3 file path — the intent asks for the move with no behaviour change, not a new grader; the move is verified by the reviewed diff and the directory listing (`src/index.ts`, `src/Traits/Macroable.ts`).
   - `[false]` `[reject]` (intent-alignment) The Fidelity Review gate was outstanding at audit time — it has since run: reviewer 1 and 2 `pass` at tree `5b3646e613d689a96154fbb30a70c95aca644120`.
 
+### 2026-10-25 — Review pass (Finalize re-check, after merging main)
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- findings: none. Merging `origin/main` (#420: `decisions/DIV-12.md`, item 5's ruling) moved the reviewed tree, so `status --item` printed `stale`; the Fidelity Review re-ran and both reviewers passed at tree `0921e93577306bae47f2cf69175824d6420ae57e`. No code changed.
+
 ## Verification
 
 **Commands:**
@@ -146,6 +150,56 @@ None.
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"5b3646e613d689a96154fbb30a70c95aca644120","base":"b02b935266084c42a7c9dbae3778d96d27f19a7e","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-25T07:23:58.395Z","items":[{"id":"F-1","result":"n/a","note":"The action item assigns no Ported Test IDs and the diff adds or changes no Ported Test; it only moves packages/macroable/src/Support/Traits/Macroable.ts to src/Traits/Macroable.ts and updates the barrel.","findings":[]},{"id":"F-2","result":"n/a","note":"No Ported Test, Xaravel Test or stale_tests file is touched (evidence (e) says none), so no expected value exists to compare against Upstream.","findings":[]},{"id":"F-3","result":"n/a","note":"No test file is changed, so no assertion is removed; the change is a byte-identical file move plus an index.ts import path update.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change adds no `// adapted:DIV-<n>.<k>` marker and no Expectations `adapted` field. The DIV-11.2 and DIV-12.10 citations in the moved file's header are unchanged prose, not adapted markers.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): no assigned or changed Oracle fixture is an error, and the item relies on none.","findings":[]},{"id":"F-7","result":"n/a","note":"Evidence (e): no Xaravel Test is touched, so there is no xaravelTest consequence to verify.","findings":[]},{"id":"F-8","result":"pass","note":"Only packages/macroable files change: the trait file moves to its Upstream path under the Component (AD-3) with identical content, and index.ts re-exports from the new path. Nothing is added to another Component, and there is no stub, fake or hard-coded return. This matches the action's 'no behaviour change'.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) lists no @asyncRoot tags in either changed file. Every declaration (macro, mixin, hasMacro, flushMacros, __callStatic, __call and the helpers) is sync, does no IO behind an async-root contract and has no Promise return type, so no tag is missing and none is false. Compared against AD-6.2 and AD-6.13, DIV-1 and ESC-6.4-1.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
 ```
 
+### Reviewer 1: pass at tree 0921e93577306bae47f2cf69175824d6420ae57e
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `b02b935266084c42a7c9dbae3778d96d27f19a7e`, on 2026-10-25T07:26:59.851Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed, and no Ported Test IDs are assigned. |
+| F-2: No expected value is weakened | n/a | The diff changes no assertions, expected values or exception expectations. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test assertions are changed or removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line or Skip Reason is changed. |
+| F-5: Every `adapted` marker matches its clause | n/a | No assertion adaptation marker or Expectations adapted field is added or changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied evidence identifies no Oracle error fixture relied on by this item. |
+| F-7: Every Xaravel Test verifies the consequence it declares | n/a | No Xaravel Test, helper, fixture or test setup is touched. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Compared the diff with the action item's macroable scope: the identical implementation moves within that component and its barrel follows. No other component's behaviour is implemented. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared the complete moved source and barrel with AD-6 and DIV-1: neither contains async methods, IO roots or @​asyncRoot tags requiring correction. Macro dispatch directly returns the callable's result. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"0921e93577306bae47f2cf69175824d6420ae57e","base":"b02b935266084c42a7c9dbae3778d96d27f19a7e","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-25T07:26:59.851Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed, and no Ported Test IDs are assigned.","findings":[]},{"id":"F-2","result":"n/a","note":"The diff changes no assertions, expected values or exception expectations.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test assertions are changed or removed.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line or Skip Reason is changed.","findings":[]},{"id":"F-5","result":"n/a","note":"No assertion adaptation marker or Expectations adapted field is added or changed.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied evidence identifies no Oracle error fixture relied on by this item.","findings":[]},{"id":"F-7","result":"n/a","note":"No Xaravel Test, helper, fixture or test setup is touched.","findings":[]},{"id":"F-8","result":"pass","note":"Compared the diff with the action item's macroable scope: the identical implementation moves within that component and its barrel follows. No other component's behaviour is implemented.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the complete moved source and barrel with AD-6 and DIV-1: neither contains async methods, IO roots or @asyncRoot tags requiring correction. Macro dispatch directly returns the callable's result.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree 0921e93577306bae47f2cf69175824d6420ae57e
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `b02b935266084c42a7c9dbae3778d96d27f19a7e`, on 2026-10-25T07:26:59.851Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The action item assigns no Ported Test IDs and the diff adds or changes no Ported Test. It only moves packages/macroable/src/Support/Traits/Macroable.ts to src/Traits/Macroable.ts and updates the barrel, so there is no assertion to compare with Upstream. |
+| F-2: No expected value is weakened | n/a | The diff changes no Ported Test or Xaravel Test (evidence (e): none touched), so no expected value can be weakened. The moved source is identical to the removed one. |
+| F-3: No assertion is removed without a DIV clause | n/a | No test file is changed, so no assertion is removed. The change is a rename of the source file plus the one-line barrel update. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. It touches no conformance file. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change adds no '// adapted:DIV-<n>.<k>' marker and no Expectations 'adapted' field. The DIV-11.2 and DIV-12.10 citations in the moved header and docblocks are unchanged, word for word, from the removed file. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c) lists no assigned Oracle request and no error fixture, base or changed, so the Story relies on no error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | n/a | Evidence (e) says no Xaravel Test is touched: no xaravelTest lines, helpers, fixtures or top-level setup are edited. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Both changed files are under packages/macroable, the item's only listed component. The added Traits/Macroable.ts matches the removed Support/Traits/Macroable.ts line for line: same imports from @​xaravel/runtime and @​xaravel/runtime/scope, the same guardWrite, dispatch and mixin logic, and the same registerClass call. index.ts changes only its re-export path. No stub, fake or hard-coded return of another Component is added. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tags in either changed file. Every declaration is sync: macro, mixin and flushMacros return null, hasMacro returns boolean, __call and __callStatic return unknown. None does IO behind an AD-6 async-root Driver contract, and none awaits a callback DIV-1 allows to be async; callMacro calls the macro synchronously and returns its result. So no tag is missing and none is false (AD-6.2, AD-6.13, DIV-1, ESC-6.4-1). |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"0921e93577306bae47f2cf69175824d6420ae57e","base":"b02b935266084c42a7c9dbae3778d96d27f19a7e","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-25T07:26:59.851Z","items":[{"id":"F-1","result":"n/a","note":"The action item assigns no Ported Test IDs and the diff adds or changes no Ported Test. It only moves packages/macroable/src/Support/Traits/Macroable.ts to src/Traits/Macroable.ts and updates the barrel, so there is no assertion to compare with Upstream.","findings":[]},{"id":"F-2","result":"n/a","note":"The diff changes no Ported Test or Xaravel Test (evidence (e): none touched), so no expected value can be weakened. The moved source is identical to the removed one.","findings":[]},{"id":"F-3","result":"n/a","note":"No test file is changed, so no assertion is removed. The change is a rename of the source file plus the one-line barrel update.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip. It touches no conformance file.","findings":[]},{"id":"F-5","result":"n/a","note":"The change adds no `// adapted:DIV-<n>.<k>` marker and no Expectations `adapted` field. The DIV-11.2 and DIV-12.10 citations in the moved header and docblocks are unchanged, word for word, from the removed file.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c) lists no assigned Oracle request and no error fixture, base or changed, so the Story relies on no error fixture.","findings":[]},{"id":"F-7","result":"n/a","note":"Evidence (e) says no Xaravel Test is touched: no xaravelTest lines, helpers, fixtures or top-level setup are edited.","findings":[]},{"id":"F-8","result":"pass","note":"Both changed files are under packages/macroable, the item's only listed component. The added Traits/Macroable.ts matches the removed Support/Traits/Macroable.ts line for line: same imports from @xaravel/runtime and @xaravel/runtime/scope, the same guardWrite, dispatch and mixin logic, and the same registerClass call. index.ts changes only its re-export path. No stub, fake or hard-coded return of another Component is added.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tags in either changed file. Every declaration is sync: macro, mixin and flushMacros return null, hasMacro returns boolean, __call and __callStatic return unknown. None does IO behind an AD-6 async-root Driver contract, and none awaits a callback DIV-1 allows to be async; callMacro calls the macro synchronously and returns its result. So no tag is missing and none is false (AD-6.2, AD-6.13, DIV-1, ESC-6.4-1).","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
+
 ## Auto Run Result
 
 - **Summary:** Macroable moves from `packages/macroable/src/Support/Traits/Macroable.ts` to `packages/macroable/src/Traits/Macroable.ts`, the Upstream file path under the Component (AD-3, MAINT-2026-10-24 item 6). The FQCN, exports and behaviour are unchanged.
@@ -153,7 +207,7 @@ None.
   - `packages/macroable/src/Traits/Macroable.ts` -- the trait, a 100% rename (`git mv`).
   - `packages/macroable/src/index.ts` -- the barrel imports `./Traits/Macroable`.
 - **Review findings:** 11 findings; 0 patched; 2 deferred (spine AD-3 wording, item 5's planning note, both low); 9 rejected, each with its reason in the Review Triage Log (four asked for spec edits, three were history or fixtures outside the intent's scope, two were already settled).
-- **Fidelity Review:** reviewer 1 (codex) and reviewer 2 (claude) `pass` at tree `5b3646e613d689a96154fbb30a70c95aca644120`; `status --item` prints `current`.
+- **Fidelity Review:** reviewer 1 (codex) and reviewer 2 (claude) `pass` at tree `5b3646e613d689a96154fbb30a70c95aca644120`, and again at `0921e93577306bae47f2cf69175824d6420ae57e` after merging `main`; `status --item` prints `current`.
 - **Follow-up review recommendation:** false (no patches: high 0, medium 0, low 0).
 - **Verification:** `bun run typecheck` exit 0; `bun run lint` exit 0; `bun test packages/macroable` 19 pass; `bun run api-surface:gate macroable` 0 unexplained; `bun run registration:check` ok (631 files, 40 registrations); `bun run harness` `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0` (database, queue and redis Variants NOT-RUN, no local backend).
 - **Residual risks:** none in code. Decision and Escalation records from Story 11.1 still name the old path as history.
