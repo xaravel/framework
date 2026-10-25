@@ -23,6 +23,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/assert": {
       "name": "@xaravel/assert",
@@ -43,6 +47,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
       "peerDependencies": {
         "@xaravel/console": "workspace:*",
         "@xaravel/session": "workspace:*",
@@ -59,6 +67,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/broadcasting": {
       "name": "@xaravel/broadcasting",
@@ -73,6 +85,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/bus": {
       "name": "@xaravel/bus",
@@ -84,6 +100,10 @@
         "@xaravel/pipeline": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/queue": "workspace:*",
@@ -101,6 +121,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/database": "workspace:*",
@@ -122,6 +146,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
       "peerDependencies": {
         "@xaravel/http": "workspace:*",
       },
@@ -139,6 +167,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/conditionable": {
       "name": "@xaravel/conditionable",
@@ -146,6 +178,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/config": {
@@ -155,6 +191,10 @@
         "@xaravel/collections": "workspace:*",
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/console": {
@@ -168,6 +208,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
         "@xaravel/view": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/bus": "workspace:*",
@@ -189,6 +233,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/reflection": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/auth": "workspace:*",
@@ -228,6 +276,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/database": {
       "name": "@xaravel/database",
@@ -240,6 +292,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/console": "workspace:*",
@@ -264,6 +320,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/events": {
       "name": "@xaravel/events",
@@ -278,6 +338,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/filesystem": {
       "name": "@xaravel/filesystem",
@@ -289,6 +353,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/http": "workspace:*",
@@ -305,6 +373,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/foundation": {
@@ -337,6 +409,10 @@
         "@xaravel/validation": "workspace:*",
         "@xaravel/view": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
       "peerDependencies": {
         "@xaravel/auth": "workspace:*",
         "@xaravel/broadcasting": "workspace:*",
@@ -363,6 +439,10 @@
     "packages/framework": {
       "name": "@xaravel/framework",
       "version": "0.0.0",
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/hashing": {
       "name": "@xaravel/hashing",
@@ -372,6 +452,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/htmx": {
       "name": "@xaravel/htmx",
@@ -379,6 +463,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/http": {
@@ -392,6 +480,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/session": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/image": "workspace:*",
@@ -407,6 +499,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/image": {
       "name": "@xaravel/image",
@@ -421,6 +517,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/json-schema": {
       "name": "@xaravel/json-schema",
@@ -428,6 +528,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/log": {
@@ -439,6 +543,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/macroable": {
       "name": "@xaravel/macroable",
@@ -446,6 +554,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/mail": {
@@ -459,6 +571,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/http": "workspace:*",
@@ -474,6 +590,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/mime": {
       "name": "@xaravel/mime",
@@ -481,6 +601,10 @@
       "dependencies": {
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/mockery": {
@@ -506,6 +630,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
       "peerDependencies": {
         "@xaravel/database": "workspace:*",
       },
@@ -522,6 +650,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/pipeline": {
       "name": "@xaravel/pipeline",
@@ -532,6 +664,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/database": "workspace:*",
@@ -551,6 +687,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/queue": {
       "name": "@xaravel/queue",
@@ -566,6 +706,10 @@
         "@xaravel/reflection": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/redis": "workspace:*",
@@ -584,6 +728,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/reflection": {
       "name": "@xaravel/reflection",
@@ -592,6 +740,10 @@
         "@xaravel/collections": "workspace:*",
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "packages/routing": {
@@ -609,6 +761,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/session": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/console": "workspace:*",
@@ -631,6 +787,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/session": {
       "name": "@xaravel/session",
@@ -641,6 +801,10 @@
         "@xaravel/filesystem": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/console": "workspace:*",
@@ -660,6 +824,9 @@
         "@xaravel/reflection": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+      },
       "peerDependencies": {
         "@xaravel/filesystem": "workspace:*",
         "@xaravel/mockery": "workspace:*",
@@ -676,6 +843,10 @@
         "@xaravel/contracts": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/testing": {
       "name": "@xaravel/testing",
@@ -687,6 +858,10 @@
         "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/console": "workspace:*",
@@ -711,6 +886,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
       },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
+      },
     },
     "packages/validation": {
       "name": "@xaravel/validation",
@@ -724,6 +903,10 @@
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
         "@xaravel/translation": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
       "peerDependencies": {
         "@xaravel/database": "workspace:*",
@@ -746,6 +929,10 @@
         "@xaravel/reflection": "workspace:*",
         "@xaravel/runtime": "workspace:*",
         "@xaravel/support": "workspace:*",
+      },
+      "devDependencies": {
+        "@xaravel/assert": "workspace:*",
+        "@xaravel/mockery": "workspace:*",
       },
     },
     "skeleton": {

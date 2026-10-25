@@ -81,5 +81,9 @@
     "@xaravel/testing": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }
