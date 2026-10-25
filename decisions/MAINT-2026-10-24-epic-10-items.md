@@ -2,7 +2,7 @@
 decision: approved
 decided_by: Maintainer
 date: 2026-10-24
-scope: Epic 10 retrospective items 1, 2, 4, 5 (part 3), 6 and 7
+scope: Epic 10 retrospective items 1, 2 (and its item 10), 4, 5 (part 3), 6 and 7
 ---
 
 # Maintainer rulings: Epic 10 items 1, 2, 4, 5, 6 and 7
@@ -24,6 +24,16 @@ As a PHP value, a contract token is its Upstream FQCN string, as PHP's `Arrayabl
 - JS coercion is unchanged. `Symbol.toPrimitive` still gives the brand key for every hint (AD-1, ESC-10.1-1), because a computed key such as `get [Arrayable]()` coerces with the same `string` hint as a template literal, so one hook cannot serve both. In `packages/*/src`, string-coercing a token (template literal, `String(token)`, `+` with a string) is a lint error, and messages name a token with `fqcn(token)`.
 
 The orchestrator builds this as new action item `epic-10-retro-item-10-token-class-string`, after item 4. Runtime then uses runtime's `isContractToken`, and assert uses its grader-side copy (item 4, AD-15). Its scope is `packages/runtime` and `packages/assert` (`packages/mockery` too, if Mockery prints a token), with XT cases for each encoder, the exporter and `assertSame`. This ruling also approves its one change outside `packages/`: the lint rule in `tools/lint-rules/`, with its tests. That is the only `tools/` change item 10 may make.
+
+### Item 10's route (added 2026-10-24, after #392)
+
+The orchestrator stopped item 10 (#392) for two scope questions and asked one about behaviour. All three are approved as the orchestrator recommended:
+
+1. **XT-contracts-11 and XT-contracts-19 are re-pinned to token identity.** `aliases.test.ts` and `hardening.test.ts` in `packages/contracts/tests/xaravel/` used `assertSame(token, fqcnString)` to check that a resolver returns a token, not a string. Under this item's ruling that check passes for the string too, as PHP's would. Each such check becomes a JS identity check: the result is `===` the token object and its `typeof` is not `"string"`. The property each test pins stays as strict, and no other assertion changes. This is the item's one change in `packages/contracts`, and it falls outside the stale-test rule (`MAINT-2026-10-24-stale-cross-scope-tests.md`), because the check itself changes.
+2. **`.oxlintrc.json` enables the new lint rule.** That is the only change allowed in that Protected file.
+3. **Mockery's `with(token)` follows Upstream Mockery.** A token is its class-string, so `with(Arrayable)` matches as Mockery 1.6's `Expectation::_matchArg` matches `with(Arrayable::class)`: identical or loosely equal values, the FQCN string itself, and an object that is an `instanceof` that class. The orchestrator confirms this against the Mockery source at the version the Oracle installs. Any difference stops the item with an Escalation.
+
+Item 10 leaves `waiting_on_maintainer`. Its status stays `in-progress`, and the orchestrator resumes it.
 
 ## Item 4: two contract-token predicates, pinned equal (L7, L8)
 
