@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 02:58
+last_updated: 10-25-2026 10:27
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1743,11 +1743,12 @@ action_items:
   - id: "epic-12-item-1-blocked-by-component-error"
     epic: 12
     action: "packages/runtime: add BlockedByComponentError in the form decisions/ESC-5.3-1.md
-      fixes (registered as a framework class, name BlockedByComponentError, a message that
-      starts BlockedByComponentError(<c>) with <c> the owning Component's package name from
-      the component map), exported for Ported Tests, with an XT-runtime test of its name,
-      registration and message form; no other runtime behaviour changes. A Maintainer-approved
-      Infrastructure change (decisions/ESC-12.1-2.md); lands before Story 12.1 resumes"
+      fixes (registered as a framework class, name BlockedByComponentError, a message
+      that starts BlockedByComponentError(<c>) with <c> the owning Component's package
+      name from the component map), exported for Ported Tests, with an XT-runtime
+      test of its name, registration and message form; no other runtime behaviour
+      changes. A Maintainer-approved Infrastructure change (decisions/ESC-12.1-2.md);
+      lands before Story 12.1 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-12.1-2.md"

@@ -95,9 +95,41 @@ registerClass("App\\Exceptions\\NotFound", NotFound);
   `jsonDecode` depth below 1: `ValueError`. A `jsonEncode` depth that is not finite or not in the int64 range:
   `TypeError` `json_encode(): Argument #3 ($depth) must be of type int, float given`.
 
-Xaravel's own API-misuse errors (`registerClass():`, `mixin():`, `frameSlot():`, `float():`, values JS cannot hold)
-stay JS `TypeError`s, because no PHP throwable stands behind them. PHP fatals (a trait collision, `Nesting level too
-deep`) stay JS `Error`s.
+Xaravel's own API-misuse errors (`registerClass():`, `mixin():`, `frameSlot():`, `float():`,
+`BlockedByComponentError():`, values JS cannot hold) stay JS `TypeError`s, because no PHP throwable stands behind
+them. PHP fatals (a trait collision, `Nesting level too deep`) stay JS `Error`s.
+
+## `BlockedByComponentError`
+
+A Ported Test whose Upstream test needs a Component from a later Phase throws `BlockedByComponentError` from its
+case's `setUp`, before any exception expectation is set, and its Expectations line is `skip` / `blocked-by:<c>`
+(`decisions/ESC-5.3-1.md`, `decisions/ESC-12.1-2.md`). Thrown from a test body after `expectException(...)`, it fails
+the expectation check as an assertion failure, and the blocked-by form is lost. Story 17.2 raises it from framework
+code, for a service whose Component isn't installed. It is exported from the package root and registered as
+`Xaravel\Runtime\BlockedByComponentError`.
+
+- `new BlockedByComponentError(component, detail = null)`. `component` is the owning Component's name from the
+  component map, in its lowercase kebab form (`database`, `json-schema`); it is exposed, readonly, as `component`.
+  `detail` is a string or `null`.
+- The message is `BlockedByComponentError(<component>)`, or `BlockedByComponentError(<component>): <detail>`, and
+  `name` is `BlockedByComponentError`. Bun's junit report records the `name` as the failure's `type`, so the harness
+  matches the line only on that `type` and a message that starts `BlockedByComponentError(<c>)`.
+- Any other component (not a string, `""`, `Database`, `a b`, `(x)`), or a detail that is neither a string nor
+  `null`, throws a JS `TypeError` `BlockedByComponentError(): …`.
+- It is a JS `Error`, not a PHP throwable: `instanceof Exception` and `instanceof Error` (PHP's) are false, so a test
+  that expects an `Exception` cannot pass by catching it.
+
+```ts
+class ConditionableTest extends TestCase {
+  setUp(): void {
+    throw new BlockedByComponentError("database", "Illuminate\\Database is not installed");
+  }
+}
+
+portedTest(`${ID}::testWhen`, { case: ConditionableTest }, function () {
+  // The ported body, which runs once the database Component lands.
+});
+```
 
 ## The `Symbol.for('xaravel.php.classes')` protocol
 

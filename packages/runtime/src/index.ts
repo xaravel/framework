@@ -2,6 +2,7 @@
 import "./metadata/polyfill";
 // Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
 import "./php/phpClasses";
+export { BlockedByComponentError } from "./BlockedByComponentError";
 export {
   bindToFrame,
   CSP_NONCE_SLOT,
