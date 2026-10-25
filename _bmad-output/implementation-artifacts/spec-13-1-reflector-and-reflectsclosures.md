@@ -87,5 +87,3 @@ Lessons applied: epic 2 / epic 12 (check the contract before building, so gaps t
 
 Status: blocked
 Blocking condition: intent gap. ESC-13.1-1 (parameter reflection objects and `self` / `parent` Specs, contract), ESC-13.1-2 (untyped and variadic closure parameters, and the no-`inject` rule, divergence), ESC-13.1-3 (closure return types, divergence), ESC-13.1-4 (class attribute decorators, contract), ESC-13.1-5 (`lazy` / `proxy` lazy objects, divergence) and ESC-13.1-6 (`isCallable` visibility and function-name strings, divergence) wait on the Maintainer. Every Test ID and XT-reflection-1, -2 and -4 depend on one of them, so no implementation was started.
-
-Runtime half landed (action item `epic-13-item-1-runtime-reflection`, spec `spec-retro-13-runtime-reflection.md`). One deferred point applies when this Story resumes: a contract token's FQCN string does not resolve through `ReflectionClass` (the Registry holds classes only, ESC-10.1-3). So for `testParameterSubclassOfInterface`, port `IA` / `IB` as registered classes, as `@xaravel/runtime/php` does for PHP interfaces. If a token is needed, raise a `contract` Escalation.
