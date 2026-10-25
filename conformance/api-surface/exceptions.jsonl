@@ -1,2 +1,4 @@
 {"component":"conditionable","fqcn":"Illuminate\\Support\\Traits\\Conditionable","member":"unless","citation":"DIV-12.13"}
 {"component":"conditionable","fqcn":"Illuminate\\Support\\Traits\\Conditionable","member":"when","citation":"DIV-12.13"}
+{"component":"reflection","fqcn":"lazy","member":null,"citation":"DIV-12.14"}
+{"component":"reflection","fqcn":"proxy","member":null,"citation":"DIV-12.14"}
