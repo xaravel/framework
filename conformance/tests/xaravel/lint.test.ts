@@ -188,6 +188,7 @@ xaravelTest("XT-conformance-131", "an oxlint-disable of a spine rule, a blanket 
     "no-arrow-test-body",
     "no-inject-param-mismatch",
     "no-dynamic-column-default",
+    "no-token-string-coercion",
   ]);
 
   // A named disable: exit 1, path:line:col.

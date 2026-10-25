@@ -9,6 +9,7 @@ import { Double } from "@xaravel/mockery";
 import { hasBrand, jsonEncode } from "@xaravel/runtime/php";
 import { fqcn, loadClassmap, resolveClass } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, contract, CONTRACT_METHODS, CONTRACT_PARAMETERS, CONTRACT_PARENTS } from "@xaravel/contracts";
+import { assertSameAbstract } from "./support/contract-namespaces";
 
 declare const ArrayableBrand: unique symbol;
 /** A test-local `Illuminate\Contracts\Support\Arrayable`, declared as Story 10.2's generators will emit it. */
@@ -212,14 +213,14 @@ xaravelTest(
     const C = contract("X\\C", {}, given);
     Assert.assertTrue(Object.isFrozen(C[CONTRACT_PARENTS]));
     Assert.assertSame(2, C[CONTRACT_PARENTS].length);
-    Assert.assertSame(P, C[CONTRACT_PARENTS][0]);
-    Assert.assertSame(Q, C[CONTRACT_PARENTS][1]);
+    assertSameAbstract(P, C[CONTRACT_PARENTS][0]);
+    assertSameAbstract(Q, C[CONTRACT_PARENTS][1]);
     Assert.assertFalse((given as readonly unknown[]) === C[CONTRACT_PARENTS]);
     given.push(contract("X\\R"));
     given.shift();
     Assert.assertSame(2, C[CONTRACT_PARENTS].length);
-    Assert.assertSame(P, C[CONTRACT_PARENTS][0]);
-    Assert.assertSame(Q, C[CONTRACT_PARENTS][1]);
+    assertSameAbstract(P, C[CONTRACT_PARENTS][0]);
+    assertSameAbstract(Q, C[CONTRACT_PARENTS][1]);
     for (const token of [X, Billing, P]) {
       Assert.assertTrue(Array.isArray(token[CONTRACT_PARENTS]));
       Assert.assertSame(0, token[CONTRACT_PARENTS].length);

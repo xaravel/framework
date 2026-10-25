@@ -7,9 +7,12 @@
 // so Mockery prints a value exactly as the grader does. Only Mockery's own
 // logic stays here: the class-token helpers below (a class token's PHP name is
 // its own static `[Symbol.for('xaravel.class.fqcn')]`, else its JS `name`,
-// display only, AD-10), `formatArgument` and `objectToArray`.
+// display only, AD-10), `formatArgument` and `objectToArray`. A contract token
+// is its FQCN class-string as a PHP value (AD-9.8), read through the grader's
+// `classString`, so Mockery prints one as the string the grader prints.
 import { createHash } from "node:crypto";
 import {
+  classString,
   phpArrayEntries,
   phpClassNameOf,
   phpIsArray as isPhpArray,
@@ -109,7 +112,9 @@ export function objectId(object: object): number {
 }
 
 /** PHP's string conversion of a scalar, as `implode` / `sprintf('%s')` do. */
-export function phpString(value: unknown): string {
+export function phpString(given: unknown): string {
+  // A contract token is its class-string (AD-9.8).
+  const value = classString(given);
   switch (typeof value) {
     case "number":
     case "bigint":
@@ -145,7 +150,9 @@ export interface Formattable {
 }
 
 /** Mockery's private `formatArgument` (Mockery.php 866-910); `isMatcher` tells a matcher from other objects. */
-export function formatArgument(argument: unknown, isMatcher: (value: unknown) => value is Formattable, depth = 0): string {
+export function formatArgument(given: unknown, isMatcher: (value: unknown) => value is Formattable, depth = 0): string {
+  // A contract token is its class-string (AD-9.8): `'Illuminate\Contracts\Support\Arrayable'`.
+  const argument = classString(given);
   if (isMatcher(argument)) {
     return argument.toString();
   }
@@ -214,7 +221,9 @@ function cleanupArray(argument: unknown, nesting: number): unknown {
     return "...";
   }
   const result = new Pairs();
-  for (const [key, value] of arrayEntries(argument)) {
+  for (const [key, item] of arrayEntries(argument)) {
+    // A contract token is its class-string (AD-9.8).
+    const value = classString(item);
     if (isPhpArray(value)) {
       result.set(key, cleanupArray(value, nesting - 1));
     } else if (isPhpObject(value)) {
@@ -226,7 +235,9 @@ function cleanupArray(argument: unknown, nesting: number): unknown {
   return result;
 }
 
-function cleanupNesting(argument: unknown, nesting: number): unknown {
+function cleanupNesting(given: unknown, nesting: number): unknown {
+  // A contract token is its class-string (AD-9.8).
+  const argument = classString(given);
   if (isPhpObject(argument)) {
     const formatted = objectToArray(argument, nesting - 1);
     // PHP's `$object['class'] = get_class($argument)` lands on the `['...']` cutoff too: `[0 => '...', 'class' => <class>]`.
@@ -272,7 +283,9 @@ export function varExport(value: unknown): string {
 }
 
 /** PHP's `get_debug_type`: the type name of a scalar, `array`, `null`, or an object's class name (a function is a `Closure`). */
-export function getDebugType(value: unknown): string {
+export function getDebugType(given: unknown): string {
+  // A contract token is its class-string (AD-9.8): `string`.
+  const value = classString(given);
   if (value === null) {
     return "null";
   }

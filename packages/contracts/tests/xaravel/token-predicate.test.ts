@@ -12,7 +12,7 @@ import { isContractToken as runtimeIsContractToken } from "@xaravel/runtime";
 import { fqcn, isContractToken as registryIsContractToken } from "@xaravel/runtime/registry";
 import { CLASS_FQCN, contract, CONTRACT_PARENTS, type ContractToken } from "@xaravel/contracts";
 import { aliasResolver } from "@xaravel/contracts/aliases";
-import { PACKAGE, typeErrorOf } from "./support/contract-namespaces";
+import { assertSameAbstract, PACKAGE, typeErrorOf } from "./support/contract-namespaces";
 
 /** Every `@xaravel/contracts` subpath module, `./aliases` included. */
 const MODULES: readonly (readonly [string, object])[] = await Promise.all(
@@ -56,7 +56,7 @@ xaravelTest(
     const bareParent = Object.freeze({ [CLASS_FQCN]: "P\\Q" });
     const withBareParent = contract("X\\Y", {}, [bareParent as unknown as ContractToken<object>]);
     Assert.assertSame(1, withBareParent[CONTRACT_PARENTS].length);
-    Assert.assertSame(bareParent, withBareParent[CONTRACT_PARENTS][0]);
+    assertSameAbstract(bareParent, withBareParent[CONTRACT_PARENTS][0]);
 
     // An accessor FQCN, or a writable one on a sealed (not frozen) object.
     Assert.assertFalse(agreed("frozen accessor FQCN", Object.freeze(Object.defineProperty({}, CLASS_FQCN, { get: () => "A\\B", enumerable: true }))));

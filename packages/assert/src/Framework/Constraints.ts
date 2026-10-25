@@ -6,6 +6,7 @@ import { phpCompare } from "../comparison/PhpOrder";
 import {
   classNameOf,
   classNameOfClass,
+  classString,
   countOf,
   gettype,
   isArrayAccess,
@@ -40,11 +41,17 @@ function isArray(value: unknown): value is object {
 // Identity and equality
 
 export class IsIdentical extends Constraint {
-  constructor(private readonly value: unknown) {
+  /** The expected value, a contract token read as its class-string (AD-9.8). */
+  private readonly value: unknown;
+
+  constructor(value: unknown) {
     super();
+    this.value = classString(value);
   }
 
-  override evaluate(other: unknown, description = "", returnResult = false): boolean | null {
+  override evaluate(given: unknown, description = "", returnResult = false): boolean | null {
+    // A contract token is its class-string (AD-9.8), so a token against a string fails with the string message.
+    const other = classString(given);
     const success = phpStrictEquals(this.value, other);
     if (returnResult) {
       return success;
@@ -70,7 +77,8 @@ export class IsIdentical extends Constraint {
     return `is not identical to ${this.valueAsString()}`;
   }
 
-  override failureDescription(other: unknown): string {
+  override failureDescription(given: unknown): string {
+    const other = classString(given);
     if (isPhpObject(this.value) && isPhpObject(other)) {
       return "two variables reference the same object";
     }
@@ -86,7 +94,8 @@ export class IsIdentical extends Constraint {
     return super.failureDescription(other);
   }
 
-  override negatedFailureDescription(other: unknown): string {
+  override negatedFailureDescription(given: unknown): string {
+    const other = classString(given);
     if (isPhpObject(this.value) && isPhpObject(other)) {
       return "two variables do not reference the same object";
     }
@@ -112,16 +121,22 @@ export class IsIdentical extends Constraint {
 
 /** IsEqual, IsEqualCanonicalizing, IsEqualIgnoringCase and IsEqualWithDelta: one constraint, the comparator's options. */
 export class IsEqual extends Constraint {
+  /** The expected value, a contract token read as its class-string (AD-9.8). */
+  private readonly value: unknown;
+
   constructor(
-    private readonly value: unknown,
+    value: unknown,
     private readonly delta: number | null = null,
     private readonly canonicalize = false,
     private readonly ignoreCase = false,
   ) {
     super();
+    this.value = classString(value);
   }
 
-  override evaluate(other: unknown, description = "", returnResult = false): boolean {
+  override evaluate(given: unknown, description = "", returnResult = false): boolean {
+    // A contract token is its class-string (AD-9.8), so a token against a string gets the string comparator and diff.
+    const other = classString(given);
     if (phpStrictEquals(this.value, other)) {
       return true;
     }

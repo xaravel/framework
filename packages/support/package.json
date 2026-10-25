@@ -34,5 +34,8 @@
     "@xaravel/mockery": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*"
   }
 }

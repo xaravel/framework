@@ -1,7 +1,8 @@
 // Shared code of the namespace Xaravel Tests: XT-contracts-5 (Story 10.2's 19 core and service namespaces),
 // XT-contracts-6 (structural types) and XT-contracts-8 (Story 10.3's web and application namespaces) read the
 // committed API surface's rows, the Upstream PHP files and the async table through these helpers, so each check has
-// one implementation (lessons, epic 4). It declares no test of its own.
+// one implementation (lessons, epic 4). `assertSameAbstract` is every contracts Xaravel Test's token-identity check
+// (AD-9.8). It declares no test of its own.
 //
 // The Upstream snapshot is gitignored and synced by `bun run upstream:sync`, which CI's `check` job runs under
 // `XARAVEL_UPSTREAM=require` (ESC-10.2-8): `upstreamOrWarn` fails a test under that variable when the snapshot is
@@ -182,6 +183,18 @@ export function mockeryDouble(token: Token): unknown {
 /** A PHPUnit mock of `token`. */
 export function phpunitMock(token: Token): unknown {
   return new TestCase().createMock(token as never);
+}
+
+/**
+ * `actual` is the contract token `expected` by JS identity (decisions/MAINT-2026-10-24-epic-10-items.md, Item 10's
+ * route, item 1, its general rule): a contract token is `assertSame` to its FQCN string, as `Arrayable::class` is in
+ * PHP (AD-9.8), so the token-not-string check is the `typeof` and `===` checks after the PHP one. Each Xaravel Test
+ * whose expected value is a token checks it through this one helper.
+ */
+export function assertSameAbstract(expected: unknown, actual: unknown, message = ""): void {
+  Assert.assertSame(expected, actual, message);
+  Assert.assertSame(typeof expected, typeof actual, message);
+  Assert.assertTrue(expected === actual, message);
 }
 
 /** The `TypeError` message `fn` throws, or "(nothing thrown)". */

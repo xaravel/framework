@@ -20,5 +20,9 @@
     "@xaravel/contracts": "workspace:*",
     "@xaravel/runtime": "workspace:*",
     "@xaravel/support": "workspace:*"
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }

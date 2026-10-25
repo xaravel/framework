@@ -3,7 +3,7 @@
 // failure with var_export; the canonicalizing ArrayComparator orders arrays and
 // objects by their serialized form. Internal to the grader.
 import { arrayEntries, isPhpArray, type Key } from "../comparison/PhpComparison";
-import { classNameOf, formatDouble, isInt, isResource, unmarkFloat } from "../comparison/PhpValues";
+import { classNameOf, classString, formatDouble, isInt, isResource, unmarkFloat } from "../comparison/PhpValues";
 import { objectToArray } from "./Exporter";
 
 function exportString(value: string): string {
@@ -24,8 +24,9 @@ function key(name: Key): string {
 }
 
 function varExportAt(given: unknown, level: number): string {
-  // A marked float exports as the float it stands for (`1.0`), as `var_export` does.
-  const value = unmarkFloat(given);
+  // A contract token exports as its class-string (AD-9.8); a marked float as the float it stands for (`1.0`), as
+  // `var_export` does.
+  const value = unmarkFloat(classString(given));
   if (value === undefined) {
     // AD-9 forbids `undefined`, so a message never disguises it as `NULL`.
     return "undefined";
@@ -84,7 +85,8 @@ function serializeKey(name: Key): string {
 
 /** `serialize($value)`. A Closure is not serializable, as in PHP. */
 export function serialize(given: unknown): string {
-  const value = unmarkFloat(given);
+  // A contract token serializes as its class-string (AD-9.8).
+  const value = unmarkFloat(classString(given));
   if (value === null || value === undefined) {
     return "N;";
   }

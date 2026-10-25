@@ -30,5 +30,9 @@
     "@xaravel/queue": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@xaravel/assert": "workspace:*",
+    "@xaravel/mockery": "workspace:*"
   }
 }

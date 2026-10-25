@@ -11,7 +11,9 @@
 // contract methods and their JS protocols both packages' test doubles share
 // (ESC-10.1-6, ESC-10.2-4), and `isContractToken`, `contractTokenName` and
 // `defineContractBrand`, the grader's one token predicate, token-name rule and
-// brand descriptor (MAINT-2026-10-24 Item 4).
+// brand descriptor (MAINT-2026-10-24 Item 4). `classString` reads a contract
+// token as its FQCN class-string, as the grader's `==`, `===` and exporter do
+// (AD-9.8, MAINT-2026-10-24 Item 2), so Mockery matches and prints one alike.
 import {
   arrayEntries as phpArrayEntries,
   isBrandedArray as phpIsBrandedArray,
@@ -22,6 +24,7 @@ import {
 } from "./comparison/PhpComparison";
 import {
   classNameOf as phpClassNameOf,
+  classString,
   isPhpObject as phpIsObject,
   isResource as phpIsResource,
   phpToString,
@@ -45,6 +48,7 @@ import { varExport as phpVarExport } from "./exporter/VarExport";
 for (const exported of [
   Assert,
   AssertionFailedError,
+  classString,
   ComparisonFailure,
   Constraint,
   contractMethods,
@@ -84,6 +88,7 @@ for (const exported of [
 export {
   Assert,
   AssertionFailedError,
+  classString,
   ComparisonFailure,
   Constraint,
   contractMethods,

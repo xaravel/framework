@@ -1,12 +1,15 @@
 // `JMac\Testing\Diagnostics\ValueFormatter` (jasonmccreary/double v1.0.1): a
 // scalar or null as `var_export` prints it, an array as `array(<count>)`, any
-// other value as `get_debug_type`. Internal.
+// other value as `get_debug_type`. A contract token is its FQCN class-string
+// (AD-9.8), so it prints as `var_export` prints that string. Internal.
+import { classString } from "@xaravel/assert";
 import { arrayEntries, FQCN, getDebugType, isPhpArray, varExport } from "../../../support/values";
 
 export class ValueFormatter {
   static readonly [FQCN]: string = "JMac\\Testing\\Diagnostics\\ValueFormatter";
 
-  static describe(value: unknown): string {
+  static describe(given: unknown): string {
+    const value = classString(given);
     if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
       return varExport(value);
     }
