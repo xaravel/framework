@@ -114,7 +114,7 @@ xaravelTest(
     // A bullet keeps its nested lines, whitespace collapsed; the list marker is dropped.
     const text = (id: string): string => lines.find((line) => line.id === id)!.text;
     expect(text("FR-3.1")).toBe("A `skip` without a Skip Reason from the vocabulary fails CI.");
-    expect(text("FR-3.2")).toContain("CI checks every Skip Reason against its rule in §3, and fails on any that breaks it: - `blocked-by` must name a Component in a later Phase. - `intentional-divergence`");
+    expect(text("FR-3.2")).toContain("CI checks every Skip Reason against its rule in §3, and fails on any that breaks it: - `blocked-by` must name a Component in a later Phase, or one in the same Phase built in a later Epic. - `intentional-divergence`");
     expect(text("FR-3.4")).toContain("1. `upstream-skip`, because it is machine-verified.");
     expect(text("FR-3.4")).toContain("When in doubt, the agent picks the reason that counts against conformance.");
     expect(text("AD-17.5")).toBe("**One runner per worktree.** A lock file `.cache/harness.lock` keeps out a second runner in the same worktree.");

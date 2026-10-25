@@ -141,7 +141,7 @@ Long term (2–3 years), Xaravel tracks Laravel releases within weeks once the p
 - **Expectations File:** the machine-maintained record of the expected status of every Test ID × Backend Variant pair. The status is `pass`, `fail-known`, `skip` or `quarantined`. A skip must have a Skip Reason. A `pass` entry may carry an `adapted:DIV-<n>.<clause>` marker when the test was adapted under that clause of the DIV's rule (§5.1). A `fail-known` entry counts as not passing, and it doesn't satisfy a Story's done definition or the Global rules (§4).
 - **Skip Reason:** one value from a fixed vocabulary. Each value has a rule CI enforces (FR-3):
   - `not-ported-yet`
-  - `blocked-by:<component>`: that Component must sit in a later Phase.
+  - `blocked-by:<component>`: that Component must sit in a later Phase, or in the same Phase and be built in a later Epic (ESC-13.1-10).
   - `intentional-divergence:<DIV-N>`: that Divergence Record must exist.
   - `php-only`: needs an approved Escalation (FR-114).
   - `upstream-skip`: the Oracle also skips or fails this test at the Baseline Pin, which the harness checks.
@@ -226,7 +226,7 @@ The Expectations File records exactly one status for every Test ID × Backend Va
 **Consequences (testable):**
 - A `skip` without a Skip Reason from the vocabulary fails CI.
 - CI checks every Skip Reason against its rule in §3, and fails on any that breaks it:
-  - `blocked-by` must name a Component in a later Phase.
+  - `blocked-by` must name a Component in a later Phase, or one in the same Phase built in a later Epic.
   - `intentional-divergence` must name an existing Divergence Record.
   - `php-only` must reference an approved Escalation.
   - `upstream-skip` must be confirmed by the Oracle.

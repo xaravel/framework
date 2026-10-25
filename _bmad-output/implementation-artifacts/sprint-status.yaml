@@ -153,7 +153,7 @@ development_status:
   epic-12-retrospective: done
 
   epic-13: in-progress
-  13-1-reflector-and-reflectsclosures: blocked  # ESC-13.1-7 (token FQCN lookup), ESC-13.1-8 (enum model), ESC-13.1-9 (assertInstanceOf class-strings), ESC-13.1-10 (same-Phase blocked-by:collections) wait on the Maintainer; implementation saved on story/13.1-impl
+  13-1-reflector-and-reflectsclosures: in-progress  # Maintainer rulings 2026-10-25 (decisions/MAINT-2026-10-25-story-13-1-second.md): ESC-13.1-7..9 option 1, ESC-13.1-10 option 2; action item epic-13-item-2-reflection-contracts lands first; implementation saved on story/13.1-impl
   epic-13-retrospective: optional
 
   epic-14: backlog
@@ -1807,3 +1807,18 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-25-story-13-1.md"
+  - id: "epic-13-item-2-reflection-contracts"
+    epic: 13
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-13-1-second.md):
+      packages/runtime: a table from a contract token's FQCN to the token, written by
+      contract(...), read by interface_exists and new ReflectionClass(<token FQCN>) (ESC-13.1-7);
+      ReflectionEnum (isBacked, getBackingType) and enum_exists in @xaravel/runtime/php, reading
+      a backed enum's static backingType (spine AD-26, ESC-13.1-8); packages/assert: assertInstanceOf
+      / assertNotInstanceOf accept a class-string resolved through the Class Registry or
+      the token table, else UnknownClassOrInterfaceException (ESC-13.1-9); tools/expectations/reasons.ts:
+      blocked-by:<c> also valid when <c> is in the same Phase and its first Story's Epic
+      is later than the line's Component's, with its comment and docs (ESC-13.1-10). An
+      XT case for each; no assertion removed or weakened; lands before Story 13.1 resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"
