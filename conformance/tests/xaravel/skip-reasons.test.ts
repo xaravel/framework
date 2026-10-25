@@ -135,7 +135,27 @@ function cli(dir: string): { exitCode: number; stdout: string; stderr: string } 
 // ---------------------------------------------------------------------------
 // XT-conformance-92: blocked-by
 
-xaravelTest("XT-conformance-92", "blocked-by:<c> fails unless <c> is in a later Phase than the test's Component per the package table (FR-3.2)", () => {
+function manifest(storyId: string, component: string): string {
+  return frontmatter({ story_id: storyId, epic: Number(storyId.split(".")[0]), component, status: "backlog", test_ids: [A] }, "\n# Story\n");
+}
+
+xaravelTest("XT-conformance-92", "blocked-by:<c> fails unless <c> is in a later Phase than the test's Component per the package table, or in the same Phase with a later first Epic per stories/ (FR-3.2, ESC-13.1-10)", () => {
+  // Same Phase, later Epic: macroable's first Story is in Epic 7, support's in Epic 5. A second, later support
+  // Story does not move support's first Epic.
+  const sameEpicFiles = (supportStory: string, macroableStory: string): Record<string, string> => ({
+    "tools/scaffold/packages.jsonl": row("database", 4) + row("macroable", 2) + row("runtime", 1) + row("support", 2),
+    [`stories/${supportStory}.md`]: manifest(supportStory, "support"),
+    [`stories/${macroableStory}.md`]: manifest(macroableStory, "macroable"),
+  });
+  expectCase({ reason: "blocked-by:macroable" }, null, { ...sameEpicFiles("5.1", "7.1"), "stories/9.1.md": manifest("9.1", "support") });
+  expectCase({ reason: "blocked-by:macroable" }, "blocked-by:", sameEpicFiles("9.1", "7.1"));
+  expectCase({ reason: "blocked-by:macroable" }, "blocked-by:", sameEpicFiles("7.2", "7.1"));
+  // Without manifests the same-Phase line fails closed, and the message names both first Epics.
+  expectCase({ reason: "blocked-by:macroable" }, "blocked-by:", { "tools/scaffold/packages.jsonl": row("macroable", 2) + row("support", 2) });
+  expect(violations([{ reason: "blocked-by:macroable" }], sameEpicFiles("9.1", "7.1"))[0]).toContain("not built in a later Epic (macroable: 7, support: 9)");
+  // A later Phase never needs a manifest.
+  expectCase({ reason: "blocked-by:database" }, null, sameEpicFiles("9.1", "7.1"));
+
   expectCase({ reason: "blocked-by:database" }, null);
   expectCase({ reason: "blocked-by:runtime" }, "blocked-by:");
   expectCase({ reason: "blocked-by:support" }, "blocked-by:");

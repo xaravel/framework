@@ -29,4 +29,16 @@ None of these adds a DIV clause. Each brings Xaravel closer to PHP or PHPUnit, o
    Each part gets a Xaravel Test. No assertion is removed or weakened. The loop takes it before the Story.
 2. **Then Story 13.1.** It resumes from `story/13.1-impl` (`differ=0` there), ports the four held Test IDs, and runs its review layers and Fidelity Review.
 
+### Amendment 2026-10-25: the item's scope
+
+#438 found two gaps in how step 1 was written:
+- `contract(...)` lives in `packages/contracts`, which the item did not name.
+- The `--item` Fidelity Review cannot see `tools/expectations/reasons.ts`.
+
+The Maintainer's session settled both, within this ruling:
+- **The item's scope is `packages/runtime`, `packages/contracts` and `packages/assert`.** `contract(...)` records each token through a new runtime export, because the runtime may not import contracts (AD-2).
+- **The `reasons.ts` part (ESC-13.1-10) landed in the Maintainer's PR**, with its XT-conformance-92 cases, and is no longer part of the item. A Component's first Epic is the lowest `epic` among the `stories/` manifests for that Component. With no manifest, the old Phase-only rule applies, which fails closed.
+
+The item leaves epic 13's `waiting_on_maintainer` and stays `in-progress`. Its planning notes are in `bmad-build-auto-result-retro-13-reflection-contracts.md`.
+
 The six `blocked-by` lines for later Phases (mail, bus, database) need no AC of their own. The global rule and the Phase sweep Stories re-verify them, as `decisions/MAINT-2026-10-25-epic-12-items.md` item 4 settled.

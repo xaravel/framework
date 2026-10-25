@@ -15,7 +15,10 @@
 //
 //   not-ported-yet                   always valid.
 //   blocked-by:<c>                   `<c>` is a `name` in tools/scaffold/packages.jsonl whose `phase`
-//                                    is greater than the `phase` of the line's Inventory `component`.
+//                                    is greater than the `phase` of the line's Inventory `component`,
+//                                    or equal to it while `<c>`'s first Epic (the lowest `epic` of a
+//                                    `stories/` manifest with that `component`) is later than the
+//                                    line's Component's (ESC-13.1-10).
 //   intentional-divergence:DIV-<n>   `<n>` matches `[1-9][0-9]*` and `decisions/DIV-<n>.md` exists.
 //   php-only                         `escalation` names an approved Escalation with `trigger: php-only`
 //                                    whose `test_ids` lists the id.
@@ -45,6 +48,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { escalationStatus, ESCALATIONS_DIR, parseEscalation, type EscalationStatus, type Trigger } from "../escalations/escalations";
 import { compareUnits, INVENTORY_DIR, type InventoryEntry } from "../inventory/inventory";
+import { readManifests, STORIES_DIR } from "../ownership/ownership";
 import { readExpectations, readWorkingInventory, type Shard } from "../pin-bump/pin-bump";
 import { TABLE_PATH } from "../scaffold/scaffold";
 import { readTable } from "../scaffold/table";
@@ -137,6 +141,8 @@ type EscalationInfo = { status: EscalationStatus; trigger: Trigger; testIds: rea
 export interface Context {
   /** Package table `phase` by `name`. */
   phases: ReadonlyMap<string, number>;
+  /** A Component's first Epic: the lowest `epic` of a `stories/` manifest naming it. */
+  firstEpics: ReadonlyMap<string, number>;
   /** Inventory entries by id. */
   inventory: ReadonlyMap<string, Pick<InventoryEntry, "component" | "oracle">>;
   deferredItems: ReadonlySet<string>;
@@ -160,6 +166,16 @@ export function contextFor(root: string, violations: string[]): Context {
   } catch (error) {
     violations.push(`${TABLE_PATH}: unreadable: ${message(error)}`);
   }
+  // Manifest violations are the ownership check's; a root without `stories/` gives no Epics, so only the Phase rule applies.
+  const firstEpics = new Map<string, number>();
+  if (existsSync(join(root, STORIES_DIR))) {
+    for (const manifest of readManifests(root).manifests) {
+      const seen = firstEpics.get(manifest.component);
+      if (seen === undefined || manifest.epic < seen) {
+        firstEpics.set(manifest.component, manifest.epic);
+      }
+    }
+  }
   const inventory = new Map<string, Pick<InventoryEntry, "component" | "oracle">>();
   try {
     for (const entry of readWorkingInventory(root)) {
@@ -171,6 +187,7 @@ export function contextFor(root: string, violations: string[]): Context {
   const escalations = new Map<string, EscalationInfo>();
   return {
     phases,
+    firstEpics,
     inventory,
     deferredItems: new Set(deferred.members),
     nonGoals: new Set(nonGoals.members),
@@ -255,7 +272,14 @@ function reasonProblem(context: Context, reason: string, id: string, variant: st
     if (own === undefined) {
       return `blocked-by: the test's Component ${entry.component} is not in ${TABLE_PATH}`;
     }
-    return blocker > own ? null : `blocked-by: ${value} is in Phase ${blocker}, not later than ${entry.component}'s Phase ${own}`;
+    if (blocker > own) {
+      return null;
+    }
+    const [blockerEpic, ownEpic] = [context.firstEpics.get(value), context.firstEpics.get(entry.component)];
+    if (blocker === own && blockerEpic !== undefined && ownEpic !== undefined && blockerEpic > ownEpic) {
+      return null;
+    }
+    return `blocked-by: ${value} is in Phase ${blocker}, not later than ${entry.component}'s Phase ${own}${blocker === own ? `, and not built in a later Epic (${value}: ${blockerEpic ?? "no Story"}, ${entry.component}: ${ownEpic ?? "no Story"})` : ""}`;
   }
   if (prefix === "intentional-divergence") {
     const match = DIV.exec(value);
