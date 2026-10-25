@@ -31,6 +31,9 @@ class Widget extends mixin(Base, Macroable) {
   declare invoked: (value: string) => unknown;
   declare fromMixin: () => unknown;
   declare fromStatic: () => unknown;
+  declare inherited: () => unknown;
+  declare overridden: () => unknown;
+  declare inheritedStatic: () => unknown;
 
   declare static greet: (name: string) => unknown;
   declare static self: () => unknown;
@@ -66,6 +69,26 @@ class WidgetMixin {
   }
 
   tag = "mixin";
+}
+
+class ParentMixin {
+  static inheritedStatic(): () => string {
+    return () => "parent-static";
+  }
+
+  inherited(): () => string {
+    return () => "parent-inherited";
+  }
+
+  overridden(): () => string {
+    return () => "parent-overridden";
+  }
+}
+
+class ChildMixin extends ParentMixin {
+  override overridden(): () => string {
+    return () => "child-overridden";
+  }
 }
 
 registerClass("Xaravel\\Tests\\Macroable\\Widget", Widget);
@@ -180,6 +203,29 @@ xaravelTest(
       Widget.mixin(new WidgetMixin(), false);
       Assert.assertSame("kept", widget.fromMixin());
 
+      // A mixin whose class extends another: inherited prototype and static methods count, and an override wins.
+      Assert.assertNull(Widget.mixin(new ChildMixin()));
+      Assert.assertSame("parent-inherited", widget.inherited());
+      Assert.assertSame("child-overridden", widget.overridden());
+      Assert.assertSame("parent-static", widget.inheritedStatic());
+
+      // A plain object has no methods to mix in: the built-ins of Object are never called.
+      Assert.assertNull(Widget.mixin({}));
+      Assert.assertFalse(Widget.hasMacro("hasOwnProperty"));
+      Assert.assertFalse(Widget.hasMacro("keys"));
+      Assert.assertFalse(Widget.hasMacro("assign"));
+
+      // hasMacro is Upstream's isset: a null macro is not registered, and calling it throws.
+      Widget.macro("n", null);
+      Assert.assertFalse(Widget.hasMacro("n"));
+      assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Widget::n does not exist.", () => Widget.__callStatic("n", []), "a null macro");
+
+      // The trait itself is never a using class, so nothing is installed on it for later classes to copy.
+      assertThrows(TypeError, "does not use", () => Macroable.macro("x", () => "x"), "macro on the trait");
+      class Later extends mixin(null, Macroable) {}
+      Assert.assertFalse("x" in Later, "no static x on a later using class, own or inherited");
+      Assert.assertFalse("x" in Later.prototype, "no instance x on a later using class, own or inherited");
+
       // An unregistered or flushed macro: BadMethodCallException naming the called class.
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\SubWidget::missing does not exist.", () => sub.__call("missing", []), "__call");
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\SubWidget::missing does not exist.", () => SubWidget.__callStatic("missing", []), "__callStatic");
@@ -199,6 +245,7 @@ xaravelTest(
     assertThrows(ScopeFrameException, "no active Scope Frame", () => Other.macro("greet", () => "x"), "macro with no frame");
     assertThrows(ScopeFrameException, "no active Scope Frame", () => Other.flushMacros(), "flushMacros with no frame");
     assertThrows(ScopeFrameException, "no active Scope Frame", () => Other.mixin(new WidgetMixin()), "mixin with no frame");
+    assertThrows(ScopeFrameException, "no active Scope Frame", () => Other.mixin(new (class {})()), "mixin of an object with no methods with no frame");
     Assert.assertFalse(Other.hasMacro("greet"), "a read with no frame sees an empty table");
 
     // Request, job and command frames.
@@ -207,6 +254,7 @@ xaravelTest(
         assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.macro("greet", () => "x"), `macro in a ${kind} frame`);
         assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.flushMacros(), `flushMacros in a ${kind} frame`);
         assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.mixin(new WidgetMixin()), `mixin in a ${kind} frame`);
+        assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.mixin(new (class {})()), `mixin of an object with no methods in a ${kind} frame`);
         Assert.assertFalse(Other.hasMacro("greet"));
       });
       // Under a test frame too: the request frame's kind decides.
@@ -230,6 +278,16 @@ xaravelTest(
     inTest(() => {
       Assert.assertFalse(Other.hasMacro("greet"), "a later test frame does not see an ended test's macros");
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Other::greet does not exist.", () => Other.greet("x"), "the dispatcher in a later test frame");
+    });
+
+    // Any other unit frame holds its writes too: a root `unit` frame, discarded when it ends.
+    runInRootFrame("unit", () => {
+      Other.macro("greet", (name: string) => `unit:${name}`);
+      Assert.assertTrue(Other.hasMacro("greet"));
+      Assert.assertSame("unit:u", Other.greet("u"));
+    });
+    inTest(() => {
+      Assert.assertFalse(Other.hasMacro("greet"), "a root unit frame's macros are discarded when it ends");
     });
 
     // Two concurrent test frames.
@@ -286,7 +344,7 @@ function section(page: string, title: string): string {
 
 xaravelTest(
   "XT-macroable-3",
-  "@xaravel/macroable is complete: `bun run api-surface:gate macroable` reports 0 unexplained (AD-15); docs/macroable.md has a Divergences section citing DIV-11.2 and the open Escalations, every DIV it cites exists, and the README links the docs page",
+  "@xaravel/macroable is complete: `bun run api-surface:gate macroable` reports 0 unexplained (AD-15); docs/macroable.md has a Divergences section citing DIV-11.2 and DIV-12.10 and the ESC-11.1-2 and ESC-11.1-3 follow-ups, every DIV it cites exists, and the README links the docs page",
   () => {
     const gate = bunRun("api-surface:gate", ["macroable"]);
     Assert.assertSame(0, gate.status, outputOf(gate));
@@ -298,12 +356,15 @@ xaravelTest(
     }
     const divergences = section(page, "Divergences");
     Assert.assertNotSame("", divergences, "docs/macroable.md has a ## Divergences section");
-    Assert.assertStringContainsString("DIV-11.2", divergences);
-    for (const escalation of ["ESC-11.1-1", "ESC-11.1-2"]) {
-      Assert.assertStringContainsString(escalation, divergences);
+    for (const cited of ["DIV-11.2", "DIV-12.10", "ESC-11.1-2", "ESC-11.1-3"]) {
+      Assert.assertStringContainsString(cited, divergences);
     }
     for (const match of divergences.matchAll(/\bDIV-(\d+)\b/g)) {
       Assert.assertTrue(existsSync(join(REPO, "decisions", `DIV-${match[1] ?? ""}.md`)), `DIV-${match[1] ?? ""} is cited but does not exist`);
+    }
+    for (const match of divergences.matchAll(/\bDIV-(\d+)\.(\d+)\b/g)) {
+      const record = readFileSync(join(REPO, "decisions", `DIV-${match[1] ?? ""}.md`), "utf8");
+      Assert.assertStringContainsString(`**${match[0]}**`, record, `${match[0]} is cited but is not a clause of decisions/DIV-${match[1] ?? ""}.md`);
     }
 
     const readme = readFileSync(join(PACKAGE, "README.md"), "utf8");

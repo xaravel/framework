@@ -3,7 +3,8 @@
 // Macro bodies Upstream rebinds are `function` expressions, and its `static function` closures are arrow functions
 // (PORTING.md § Mechanical expression rule / By hand). `__CLASS__` is the test class's FQCN as a string literal.
 // `$obj::m()` is a static call on `obj`'s class, written `classOf(obj).m()`. The fixtures are registered in `setUp`
-// with `registerTestClass`, and their macros are typed as `declare` members (AD-26 Macroable row).
+// with `registerTestClass`, and their macros are typed as `declare` members (AD-26 Macroable row). A call to a name
+// that was never registered goes through `__callStatic` (DIV-12.10).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { Macroable } from "@xaravel/macroable";
 import { BadMethodCallException, mixin, registerTestClass, toPhpString } from "@xaravel/runtime";
@@ -20,7 +21,6 @@ class EmptyMacroable extends mixin(null, Macroable) {
   declare static "Illuminate\\Tests\\Support\\SupportMacroableTest": () => unknown;
   declare static concatenate: (arg1: string, arg2: string) => unknown;
   declare static greet: (name?: string) => unknown;
-  declare static nonExistentMacro: () => unknown;
   declare static existingMethod: () => unknown;
   declare static nonStaticClosure: () => unknown;
   declare static staticClosure: () => unknown;
@@ -199,7 +199,7 @@ portedTest(`${ID}::testMacroWithDefaultArguments`, { case: SupportMacroableTest 
 portedTest(`${ID}::testCallingUndefinedMacroThrowsException`, { case: SupportMacroableTest }, async function () {
   this.expectException(BadMethodCallException);
 
-  classOf(this.macroable!).nonExistentMacro();
+  classOf(this.macroable!).__callStatic("nonExistentMacro", []); // adapted:DIV-12.10
 });
 
 portedTest(`${ID}::testMethodConflictDoesNotThrowException`, { case: SupportMacroableTest }, async function () {

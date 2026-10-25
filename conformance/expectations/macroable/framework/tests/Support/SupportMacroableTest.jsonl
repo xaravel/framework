@@ -1,4 +1,4 @@
-{"id":"Illuminate\\Tests\\Support\\SupportMacroableTest::testCallingUndefinedMacroThrowsException","variant":"none","status":"fail-known","reason":null,"adapted":null,"escalation":"ESC-11.1-1"}
+{"id":"Illuminate\\Tests\\Support\\SupportMacroableTest::testCallingUndefinedMacroThrowsException","variant":"none","status":"pass","reason":null,"adapted":"DIV-12.10","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportMacroableTest::testClassBasedMacros","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportMacroableTest::testClassBasedMacrosNoReplace","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportMacroableTest::testFlushMacros","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

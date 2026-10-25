@@ -9,16 +9,18 @@
 //
 // Writes (`macro`, `mixin`, `flushMacros`) are base-only writes (DIV-11.2). Inside a `request`, `job` or `command`
 // frame they throw `ScopeFrameException`; inside any other unit frame, a `test` frame included, they are held by that
-// unit and discarded when it ends; with no active frame they throw, as `frameStatic`'s writes do (AD-5). Writes before
-// the Application is `sealed` go to no Application base yet (conformance/escalations/ESC-11.1-2.md), and a child unit
-// of a `request`, `job` or `command` frame is not recognised as one (conformance/escalations/ESC-11.1-3.md).
+// unit and discarded when it ends; with no active frame they throw, as `frameStatic`'s writes do (AD-5). Two limits
+// are follow-ups, not divergences: a write before the Application is `sealed` goes to no Application base until the
+// Story that adds the `sealed` state adds that seam (decisions/ESC-11.1-2.md), and a child unit of a `request`, `job`
+// or `command` frame is recognised once `@xaravel/runtime/scope` exposes the frame chain's kinds
+// (decisions/ESC-11.1-3.md).
 //
 // Dispatch. PHP resolves a missing method at call time through `__call` / `__callStatic`; without a Proxy (AD-7,
 // AD-26) `macro(name)` makes `name` a real member of the using class once, on its prototype and on its static side,
 // unless a member of that name already exists (a real method wins, as in PHP). The member is a dispatcher: it holds no
 // state, is the same in every frame, and forwards to `__call` / `__callStatic`, which read the frame's table. A name
-// that was never registered has no member, so calling it is a JS `TypeError`, not `BadMethodCallException`
-// (conformance/escalations/ESC-11.1-1.md).
+// that was never registered has no member, so calling it is a JS `TypeError`, not `BadMethodCallException`; such a
+// call goes through `__callStatic` / `__call` instead (DIV-12.10).
 import { BadMethodCallException, Error as PhpError, fqcn, registerClass } from "@xaravel/runtime";
 import { currentFrame, type FrameSlot, frameStatic, ScopeFrameException } from "@xaravel/runtime/scope";
 
@@ -30,8 +32,6 @@ type MacroTable = ReadonlyMap<string, unknown>;
 
 /** The `frameStatic` key of a using class's macro table: Upstream's `static::$macros`. */
 const MACROS: unique symbol = Symbol("Illuminate\\Support\\Traits\\Macroable::$macros");
-/** Marks a member `macro()` installed (a dispatcher), as opposed to a real method of the class. */
-const DISPATCHER: unique symbol = Symbol("xaravel.macroable.dispatcher");
 /** The unit kinds in which a base-only write throws (DIV-11.2). */
 const BASE_ONLY_KINDS: ReadonlySet<string> = new Set(["request", "job", "command"]);
 /** Prototype members every object has, never registered by `mixin`. */
@@ -80,7 +80,6 @@ function install(target: object, name: string, fn: (...args: unknown[]) => unkno
   if (name in target) {
     return;
   }
-  Object.defineProperty(fn, DISPATCHER, { value: true, enumerable: false, writable: false, configurable: false });
   Object.defineProperty(target, name, { value: fn, writable: true, enumerable: false, configurable: true });
 }
 
@@ -129,7 +128,7 @@ function mixinMethods(mixin: object): Map<string, (...args: unknown[]) => unknow
     }
   }
   const klass: unknown = (Object.getPrototypeOf(mixin) as { constructor?: unknown } | null)?.constructor;
-  for (let holder: unknown = klass; typeof holder === "function" && holder !== Function.prototype; holder = Object.getPrototypeOf(holder)) {
+  for (let holder: unknown = klass; typeof holder === "function" && holder !== Object && holder !== Function.prototype; holder = Object.getPrototypeOf(holder)) {
     for (const key of Object.getOwnPropertyNames(holder)) {
       const descriptor = Object.getOwnPropertyDescriptor(holder, key)!;
       if (!FUNCTION_KEYS.has(key) && !methods.has(key) && "value" in descriptor && typeof descriptor.value === "function") {
@@ -167,6 +166,7 @@ export class Macroable {
    * with `replace` false, a macro that already exists is kept.
    */
   static mixin(mixin: object, replace: boolean = true): null {
+    guardWrite("mix in macros");
     const self = this as unknown as typeof Macroable;
     for (const [name, method] of mixinMethods(mixin)) {
       if (replace || !self.hasMacro(name)) {
