@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 22:43
+last_updated: 10-24-2026 22:44
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1678,8 +1678,8 @@ action_items:
       base, with an XT-macroable-2 boot-time case) lands, since that Story may not
       edit packages/macroable (finding S2)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
   - id: "epic-11-retro-item-3-porting-macroable-row"
     epic: 11
     action: "Reconcile PORTING.md:26 (Macroable row, Protected): callers type a macro
@@ -1687,8 +1687,8 @@ action_items:
       do, since oxlint's no-unsafe-declaration-merging rejects module augmentation
       of a class (finding S3)"
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
   - id: "epic-11-retro-item-4-remove-scratch-note"
     epic: 11
     action: "Remove _bmad-output/implementation-artifacts/bmad-build-auto-result-retro-10-token-class-string.md
@@ -1718,5 +1718,25 @@ action_items:
       whether packages/contracts' lower-case folders conform, before Epic 12 adds
       a second trait package (finding L4)"
     owner: "Maintainer"
+    status: done
+    ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
+  - id: "epic-11-retro-item-7-macroable-boot-write"
+    epic: 11
+    action: "packages/macroable: once Story 17.4's base-write seam is on main, route
+      macro, mixin and flushMacros made before sealed to the active Application's
+      base (decisions/ESC-11.1-2.md), with an XT-macroable-2 boot-time case; no assertion
+      removed or weakened. Waits in epic 11's waiting_on_maintainer only until Story
+      17.4 is done; Story 17.4's PR takes it out (decisions/MAINT-2026-10-24-epic-11-items.md
+      item 2)"
+    owner: "orchestrator"
     status: open
-    ref: "_bmad-output/implementation-artifacts/epic-11-retro-2026-10-24.md"
+    ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
+  - id: "epic-11-retro-item-8-macroable-ad3-path"
+    epic: 11
+    action: "packages/macroable: move src/Support/Traits/Macroable.ts to src/Traits/Macroable.ts,
+      the Upstream file path under the Component (AD-3, decisions/MAINT-2026-10-24-epic-11-items.md
+      item 6); imports, the barrel, docs and tests follow; no behaviour change; lands
+      before Epic 12 adds Conditionable"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-24-epic-11-items.md"
