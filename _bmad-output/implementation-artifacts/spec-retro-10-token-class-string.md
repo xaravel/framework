@@ -2,7 +2,7 @@
 title: 'A contract token is its FQCN class-string as a PHP value; a lint rule refuses string-coercing one (epic-10-retro-item-10)'
 type: 'feature'
 created: '2026-10-24'
-status: 'in-review'
+status: 'in-progress'
 baseline_revision: '9a4d239c47a5d66c0759f38292dc2360bb325958'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -89,6 +89,39 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-10-24 — Review pass
+- verdicts: 27 findings — high 2, medium 4, low 12, false 2, maybe-false 7
+- findings:
+  - `[low]` `[reject]` (blind) Spec Change Log names edits that are not made in Boundaries or the matrix — the fix is a spec edit, and `<intent-contract>` is read-only at review; the Change Log entry is the amendment record.
+  - `[low]` `[reject]` (blind) AC and Verification omit XT-contracts-12 — spec edit; recorded in the Change Log.
+  - `[low]` `[reject]` (blind) Auto Run Result is stale — spec edit; rewritten at this HALT.
+  - `[low]` `[reject]` (blind) the lint rule also covers `installer/src` — it reuses the plugin's existing `isPackageSource` scope, which AD-16.4 package source includes; widening to spec wording would add a branch for no user harm.
+  - `[low]` `[reject]` (blind) Code Map lists a `registry.ts` change not made — spec edit; the encoders reuse `fqcn`, as the Code Map allows ("or reuse `fqcn`").
+  - `[low]` `[patch]` (blind, edge) the rule skips `+` with a non-literal or token operand, unary `+` and `Number(token)` — real (they throw at runtime, loudly); smallest fix is listing them under the rule's Limits. Not applied: the pass halts on an intent gap.
+  - `[low]` `[reject]` (blind) a shadowing local cannot be disabled — documented limit; a rename fixes it, and nothing in `src/` shadows a token name today.
+  - `[low]` `[patch]` (blind) `classString` re-reads the FQCN instead of `contractTokenName` — duplicate token-name rule (epic 4/10 lesson). Not applied: halt.
+  - `[maybe-false]` `[defer]` (blind) assert's `phpToString` and runtime's `looseEquals` still treat a token as an object — medium if true; settle by asking whether the ruling's "as a PHP value" reaches runtime `==`, which the action does not list. Not applied: halt.
+  - `[maybe-false]` `[defer]` (blind) `assertIsString(token)` prints a quoted string and fails — low/medium if true; the ruling keeps `gettype` unchanged, so the message follows from the approved exporter change.
+  - `[low]` `[patch]` (blind) XT-mockery-16 lacks `with(FQCN)` vs a token argument and a nested `with([token])` — test gap. Not applied: halt.
+  - `[low]` `[reject]` (blind) `assertSameAbstract` fails with "false is true" and is copied in two files — the `typeof` line before it already names the string case; cosmetic.
+  - `[low]` `[reject]` (blind) XT-runtime-41 compares flags against `jsonEncode(FQCN, flags)` — the string path is pinned by the existing jsonEncode tests; cosmetic.
+  - `[false]` `[reject]` (blind) Code Map line numbers for `ArrayComparator.ts` and the `oversized` warning — not a defect in the change.
+  - `[medium]` `[patch]` (edge) Mockery `_matchArg` runs `instanceof` on a token without `Symbol.hasInstance` (a genuine token, XT-contracts-20's `bareParent`) and throws TypeError instead of no-match. Not applied: halt.
+  - `[low]` `[reject]` (edge) an empty-FQCN token compares equal to `""` — `contract()` refuses an empty name; only a hand-built object reaches it.
+  - `[high]` `[intent_gap]` (edge, verification) XT-contracts-4 (`psr.test.ts:147`), XT-contracts-5 (`namespaces.test.ts:274`), XT-contracts-8 (`web.test.ts:308`), XT-contracts-18 (`contract.test.ts:215-216,221-222`) and XT-contracts-20 (`token-predicate.test.ts:59`) check `assertSame(parentToken, parents[i])`. Under AD-9.8 they also pass when a parent is stored as its FQCN string, so merging as built weakens them. Verified at each line: no `===` or `typeof` check beside them. "Item 10's route" lets only XT-contracts-11, 12 and 19 change, and says any other such check stops the item.
+  - `[high]` `[intent_gap]` (verification) same root cause as the row above (grouped).
+  - `[medium]` `[patch]` (verification) JMac `EqualsMatcher` now loosely matches `with(token)` against `true`, where Upstream JMac compares a class-string with `===`. Not applied: halt.
+  - `[medium]` `[patch]` (verification) `classString` in `VarExport.serialize` and `Exporter.shortenedExport` is not observed by a test (nested canonicalizing, an `InvokedCount` message). Not applied: halt.
+  - `[medium]` `[patch]` (verification, other) the `EqualsMatcher` defect (grouped with the row above it).
+  - `[maybe-false]` `[defer]` (intent) the new tests use stand-in tokens, not `@xaravel/contracts` exports — would be low; both predicates are structural and XT-contracts-20 pins them equal.
+  - `[maybe-false]` `[defer]` (intent) Mockery `getDebugType` gives `string` for a token — follows from "prints as that string"; settle at the ruling.
+  - `[false]` `[reject]` (intent) `with(Arrayable)` matches anything PHP-`==` to the FQCN — that is Mockery 1.6.15's `_matchArg` (`$expected == $actual`), which the route approves.
+  - `[maybe-false]` `[defer]` (intent) the literal deviations (jsonEncode row, XT-contracts-12, `installer/src`) — recorded in the Change Log and rows above.
+  - `[maybe-false]` `[defer]` (fidelity, reviewer 2, evidence gap noted) `jsonLastError()` may read 0 outside a Scope Frame — settle by checking whether the harness preload opens a frame.
+  - `[maybe-false]` `[defer]` (fidelity, reviewer 2, evidence gap noted) runtime `phpVarExport` — there is no runtime var_export port (`packages/runtime/src/php/` has none); it is assert's `exporter/VarExport.ts`, as the retro finding records.
+
+Cascade: an intent_gap exists, so lower entries are moot this pass. The attempted change stays on branch `planning/retro-10-token-class-string` (pushed) instead of a patch file, as the run before did.
+
 ## Design Notes
 
 The lint rule is syntactic, as the plugin's rules are: a token is a value imported by name, PascalCase, from `@xaravel/contracts` or a subpath, a PascalCase member of a namespace import of one, or a `const` bound to a `contract(...)` call in the file. Coercions: a template-literal expression, `String(x)`, `x.toString()`, `+`/`+=` with a string or template operand. Its limits (a token passed through a variable or function, `[x].join()`) go in the rule's doc comment (epic 6 lesson).
@@ -105,9 +138,86 @@ Mockery `_matchArg` order for a token, following Upstream with `$expected` the c
 
 ## Auto Run Result
 
-Status: in-progress (waiting on the Maintainer; resume at step 4, review)
-Blocking condition: one more stale check in `packages/contracts`, outside the route's two re-pins. XT-contracts-12 (`packages/contracts/tests/xaravel/aliases.test.ts:369`) asserts `Assert.assertSame(typed, aliasResolver(table({ PROVIDER_ALIASES: [["App\\M", "Illuminate\\Contracts\\Cache\\Factory"]] }))("App\\M"))`. With AD-9.8 a resolver that returned the FQCN string would pass it, so merging the item as built would weaken that Xaravel Test. "Item 10's route" (`decisions/MAINT-2026-10-24-epic-10-items.md`) allows only XT-contracts-11 and XT-contracts-19 to change in `packages/contracts`. Recommended: approve the same identity re-pin for that one line (the `assertSameAbstract` helper XT-contracts-11 already uses in the same file). A sweep of `packages/*/tests` and `conformance/tests` for `assertSame`/`assertEquals` on contract tokens or resolver results found no other such check.
+Status: in-progress (waiting on the Maintainer for the third time; resume at step 4, review). The spec stays `in-progress`, not `blocked`, so the next run resumes it.
+Blocking condition: five more token-identity checks in `packages/contracts`, beyond the route's XT-contracts-11, 12 and 19 re-pins. They check a contract's parents with `assertSame(parentToken, parents[i])`. Under AD-9.8 each would also pass if `contract()` stored a parent as its FQCN string:
 
-The build is complete on branch `planning/retro-10-token-class-string` (`[orchestrator wip]` commit, not merged): `bun run harness` (`SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`), `bun run harness --xaravel` (368 passed, 0 failed, 5 skipped as before), `bun run typecheck` and `bun run lint` clean. A mutation (`aliasResolver` returning the FQCN string) fails XT-contracts-11 and XT-contracts-19. The review layers and the Fidelity Review have not run yet.
+- XT-contracts-4 (`psr.test.ts:147`)
+- XT-contracts-5 (`namespaces.test.ts:274`)
+- XT-contracts-8 (`web.test.ts:308`)
+- XT-contracts-18 (`contract.test.ts:215-216,221-222`)
+- XT-contracts-20 (`token-predicate.test.ts:59`)
 
-Note for the review: the matrix's jsonEncode row is wrong. An FQCN has no `/`, so the expected output is `"Illuminate\\Contracts\\Support\\Arrayable"`, as PHP's `json_encode` writes the string. XT-runtime-41 pins that the token encodes exactly as its FQCN string under each flag. Correct the row through the Spec Change Log at review.
+The route ("Item 10's route", `decisions/MAINT-2026-10-24-epic-10-items.md`, *Added after #396*) says any other such check stops the item. Both the edge-case and verification-gap reviewers found them; the 2026-10-24 sweep missed them because it looked only at resolver results.
+
+Recommended ruling: one general rule in place of another line-by-line list. Every `assertSame`/`assertEquals` in `packages/contracts/tests` whose expected value is a contract token re-pins to JS identity through an `assertSameAbstract`-style helper: PHP `assertSame`, then the same `typeof`, then `===`. No assertion is removed. A grep of `packages/*/tests` and `conformance/tests` for token operands found these five and no others outside `packages/contracts`.
+
+State on this branch (`planning/retro-10-token-class-string`, `[orchestrator wip]` commits, pushed, not merged):
+- The full build, including the XT-contracts-12 re-pin.
+- `bun run typecheck` and `bun run lint` are clean.
+- `bun run harness --xaravel` shows 368 passed, 0 failed, 5 skipped.
+- Full `bun run harness` gives `differ=0` on 2 of 3 runs. On the other run, XT-conformance-134, a test that spawns `tsc -b` and that this item does not touch, timed out under load.
+
+Fidelity Review at tree `a3bf3e0e0a666ba8cc8d0f12608987dd55de9770`:
+- Reviewer 1: pass.
+- Reviewer 2: reject, on two F-7 missing-evidence findings only. That counts as a pass with the evidence gaps noted (`decisions/MAINT-2026-10-24-evidence-gaps.md`).
+- The tree changes when the re-pins land, so the review runs again then.
+
+Patches the next pass applies (triage rows above):
+- Mockery `_matchArg` must not throw on a token without `Symbol.hasInstance`.
+- JMac `EqualsMatcher` compares a token expected strictly, as a class-string.
+- `classString` reads through `contractTokenName`.
+- Tests for nested canonicalizing, an `InvokedCount` message, `with(FQCN)` against a token argument, and nested `with([token])`.
+- The lint rule's Limits list the uncaught `+`/`Number` forms.
+
+## Fidelity Review
+
+### Reviewer 1: pass at tree a3bf3e0e0a666ba8cc8d0f12608987dd55de9770
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `9a4d239c47a5d66c0759f38292dc2360bb325958`, on 2026-10-25T02:07:54.381Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The action item adds or changes no Ported Test, so there are no Upstream assertions to match. |
+| F-2: No expected value is weakened | pass | The changed export-list expectation remains exact and adds classString. Token/string equality follows the supplied Maintainer ruling; no expected value or exception expectation is weakened. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is changed and no Upstream assertion is removed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change adds no adapted marker or Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no Oracle error fixture relied on by this item. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The touched tests check their declared export isolation, token comparisons, exact diagnostics, encodings, serialization slots and JS coercion. Their AD-15.9 and AD-9.8 citations match those subjects and the supplied rulings. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The shown changes stay within the authorized runtime, assert and mockery components. Stand-in tokens are test fixtures permitted by grader isolation; no other component's implementation is stubbed. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared the changed source and declaration inventory with AD-6 and DIV-1. These files retain no asyncRoot tags and introduce no IO root or async callback API requiring one. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no Oracle request file. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"a3bf3e0e0a666ba8cc8d0f12608987dd55de9770","base":"9a4d239c47a5d66c0759f38292dc2360bb325958","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-25T02:07:54.381Z","items":[{"id":"F-1","result":"n/a","note":"The action item adds or changes no Ported Test, so there are no Upstream assertions to match.","findings":[]},{"id":"F-2","result":"pass","note":"The changed export-list expectation remains exact and adds classString. Token/string equality follows the supplied Maintainer ruling; no expected value or exception expectation is weakened.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is changed and no Upstream assertion is removed.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change adds no adapted marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no Oracle error fixture relied on by this item.","findings":[]},{"id":"F-7","result":"pass","note":"The touched tests check their declared export isolation, token comparisons, exact diagnostics, encodings, serialization slots and JS coercion. Their AD-15.9 and AD-9.8 citations match those subjects and the supplied rulings.","findings":[]},{"id":"F-8","result":"pass","note":"The shown changes stay within the authorized runtime, assert and mockery components. Stand-in tokens are test fixtures permitted by grader isolation; no other component's implementation is stubbed.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the changed source and declaration inventory with AD-6 and DIV-1. These files retain no asyncRoot tags and introduce no IO root or async callback API requiring one.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no Oracle request file.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: reject at tree a3bf3e0e0a666ba8cc8d0f12608987dd55de9770
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `9a4d239c47a5d66c0759f38292dc2360bb325958`, on 2026-10-25T02:07:54.381Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The action item assigns no Ported Test IDs and changes no Ported Test; only Xaravel Tests (XT-assert-3, XT-assert-101, XT-mockery-16, XT-runtime-41) are touched. |
+| F-2: No expected value is weakened | pass | No Ported Test changes. The one changed expected value is XT-assert-3's exact export list, which gains 'classString'. It is still an exact toEqual, made to match a real new export, so it is not loosened. No stale_tests path is in scope. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test is added or changed, so there are no Upstream assertions to count. XT-assert-3 loses no assertion. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change sets no Expectations line to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field changes. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c): no assigned or changed Oracle fixture is an error, and the touched XTs declare no Oracle request. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | Traced each XT body against the changed code. XT-assert-101: classString, phpStrict/LooseEquals (e.g. token == true is true, token == 0 is false), assertSame/assertEquals pass and fail messages with diffs, canonicalizing, assertNotSame/NotEquals, exporter, varExport and the unchanged assertIsString all match its string. XT-mockery-16: the _matchArg token branch (identity, instanceof via Symbol.hasInstance, else == on the FQCN string), the no-match messages and phpString/formatArgument/getDebugType/ValueFormatter match its string and ruling item 3. XT-runtime-41: jsonEncode under the flags, phpSerialize slots (r:4) and String(token) throwing TypeError check what they claim. AD-9.8 is the bullet each test verifies. Two gaps remain, below. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Source changes are in packages/runtime (jsonEncode, phpSerialize), packages/assert (classString, comparisons, constraints, exporter, VarExport) and packages/mockery (Expectation._matchArg, values, ValueFormatter), all listed components. Mockery uses assert's grader-side classString and isContractToken, and runtime uses its own isContractToken, as Item 4 requires. No stub, fake or hard-coded return stands in for another component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g): none of the changed files holds an @​asyncRoot tag. The new export classString and every changed function (encodeValue, serializeValue, the comparisons, exporter, _matchArg, the values helpers) are sync and return no Promise, so no tag is missing or false. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+- **F-7** `packages/runtime/tests/xaravel/tokens.test.ts`: The consequence says jsonEncode writes a token 'recording no error', checked by Assert.assertSame(0, jsonLastError()). Under ESC-9.8-1 part 2 the codec records nothing outside an active Scope Frame, and jsonLastError() reads 0 there. xaravelTest only runs the body through runWithMockery (no xaravel.scope.run), so unless the harness preload opens a frame, this assertion holds even if an error were recorded. Run the encodes inside a Scope Frame (or first record a non-zero error so the 0 is meaningful), or supply evidence that a frame is active in this test. _(missing evidence)_
+- **F-7** `packages/runtime/src/php`: AD-9.8 and MAINT-2026-10-24-epic-10-items Item 2 say jsonEncode, phpSerialize and phpVarExport in packages/runtime write a token as its FQCN string, and the action asks for XT cases for each encoder. The change and XT-runtime-41 cover only jsonEncode and phpSerialize; only assert's phpVarExport is tested (XT-assert-101). The prompt does not show whether packages/runtime has a var_export port. If it does, add the token branch and an XT case; if not, record that in the item's scope. _(missing evidence)_
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"reject","tree":"a3bf3e0e0a666ba8cc8d0f12608987dd55de9770","base":"9a4d239c47a5d66c0759f38292dc2360bb325958","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-25T02:07:54.381Z","items":[{"id":"F-1","result":"n/a","note":"The action item assigns no Ported Test IDs and changes no Ported Test; only Xaravel Tests (XT-assert-3, XT-assert-101, XT-mockery-16, XT-runtime-41) are touched.","findings":[]},{"id":"F-2","result":"pass","note":"No Ported Test changes. The one changed expected value is XT-assert-3's exact export list, which gains 'classString'. It is still an exact toEqual, made to match a real new export, so it is not loosened. No stale_tests path is in scope.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test is added or changed, so there are no Upstream assertions to count. XT-assert-3 loses no assertion.","findings":[]},{"id":"F-4","result":"n/a","note":"The change sets no Expectations line to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"Evidence (a): no added line carries an adapted:DIV marker, and no Expectations adapted field changes.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c): no assigned or changed Oracle fixture is an error, and the touched XTs declare no Oracle request.","findings":[]},{"id":"F-7","result":"fail","note":"Traced each XT body against the changed code. XT-assert-101: classString, phpStrict/LooseEquals (e.g. token == true is true, token == 0 is false), assertSame/assertEquals pass and fail messages with diffs, canonicalizing, assertNotSame/NotEquals, exporter, varExport and the unchanged assertIsString all match its string. XT-mockery-16: the _matchArg token branch (identity, instanceof via Symbol.hasInstance, else == on the FQCN string), the no-match messages and phpString/formatArgument/getDebugType/ValueFormatter match its string and ruling item 3. XT-runtime-41: jsonEncode under the flags, phpSerialize slots (r:4) and String(token) throwing TypeError check what they claim. AD-9.8 is the bullet each test verifies. Two gaps remain, below.","findings":[{"path":"packages/runtime/tests/xaravel/tokens.test.ts","detail":"The consequence says jsonEncode writes a token 'recording no error', checked by Assert.assertSame(0, jsonLastError()). Under ESC-9.8-1 part 2 the codec records nothing outside an active Scope Frame, and jsonLastError() reads 0 there. xaravelTest only runs the body through runWithMockery (no xaravel.scope.run), so unless the harness preload opens a frame, this assertion holds even if an error were recorded. Run the encodes inside a Scope Frame (or first record a non-zero error so the 0 is meaningful), or supply evidence that a frame is active in this test.","kind":"missing-evidence"},{"path":"packages/runtime/src/php","detail":"AD-9.8 and MAINT-2026-10-24-epic-10-items Item 2 say jsonEncode, phpSerialize and phpVarExport in packages/runtime write a token as its FQCN string, and the action asks for XT cases for each encoder. The change and XT-runtime-41 cover only jsonEncode and phpSerialize; only assert's phpVarExport is tested (XT-assert-101). The prompt does not show whether packages/runtime has a var_export port. If it does, add the token branch and an XT case; if not, record that in the item's scope.","kind":"missing-evidence"}]},{"id":"F-8","result":"pass","note":"Source changes are in packages/runtime (jsonEncode, phpSerialize), packages/assert (classString, comparisons, constraints, exporter, VarExport) and packages/mockery (Expectation._matchArg, values, ValueFormatter), all listed components. Mockery uses assert's grader-side classString and isContractToken, and runtime uses its own isContractToken, as Item 4 requires. No stub, fake or hard-coded return stands in for another component.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g): none of the changed files holds an @asyncRoot tag. The new export classString and every changed function (encodeValue, serializeValue, the comparisons, exporter, _matchArg, the values helpers) are sync and return no Promise, so no tag is missing or false.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```
