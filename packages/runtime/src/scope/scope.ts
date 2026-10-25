@@ -2,14 +2,17 @@
 //
 // `runInFrame(kind, fn)` runs `fn` in a unit frame; `currentFrame()` is the active frame or null; `frameSlot(key,
 // init)` is a per-frame value, initialised lazily. Writing a slot with no active frame throws `ScopeFrameException`;
-// reading one returns `init()` without storing it.
+// reading one returns `init()` without storing it. `frameKinds()` is the kinds of the active frame chain, innermost
+// first: unit and narrow frames, parents only, origins never followed (decisions/ESC-11.1-3.md).
 //
 // Frame kinds (AD-5.8, Story 9.2). Frames form a parent chain. `runInFrame` opens a unit frame: a child of the active
 // frame, else a root unit. `runInRootFrame` always opens a root unit (production kernels; `interleave` opens its root
 // units through `runInInterleaveUnit`, which also records an origin, below). `runInNarrowFrame` opens a narrow frame
-// that overrides only the slots it declares. A child of a `test` unit keeps only the request, route and CSP nonce
-// slots; its other writes land in the test frame. A child of any other unit keeps its own writes and reads its
-// parent's values until it writes them.
+// that overrides only the slots it declares; its kind is never `test`, so a `test` kind in the chain is always a test
+// unit. A unit nested in a `test` unit at any depth keeps only the request, route and CSP nonce slots; its other writes
+// land in the nearest enclosing test frame (decisions/MAINT-2026-10-24-ad-5-8-any-depth.md). A `test` unit, one nested
+// in another test included, holds its own writes, so they end with it. A child of any other unit keeps its own writes
+// and reads its parent's values until it writes them.
 //
 // End of a unit (AD-5.9). `frameDefer(promise)` adds to the innermost unit's defer list; a unit whose body returns a
 // Promise settles only after the list drains. A sync body that leaves deferred promises throws.
@@ -24,7 +27,8 @@
 // the process's default Application (`setDefaultApplication`) wherever the frame's Application is null, a frame opened
 // with `app` null included (AD-5.3). `frameOverlay(app)` is a unit's overlay for one Application;
 // `frameStatic(Class, key, init)` holds one Upstream static per unit. Both write where an undeclared slot
-// write goes (AD-5.8): through narrow frames, from a child of a `test` unit into the test frame, else into the unit.
+// write goes (AD-5.8): through narrow frames, from a unit nested in a `test` unit at any depth into the nearest test
+// frame, else into the unit.
 // Reads walk the chain up to the first unit that holds the key. A unit's overlays and statics are discarded when it
 // ends, and a write to an ended unit throws, a `frameSlot` write included. The runtime never imports Foundation: an
 // Application is any object.
@@ -71,11 +75,11 @@ export interface FrameSlot<T> {
 /** A slot key: slots with the same key share storage in a frame. */
 export type FrameSlotKey = string | symbol;
 
-/** The request slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
+/** The request slot: one of the three slots a unit nested in a `test` frame keeps (AD-5.8). */
 export const REQUEST_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.request");
-/** The current route slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
+/** The current route slot: one of the three slots a unit nested in a `test` frame keeps (AD-5.8). */
 export const ROUTE_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.route");
-/** The CSP nonce slot: one of the three slots a child unit of a `test` frame keeps (AD-5.8). */
+/** The CSP nonce slot: one of the three slots a unit nested in a `test` frame keeps (AD-5.8). */
 export const CSP_NONCE_SLOT: unique symbol = Symbol.for("xaravel.scope.slot.csp-nonce");
 
 const CHILD_OF_TEST_SLOTS: ReadonlySet<FrameSlotKey> = new Set<FrameSlotKey>([REQUEST_SLOT, ROUTE_SLOT, CSP_NONCE_SLOT]);
@@ -112,6 +116,19 @@ const storage = new AsyncLocalStorage<Store>();
 /** The active Scope Frame, or null outside any frame. */
 export function currentFrame(): Frame | null {
   return storage.getStore()?.frame ?? null;
+}
+
+/**
+ * The kinds of the active frame chain, innermost first: unit and narrow frames, up the parents only (an `interleave`
+ * unit's origin is never followed), as a frozen array; `[]` outside any frame (decisions/ESC-11.1-3.md). Stores
+ * nothing.
+ */
+export function frameKinds(): readonly string[] {
+  const kinds: string[] = [];
+  for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = frame.parent) {
+    kinds.push(frame.frame.kind);
+  }
+  return Object.freeze(kinds);
 }
 
 // No `@asyncRoot` tag on runInFrame, runInRootFrame or runInNarrowFrame, though each accepts an async body: each is a
@@ -221,11 +238,15 @@ export function frameStatic<T>(Class: abstract new (...args: never[]) => unknown
 
 /**
  * Runs `fn` in a narrow frame of `kind` that overrides only the `slots` it declares; every other read and write
- * passes through to the enclosing unit frame (AD-5.8). Its result is returned unchanged. Untagged, as a generic Scope
- * Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
+ * passes through to the enclosing unit frame (AD-5.8). The kind `test` is reserved for test units and throws
+ * `TypeError`, so `frameKinds()` never shows a narrow `test` frame. Its result is returned unchanged. Untagged, as a
+ * generic Scope Frame runner (decisions/ESC-9.3-1.md); see the note above `runInFrame`.
  */
 export function runInNarrowFrame<T>(kind: string, slots: Iterable<FrameSlotKey>, fn: () => T): T {
   checkRun("runInNarrowFrame", kind, fn);
+  if (kind === "test") {
+    throw new TypeError("runInNarrowFrame(): the kind test is reserved for test unit frames; open one with runInFrame()");
+  }
   if (slots === null || typeof slots !== "object" || typeof (slots as Partial<Iterable<FrameSlotKey>>)[Symbol.iterator] !== "function") {
     throw new TypeError(`runInNarrowFrame(): the ${kind} frame needs an iterable of slot keys`);
   }
@@ -329,10 +350,10 @@ function checkKey(name: string, key: unknown): asserts key is FrameSlotKey {
 /**
  * The entries for `owner` (an Application or a Class) in the nearest unit frame up the chain from the active frame
  * that holds `key` for it, or null when none does. Writes go to `ownerOf(store, OVERLAY_KEY)` instead; the two
- * agree because a child of a `test` unit never holds overlay or static entries (its writes, and the `init()` values
- * `frameStatic` stores, all land in the test frame), so the first unit up the chain that holds a key is its owner or
- * an ancestor the owner reads through. From a root unit the walk continues from its origin (`readUp`), which a write
- * never reaches.
+ * agree because a non-test unit nested in a `test` unit never holds overlay or static entries (its writes, and the
+ * `init()` values `frameStatic` stores, all land in the nearest test frame, which a nested `test` unit is for its
+ * own), so the first unit up the chain that holds a key is its owner or an ancestor the owner reads through. From a
+ * root unit the walk continues from its origin (`readUp`), which a write never reaches.
  */
 function lookUp(kind: "overlays" | "statics", owner: object, key: FrameSlotKey): Map<FrameSlotKey, unknown> | null {
   for (let frame: Store | null = storage.getStore() ?? null; frame !== null; frame = readUp(frame)) {
@@ -402,6 +423,16 @@ function nearestUnit(store: Store | null): Store | null {
   return frame;
 }
 
+/** Whether a `test` unit is `store` or one of its parents (origins never followed): a unit below it is nested in a test. */
+function underTest(store: Store | null): boolean {
+  for (let frame = store; frame !== null; frame = frame.parent) {
+    if (frame.type === "unit" && frame.frame.kind === "test") {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** The frame a write of `key` from `store` goes to (Design Notes: owner frame), or null when none takes it. */
 function ownerOf(store: Store, key: FrameSlotKey): Store | null {
   for (let frame: Store | null = store; frame !== null; frame = frame.parent) {
@@ -411,7 +442,10 @@ function ownerOf(store: Store, key: FrameSlotKey): Store | null {
       }
       continue;
     }
-    if (nearestUnit(frame.parent)?.frame.kind === "test" && !CHILD_OF_TEST_SLOTS.has(key)) {
+    if (frame.frame.kind === "test") {
+      return frame;
+    }
+    if (underTest(frame.parent) && !CHILD_OF_TEST_SLOTS.has(key)) {
       continue;
     }
     return frame;

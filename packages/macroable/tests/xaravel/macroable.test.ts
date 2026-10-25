@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Macroable } from "@xaravel/macroable";
 import { BadMethodCallException, classUsesRecursive, fqcn, mixin, registerClass } from "@xaravel/runtime";
-import { runInFrame, runInNarrowFrame, runInRootFrame, ScopeFrameException } from "@xaravel/runtime/scope";
+import { interleave, runInFrame, runInNarrowFrame, runInRootFrame, ScopeFrameException } from "@xaravel/runtime/scope";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 const PACKAGE = join(REPO, "packages", "macroable");
@@ -239,7 +239,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-macroable-2",
-  "Macro registration is a base-only write (DIV-11.2, AD-5): macro, mixin and flushMacros pass only when the innermost frame is a test frame, and throw ScopeFrameException with no active frame and in every other frame (request, job, command, a root unit, and a unit or narrow frame nested in a test frame) (ESC-11.1-6); a test frame holds its macros and discards them when it ends, so two concurrent test frames never see each other's macros",
+  "Macro registration is a base-only write (DIV-11.2, AD-5): macro, mixin and flushMacros pass only when the frame chain (frameKinds()) holds a test frame and no request, job or command frame, so a test frame and a unit or narrow frame nested in one at any depth write, landing in the test frame as AD-5.8 routes it; they throw ScopeFrameException with no active frame, under a request, job or command frame anywhere in the chain (a test opened inside one included), and in a chain with no test frame (a root unit, an interleave unit, whose origin is not followed) (ESC-11.1-3, ESC-11.1-5); a test frame holds its macros and discards them when it ends, so two concurrent test frames never see each other's macros",
   async () => {
     // No active frame.
     assertThrows(ScopeFrameException, "no active Scope Frame", () => Other.macro("greet", () => "x"), "macro with no frame");
@@ -257,7 +257,7 @@ xaravelTest(
         assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.mixin(new (class {})()), `mixin of an object with no methods in a ${kind} frame`);
         Assert.assertFalse(Other.hasMacro("greet"));
       });
-      // Under a test frame too: the request frame's kind decides.
+      // Under a test frame too: a request, job or command frame anywhere in the chain decides.
       inTest(() =>
         runInFrame(kind, () => {
           assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.macro("greet", () => "x"), `macro in a ${kind} frame under a test`);
@@ -267,27 +267,85 @@ xaravelTest(
       );
     }
 
-    // A test frame holds its macros and discards them when it ends. A unit or narrow frame nested in it reads them but
-    // may not write (decisions/ESC-11.1-6.md): only the innermost `test` frame takes a write.
+    // Test in request, and unit in request in test: a request, job or command frame anywhere in the chain throws.
+    for (const kind of ["request", "job", "command"]) {
+      runInRootFrame(kind, () =>
+        runInFrame("test", () => {
+          assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.macro("greet", () => "x"), `macro in a test frame inside a ${kind} frame`);
+          assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.flushMacros(), `flushMacros in a test frame inside a ${kind} frame`);
+          assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.mixin(new WidgetMixin()), `mixin in a test frame inside a ${kind} frame`);
+          Assert.assertFalse(Other.hasMacro("greet"));
+        }),
+      );
+      inTest(() =>
+        runInFrame(kind, () =>
+          runInFrame("unit", () => {
+            assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.macro("greet", () => "x"), `macro in a unit in a ${kind} frame in a test`);
+            assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.flushMacros(), `flushMacros in a unit in a ${kind} frame in a test`);
+            assertThrows(ScopeFrameException, `inside a ${kind} frame`, () => Other.mixin(new WidgetMixin()), `mixin in a unit in a ${kind} frame in a test`);
+            Assert.assertFalse(Other.hasMacro("greet"));
+          }),
+        ),
+      );
+    }
+
+    // A test frame holds its macros and discards them when it ends. A unit or narrow frame nested in it at any depth
+    // writes too, to the test frame's overlay (decisions/ESC-11.1-5.md, second bullet), as AD-5.8 routes the write
+    // (decisions/MAINT-2026-10-24-ad-5-8-any-depth.md).
     inTest(() => {
       Other.macro("greet", (name: string) => `a:${name}`);
       Assert.assertSame("a:x", Other.greet("x"));
       runInFrame("unit", () => {
         Assert.assertSame("a:y", Other.greet("y"), "a nested unit reads the test's macros");
-        assertThrows(ScopeFrameException, "inside a unit frame", () => Other.macro("greet", (name: string) => `nested:${name}`), "macro in a unit nested in a test");
-        assertThrows(ScopeFrameException, "inside a unit frame", () => Other.flushMacros(), "flushMacros in a unit nested in a test");
-        assertThrows(ScopeFrameException, "inside a unit frame", () => Other.mixin(new WidgetMixin()), "mixin in a unit nested in a test");
+        Other.macro("greet", (name: string) => `unit:${name}`);
+        Assert.assertSame("unit:y", Other.greet("y"), "macro in a unit nested in a test");
       });
+      Assert.assertSame("unit:z", Other.greet("z"), "a unit nested in a test writes to the test frame");
+      runInFrame("unit", () => Other.flushMacros());
+      Assert.assertFalse(Other.hasMacro("greet"), "flushMacros in a unit nested in a test flushes the test frame's table");
+      runInFrame("unit", () => Other.mixin(new WidgetMixin()));
+      Assert.assertTrue(Other.hasMacro("fromStatic"), "mixin in a unit nested in a test lands in the test frame");
+      Other.flushMacros();
+
       runInNarrowFrame("narrow", [], () => {
-        Assert.assertSame("a:n", Other.greet("n"), "a nested narrow frame reads the test's macros");
-        assertThrows(ScopeFrameException, "inside a narrow frame", () => Other.macro("greet", (name: string) => `narrow:${name}`), "macro in a narrow frame nested in a test");
-        assertThrows(ScopeFrameException, "inside a narrow frame", () => Other.flushMacros(), "flushMacros in a narrow frame nested in a test");
-        assertThrows(ScopeFrameException, "inside a narrow frame", () => Other.mixin(new WidgetMixin()), "mixin in a narrow frame nested in a test");
+        Other.macro("greet", (name: string) => `narrow:${name}`);
+        Assert.assertSame("narrow:n", Other.greet("n"), "macro in a narrow frame nested in a test");
       });
-      Assert.assertSame("a:z", Other.greet("z"), "the nested frames' writes did not land");
+      Assert.assertSame("narrow:z", Other.greet("z"), "a narrow frame nested in a test writes to the test frame");
+      runInNarrowFrame("narrow", [], () => Other.flushMacros());
+      Assert.assertFalse(Other.hasMacro("greet"), "flushMacros in a narrow frame nested in a test flushes the test frame's table");
+      runInNarrowFrame("narrow", [], () => Other.mixin(new WidgetMixin()));
+      Assert.assertTrue(Other.hasMacro("fromStatic"), "mixin in a narrow frame nested in a test lands in the test frame");
+      Other.flushMacros();
+
+      Other.macro("greet", (name: string) => `a:${name}`);
+      runInFrame("unit", () =>
+        runInFrame("unit", () => {
+          Other.macro("greet", (name: string) => `deep:${name}`);
+          Assert.assertSame("deep:d", Other.greet("d"), "macro in a unit in a unit in a test");
+        }),
+      );
+      Assert.assertSame("deep:z", Other.greet("z"), "a unit nested two deep writes to the test frame (AD-5.8)");
+      runInFrame("unit", () => runInNarrowFrame("narrow", [], () => runInFrame("unit", () => Other.mixin(new WidgetMixin()))));
+      Assert.assertTrue(Other.hasMacro("fromStatic"), "mixin in a unit three deep lands in the test frame");
+      runInFrame("unit", () => runInFrame("unit", () => Other.flushMacros()));
+      Assert.assertFalse(Other.hasMacro("greet"), "flushMacros in a unit nested two deep flushes the test frame's table");
+      Assert.assertFalse(Other.hasMacro("fromStatic"));
+      runInFrame("unit", () => runInFrame("unit", () => Other.macro("greet", (name: string) => `last:${name}`)));
+      Assert.assertSame("last:z", Other.greet("z"), "a write made only from a unit two deep is the test frame's");
+
+      // A test frame nested in a unit in a test is the nearest test frame: its macros end with it.
+      runInFrame("unit", () =>
+        runInFrame("test", () => {
+          Other.macro("inner", () => "inner");
+          Assert.assertTrue(Other.hasMacro("inner"), "a macro registered in a nested test frame is seen in it");
+        }),
+      );
+      Assert.assertFalse(Other.hasMacro("inner"), "a nested test frame's macros end with it, not landing in the outer test");
+      Assert.assertSame("last:z", Other.greet("z"), "the outer test's macros are unchanged by the nested test");
     });
     inTest(() => {
-      Assert.assertFalse(Other.hasMacro("greet"), "a later test frame does not see an ended test's macros");
+      Assert.assertFalse(Other.hasMacro("greet"), "a later test frame does not see an ended test's macros, nested writes included");
       assertThrows(BadMethodCallException, "Method Xaravel\\Tests\\Macroable\\Other::greet does not exist.", () => Other.greet("x"), "the dispatcher in a later test frame");
     });
 
@@ -298,6 +356,18 @@ xaravelTest(
       assertThrows(ScopeFrameException, "inside a unit frame", () => Other.mixin(new (class {})()), "mixin of an object with no methods in a root unit frame");
       Assert.assertFalse(Other.hasMacro("greet"));
     });
+
+    // An interleave unit of a test is a root unit whose origin is the test; the frame-chain read does not follow the
+    // origin, so its writes throw.
+    await inTest(() =>
+      interleave([
+        async () => {
+          assertThrows(ScopeFrameException, "inside a unit frame", () => Other.macro("greet", () => "x"), "macro in an interleave unit of a test");
+          assertThrows(ScopeFrameException, "inside a unit frame", () => Other.flushMacros(), "flushMacros in an interleave unit of a test");
+          assertThrows(ScopeFrameException, "inside a unit frame", () => Other.mixin(new WidgetMixin()), "mixin in an interleave unit of a test");
+        },
+      ]),
+    );
 
     // Two concurrent test frames.
     let releaseA: () => void = () => {};

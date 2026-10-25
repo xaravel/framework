@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-24-2026 23:27
+last_updated: 10-24-2026 23:56
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1667,7 +1667,7 @@ action_items:
       note and the spec's deferred entry follow; no assertion removed or weakened
       (finding S1)"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "decisions/MAINT-2026-10-24-ad-5-8-any-depth.md"
   - id: "epic-11-retro-item-2-boot-time-macro-route"
     epic: 11

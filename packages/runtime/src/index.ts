@@ -13,6 +13,7 @@ export {
   type FrameSlotKey,
   frameAsyncGenerator,
   frameDefer,
+  frameKinds,
   frameOverlay,
   frameSlot,
   frameStatic,

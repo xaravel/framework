@@ -1,6 +1,6 @@
 // Xaravel Tests for Story 9.2: frame kinds, the defer list and frame propagation (AD-5.1, AD-5.8, AD-5.9;
-// ESC-8.3-1). One test per acceptance criterion, in order. `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each
-// body starts outside any Scope Frame.
+// ESC-8.3-1). One test per acceptance criterion, in order; XT-runtime-42 is the frame-chain read (ESC-11.1-3).
+// `xaravelTest` opens no frame (ESC-4.2-1 item 7), so each body starts outside any Scope Frame.
 import { Assert, xaravelTest } from "@xaravel/assert";
 import {
   bindToFrame,
@@ -9,7 +9,10 @@ import {
   type Frame,
   frameAsyncGenerator,
   frameDefer,
+  frameKinds,
+  frameOverlay,
   frameSlot,
+  frameStatic,
   frameStreamSource,
   interleave,
   REQUEST_SLOT,
@@ -128,7 +131,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-runtime-6",
-  "a child unit opened inside a test frame holds only the request, route and CSP nonce, and its other writes land in the test frame; a child unit inside a non-test frame keeps its own writes; runInRootFrame, and interleave, open a root unit that sees no enclosing frame's slots (AD-5.8)",
+  "a unit opened inside a test frame, at any depth, holds only the request, route and CSP nonce, and its other writes (slots, overlays and statics) land in the nearest enclosing test frame; a child unit inside a non-test frame keeps its own writes; runInRootFrame, and interleave, open a root unit that sees no enclosing frame's slots (AD-5.8)",
   async () => {
     const request = frameSlot<string | null>(REQUEST_SLOT, () => null);
     const route = frameSlot<string | null>(ROUTE_SLOT, () => null);
@@ -168,6 +171,83 @@ xaravelTest(
       Assert.assertNull(route.get(), "the route stays in the child");
       Assert.assertNull(nonce.get(), "the CSP nonce stays in the child");
     });
+
+    // A unit nested at any depth in a test frame, through a job unit and a narrow frame too: its writes land in the
+    // nearest test frame, and it keeps only the request, route and CSP nonce (decisions/MAINT-2026-10-24-ad-5-8-any-depth.md).
+    const app = {};
+    class Clock {}
+    const testNow = (): ReturnType<typeof frameStatic<string | null>> => frameStatic(Clock, "testNow", () => null);
+    for (const middle of ["request", "unit", "job"]) {
+      await runInFrame("test", async () => {
+        const test = currentFrame();
+        request.set("test-request");
+        await runInFrame(middle, async () => {
+          await runInFrame("unit", async () => {
+            const write = (depth: string): void => {
+              Assert.assertTrue(currentFrame() !== test, `${middle}: the ${depth} unit is its own frame`);
+              request.set(`${depth}-request`);
+              route.set(`${depth}-route`);
+              nonce.set(`${depth}-nonce`);
+              auth.set(`${depth}-user`);
+              session.get().set("flash", depth);
+              frameOverlay(app).set("guard", depth);
+              testNow().set(depth);
+              Assert.assertSame(`${depth}-request`, request.get(), `${middle}: the ${depth} unit reads its own request`);
+            };
+            write("grandchild");
+            await ticks(2);
+            runInNarrowFrame("transaction", [], () => {
+              runInFrame("unit", () => write("great-grandchild"));
+            });
+            Assert.assertSame("grandchild-request", request.get(), `${middle}: the grandchild keeps its own request; the great-grandchild's stays in it`);
+            Assert.assertSame("great-grandchild-user", auth.get(), `${middle}: the great-grandchild's auth is the test frame's`);
+          });
+          Assert.assertSame("test-request", request.get(), `${middle}: the grandchild's request stays in it`);
+          Assert.assertNull(route.get(), `${middle}: the grandchild's route stays in it`);
+          Assert.assertSame("great-grandchild-user", auth.get(), `${middle}: the middle unit reads the test frame's auth`);
+        });
+        Assert.assertSame(test, currentFrame());
+        Assert.assertSame("great-grandchild-user", auth.get(), `${middle}: auth lands in the test frame at any depth`);
+        Assert.assertSame("great-grandchild", session.get().get("flash") ?? null, `${middle}: the session's init value lives in the test frame`);
+        Assert.assertSame("great-grandchild", frameOverlay(app).get("guard"), `${middle}: an overlay write lands in the test frame`);
+        Assert.assertSame("great-grandchild", testNow().get(), `${middle}: a static write lands in the test frame`);
+        Assert.assertSame("test-request", request.get(), `${middle}: the test frame's request is unchanged`);
+        Assert.assertNull(route.get(), `${middle}: the route stays in the nested unit`);
+        Assert.assertNull(nonce.get(), `${middle}: the CSP nonce stays in the nested unit`);
+      });
+    }
+    Assert.assertNull(currentFrame());
+    Assert.assertFalse(runInFrame("unit", () => frameOverlay(app).has("guard")), "the test frame's writes ended with it");
+
+    // A test unit nested in another test (test > test > unit, test > unit > test > unit) is the nearest test frame:
+    // the innermost unit's writes land in the inner test, end with it, and leave the outer test's values unchanged.
+    for (const shape of ["test > test > unit", "test > unit > test > unit"]) {
+      runInFrame("test", () => {
+        auth.set("outer-user");
+        frameOverlay(app).set("guard", "outer");
+        testNow().set("outer");
+        const inner = (): void => {
+          runInFrame("test", () => {
+            runInFrame("unit", () => {
+              auth.set("inner-user");
+              frameOverlay(app).set("guard", "inner");
+              testNow().set("inner");
+            });
+            Assert.assertSame("inner-user", auth.get(), `${shape}: the slot write is seen in the inner test`);
+            Assert.assertSame("inner", frameOverlay(app).get("guard"), `${shape}: the overlay write is seen in the inner test`);
+            Assert.assertSame("inner", testNow().get(), `${shape}: the static write is seen in the inner test`);
+          });
+        };
+        if (shape === "test > test > unit") {
+          inner();
+        } else {
+          runInFrame("unit", inner);
+        }
+        Assert.assertSame("outer-user", auth.get(), `${shape}: the inner test's slot write ended with it`);
+        Assert.assertSame("outer", frameOverlay(app).get("guard"), `${shape}: the inner test's overlay write ended with it`);
+        Assert.assertSame("outer", testNow().get(), `${shape}: the inner test's static write ended with it`);
+      });
+    }
 
     // Child of a non-test frame: its own writes stay in it; it reads the parent's values it has not written.
     for (const kind of ["unit", "job"]) {
@@ -597,5 +677,57 @@ xaravelTest(
     Assert.assertInstanceOf(TypeError, thrownBy(() => bindToFrame(null as unknown as () => void)));
     Assert.assertInstanceOf(TypeError, thrownBy(() => frameStreamSource(null as unknown as object)));
     Assert.assertInstanceOf(TypeError, thrownBy(() => frameAsyncGenerator({} as unknown as AsyncGenerator)));
+  },
+);
+
+xaravelTest(
+  "XT-runtime-42",
+  "frameKinds() is the active frame chain's kinds, innermost first, unit and narrow frames, parents only (origins not followed), frozen, and [] outside any frame; runInNarrowFrame refuses the kind test (AD-5.8, ESC-11.1-3)",
+  async () => {
+    /** Asserts `frameKinds()` is `expected`, frozen, before and after an `await`. */
+    const check = async (expected: readonly string[], label: string): Promise<void> => {
+      const before = frameKinds();
+      Assert.assertSame(expected.join(","), before.join(","), label);
+      Assert.assertSame(expected.length, before.length, label);
+      Assert.assertTrue(Object.isFrozen(before), `${label}: frozen`);
+      await ticks(2);
+      Assert.assertSame(expected.join(","), frameKinds().join(","), `${label}: after an await`);
+    };
+
+    Assert.assertSame(0, frameKinds().length, "no frame");
+    Assert.assertTrue(Object.isFrozen(frameKinds()), "no frame: frozen");
+    Assert.assertInstanceOf(TypeError, thrownBy(() => (frameKinds() as string[]).push("x")));
+
+    await runInFrame("test", async () => {
+      await check(["test"], "test frame");
+      await runInFrame("unit", async () => {
+        await check(["unit", "test"], "unit in test");
+        await runInFrame("unit", () => check(["unit", "unit", "test"], "unit in unit in test"));
+      });
+      await runInNarrowFrame("transaction", [], () => check(["transaction", "test"], "narrow in test"));
+      await runInFrame("request", async () => {
+        await check(["request", "test"], "request under test");
+        await runInFrame("unit", () => check(["unit", "request", "test"], "unit in request in test"));
+      });
+      await runInFrame("job", () => check(["job", "test"], "job under test"));
+      await runInFrame("command", () => check(["command", "test"], "command under test"));
+      // An interleave unit is a root unit whose origin is this test: the read does not follow the origin.
+      await interleave([() => check(["unit"], "interleave unit of a test")]);
+      await runInRootFrame("unit", () => check(["unit"], "root unit under test"));
+      await check(["test"], "back in the test frame");
+    });
+
+    await runInFrame("request", () => runInFrame("test", () => check(["test", "request"], "test in request")));
+    await runInFrame("unit", () => check(["unit"], "root unit"));
+    Assert.assertSame(0, frameKinds().length, "no frame after the units end");
+
+    // The kind `test` is reserved for test units, so a `test` kind in the chain is always one.
+    const narrowTest = thrownBy(() => runInNarrowFrame("test", [], () => 1));
+    Assert.assertInstanceOf(TypeError, narrowTest);
+    Assert.assertSame("runInNarrowFrame(): the kind test is reserved for test unit frames; open one with runInFrame()", (narrowTest as Error).message);
+    runInFrame("test", () => {
+      Assert.assertInstanceOf(TypeError, thrownBy(() => runInNarrowFrame("test", [], () => 1)));
+      Assert.assertSame("test", frameKinds().join(","), "the refused narrow frame was never opened");
+    });
   },
 );

@@ -13,6 +13,7 @@ export {
   type FrameSlot,
   type FrameSlotKey,
   frameDefer,
+  frameKinds,
   frameOverlay,
   frameSlot,
   frameStatic,
