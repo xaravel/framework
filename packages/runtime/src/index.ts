@@ -32,6 +32,9 @@ export {
   __PHP_Incomplete_Class,
   ArgumentCountError,
   ArithmeticError,
+  Attribute,
+  attribute,
+  type AttributeDecorator,
   BadFunctionCallException,
   BadMethodCallException,
   DivisionByZeroError,
@@ -47,6 +50,15 @@ export {
   OutOfRangeException,
   OverflowException,
   RangeException,
+  ReflectionAttribute,
+  ReflectionClass,
+  ReflectionException,
+  ReflectionFunction,
+  ReflectionIntersectionType,
+  ReflectionMethod,
+  ReflectionNamedType,
+  ReflectionParameter,
+  ReflectionUnionType,
   RuntimeException,
   TypeError,
   UnderflowException,
@@ -109,4 +121,6 @@ export {
 } from "./php/index";
 export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
 export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
+export { readReturnMetadata, returns } from "./metadata/returns";
+export { allOf, oneOf, parent, primitive, self, static, variadic } from "./metadata/specs";
 export { bootTraits, classUsesRecursive, type ClassReference, clearBootedTraits, initializeTraits, type Mixed, mixin } from "./traits/mixin";

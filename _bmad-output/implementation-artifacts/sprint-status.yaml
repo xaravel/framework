@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 12:06
+last_updated: 10-25-2026 15:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1795,15 +1795,15 @@ action_items:
   - id: "epic-13-item-1-runtime-reflection"
     epic: 13
     action: "packages/runtime: add, under DIV-3.2-3.4 and DIV-12.15, PHP's ReflectionClass,
-      ReflectionMethod, ReflectionFunction, ReflectionParameter, ReflectionNamedType and
-      ReflectionUnionType in @xaravel/runtime/php (registered under their PHP names, limited
-      to the members Reflector, ReflectsClosures and their tests call, reading parameters
-      from inject metadata); the Spec values primitive, variadic, oneOf and allOf and the
-      markers self, parent and static; returns(<Spec>, fn) with its reader; PHP's Attribute
-      class and the attribute(X, ...args) class decorator with getAttributes / newInstance();
-      XT-runtime tests for each; no other runtime behaviour changes. A Maintainer-approved
-      Infrastructure change (decisions/MAINT-2026-10-25-story-13-1.md); lands before Story
-      13.1 resumes"
+      ReflectionMethod, ReflectionFunction, ReflectionParameter, ReflectionNamedType
+      and ReflectionUnionType in @xaravel/runtime/php (registered under their PHP
+      names, limited to the members Reflector, ReflectsClosures and their tests call,
+      reading parameters from inject metadata); the Spec values primitive, variadic,
+      oneOf and allOf and the markers self, parent and static; returns(<Spec>, fn)
+      with its reader; PHP's Attribute class and the attribute(X, ...args) class decorator
+      with getAttributes / newInstance(); XT-runtime tests for each; no other runtime
+      behaviour changes. A Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-13-1.md);
+      lands before Story 13.1 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-25-story-13-1.md"
