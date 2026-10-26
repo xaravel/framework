@@ -157,7 +157,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: in-progress
-  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # Maintainer rulings 2026-10-25: ESC-14.1-1..4 (decisions/MAINT-2026-10-25-story-14-1.md) and ESC-14.1-5..8 (decisions/MAINT-2026-10-25-story-14-1-second.md), all option 1 (DIV-12.16..12.19); action items epic-14-item-1 and epic-14-item-2 (runtime) are done, so the Story resumes
+  14-1-enumerable-core-construction-conversion-and-serialization: blocked  # ESC-14.1-9 and ESC-14.1-10 (contract) wait on the Maintainer: third planning round, after ESC-14.1-1..8 were ruled (decisions/MAINT-2026-10-25-story-14-1.md, decisions/MAINT-2026-10-25-story-14-1-second.md) and epic-14-item-1/-2 landed; the runtime still lacks PHP predicates and functions every constructor reaches (UnitEnum, is_callable, …) and ReflectionMethod::invokeArgs
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog

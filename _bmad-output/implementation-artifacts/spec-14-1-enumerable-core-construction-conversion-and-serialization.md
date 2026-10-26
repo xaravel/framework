@@ -3,7 +3,7 @@ title: 'Story 14.1: Enumerable core: construction, conversion and serialization'
 type: 'feature'
 created: '2026-10-25'
 status: 'blocked'
-baseline_revision: 'fcb916103720cc0e9486ca66fc79a73d9552648d'
+baseline_revision: '1b1bff5a3664c100d85e5115b40e1acdd1676261'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -99,6 +99,13 @@ Planning traced every Test ID through the Upstream source before building (the E
 - **ESC-14.1-7 (divergence): testEnsureForObjects.** Upstream puts the dataset's class-name string into the items and expects `gettype($collection)` (`'string'`). PORTING.md:76 makes the row a constructor, so the port gives `'object'`. No clause covers using a class-name dataset value as a value. The test also calls `class_basename`, a support helper (Phase 2).
 - **ESC-14.1-8 (divergence): the DIV-12.17 scope and one `adapted` clause per line.** testConstructMethodFromWeakMap writes `$map[$object] = 3` on the runtime's `WeakMap`, and DIV-12.17 names only Collection. testOffsetAccess and testBehavesLikeAnArrayWithArrayAccess need DIV-12.6 and DIV-12.17 in one test, but an Expectations line carries one `adapted` clause.
 
+**Third planning round (2026-10-26, after the second rulings).** ESC-14.1-5..8 were ruled option 1 (`decisions/MAINT-2026-10-25-story-14-1-second.md`) and epic-14-item-2 landed (#459). A reach analysis of every Upstream method the 112 Test IDs call, and of the test bodies and fixtures, was checked name by name against `packages/runtime/src/php/index.ts` and `packages/runtime/src/index.ts`. Two questions remain, raised together:
+
+- **ESC-14.1-9 (contract): PHP type tests and functions still missing.** Every constructor tests `instanceof UnitEnum` (EnumeratesValues.php:1125); `isEnumCase` / `isEnumClass` are internal and `enumExists(fqcn(x))` throws for an unregistered object. LazyCollection needs `instanceof Closure`, `instanceof Generator` on a bare JS generator (`isJsGenerator` is internal) and `is_callable`; `ensure` needs `instanceof` by name, `sprintf` and `implode`; `jsonSerialize`, `Arr::map`, `values`, `count` and LazyCollection `range` need `array_map`, `array_keys`, `array_values`, `count` and `abs`; `Arr::wrap` / `Arr::from` need `is_array` and `is_object`; `data_get` (reached by testMacroable #1) needs `explode`, `is_iterable`, `array_key_first`, `array_key_last`, `array_key_exists` and `array_merge`. `get_debug_type` is exported only as `getDebugType`. It stops the build (104 Test IDs and XT-collections-1..3).
+- **ESC-14.1-10 (contract): `ReflectionMethod::invokeArgs`.** testGetArrayableItems #0/#1 call the protected `getArrayableItems` through it; the runtime's `ReflectionMethod` has no `invoke` / `invokeArgs`.
+
+The Code Map's runtime paragraph above predates #456 and #459; the next planning round rewrites it against the runtime as it then stands (Generator.ts, keyed.ts, arrayFunctions.ts, range.ts, stringFunctions.ts and `docs/php-functions.md` now exist).
+
 Settled without an Escalation:
 
 - `proxy()`'s static `$proxies` is a `frameStatic` (spine AD-5, "every Upstream static setter").
@@ -127,3 +134,12 @@ Blocking condition: intent gap. The Story resumed after the Maintainer ruled ESC
 - ESC-14.1-8 (divergence): DIV-12.17's scope (the `WeakMap` write), and one `adapted` clause per Expectations line where a test needs DIV-12.6 and DIV-12.17.
 
 No package code was written. The Story's Expectations lines now name the open Escalation that holds each one: 14 name ESC-14.1-5, 86 ESC-14.1-6, 2 ESC-14.1-7 and 4 ESC-14.1-8. The four `unwrap` rows with an array or a scalar, and testDump (`blocked-by:support`), name none. `bun run escalations:check` and `bun run expectations:check` pass.
+
+### Third run (2026-10-26)
+
+Status: blocked
+Blocking condition: intent gap. The Story resumed after the Maintainer ruled ESC-14.1-5..8 option 1 and epic-14-item-2 landed (#459). Re-planning traced every Test ID through Upstream and checked each PHP built-in against the runtime's exports. Two contract questions remain, raised together (Design Notes, "Third planning round"):
+- ESC-14.1-9: PHP type tests (`UnitEnum`, `BackedEnum`, `Closure`, `Generator` on a JS generator, `is_callable`, `is_a` by name, `is_array`, `is_object`, `is_string`, `is_iterable`) and functions (`sprintf`, `implode`, `explode`, `array_map`, `array_keys`, `array_values`, `array_key_exists`, `array_key_first`, `array_key_last`, `array_merge`, `count`, `abs`, the `get_debug_type` name) that the runtime does not export. Every constructor needs the `UnitEnum` test, so it stops the build.
+- ESC-14.1-10: `ReflectionMethod::invokeArgs` for testGetArrayableItems #0/#1.
+
+No package code was written. The Expectations lines that named ESC-14.1-5..8 now name ESC-14.1-9 (104) or ESC-14.1-10 (2). `bun run escalations:check` and `bun run expectations:check` pass.
