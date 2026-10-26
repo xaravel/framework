@@ -1,6 +1,10 @@
 // PHP's by-reference array functions Story 14.2 calls (action item epic-14-item-5-runtime-array-functions,
 // ESC-14.2-1), under their PHP names, ports of PHP 8.5.11's `ext/standard/array.c` and `strnatcmp.c` in coercive
-// typing mode: `array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort` and `arsort`.
+// typing mode: `array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort` and `arsort`. Beside them, for
+// `Collection::sortBy` (action item epic-14-item-6-runtime-sort-string-functions, ESC-14.2-4): `uasort`, a port of
+// `php_usort` with `php_array_user_compare_unstable`, and the string comparisons `strcmp`, `strcasecmp`, `strnatcmp`,
+// `strnatcasecmp` and `strcoll` (`ext/standard/string.c`, `Zend/zend_operators.c`), which call the comparators the
+// sorts use.
 //
 // A by-reference parameter is a `Ref` (AD-9, DIV-9.2) whose `value` is an AD-9 array. PHP arrays are values, so each
 // function builds a new array and writes it to `ref.value` (PHP's copy-on-write: no other holder of the old JS value
@@ -9,10 +13,10 @@
 // sorts), the array goes out through `arrayFromEntries` too, unless the input is a `PhpArray` whose next free index
 // (`nNextFreeElement`, which a later `[]` append reads) differs from the one the result's keys give: then it stays a
 // `PhpArray` with PHP's index. PHP's warnings are not reproduced. Everything is synchronous.
-import { numericCompare, regularCompare, toPhpArray } from "./arrayFunctions";
-import { arrayEntries, toPhpString } from "./casts";
+import { numericCompare, regularCompare, requiredCallback, toPhpArray } from "./arrayFunctions";
+import { arrayEntries, toInt, toPhpString } from "./casts";
 import { LONE_SURROGATE, utf8 } from "./mangle";
-import { argumentTypeError, intParameter, nullableIntParameter } from "./phpArguments";
+import { argumentTypeError, intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
 import { arrayFromEntries, nextFreeIndex, PhpArray, phpArrayWithNextFree, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 import { phpType } from "./phpType";
 import { Ref } from "./Ref";
@@ -232,7 +236,7 @@ function compareLeft(a: Uint8Array, b: Uint8Array, at: Cursors): number {
  * bytes of two strings: leading zeros and whitespace skipped, digit runs compared by value (a run after a `0` as a
  * fraction), any other byte by its value, ASCII-case-folded when `foldCase`.
  */
-function strnatcmp(a: Uint8Array, b: Uint8Array, foldCase: boolean): number {
+function strnatcmpEx(a: Uint8Array, b: Uint8Array, foldCase: boolean): number {
   if (a.length === 0 || b.length === 0) {
     return a.length === b.length ? 0 : a.length > b.length ? 1 : -1;
   }
@@ -325,11 +329,18 @@ function bytesOf(fn: string, value: unknown): Uint8Array {
   return utf8.encode(string);
 }
 
-/** `strcoll` in the C locale: `strcmp`, which stops at a NUL byte. */
+/**
+ * `strcoll` in the C locale, which is C's `strcmp`: the difference of the first differing bytes, the terminating NUL
+ * included (`"ab"` against `"a"` is 98), stopping at a NUL byte.
+ */
 function localeCompare(a: Uint8Array, b: Uint8Array): number {
-  const aEnd = a.indexOf(0);
-  const bEnd = b.indexOf(0);
-  return binaryCompare(aEnd === -1 ? a : a.subarray(0, aEnd), bEnd === -1 ? b : b.subarray(0, bEnd), false);
+  for (let index = 0; ; index++) {
+    const x = byteAt(a, index);
+    const y = byteAt(b, index);
+    if (x !== y || x === 0) {
+      return x - y;
+    }
+  }
 }
 
 /** `php_get_data_compare_func(sort_type, 0)`'s unstable comparator. */
@@ -343,7 +354,7 @@ function dataCompare(fn: string, sortType: bigint): (a: unknown, b: unknown) => 
     case 5n:
       return (a, b) => localeCompare(bytesOf(fn, a), bytesOf(fn, b));
     case 6n:
-      return (a, b) => strnatcmp(bytesOf(fn, a), bytesOf(fn, b), foldCase);
+      return (a, b) => strnatcmpEx(bytesOf(fn, a), bytesOf(fn, b), foldCase);
     default:
       return regularCompare;
   }
@@ -357,10 +368,19 @@ function sortByValue(fn: string, array: Ref<unknown>, flags: unknown, reverse: b
   const { array: input, entries } = referencedArray(fn, array);
   const sortType = BigInt(intParameter(fn, 2, "flags", flags));
   const cmp = dataCompare(fn, sortType);
+  array.value = sortedArray(input, entries, reverse ? (a, b) => -cmp(a, b) : cmp);
+  return true;
+}
+
+/**
+ * `input`'s `entries` sorted by value with `zend_sort` and PHP's stable fallback (`RETURN_STABLE_SORT`: values `cmp`
+ * calls equal keep their order), keys kept, as the array a sort writes back (`keptArray` for a `PhpArray` input).
+ */
+function sortedArray(input: object, entries: readonly [PhpArrayKey, unknown][], cmp: (a: unknown, b: unknown) => number): unknown {
   const buckets = entries.map(([key, value], index) => ({ key, value, index }));
   if (buckets.length > 1) {
     zendSort(buckets, (a, b) => {
-      const result = reverse ? -cmp(a.value, b.value) : cmp(a.value, b.value);
+      const result = cmp(a.value, b.value);
       if (result !== 0) {
         return result;
       }
@@ -368,8 +388,7 @@ function sortByValue(fn: string, array: Ref<unknown>, flags: unknown, reverse: b
     });
   }
   const sorted = buckets.map(({ key, value }) => [key, value] as const);
-  array.value = input instanceof PhpArray ? keptArray(sorted, nextFreeIndex(input)) : arrayFromEntries(sorted);
-  return true;
+  return input instanceof PhpArray ? keptArray(sorted, nextFreeIndex(input)) : arrayFromEntries(sorted);
 }
 
 /**
@@ -388,4 +407,109 @@ export function asort(array: Ref<unknown>, flags: unknown = 0): true {
 /** PHP's `arsort(&$array, $flags = SORT_REGULAR)`: `asort` descending; equal values keep their order. */
 export function arsort(array: Ref<unknown>, flags: unknown = 0): true {
   return sortByValue("arsort", array, flags, true);
+}
+
+/**
+ * `php_array_user_compare_unstable`: `callback(a, b)` read as PHP reads it, its `zval_get_long` (`toInt`) and then its
+ * sign; a `false` result calls `callback(b, a)` and negates that sign, and `true` is 1 (PHP's bool deprecation is not
+ * reproduced). Once a call has thrown (or its result could not be read), no further call is made: PHP's
+ * `zend_call_function` returns at once while an exception is pending, and the comparison is 0.
+ */
+function userCompare(callback: (...args: unknown[]) => unknown, failed: { error: { thrown: unknown } | null }): (a: unknown, b: unknown) => number {
+  // The sign of `callback(a, b)` (null for a `false` result), read inside the try: a throw from the callback or from
+  // reading its result is recorded, and the comparison is 0.
+  const call = (a: unknown, b: unknown): number | null => {
+    if (failed.error !== null) {
+      return 0;
+    }
+    try {
+      const result = callback(a, b) ?? null;
+      if (result === false) {
+        return null;
+      }
+      const long = toInt(result);
+      return long > 0 ? 1 : long < 0 ? -1 : 0;
+    } catch (thrown) {
+      failed.error = { thrown };
+      return 0;
+    }
+  };
+  return (a, b) => {
+    const first = call(a, b);
+    if (first !== null) {
+      return first;
+    }
+    const swapped = call(b, a);
+    return swapped === null ? 0 : -swapped;
+  };
+}
+
+/**
+ * PHP's `uasort(&$array, $callback)`: sorts `array.value` by value with `callback(a, b)`, keys kept, and returns true.
+ * It ports `php_usort` over `zend_sort` with PHP's stable fallback (`RETURN_STABLE_SORT`: values the callback calls
+ * equal keep their order). The callback's result is read as PHP reads it (`(int)`, then its sign: `0.5` is 0, `"1"`
+ * 1); a `false` result calls it again with the operands swapped and negates that sign, and `true` is 1. An empty array
+ * is left as it is, and the callback is not called. A `PhpArray` input keeps its next free index as `asort`'s does.
+ * When the callback throws, it is not called again (each later comparison is 0), the partly sorted array is written
+ * back, as PHP writes it, and the exception propagates. Throws as `asort` does for `array`, and, for `callback`, as
+ * `array_any` does: PHP's `TypeError` `uasort(): Argument #2 ($callback) must be a valid callback, no array or string
+ * given` for null, and the DIV-9.13 `TypeError` for a PHP callable string or array.
+ */
+export function uasort(array: Ref<unknown>, callback: unknown): true {
+  const { array: input, entries } = referencedArray("uasort", array);
+  const compare = requiredCallback("uasort", 2, callback);
+  if (entries.length === 0) {
+    return true;
+  }
+  const failed: { error: { thrown: unknown } | null } = { error: null };
+  array.value = sortedArray(input, entries, userCompare(compare, failed));
+  if (failed.error !== null) {
+    throw failed.error.thrown;
+  }
+  return true;
+}
+
+/** The UTF-8 bytes of string parameter `position` (`$string1` / `$string2`) of `fn()`. */
+function stringBytes(fn: string, position: number, value: unknown): Uint8Array {
+  return bytesOf(fn, stringParameter(fn, position, `string${position}`, value));
+}
+
+/**
+ * PHP's `strcmp($string1, $string2)` (`zend_binary_strcmp`): the difference of the first differing UTF-8 bytes
+ * (`strcmp("a", "c")` is -2), else -1, 0 or 1 by length. Both are PHP `string` parameters (an int, float, bool or null
+ * its string, an object its `__toString` port), and anything else throws PHP's `TypeError`; a string holding a lone
+ * surrogate throws a JS `TypeError` naming the function.
+ */
+export function strcmp(string1: unknown, string2: unknown): number {
+  return binaryCompare(stringBytes("strcmp", 1, string1), stringBytes("strcmp", 2, string2), false);
+}
+
+/**
+ * PHP's `strcasecmp($string1, $string2)` (`zend_binary_strcasecmp`): `strcmp` after ASCII lower-casing
+ * (`strcasecmp("A", "c")` is -2); a byte of 0x80 or more is not folded. Throws as `strcmp` does.
+ */
+export function strcasecmp(string1: unknown, string2: unknown): number {
+  return binaryCompare(stringBytes("strcasecmp", 1, string1), stringBytes("strcasecmp", 2, string2), true);
+}
+
+/**
+ * PHP's `strnatcmp($string1, $string2)` (`strnatcmp_ex`): -1, 0 or 1 in natural order (leading zeros and whitespace
+ * skipped, digit runs by value, a run after a `0` as a fraction). Throws as `strcmp` does.
+ */
+export function strnatcmp(string1: unknown, string2: unknown): number {
+  return strnatcmpEx(stringBytes("strnatcmp", 1, string1), stringBytes("strnatcmp", 2, string2), false);
+}
+
+/** PHP's `strnatcasecmp($string1, $string2)`: `strnatcmp` with ASCII case folded. Throws as `strcmp` does. */
+export function strnatcasecmp(string1: unknown, string2: unknown): number {
+  return strnatcmpEx(stringBytes("strnatcasecmp", 1, string1), stringBytes("strnatcasecmp", 2, string2), true);
+}
+
+/**
+ * PHP's `strcoll($string1, $string2)` in the C locale, PHP's default, which is C's `strcmp`: it stops at a NUL byte,
+ * and gives the difference of the first differing bytes, the terminating NUL included (`strcoll("ab", "a")` is 98,
+ * `strcoll("é", "e")` 94). No other locale is ported. Throws as `strcmp` does.
+ */
+export function strcoll(string1: unknown, string2: unknown): number {
+  return localeCompare(stringBytes("strcoll", 1, string1), stringBytes("strcoll", 2, string2));
 }

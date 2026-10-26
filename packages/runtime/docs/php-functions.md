@@ -4,12 +4,14 @@ The runtime ports PHP's `Generator`, the keyed yield a JS generator cannot write
 core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generators-functions`), and PHP's type tests,
 `instanceof` targets and the rest of the functions Collections calls (ESC-14.1-9, action item
 `epic-14-item-3-runtime-type-tests-functions`), and the array, by-reference, sort, string and object functions Story
-14.2 calls (ESC-14.2-1, action item `epic-14-item-5-runtime-array-functions`). Everything here is
-exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is synchronous. Each function
-ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`, `ext/spl/spl_iterators.c`,
-`Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`, `ext/standard/math.c`,
-`ext/standard/type.c`, `ext/standard/strnatcmp.c`, `Zend/zend_builtin_functions.c`, `Zend/zend_API.c`) in coercive typing mode, PHP's mode for a file without `strict_types`,
-as Laravel's are.
+14.2 calls (ESC-14.2-1, action item `epic-14-item-5-runtime-array-functions`), and `is_null`, `uasort` and the string
+comparisons `Collection::sortBy` calls (ESC-14.2-4, action item `epic-14-item-6-runtime-sort-string-functions`).
+Everything here is exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is
+synchronous. Each function ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`,
+`ext/spl/spl_iterators.c`, `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`,
+`ext/standard/math.c`, `ext/standard/type.c`, `ext/standard/strnatcmp.c`, `Zend/zend_builtin_functions.c`,
+`Zend/zend_API.c`, `Zend/zend_operators.c`) in coercive typing mode, PHP's mode for a file without `strict_types`, as
+Laravel's are.
 
 Common rules:
 
@@ -84,6 +86,8 @@ map it:
 ## Type tests
 
 - `is_array(value)`, `is_object(value)`, `is_string(value)`: as above.
+- `is_null(value)`: `true` for `null` and for `undefined`, which reads as null (AD-9), `false` for anything else (a
+  contract token is a string, a `PhpFloat` NaN a float).
 - `is_iterable(value)`: an array, or a Traversable object (a bare JS generator object included).
 - `is_a(object_or_class, class, allow_string = false)`: whether `object_or_class` is an object of `class` (its
   `instanceof`), or, with `allow_string`, a class-string (a string, a contract token or a class constructor) naming
@@ -201,10 +205,10 @@ map it:
 
 ## By-reference array functions
 
-`array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort` and `arsort` take PHP's `&$array` as a `Ref`
-(AD-9, DIV-9.2) whose `value` is an AD-9 array. A PHP array is a value, so each builds a new array and writes it to
-`ref.value`; the JS value the `Ref` held before is not changed, as PHP's copy-on-write leaves another holder's copy. A
-`Ref` holding anything else throws PHP's `TypeError` `array_shift(): Argument #1 ($array) must be of type array, int
+`array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort`, `arsort` and `uasort` take PHP's `&$array` as a
+`Ref` (AD-9, DIV-9.2) whose `value` is an AD-9 array. A PHP array is a value, so each builds a new array and writes it
+to `ref.value`; the JS value the `Ref` held before is not changed, as PHP's copy-on-write leaves another holder's copy.
+A `Ref` holding anything else throws PHP's `TypeError` `array_shift(): Argument #1 ($array) must be of type array, int
 given`; an argument that is no `Ref` throws a JS `TypeError` naming DIV-9.2.
 
 - `array_shift(ref)` removes and returns the first value; `array_pop(ref)` the last. Each gives `null` for an empty
@@ -238,6 +242,25 @@ equal values keep their order, for `arsort` too, which negates the comparison, n
   ported (`setlocale` is not).
 - A value without a string form under a string comparison throws PHP's `Error`, a string holding a lone surrogate a
   JS `TypeError` naming the function, and a `flags` that is no int PHP's `TypeError`.
+
+## Sorting with a callback: `uasort`
+
+`uasort(ref, callback)` sorts by value with `callback(a, b)`, keys kept, and returns `true`. It ports `php_usort` over
+`zend_sort` with PHP's stable fallback, so values the callback calls equal keep their order, and the callback is
+called with the same operands, in the same order, as PHP calls it.
+
+- `callback` is a `callable`, taken as `array_any` takes one: a function or an object whose `__invoke` is a function.
+  `null` (and any other value) throws PHP's `TypeError` `uasort(): Argument #2 ($callback) must be a valid callback, no
+  array or string given`; a PHP callable string or array throws the DIV-9.13 `TypeError`. `ref` is checked first, as
+  `asort` checks it.
+- The callback's result is read as `php_array_user_compare_unstable` reads it: PHP's `(int)` (`toInt`: `0.5` is 0,
+  `"1"` 1, `null` 0, a non-empty array 1), then its sign. A `false` result calls the callback again with the operands
+  swapped and negates that result's sign; `true` is 1. PHP's deprecation for a bool result is not reproduced.
+- An empty array is left as it is (the same JS value), and the callback is not called. A `PhpArray` input keeps its
+  next free index, as `asort`'s does.
+- When the callback throws, it is not called again: PHP's `zend_call_function` returns at once while an exception is
+  pending, so each later comparison is 0 and the stable fallback orders the rest. The partly sorted array is written
+  back, as PHP writes it, and the thrown value propagates.
 
 ## Math functions
 
@@ -308,6 +331,20 @@ array size (`HT_MAX_SIZE`, 2^30), with both of PHP's size messages; PHP's `TypeE
 - `strlen(string)`: the number of UTF-8 bytes (`strlen("héllo")` is 6, `strlen(12.5)` is 4).
 - `lcfirst(string)`: the first byte lowered when it is an ASCII `A`-`Z`; a multi-byte first character is unchanged
   (`lcfirst("Élan")` is `"Élan"`).
+- `strcmp(string1, string2)` (`zend_binary_strcmp`) compares the UTF-8 bytes and gives PHP's int, not only its sign:
+  the difference of the first differing bytes (`strcmp("a", "c")` is -2, `strcmp("é", "e")` 94), else -1, 0 or 1 by
+  length. `strcasecmp` (`zend_binary_strcasecmp`) does the same after ASCII lower-casing (`strcasecmp("A", "c")` is
+  -2); a byte of 0x80 or more is not folded.
+- `strnatcmp(string1, string2)` and `strnatcasecmp` (ASCII case folded) port `strnatcmp_ex`, as `SORT_NATURAL` does,
+  and give -1, 0 or 1.
+- `strcoll(string1, string2)` is the C locale's `strcoll`, PHP's default, which is C's `strcmp`: it stops at a NUL
+  byte and gives the difference of the first differing bytes, the terminating NUL included (`strcoll("ab", "a")` is
+  98). `asort`'s `SORT_LOCALE_STRING` calls the same comparator.
+- The magnitudes of `strcmp`, `strcasecmp` and `strcoll` are those PHP 8.5.11 gives on a C library whose `memcmp` /
+  `strcmp` return the byte difference, as the probe records; only their sign is portable across C libraries.
+- Their arguments are PHP `string` parameters: an int, float, bool or null is its string, an object its `__toString`
+  port, and anything else throws PHP's `TypeError` `strcmp(): Argument #1 ($string1) must be of type string, array
+  given`.
 - `substr(string, offset, length = null)` counts UTF-8 bytes, as PHP's string is its bytes: a negative offset counts
   from the end, a negative length stops that many bytes before it, and `null` runs to the end.
 
@@ -351,8 +388,8 @@ A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold t
 limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a UTF-8 sequence
 (`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, a `sprintf` result that is no valid UTF-8 (a
 precision that splits a sequence, `%.1s` of `"é"`, or a `%c` byte of 0x80 or more on its own), and a string holding a
-lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, `lcfirst`, `range`, `explode` or
-`sprintf`.
+lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, `lcfirst`, `range`, `explode`,
+`sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`, `strnatcasecmp` or `strcoll`.
 
 ## Not ported
 
@@ -384,7 +421,10 @@ lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, 
   them, which `looseEquals` and `spaceship` compare; those do not apply PHP's enum handler yet.
 - PHP callable strings and arrays as `array_any`, `array_all` and `array_find_key` callbacks (DIV-9.13), as for
   `array_filter`.
-- A locale for `SORT_LOCALE_STRING`: it is the C locale's byte order, as PHP's default locale gives it.
+- A locale for `SORT_LOCALE_STRING` and `strcoll`, and `setlocale`: each is the C locale's byte order, as PHP's
+  default locale gives it.
+- `usort` and `uksort`; `uasort` is ported. PHP callable strings and arrays as a `uasort` callback (DIV-9.13), as for
+  `array_filter`: pass `strnatcasecmp` itself, not `'strnatcasecmp'`.
 - The order PHP gives two distinct enum cases under `SORT_REGULAR` (`asort`, `arsort`, `array_unique`) is by object
   address; the runtime orders them by first comparison, so only the grouping of equal cases and their place after
   other values are PHP's.

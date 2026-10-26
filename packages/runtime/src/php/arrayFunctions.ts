@@ -564,10 +564,11 @@ export function count(value: unknown, mode: unknown = COUNT_NORMAL): number | bi
 }
 
 /**
- * A `callable` callback parameter (`array_any`, `array_all`, `array_find_key`): taken as `array_filter` takes one
- * (DIV-9.13), except that null throws PHP's `TypeError` `must be a valid callback, no array or string given`.
+ * A `callable` callback parameter (`array_any`, `array_all`, `array_find_key`, `uasort`): taken as `array_filter`
+ * takes one (DIV-9.13), except that null throws PHP's `TypeError` `must be a valid callback, no array or string
+ * given`. Internal: the package does not export it.
  */
-function requiredCallback(fn: string, position: number, callback: unknown): (...args: unknown[]) => unknown {
+export function requiredCallback(fn: string, position: number, callback: unknown): (...args: unknown[]) => unknown {
   return callbackParameter(fn, position, callback, false) as (...args: unknown[]) => unknown;
 }
 

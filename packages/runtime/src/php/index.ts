@@ -61,7 +61,20 @@ export {
   SORT_STRING,
   toPhpArray,
 } from "./arrayFunctions";
-export { array_pop, array_shift, array_splice, array_unshift, arsort, asort } from "./arrayRefFunctions";
+export {
+  array_pop,
+  array_shift,
+  array_splice,
+  array_unshift,
+  arsort,
+  asort,
+  strcasecmp,
+  strcmp,
+  strcoll,
+  strnatcasecmp,
+  strnatcmp,
+  uasort,
+} from "./arrayRefFunctions";
 export { Attribute } from "./Attribute";
 export { BackedEnum } from "./BackedEnum";
 export { Closure } from "./Closure";
@@ -162,6 +175,6 @@ export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
 export { sprintf } from "./sprintf";
 export { explode, implode, lcfirst, str_contains, str_starts_with, strlen, substr } from "./stringFunctions";
-export { is_a, is_array, is_callable, is_iterable, is_object, is_string } from "./typeTests";
+export { is_a, is_array, is_callable, is_iterable, is_null, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";
