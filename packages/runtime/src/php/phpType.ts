@@ -81,3 +81,68 @@ export function phpTypeName(v: unknown): string {
   }
   return type === "object" ? className(v as object) : type;
 }
+
+/** PHP's `gettype($value)` names, by `phpType`. */
+const GETTYPE_NAMES: Readonly<Record<PhpType, string>> = {
+  null: "NULL",
+  bool: "boolean",
+  int: "integer",
+  float: "double",
+  string: "string",
+  array: "array",
+  object: "object",
+};
+
+/**
+ * PHP's `gettype($value)`: `NULL`, `boolean`, `integer`, `double`, `string`, `array` or `object`, over the AD-9 value
+ * model (`phpType`; a plain object is an array, a function an object). Throws a `TypeError` for a symbol or a `bigint`
+ * outside the int64 range, which are no PHP values.
+ */
+export function gettype(v: unknown): string {
+  return GETTYPE_NAMES[phpType(v)];
+}
+
+/**
+ * PHP's `get_debug_type($value)`: `null`, `bool`, `int`, `float`, `string`, `array`, or an object's class name: its
+ * Registry FQCN, `Closure` for a function, and for an instance of a class the Registry does not hold (a port's
+ * `new class extends P {}`) `P@anonymous` after its nearest registered parent class, else `class@anonymous`. PHP names
+ * an anonymous class with no parent after its first interface; the runtime cannot read a class's interface order, so
+ * that is `class@anonymous` too. Throws a `TypeError` for a symbol or a `bigint` outside the int64 range, which are no
+ * PHP values.
+ */
+export function getDebugType(v: unknown): string {
+  const type = phpType(v);
+  if (type !== "object") {
+    return type;
+  }
+  if (typeof v === "function") {
+    return "Closure";
+  }
+  try {
+    return fqcn(v as object);
+  } catch {
+    // An unregistered class: named after its nearest registered parent below.
+  }
+  let prototype = Object.getPrototypeOf(Object.getPrototypeOf(v) as object) as object | null;
+  while (prototype !== null && prototype !== Object.prototype) {
+    const parent = registeredName(prototype);
+    if (parent !== null) {
+      return `${parent}@anonymous`;
+    }
+    prototype = Object.getPrototypeOf(prototype) as object | null;
+  }
+  return "class@anonymous";
+}
+
+/** The FQCN of the class whose prototype is `prototype`, or null when it is not registered. */
+function registeredName(prototype: object | null): string | null {
+  const klass: unknown = prototype === null || !Object.hasOwn(prototype, "constructor") ? null : Reflect.get(prototype, "constructor");
+  if (typeof klass !== "function") {
+    return null;
+  }
+  try {
+    return fqcn(klass);
+  } catch {
+    return null;
+  }
+}

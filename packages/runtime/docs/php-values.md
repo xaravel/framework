@@ -35,6 +35,26 @@ position.
 An illegal key throws PHP's `TypeError` `Cannot access offset of type … on array`. A push past `PHP_INT_MAX` throws
 PHP's `Error` `Cannot add element to the array as the next element is already occupied`.
 
+## Array helpers
+
+The codecs and the casts read and build PHP arrays through three helpers, which a port uses so its keys normalise and
+order exactly as `jsonEncode` and the grader's do (ESC-14.1-1):
+
+- `arrayEntries(array)` is the `[key, value]` pairs of a PHP array (a list, a plain object or a `PhpArray`) in PHP
+  order, keys normalised (`{"1": "a"}` gives `[[1, "a"]]`) and `undefined` values read as `null`.
+- `arrayFromEntries(entries)` is the PHP array of `[key, value]` entries as the value model holds it: a list is an
+  `Array`, all-string keys a plain object, anything else a `PhpArray`. A repeated key keeps its first position and
+  its last value.
+- `normalizeKey(key)` is PHP's array-key normalisation (`"07"` stays `"07"`, `"7"` is `7`, `true` is `1`, `null` is
+  `""`, a float truncates). Any other key throws PHP's `TypeError` `Cannot access offset of type … on array`.
+
+## Type names
+
+`gettype(value)` and `getDebugType(value)` are PHP's `gettype` (`NULL`, `boolean`, `integer`, `double`, `string`,
+`array`, `object`) and `get_debug_type` (`null`, `bool`, `int`, `float`, `string`, `array`, the Registry FQCN,
+`Closure` for a function, `P@anonymous` for an unregistered class whose nearest registered parent is `P`, else
+`class@anonymous`), over the same value model (ESC-14.1-1).
+
 ## Brands
 
 A marker interface becomes a brand getter on the prototype (AD-9.5). `hasBrand(classOrInstance, Token)` reads it

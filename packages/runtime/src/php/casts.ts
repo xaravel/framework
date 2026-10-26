@@ -1,7 +1,7 @@
 // PHP's scalar casts over the AD-9 value model (Story 9.6): `(int)`, `(float)`, `(string)` and `(bool)` as PHP 8.5's
 // `zval_get_long`, `zval_get_double`, `zval_get_string` and `zend_is_true` give them. The internal `phpType`
-// (re-exported from `phpType.ts`), `isTrue`, `formatFloat` (re-exported from `scalarString.ts`) and `arrayEntries` are
-// shared with `spaceship` and `valueCopy`.
+// (re-exported from `phpType.ts`), `isTrue` and `formatFloat` (re-exported from `scalarString.ts`) are shared with
+// `spaceship` and `valueCopy`, as is `arrayEntries`, which `@xaravel/runtime/php` also exports (ESC-14.1-1).
 //
 // Value model (AD-9): `undefined` reads as `null`; an int is a safe-integer `number` (not `-0`) or a `bigint` in the
 // int64 range; a float is any other `number` or a marked `PhpFloat`; a PHP array is an `Array`, a plain object

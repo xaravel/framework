@@ -58,8 +58,8 @@ function offsetType(key: unknown): string {
 /**
  * `key` normalised as PHP normalises an array key: a canonical decimal string in the int64 range is an int, a bool
  * is 0 or 1, `null` is `""`, and a float (a marked one included) truncates. Throws PHP's `TypeError` for any other
- * value, and for a `bigint` outside the int64 range, which is no PHP int. Internal: the casts read a plain object's keys
- * through it; the package does not export it.
+ * value, and for a `bigint` outside the int64 range, which is no PHP int. The casts read a plain object's keys through
+ * it; `@xaravel/runtime/php` exports it so a port normalises keys as the codecs and the grader do (ESC-14.1-1).
  */
 export function normalizeKey(key: unknown): PhpArrayKey {
   switch (typeof key) {
@@ -203,8 +203,8 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
 /**
  * `[key, value]` entries as AD-9 holds a PHP array (DIV-9.2): keys normalised, a repeated key keeping its first
  * position and its last value; a list is an `Array`, all string keys a plain object (built with `defineProperty`, so a
- * `"__proto__"` key stays an entry), anything else a `PhpArray`. Internal: the codec builds arrays through it; the
- * package does not export it.
+ * `"__proto__"` key stays an entry), anything else a `PhpArray`. The codecs build arrays through it;
+ * `@xaravel/runtime/php` exports it so a port returns PHP arrays in the same form (ESC-14.1-1).
  */
 export function arrayFromEntries(entries: Iterable<readonly [PhpKeyInput, unknown]>): unknown {
   const array = new PhpArray<PhpKeyInput, unknown>(entries);

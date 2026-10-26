@@ -16,7 +16,8 @@ them from `@xaravel/runtime` (or `@xaravel/runtime/php`), never from another pac
 
 PHP's `Exception` and `Error` each extend the JS `Error` directly. Every class is therefore `instanceof` the JS
 `Error`, and no class is under both PHP roots, as in PHP. The chains match PHP 8.5's `class_parents`, which the Oracle
-tests check.
+tests check. `Exception` and `Error` carry the `Throwable` and `Stringable` brands, so every class here is
+`instanceof Throwable`, as in PHP, while a JS `Error` is not ([built-in interfaces](php-builtins.md)).
 
 The names `Error` and `TypeError` shadow the JS globals in a module that imports them. A module that needs both
 imports the PHP class under an alias: `import { Error as PhpError, TypeError as PhpTypeError } from "@xaravel/runtime"`.
