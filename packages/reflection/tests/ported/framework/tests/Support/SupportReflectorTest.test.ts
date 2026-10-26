@@ -12,11 +12,14 @@
 // fixture `C` (`f(A|Model $x)`) needs `Model`, so it is reached the same way; unblocking it declares
 // `class C { @inject({ x: oneOf(A, Model) }) f(x) {} }` here.
 //
-// testParameterSubclassOfInterface is not ported: a contract token's FQCN does not resolve through the Class Registry
-// (ESC-13.1-7), so its fixtures `IA`, `IB` and `TestClassWithInterfaceSubclassParameter` are not declared either.
-// testGetClassAttributes is not ported: it reads the `Collection` `getClassAttributes` returns, and Collections is in
-// reflection's own Phase, so `blocked-by:collections` is not a valid Skip Reason for it (ESC-13.1-10).
+// The PHP interfaces `IA` and `IB` are `contract(...)` tokens, which `contract` records so that `isParameterSubclassOf`
+// resolves an interface name (ESC-13.1-7's ruling). testGetClassAttributes reads the `Collection`
+// `getClassAttributes` returns, so its case's `setUp` throws `BlockedByComponentError("collections")` (Collections is
+// built in Epic 14, after reflection's Epic, ESC-13.1-10's ruling). Its body is Upstream's under the mechanical rule
+// (`->map->string` is `.map.string`), read through `CollectionReflector`, a view of `Reflector` typed with the
+// `Collection` members the body calls; Epic 14 removes the view when it unblocks the test.
 import { portedTest, TestCase } from "@xaravel/assert";
+import { contract } from "@xaravel/contracts";
 import { Mailable } from "@xaravel/contracts/mail";
 import { Reflector } from "@xaravel/reflection";
 import { BlockedByComponentError, fqcn, inject, parent, registerTestClass, resolveClass } from "@xaravel/runtime";
@@ -52,10 +55,23 @@ class TestClassWithCallStatic {
   }
 }
 
+const IA = contract(`${NS}\\IA`);
+
+const IB = contract(`${NS}\\IB`, {}, [IA]);
+
+class TestClassWithInterfaceSubclassParameter {
+  @inject({ x: IB }) // adapted:DIV-3.2
+  f(x: unknown): void {
+    void x;
+    //
+  }
+}
+
 class SupportReflectorTest extends TestCase {
   setUp(): void {
     registerTestClass(`${NS}\\A`, A);
     registerTestClass(`${NS}\\B`, B);
+    registerTestClass(`${NS}\\TestClassWithInterfaceSubclassParameter`, TestClassWithInterfaceSubclassParameter);
     registerTestClass(`${NS}\\TestClassWithCall`, TestClassWithCall);
     registerTestClass(`${NS}\\TestClassWithCallStatic`, TestClassWithCallStatic);
     for (const [name, klass] of Fixtures.FIXTURES) {
@@ -78,12 +94,34 @@ class SupportReflectorTestBus extends TestCase {
   }
 }
 
+/** The test that reads the `Collection` `getClassAttributes` returns (the Collections Component). */
+class SupportReflectorTestCollections extends TestCase {
+  setUp(): void {
+    throw new BlockedByComponentError("collections");
+  }
+}
+
 /** The tests that reflect `Model` (the Database Component). */
 class SupportReflectorTestDatabase extends TestCase {
   setUp(): void {
     throw new BlockedByComponentError("database");
   }
 }
+
+/** The `Illuminate\\Support\\Collection` members testGetClassAttributes calls (Collections, Epic 14), as types only. */
+interface AttributeCollection {
+  all(): unknown;
+  toArray(): unknown;
+  flatten(): AttributeCollection;
+  keys(): AttributeCollection;
+  readonly map: { readonly string: AttributeCollection };
+  readonly sum: { readonly number: unknown };
+}
+
+/** `Reflector`, with `getClassAttributes` typed as returning that `Collection`; it throws until Epic 14. */
+const CollectionReflector = Reflector as unknown as {
+  getClassAttributes(objectOrClass: object | string, attribute: abstract new (...args: never[]) => unknown, includeParents?: boolean): AttributeCollection;
+};
 
 portedTest(`${ID}::testGetClassName`, { case: SupportReflectorTestMail }, async function () {
   const method = new ReflectionClass(resolveClass("Illuminate\\Support\\Testing\\Fakes\\PendingMailFake")).getMethod("send");
@@ -115,6 +153,12 @@ portedTest(`${ID}::testParentClassName`, { case: SupportReflectorTest }, async f
   this.assertSame(fqcn(A), Reflector.getParameterClassName(method.getParameters()[0]!)); // adapted:DIV-3.2
 });
 
+portedTest(`${ID}::testParameterSubclassOfInterface`, { case: SupportReflectorTest }, async function () {
+  const method = new ReflectionClass(TestClassWithInterfaceSubclassParameter).getMethod("f");
+
+  this.assertTrue(Reflector.isParameterSubclassOf(method.getParameters()[0]!, IA)); // adapted:DIV-3.2
+});
+
 portedTest(`${ID}::testUnionTypeName`, { case: SupportReflectorTestDatabase }, async function () {
   const method = new ReflectionClass(resolveClass(`${NS}\\C`)).getMethod("f");
 
@@ -131,6 +175,48 @@ portedTest(`${ID}::testIsCallable`, { case: SupportReflectorTest }, async functi
   this.assertFalse(Reflector.isCallable([new TestClassWithCallStatic()]));
   this.assertFalse(Reflector.isCallable(["TotallyMissingClass", "foo"]));
   this.assertTrue(Reflector.isCallable(["TotallyMissingClass", "foo"], true));
+});
+
+portedTest(`${ID}::testGetClassAttributes`, { case: SupportReflectorTestCollections }, async function () {
+  const Reflector = CollectionReflector;
+
+  // Upstream's `require_once __DIR__.'/Fixtures/ClassesWithAttributes.php'` is this file's import of the fixtures.
+  this.assertSame([], Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.UnusedAttr).toArray()); // adapted:DIV-12.15
+
+  this.assertSame(
+    { [fqcn(Fixtures.ChildClass)]: [], [fqcn(Fixtures.ParentClass)]: [] },
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.UnusedAttr, true).toArray(), // adapted:DIV-12.15
+  );
+
+  this.assertSame(
+    ["quick", "brown", "fox"],
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr).map.string.all(), // adapted:DIV-12.15
+  );
+
+  this.assertSame(
+    ["quick", "brown", "fox", "lazy", "dog"],
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr, true).flatten().map.string.all(), // adapted:DIV-12.15
+  );
+
+  this.assertSame(7, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr).sum.number); // adapted:DIV-12.15
+  this.assertSame(12, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr, true).flatten().sum.number); // adapted:DIV-12.15
+  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr).sum.number); // adapted:DIV-12.15
+  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr, true).flatten().sum.number); // adapted:DIV-12.15
+
+  this.assertSame(
+    [fqcn(Fixtures.ChildClass), fqcn(Fixtures.ParentClass)],
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr, true).keys().all(), // adapted:DIV-12.15
+  );
+
+  this.assertContainsOnlyInstancesOf(
+    Fixtures.StrAttr,
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr).all(), // adapted:DIV-12.15
+  );
+
+  this.assertContainsOnlyInstancesOf(
+    Fixtures.StrAttr,
+    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr, true).flatten().all(), // adapted:DIV-12.15
+  );
 });
 
 portedTest(`${ID}::testGetClassAttribute`, { case: SupportReflectorTest }, async function () {

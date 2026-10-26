@@ -4,21 +4,20 @@
 // `Boolean` and `primitive` are builtin (DIV-3.3). `static::` is `this`, PHP's bare `return;` is `return null`, and
 // `array_filter` drops PHP-falsy names (`toBool`).
 //
-// - `class_exists($n) || interface_exists($n)` is "the Class Registry resolves `n`" (`resolveClass`). A contract
-//   token's FQCN is not in the Registry, so a token-typed parameter never passes `isParameterSubclassOf` yet
-//   (ESC-13.1-7).
+// - `class_exists($n)` is "the Class Registry resolves `n`" (`resolveClass`), and `interface_exists($n)` is the
+//   runtime's `interfaceExists`, which finds the contract tokens `contract(...)` records (ESC-13.1-7's ruling).
 // - `isCallable` follows DIV-9.14: a class is a registered constructor or an FQCN string, visibility is erased, and a
 //   non-array string is callable only as a `'Class::method'` string (or under `syntaxOnly`).
 // - `getClassAttributes` returns a `Collection`, which does not exist before Epic 14, so it throws
 //   `BlockedByComponentError("collections")`. `getClassAttribute` builds the same per-class instance lists as plain
 //   arrays and takes the first instance (ESC-13.1-4's ruling, DIV-12.15).
-// - `isParameterBackedEnumWithStringBackingType` is not ported: it needs an enum model and `ReflectionEnum`
-//   (ESC-13.1-8).
+// - `enum_exists` and `ReflectionEnum` are the runtime's `enumExists` and `ReflectionEnum`, over AD-26's enum model,
+//   where a backed enum declares `static backingType` (ESC-13.1-8's ruling).
 //
 // Everything is sync, and `null` is the only absent value.
 import type { Collection } from "@xaravel/contracts/bus";
 import { BlockedByComponentError, fqcn, registerClass, resolveClass, toBool } from "@xaravel/runtime";
-import { ReflectionClass, ReflectionException, ReflectionMethod, ReflectionNamedType, type ReflectionParameter, ReflectionUnionType } from "@xaravel/runtime/php";
+import { enumExists, interfaceExists, ReflectionClass, ReflectionEnum, ReflectionException, ReflectionMethod, ReflectionNamedType, type ReflectionParameter, ReflectionUnionType } from "@xaravel/runtime/php";
 
 /** A class, as `getAttributes` filters by it. */
 type AttributeClass = abstract new (...args: never[]) => unknown;
@@ -58,8 +57,7 @@ function isRegisteredClass(klass: unknown): klass is abstract new (...args: neve
 }
 
 /**
- * PHP's `class_exists($class) || interface_exists($class)` (DIV-9.14): a registered constructor, or an FQCN string the
- * Class Registry resolves.
+ * PHP's `class_exists($class)` (DIV-9.14): a registered constructor, or an FQCN string the Class Registry resolves.
  */
 function classExists(klass: unknown): boolean {
   if (typeof klass === "string") {
@@ -100,19 +98,19 @@ export class Reflector {
    * `__callStatic` (for a class). Visibility is erased, so every method found is public; a `#private` method is never
    * found. Never throws.
    */
-  static isCallable(variable: unknown, syntaxOnly: boolean = false): boolean {
-    if (!isArray(variable)) {
-      return isCallableValue(variable, syntaxOnly);
+  static isCallable(varValue: unknown, syntaxOnly: boolean = false): boolean {
+    if (!isArray(varValue)) {
+      return isCallableValue(varValue, syntaxOnly);
     }
 
-    const first: unknown = variable[0] ?? null;
-    const second: unknown = variable[1] ?? null;
+    const first: unknown = varValue[0] ?? null;
+    const second: unknown = varValue[1] ?? null;
 
     if (first === null || second === null || typeof second !== "string") {
       return false;
     }
 
-    if (syntaxOnly && (typeof first === "string" || isObject(first)) && typeof second === "string") {
+    if (syntaxOnly && (typeof first === "string" || typeof first === "function" || isObject(first)) && typeof second === "string") {
       return true;
     }
 
@@ -245,14 +243,43 @@ export class Reflector {
   }
 
   /**
-   * Determine if the parameter's type is a subclass of the given type (a class, a token, or an FQCN). The parameter's
-   * class name must resolve through the Class Registry, so a token-typed parameter gives false (ESC-13.1-7). Throws
-   * `ReflectionException` for a `className` FQCN the Registry does not hold, as PHP does.
+   * Determine if the parameter's type is a subclass of the given type (a class, a contract token, or an FQCN). The
+   * parameter's class name must name a registered class or a recorded contract token (PHP's interface), and a
+   * token-typed parameter is a subclass of the token's parents. Throws `ReflectionException` for a `className` FQCN
+   * that names neither, as PHP does.
    */
   static isParameterSubclassOf(parameter: ReflectionParameter, className: object | string): boolean {
     const paramClassName = this.getParameterClassName(parameter);
 
-    return toBool(paramClassName) && classExists(paramClassName) && new ReflectionClass(paramClassName as string).isSubclassOf(className);
+    return toBool(paramClassName)
+      && (classExists(paramClassName) || interfaceExists(paramClassName as string))
+      && new ReflectionClass(paramClassName as string).isSubclassOf(className);
+  }
+
+  /**
+   * Determine if the parameter's type is a Backed Enum with a string backing type: a named type whose name is an
+   * AD-26 enum that declares `static backingType = "string"`. False for a union, a builtin, a pure or int-backed enum,
+   * or any other class.
+   */
+  static isParameterBackedEnumWithStringBackingType(parameter: ReflectionParameter): boolean {
+    if (!(parameter.getType() instanceof ReflectionNamedType)) {
+      return false;
+    }
+
+    const backedEnumClass = (parameter.getType() as ReflectionNamedType | null)?.getName() ?? null;
+
+    if (backedEnumClass === null) {
+      return false;
+    }
+
+    if (enumExists(backedEnumClass)) {
+      const reflectionBackedEnum = new ReflectionEnum(backedEnumClass);
+
+      return reflectionBackedEnum.isBacked()
+        && reflectionBackedEnum.getBackingType()?.getName() === "string";
+    }
+
+    return false;
   }
 }
 

@@ -8,7 +8,7 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 
 ## Documentation
 
-See [docs/reflection.md](docs/reflection.md) for `Reflector` and `ReflectsClosures`, how they read declared types from `inject` and `returns` metadata, and the Divergences from Laravel.
+See [docs/reflection.md](docs/reflection.md) for `Reflector` and `ReflectsClosures`, how they read declared types from `inject` and `returns` metadata, and the Divergences from Laravel. `Reflector.isParameterSubclassOf` resolves interface hints through the contract tokens `contract(...)` records, and `Reflector.isParameterBackedEnumWithStringBackingType` reads an AD-26 enum's `static backingType` through `ReflectionEnum`.
 
 ```ts
 import { Reflector } from "@xaravel/reflection";

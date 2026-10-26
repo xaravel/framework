@@ -6,10 +6,8 @@
 // being `X`. A return hint is `returns(<Spec>, fn)` (DIV-3.4), with `oneOf` for a union, `allOf` for an intersection,
 // and the `self` / `static` markers. `X::class` compared against a returned name is `fqcn(X)` (AD-10). The PHP
 // interfaces are `contract(...)` tokens, which `ReflectsClosuresBothInterfaces` implements through their brands.
-// Upstream's local classes are registered under `Illuminate\Tests\Support\<Name>` in `setUp`.
-//
-// testItReturnsTheFirstParameterType is not ported: `assertInstanceOf` takes the class-string
-// `firstClosureParameterType` returns, which `@xaravel/assert` rejects (ESC-13.1-9).
+// Upstream's local classes are registered under `Illuminate\Tests\Support\<Name>` in `setUp`. `assertInstanceOf`
+// takes the class-string `firstClosureParameterType` returns, as PHPUnit's does (ESC-13.1-9's ruling).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { contract } from "@xaravel/contracts";
 import { ReflectsClosures } from "@xaravel/reflection";
@@ -142,6 +140,17 @@ portedTest(`${ID}::testReflectsClosures`, { case: SupportReflectsClosuresTest },
       //
     }),
   );
+});
+
+portedTest(`${ID}::testItReturnsTheFirstParameterType`, { case: SupportReflectsClosuresTest }, async function () {
+  const type = ReflectsClosuresClass.reflectFirst(
+    inject({ a: ExampleParameter }, (a: ExampleParameter) => { // adapted:DIV-3.3
+      void a;
+      //
+    }),
+  );
+
+  this.assertInstanceOf(type, new ExampleParameter());
 });
 
 portedTest(`${ID}::testItThrowsWhenNoParameters`, { case: SupportReflectsClosuresTest }, async function () {

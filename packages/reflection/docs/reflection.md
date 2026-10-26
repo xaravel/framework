@@ -39,14 +39,15 @@ All methods are static.
 
 - `Reflector.getParameterClassName(parameter)` gives the class name of a `ReflectionParameter`'s type, or `null` for a builtin type or a union. `self` gives the declaring class's FQCN, and `parent` its parent's. A closure's parameter has no declaring class, so `self` and `parent` stay as written, as does `parent` on a class with no registered parent.
 - `Reflector.getParameterClassNames(parameter)` gives the class names of the type as a list, a union's classes in order. Builtin members are dropped, so a builtin type gives `[]`.
-- `Reflector.isParameterSubclassOf(parameter, className)` tells whether the parameter's class is a subclass of `className` (a class, a token or a registered FQCN). The parameter's class name must resolve through the Class Registry, and a contract token's FQCN does not, so a token-typed parameter gives `false` for now (ESC-13.1-7). It throws `ReflectionException` when `className` is an FQCN the Registry does not hold.
+- `Reflector.isParameterSubclassOf(parameter, className)` tells whether the parameter's class is a subclass of `className` (a class, a contract token, or the FQCN of either). The parameter's type must name a registered class (PHP's `class_exists`) or a contract token that `contract(...)` recorded (PHP's `interface_exists`, the runtime's `interfaceExists`). So an interface works as in Laravel: a parameter typed by token `IB`, declared `contract('App\\IB', {}, [IA])`, is a subclass of `IA`, but not of `IB` itself. It throws `ReflectionException` when `className` is an FQCN that names neither.
+- `Reflector.isParameterBackedEnumWithStringBackingType(parameter)` tells whether the parameter's type is a backed enum whose backing type is `string`. An enum is a registered class whose static side has a `cases` function, and a backed one declares `static backingType = "string"` or `"int"` (AD-26); the runtime's `enumExists` and `ReflectionEnum` read it. A union, a builtin or untyped parameter, a pure or `int`-backed enum, and any other class give `false`.
 - `Reflector.isCallable(value, syntaxOnly = false)` is PHP 7.4's `is_callable`:
   - A closure, and an object whose `__invoke` is a function, are callable.
   - A registered class on its own stands for its class-string, so it is not callable.
   - `[classOrObject, 'method']` is callable when the class has the method, or has `__call` (for an object) or `__callStatic` (for a class). The class is a registered constructor, an object's class, or an FQCN the Class Registry resolves.
   - A `'Class::method'` string is callable when `[Class, method]` is.
   - Any other string is not callable, except under `syntaxOnly`, where any string is.
-  - Under `syntaxOnly`, `[stringOrObject, 'method']` is callable without looking the method up.
+  - Under `syntaxOnly`, `[stringOrObjectOrClass, 'method']` (a string, an object, or a class, registered or not) is callable without looking the method up.
   - It never throws.
 - `Reflector.getClassAttribute(objectOrClass, attribute, ascend = false)` gives the first `attribute` instance on the class's own `@attribute(...)` list, or `null`. With `ascend`, it then checks each parent class. Every matching attribute on the classes it checks is built (`newInstance()`) before the first is returned, as Laravel builds the whole collection first. It throws `ReflectionException` for an FQCN the Class Registry does not hold.
 - `Reflector.getClassAttributes(objectOrClass, attribute, includeParents = false)` returns a `Collection` in Laravel. Collections is not ported yet, so it throws `BlockedByComponentError("collections")`.
@@ -96,10 +97,12 @@ A closure with no `inject` declaration at all has no parameter list to read. Rea
 - **Attributes are decorators (DIV-12.15).** A PHP attribute `#[X(args)]` is written `@attribute(X, ...args)`. Attributes match by `instanceof`.
 - **Plain arrays and objects for `Collection`.** `ReflectsClosures` returns plain arrays and objects where Laravel builds them with `Collection` and returns its `all()` array.
 
-### Open items
+### Rulings this package follows
 
-- `Reflector.isParameterSubclassOf` cannot yet resolve a contract token (an interface) from its name (ESC-13.1-7).
-- `Reflector.isParameterBackedEnumWithStringBackingType` is not ported: it needs an enum model and `ReflectionEnum` (ESC-13.1-8).
-- Laravel's test of `firstClosureParameterType` passes the class-string it returns to `assertInstanceOf`, which `@xaravel/assert` does not accept yet (ESC-13.1-9).
-- `Reflector.getClassAttributes` throws `BlockedByComponentError("collections")` until Collections is ported, and its Laravel test waits until then (ESC-13.1-10).
+The Maintainer's rulings on Story 13.1's Escalations (`decisions/MAINT-2026-10-25-story-13-1.md` and `decisions/MAINT-2026-10-25-story-13-1-second.md`) settle these points:
+
+- Interface names resolve through the contract tokens `contract(...)` records, so `isParameterSubclassOf` works for an interface hint (ESC-13.1-7).
+- A backed enum declares `static backingType`, which `isParameterBackedEnumWithStringBackingType` reads through `ReflectionEnum` (ESC-13.1-8).
+- `assertInstanceOf` accepts the class-string `firstClosureParameterType` returns, as PHPUnit's does, so Laravel's test of it is ported unchanged (ESC-13.1-9).
+- `Reflector.getClassAttributes` throws `BlockedByComponentError("collections")` until Collections (Epic 14) is ported, and its Laravel test is `blocked-by:collections` until then (ESC-13.1-10).
 - Laravel's tests that reflect the Mail and Bus fakes and `Model` wait on those Components (`blocked-by:mail`, `blocked-by:bus`, `blocked-by:database`).
