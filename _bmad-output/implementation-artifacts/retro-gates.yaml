@@ -93,5 +93,12 @@ epic-12:
   checkpoint_approved: false
   waiting_on_maintainer: []
 epic-13:
-  # No retrospective yet; this entry only routes epic 13's Maintainer-ruled items.
-  waiting_on_maintainer: []
+  verdict: accepted-with-open-items
+  attempts: 1
+  doc: _bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md
+  blocked: false
+  checkpoint_approved: false
+  waiting_on_maintainer:
+    - epic-13-retro-item-3-blocked-by-reverification
+    - epic-13-retro-item-4-scratch-note-check
+    - epic-13-retro-item-6-reflection-php-edges
