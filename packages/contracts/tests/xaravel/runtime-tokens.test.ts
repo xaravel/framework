@@ -1,11 +1,11 @@
 // Xaravel Test for action item epic-14-item-1-runtime-php-types (ESC-14.1-2, decisions/MAINT-2026-10-25-story-14-1.md):
 // the runtime builds PHP's built-in interfaces (`Traversable`, `Iterator`, `IteratorAggregate`, `JsonSerializable`,
-// `Stringable`, `Throwable`) as contract tokens itself, because it cannot import `contract()` (AD-2). XT-contracts-22 is
+// `Stringable`, `Throwable`, and since epic-14-item-3 `ArrayAccess`) as contract tokens itself, because it cannot import `contract()` (AD-2). XT-contracts-22 is
 // the equivalence test: each runtime token has the own keys, in the same order, with the same descriptors and
 // frozenness, as the token `contract()` makes from the same name, members, parents and built-ins; its brand and
 // `instanceof` behave alike; and `contract()` takes it as a parent. The runtime side is XT-runtime-52.
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { Iterator, IteratorAggregate, JsonSerializable, Stringable, Throwable, Traversable } from "@xaravel/runtime/php";
+import { ArrayAccess, Iterator, IteratorAggregate, JsonSerializable, Stringable, Throwable, Traversable } from "@xaravel/runtime/php";
 import { CLASS_FQCN, contract, CONTRACT_BUILTINS, CONTRACT_METHODS, CONTRACT_PARAMETERS, CONTRACT_PARENTS, type ContractToken } from "@xaravel/contracts";
 
 /** A key as text, for messages and comparison. */
@@ -25,7 +25,7 @@ function shape(token: object): string[] {
 
 xaravelTest(
   "XT-contracts-22",
-  "the runtime's built-in interface tokens (Traversable, Iterator, IteratorAggregate, JsonSerializable, Stringable, Throwable) have the own keys, order, descriptors, frozenness and nested values of the contract() token made with the same name, members, parents and built-ins, behave alike under instanceof, and contract() accepts them as parents (ESC-14.1-2)",
+  "the runtime's built-in interface tokens (Traversable, Iterator, IteratorAggregate, JsonSerializable, Stringable, Throwable, ArrayAccess) have the own keys, order, descriptors, frozenness and nested values of the contract() token made with the same name, members, parents and built-ins, behave alike under instanceof, and contract() accepts them as parents (ESC-14.1-2)",
   () => {
     const cases: [object, string, Record<string, readonly string[]>, readonly object[], readonly string[]][] = [
       [Traversable, "Traversable", {}, [], []],
@@ -34,6 +34,9 @@ xaravelTest(
       [JsonSerializable, "JsonSerializable", { jsonSerialize: [] }, [], []],
       [Stringable, "Stringable", {}, [], ["__toString"]],
       [Throwable, "Throwable", { getMessage: [], getCode: [], getFile: [], getLine: [], getTrace: [], getPrevious: [], getTraceAsString: [] }, [Stringable], []],
+      // Action item epic-14-item-3-runtime-type-tests-functions (ESC-14.1-9): a brand-only token. UnitEnum and
+      // BackedEnum answer `instanceof` through an enum-case test, not contract()'s brand test, so they are not here.
+      [ArrayAccess, "ArrayAccess", { offsetExists: ["offset"], offsetGet: ["offset"], offsetSet: ["offset", "value"], offsetUnset: ["offset"] }, [], []],
     ];
     for (const [runtime, name, members, parents, builtins] of cases) {
       // The name is already recorded by the runtime, so this contract() token stays unrecorded (first one wins).

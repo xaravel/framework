@@ -7,7 +7,7 @@
 // this module. It and `Generator.ts` import each other; every cross-use happens at call time, never at load.
 import { arrayCount, arrayEntries, isTrue } from "./casts";
 import { Exception } from "./Exception";
-import { Generator, generatorTraversal, isJsGenerator } from "./Generator";
+import { Generator, generatorTraversal, isGeneratorObject, isJsGenerator } from "./Generator";
 import { Iterator } from "./Iterator";
 import { IteratorAggregate } from "./IteratorAggregate";
 import { foreachIterator, foreachValues, type IteratorMethods } from "./liveCursor";
@@ -64,7 +64,7 @@ export function iteratorOf(subject: object): IteratorMethods {
     if (isJsGenerator(current)) {
       current = new Generator(current);
     }
-    if (current instanceof Generator) {
+    if (isGeneratorObject(current)) {
       return generatorTraversal(current);
     }
     if (current instanceof Iterator) {

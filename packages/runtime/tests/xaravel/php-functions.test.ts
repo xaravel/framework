@@ -135,8 +135,9 @@ function gen(fn: () => globalThis.Generator<unknown, unknown, unknown>): Generat
 
 /** The `[key, value]` pairs of PHP's `foreach` over an array or a Traversable; the probe's `pairs`. */
 function pairs(subject: unknown): unknown[] {
-  if (subject instanceof Generator || subject instanceof ArrayIterator || subject instanceof ArrayObject) {
-    return [...subject.entries()];
+  // The wrapper class itself: `instanceof Generator` also answers a bare JS generator object (epic-14-item-3).
+  if ((Function.prototype[Symbol.hasInstance].call(Generator, subject) as boolean) || subject instanceof ArrayIterator || subject instanceof ArrayObject) {
+    return [...(subject as Generator | ArrayIterator | ArrayObject).entries()];
   }
   return [...toPhpArray(subject)];
 }

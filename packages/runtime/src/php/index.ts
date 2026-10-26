@@ -11,8 +11,13 @@ import "./IteratorAggregate";
 import "./JsonSerializable";
 import "./Stringable";
 import "./Throwable";
+import "./ArrayAccess";
+import "./UnitEnum";
+import "./BackedEnum";
 export { ArgumentCountError } from "./ArgumentCountError";
 export { ArithmeticError } from "./ArithmeticError";
+export { abs } from "./mathFunctions";
+export { ArrayAccess } from "./ArrayAccess";
 export { ArrayIterator } from "./ArrayIterator";
 export { ArrayObject } from "./ArrayObject";
 export {
@@ -20,7 +25,17 @@ export {
   ARRAY_FILTER_USE_KEY,
   array_combine,
   array_filter,
+  array_key_exists,
+  array_key_first,
+  array_key_last,
+  array_keys,
+  array_map,
+  array_merge,
   array_unique,
+  array_values,
+  COUNT_NORMAL,
+  COUNT_RECURSIVE,
+  count,
   in_array,
   is_scalar,
   iterator_count,
@@ -31,6 +46,8 @@ export {
   toPhpArray,
 } from "./arrayFunctions";
 export { Attribute } from "./Attribute";
+export { BackedEnum } from "./BackedEnum";
+export { Closure } from "./Closure";
 export { attribute, type AttributeDecorator } from "./attributes";
 export { BadFunctionCallException } from "./BadFunctionCallException";
 export { BadMethodCallException } from "./BadMethodCallException";
@@ -113,14 +130,17 @@ export {
 } from "./jsonConstants";
 export { jsonDecode } from "./jsonDecode";
 export { jsonEncode } from "./jsonEncode";
-export { jsonLastError, jsonLastErrorMsg } from "./jsonLastError";
+export { jsonLastError, jsonLastError as json_last_error, jsonLastErrorMsg } from "./jsonLastError";
 export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
 export { arrayFromEntries, normalizeKey, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 export { phpSerialize } from "./phpSerialize";
-export { getDebugType, gettype } from "./phpType";
+export { getDebugType, getDebugType as get_debug_type, gettype } from "./phpType";
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
 export { stdClass } from "./stdClass";
-export { str_starts_with, substr } from "./stringFunctions";
+export { sprintf } from "./sprintf";
+export { explode, implode, str_starts_with, substr } from "./stringFunctions";
+export { is_a, is_array, is_callable, is_iterable, is_object, is_string } from "./typeTests";
+export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";

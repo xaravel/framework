@@ -110,6 +110,19 @@ method a `mixin()` layer holds, the using class.
   so only a function-valued member wrapped in `returns(...)` carries one (for example a static field,
   `static build = returns(self, () => …)`); a prototype method has no way to declare a return Spec.
 - `isPublic()`, which is always true: TypeScript's `private` and `protected` are erased (DIV-9.14).
+- `invoke(object, ...args)` and `invokeArgs(object, args = [])` port `reflection_method_invoke` (ESC-14.1-10): they
+  call the method whatever its visibility, as PHP 8.1 and later do, and return its result (`undefined` read as
+  `null`). A static method (one found on the static chain) ignores `object` and runs with the reflected class as
+  `this`, PHP's called scope, so `new ReflectionMethod(Child, 'make').invoke(null)` runs `make` on `Child`. An instance
+  method runs on `object`, which must be an instance of the declaring class: `null` throws a `ReflectionException`
+  `Trying to invoke non static method <C>::<m>() without an object`, another object `Given object is not an instance
+  of the class this method was declared in`. An `object` that is neither an object nor `null` throws PHP's
+  `TypeError` (`ReflectionMethod::invoke(): Argument #1 ($object) must be of type ?object, int given`; a class
+  constructor or a contract token is a string there). `invokeArgs` takes the AD-9 array forms and passes the values
+  in order; a string key, PHP's named argument, throws a JS `TypeError` naming the limit: named arguments are not
+  ported. An `args` that is no array throws PHP's `TypeError`.
+- `setAccessible(accessible)`: the no-op it has been since PHP 8.1. It takes a bool (PHP's `TypeError` otherwise) and
+  returns `null`.
 
 ## Attributes
 
@@ -152,6 +165,7 @@ PHP's `ReflectionException`, an `Exception`.
 ## Not ported
 
 - `ReflectionEnumBackedCase`, `ReflectionEnum`'s `getCases()` / `getCase()`, `ReflectionProperty`, `ReflectionType` as a base class, and any member not listed above.
+- Named arguments to `ReflectionMethod::invokeArgs` (a string key throws a JS `TypeError`).
 - Attributes on methods, properties, parameters and constants, and `getAttributes`' flags argument (the filter is
   always `instanceof`).
 - `lazy()` / `proxy()` (DIV-12.14).

@@ -1,10 +1,13 @@
 # PHP generators and functions
 
 The runtime ports PHP's `Generator`, the keyed yield a JS generator cannot write, and the PHP functions the Collections
-core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generators-functions`). Everything here is
+core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generators-functions`), and PHP's type tests,
+`instanceof` targets and the rest of the functions Collections calls (ESC-14.1-9, action item
+`epic-14-item-3-runtime-type-tests-functions`). Everything here is
 exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is synchronous. Each function
 ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`, `ext/spl/spl_iterators.c`,
-`Zend/zend_generators.c`, `Zend/zend_sort.c`) in coercive typing mode, PHP's mode for a file without `strict_types`,
+`Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`, `ext/standard/math.c`,
+`ext/standard/type.c`, `Zend/zend_builtin_functions.c`, `Zend/zend_API.c`) in coercive typing mode, PHP's mode for a file without `strict_types`,
 as Laravel's are.
 
 Common rules:
@@ -62,6 +65,63 @@ iterator_to_array(pairs()); // a bare JS generator object is wrapped
   `Generator passed to yield from was aborted without proper return and is unable to continue`; a generator being run
   `Impossible to yield from the Generator being currently run`.
 
+## The value model of the type tests
+
+`is_array`, `is_object`, `is_string`, `is_iterable`, `is_callable` and `is_a` read a JS value as AD-9 and DIV-12.19
+map it:
+
+- `is_array(v)` is `phpType(v) === "array"` and `is_object(v)` is `phpType(v) === "object"`, except that a contract
+  token is its class-string (AD-9): `is_string(token)` is true, `is_array(token)` and `is_object(token)` false.
+- A class constructor (a function whose source is a `class`, or that carries its own Registry FQCN key) stands for
+  its class-string where a class is named, as Reflector treats a registered class: it is no `Closure`,
+  `is_a(ctor, name)` needs `$allowString`, and `is_callable(ctor)` is the string rule. `is_object(ctor)` stays true,
+  as `phpType` gives it, and `is_string(ctor)` false.
+- Any other function is a PHP `Closure`: a plain, arrow, bound, async or generator function. A native JS constructor
+  such as `Map` reads as a function, so it is a Closure too.
+- `gettype`, `getDebugType` and `phpType` keep their results (a token is still `array` to `gettype`).
+
+## Type tests
+
+- `is_array(value)`, `is_object(value)`, `is_string(value)`: as above.
+- `is_iterable(value)`: an array, or a Traversable object (a bare JS generator object included).
+- `is_a(object_or_class, class, allow_string = false)`: whether `object_or_class` is an object of `class` (its
+  `instanceof`), or, with `allow_string`, a class-string (a string, a contract token or a class constructor) naming
+  `class`, a subclass of it, or a class or token implementing it. `class` is matched case-insensitively, a leading `\`
+  ignored, and resolved by the class lookup (a registered class, else a recorded token). A name nothing holds, and any
+  value that is neither an object nor (with `allow_string`) a class-string, give `false`; it never throws for an
+  unknown name. For an interface target it reads the token's `instanceof` (the brand, or the enum test below) on an
+  object, and the brand on a class's prototype (`hasBrand`), or, for `UnitEnum` / `BackedEnum`, the enum-class test,
+  on a class-string. A token answers its own name and its parents'. `Countable` and every other PHP interface the
+  runtime records no token for are misses, so `is_a(x, 'Countable')` is `false` until a ruling records one.
+- `is_callable(value, syntax_only = false, callable_name = null)` ports `zend_is_callable_ex` under DIV-9.13 and
+  DIV-9.14, with the rules Reflector's `isCallable` uses for a non-array value:
+  - a Closure, and an object whose `__invoke` is a function, are callable;
+  - a callable array `[object, method]` is callable when the method is found on the object's class (its prototype
+    chain or its static side), or the class has `__call`;
+  - `[class-string, method]` (a string, a contract token or a class constructor) and a `'Class::method'` string are
+    callable when the method is static, or missing with a `__callStatic`;
+  - any other string, a PHP function name such as `'strlen'` included, is not (DIV-9.14); under `syntax_only`, any
+    string, and any two-entry array (keys 0 and 1) of a class-string or an object and a string, is;
+  - `callable_name`, a `Ref`, receives PHP's name: `<FQCN>::method`, `<FQCN>::__invoke`, the string itself, `Array`
+    for a malformed array, or the `(string)` of a scalar. A Closure's name is `Closure::__invoke`; PHP 8.5 names a
+    closure `{closure:<file>:<line>}`, which the runtime cannot give.
+
+## `instanceof` targets
+
+- `Closure` is PHP's class: `x instanceof Closure` is true exactly for a function that is not a class constructor,
+  and `new Closure()` throws PHP's `Error` `Instantiation of class Closure is not allowed`. It is registered as
+  `Closure` (so `resolveClass('Closure')` finds it), and is not in `Symbol.for('xaravel.php.classes')`.
+- `UnitEnum` and `BackedEnum` are tokens. An AD-26 enum case carries no brand, so `x instanceof UnitEnum` is true for
+  an object whose class has a static `cases` function, and `x instanceof BackedEnum` for such a case whose class
+  declares `backingType` `'string'` or `'int'`; `hasBrand(case, UnitEnum)` stays `false`. `BackedEnum`'s parent is
+  `UnitEnum`. Their members are PHP's: `cases`, and `from` and `tryFrom`.
+- `ArrayAccess` is a token over the `Symbol.for("ArrayAccess")` brand `ArrayObject`, `ArrayIterator` and `WeakMap`
+  carry, with PHP's members `offsetExists`, `offsetGet`, `offsetSet` and `offsetUnset`.
+- The three tokens are recorded, so `interfaceExists('ArrayAccess')`, `interfaceExists('UnitEnum')` and
+  `interfaceExists('BackedEnum')` are true, as in PHP, and `is_a` resolves their names.
+- `x instanceof Generator` is also true for a bare JS generator object, as PHP sees one. `Traversable` and `Iterator`
+  do not answer a bare JS generator object.
+
 ## Array functions
 
 - `is_scalar(value)`: true for an int, a float, a string or a bool.
@@ -96,6 +156,38 @@ iterator_to_array(pairs()); // a bare JS generator object is wrapped
   (`objectProps`: protected `"\0*\0name"` and private `"\0Class\0name"` names mangled, an `ArrayObject` its storage),
   a numeric property name becoming an int key.
 
+- `array_map(callback, array, ...arrays)`: with one array, `callback(value)` for each entry, keys kept (string and
+  int), or a copy of the array without a callback; with several, a list as long as the longest array, each element
+  `callback(v1, v2, …)` (a shorter array gives `null`), or without a callback the list of those value lists. The
+  callback is taken as `array_filter` takes it. A non-array throws PHP's `TypeError`
+  `array_map(): Argument #2 ($array) must be of type array, int given` (`Argument #3 must be …` and on, unnamed).
+- `array_keys(array, filter_value, strict = false)`: the keys as a list, or, when `filter_value` is passed (decided by
+  argument count, so an explicit `null` or `undefined` searches for `null`), the keys whose value is `==` it (`in_array`'s comparison) or `===` it.
+- `array_values(array)`: the values as a list.
+- `array_key_exists(key, array)`: the key as PHP's array offset reads it (a numeric string is its int, `null` is `""`,
+  a float truncates, a bool is 0 or 1). An array or object key throws PHP's `TypeError`
+  `Cannot access offset of type array on array` (`… of type <class> on array`).
+- `array_key_first(array)` and `array_key_last(array)`: the first or last key, `null` for an empty array.
+- `array_merge(...arrays)`: string keys overwrite in place, int keys are renumbered from 0; `[]` with no arguments. A
+  non-array throws `array_merge(): Argument #<n> must be of type array, <type> given`.
+- `count(value, mode = COUNT_NORMAL)` with `COUNT_NORMAL` (0) and `COUNT_RECURSIVE` (1): an array's entries (nested
+  arrays' too when recursive; an array already being counted counts 0, as PHP's recursion guard gives it), or, for
+  an object carrying the `Symbol.for("Countable")` brand, its `count()` as an int. Any other mode throws PHP's
+  `ValueError`, any other value PHP's `TypeError` `count(): Argument #1 ($value) must be of type Countable|array, int
+  given`. A contract token is a string there.
+
+## Math functions
+
+- `abs(num)`: an int or a float (a numeric string its number, `null` and `false` 0, `true` 1). An int stays an int,
+  except `PHP_INT_MIN`, whose absolute value is a float; a float result is a `number`, marked `float()` when
+  integral (`abs(-0.0)` is `float(0)`). Anything else throws PHP's `TypeError`
+  `abs(): Argument #1 ($num) must be of type int|float, string given`.
+
+## PHP names beside camelCase exports
+
+`get_debug_type` is `getDebugType` and `json_last_error` is `jsonLastError`, the same function objects under PHP's
+names (ESC-14.1-1, PORTING.md's bare-name rule).
+
 ## `range`
 
 `range(start, end, step = 1)` follows PHP 8.3's rules: two ints give ints; a float bound or a fractional step gives
@@ -112,12 +204,47 @@ array size (`HT_MAX_SIZE`, 2^30), with both of PHP's size messages; PHP's `TypeE
 - `substr(string, offset, length = null)` counts UTF-8 bytes, as PHP's string is its bytes: a negative offset counts
   from the end, a negative length stops that many bytes before it, and `null` runs to the end.
 
+- `implode(separator, array)` and `implode(array)`, as PHP 8.5 compiles a direct call: each value as PHP's `(string)`
+  gives it (`[1, 1.5, true, false, null]` is `"1,1.5,1,,"`, an array `"Array"`, an object its `__toString` port, an
+  object without one PHP's `Error`), joined by `separator`. Only a call with one argument is the one-argument form,
+  whose argument must be an array; an explicit `null` (or `undefined`) second argument, as in PHP, throws `implode(): If argument #1
+  ($separator) is of type string, argument #2 ($array) must be of type array, null given`; an array separator with
+  an array throws `implode(): Argument #1 ($separator) must be of type string, array given`.
+- `explode(separator, string, limit = PHP_INT_MAX)`: a positive `limit` keeps at most that many parts, the last
+  holding the rest; a negative one drops that many from the end (none when the separator is not found); 0 is 1. An
+  empty `string` gives `[""]` (`[]` for a negative `limit`). An empty separator throws PHP's `ValueError`
+  `explode(): Argument #1 ($separator) must not be empty`.
+
+## `sprintf`
+
+`sprintf(format, ...values)` ports `php_formatted_print`: `%%`, and `%[argnum$][flags][width][.precision]specifier`
+with the flags `-`, `+`, ` `, `0` and `'<char>`, a `*` width or precision taken from an int argument (PHP 8's form,
+`%*d`, `%.*f`, `%2$*1$d`), the length modifier `l` (ignored), and the specifiers `b c d e E f F g G h H o s u x X`.
+
+- `%d`, `%u`, `%c`, `%o`, `%x`, `%X` and `%b` read a value as `(int)`; `%u` and the bases print it as an unsigned
+  64-bit int (`%u` of -1 is `18446744073709551615`); a `0` flag with `-` pads an int with spaces, as PHP does; an
+  explicit precision on `%x`, `%o` or `%b` prints no digits, as PHP's does.
+- `%e`, `%E`, `%f`, `%F`, `%g`, `%G`, `%h` and `%H` read a value as `(float)`. The digits are exact: the double's
+  decimal value rounded half to even, as `zend_dtoa` does (`%.2f` of 0.125 is `0.12`, `%.0f` of 2.5 is `2`). `%e` writes
+  the exponent without padding (`1.5e+3`); `%g` uses `zend_gcvt` (`1.0e+6`, `-0` for -0.0); a precision above 53 is
+  53; infinities are `INF` / `-INF` and NaN `NaN`, the width ignored. The decimal point is always `.`: PHP's default
+  C locale; `setlocale` is not ported, and `%f` / `%g` are C-locale.
+- `%s` reads a value as `(string)` (`true` is `"1"`, `null` `""`, an array `"Array"`); its precision truncates.
+- A width, a precision and `%s`'s truncation count UTF-8 bytes, as PHP's string is its bytes.
+- Too few values throw PHP's `ArgumentCountError` `N arguments are required, M given`; PHP's `ValueError`s are thrown
+  for `Unknown format specifier "y"`, `Missing format specifier at end of string`, `Argument number specifier must be
+  greater than zero and less than 2147483647`, `Missing padding character`, `Width must be an integer`, `Width must
+  be between 0 and 2147483647`, `Precision must be between 0 and 2147483647` (a literal precision such as
+  `%.9999999999f`), `Precision must be an integer`, `Precision must be between -1 and 2147483647` and
+  `Precision -1 is only supported for %g, %G, %h and %H`.
+
 ## Values JS cannot hold
 
 A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold throws a JS `TypeError` that names the
 limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a UTF-8 sequence
-(`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, and a string holding a lone surrogate passed to
-`substr`, `str_starts_with` or `range`.
+(`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, a `sprintf` result that is no valid UTF-8 (a
+precision that splits a sequence, `%.1s` of `"é"`, or a `%c` byte of 0x80 or more on its own), and a string holding a
+lone surrogate passed to `substr`, `str_starts_with`, `range`, `explode` or `sprintf`.
 
 ## Not ported
 
@@ -128,8 +255,20 @@ limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a U
   one must only be driven through its `Generator`.
 - `array_unique`'s `SORT_LOCALE_STRING`, `SORT_NATURAL` and `SORT_STRING | SORT_FLAG_CASE` comparators (and the
   `SORT_FLAG_CASE` forms of the first two): each throws a `ValueError` naming the flag in full. PHP compares no value of an array of one element, so no flag is refused there.
-- PHP callable strings (`'strlen'`) and arrays (`[Str::class, 'upper']`) as `array_filter` callbacks: each throws a
-  `TypeError` naming the callable form; pass a function, or an object with an `__invoke` method.
+- PHP callable strings (`'strlen'`) and arrays (`[Str::class, 'upper']`) as `array_filter` and `array_map` callbacks
+  (DIV-9.13): each throws a `TypeError` naming the callable form; pass a function, or an object with an `__invoke`
+  method. `is_callable` gives `false` for a PHP function name (DIV-9.14).
+- `sprintf`'s locale handling (`setlocale`, a locale decimal point for `%f` / `%g`): the point is always `.`.
+- `Traversable` and `Iterator` answering a bare JS generator object: it answers `instanceof Generator` and
+  `is_a(gen, 'Generator')`, but not `instanceof Traversable` / `Iterator`, nor `is_a(gen, 'Traversable')` /
+  `is_a(gen, 'Iterator')`.
+- A token for `Countable` or any other PHP interface not listed above: `Countable` is no recorded token, so
+  `is_a(x, 'Countable')` is `false` (`count` reads the `Symbol.for("Countable")` brand directly).
+- A contract token passed to `sprintf`, `implode`, `explode` or `array_key_exists` is not read as its class-string:
+  those go through the existing string and key casts, which read a token as an array.
+- A Closure's PHP callable name (`{closure:<file>:<line>}`): `is_callable` gives `Closure::__invoke`.
+- `is_callable` for a method name in another case: JS names are case-sensitive, so `[obj, 'M']` misses `m`.
+- An `UnitEnum` or `BackedEnum` brand: an enum case answers `instanceof`, but `hasBrand(case, UnitEnum)` is `false`.
 - `toPhpArray` does not act on `ArrayObject`'s `STD_PROP_LIST` flag: an `ArrayObject` always gives its storage.
 - `array_unique`'s enum rule orders different cases by a runtime counter where PHP compares object addresses; it only
   groups equal cases, as PHP's comment says, and the kept keys are the same.

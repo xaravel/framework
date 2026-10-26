@@ -11,6 +11,24 @@ export function isEnumClass(klass: unknown): boolean {
   return typeof klass === "function" && typeof (klass as { cases?: unknown }).cases === "function";
 }
 
+/** Whether `value` is a case of an AD-26 enum (PHP's `ZEND_ACC_ENUM` class): an object whose class is one. Internal. */
+export function isEnumCase(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return typeof prototype === "object" && prototype !== null && isEnumClass(Reflect.get(prototype, "constructor"));
+}
+
+/** Whether `klass` is a backed AD-26 enum class: an enum class that declares `static backingType` `'string'` or `'int'`. Internal. */
+export function isBackedEnumClass(klass: unknown): boolean {
+  if (!isEnumClass(klass)) {
+    return false;
+  }
+  const declared: unknown = (klass as { backingType?: unknown }).backingType;
+  return declared === "string" || declared === "int";
+}
+
 /**
  * PHP's `interface_exists($interface)`: whether `name` names a recorded contract token and no registered class
  * (case-insensitive, a leading `\` ignored). Throws PHP's `TypeError` for a non-string.
