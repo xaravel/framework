@@ -41,6 +41,10 @@ evidence: >-
   either. The Story may edit only packages/collections/**, and changing the
   tests to hand-written doubles would replace Upstream's Mockery
   expectations (one `toArray()` call per item), which no DIV clause allows.
+  `blocked-by:mockery` is not available: `bun run expectations:check`
+  accepts a `blocked-by` Component only of a later Phase
+  (tools/expectations/reasons.ts:282), and mockery is Phase 0 while
+  collections is Phase 1, so these stay `not-ported-yet` with `ESC-14.1-11`.
 ---
 
 # ESC-14.1-11: `Mockery.mock(<contract token>)` builds a mock that is not `instanceof` the token

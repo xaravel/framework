@@ -16,6 +16,9 @@
 // testToArrayCallsToArrayOnEachItemInCollection and testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection
 // are not ported yet: they wait on ESC-14.1-11, as `Mockery.mock(<contract token>)` builds a mock that is not
 // `instanceof` the token.
+// `blocked-by:mockery` is not available: `bun run expectations:check` accepts a `blocked-by` Component only of a later
+// Phase (tools/expectations/reasons.ts:282), and mockery is Phase 0 while collections is Phase 1, so these stay
+// `not-ported-yet` with `ESC-14.1-11`.
 import { portedTest, TestCase } from "@xaravel/assert";
 import { Collection, LazyCollection } from "@xaravel/collections";
 import {

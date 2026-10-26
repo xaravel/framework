@@ -18,6 +18,7 @@ import { Conditionable } from "@xaravel/conditionable";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import {
   array_map,
+  arrayEntries,
   BlockedByComponentError,
   CachingIterator,
   Exception,
@@ -31,6 +32,7 @@ import {
   is_callable,
   is_scalar,
   is_string,
+  isContractToken,
   type Iterator,
   JSON_PRETTY_PRINT,
   JsonSerializable,
@@ -42,6 +44,8 @@ import {
   registerClass,
   sprintf,
   toBool,
+  toPhpString,
+  valueCopy,
   type Traversable,
   UnexpectedValueException,
   UnitEnum,
@@ -131,7 +135,13 @@ function proxies(klass: unknown): { get(): readonly string[]; set(value: readonl
 
 /** An `ensure` type as Upstream's message and comparison read it: a type-name string, or a class's or token's FQCN. */
 function typeName(type: unknown): string {
-  return typeof type === "string" ? type : fqcn(type as object);
+  if (typeof type === "string") {
+    return type;
+  }
+  if (typeof type === "function" || isContractToken(type)) {
+    return fqcn(type as object);
+  }
+  return toPhpString(type);
 }
 
 /** PHP's `$item instanceof $type`, for a type-name string, a class or a contract token. */
@@ -189,7 +199,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   /** Execute a callback over each item; returning `false` from it stops the iteration. */
   each<T extends EnumeratesValuesHost>(this: T, callback: ItemCallback): T {
     for (const [key, item] of this.entries()) {
-      if (callCallable(callback, item, key) === false) {
+      if (callCallable(callback, valueCopy(item), key) === false) {
         break;
       }
     }
@@ -202,7 +212,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
    * contract token, or a list of them. Throws `UnexpectedValueException` naming the first item of another type.
    */
   ensure<T extends EnumeratesValuesHost>(this: T, type: unknown): T {
-    const allowedTypes = is_array(type) ? (type as unknown[]) : [type];
+    const allowedTypes = is_array(type) ? arrayEntries(type as object).map(([, allowedType]) => allowedType) : [type];
 
     return (this as T & EnumeratesValues).each((item: unknown, index: unknown) => {
       const itemType = get_debug_type(item);
@@ -236,7 +246,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   reject<T extends EnumeratesValuesHost>(this: T, callback: unknown = true): T {
     const useAsCallable = (this as T & EnumeratesValues).useAsCallable(callback);
 
-    return this.filter((value: unknown, key: unknown) => (useAsCallable ? !toBool(callCallable(callback, value, key)) : !looseEquals(value, callback))) as T;
+    return this.filter((value: unknown, key: unknown) => (useAsCallable ? !toBool(callCallable(callback, valueCopy(value), key)) : !looseEquals(value, callback))) as T;
   }
 
   /** Collect the values into a `Collection`. */
@@ -335,7 +345,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   /** Get a value retrieving callback: the callable itself, or a `data_get` of the key. */
   protected valueRetriever(value: unknown): ItemCallback {
     if (this.useAsCallable(value)) {
-      return (item: unknown, key: unknown) => callCallable(value, item, key);
+      return (item: unknown, key: unknown) => callCallable(value, valueCopy(item), key);
     }
 
     return (item: unknown) => data_get(item, value);

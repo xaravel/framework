@@ -2,7 +2,7 @@
 // `$collection->each->save()` through `__get` and `__call`. Xaravel has no Proxy outside `Model` (AD-7), so each read
 // or call is written as the call PHP makes (DIV-12.16): `collection.__get('each').__get('name')` and
 // `collection.__get('each').__call('save', [])`.
-import { Error as PhpError, getDebugType, is_array, is_string, registerClass, resolveClass } from "@xaravel/runtime";
+import { Error as PhpError, getDebugType, is_array, is_object, is_string, registerClass, resolveClass } from "@xaravel/runtime";
 import type { Enumerable } from "./Enumerable";
 import { arrayRead, propertyRead } from "./support/callables";
 
@@ -33,9 +33,14 @@ export class HigherOrderCollectionProxy {
     this.collection = collection;
   }
 
-  /** Proxy accessing an attribute onto the collection items: `$proxy->key` (DIV-12.16). */
+  /**
+   * Proxy accessing an attribute onto the collection items: `$proxy->key` (DIV-12.16). An item that is neither a PHP
+   * array nor an object reads as `null`, as PHP's property read on it does (with a warning).
+   */
   __get(key: string): unknown {
-    return callMethod(this.collection, this.method, [(value: unknown): unknown => (is_array(value) ? arrayRead(value as object, key) : propertyRead(value as object, key))]);
+    return callMethod(this.collection, this.method, [
+      (value: unknown): unknown => (is_array(value) ? arrayRead(value as object, key) : is_object(value) ? propertyRead(value as object, key) : null),
+    ]);
   }
 
   /** Proxy a method call onto the collection items: `$proxy->method(...$parameters)` (DIV-12.16). */

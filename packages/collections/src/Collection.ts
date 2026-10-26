@@ -122,7 +122,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   /** Run a filter over each of the items: the callback gets each value and its key, and keys are kept. */
   filter(callback: ItemCallback | null = null): this {
     if (callback !== null) {
-      return this.newInstance(Arr.where(this.items, callback));
+      return this.newInstance(Arr.where(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
     }
 
     return this.newInstance(array_filter(this.items));
@@ -146,7 +146,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
 
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
   map(callback: ItemCallback): this {
-    return this.newInstance(Arr.map(this.items, callback));
+    return this.newInstance(Arr.map(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
   }
 
   /** Return only unique items from the collection array, by `==` or, when `strict`, by `===`. */

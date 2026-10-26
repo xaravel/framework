@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { Collection, collect, LazyCollection } from "@xaravel/collections";
+import { Arr, Collection, collect, LazyCollection } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
 import { arrayEntries, InvalidArgumentException, jsonEncode, keyed, PhpArray } from "@xaravel/runtime";
 
@@ -68,7 +68,7 @@ function keysOf(array: unknown): unknown[] {
 
 xaravelTest(
   "XT-collections-1",
-  "Collection and LazyCollection keep a PHP array's key order and normalise integer-like string keys as PHP does ('10' and '-5' become ints, '07' and '-0' stay strings, a repeated key keeps its first position and its last value) (FR-23.1, FR-23.2), and toArray(), toJson() and jsonEncode give the list or object shape the Oracle gives for the same arrays: string keys 0..n-1 in order are a list, a gap or a filter that keeps keys is an object, and values() is a list again (FR-23.3)",
+  "Collection and LazyCollection keep a PHP array's key order and normalise integer-like string keys as PHP does ('10' and '-5' become ints, '07' and '-0' stay strings, a repeated key keeps its first position and its last value) (FR-23.1, FR-23.2), and toArray(), toJson() and jsonEncode give the list or object shape the Oracle gives for the same arrays: string keys 0..n-1 in order are a list, a gap or a filter that keeps keys is an object, and values() is a list again (FR-23.3); keys() and entries() iterate the normalised keys and pairs in order; toArray() turns each Arrayable item, a nested collection included, into its own toArray(); a callback that mutates the nested array it receives leaves the collection unchanged, as PHP passes items by value; a value no array form covers (a scalar) given to Arr.from throws Upstream's InvalidArgumentException 'Items cannot be represented by a scalar value.'",
   () => {
     const mixed = new PhpArray<string | number, string>([
       ["10", "a"],
@@ -95,10 +95,61 @@ xaravelTest(
     Assert.assertSame(normalised, keysOf(collect(mixed).toArray()), "Collection keys");
     Assert.assertSame(normalised, keysOf(LazyCollection.make(mixed).toArray()), "LazyCollection keys");
     Assert.assertSame("g", collect(mixed).get(1), "a repeated key keeps its last value");
-    for (const [key] of collect(mixed).entries()) {
-      Assert.assertTrue(normalised.includes(key as string | number), `iterated key ${String(key)}`);
+    const pairs = [
+      [10, "a"],
+      [9, "b"],
+      ["x", "c"],
+      ["07", "d"],
+      [-5, "e"],
+      [1, "g"],
+      ["-0", "h"],
+    ];
+    for (const [name, c] of [
+      ["Collection", collect(mixed)],
+      ["LazyCollection", LazyCollection.make(mixed)],
+    ] as const) {
+      Assert.assertSame(normalised, [...c.keys()], `${name} keys(), in order`);
+      Assert.assertSame(pairs, [...c.entries()], `${name} entries(), in order`);
     }
+
+    // toArray() converts each Arrayable item, a nested collection included, to its own toArray().
+    for (const [name, make] of [
+      ["Collection", (items: unknown) => collect(items)],
+      ["LazyCollection", (items: unknown) => LazyCollection.make(items)],
+    ] as const) {
+      Assert.assertSame([new XtArrayable().toArray(), { a: 1 }, "x"], make([new XtArrayable(), collect({ a: 1 }), "x"]).toArray(), `${name} toArray() of Arrayable items`);
+    }
+
+    // A callback that mutates the nested array it receives leaves the collection unchanged (PHP passes it by value).
+    const nested = collect([[1, 2]]);
+    nested.map((v: number[]) => {
+      v.push(9);
+      return v;
+    });
+    nested.each((v: number[]) => {
+      v.push(9);
+    });
+    nested.filter((v: number[]) => v.push(9) > 0);
+    Assert.assertSame([[1, 2]], nested.all(), "Collection callbacks get copies");
+    const lazyNested = LazyCollection.make([[1, 2]]);
+    lazyNested
+      .map((v: number[]) => {
+        v.push(9);
+        return v;
+      })
+      .all();
+    Assert.assertSame([[1, 2]], lazyNested.all(), "LazyCollection callbacks get copies");
     Assert.assertSame(["a", "b", "c"], collect(list).toArray(), "integer-like string keys 0..n-1 are a list");
+
+    // Arr::from's default arm: a scalar is no array form.
+    let fromScalar: unknown = null;
+    try {
+      Arr.from(1);
+    } catch (error) {
+      fromScalar = error;
+    }
+    Assert.assertInstanceOf(InvalidArgumentException, fromScalar);
+    Assert.assertSame("Items cannot be represented by a scalar value.", (fromScalar as InvalidArgumentException).getMessage());
 
     // The shapes, against the Oracle.
     const output = oracle("XT-collections-1");
@@ -184,7 +235,7 @@ class XtArrayable implements Arrayable {
 
 xaravelTest(
   "XT-collections-3",
-  "LazyCollection.make() enumerates as Upstream from an array, an Arrayable, a generator function whose keyed(k, v) yields give PHP's keys and whose plain yields take PHP's next int key, and a plain function whose result is wrapped as an array, each enumeration calling the generator function afresh; a bare generator object passed to make() or the constructor throws Upstream's InvalidArgumentException (DIV-12.18)",
+  "LazyCollection.make() enumerates as Upstream from an array, an Arrayable, a generator function whose keyed(k, v) yields give PHP's keys and whose plain yields take PHP's next int key, and a plain function whose result is wrapped as an array, each enumeration calling the generator function afresh; a bare generator object passed to make() or the constructor throws Upstream's InvalidArgumentException (DIV-12.18); a LazyCollection.range or LazyCollection.times result gives the same items each time it is enumerated; LazyCollection.range with a zero step throws Upstream's InvalidArgumentException 'Step value cannot be zero.'",
   () => {
     Assert.assertSame({ a: 1, b: 2 }, LazyCollection.make({ a: 1, b: 2 }).all(), "an array");
     Assert.assertSame(
@@ -236,5 +287,21 @@ xaravelTest(
       Assert.assertInstanceOf(InvalidArgumentException, thrown);
       Assert.assertSame("Generators should not be passed directly to LazyCollection. Instead, pass a generator function.", (thrown as InvalidArgumentException).getMessage());
     }
+
+    const range = LazyCollection.range(1, 3);
+    Assert.assertSame([1, 2, 3], range.all(), "range, first enumeration");
+    Assert.assertSame([1, 2, 3], range.all(), "range, second enumeration");
+    const times = LazyCollection.times(3, (number: number) => number * 10);
+    Assert.assertSame([10, 20, 30], times.all(), "times, first enumeration");
+    Assert.assertSame([10, 20, 30], times.all(), "times, second enumeration");
+
+    let zeroStep: unknown = null;
+    try {
+      LazyCollection.range(1, 5, 0);
+    } catch (error) {
+      zeroStep = error;
+    }
+    Assert.assertInstanceOf(InvalidArgumentException, zeroStep);
+    Assert.assertSame("Step value cannot be zero.", (zeroStep as InvalidArgumentException).getMessage());
   },
 );

@@ -81,7 +81,13 @@ export function data_get(target: unknown, key: unknown, defaultValue: unknown = 
   return target ?? null;
 }
 
-/** Return the default value of the given value: a Closure is called with `args`, anything else is returned. */
+/**
+ * Return the default value of the given value: a Closure is called with `args` and its result returned, anything else
+ * is returned as it is. A dual helper (AD-6.5): a callback returning `T` gives `T`, so an async one gives its own
+ * Promise, never awaited here.
+ */
+export function value<T>(value_: (...args: any[]) => T, ...args: unknown[]): T;
+export function value<T>(value_: T, ...args: unknown[]): T;
 export function value(value_: unknown, ...args: unknown[]): unknown {
   return value_ instanceof Closure ? ((value_ as (...parameters: unknown[]) => unknown)(...args) ?? null) : (value_ ?? null);
 }

@@ -95,3 +95,5 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 - **DIV-12.19:** where a test passes a collection class as a value, it is the class's FQCN, `fqcn(Collection)`.
 
 Not ported yet: `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.
+
+`has()` arrives with Story 14.2, so until then `data_get` and `Arr.exists` on a `Collection` or `LazyCollection` target throw, and so do a key-based `unique(key)` or `countBy(key)` over items that are collections.

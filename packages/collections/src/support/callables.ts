@@ -1,6 +1,8 @@
 // Calling a PHP callable and reading a PHP array or object by key, as the Collections core does. Internal: not
 // exported from the package.
-import { arrayEntries, Error as PhpError, getDebugType, normalizeKey } from "@xaravel/runtime";
+import { Error as PhpError, getDebugType, normalizeKey, type PhpArray, toBool } from "@xaravel/runtime";
+
+const PHP_ARRAY = Symbol.for("xaravel.php.array");
 
 /**
  * PHP's `$callback(...$args)`: a function is called with `args`, and an object whose `__invoke` is a function through
@@ -20,12 +22,31 @@ export function callCallable(callback: unknown, ...args: unknown[]): unknown {
 /** PHP's `$array[$key]` read on a PHP array (a list, a plain object or a `PhpArray`): `null` for a missing key. */
 export function arrayRead(array: object, key: unknown): unknown {
   const normalized = normalizeKey(key);
-  for (const [entryKey, value] of arrayEntries(array)) {
-    if (entryKey === normalized) {
-      return value;
+  if (Array.isArray(array)) {
+    return typeof normalized === "number" && normalized >= 0 && normalized < array.length ? ((array[normalized] as unknown) ?? null) : null;
+  }
+  if ((array as Record<symbol, unknown>)[PHP_ARRAY] === true) {
+    return (array as PhpArray).get(normalized) ?? null;
+  }
+  const name = String(normalized);
+  return Object.hasOwn(array, name) ? (((array as Record<string, unknown>)[name] as unknown) ?? null) : null;
+}
+
+/**
+ * Whether `object` has the PHP property `name`: an own property, or an accessor up its prototype chain. A function
+ * reached through the prototype is a method, not a property.
+ */
+function hasProperty(object: object, name: string): boolean {
+  if (Object.hasOwn(object, name)) {
+    return true;
+  }
+  for (let holder: object | null = Object.getPrototypeOf(object) as object | null; holder !== null && holder !== Object.prototype; holder = Object.getPrototypeOf(holder) as object | null) {
+    const descriptor = Object.getOwnPropertyDescriptor(holder, name);
+    if (descriptor !== undefined) {
+      return descriptor.get !== undefined || descriptor.set !== undefined || typeof descriptor.value !== "function";
     }
   }
-  return null;
+  return false;
 }
 
 /**
@@ -34,7 +55,7 @@ export function arrayRead(array: object, key: unknown): unknown {
  */
 export function propertyRead(object: object, key: unknown): unknown {
   const name = String(key);
-  if (name in object) {
+  if (hasProperty(object, name)) {
     return ((object as Record<string, unknown>)[name] as unknown) ?? null;
   }
   const magic: unknown = (object as { __get?: unknown }).__get;
@@ -47,12 +68,12 @@ export function propertyRead(object: object, key: unknown): unknown {
 /** PHP's `isset($object->{$key})`: a non-null property, else the object's `__isset($key)` port when it has one. */
 export function propertyIsSet(object: object, key: unknown): boolean {
   const name = String(key);
-  if (name in object) {
+  if (hasProperty(object, name)) {
     return ((object as Record<string, unknown>)[name] ?? null) !== null;
   }
   const magic: unknown = (object as { __isset?: unknown }).__isset;
   if (typeof magic === "function") {
-    return Reflect.apply(magic, object, [name]) === true;
+    return toBool(Reflect.apply(magic, object, [name]));
   }
   return false;
 }

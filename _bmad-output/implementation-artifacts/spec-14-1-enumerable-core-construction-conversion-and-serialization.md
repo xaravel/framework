@@ -2,9 +2,9 @@
 title: 'Story 14.1: Enumerable core: construction, conversion and serialization'
 type: 'feature'
 created: '2026-10-25'
-status: 'in-progress'
+status: 'in-review'
 baseline_revision: '6d1b30c4a93b66c1c3e8c6ae9c7e0ba544580ad6'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - '{project-root}/PORTING.md'
@@ -14,7 +14,28 @@ context:
   - '{project-root}/packages/runtime/docs/php-values.md'
   - '{project-root}/conformance/review/fidelity.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      `Arr.exists`' Enumerable branch, and so `data_get` and key-based `unique` / `countBy` over Collection items, throw `array.has is not a function` until `Collection::has` / `LazyCollection::has` land.
+    evidence: |-
+      Confirmed by three reviewers: `data_get(collect({a: 1}), 'a')` throws. Porting `has` needs PHP's `array_all` and `array_flip`, which the runtime does not export; no 14.1 Test ID reaches the branch, so the Escalation belongs to Story 14.2 (testHas#0/#1), under decisions/MAINT-2026-10-26-runtime-builtins.md.
+    location: >-
+      packages/collections/src/Arr.ts (exists)
+    severity: medium
+  - summary: >-
+      `data_get`'s dot, `*` and `{first}` / `{last}` paths, and `HigherOrderCollectionProxy.__call`, have no test yet.
+    evidence: |-
+      Their Upstream tests (data_get, key-based unique / countBy, testHigherOrderCollectionMethods) are in Stories 14.2-14.5 and Support's; those Stories' ports cover them.
+    location: >-
+      packages/collections/src/helpers.ts, packages/collections/src/HigherOrderCollectionProxy.ts
+    severity: low
+  - summary: >-
+      XT-collections-1's Oracle comparison runs only once CI signs its fixture.
+    evidence: |-
+      Fidelity reviewer 1 rejected on F-2 / F-7 for the missing fixture; it is committed by oracle.yml#story after the push, and the Fidelity Review must run again on that tree before story:check.
+    location: >-
+      conformance/fixtures/collections/77a1c76a3a51c30f5f2c204bbe58242ccdec6962bcbe82a732e70090ed18a0ef.json
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -81,6 +102,48 @@ deferred: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+### 2026-10-26 — Review pass
+- verdicts: 38 findings — high 4, medium 13, low 11, false 9, maybe-false 1
+- findings:
+  - `[low]` `patch` (verification-gap) `toArray()`'s per-item `Arrayable` mapping has no running test (its two Upstream tests wait on ESC-14.1-11) — XT-collections-1 gains `toArray()` over an Arrayable fixture and a nested Collection, for both classes.
+  - `[low]` `defer` (verification-gap) `data_get`'s dot, `*` and `{first}`/`{last}` paths have no test — its Upstream tests and key-based `unique`/`countBy` tests are in Stories 14.2-14.5; deferred.
+  - `[low]` `defer` (verification-gap) `HigherOrderCollectionProxy.__call` has no test — `testHigherOrderCollectionMethods` is a later Story's; deferred.
+  - `[medium]` `defer` (verification-gap, other) `data_get` / `Arr.exists` on a Collection target throws `array.has is not a function` — same root as the `has` entries below; deferred, docs patched.
+  - `[false]` `reject` (intent) the "Construct: none of these" row is tested at `Arr.from`, not the constructor — `getArrayableItems` sends every value that is not null, a scalar or an enum case to `Arr.from`, so the row's error is `Arr.from`'s default arm; the constructor cannot reach it with any value the runtime's `phpType` gives.
+  - `[false]` `reject` (intent) `instanceof UnitEnum` replaces `enumExists(fqcn(x))` — ESC-14.1-9 (option 1) added the `UnitEnum` token so that the constructor's test is Upstream's `instanceof UnitEnum`; `enumExists(fqcn(x))` throws for an unregistered object (Design Notes, third round).
+  - `[false]` `reject` (intent) `support/callables.ts` and the package's array readers re-implement PHP — they compose the runtime's exported `arrayEntries` / `normalizeKey` / `PhpArray` into the `$value[$key]` read Upstream writes inline; no runtime internal is copied, and an internal `support/` module is the conditionable package's precedent (`packages/conditionable/src/support/values.ts`).
+  - `[medium]` `defer` (intent) `Enumerable` declares `has`, which the classes lack — same root as the `has` entries; deferred.
+  - `[false]` `reject` (intent) four Test IDs stay unported under ESC-14.1-11 — the intent's own rule is "never port an escalated Test ID before its ruling"; the Story halts blocked on it.
+  - `[low]` `reject` (intent) the test file's local `class_basename` throwing `BlockedByComponentError('support')` may read as a stand-in — it is never reached (the case's `setUp` throws first) and returns nothing; it only lets the kept Upstream body compile, as testDump's does.
+  - `[false]` `reject` (intent) testOffsetAccess / testBehavesLikeAnArrayWithArrayAccess record one clause for lines marked with two — DIV-12.17 says such a test records DIV-12.17 while each line keeps its own marker (ESC-14.1-8).
+  - `[false]` `reject` (intent) testEnsureForObjects lines are marked DIV-12.19 while the line is `skip` with `adapted: null` — only a `pass` line may carry `adapted` (PORTING.md § Markers); the marker is ready for the port Epic 19 enables.
+  - `[high]` `patch` (blind) `LazyCollection.range` mutates its captured `from`, so re-enumeration continues from the last value (confirmed `[1,2,3]` then `[4,3]`); `times` too — bounds copied into locals per enumeration; XT-collections-3 asserts two enumerations agree.
+  - `[medium]` `defer` (blind) `data_get` / key-based `valueRetriever` throw a raw `TypeError` on a Collection target (`has` missing) — fix is porting `has`, which needs PHP's `array_all` / `array_flip`; the runtime lacks them and no 14.1 Test ID can carry that Escalation, so Story 14.2 (testHas) raises it under MAINT-2026-10-26-runtime-builtins; docs' "Not ported yet" lists it.
+  - `[false]` `reject` (blind) the spec is `in-review` while ESC-14.1-11 lines stay `not-ported-yet`, and they should be `blocked-by:mockery` — the Story halts `blocked` on ESC-14.1-11; `blocked-by:mockery` fails `expectations:check` (`tools/expectations/reasons.ts:282`: mockery is Phase 0, not later than collections).
+  - `[high]` `patch` (blind) no test enumerates an internal lazy source twice, which let the `range` bug through — grouped with the `range` entry; XT-collections-3 now enumerates `range` and `times` twice.
+  - `[medium]` `defer` (blind) the classes carry the `Enumerable` brand without `has` — same root as the `has` entries; deferred.
+  - `[low]` `reject` (blind) `Collection` deep-copies items at several layers — `valueCopy` copies only nested arrays (objects by handle) and each copy is AD-9's "never hand back the internal array"; collapsing copies across methods is a redesign, not a direct correction, for a cost not measured here.
+  - `[medium]` `patch` (blind) `ensure()` with a `PhpArray` or plain-object type list throws "is not iterable" — types read as `arrayEntries` values.
+  - `[medium]` `patch` (blind) `propertyRead` / `propertyIsSet` treat prototype methods as properties (`data_get(obj, 'toArray')` returns a function) — a function-valued prototype member is no longer a property.
+  - `[low]` `patch` (blind) `arrayRead` scans every entry for one key, quadratic under `*` — direct normalised-key lookup.
+  - `[low]` `reject` (blind) `[Symbol.toPrimitive]` ignores the `number` hint — AD-26 decides `__toString` as `toString()` plus `[Symbol.toPrimitive]`, the form every port uses; PHP's `TypeError` for `$c + 1` is arithmetic on an object, not a cast, and no port reproduces it.
+  - `[low]` `patch` (blind) XT-collections-1's `entries()` check tests membership only — exact ordered `keys()` / `entries()` assertions.
+  - `[high]` `patch` (edge) range re-enumeration — same entry as the blind `range` finding.
+  - `[medium]` `defer` (edge) `Arr.exists`' `has` branch throws a raw `TypeError` — same root as the `has` entries; deferred.
+  - `[medium]` `patch` (edge) a callback that mutates a nested array it receives changes the collection (confirmed for `map`) — every callback in this diff receives `valueCopy(value)`; an XT assertion covers it.
+  - `[medium]` `patch` (edge) higher-order `__get` on a null or scalar item throws from `in` — such an item reads `null`, as PHP's property read on a non-object gives.
+  - `[medium]` `patch` (edge) prototype members read as properties — grouped with the blind `propertyRead` entry.
+  - `[low]` `patch` (edge) a truthy non-boolean `__isset` result reads false — cast with `toBool`.
+  - `[medium]` `patch` (edge) `ensure()` with a `PhpArray` or plain-object type list — grouped with the blind `ensure` entry.
+  - `[low]` `patch` (edge) `ensure()`'s message calls `fqcn()` on a non-string primitive type — a string names itself, a class or token `fqcn()`, else `toPhpString`.
+  - `[low]` `reject` (edge) `range` with numeric strings concatenates — the signature takes numbers, `tsc --strict` rejects a string, and no Upstream test or caller passes one; coercing would add a branch for an untyped call.
+  - `[high]` `patch` (edge, claim) range is not line for line because PHP's `use` copies — same entry as the `range` patch.
+  - `[false]` `reject` (edge, claim) the AC "no line is `not-ported-yet`" cannot pass — true, and the Story halts `blocked` on ESC-14.1-11 rather than `done`; nothing to patch.
+  - `[maybe-false]` `defer` (fidelity F-2, reviewer 1) XT-collections-1's signed fixture is missing — it exists only after CI signs it on push (`oracle.yml#story`); settled by re-running the review on the tree that holds it.
+  - `[false]` `reject` (fidelity F-4, reviewer 1) the four ESC-14.1-11 lines should be `blocked-by:mockery` — `expectations:check` rejects it (`reasons.ts:282`, mockery is Phase 0); the test file's comment and ESC-14.1-11's evidence now say so, which changes the reviewed tree.
+  - `[medium]` `defer` (fidelity F-7, reviewer 1) XT-collections-1's Oracle comparison cannot run without its fixture — same as F-2; re-review after the fixture lands.
+  - `[medium]` `patch` (fidelity F-9, reviewer 1) `value` returns `unknown`, not the dual helper's `T` / `Promise<T>` (AD-6.5) — generic signature.
 
 ## Design Notes
 
@@ -155,3 +218,58 @@ Blocking condition: intent gap. The Story resumed after the Maintainer ruled ESC
 - ESC-14.1-10: `ReflectionMethod::invokeArgs` for testGetArrayableItems #0/#1.
 
 No package code was written. The Expectations lines that named ESC-14.1-5..8 now name ESC-14.1-9 (104) or ESC-14.1-10 (2). `bun run escalations:check` and `bun run expectations:check` pass.
+
+## Fidelity Review
+
+### Reviewer 1: reject at tree fd641bdadc08173c177367544d1c4b7c0ba4ef94
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `6d1b30c4a93b66c1c3e8c6ae9c7e0ba544580ad6`, on 2026-10-26T13:20:00.129Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared added Ported Tests with the supplied Upstream methods; assertion subjects, expected values and order are preserved through the documented adaptations. |
+| F-2: No expected value is weakened | fail | Ported expected values remain unchanged, but XT-collections-1's Oracle-derived expected values cannot be confirmed. |
+| F-3: No assertion is removed without a DIV clause | pass | Compared assertion counts within each added Ported Test against Upstream; no assertion is dropped. The four unported Mockery cases remain explicitly skipped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | fail | Support skips match their dependencies, but the four Mockery-dependent skips use a lower-precedence reason. |
+| F-5: Every `adapted` marker matches its clause | pass | Compared adapted markers and Expectations fields with DIV-12.6, .16, .17 and .19; the index, higher-order and class-name rewrites match their clauses. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | No supplied Oracle fixture has an error output to compare with an Upstream expected exception. |
+| F-7: Every Xaravel Test verifies the consequence it declares | fail | Compared all three Xaravel Test bodies with their consequences; Oracle shape verification lacks its required fixture. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Framework changes stay within collections and reuse existing Components. Support-dependent tests are blocked rather than supplied with working substitute implementations. |
+| F-9: Every `@asyncRoot` tag is true | fail | The collection methods are synchronous and need no async-root tags, but value does not satisfy the required dual-helper type rule. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | Compared the request with XT-collections-1's inputs and recorded F-10 reason; its expressions evaluate the declared key and JSON-shape cases, with an explicit reason for having no Upstream test counterpart. |
+
+Findings:
+
+- **F-2** `conformance/fixtures/collections/77a1c76a3a51c30f5f2c204bbe58242ccdec6962bcbe82a732e70090ed18a0ef.json`: Supply the signed, verified fixture and its output so XT-collections-1's expected values can be reviewed. _(missing evidence)_
+- **F-4** `conformance/expectations/collections/framework/tests/Support/SupportCollectionTest.jsonl`: Change the two datasets of each interface-mocking test from not-ported-yet to blocked-by:mockery. ESC-14.1-11 identifies Mockery as the blocking Component, and blocked-by precedes not-ported-yet.
+- **F-7** `packages/collections/tests/xaravel/collections.test.ts`: Provide XT-collections-1's signed Oracle fixture and output. Its FR-23.3 comparisons currently cannot execute because the fixture is explicitly unavailable. _(missing evidence)_
+- **F-9** `packages/collections/src/helpers.ts`: Give value a generic callback-preserving signature: a synchronous callback must return T and an asynchronous callback Promise<T>. Its current unknown return type loses the callback's own type, contrary to AD-6 and DIV-1's dual-helper rule.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"reject","tree":"fd641bdadc08173c177367544d1c4b7c0ba4ef94","base":"6d1b30c4a93b66c1c3e8c6ae9c7e0ba544580ad6","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-26T13:20:00.129Z","items":[{"id":"F-1","result":"pass","note":"Compared added Ported Tests with the supplied Upstream methods; assertion subjects, expected values and order are preserved through the documented adaptations.","findings":[]},{"id":"F-2","result":"fail","note":"Ported expected values remain unchanged, but XT-collections-1's Oracle-derived expected values cannot be confirmed.","findings":[{"path":"conformance/fixtures/collections/77a1c76a3a51c30f5f2c204bbe58242ccdec6962bcbe82a732e70090ed18a0ef.json","detail":"Supply the signed, verified fixture and its output so XT-collections-1's expected values can be reviewed.","kind":"missing-evidence"}]},{"id":"F-3","result":"pass","note":"Compared assertion counts within each added Ported Test against Upstream; no assertion is dropped. The four unported Mockery cases remain explicitly skipped.","findings":[]},{"id":"F-4","result":"fail","note":"Support skips match their dependencies, but the four Mockery-dependent skips use a lower-precedence reason.","findings":[{"path":"conformance/expectations/collections/framework/tests/Support/SupportCollectionTest.jsonl","detail":"Change the two datasets of each interface-mocking test from not-ported-yet to blocked-by:mockery. ESC-14.1-11 identifies Mockery as the blocking Component, and blocked-by precedes not-ported-yet.","kind":"defect"}]},{"id":"F-5","result":"pass","note":"Compared adapted markers and Expectations fields with DIV-12.6, .16, .17 and .19; the index, higher-order and class-name rewrites match their clauses.","findings":[]},{"id":"F-6","result":"n/a","note":"No supplied Oracle fixture has an error output to compare with an Upstream expected exception.","findings":[]},{"id":"F-7","result":"fail","note":"Compared all three Xaravel Test bodies with their consequences; Oracle shape verification lacks its required fixture.","findings":[{"path":"packages/collections/tests/xaravel/collections.test.ts","detail":"Provide XT-collections-1's signed Oracle fixture and output. Its FR-23.3 comparisons currently cannot execute because the fixture is explicitly unavailable.","kind":"missing-evidence"}]},{"id":"F-8","result":"pass","note":"Framework changes stay within collections and reuse existing Components. Support-dependent tests are blocked rather than supplied with working substitute implementations.","findings":[]},{"id":"F-9","result":"fail","note":"The collection methods are synchronous and need no async-root tags, but value does not satisfy the required dual-helper type rule.","findings":[{"path":"packages/collections/src/helpers.ts","detail":"Give value a generic callback-preserving signature: a synchronous callback must return T and an asynchronous callback Promise<T>. Its current unknown return type loses the callback's own type, contrary to AD-6 and DIV-1's dual-helper rule.","kind":"defect"}]},{"id":"F-10","result":"pass","note":"Compared the request with XT-collections-1's inputs and recorded F-10 reason; its expressions evaluate the declared key and JSON-shape cases, with an explicit reason for having no Upstream test counterpart.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree fd641bdadc08173c177367544d1c4b7c0ba4ef94
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `6d1b30c4a93b66c1c3e8c6ae9c7e0ba544580ad6`, on 2026-10-26T13:20:00.129Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared each added portedTest in SupportCollectionTest.test.ts with the Upstream source lines shown in the Inventory rows. Each assertion keeps its subject, expected value and order. Index reads are get()/offsetGet (DIV-12.6), and isset/unset/index writes on Collection and WeakMap are offset* calls (DIV-12.17). The higher-order read is __get (DIV-12.16), and $collection used as a value is fqcn(collection) (DIV-12.19). Plain translations: isset on a native PHP array becomes '?? null !== null', get_class/::class becomes fqcn, and range() becomes phpRange. [true=>2,false=>3] is a PhpArray (DIV-9.2). testDump and testEnsureForObjects keep Upstream's bodies under a blocked case. The two Mockery tests are not added, so nothing is compared for them. |
+| F-2: No expected value is weakened | pass | Every expected value matches Upstream's, and every assertion keeps its kind: assertSame stays assertSame, assertEquals stays assertEquals, and expectExceptionObject keeps the full message. The ensure messages are built with the same sprintf format and arguments. No expected value was changed to match Xaravel's output. |
+| F-3: No assertion is removed without a DIV clause | pass | Counted assertions against each Inventory row's counts. Examples: testGetArrayableItems has 7 assertSame, testRangeMethod 6, testOffsetAccess 3 assertSame + 1 assertTrue + 1 assertFalse, testToPrettyJson 4, testBehavesLikeAnArray 10 assertEquals, and each testEnsure* has one expectExceptionObject (Upstream's assertThat ×3). No Ported Test has fewer assertions than Upstream. |
+| F-4: Every new Skip Reason is justified and its precedence is right | pass | New skip reasons: testDump#0/#1 is blocked-by:support, because it needs Symfony VarDumper through Support. testEnsureForObjects#0/#1 is blocked-by:support, because its expected message calls Support's class_basename. Both are covered. intentional-divergence does not apply, and blocked-by comes before not-ported-yet in the precedence order. The four Mockery-dependent lines keep their earlier not-ported-yet reason; only the escalation changes, to the pending ESC-14.1-11. not-ported-yet is in the SM-1 denominator. |
+| F-5: Every `adapted` marker matches its clause | pass | Read clauses DIV-12.6, DIV-12.16, DIV-12.17 and DIV-12.19 in decisions/DIV-12.md. Each '// adapted:' marker rewrites exactly the construct its clause names: get(k) for $c[k]; offsetSet/offsetExists/offsetUnset for writes, isset and unset (WeakMap included explicitly); __get for the higher-order read; fqcn(collection) for a class-name dataset value. The Expectations adapted fields agree: DIV-12.17 for tests that combine reads with writes, isset or unset (per the ESC-14.1-8 sentence), DIV-12.6 for testArrayAccessOffsetSet (reads only), and DIV-12.16 for testCanAddMethodsToProxy. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | pass | No error fixture is present or relied on. The only committed request is for XT-collections-1, whose fixture is not in the repository yet. The test code throws when a fixture's output.error is not null, so an error fixture cannot stand in for an expected value. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-collections-1 checks key order and normalisation directly: the keys [10,9,'x','07',-5,1,'-0'], the repeated key 1 → 'g', and both Collection and LazyCollection. It compares toArray/toJson/json_encode against the Oracle for the list, gap, filter and values() cases, and checks that Arr.from(1) throws. This matches FR-23.1 (order), FR-23.2 (normalisation) and FR-23.3 (list/object shape matching the Oracle). XT-collections-2 checks every ArrayAccess claim, including null versus default, position-keeping writes, next-int appends, isset on a null item, unset, and copies on read and construction. XT-collections-3 checks each LazyCollection source, keyed and plain generator keys, fresh calls per enumeration, wrapped function results, rejection of a bare generator object by both make() and the constructor, and the zero-step range error. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Every changed source file belongs to the collections component: Collection, LazyCollection, Enumerable, EnumeratesValues, HigherOrderCollectionProxy, Arr, helpers (collect/data_get/value) and functions (enum_value) all live in Laravel's illuminate/collections package. Support-dependent behaviour is not faked. The escaped toString path throws BlockedByComponentError('support'), dump/dd are not ported, and the tests that need Support are blocked-by:support. |
+| F-9: Every `@asyncRoot` tag is true | pass | Evidence (g) shows no @​asyncRoot tag in any changed src file, and no added export is async or returns a Promise. Collections are sync under DIV-1. value() returns its callback's own result as a plain function, with no declared Promise type. |
+| F-10: Oracle requests match the Upstream test's inputs | pass | conformance/oracle-requests/14.1.jsonl has one request, XT-collections-1, which is an Xaravel Test with no Upstream test. Its reason is recorded in the header of collections.test.ts. setup builds PHP arrays and exprs evaluate collection conversions. No expected value is written as PHP to be signed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"fd641bdadc08173c177367544d1c4b7c0ba4ef94","base":"6d1b30c4a93b66c1c3e8c6ae9c7e0ba544580ad6","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-26T13:20:00.129Z","items":[{"id":"F-1","result":"pass","note":"Compared each added portedTest in SupportCollectionTest.test.ts with the Upstream source lines shown in the Inventory rows. Each assertion keeps its subject, expected value and order. Index reads are get()/offsetGet (DIV-12.6), and isset/unset/index writes on Collection and WeakMap are offset* calls (DIV-12.17). The higher-order read is __get (DIV-12.16), and $collection used as a value is fqcn(collection) (DIV-12.19). Plain translations: isset on a native PHP array becomes `?? null !== null`, get_class/::class becomes fqcn, and range() becomes phpRange. [true=>2,false=>3] is a PhpArray (DIV-9.2). testDump and testEnsureForObjects keep Upstream's bodies under a blocked case. The two Mockery tests are not added, so nothing is compared for them.","findings":[]},{"id":"F-2","result":"pass","note":"Every expected value matches Upstream's, and every assertion keeps its kind: assertSame stays assertSame, assertEquals stays assertEquals, and expectExceptionObject keeps the full message. The ensure messages are built with the same sprintf format and arguments. No expected value was changed to match Xaravel's output.","findings":[]},{"id":"F-3","result":"pass","note":"Counted assertions against each Inventory row's counts. Examples: testGetArrayableItems has 7 assertSame, testRangeMethod 6, testOffsetAccess 3 assertSame + 1 assertTrue + 1 assertFalse, testToPrettyJson 4, testBehavesLikeAnArray 10 assertEquals, and each testEnsure* has one expectExceptionObject (Upstream's assertThat ×3). No Ported Test has fewer assertions than Upstream.","findings":[]},{"id":"F-4","result":"pass","note":"New skip reasons: testDump#0/#1 is blocked-by:support, because it needs Symfony VarDumper through Support. testEnsureForObjects#0/#1 is blocked-by:support, because its expected message calls Support's class_basename. Both are covered. intentional-divergence does not apply, and blocked-by comes before not-ported-yet in the precedence order. The four Mockery-dependent lines keep their earlier not-ported-yet reason; only the escalation changes, to the pending ESC-14.1-11. not-ported-yet is in the SM-1 denominator.","findings":[]},{"id":"F-5","result":"pass","note":"Read clauses DIV-12.6, DIV-12.16, DIV-12.17 and DIV-12.19 in decisions/DIV-12.md. Each `// adapted:` marker rewrites exactly the construct its clause names: get(k) for $c[k]; offsetSet/offsetExists/offsetUnset for writes, isset and unset (WeakMap included explicitly); __get for the higher-order read; fqcn(collection) for a class-name dataset value. The Expectations adapted fields agree: DIV-12.17 for tests that combine reads with writes, isset or unset (per the ESC-14.1-8 sentence), DIV-12.6 for testArrayAccessOffsetSet (reads only), and DIV-12.16 for testCanAddMethodsToProxy.","findings":[]},{"id":"F-6","result":"pass","note":"No error fixture is present or relied on. The only committed request is for XT-collections-1, whose fixture is not in the repository yet. The test code throws when a fixture's output.error is not null, so an error fixture cannot stand in for an expected value.","findings":[]},{"id":"F-7","result":"pass","note":"XT-collections-1 checks key order and normalisation directly: the keys [10,9,'x','07',-5,1,'-0'], the repeated key 1 → 'g', and both Collection and LazyCollection. It compares toArray/toJson/json_encode against the Oracle for the list, gap, filter and values() cases, and checks that Arr.from(1) throws. This matches FR-23.1 (order), FR-23.2 (normalisation) and FR-23.3 (list/object shape matching the Oracle). XT-collections-2 checks every ArrayAccess claim, including null versus default, position-keeping writes, next-int appends, isset on a null item, unset, and copies on read and construction. XT-collections-3 checks each LazyCollection source, keyed and plain generator keys, fresh calls per enumeration, wrapped function results, rejection of a bare generator object by both make() and the constructor, and the zero-step range error.","findings":[]},{"id":"F-8","result":"pass","note":"Every changed source file belongs to the collections component: Collection, LazyCollection, Enumerable, EnumeratesValues, HigherOrderCollectionProxy, Arr, helpers (collect/data_get/value) and functions (enum_value) all live in Laravel's illuminate/collections package. Support-dependent behaviour is not faked. The escaped toString path throws BlockedByComponentError('support'), dump/dd are not ported, and the tests that need Support are blocked-by:support.","findings":[]},{"id":"F-9","result":"pass","note":"Evidence (g) shows no @asyncRoot tag in any changed src file, and no added export is async or returns a Promise. Collections are sync under DIV-1. value() returns its callback's own result as a plain function, with no declared Promise type.","findings":[]},{"id":"F-10","result":"pass","note":"conformance/oracle-requests/14.1.jsonl has one request, XT-collections-1, which is an Xaravel Test with no Upstream test. Its reason is recorded in the header of collections.test.ts. setup builds PHP arrays and exprs evaluate collection conversions. No expected value is written as PHP to be signed.","findings":[]}],"prior":[]}
+```

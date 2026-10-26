@@ -140,13 +140,15 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     void args;
 
     return new this(function* () {
-      if (from <= to) {
-        for (; from <= to; from += Number(abs(step))) {
-          yield from;
+      // PHP's `use ($from, $to, $step)` copies the bounds into each call, so every enumeration starts afresh.
+      let current = from;
+      if (current <= to) {
+        for (; current <= to; current += Number(abs(step))) {
+          yield current;
         }
       } else {
-        for (; from >= to; from -= Number(abs(step))) {
-          yield from;
+        for (; current >= to; current -= Number(abs(step))) {
+          yield current;
         }
       }
     });
@@ -168,7 +170,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       const counts = new PhpArray();
 
       for (const [key, value_] of this.entries()) {
-        const group = enum_value(callback(value_, key)) as PhpKeyInput;
+        const group = enum_value(callback(valueCopy(value_), key)) as PhpKeyInput;
 
         if (!toBool(counts.get(group))) {
           counts.set(group, 0);
@@ -186,7 +188,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     const test: ItemCallback = callback ?? ((value_: unknown) => toBool(value_));
     return this.lazyInstance(function* (this: LazyCollection) {
       for (const [key, value_] of this.entries()) {
-        if (toBool(callCallable(test, value_, key))) {
+        if (toBool(callCallable(test, valueCopy(value_), key))) {
           yield keyed(key, value_);
         }
       }
@@ -217,7 +219,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   map(callback: ItemCallback): this {
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {
       for (const [key, value_] of this.entries()) {
-        yield keyed(key, callCallable(callback, value_, key));
+        yield keyed(key, callCallable(callback, valueCopy(value_), key));
       }
     });
   }
@@ -229,7 +231,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       const exists: unknown[] = [];
 
       for (const [itemKey, item] of this.entries()) {
-        const id = callback(item, itemKey);
+        const id = callback(valueCopy(item), itemKey);
         if (!in_array(id, exists, strict)) {
           yield keyed(itemKey, item);
 
