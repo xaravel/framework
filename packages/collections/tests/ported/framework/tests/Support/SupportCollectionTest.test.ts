@@ -19,11 +19,12 @@
 // through `phpArrayEntries` (PORTING.md § Reading a PHP array), and a `<` / `>` whose operand may be a string is
 // `spaceship` (PORTING.md § Mechanical expression rule). testValueWithObjects calls Support's `literal()` helper, which
 // arrives with Support (Epic 19), so it keeps Upstream's body in the blocked case, through a local `literal` that
-// throws the same error. testContains, testContainsStrict, testDoesntContain and testSome call `is_null`, and
-// testGetPluckValueWithAccessors's fixture `TestAccessorEloquentTestStub::__isset` calls it too;
-// testValueRetrieverAcceptsDotNotation reaches `sortBy`. Those Test IDs wait on ESC-14.2-4 and are not ported here.
-// Their Expectations lines are `not-ported-yet`, not `blocked-by:runtime`: `tools/expectations/reasons.ts` accepts
+// throws the same error. testValueRetrieverAcceptsDotNotation reaches `sortBy`, whose `match ($descending)` throws
+// PHP's `UnhandledMatchError`, which the runtime does not export; it waits on ESC-14.2-6 and is not ported here. Its
+// Expectations lines are `not-ported-yet`, not `blocked-by:runtime`: `tools/expectations/reasons.ts` accepts
 // `blocked-by:<c>` only for a Component in a later Phase or Epic than collections, and the runtime is Phase 0/1.
+// testGetPluckValueWithAccessors's fixture calls `$this->$accessor()`, which PHP resolves case-insensitively; the
+// runtime exports no such call, so it waits on ESC-14.2-7, and its lines are `not-ported-yet` for the same reason.
 //
 // `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
@@ -47,6 +48,7 @@ import {
   gettype,
   implode,
   InvalidArgumentException,
+  is_null,
   is_numeric,
   JSON_BIGINT_AS_STRING,
   JSON_ERROR_DEPTH,
@@ -147,12 +149,12 @@ class TestArrayAccessImplementation {
   }
 
   offsetExists(offset: string): boolean {
-    return (this.arr[offset] ?? null) !== null;
+    return Object.hasOwn(this.arr, offset) && (this.arr[offset] ?? null) !== null;
   }
 
   offsetGet(offset: string): unknown {
     // PHP's read of a missing key gives `null` (AD-9).
-    return this.arr[offset] ?? null;
+    return Object.hasOwn(this.arr, offset) ? (this.arr[offset] ?? null) : null;
   }
 
   offsetSet(offset: string, value: unknown): void {
@@ -1217,8 +1219,8 @@ portedTest(`${ID}::testValue`, { case: SupportCollectionTest, dataset: COLLECTIO
   this.assertSame("bar", c.where("id", 2).value("pivot.value"));
 });
 
-// testValueRetrieverAcceptsDotNotation (#0/#1) reaches `sortBy`, whose `sortByMany` branch calls `uasort` and the
-// `strcmp` family. It waits on ESC-14.2-4 and is not ported; see the header note on its `not-ported-yet` lines.
+// testValueRetrieverAcceptsDotNotation (#0/#1) reaches `sortBy`, whose `match ($descending)` throws PHP's
+// `UnhandledMatchError`. It waits on ESC-14.2-6 and is not ported; see the header note on its `not-ported-yet` lines.
 portedTest(`${ID}::testValueUsingEnum`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const c = new collection([
     { id: 1, name: StaffEnum.Taylor },
@@ -1288,8 +1290,10 @@ portedTest(`${ID}::testExceptSelf`, { case: SupportCollectionTest, dataset: COLL
   this.assertEquals({ first: "Taylor", last: "Otwell" }, data.except(data).all());
 });
 
-// testGetPluckValueWithAccessors (#0/#1): its fixture TestAccessorEloquentTestStub::__isset calls `is_null`, so the
-// test and the fixture wait on ESC-14.2-4 and are not ported; see the header note on their `not-ported-yet` lines.
+// testGetPluckValueWithAccessors (#0/#1): its fixture TestAccessorEloquentTestStub calls `$this->$accessor()` with
+// the name `getsomeAttribute`, which PHP resolves case-insensitively to `getSomeAttribute()`. The runtime exports no
+// such call, so the test and the fixture wait on ESC-14.2-7 and are not ported; see the header note on its
+// `not-ported-yet` lines.
 portedTest(`${ID}::testPluckWithArrayAndObjectValues`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const data = new collection([Object.assign(new stdClass(), { name: "taylor", email: "foo" }), { name: "dayle", email: "bar" }]);
   this.assertEquals({ taylor: "foo", dayle: "bar" }, data.pluck("email", "name").all());
@@ -1575,8 +1579,134 @@ portedTest(`${ID}::testNthThrowsExceptionForNegativeStep`, { case: SupportCollec
   new collection([1, 2, 3]).nth(-1).all();
 });
 
-// testContains, testContainsStrict, testDoesntContain and testSome (#0/#1) call `is_null`, which the runtime does
-// not export yet. They wait on ESC-14.2-4 and are not ported; see the header note on their `not-ported-yet` lines.
+portedTest(`${ID}::testContains`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([1, 3, 5]);
+
+  this.assertTrue(c.contains(1));
+  this.assertTrue(c.contains("1"));
+  this.assertFalse(c.contains(2));
+  this.assertFalse(c.contains("2"));
+
+  c = new collection(["1"]);
+  this.assertTrue(c.contains("1"));
+  this.assertTrue(c.contains(1));
+
+  c = new collection([null]);
+  this.assertTrue(c.contains(false));
+  this.assertTrue(c.contains(null));
+  this.assertTrue(c.contains([]));
+  this.assertTrue(c.contains(0));
+  this.assertTrue(c.contains(""));
+
+  c = new collection([0]);
+  this.assertTrue(c.contains(0));
+  this.assertTrue(c.contains("0"));
+  this.assertTrue(c.contains(false));
+  this.assertTrue(c.contains(null));
+
+  this.assertTrue(
+    c.contains((value: number) => {
+      return value < 5;
+    }),
+  );
+  this.assertFalse(
+    c.contains((value: number) => {
+      return value > 5;
+    }),
+  );
+
+  c = new collection([{ v: 1 }, { v: 3 }, { v: 5 }]);
+
+  this.assertTrue(c.contains("v", 1));
+  this.assertFalse(c.contains("v", 2));
+
+  c = new collection(["date", "class", Object.assign(new stdClass(), { foo: 50 })]);
+
+  this.assertTrue(c.contains("date"));
+  this.assertTrue(c.contains("class"));
+  this.assertFalse(c.contains("foo"));
+
+  c = new collection([
+    { a: false, b: false },
+    { a: true, b: false },
+  ]);
+
+  this.assertTrue(c.__get("contains").__get("a")); // adapted:DIV-12.16
+  this.assertFalse(c.__get("contains").__get("b")); // adapted:DIV-12.16
+
+  c = new collection([null, 1, 2]);
+
+  this.assertTrue(
+    c.contains((value: unknown) => {
+      return is_null(value);
+    }),
+  );
+});
+
+portedTest(`${ID}::testDoesntContain`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([1, 3, 5]);
+
+  this.assertFalse(c.doesntContain(1));
+  this.assertFalse(c.doesntContain("1"));
+  this.assertTrue(c.doesntContain(2));
+  this.assertTrue(c.doesntContain("2"));
+
+  c = new collection(["1"]);
+  this.assertFalse(c.doesntContain("1"));
+  this.assertFalse(c.doesntContain(1));
+
+  c = new collection([null]);
+  this.assertFalse(c.doesntContain(false));
+  this.assertFalse(c.doesntContain(null));
+  this.assertFalse(c.doesntContain([]));
+  this.assertFalse(c.doesntContain(0));
+  this.assertFalse(c.doesntContain(""));
+
+  c = new collection([0]);
+  this.assertFalse(c.doesntContain(0));
+  this.assertFalse(c.doesntContain("0"));
+  this.assertFalse(c.doesntContain(false));
+  this.assertFalse(c.doesntContain(null));
+
+  this.assertFalse(
+    c.doesntContain((value: number) => {
+      return value < 5;
+    }),
+  );
+  this.assertTrue(
+    c.doesntContain((value: number) => {
+      return value > 5;
+    }),
+  );
+
+  c = new collection([{ v: 1 }, { v: 3 }, { v: 5 }]);
+
+  this.assertFalse(c.doesntContain("v", 1));
+  this.assertTrue(c.doesntContain("v", 2));
+
+  c = new collection(["date", "class", Object.assign(new stdClass(), { foo: 50 })]);
+
+  this.assertFalse(c.doesntContain("date"));
+  this.assertFalse(c.doesntContain("class"));
+  this.assertTrue(c.doesntContain("foo"));
+
+  c = new collection([
+    { a: false, b: false },
+    { a: true, b: false },
+  ]);
+
+  this.assertFalse(c.__get("doesntContain").__get("a")); // adapted:DIV-12.16
+  this.assertTrue(c.__get("doesntContain").__get("b")); // adapted:DIV-12.16
+
+  c = new collection([null, 1, 2]);
+
+  this.assertFalse(
+    c.doesntContain((value: unknown) => {
+      return is_null(value);
+    }),
+  );
+});
+
 portedTest(`${ID}::testDoesntContainStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let c = new collection([1, 3, 5, "02"]);
 
@@ -1625,6 +1755,102 @@ portedTest(`${ID}::testDoesntContainStrict`, { case: SupportCollectionTest, data
   this.assertTrue(c.doesntContainStrict("foo"));
   this.assertTrue(c.doesntContainStrict(null));
   this.assertFalse(c.doesntContainStrict(""));
+});
+
+portedTest(`${ID}::testSome`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([1, 3, 5]);
+
+  this.assertTrue(c.some(1));
+  this.assertFalse(c.some(2));
+  this.assertTrue(
+    c.some((value: number) => {
+      return value < 5;
+    }),
+  );
+  this.assertFalse(
+    c.some((value: number) => {
+      return value > 5;
+    }),
+  );
+
+  c = new collection([{ v: 1 }, { v: 3 }, { v: 5 }]);
+
+  this.assertTrue(c.some("v", 1));
+  this.assertFalse(c.some("v", 2));
+
+  c = new collection(["date", "class", Object.assign(new stdClass(), { foo: 50 })]);
+
+  this.assertTrue(c.some("date"));
+  this.assertTrue(c.some("class"));
+  this.assertFalse(c.some("foo"));
+
+  c = new collection([
+    { a: false, b: false },
+    { a: true, b: false },
+  ]);
+
+  this.assertTrue(c.__get("some").__get("a")); // adapted:DIV-12.16
+  this.assertFalse(c.__get("some").__get("b")); // adapted:DIV-12.16
+
+  c = new collection([null, 1, 2]);
+
+  this.assertTrue(
+    c.some((value: unknown) => {
+      return is_null(value);
+    }),
+  );
+});
+
+portedTest(`${ID}::testContainsStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([1, null, 2]);
+  this.assertTrue(c.containsStrict((value: unknown) => is_null(value)));
+  this.assertFalse(c.containsStrict((value: unknown) => value === 0));
+
+  c = new collection([1, 3, 5, "02"]);
+
+  this.assertTrue(c.containsStrict(1));
+  this.assertFalse(c.containsStrict("1"));
+  this.assertFalse(c.containsStrict(2));
+  this.assertTrue(c.containsStrict("02"));
+  this.assertFalse(c.containsStrict(true));
+  this.assertTrue(
+    c.containsStrict((value: unknown) => {
+      return spaceship(value, 5) < 0;
+    }),
+  );
+  this.assertFalse(
+    c.containsStrict((value: unknown) => {
+      return spaceship(value, 5) > 0;
+    }),
+  );
+
+  c = new collection([0]);
+  this.assertTrue(c.containsStrict(0));
+  this.assertFalse(c.containsStrict("0"));
+
+  this.assertFalse(c.containsStrict(false));
+  this.assertFalse(c.containsStrict(null));
+
+  c = new collection([1, null]);
+  this.assertTrue(c.containsStrict(null));
+  this.assertFalse(c.containsStrict(0));
+  this.assertFalse(c.containsStrict(false));
+
+  c = new collection([{ v: 1 }, { v: 3 }, { v: "04" }, { v: 5 }]);
+
+  this.assertTrue(c.containsStrict("v", 1));
+  this.assertFalse(c.containsStrict("v", 2));
+  this.assertFalse(c.containsStrict("v", "1"));
+  this.assertFalse(c.containsStrict("v", 4));
+  this.assertTrue(c.containsStrict("v", "04"));
+
+  c = new collection(["date", "class", Object.assign(new stdClass(), { foo: 50 }), ""]);
+
+  this.assertTrue(c.containsStrict("date"));
+  this.assertTrue(c.containsStrict("class"));
+  this.assertFalse(c.containsStrict("foo"));
+  this.assertFalse(c.containsStrict(null));
+  this.assertTrue(c.containsStrict(""));
 });
 
 portedTest(`${ID}::testContainsWithOperator`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
