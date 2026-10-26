@@ -171,8 +171,8 @@ function staticCallable(klass: ClassLike | object, method: string): boolean {
   return findMethod(klass, "__callStatic") !== null;
 }
 
-/** PHP's `Closure` methods, lower-cased (PHP method names are case-insensitive). */
-const CLOSURE_METHODS: ReadonlySet<string> = new Set(["__invoke", "bind", "bindto", "call", "fromcallable"]);
+/** PHP's `Closure` methods, lower-cased (PHP method names are case-insensitive). Internal: `method_exists` reads them too. */
+export const CLOSURE_METHODS: ReadonlySet<string> = new Set(["__invoke", "bind", "bindto", "call", "fromcallable"]);
 
 /**
  * The object rule: `method` is a method of `object`'s class (either chain), or the class has `__call`. A Closure's
