@@ -1,0 +1,68 @@
+gettype	["NULL","boolean","integer","double","double","string","array","object","object"]
+get_debug_type	["null","bool","int","float","float","string","array","stdClass","Closure"]
+get_debug_type.anon_extends_ArrayObject	"ArrayObject@anonymous"
+get_debug_type.anon	"class@anonymous"
+array_keys.normalised	["07",7,1,"",2]
+offset.array	"TypeError: Cannot access offset of type array on array"
+ArrayIterator.walk	[["a",1],[0,"x"],[1,"y"]]
+ArrayIterator.past_end	[false,null,null,3]
+ArrayIterator.values	[1,"x","y"]
+ArrayIterator.offsetExists_null	[true,false,null]
+position.end_unset_set	[true,"c"]
+position.end_unset_push	[true,0]
+position.delete_current	["c",null]
+position.delete_last_then_set	[false,"z"]
+position.reset_unpositioned	"b"
+position.reset_rewound	"b"
+foreach.reset.ArrayIterator	["a","c","a"]
+foreach.reset.ArrayObject	["a","c","a"]
+exchangeArray.position.pqr	["p","q","r",null]
+exchangeArray.position.p	["p",null,null,null]
+exchangeArray.foreach	["x","q","r"]
+exchangeArray.returns	[{"x":1,"y":2},[1,2]]
+wrap.count_inner	2
+wrap.serialize	"O:11:\"ArrayObject\":4:{i:0;i:0;i:1;O:11:\"ArrayObject\":4:{i:0;i:0;i:1;a:2:{i:0;i:1;i:1;i:2;}i:2;a:0:{}i:3;N;}i:2;a:0:{}i:3;N;}"
+wrap.after_exchange	[[1,2],[5,6]]
+wrap.exchanged_to_object	[1,7,8]
+wrap.iterator_after_outer_exchange	["q",3]
+copy.nested	[[1]]
+serialize.ArrayObject	"O:11:\"ArrayObject\":4:{i:0;i:0;i:1;a:2:{i:0;i:1;i:1;i:2;}i:2;a:0:{}i:3;N;}"
+serialize.ArrayIterator	"O:13:\"ArrayIterator\":4:{i:0;i:0;i:1;a:1:{i:0;i:1;}i:2;a:0:{}i:3;N;}"
+serialize.getIterator_flags	"O:13:\"ArrayIterator\":4:{i:0;i:2;i:1;O:11:\"ArrayObject\":4:{i:0;i:2;i:1;a:1:{i:0;i:1;}i:2;a:0:{}i:3;N;}i:2;a:0:{}i:3;N;}"
+serialize.ArrayIterator_round_trip	["O:13:\"ArrayIterator\":4:{i:0;i:0;i:1;a:2:{s:1:\"a\";i:1;s:1:\"b\";i:2;}i:2;a:0:{}i:3;N;}","a",{"a":1,"b":2}]
+serialize.members	"O:40:\"XaravelFixture\\PhpBuiltins\\MembersObject\":4:{i:0;i:0;i:1;a:1:{i:0;i:1;}i:2;a:3:{s:4:\"\u0000*\u0000p\";i:1;s:43:\"\u0000XaravelFixture\\PhpBuiltins\\MembersObject\u0000q\";i:2;s:1:\"r\";i:3;}i:3;N;}"
+json_encode	["{\"0\":1,\"1\":2}","{\"a\":1}","{}"]
+flags	[5,6,2,3]
+__unserialize.0	"UnexpectedValueException: Incomplete or ill-typed serialization data"
+__unserialize.1	"UnexpectedValueException: Incomplete or ill-typed serialization data"
+__unserialize.2	"UnexpectedValueException: Incomplete or ill-typed serialization data"
+__unserialize.3	"UnexpectedValueException: Incomplete or ill-typed serialization data"
+__unserialize.4	"UnexpectedValueException: Incomplete or ill-typed serialization data"
+__unserialize.5	"InvalidArgumentException: Passed variable is not an array or object"
+__unserialize.6	"UnexpectedValueException: Cannot deserialize ArrayObject with iterator class 'Foo'; no such class exists"
+__unserialize.7	"UnexpectedValueException: Cannot deserialize ArrayObject with iterator class 'stdClass'; this class does not implement the Iterator interface"
+__unserialize.restores	[{"a":1},"bar","O:11:\"ArrayObject\":4:{i:0;i:0;i:1;a:1:{s:1:\"a\";i:1;}i:2;a:1:{s:3:\"foo\";s:3:\"bar\";}i:3;N;}"]
+setIteratorClass.stdClass	"TypeError: ArrayObject::setIteratorClass(): Argument #1 ($iteratorClass) must be a class name derived from ArrayIterator, stdClass given"
+construct.iteratorClass	"TypeError: ArrayObject::__construct(): Argument #3 ($iteratorClass) must be a class name derived from ArrayIterator, stdClass given"
+setIteratorClass.sub	["XaravelFixture\\PhpBuiltins\\SubIterator",[1,2],"XaravelFixture\\PhpBuiltins\\SubIterator","O:11:\"ArrayObject\":4:{i:0;i:0;i:1;a:2:{i:0;i:1;i:1;i:2;}i:2;a:0:{}i:3;s:38:\"XaravelFixture\\PhpBuiltins\\SubIterator\";}","XaravelFixture\\PhpBuiltins\\SubIterator"]
+construct.ArrayIterator.int	"TypeError: ArrayIterator::__construct(): Argument #1 ($array) must be of type array, int given"
+construct.ArrayObject.string	"TypeError: ArrayObject::__construct(): Argument #1 ($array) must be of type array, string given"
+construct.ArrayObject.null	"TypeError: ArrayObject::__construct(): Argument #1 ($array) must be of type array, null given"
+exchangeArray.int	"TypeError: ArrayObject::exchangeArray(): Argument #1 ($array) must be of type array, int given"
+CachingIterator.constants	[1,2,4,8,16,256]
+CachingIterator.default	[[1,false,null,true,""],[["a","x",true,"x"],["b","y",false,"y"]],false,null,null,""]
+CachingIterator.CALL_TOSTRING	["1.5","","1"]
+CachingIterator.USE_KEY_CURRENT	["a","1"]
+CachingIterator.USE_INNER.no_string	"Error: Object of class ArrayIterator could not be converted to string"
+CachingIterator.USE_INNER	["inner@a","inner@b"]
+CachingIterator.FULL_CACHE.first	[{"a":1},1]
+CachingIterator.FULL_CACHE	[[1,2,3],{"a":1,"b":2,"c":3},3]
+CachingIterator.FULL_CACHE.rewind_after_unset	[[1,3],{"a":1,"c":3}]
+CachingIterator.FULL_CACHE.copy	{"a":[1]}
+CachingIterator.FULL_CACHE.object_key	["TypeError: Cannot access offset of type stdClass on array",["a=1"],true,2,true,{"a":1},true]
+CachingIterator.errors	["BadMethodCallException: CachingIterator does not fetch string value (see CachingIterator::__construct)","BadMethodCallException: CachingIterator does not use a full cache (see CachingIterator::__construct)","BadMethodCallException: CachingIterator does not use a full cache (see CachingIterator::__construct)","ValueError: CachingIterator::__construct(): Argument #2 ($flags) must contain only one of CachingIterator::CALL_TOSTRING, CachingIterator::TOSTRING_USE_KEY, CachingIterator::TOSTRING_USE_CURRENT, or CachingIterator::TOSTRING_USE_INNER","ValueError: CachingIterator::__construct(): Argument #2 ($flags) must contain only one of CachingIterator::CALL_TOSTRING, CachingIterator::TOSTRING_USE_KEY, CachingIterator::TOSTRING_USE_CURRENT, or CachingIterator::TOSTRING_USE_INNER","TypeError: CachingIterator::__construct(): Argument #1 ($iterator) must be of type Iterator, array given","TypeError: CachingIterator::__construct(): Argument #1 ($iterator) must be of type Iterator, ArrayObject given"]
+WeakMap.order	[["b=3","a=2"],2,3]
+WeakMap.iterator	[[true,true,3],[false,null,null],[true,true]]
+WeakMap.null_and_unset	[false,false,true,1]
+WeakMap.key_errors	[["TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object"],["TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object"],["TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object","TypeError: WeakMap key must be an object"]]
+WeakMap.errors	["Error: Cannot append to WeakMap","Error: Object stdClass#<n> not contained in WeakMap","Error: Object ArrayObject#<n> not contained in WeakMap","Exception: Serialization of 'WeakMap' is not allowed","Exception: Unserialization of 'WeakMap' is not allowed","Exception: Serialization of 'InternalIterator' is not allowed","Exception: Unserialization of 'InternalIterator' is not allowed","Error: Call to private InternalIterator::__construct() from global scope","{}"]
