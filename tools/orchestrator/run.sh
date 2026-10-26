@@ -20,6 +20,12 @@ if [ -f "$HOME/.claude-auth-token" ]; then
   CLAUDE_CODE_OAUTH_TOKEN="$(tr -d '[:space:]' < "$HOME/.claude-auth-token")"
   export CLAUDE_CODE_OAUTH_TOKEN
 fi
+# Which CLI runs the iteration: claude (default) or codex, the fallback when the
+# Claude subscription is spent (decisions/MAINT-2026-10-25-codex-fallback.md).
+# Set it in "$STATE/env" (XARAVEL_ORCH_CLI=codex); the next iteration picks it up.
+CLI="${XARAVEL_ORCH_CLI:-claude}"
+case "$CLI" in claude|codex) ;; *) echo "XARAVEL_ORCH_CLI must be claude or codex, not '$CLI'" >&2; exit 2 ;; esac
+[ "$CLI" = codex ] && MODEL="codex:${XARAVEL_ORCH_CODEX_MODEL:-default}"
 
 say() { echo "$(date -u +%FT%TZ) $*" | tee -a "$STATE/history"; }
 
@@ -73,8 +79,30 @@ if ! (cd "$REPO" && git fetch -q --prune origin && git checkout -q -f main \
   say "git sync failed; see $log"; sleep 900; exec /bin/bash "$REPO/tools/orchestrator/run.sh"
 fi
 
-(cd "$REPO" && claude -p "$(cat tools/orchestrator/iteration.md)" --model "$MODEL" \
-    --permission-mode auto --output-format stream-json --verbose) >>"$log" 2>&1
+# One Codex iteration (tools/orchestrator/codex.md, then iteration.md). Codex reads
+# skills from .agents/skills, so it gets a fresh copy of .claude/skills, kept out
+# of git status. Its workspace-write sandbox writes only the clone (.git named
+# explicitly), the state dir and the caches the tools need; approval_policy=never
+# makes anything outside fail at once instead of waiting on an approver.
+codex_iteration() {
+  local model=()
+  [ -n "${XARAVEL_ORCH_CODEX_MODEL:-}" ] && model=(-m "$XARAVEL_ORCH_CODEX_MODEL")
+  mkdir -p "$STATE/tmp" "$REPO/.agents" || return 1
+  rm -rf "$REPO/.agents/skills" && cp -R "$REPO/.claude/skills" "$REPO/.agents/skills" || return 1
+  grep -qx '.agents/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.agents/' >> "$REPO/.git/info/exclude"
+  (cd "$REPO" && TMPDIR="$STATE/tmp" codex exec -C "$REPO" --add-dir "$REPO/.git" --add-dir "$STATE" \
+      --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" --add-dir "$HOME/.bun" --add-dir "$HOME/.config/gh" \
+      --sandbox workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true \
+      ${model[@]+"${model[@]}"} --json --color never \
+      "$(cat tools/orchestrator/codex.md tools/orchestrator/iteration.md)" </dev/null)
+}
+
+if [ "$CLI" = codex ]; then
+  codex_iteration >>"$log" 2>&1
+else
+  (cd "$REPO" && claude -p "$(cat tools/orchestrator/iteration.md)" --model "$MODEL" \
+      --permission-mode auto --output-format stream-json --verbose) >>"$log" 2>&1
+fi
 rc=$?
 outcome=""
 [ -f "$STATE/outcome" ] && outcome="$(tr -d '[:space:]' < "$STATE/outcome")"
@@ -89,6 +117,9 @@ case "$outcome" in
       # Usage limit: every iteration before the reset would fail at once.
       say "usage limit; sleeping ${wait#* }s until ${wait%% *}"
       sleep "${wait#* }"
+    elif grep -q "Selected model is at capacity" "$log" 2>/dev/null; then
+      say "model at capacity; sleeping 300s"
+      sleep 300   # Codex's provider-side capacity error clears in minutes
     else
       sleep 900   # crash, auth failure or no outcome: back off
     fi ;;

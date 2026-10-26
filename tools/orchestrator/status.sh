@@ -22,7 +22,9 @@ REPO="${XARAVEL_REPO:-$HOME/repos/xaravel}"
 echo "time: $(date '+%Y-%m-%d %H:%M %Z')"
 if [ ! -d "$STATE" ]; then echo "no orchestrator state at $STATE"; exit 1; fi
 echo "branch: $(git -C "$REPO" branch --show-current 2>/dev/null || echo '?')"
-if pgrep -f "claude -p" >/dev/null 2>&1; then echo "iteration: running"; else echo "iteration: not running (between iterations, or stopped)"; fi
+if pgrep -f "claude -p" >/dev/null 2>&1 || pgrep -f "codex exec -C $REPO" >/dev/null 2>&1; then echo "iteration: running"; else echo "iteration: not running (between iterations, or stopped)"; fi
+cli="$(grep -h '^XARAVEL_ORCH_CLI=' "$STATE/env" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "\"' ")"
+echo "cli: ${cli:-claude}"
 [ -e "$STATE/STOP" ] && echo "STOP file: present"
 echo "history:"; tail -3 "$STATE/history" 2>/dev/null | sed 's/^/  /'
 log="$(ls -t "$STATE"/logs/*.log 2>/dev/null | head -1)"
@@ -30,8 +32,11 @@ if [ -n "$log" ]; then
   mod="$(stat -f %Sm -t %H:%M "$log" 2>/dev/null || date -r "$log" +%H:%M 2>/dev/null)"
   echo "latest log: $(basename "$log") (written $mod)"
   grep -oE "hit your (session|usage) limit[^\"]{0,60}" "$log" 2>/dev/null | tail -1 | sed 's/^/usage limit: /'
+  grep -q "Selected model is at capacity" "$log" 2>/dev/null && echo "model at capacity: yes (Codex)"
   echo "narration:"
-  jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' "$log" 2>/dev/null \
+  # Claude's stream-json assistant text, or Codex's --json agent messages; non-JSON lines are skipped.
+  jq -rR 'fromjson? | if .type=="assistant" then (.message.content[]? | select(.type=="text") | .text)
+         elif .type=="item.completed" and .item.type=="agent_message" then .item.text else empty end' "$log" 2>/dev/null \
     | tail -n "__LINES__" | sed 's/^/  /'
 fi
 REMOTE
