@@ -156,8 +156,8 @@ development_status:
   13-1-reflector-and-reflectsclosures: done
   epic-13-retrospective: done
 
-  epic-14: backlog
-  14-1-enumerable-core-construction-conversion-and-serialization: backlog
+  epic-14: in-progress
+  14-1-enumerable-core-construction-conversion-and-serialization: blocked  # ESC-14.1-1 (runtime PHP-array helpers internal, contract; stops the whole build), ESC-14.1-2 (SPL iterators, JsonSerializable, Throwable, WeakMap missing from the runtime, contract), ESC-14.1-3 (higher-order __get on collection and proxy, divergence), ESC-14.1-4 (ArrayAccess writes, isset, unset, divergence) wait on the Maintainer; intent gap found at planning, no code built
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
