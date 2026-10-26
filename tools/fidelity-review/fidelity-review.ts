@@ -37,8 +37,9 @@
 // `--base` (default: the spec's `baseline_revision`) and the working tree; it
 // still shows `stories/`.
 //
-// The prompt. The system text holds the checklist, the `## Precedence`
-// section of `conformance/README.md` and the answering rules. The user text
+// The prompt. The system text holds the checklist, the `## Precedence` and
+// `## Skip Reasons and their rules` sections of `conformance/README.md`
+// (ESC-14.2-5) and the answering rules. The user text
 // holds the manifest, the Inventory rows with their Upstream lines, the
 // content of each changed Oracle request file, the per-file patches, and the
 // evidence the items need: (a) every DIV record an added
@@ -83,7 +84,13 @@
 // method it cites (`upstreamCitedSources`) come first, then the files its directory walk selects by name
 // (`upstreamWalkedSources`), one that does not fit with the methods the test points at (`phpMethodBodies`; ESC-10.4-2), each
 // once, filling what the prompt cap leaves after the other sections; a file another section shows in full is
-// named, not repeated, and one that does not fit is named as omitted for size.
+// named, not repeated, and one that does not fit is named as omitted for size;
+// (i) when an added Expectations line is a `skip` with reason `not-ported-yet`
+// or `blocked-by:<c>`, the `blocked-by` rule `expectations:reasons` applies, as
+// its source in `tools/expectations/reasons.ts`, and for each group of such
+// lines the Phase and first Epic of the test's Component and of every
+// Component the line's `blocked-by` or Escalation names, with what that rule
+// says of `blocked-by:<c>` for each (`skipEligibilityEvidence`, ESC-14.2-5).
 // Everything is read from the working tree. A missing evidence file is named
 // ("unavailable: <why>"), never dropped.
 //
@@ -138,7 +145,8 @@ import { FIXTURES_DIR, verifyFixture } from "../oracle/fixtures";
 import { committedRequests, verificationKey } from "../oracle/verify";
 import { allowedPath, covers, parseManifest, STORIES_DIR, type Manifest } from "../ownership/ownership";
 import { activePhases, isProtected, parseList } from "../protected-paths/protected-paths";
-import { readWorkingInventory } from "../pin-bump/pin-bump";
+import { checkLine, contextFor } from "../expectations/reasons";
+import { EXPECTATIONS_DIR, readWorkingInventory } from "../pin-bump/pin-bump";
 import { readUpstream } from "../upstream/upstream";
 import { SPINE_FILE, spineRules } from "../xt-coverage/consequences";
 
@@ -281,19 +289,23 @@ export interface Evidence {
   readonly decisions: readonly EvidenceEntry[];
   /** (g) Each `packages/<name>/src/` file the change adds or modifies, as its declaration-and-tag listing (`sourceSurface`, F-9, ESC-9.3-2). */
   readonly sourceSurface: readonly EvidenceEntry[];
+  /** (i) The `blocked-by` rule and the Components' Phases and first Epics, for added `not-ported-yet` and `blocked-by` skip lines (`skipEligibilityEvidence`, F-4, ESC-14.2-5). */
+  readonly skipEligibility: readonly EvidenceEntry[];
   /** (h) Each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (ESC-10.1-5), within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
   readonly wholeFiles: readonly WholeFileEntry[];
   /** The files of touched Xaravel Tests (e) leaves out as outside the Story's scope (`inStoryScope`, ESC-9.10-3), named in (e). */
   readonly outOfScopeTests: readonly string[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], testFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], outOfScopeTests: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], testFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], skipEligibility: [], outOfScopeTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
   readonly items: readonly ChecklistItem[];
   /** The `## Precedence` section of `conformance/README.md`, or null when it could not be read. */
   readonly precedence: string | null;
+  /** The `## Skip Reasons and their rules` section of `conformance/README.md` (ESC-14.2-5); absent or null: unavailable. */
+  readonly skipReasons?: string | null;
   /** The Story id, or the action item id when `subject` is `item`. */
   readonly storyId: string;
   /**
@@ -401,6 +413,10 @@ export function buildPrompt(input: PromptInput): Prompt {
     "The Skip Reason precedence F-4 cites (the `## Precedence` section of conformance/README.md):",
     "",
     input.precedence === null ? "unavailable: conformance/README.md has no ## Precedence section" : input.precedence.trim(),
+    "",
+    "The Skip Reason rules F-4 judges a reason against (the `## Skip Reasons and their rules` section of conformance/README.md; evidence (i) carries the `blocked-by` rule as `expectations:reasons` applies it):",
+    "",
+    (input.skipReasons ?? null) === null ? `unavailable: conformance/README.md has no ${SKIP_REASONS_HEADING} section` : input.skipReasons!.trim(),
   ];
   const prior = input.prior ?? [];
   if (prior.length > 0) {
@@ -509,6 +525,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   for (const entry of evidence.wholeFiles) {
     sections.push("", `#### ${entry.path} (${entry.reason})`, "", entry.text === null ? (entry.note ?? "unavailable: not read") : fence(entry.text, wholeFileLang(entry.path)));
   }
+  evidenceSection(sections, "### (i) The `blocked-by` rule, and the Phases and first Epics of the Components added skip lines name (F-4, ESC-14.2-5)", evidence.skipEligibility, "No added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.", "markdown");
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
     sections.push(NO_PRIOR);
@@ -524,8 +541,21 @@ export function buildPrompt(input: PromptInput): Prompt {
 
 /** The `## Precedence` section of a README (the heading up to the next `## `), or null. */
 export function precedenceSection(readme: string): string | null {
-  const lines = readme.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.indexOf("## Precedence");
+  return markdownSection(readme, "## Precedence");
+}
+
+/** The heading of the README section that lists each Skip Reason and when it is valid (ESC-14.2-5). */
+export const SKIP_REASONS_HEADING = "## Skip Reasons and their rules";
+
+/** The `## Skip Reasons and their rules` section of a README, or null (ESC-14.2-5). */
+export function skipReasonsSection(readme: string): string | null {
+  return markdownSection(readme, SKIP_REASONS_HEADING);
+}
+
+/** The section of a markdown text that starts at the line `heading` (a `## ` heading), up to the next `## `, or null. */
+function markdownSection(text: string, heading: string): string | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.indexOf(heading);
   if (start === -1) {
     return null;
   }
@@ -1118,8 +1148,119 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     sourceSurface: sourceSurfaceEvidence(root, files),
     // (h) needs the rest of the prompt to size its budget, so the review fills it in last (`withWholeFiles`).
     wholeFiles: [],
+    // F-4 judges whether a held line could be `blocked-by` instead, by the rule `expectations:reasons` applies (ESC-14.2-5).
+    skipEligibility: skipEligibilityEvidence(root, files),
     outOfScopeTests: [],
   };
+}
+
+/** The reasons file whose `blocked-by` rule evidence (i) shows (ESC-14.2-5). */
+export const REASONS_FILE = "tools/expectations/reasons.ts";
+/** How many Test IDs one (i) group lists before it only counts the rest. */
+const SKIP_GROUP_IDS = 20;
+/** A Component a text names: `packages/<c>`, `@xaravel/<c>` or `blocked-by:<c>`. */
+const NAMED_COMPONENT = /(?:\bpackages\/|@xaravel\/|\bblocked-by:)([a-z][a-z0-9-]*)/g;
+
+/** The `blocked-by` branch of `reasonProblem` in `tools/expectations/reasons.ts`, with its line range, or why it is unavailable. */
+function blockedByRule(root: string): EvidenceEntry {
+  const file = readEvidenceFile(root, REASONS_FILE);
+  if (file.text === null) {
+    return file;
+  }
+  const lines = file.text.split("\n");
+  const start = lines.findIndex((line) => line.trim() === 'if (prefix === "blocked-by") {');
+  const indent = start === -1 ? "" : lines[start]!.slice(0, lines[start]!.indexOf("if"));
+  const end = start === -1 ? -1 : lines.findIndex((line, i) => i > start && line === `${indent}}`);
+  if (end === -1) {
+    return { label: REASONS_FILE, text: null, unavailable: `${REASONS_FILE} has no \`if (prefix === "blocked-by") {\` branch` };
+  }
+  return { label: `${REASONS_FILE}:${start + 1}-${end + 1}, the \`blocked-by:<c>\` rule \`bun run expectations:reasons\` applies`, text: lines.slice(start, end + 1).join("\n"), unavailable: null, lang: "ts" };
+}
+
+/**
+ * Evidence (i), for F-4 (ESC-14.2-5): when an added Expectations line is a `skip` with reason `not-ported-yet` or
+ * `blocked-by:<c>`, the `blocked-by` rule `expectations:reasons` applies (`blockedByRule`), then one entry per group of
+ * such lines (same Component, reason and Escalation) that names another Component, in its `blocked-by` or in its
+ * Escalation's text (`NAMED_COMPONENT`). Each group gives the Phase (`tools/scaffold/packages.jsonl`) and first Epic
+ * (the lowest `epic` of a `stories/` manifest) of the test's Component and of each named one, read as
+ * `expectations:reasons` reads them (`contextFor`), and what `checkLine` says of the line with `blocked-by:<c>`.
+ * Empty when no such line names another Component.
+ */
+export function skipEligibilityEvidence(root: string, files: readonly ChangedFile[]): EvidenceEntry[] {
+  const held: Record<string, unknown>[] = [];
+  for (const file of files) {
+    if (!file.filename.startsWith(`${EXPECTATIONS_DIR}/`) || !file.filename.endsWith(".jsonl")) {
+      continue;
+    }
+    for (const line of addedLines([file])) {
+      try {
+        const value = JSON.parse(line) as unknown;
+        if (isRecord(value) && value["status"] === "skip" && typeof value["reason"] === "string" && (value["reason"] === "not-ported-yet" || value["reason"].startsWith("blocked-by:"))) {
+          held.push(value);
+        }
+      } catch {
+        // A malformed line is the Expectations checks' to report.
+      }
+    }
+  }
+  if (held.length === 0) {
+    return [];
+  }
+  const context = contextFor(root, []);
+  const escalationTexts = new Map<string, string>();
+  const escalationText = (id: string): string => {
+    if (!escalationTexts.has(id)) {
+      const path = join(root, "conformance", "escalations", `${id}.md`);
+      escalationTexts.set(id, /^[A-Za-z0-9.-]+$/.test(id) && existsSync(path) ? readFileSync(path, "utf8") : "");
+    }
+    return escalationTexts.get(id)!;
+  };
+  const groups = new Map<string, { component: string | null; reason: string; escalation: string | null; named: string[]; lines: Record<string, unknown>[] }>();
+  for (const line of held) {
+    const component = context.inventory.get(String(line["id"]))?.component ?? null;
+    const reason = line["reason"] as string;
+    const escalation = typeof line["escalation"] === "string" ? line["escalation"] : null;
+    const key = JSON.stringify([component, reason, escalation]);
+    let group = groups.get(key);
+    if (group === undefined) {
+      const names = new Set<string>();
+      for (const text of [reason, escalation === null ? "" : escalationText(escalation)]) {
+        for (const match of text.matchAll(NAMED_COMPONENT)) {
+          if (context.phases.has(match[1]!) && match[1] !== component) {
+            names.add(match[1]!);
+          }
+        }
+      }
+      group = { component, reason, escalation, named: [...names].sort(compareUnits), lines: [] };
+      groups.set(key, group);
+    }
+    group.lines.push(line);
+  }
+  const where = (name: string): string => `\`${name}\`: Phase ${context.phases.get(name) ?? "unknown"}, first Epic ${context.firstEpics.get(name) ?? "none (no Story manifest names it)"}`;
+  const entries: EvidenceEntry[] = [];
+  for (const group of groups.values()) {
+    if (group.named.length === 0) {
+      continue;
+    }
+    const ids = group.lines.map((line) => `- ${String(line["id"])} × ${String(line["variant"])}`);
+    const text = [
+      `${group.lines.length} added line${group.lines.length === 1 ? "" : "s"} with reason \`${group.reason}\`, escalation ${group.escalation === null ? "null" : `\`${group.escalation}\``}:`,
+      "",
+      ...ids.slice(0, SKIP_GROUP_IDS),
+      ...(ids.length > SKIP_GROUP_IDS ? [`- and ${ids.length - SKIP_GROUP_IDS} more`] : []),
+      "",
+      group.component === null ? "The test's Component: unknown (no Inventory row)." : `The test's Component: ${where(group.component)}.`,
+      "",
+      `The Components the line${group.escalation === null ? "" : " or its Escalation"} names, and what \`expectations:reasons\` says of \`blocked-by:<c>\` on the first line (\`checkLine\`, with escalation null):`,
+      "",
+      ...group.named.map((name) => {
+        const problem = checkLine(context, { ...group.lines[0]!, status: "skip", reason: `blocked-by:${name}`, escalation: null }, "probe");
+        return `- ${where(name)}: ${problem === null ? "valid" : `invalid: ${problem}`}`;
+      }),
+    ].join("\n");
+    entries.push({ label: `${group.component ?? "unknown Component"}, ${group.reason}, ${group.escalation ?? "no Escalation"}`, text, unavailable: null });
+  }
+  return entries.length === 0 ? [] : [blockedByRule(root), ...entries];
 }
 
 /**
@@ -4235,7 +4376,9 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     }
   }
   const readmePath = join(root, "conformance", "README.md");
-  const precedence = existsSync(readmePath) ? precedenceSection(readFileSync(readmePath, "utf8")) : null;
+  const readme = existsSync(readmePath) ? readFileSync(readmePath, "utf8") : null;
+  const precedence = readme === null ? null : precedenceSection(readme);
+  const skipReasons = readme === null ? null : skipReasonsSection(readme);
   // (e) shows the Story's own touched tests; another PR's in the base range is named, not shown (ESC-9.10-3).
   const touchedTests = xaravelTestEvidence(root, storyFiles);
   const xaravelTests = touchedTests.filter((entry) => subject.inScope(entry.path, entry.ids));
@@ -4244,6 +4387,7 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     checklistText,
     items,
     precedence,
+    skipReasons,
     storyId,
     subject: args.subject,
     tree: diff.tree,

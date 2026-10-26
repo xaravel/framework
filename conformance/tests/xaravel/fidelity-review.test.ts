@@ -58,6 +58,9 @@ import {
   parseVerdict,
   phpDeclarationLines,
   precedenceSection,
+  SKIP_REASONS_HEADING,
+  skipEligibilityEvidence,
+  skipReasonsSection,
   PROMPT_CAP,
   RECORD_KIND,
   RECORDS_HEADING,
@@ -927,6 +930,52 @@ xaravelTest(
     expect(bare).toContain("No base fixture of an assigned committed Oracle request is an error; the changed fixtures are listed below.");
     expect(bare).toContain("No fixture the change adds or modifies is an error.");
     expect(bare).toContain("No added line cites a decision record (`ESC-…`, `MAINT-…`, `OQ-…`, `PHASE-0-EXIT` or `decisions/<name>.md`).");
+
+    // ESC-14.2-5: the system text carries README's Skip Reasons table beside its Precedence, and (i) shows the
+    // `blocked-by` rule expectations:reasons applies, with the Phases and first Epics of the Components a held line names.
+    const readme = readFileSync(join(root, "conformance", "README.md"), "utf8");
+    const skipReasons = skipReasonsSection(readme);
+    expect(skipReasons!.startsWith(`${SKIP_REASONS_HEADING}\n`)).toBe(true);
+    expect(skipReasons).toContain("| `blocked-by:<c>` |");
+    expect(skipReasons).not.toContain("## Precedence");
+    const withTable = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: precedenceSection(readme), skipReasons, storyId: "14.2", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE });
+    expect(withTable.system).toContain(skipReasons!);
+    expect(withTable.system.indexOf(skipReasons!)).toBeGreaterThan(withTable.system.indexOf("## Precedence"));
+    expect(bare).toContain("### (i) The `blocked-by` rule, and the Phases and first Epics of the Components added skip lines name (F-4, ESC-14.2-5)\n\nNo added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.");
+    expect(buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).system).toContain(`unavailable: conformance/README.md has no ${SKIP_REASONS_HEADING} section`);
+    const shard = "conformance/expectations/collections/framework/tests/Support/SupportCollectionTest.jsonl";
+    const held = "Illuminate\\Tests\\Support\\SupportCollectionTest::testContains#0";
+    const skipLine = (fields: Record<string, unknown>) => JSON.stringify({ id: held, variant: "none", status: "skip", reason: "not-ported-yet", adapted: null, escalation: null, ...fields });
+    const eligibility = (filename: string, ...lines: string[]) => skipEligibilityEvidence(root, [{ filename, status: "modified", patch: `@@ -1 +1,${lines.length} @@\n-a\n${lines.map((line) => `+${line}`).join("\n")}\n` }]);
+    // A not-ported-yet line held by an Escalation that names `packages/runtime`: the rule, then the group with both Components.
+    const runtimeHeld = eligibility(shard, skipLine({ escalation: "ESC-14.2-4" }));
+    expect(runtimeHeld.map((entry) => entry.label)).toEqual([expect.stringMatching(/^tools\/expectations\/reasons\.ts:\d+-\d+, the `blocked-by:<c>` rule `bun run expectations:reasons` applies$/), "collections, not-ported-yet, ESC-14.2-4"]);
+    expect(runtimeHeld[0]!.text!.split("\n")[0]!.trim()).toBe('if (prefix === "blocked-by") {');
+    expect(runtimeHeld[0]!.text).toContain("blockerEpic > ownEpic");
+    expect(runtimeHeld[0]!.lang).toBe("ts");
+    expect(runtimeHeld[1]!.text).toContain(`- ${held} × none`);
+    expect(runtimeHeld[1]!.text).toContain("The test's Component: `collections`: Phase 1, first Epic 14.");
+    expect(runtimeHeld[1]!.text).toContain("- `runtime`: Phase 1, first Epic 9: invalid: probe: ");
+    expect(runtimeHeld[1]!.text).toContain("blocked-by: runtime is in Phase 1, not later than collections's Phase 1, and not built in a later Epic (runtime: 9, collections: 14)");
+    // A blocked-by line names its own Component; a later Phase is valid.
+    const auth = eligibility(shard, skipLine({ reason: "blocked-by:auth" }));
+    expect(auth.map((entry) => entry.label.split(":")[0])).toEqual(["tools/expectations/reasons.ts", "collections, blocked-by"]);
+    expect(auth[1]!.text).toContain("escalation null:");
+    expect(auth[1]!.text).toMatch(/- `auth`: Phase 8, first Epic [^\n]*: valid$/m);
+    // Lines that share a Component, reason and Escalation are one group; past 20 Test IDs it counts the rest.
+    const grouped = eligibility(shard, ...Array.from({ length: 25 }, (_, i) => skipLine({ variant: `v${i}`, escalation: "ESC-14.2-4" })));
+    expect(grouped.length).toBe(2);
+    expect(grouped[1]!.text).toStartWith("25 added lines with reason `not-ported-yet`, escalation `ESC-14.2-4`:");
+    expect(grouped[1]!.text).toContain(`- ${held} × v19\n- and 5 more\n`);
+    expect(grouped[1]!.text).not.toContain("× v20");
+    // Nothing when no other Component is named, the line is not such a skip, or the file is not an Expectations shard.
+    expect(eligibility(shard, skipLine({}))).toEqual([]);
+    expect(eligibility(shard, skipLine({ status: "pass", reason: null, escalation: "ESC-14.2-4" }))).toEqual([]);
+    expect(eligibility(shard, skipLine({ reason: "upstream-skip", escalation: "ESC-14.2-4" }))).toEqual([]);
+    expect(eligibility("packages/collections/tests/data.jsonl", skipLine({ escalation: "ESC-14.2-4" }))).toEqual([]);
+    expect(eligibility(shard, "{not json")).toEqual([]);
+    // gatherEvidence carries it as (i).
+    expect(gatherEvidence(root, [{ filename: shard, status: "modified", patch: `@@ -1 +1 @@\n-a\n+${skipLine({ escalation: "ESC-14.2-4" })}\n` }], none).skipEligibility.length).toBe(2);
 
     // (c) for changed fixtures: a Story's own error fixture, added with its request, reaches the prompt.
     const fixtureRepo = makeRepo({ change: false });
