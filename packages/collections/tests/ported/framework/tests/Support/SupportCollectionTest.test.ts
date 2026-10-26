@@ -13,14 +13,13 @@
 // their Expectations lines are `skip` / `blocked-by:support`. VarDumper is reached through the Class Registry by its
 // FQCN, and `class_basename` through a local function that throws the same error.
 //
-// testToArrayCallsToArrayOnEachItemInCollection and testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection
-// are not ported yet: they wait on ESC-14.1-11, as `Mockery.mock(<contract token>)` builds a mock that is not
-// `instanceof` the token.
-// `blocked-by:mockery` is not available: `bun run expectations:check` accepts a `blocked-by` Component only of a later
-// Phase (tools/expectations/reasons.ts:282), and mockery is Phase 0 while collections is Phase 1, so these stay
-// `not-ported-yet` with `ESC-14.1-11`.
+// `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
+// `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
+// (PORTING.md § Test-adaptation rules, Mockery; decisions/ESC-14.1-11.md).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { Collection, LazyCollection } from "@xaravel/collections";
+import { Arrayable } from "@xaravel/contracts/support";
+import { Mockery } from "@xaravel/mockery";
 import {
   ArrayIterator,
   ArrayObject,
@@ -198,7 +197,16 @@ portedTest(`${ID}::testGetArrayableItems`, { case: SupportCollectionTest, datase
   this.assertSame({ foo: "bar" }, array);
 });
 
-// testToArrayCallsToArrayOnEachItemInCollection waits on ESC-14.1-11 (`Mockery.mock(Arrayable)` is not `instanceof Arrayable`).
+portedTest(`${ID}::testToArrayCallsToArrayOnEachItemInCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const item1 = Mockery.mock(Arrayable);
+  item1.expects("toArray").andReturn("foo.array");
+  const item2 = Mockery.mock(Arrayable);
+  item2.expects("toArray").andReturn("bar.array");
+  const c = new collection([item1, item2]);
+  const results = c.toArray();
+
+  this.assertEquals(["foo.array", "bar.array"], results);
+});
 
 portedTest(`${ID}::testLazyReturnsLazyCollection`, { case: SupportCollectionTest }, async function () {
   const data = new Collection([1, 2, 3, 4, 5]);
@@ -211,8 +219,16 @@ portedTest(`${ID}::testLazyReturnsLazyCollection`, { case: SupportCollectionTest
   this.assertSame([1, 2, 3, 4, 5], lazy.all());
 });
 
-// testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection waits on ESC-14.1-11 (`Mockery.mock(JsonSerializable)` and
-// `Mockery.mock(Arrayable)` are not `instanceof` their tokens).
+portedTest(`${ID}::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const item1 = Mockery.mock(JsonSerializable);
+  item1.expects("jsonSerialize").andReturn("foo.json");
+  const item2 = Mockery.mock(Arrayable);
+  item2.expects("toArray").andReturn("bar.array");
+  const c = new collection([item1, item2]);
+  const results = c.jsonSerialize();
+
+  this.assertEquals(["foo.json", "bar.array"], results);
+});
 
 portedTest(`${ID}::testToJsonEncodesTheJsonSerializeResult`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const c = this.getMockBuilder<Collection | LazyCollection>(collection).onlyMethods(["jsonSerialize"]).getMock();

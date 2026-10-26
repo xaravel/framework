@@ -350,8 +350,8 @@
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJoin#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerialize#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerialize#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.1-11"}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.1-11"}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testJsonSerializeCallsToArrayOrJsonSerializeOnEachItemInCollection#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testKeyByAttribute#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testKeyByAttribute#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testKeyByBackedEnum#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
@@ -669,8 +669,8 @@
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testTap#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testTimesMethod#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testTimesMethod#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.1-11"}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.1-11"}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToArrayCallsToArrayOnEachItemInCollection#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToJsonEncodesTheJsonSerializeResult#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToJsonEncodesTheJsonSerializeResult#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testToPrettyJsonEncodesTheJsonSerializeResult#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
