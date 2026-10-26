@@ -15,6 +15,7 @@ These override anything below that conflicts with them.
 3. **Keep the machine light.** Another loop runs on this host.
    - Run the harness only for the unit's own scope: `bun run harness --story <id>`, or `--fast` while iterating. Never run the full `bun run harness`.
    - Run at most one test process at a time.
+   - The driver already runs this whole session at the lowest CPU priority. Never call `nice` or `renice` yourself: the sandbox refuses `setpriority`, and that refusal is not a reason to stop.
 4. **Skills.** The BMAD skills are in `.agents/skills`, a copy of `.claude/skills`. Load a skill the way the instructions name it, for example `bmad-build-auto`. Where an instruction names a Claude Code tool you don't have (Agent, Skill, TaskCreate, ScheduleWakeup, auto permission mode), use your closest equivalent and record what you used. Use subagents for the subagent steps.
 5. **The workflow's own writes are not a dirty tree.** Some steps write tracked files before a later clean-tree check, for example step-01's context compilation refreshing `epic-<N>-context.md`. Those files are the workflow's own output, so commit them on the unit's branch (`<id>: refresh epic context`), then pass the check. Only changes the workflow did not make count as dirty.
 6. **Codex specifics.**
