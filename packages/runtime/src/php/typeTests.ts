@@ -1,4 +1,5 @@
-// PHP's type tests (action item epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9), under their PHP names, ports
+// PHP's type tests (action item epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9; `is_null` action item
+// epic-14-item-6-runtime-sort-string-functions, ESC-14.2-4), under their PHP names, ports
 // of PHP 8.5.11's `ext/standard/type.c`, `Zend/zend_builtin_functions.c` (`is_a_impl`) and `Zend/zend_API.c`
 // (`zend_is_callable_at_frame`, `zend_get_callable_name_ex`) in coercive typing mode, over the AD-9 value model:
 //
@@ -82,6 +83,11 @@ export function is_array(value: unknown): boolean {
 /** PHP's `is_object($value)`: any other object, a function included (`phpType`); a contract token is a string. */
 export function is_object(value: unknown): boolean {
   return !isContractToken(value) && phpType(value) === "object";
+}
+
+/** PHP's `is_null($value)`: true for `null` and for `undefined`, which reads as null (AD-9); false for anything else. */
+export function is_null(value: unknown): boolean {
+  return value === null || value === undefined;
 }
 
 /** PHP's `is_string($value)`: a string, or a contract token, which is its class-string (AD-9). */
