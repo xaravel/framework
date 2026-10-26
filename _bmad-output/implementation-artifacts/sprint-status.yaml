@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: blocked  # ESC-14.2-1 (contract: runtime PHP builtins array_any/array_first/array_slice/…, identical, Randomizer, SortDirection; under decisions/MAINT-2026-10-26-runtime-builtins.md) holds 145 Test IDs; ESC-14.2-2 (divergence: keyed-array spread) and ESC-14.2-3 (divergence: options-form overloads) wait on the Maintainer; no package code written
+  14-2-retrieval-search-and-mutation-methods: in-progress  # ESC-14.2-1..3 ruled option 1 (decisions/MAINT-2026-10-26-story-14-2.md): ESC-14.2-1 by the monitor under the runtime-builtins standing rule, DIV-9.15 and DIV-12.20 by the Maintainer; action item epic-14-item-5-runtime-array-functions lands first
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
@@ -1978,3 +1978,23 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-26-story-14-1-mockery.md"
+  - id: "epic-14-item-5-runtime-array-functions"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-26-story-14-2.md, approved by
+      the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md), in scope packages/runtime (packages/contracts only if a
+      token needs it): under their PHP names and PHP behaviour, @xaravel/runtime/php exports
+      array_any, array_all, array_find_key, array_first, array_last, array_search (loose and
+      strict), array_flip, array_slice and array_reverse (preserve_keys), array_intersect_key
+      and array_intersect_assoc over AD-9's three array forms with PHP's kept keys; the
+      by-reference array_shift, array_pop, array_unshift and array_splice over a Ref<T>
+      (AD-9, DIV-9.2), renumbering integer keys as PHP; min, max, str_contains, strlen,
+      lcfirst, property_exists, method_exists, and asort / arsort with PHP's sort flags over
+      the existing zend sort; PHP's identity operator for arrays and objects as the exported
+      identical(a, b); is_numeric and is_float beside the existing isNumeric and isFloat;
+      Random\\Randomizer with pickArrayKeys; and PHP 8.6's SortDirection enum as an AD-26 enum
+      (ESC-14.2-1). XT-runtime cases for each, against PHP's results; the existing exports
+      stay; the runtime does not import contracts (AD-2); no other runtime behaviour changes;
+      lands before Story 14.2 resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-26-story-14-2.md"
