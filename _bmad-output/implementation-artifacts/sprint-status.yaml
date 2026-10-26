@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 22:39
+last_updated: 10-26-2026 00:09
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -157,7 +157,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: in-progress
-  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # Maintainer rulings 2026-10-25: ESC-14.1-1..4 (decisions/MAINT-2026-10-25-story-14-1.md) and ESC-14.1-5..8 (decisions/MAINT-2026-10-25-story-14-1-second.md), all option 1 (DIV-12.16..12.19); action item epic-14-item-2-runtime-generators-functions lands first
+  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # Maintainer rulings 2026-10-25: ESC-14.1-1..4 (decisions/MAINT-2026-10-25-story-14-1.md) and ESC-14.1-5..8 (decisions/MAINT-2026-10-25-story-14-1-second.md), all option 1 (DIV-12.16..12.19); action items epic-14-item-1 and epic-14-item-2 (runtime) are done, so the Story resumes
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
@@ -1918,20 +1918,20 @@ action_items:
   - id: "epic-14-item-2-runtime-generators-functions"
     epic: 14
     action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-25-story-14-1-second.md),
-      in scope packages/runtime and packages/contracts: @xaravel/runtime/php exports keyed,
-      yieldFrom and PHP's Generator class (current, key, next, valid, send, rewind,
-      getReturn; it wraps a JS generator object, is registered as an Iterator and a
-      Traversable whose [Symbol.iterator] yields values and entries() [key, value] pairs,
-      and its rewind throws once advanced past the first yield, as PHP's; DIV-12.18,
-      ESC-14.1-5); and, under their PHP names, is_scalar, in_array (loose and strict),
-      array_combine, array_filter (ARRAY_FILTER_USE_KEY / ARRAY_FILTER_USE_BOTH),
+      in scope packages/runtime and packages/contracts: @xaravel/runtime/php exports
+      keyed, yieldFrom and PHP's Generator class (current, key, next, valid, send,
+      rewind, getReturn; it wraps a JS generator object, is registered as an Iterator
+      and a Traversable whose [Symbol.iterator] yields values and entries() [key,
+      value] pairs, and its rewind throws once advanced past the first yield, as PHP's;
+      DIV-12.18, ESC-14.1-5); and, under their PHP names, is_scalar, in_array (loose
+      and strict), array_combine, array_filter (ARRAY_FILTER_USE_KEY / ARRAY_FILTER_USE_BOTH),
       array_unique (SORT_STRING / SORT_REGULAR / SORT_NUMERIC, PHP's kept keys), range
       (ints, floats, numeric strings and characters, PHP 8.3's rules and errors),
-      iterator_to_array (preserve_keys), iterator_count, str_starts_with and substr, plus
-      PHP's (array) cast as toPhpArray, returning a PhpArray, with an object's mangled
-      protected and private names as phpSerialize reads them (ESC-14.1-6). XT-runtime
-      cases for each; the runtime does not import contracts (AD-2); no other runtime
-      behaviour changes; lands before Story 14.1 resumes"
+      iterator_to_array (preserve_keys), iterator_count, str_starts_with and substr,
+      plus PHP's (array) cast as toPhpArray, returning a PhpArray, with an object's
+      mangled protected and private names as phpSerialize reads them (ESC-14.1-6).
+      XT-runtime cases for each; the runtime does not import contracts (AD-2); no
+      other runtime behaviour changes; lands before Story 14.1 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-25-story-14-1-second.md"
