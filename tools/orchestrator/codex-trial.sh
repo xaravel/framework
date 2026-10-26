@@ -51,9 +51,9 @@ case "${1:-}" in
     prompt="$(cat tools/orchestrator/codex-trial.md tools/orchestrator/iteration.md)"
     # workspace-write keeps writes inside the clone, $STATE, and the caches the tools need (uv's, and the
     # Fidelity Review's `claude -p` session files); never $HOME/repos/xaravel. The network is needed for
-    # bun and the Fidelity Review's Claude reviewer. Approvals go to Codex's automatic reviewer.
+    # bun and the Fidelity Review's Claude reviewer. Approvals go to Codex's automatic reviewer;
+    # --approve-for-me implies the workspace-write sandbox (it refuses an explicit --sandbox).
     nice -n 19 "$CODEX" exec -C "$TRIAL" --add-dir "$STATE" --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" \
-      --sandbox workspace-write \
       -c sandbox_workspace_write.network_access=true --approve-for-me --json --color never \
       -o "$STATE/last-message.md" "$prompt" >"$log" 2>&1
     rc=$?
