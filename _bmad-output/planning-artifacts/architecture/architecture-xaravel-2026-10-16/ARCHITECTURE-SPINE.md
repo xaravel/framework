@@ -527,7 +527,7 @@ Arrows point from a dependent to its dependency. Every package may also depend d
   | `__toString` | `toString()` plus `[Symbol.toPrimitive]` |
   | `__invoke` | Method named `__invoke`, called by the container, router and dispatcher |
   | `ArrayAccess` | `offsetGet` / `offsetSet` / `offsetExists` / `offsetUnset` plus `get()`. Index syntax works only on `Model` (its Proxy). `$collection[0]` becomes `collection.get(0)` (DIV-12 adaptation). |
-  | `IteratorAggregate`, `Countable` | `[Symbol.iterator]`, `count()` |
+  | `IteratorAggregate`, `Countable` | `[Symbol.iterator]` (yields values; `entries()` and `keys()` give keys), `count()` |
   | Traits | `mixin(Base, ...Traits)`; `boot<Trait>` / `initialize<Trait>` run as Upstream; identity through `classUsesRecursive()` |
   | `static::` / `new static` | `this` in static methods / `new this()` |
   | Property + method with one name (DIV-12) | **Model configuration properties:** AD-7. **Option pairs** (`casts`, `middleware`, `backoff`, `tries`, `timeout`, `uniqueId`, `uniqueFor`, `retryUntil`, `attachments`, `envelope`, `content`, `via`, `broadcastOn`, …): base classes declare neither, and the framework reads `option(this, name)` (call if function, else value). **Framework method plus state** (`delay()`, `afterCommit()`, `subject()`, …): the method keeps the name, and the state moves behind Upstream's getters. The full pair list is generated from Upstream at the Pin in Phase 0 and committed in `PORTING.md`. |
