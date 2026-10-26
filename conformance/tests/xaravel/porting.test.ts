@@ -80,7 +80,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
   // The real repo.
   const report = checkPorting(root);
   expect(report.violations).toEqual([]);
-  expect(report.constructs).toBe(17);
+  expect(report.constructs).toBe(18);
   expect(report.sections).toBe(12);
   expect(report.fixtures).toBe(20);
   const porting = read(PORTING_FILE);
@@ -102,7 +102,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
 
   // The construct names equal the spine table's, read independently; every row is decided.
   const spineNames = spineConstructNames();
-  expect(spineNames.length).toBe(17);
+  expect(spineNames.length).toBe(18);
   const constructRows = section(porting, "## Construct mapping (AD-26)").filter((line) => line.startsWith("|")).slice(2);
   expect(firstCells(section(porting, "## Construct mapping (AD-26)"))).toEqual(spineNames);
   for (const row of constructRows) {
@@ -174,7 +174,7 @@ xaravelTest("XT-conformance-153", "PORTING.md holds every AD-26 construct row de
   const real = run(CLI, ["check"]);
   expect(real.stderr).toBe("");
   expect(real.code).toBe(0);
-  expect(real.stdout).toBe(`PORTING OK: 17 construct row(s) decided, 12 section(s), ${rows.length} DIV-12 pair(s), 20 fixture translation(s).\n`);
+  expect(real.stdout).toBe(`PORTING OK: 18 construct row(s) decided, 12 section(s), ${rows.length} DIV-12 pair(s), 20 fixture translation(s).\n`);
 
   // Fixture roots: an unchanged copy passes; each broken one fails with exit 1 and the matrix message.
   expect(run(CLI, ["check", "--root", fixture()]).code).toBe(0);
