@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 19:12
+last_updated: 10-25-2026 19:22
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1879,7 +1879,7 @@ action_items:
       for a non-static method gives false, as PHP 8's is_callable does; XT-reflection-1's
       pin of true is re-pinned to false. No assertion removed or weakened."
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
   - id: "epic-13-retro-item-6-reflection-php-edges"
     epic: 13
