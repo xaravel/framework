@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: blocked  # 159 of 171 built; ESC-14.2-4 (is_null, uasort, strcmp family: runtime-builtins standing rule, monitor) holds 12 Test IDs; ESC-14.2-5 approved by the orchestrator (amendment 2026-10-21): F-4 evidence (i) added, re-run the Fidelity Review on the changed tree
+  14-2-retrieval-search-and-mutation-methods: in-progress  # 159 of 171 built; ESC-14.2-4 ruled option 1 by the monitor under the runtime-builtins standing rule (decisions/ESC-14.2-4.md), action item epic-14-item-6-runtime-sort-string-functions lands first and frees its 12 Test IDs; ESC-14.2-5 approved by the orchestrator (amendment 2026-10-21, decisions/ESC-14.2-5.md): F-4 evidence (i) added, re-run the Fidelity Review on the changed tree
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
@@ -1998,3 +1998,17 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-26-story-14-2.md"
+  - id: "epic-14-item-6-runtime-sort-string-functions"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.2-4.md, approved
+      by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md), in scope packages/runtime: under their PHP names and PHP
+      behaviour, @xaravel/runtime/php exports is_null; uasort over a Ref<T> (AD-9, DIV-9.2),
+      keeping keys, with the user comparator's result read as PHP reads it; and strcmp,
+      strcasecmp, strnatcmp, strnatcasecmp and strcoll (C locale), exporting the comparisons
+      arrayRefFunctions.ts already implements privately for asort / arsort rather than a
+      second copy (ESC-14.2-4). XT-runtime cases for each, against PHP's results; the existing
+      exports stay; no other runtime behaviour changes; lands before Story 14.2's twelve
+      ESC-14.2-4 Test IDs are ported"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-14.2-4.md"
