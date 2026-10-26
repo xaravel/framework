@@ -15,6 +15,21 @@ export { ArgumentCountError } from "./ArgumentCountError";
 export { ArithmeticError } from "./ArithmeticError";
 export { ArrayIterator } from "./ArrayIterator";
 export { ArrayObject } from "./ArrayObject";
+export {
+  ARRAY_FILTER_USE_BOTH,
+  ARRAY_FILTER_USE_KEY,
+  array_combine,
+  array_filter,
+  array_unique,
+  in_array,
+  is_scalar,
+  iterator_count,
+  iterator_to_array,
+  SORT_NUMERIC,
+  SORT_REGULAR,
+  SORT_STRING,
+  toPhpArray,
+} from "./arrayFunctions";
 export { Attribute } from "./Attribute";
 export { attribute, type AttributeDecorator } from "./attributes";
 export { BadFunctionCallException } from "./BadFunctionCallException";
@@ -26,17 +41,20 @@ export { DomainException } from "./DomainException";
 export { Error } from "./Error";
 export { ErrorException } from "./ErrorException";
 export { Exception } from "./Exception";
+export { Generator, yieldFrom } from "./Generator";
 export { InternalIterator } from "./InternalIterator";
 export { InvalidArgumentException } from "./InvalidArgumentException";
 export { Iterator } from "./Iterator";
 export { IteratorAggregate } from "./IteratorAggregate";
 export { JsonSerializable } from "./JsonSerializable";
 export { JsonException } from "./JsonException";
+export { keyed, type KeyedYield } from "./keyed";
 export { LengthException } from "./LengthException";
 export { LogicException } from "./LogicException";
 export { OutOfBoundsException } from "./OutOfBoundsException";
 export { OutOfRangeException } from "./OutOfRangeException";
 export { OverflowException } from "./OverflowException";
+export { range } from "./range";
 export { RangeException } from "./RangeException";
 export { ReflectionAttribute } from "./ReflectionAttribute";
 export { ReflectionClass } from "./ReflectionClass";
@@ -104,4 +122,5 @@ export { getDebugType, gettype } from "./phpType";
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
 export { stdClass } from "./stdClass";
+export { str_starts_with, substr } from "./stringFunctions";
 export { valueCopy } from "./valueCopy";

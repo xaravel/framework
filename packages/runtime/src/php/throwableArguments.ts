@@ -18,7 +18,8 @@
 // Load safety: the exception classes import this file, so it imports only the Registry and modules that import
 // nothing that loads a PHP throwable (`phpType.ts`, `phpInt.ts`, `numericString.ts`, `scalarString.ts`), and builds
 // the `TypeError` from the class the Registry's base map holds under that name (`php/TypeError.ts` registers it),
-// falling back to the JS `TypeError` only when nothing registered it. The package does not export this module.
+// falling back to the JS `TypeError` only when nothing registered it. The package does not export this module;
+// `phpArguments.ts` reads the same coercions for PHP's functions.
 import { registeredBaseClass } from "../registry/registry";
 import { parseNumeric } from "./numericString";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
@@ -38,7 +39,7 @@ function phpTypeError(message: string): globalThis.Error {
  * `value` as the PHP value it stands for: a `bigint` outside int64 as the float PHP makes of that integer literal
  * (`Number(value)`, which rounds as PHP's parser does), any other value unchanged.
  */
-function phpValueOf(value: unknown): unknown {
+export function phpValueOf(value: unknown): unknown {
   return typeof value === "bigint" && (value < INT_MIN || value > INT_MAX) ? Number(value) : value;
 }
 
@@ -69,7 +70,7 @@ function floatToIntArgument(value: number): number | bigint | null {
 }
 
 /** `value` as PHP's coercive `int` parameter takes it (`zend_parse_arg_long_weak`), or null when it rejects it. */
-function toIntArgument(argument: unknown): number | bigint | null {
+export function toIntArgument(argument: unknown): number | bigint | null {
   const value = phpValueOf(argument);
   switch (typeOf(value)) {
     case "null":
@@ -93,7 +94,7 @@ function toIntArgument(argument: unknown): number | bigint | null {
 }
 
 /** `value` as PHP's coercive `string` parameter takes it (`zend_parse_arg_str_weak`), or null when it rejects it. */
-function toStringArgument(argument: unknown): string | null {
+export function toStringArgument(argument: unknown): string | null {
   const value = phpValueOf(argument);
   switch (typeOf(value)) {
     case "null":
