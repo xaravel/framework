@@ -53,7 +53,8 @@ case "${1:-}" in
     # Fidelity Review's `claude -p` session files); never $HOME/repos/xaravel. The network is needed for
     # bun and the Fidelity Review's Claude reviewer. Approvals go to Codex's automatic reviewer;
     # --approve-for-me implies the workspace-write sandbox (it refuses an explicit --sandbox).
-    nice -n 19 "$CODEX" exec -C "$TRIAL" --add-dir "$STATE" --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" \
+    # workspace-write keeps .git read-only unless it is named as a writable root, and the loop branches and commits.
+    nice -n 19 "$CODEX" exec -C "$TRIAL" --add-dir "$TRIAL/.git" --add-dir "$STATE" --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" \
       -c sandbox_workspace_write.network_access=true --approve-for-me --json --color never \
       -o "$STATE/last-message.md" "$prompt" >"$log" 2>&1
     rc=$?
