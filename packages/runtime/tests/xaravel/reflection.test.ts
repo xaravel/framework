@@ -1,6 +1,7 @@
 // Xaravel Tests for action item epic-13-item-1-runtime-reflection (decisions/MAINT-2026-10-25-story-13-1.md, route
 // step 1): the Spec values (XT-runtime-44), `returns` (XT-runtime-45), PHP's reflection classes over `inject`
-// (XT-runtime-46) and PHP attributes (XT-runtime-47), under DIV-3.2-3.4 and DIV-12.15. The fixtures are
+// (XT-runtime-46) and PHP attributes (XT-runtime-47), under DIV-3.2-3.4 and DIV-12.15; and, for action item
+// epic-13-retro-item-5-reflector-own-type, a named type's own class or token (XT-runtime-50). The fixtures are
 // SupportReflectorTest's, SupportReflectsClosuresTest's and Fixtures/ClassesWithAttributes.php's, written under those
 // clauses and registered under `XaravelFixture\Reflection\<Upstream short name>`, so they never collide with a
 // framework class or Story 13.1's own fixtures. Each expected value is what PHP 8.5's reflection returns for the
@@ -34,6 +35,7 @@ import {
   Exception,
   ReflectionAttribute,
   ReflectionClass,
+  ReflectionEnum,
   ReflectionException,
   ReflectionFunction,
   ReflectionIntersectionType,
@@ -45,7 +47,7 @@ import {
   TypeError as PhpTypeError,
 } from "@xaravel/runtime/php";
 import * as php from "@xaravel/runtime/php";
-import { fqcn, registerClass, resolveClass } from "@xaravel/runtime/registry";
+import { fqcn, registerClass, registerContractToken, resolveClass } from "@xaravel/runtime/registry";
 import { mixin } from "@xaravel/runtime";
 
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
@@ -733,5 +735,82 @@ xaravelTest(
       decorator(() => null, { kind: "method", name: "m", static: false, private: false, metadata: {} } as unknown as DecoratorContext),
     );
     assertThrows(TypeError, /^ReflectionClass::getAttributes\(\): the filter must be an attribute class/, () => new ReflectionClass(ChildClass).getAttributes("StrAttr" as unknown as typeof StrAttr));
+  },
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// A named type's own class or token (epic-13-retro-item-5-reflector-own-type, finding L1 of the Epic 13 retrospective).
+
+/** An AD-26 string-backed enum, for `ReflectionEnum`'s backing type. */
+class OwnTypeSuit {
+  static readonly backingType = "string";
+  static cases(): OwnTypeSuit[] {
+    return [];
+  }
+}
+registerClass(`${NS}\\OwnTypeSuit`, OwnTypeSuit);
+
+/** A named type's `getClassOrToken()`. */
+function valueOf(type: unknown): object | null {
+  Assert.assertInstanceOf(ReflectionNamedType, type);
+  return (type as ReflectionNamedType).getClassOrToken();
+}
+
+xaravelTest(
+  "XT-runtime-50",
+  "ReflectionNamedType.getClassOrToken() (a Xaravel addition (DIV-3.2; decisions/MAINT-2026-10-25-epic-13-items.md, item 5)) gives the class or contract token a Spec holds, beside the FQCN getName() gives: a class and a token give themselves, as do the members of a union and an intersection, a variadic's element and a return type's; String, Number, Boolean, primitive, self, parent and static give null, as does ReflectionEnum's backing type; two tokens recorded with registerContractToken under one FQCN (the first one wins the lookup by name, ESC-13.1-7) each come back as themselves, so a caller can reflect a parameter's own type rather than resolve its name again",
+  () => {
+    const fn = inject(
+      { a: A, ia: IA, s: String, n: Number, b: Boolean, any: primitive, me: self, up: parent, either: oneOf(A, IA, String), both: allOf(IA, IB) },
+      (a: unknown, ia: unknown, s: unknown, n: unknown, b: unknown, any: unknown, me: unknown, up: unknown, either: unknown, both: unknown) => [a, ia, s, n, b, any, me, up, either, both],
+    );
+    const params = new ReflectionFunction(fn).getParameters();
+    Assert.assertSame(["a", "ia", "s", "n", "b", "any", "me", "up", "either", "both"], params.map((parameter) => parameter.getName()));
+    Assert.assertSame(A, valueOf(params[0]!.getType()));
+    Assert.assertSame(`${NS}\\A`, (params[0]!.getType() as ReflectionNamedType).getName());
+    Assert.assertSame(IA, valueOf(params[1]!.getType()));
+    Assert.assertSame(`${NS}\\IA`, (params[1]!.getType() as ReflectionNamedType).getName());
+    for (const parameter of params.slice(2, 8)) {
+      Assert.assertNull(valueOf(parameter.getType()), `${parameter.getName()} holds no class or token`);
+    }
+    const union = params[8]!.getType();
+    Assert.assertInstanceOf(ReflectionUnionType, union);
+    Assert.assertSame([A, IA, null], (union as ReflectionUnionType).getTypes().map((member) => valueOf(member)));
+    const intersection = params[9]!.getType();
+    Assert.assertInstanceOf(ReflectionIntersectionType, intersection);
+    Assert.assertSame([IA, IB], (intersection as ReflectionIntersectionType).getTypes().map((member) => valueOf(member)));
+    // A union's allOf member keeps its members' values.
+    const dnf = new ReflectionFunction(inject({ x: oneOf(allOf(IA, IB), A) }, (x: unknown) => x)).getParameters()[0]!.getType() as ReflectionUnionType;
+    Assert.assertSame([IA, IB], (dnf.getTypes()[0] as ReflectionIntersectionType).getTypes().map((member) => valueOf(member)));
+    Assert.assertSame(A, valueOf(dnf.getTypes()[1]));
+
+    // A variadic's element, and a return type.
+    Assert.assertSame(A, valueOf(new ReflectionFunction(inject({ xs: variadic(A) }, (...xs: unknown[]) => xs)).getParameters()[0]!.getType()));
+    Assert.assertSame(IB, valueOf(new ReflectionFunction(returns(IB, () => null)).getReturnType()));
+    Assert.assertSame(A, valueOf(new ReflectionFunction(returns(A, () => null)).getReturnType()));
+    Assert.assertNull(valueOf(new ReflectionFunction(returns(static_, () => null)).getReturnType()));
+    Assert.assertNull(valueOf(new ReflectionFunction(returns(String, () => null)).getReturnType()));
+
+    // ReflectionEnum's backing type is a builtin, with no value.
+    const backing = new ReflectionEnum(OwnTypeSuit).getBackingType();
+    Assert.assertSame(["string", true], named(backing));
+    Assert.assertNull(valueOf(backing));
+
+    // Two tokens under one FQCN: each named type holds its own token, though both give the same name.
+    const first = token(`${NS}\\OwnTypeSame`);
+    const second = token(`${NS}\\OwnTypeSame`, [IA]);
+    registerContractToken(first);
+    registerContractToken(second);
+    // The lookup by name gives the first token, which has no parent.
+    Assert.assertFalse(new ReflectionClass(`${NS}\\OwnTypeSame`).isSubclassOf(IA));
+    Assert.assertTrue(new ReflectionClass(second).isSubclassOf(IA));
+    const [one, two] = new ReflectionFunction(inject({ one: first, two: second }, (one: unknown, two: unknown) => [one, two])).getParameters();
+    Assert.assertSame((one!.getType() as ReflectionNamedType).getName(), (two!.getType() as ReflectionNamedType).getName());
+    Assert.assertSame(first, valueOf(one!.getType()));
+    Assert.assertSame(second, valueOf(two!.getType()));
+    Assert.assertFalse(valueOf(one!.getType()) === valueOf(two!.getType()));
+
+    // The builder's default: no value.
+    Assert.assertNull(new ReflectionNamedType("string", true).getClassOrToken());
   },
 );

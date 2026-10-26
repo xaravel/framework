@@ -4,6 +4,9 @@
 // throws the runtime's `RuntimeException` naming the `inject` form (XT-reflection-2). XT-reflection-1 also covers
 // interface hints (contract tokens, ESC-13.1-7's ruling) and AD-26 backed enums (ESC-13.1-8's ruling). XT-reflection-3
 // classifies every Test ID from the Expectations shards, and XT-reflection-4 is the close gate (api-surface, docs).
+// XT-reflection-5 is action item epic-13-retro-item-5-reflector-own-type: isParameterSubclassOf reads the parameter's
+// own token (finding L1), a bare unregistered class (L4), a parameter typed with one (L5), and PHP 8's static rule for
+// a 'Class::method' string (item 6 (b) of decisions/MAINT-2026-10-25-epic-13-items.md).
 // FR-26 lists Reflection among its Upstream Components. Every FQCN here is registered under `Xaravel\Tests\Reflection\…` with `registerClass`, so it
 // is used by this file only.
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
@@ -96,6 +99,30 @@ class Derived extends Base {
   }
 }
 registerClass(`${NS}\\Derived`, Derived);
+
+/** A `self` hint in a subclass of `Base` (XT-reflection-5). */
+class SelfTyped extends Base {
+  @inject({ x: self })
+  f(x: SelfTyped): void {
+    void x;
+  }
+}
+registerClass(`${NS}\\SelfTyped`, SelfTyped);
+
+/** A registered subclass of `Derived`, inheriting `static make()` (XT-reflection-5). */
+class DerivedChild extends Derived {}
+registerClass(`${NS}\\DerivedChild`, DerivedChild);
+
+/** An instance `go()` beside a `static go()` of the same name, and a subclass inheriting both (XT-reflection-5). */
+class Shadowing {
+  go(): void {}
+
+  static go(): void {}
+}
+registerClass(`${NS}\\Shadowing`, Shadowing);
+
+class ShadowingChild extends Shadowing {}
+registerClass(`${NS}\\ShadowingChild`, ShadowingChild);
 
 class Consumer {
   @inject({ x: Derived })
@@ -331,7 +358,9 @@ xaravelTest(
     Assert.assertTrue(Reflector.isCallable(Invokable, true));
     Assert.assertFalse(Reflector.isCallable(new OrderShipped()));
     Assert.assertTrue(Reflector.isCallable(`${NS}\\Derived::make`));
-    Assert.assertTrue(Reflector.isCallable(`${NS}\\Listener::handle`));
+    // PHP 8's is_callable: a 'Class::method' string naming an instance method is not callable (Maintainer's ruling,
+    // item 6 (b) of decisions/MAINT-2026-10-25-epic-13-items.md).
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\Listener::handle`));
     Assert.assertTrue(Reflector.isCallable(`${NS}\\Magic::anything`));
     Assert.assertFalse(Reflector.isCallable(`${NS}\\Listener::missing`));
     Assert.assertFalse(Reflector.isCallable("Missing\\Name::method"));
@@ -373,6 +402,61 @@ xaravelTest(
     const blocked = thrownBy(() => Reflector.getClassAttributes(TaggedChild, Tag));
     Assert.assertTrue(blocked instanceof BlockedByComponentError);
     Assert.assertSame("collections", (blocked as BlockedByComponentError).component);
+  },
+);
+
+xaravelTest(
+  "XT-reflection-5",
+  "isParameterSubclassOf reflects the parameter's own class or token (ReflectionNamedType.getClassOrToken(), a Xaravel addition (DIV-3.2; decisions/MAINT-2026-10-25-epic-13-items.md, item 5)), and a self hint, which holds none, its resolved declaring class: of two contract() tokens recorded under one FQCN, a parameter typed with the second is a subclass of the second's parent and one typed with the first is not, though the Registry's lookup by that name gives the first (ESC-13.1-7); a 'Class::method' string is callable only for a static method, its own or inherited from a registered parent, or, when the class has no such method, through __callStatic, as PHP 8's is_callable gives (an instance method is not, nor one that shadows a static method of the same name, though under syntaxOnly any such string is), while the array form still accepts an instance method; a bare unregistered class is a plain function to the Registry, so isCallable is true and never throws; a parameter typed with an unregistered class makes getParameterClassName, getParameterClassNames and isParameterSubclassOf throw the runtime's TypeError from fqcn() (DIV-3.2, DIV-9.14)",
+  () => {
+    // L1: two tokens under one FQCN, each answering for itself.
+    const OwnParent = contract(`${NS}\\OwnTypeParent`);
+    const FirstToken = contract(`${NS}\\OwnTypeSame`);
+    const SecondToken = contract(`${NS}\\OwnTypeSame`, {}, [OwnParent]);
+    Assert.assertSame(fqcn(FirstToken), fqcn(SecondToken));
+    const typedSecond = new ReflectionFunction(inject({ x: SecondToken }, (x: unknown) => x)).getParameters()[0]!;
+    const typedFirst = new ReflectionFunction(inject({ x: FirstToken }, (x: unknown) => x)).getParameters()[0]!;
+    Assert.assertSame(`${NS}\\OwnTypeSame`, Reflector.getParameterClassName(typedSecond));
+    Assert.assertTrue(Reflector.isParameterSubclassOf(typedSecond, OwnParent));
+    Assert.assertTrue(Reflector.isParameterSubclassOf(typedSecond, `${NS}\\OwnTypeParent`));
+    Assert.assertFalse(Reflector.isParameterSubclassOf(typedFirst, OwnParent));
+    // The lookup by name still gives the first token: only the parameter's own type answers for the second.
+    Assert.assertFalse(new ReflectionClass(`${NS}\\OwnTypeSame`).isSubclassOf(OwnParent));
+    // A `self` / `parent` hint holds no class, so it reflects its resolved name.
+    Assert.assertTrue(Reflector.isParameterSubclassOf(parameterOf(SelfTyped, "f"), Base));
+    Assert.assertFalse(Reflector.isParameterSubclassOf(parameterOf(SelfTyped, "f"), SelfTyped));
+    Assert.assertFalse(Reflector.isParameterSubclassOf(parameterOf(Derived, "f"), Base));
+
+    // 'Class::method' strings (PHP 8): static, inherited static, instance, shadowed static, magic static, missing.
+    Assert.assertTrue(Reflector.isCallable(`${NS}\\Derived::make`));
+    Assert.assertTrue(Reflector.isCallable(`${NS}\\DerivedChild::make`));
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\Shadowing::go`));
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\ShadowingChild::go`));
+    Assert.assertTrue(Reflector.isCallable(`${NS}\\Listener::handle`, true));
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\Listener::handle`));
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\Magic::__call`));
+    Assert.assertTrue(Reflector.isCallable(`${NS}\\Magic::__callStatic`));
+    Assert.assertTrue(Reflector.isCallable(`${NS}\\Magic::anything`));
+    Assert.assertFalse(Reflector.isCallable(`${NS}\\Listener::missing`));
+    // The array form keeps Laravel's rules, which accept an instance method.
+    Assert.assertTrue(Reflector.isCallable([`${NS}\\Listener`, "handle"]));
+    Assert.assertTrue(Reflector.isCallable([Listener, "handle"]));
+
+    // L4: a bare unregistered class is a plain function to the Registry.
+    Assert.assertTrue(Reflector.isCallable(Unregistered));
+    Assert.assertTrue(Reflector.isCallable(Unregistered, true));
+
+    // L5: a parameter typed with an unregistered class throws fqcn()'s TypeError when its type is read.
+    const unregistered = new ReflectionFunction(inject({ x: Unregistered }, (x: unknown) => x)).getParameters()[0]!;
+    for (const read of [
+      () => Reflector.getParameterClassName(unregistered),
+      () => Reflector.getParameterClassNames(unregistered),
+      () => Reflector.isParameterSubclassOf(unregistered, Base),
+    ]) {
+      const error = thrownBy(read);
+      Assert.assertSame(TypeError, (error as object | null)?.constructor ?? null);
+      Assert.assertStringStartsWith("fqcn(): the class is not registered", (error as Error).message);
+    }
   },
 );
 

@@ -17,19 +17,25 @@ built-ins `Symbol.for('xaravel.php.classes')` publishes ([exceptions.md](excepti
 
 A Spec reads as a type:
 
-| Spec | Type | `getName()` | `isBuiltin()` |
-| --- | --- | --- | --- |
-| a class or a contract token | `ReflectionNamedType` | its `fqcn()` | false |
-| `String`, `Number`, `Boolean` | `ReflectionNamedType` | `string`, `float`, `bool` | true |
-| `primitive` | `ReflectionNamedType` | `mixed` | true |
-| `self`, `parent`, `static` | `ReflectionNamedType` | `self`, `parent`, `static` | false |
-| `oneOf(...)` | `ReflectionUnionType` | | |
-| `allOf(...)` | `ReflectionIntersectionType` | | |
+| Spec | Type | `getName()` | `isBuiltin()` | `getClassOrToken()` |
+| --- | --- | --- | --- | --- |
+| a class or a contract token | `ReflectionNamedType` | its `fqcn()` | false | the class or token |
+| `String`, `Number`, `Boolean` | `ReflectionNamedType` | `string`, `float`, `bool` | true | `null` |
+| `primitive` | `ReflectionNamedType` | `mixed` | true | `null` |
+| `self`, `parent`, `static` | `ReflectionNamedType` | `self`, `parent`, `static` | false | `null` |
+| `oneOf(...)` | `ReflectionUnionType` | | | |
+| `allOf(...)` | `ReflectionIntersectionType` | | | |
 
 `Number` reads as `float`, the PHP hint that accepts every JS number. `getTypes()` on a union or an intersection gives
 its members in declaration order; an `allOf(...)` member of a union is a `ReflectionIntersectionType`. The relative
 markers stay unresolved, so `Reflector` resolves them against the parameter's declaring class (DIV-3.2). Any other
 value (`5`, an unregistered class, an object shaped like a Spec value) throws a `TypeError` when its type is read.
+
+`getClassOrToken()` is a Xaravel addition (DIV-3.2; `decisions/MAINT-2026-10-25-epic-13-items.md`, item 5): the
+class or contract token the Spec holds, which `getName()` names, so a caller can reflect the type's own value instead
+of resolving its name again. Two tokens recorded under one FQCN give the same name, while the Registry's lookup by
+that name gives the first one (ESC-13.1-7); each type keeps its own token. A union's or an intersection's members
+carry theirs, and `ReflectionEnum`'s backing type, a builtin, gives `null`.
 
 Errors. A misuse of a Spec, `attribute()` or a filter throws the JS `TypeError`, as `inject` does. An argument of the
 wrong type to a PHP constructor or method (`ReflectionClass::__construct(): Argument #1 ($objectOrClass) must be of

@@ -28,7 +28,7 @@ function namedType(spec: unknown, where: string): ReflectionNamedType {
     return new ReflectionNamedType(kind, false);
   }
   if (kind === null && isClassSpec(spec)) {
-    return new ReflectionNamedType(fqcn(spec as object), false);
+    return new ReflectionNamedType(fqcn(spec as object), false, spec as object);
   }
   throw new TypeError(`${where} is not a class, a token, String, Number, Boolean or a Spec value (DIV-3.2)`);
 }
