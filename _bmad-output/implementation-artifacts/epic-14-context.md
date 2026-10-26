@@ -69,7 +69,7 @@ Port Laravel's `illuminate/collections` component as `@xaravel/collections`: `Co
 - **Dependencies.**
   - The package depends on `@xaravel/runtime`, `@xaravel/contracts`, `@xaravel/macroable` and `@xaravel/conditionable`.
   - `@xaravel/http` is an optional peer, for `TransformsToResourceCollection`.
-  - The package is currently an empty `export {}`.
+  - PHP builtins (functions, classes, interfaces) that the Upstream code calls come from `@xaravel/runtime`, under their PHP names and with PHP's behaviour. If one is missing, raise a `contract` Escalation that recommends adding it to `packages/runtime`. Never re-implement PHP semantics inside `packages/collections`.
 - **PHP value model.**
   - A PHP list is a JS `Array`. A map whose keys are all non-integer-like strings is a plain object. Any other array is a `PhpArray` from `@xaravel/runtime`.
   - Public APIs accept all three forms. They never mutate caller data and never return internal arrays by reference.
