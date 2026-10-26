@@ -36,3 +36,13 @@ The check fails on the one note on `main`, `bmad-build-auto-result-retro-13-refl
 ## Bookkeeping
 
 Items 2, 3, 4 and 6 are `done`, and epic 13's `waiting_on_maintainer` is empty. Items 1 and 5 stay with the orchestrator, with item 5's `action` extended.
+
+## Amendment: item 5's scope
+
+#447 parked the orchestrator's item 5. Its L1 fix, testing a parameter's own token, needs the runtime's `ReflectionNamedType` to carry the parameter's Spec value. Today it holds only the FQCN string, and the Spec sits in `ReflectionParameter`'s private `#spec`.
+
+The Maintainer approved widening the item:
+- **Scope:** `packages/runtime`, limited to letting `ReflectionNamedType`, and the parameter reflection that builds it, carry the Spec's class or token beside its FQCN name, with an XT-runtime case.
+- **The rest:** `Reflector.isParameterSubclassOf` then tests that value. Everything else in item 5 stands as written.
+
+The item leaves epic 13's `waiting_on_maintainer` and stays `in-progress`.
