@@ -35,6 +35,8 @@ case "${1:-}" in
     # Keep the copy and trial state out of git status, so the iteration sees a clean tree.
     grep -qx '.agents/' .git/info/exclude 2>/dev/null || echo '.agents/' >> .git/info/exclude
     nice -n 19 bun install --frozen-lockfile >/dev/null || exit 1
+    # The git-ignored Upstream source the Stories port from (conformance/upstream/), verified against its pins.
+    nice -n 19 bun run upstream:sync >/dev/null && nice -n 19 bun run upstream:check >/dev/null || exit 1
     echo "setup ok: $TRIAL on $(git rev-parse --short HEAD), $(ls .agents/skills | wc -l | tr -d ' ') skills"
     ;;
   smoke)
@@ -51,11 +53,12 @@ case "${1:-}" in
     prompt="$(cat tools/orchestrator/codex-trial.md tools/orchestrator/iteration.md)"
     # workspace-write keeps writes inside the clone, $STATE, and the caches the tools need (uv's, and the
     # Fidelity Review's `claude -p` session files); never $HOME/repos/xaravel. The network is needed for
-    # bun and the Fidelity Review's Claude reviewer. Approvals go to Codex's automatic reviewer;
-    # --approve-for-me implies the workspace-write sandbox (it refuses an explicit --sandbox).
+    # bun and the Fidelity Review's Claude reviewer. approval_policy=never: anything inside the sandbox runs,
+    # anything outside fails at once (run 3's --approve-for-me left an apply_patch waiting for minutes).
     # workspace-write keeps .git read-only unless it is named as a writable root, and the loop branches and commits.
     nice -n 19 "$CODEX" exec -C "$TRIAL" --add-dir "$TRIAL/.git" --add-dir "$STATE" --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" \
-      -c sandbox_workspace_write.network_access=true --approve-for-me --json --color never \
+      --sandbox workspace-write -c approval_policy='"never"' \
+      -c sandbox_workspace_write.network_access=true --json --color never \
       -o "$STATE/last-message.md" "$prompt" >"$log" 2>&1
     rc=$?
     echo "rc=$rc outcome=$(cat "$STATE/outcome" 2>/dev/null || echo none) log=$log report=$STATE/trial-report.md"
