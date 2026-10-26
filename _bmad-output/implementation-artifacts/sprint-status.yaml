@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 22:11
+last_updated: 10-25-2026 22:39
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -157,7 +157,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: in-progress
-  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # Maintainer rulings 2026-10-25 (decisions/MAINT-2026-10-25-story-14-1.md): ESC-14.1-1..4 all option 1 (DIV-12.16, DIV-12.17); a Traversable iterates its values, entries() gives pairs; action item epic-14-item-1-runtime-php-types is done, so the Story resumes
+  14-1-enumerable-core-construction-conversion-and-serialization: blocked  # second planning round (2026-10-25), after the ESC-14.1-1..4 rulings: ESC-14.1-5 (keyed generators, PHP Generator), ESC-14.1-6 (PHP functions and the (array) cast the runtime does not export), ESC-14.1-7 (testEnsureForObjects class-name item) and ESC-14.1-8 (DIV-12.17 scope, one adapted clause per line) wait on the Maintainer
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
