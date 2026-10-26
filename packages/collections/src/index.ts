@@ -8,5 +8,7 @@ export { Enumerable } from "./Enumerable";
 export { Arr } from "./Arr";
 export { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
 export { EnumeratesValues, type EnumeratesValuesHost } from "./Traits/EnumeratesValues";
-export { collect, data_get, value } from "./helpers";
+export { collect, data_get, data_has, value } from "./helpers";
+export { ItemNotFoundException } from "./ItemNotFoundException";
+export { MultipleItemsFoundException } from "./MultipleItemsFoundException";
 export { enum_value } from "./functions";

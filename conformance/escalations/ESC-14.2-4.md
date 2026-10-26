@@ -6,6 +6,8 @@ test_ids:
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testContainsStrict#1"
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testDoesntContain#0"
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testDoesntContain#1"
+  - "Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#0"
+  - "Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#1"
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testSome#0"
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testSome#1"
   - "Illuminate\\Tests\\Support\\SupportCollectionTest::testValueRetrieverAcceptsDotNotation#0"
@@ -20,10 +22,11 @@ proposed: >-
   `strnatcmp`, `strnatcasecmp` and `strcoll` (the C locale), which
   arrayRefFunctions.ts already implements privately for `asort` / `arsort`.
   Add XT-runtime cases against PHP's results. The existing exports stay,
-  and no other runtime behaviour changes. The ten Test IDs are then ported
+  and no other runtime behaviour changes. The twelve Test IDs are then ported
   as Upstream wrote them, with `Collection::sortBy` / `sortByMany` and
-  `LazyCollection::sortBy` ported in full. Option 2: write `x === null` for
-  `is_null` in the four test bodies, and hold
+  `LazyCollection::sortBy` ported in full, and the test-local fixture
+  `TestAccessorEloquentTestStub` keeps Upstream's `! is_null(...)`. Option 2: write `x === null` for
+  `is_null` in the four test bodies and the fixture, and hold
   testValueRetrieverAcceptsDotNotation for Story 14.5, which owns `sortBy`.
   That needs a manifest change, and a test-body rewrite that no PORTING.md
   row or DIV clause covers.
@@ -48,7 +51,19 @@ evidence: >-
   `sortBy` without `sortByMany` would be a partial implementation, and a
   private copy in packages/collections is forbidden
   (decisions/MAINT-2026-10-26-runtime-builtins.md, epic 14 context).
-  The other 161 Test IDs need none of these, and are built in this pass.
+  The build pass found a third use the planning round missed: the
+  test-local fixture `TestAccessorEloquentTestStub::__isset`
+  (SupportCollectionTest.php:6574) returns `! is_null($this->$accessor())`,
+  and testGetPluckValueWithAccessors reaches it, because `pluck('some')`
+  calls `data_get`, whose object branch tests `isset($item->some)` through
+  the stub's `__isset`. The fixture is test code, so it keeps the PHP name
+  as the test bodies do, and testGetPluckValueWithAccessors#0/#1 wait here
+  too. The other 159 Test IDs need none of these, and are built in this
+  pass. The twelve Expectations lines stay `not-ported-yet` with this
+  Escalation, not `blocked-by:runtime`: tools/expectations/reasons.ts
+  (:270-282) accepts `blocked-by:<c>` only when `<c>` is in a later Phase,
+  or the same Phase and a later Epic, than collections, and the runtime is
+  Phase 0/1, as ESC-14.1-11 kept `not-ported-yet` for its Mockery tests.
   Option 1 meets every condition of the standing rule for runtime builtins:
   trigger `contract`, `packages/runtime` only, PHP names and behaviour with
   XT-runtime cases, and no DIV clause, expected value or grader file.
@@ -56,4 +71,4 @@ evidence: >-
 
 # ESC-14.2-4: Story 14.2 needs `is_null`, `uasort` and PHP's string comparisons from the runtime
 
-After epic-14-item-5 landed, Story 14.2's second planning round checked every PHP builtin its Test IDs reach. Two gaps remain that ESC-14.2-1 did not list. First, four test bodies call `is_null` (testContains, testContainsStrict, testDoesntContain and testSome). Second, testValueRetrieverAcceptsDotNotation reaches `Collection::sortBy`, whose `sortByMany` branch calls `uasort` and the `strcmp` family. Option 1 exports these from the runtime under the standing rule for runtime builtins. This Escalation holds only these ten Test IDs. The Story's other 161 are built now.
+After epic-14-item-5 landed, Story 14.2's second planning round checked every PHP builtin its Test IDs reach. Two gaps remain that ESC-14.2-1 did not list. First, four test bodies call `is_null` (testContains, testContainsStrict, testDoesntContain and testSome). Second, testValueRetrieverAcceptsDotNotation reaches `Collection::sortBy`, whose `sortByMany` branch calls `uasort` and the `strcmp` family. Option 1 exports these from the runtime under the standing rule for runtime builtins. A third use came up in the build: the test-local fixture `TestAccessorEloquentTestStub::__isset`, which testGetPluckValueWithAccessors reaches, calls `is_null` too. This Escalation holds only these twelve Test IDs. The Story's other 159 are built now.

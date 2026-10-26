@@ -1,14 +1,53 @@
-// Laravel's global Collections helpers (`src/Illuminate/Collections/helpers.php`, v13.37.0) that Story 14.1 ports:
-// `collect`, `data_get` and `value`. The others (`data_fill`, `data_has`, `data_set`, `data_forget`, `head`, `last`,
-// `when`) belong to the Stories that port their tests.
-import { array_key_first, array_key_last, arrayEntries, Closure, explode, Generator, in_array, is_array, is_iterable, is_object, Traversable } from "@xaravel/runtime";
+// Laravel's global Collections helpers (`src/Illuminate/Collections/helpers.php`, v13.37.0) that Stories 14.1 and 14.2
+// port: `collect`, `data_get`, `data_has` and `value`. The others (`data_fill`, `data_set`, `data_forget`, `head`,
+// `last`, `when`) belong to the Stories that port their tests.
+import {
+  array_key_first,
+  array_key_last,
+  arrayEntries,
+  Closure,
+  explode,
+  Generator,
+  identical,
+  in_array,
+  is_array,
+  is_iterable,
+  is_object,
+  property_exists,
+  Traversable,
+} from "@xaravel/runtime";
 import { Arr } from "./Arr";
 import { Collection } from "./Collection";
-import { arrayRead, propertyIsSet, propertyRead } from "./support/callables";
+import { arrayRead, offsetRead, propertyIsSet, propertyRead } from "./support/callables";
 
 /** Create a collection from the given value. */
 export function collect(value_: unknown = []): Collection {
   return new Collection(value_);
+}
+
+/**
+ * Determine if a key / property exists on an array or object using "dot" notation: each segment is a key of a PHP
+ * array or an `ArrayAccess` object, or a declared property of an object (`property_exists`). A `null` or empty key
+ * gives `false`.
+ */
+export function data_has(target: unknown, key: unknown): boolean {
+  if (key === null || key === undefined || identical(key, [])) {
+    return false;
+  }
+
+  const segments: unknown[] = is_array(key) ? arrayEntries(key as object).map(([, segment]) => segment) : explode(".", key);
+
+  for (const segment of segments) {
+    if (Arr.accessible(target) && Arr.exists(target, segment)) {
+      target = offsetRead(target as object, segment);
+    } else if (is_object(target) && property_exists(target, segment)) {
+      target = propertyRead(target as object, segment);
+    } else {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**

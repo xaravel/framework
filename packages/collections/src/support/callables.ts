@@ -1,6 +1,6 @@
 // Calling a PHP callable and reading a PHP array or object by key, as the Collections core does. Internal: not
 // exported from the package.
-import { Error as PhpError, getDebugType, normalizeKey, type PhpArray, toBool } from "@xaravel/runtime";
+import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool } from "@xaravel/runtime";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 
@@ -76,4 +76,39 @@ export function propertyIsSet(object: object, key: unknown): boolean {
     return toBool(Reflect.apply(magic, object, [name]));
   }
   return false;
+}
+
+/**
+ * PHP's `$target[$key]` read on a PHP array or an `ArrayAccess` object: `arrayRead` for an array, the object's
+ * `offsetGet($key)` otherwise.
+ */
+export function offsetRead(target: object, key: unknown): unknown {
+  if (is_array(target)) {
+    return arrayRead(target, key);
+  }
+  return (target as { offsetGet(offset: unknown): unknown }).offsetGet(key) ?? null;
+}
+
+/**
+ * PHP's `isset($target[$key])` on a PHP array (the key is present and its value is not `null`) or an `ArrayAccess`
+ * object (its `offsetExists($key)`).
+ */
+export function offsetIsSet(target: object, key: unknown): boolean {
+  if (is_array(target)) {
+    return arrayRead(target, key) !== null;
+  }
+  return toBool((target as { offsetExists(offset: unknown): unknown }).offsetExists(key));
+}
+
+/**
+ * Whether `value` is an AD-26 options object: a plain object (prototype `Object.prototype` or `null`). A member reads
+ * one only in the position where PHP never takes an array (`random`'s `$number`, `splice`'s `$length`), so the reading
+ * is unambiguous.
+ */
+export function isOptionsObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }

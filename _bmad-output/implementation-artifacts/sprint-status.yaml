@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: in-progress  # ESC-14.2-1..3 ruled option 1 (decisions/MAINT-2026-10-26-story-14-2.md): ESC-14.2-1 by the monitor under the runtime-builtins standing rule, DIV-9.15 and DIV-12.20 by the Maintainer; action item epic-14-item-5-runtime-array-functions lands first
+  14-2-retrieval-search-and-mutation-methods: blocked  # 159 of 171 built; ESC-14.2-4 (is_null, uasort, strcmp family: runtime-builtins standing rule, monitor) holds 12 Test IDs; ESC-14.2-5 (Fidelity F-4 evidence: orchestrator may rule, amendment 2026-10-21) holds the standing reject
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
