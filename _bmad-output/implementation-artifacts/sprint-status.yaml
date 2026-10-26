@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: backlog
+  14-2-retrieval-search-and-mutation-methods: blocked  # ESC-14.2-1 (contract: runtime PHP builtins array_any/array_first/array_slice/…, identical, Randomizer, SortDirection; under decisions/MAINT-2026-10-26-runtime-builtins.md) holds 145 Test IDs; ESC-14.2-2 (divergence: keyed-array spread) and ESC-14.2-3 (divergence: options-form overloads) wait on the Maintainer; no package code written
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
