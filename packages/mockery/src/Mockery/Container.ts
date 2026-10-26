@@ -11,12 +11,18 @@
 // arguments (the real constructor runs with them); a string-keyed map is
 // quick definitions (`shouldReceive(map)->byDefault()`). A class-name string
 // resolves to a class only through the class-lookup protocol (ESC-4.6-1 item
-// 9); an unresolved name is a display-only part of the mock's name.
+// 9); an unresolved name is a display-only part of the mock's name. A
+// contract token object (`@xaravel/assert`'s `isContractToken`: an
+// `@xaravel/contracts` token or a runtime PHP-interface token, PORTING.md's
+// `Mockery.mock(X)` form; ESC-14.1-11 option 1) is an interface target: the
+// mock is `instanceof` it and every contract it extends, and its name carries
+// the token's FQCN. A token with an empty FQCN cannot be parsed.
 // `alias:` and `overload:` mocks are PHP-only (ESC-4.6-1 item 3). Anything
 // else throws `Mockery\Exception('Unable to parse arguments sent to
 // Mockery\Container::mock()')`.
 import { LogicException } from "../php/LogicException";
 import { lookupClass } from "../support/classes";
+import { contractTokenName, isContractToken } from "@xaravel/assert";
 import { arrayEntries, classNameOf, FQCN, isClass, isClosure, isPhpArray, isPhpObject } from "../support/values";
 import { Exception } from "./Exception";
 import { InvalidArgumentException } from "./Exception/InvalidArgumentException";
@@ -30,6 +36,7 @@ interface Parsed {
   closure: ((mock: MockObject) => unknown) | null;
   targets: (AnyClass | string)[];
   token: symbol | null;
+  contracts: object[];
   partialObject: object | null;
   whiteList: string[] | null;
   blackList: string[];
@@ -73,6 +80,7 @@ export class Container {
     const spec: MockSpec = {
       parent,
       token: parsed.token,
+      contracts: parsed.contracts,
       parts,
       partialObject: parsed.partialObject,
       whiteList: parsed.whiteList,
@@ -175,7 +183,7 @@ export class Container {
   }
 
   private parseArguments(args: unknown[]): Parsed {
-    const parsed: Parsed = { closure: null, targets: [], token: null, partialObject: null, whiteList: null, blackList: [], quickDefinitions: null, constructorArgs: null };
+    const parsed: Parsed = { closure: null, targets: [], token: null, contracts: [], partialObject: null, whiteList: null, blackList: [], quickDefinitions: null, constructorArgs: null };
     if (args.length >= 2) {
       const last = args.at(-1);
       if (isClosure(last)) {
@@ -195,6 +203,17 @@ export class Container {
       if (typeof argument === "symbol") {
         // A contract token (ESC-4.5-1 item 3).
         parsed.token = argument;
+        continue;
+      }
+      if (isContractToken(argument)) {
+        // A contract token object (ESC-14.1-11 option 1), before the PHP-array test that would read it as quick
+        // definitions.
+        if (contractTokenName(argument) === null) {
+          throw new Exception("Unable to parse arguments sent to Mockery\\Container::mock()");
+        }
+        if (!parsed.contracts.includes(argument)) {
+          parsed.contracts.push(argument);
+        }
         continue;
       }
       if (argument === null) {
