@@ -99,10 +99,24 @@ function intValue(key: PhpArrayKey): bigint | null {
   return typeof key === "string" ? null : BigInt(key);
 }
 
+/** Reads a `PhpArray`'s next free index (set by the class's static block). */
+let readNextFree: (array: PhpArray) => bigint | null;
+/** Builds a `PhpArray` from entries with the given next free index (set by the class's static block). */
+let buildWithNextFree: (entries: Iterable<readonly [PhpArrayKey, unknown]>, nextFree: bigint | null) => PhpArray;
+
 export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implements Iterable<[PhpArrayKey, V]> {
   readonly #entries = new Map<PhpArrayKey, V>();
   /** PHP's `nNextFreeElement`: the largest int key ever inserted plus 1 (capped at `PHP_INT_MAX`); null when none. */
   #nextFree: bigint | null = null;
+
+  static {
+    readNextFree = (array) => array.#nextFree;
+    buildWithNextFree = (entries, nextFree) => {
+      const array = new PhpArray(entries);
+      array.#nextFree = nextFree;
+      return array;
+    };
+  }
 
   constructor(entries: Iterable<readonly [K, V]> = []) {
     for (const [key, value] of entries) {
@@ -198,6 +212,22 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
       this.#nextFree = value < INT_MAX ? value + 1n : INT_MAX;
     }
   }
+}
+
+/**
+ * PHP's `nNextFreeElement` of `array`: the key `$a[] = …` takes next, or null when no int key was ever inserted (then
+ * 0). Internal: the package entries do not export it (action item epic-14-item-5-runtime-array-functions).
+ */
+export function nextFreeIndex(array: PhpArray): bigint | null {
+  return readNextFree(array);
+}
+
+/**
+ * A `PhpArray` of `entries` (normalised keys, in order) whose next free index is `nextFree`, as PHP keeps it where it
+ * does not renumber (`array_pop`, `asort`). Internal: the package entries do not export it.
+ */
+export function phpArrayWithNextFree(entries: Iterable<readonly [PhpArrayKey, unknown]>, nextFree: bigint | null): PhpArray {
+  return buildWithNextFree(entries, nextFree);
 }
 
 /**

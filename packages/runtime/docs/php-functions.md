@@ -3,11 +3,12 @@
 The runtime ports PHP's `Generator`, the keyed yield a JS generator cannot write, and the PHP functions the Collections
 core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generators-functions`), and PHP's type tests,
 `instanceof` targets and the rest of the functions Collections calls (ESC-14.1-9, action item
-`epic-14-item-3-runtime-type-tests-functions`). Everything here is
+`epic-14-item-3-runtime-type-tests-functions`), and the array, by-reference, sort, string and object functions Story
+14.2 calls (ESC-14.2-1, action item `epic-14-item-5-runtime-array-functions`). Everything here is
 exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is synchronous. Each function
 ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`, `ext/spl/spl_iterators.c`,
 `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`, `ext/standard/math.c`,
-`ext/standard/type.c`, `Zend/zend_builtin_functions.c`, `Zend/zend_API.c`) in coercive typing mode, PHP's mode for a file without `strict_types`,
+`ext/standard/type.c`, `ext/standard/strnatcmp.c`, `Zend/zend_builtin_functions.c`, `Zend/zend_API.c`) in coercive typing mode, PHP's mode for a file without `strict_types`,
 as Laravel's are.
 
 Common rules:
@@ -176,17 +177,119 @@ map it:
   `ValueError`, any other value PHP's `TypeError` `count(): Argument #1 ($value) must be of type Countable|array, int
   given`. A contract token is a string there.
 
+- `array_any(array, callback)`, `array_all(array, callback)` and `array_find_key(array, callback)`: the callback gets
+  `(value, key)` and its result is read by `zend_is_true`; each stops at the first decisive entry (`array_any([])` is
+  `false`, `array_all([])` `true`, `array_find_key` gives the first matching key or `null`). The callback is taken as
+  `array_filter` takes one (DIV-9.13) but must not be `null`: `null` throws PHP's `TypeError`
+  `array_any(): Argument #2 ($callback) must be a valid callback, no array or string given`.
+- `array_first(array)` and `array_last(array)`: the first or last value, `null` for an empty array.
+- `array_search(needle, haystack, strict = false)`: the first key whose value is `==` `needle` (`in_array`'s
+  comparison, the enum rule included) or `===` it (`identical`), else `false`.
+- `array_flip(array)`: each value becomes a key (a numeric string its int, as PHP's symbol table normalises it) whose
+  value is its key; a repeated value keeps its first place and its last key; a value that is no int or string is
+  skipped, as PHP skips it with a warning.
+- `array_slice(array, offset, length = null, preserve_keys = false)` and `array_reverse(array, preserve_keys = false)`:
+  PHP's clamping of `offset` and `length`; a string key is always kept, an int key only with `preserve_keys`, else
+  renumbered from 0.
+- `array_intersect_key(array, ...arrays)`: the entries of `array`, keys kept, whose key every other array has (`"1"`
+  and `1` are one key); `array_intersect_assoc(array, ...arrays)` also needs `(string) value === (string) other`
+  (PHP's `string_compare_function`: an array reads as `"Array"`, an object without a `__toString` port throws PHP's
+  `Error`). With one argument each gives `array` itself. A non-array throws `Argument #1 ($array) must be of type
+  array, …` and, for the rest, `Argument #<n> must be of type array, …`.
+- `SORT_LOCALE_STRING` (5), `SORT_NATURAL` (6) and `SORT_FLAG_CASE` (8), beside `SORT_REGULAR`, `SORT_NUMERIC` and
+  `SORT_STRING`, for `asort` / `arsort`.
+
+## By-reference array functions
+
+`array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort` and `arsort` take PHP's `&$array` as a `Ref`
+(AD-9, DIV-9.2) whose `value` is an AD-9 array. A PHP array is a value, so each builds a new array and writes it to
+`ref.value`; the JS value the `Ref` held before is not changed, as PHP's copy-on-write leaves another holder's copy. A
+`Ref` holding anything else throws PHP's `TypeError` `array_shift(): Argument #1 ($array) must be of type array, int
+given`; an argument that is no `Ref` throws a JS `TypeError` naming DIV-9.2.
+
+- `array_shift(ref)` removes and returns the first value; `array_pop(ref)` the last. Each gives `null` for an empty
+  array, which it leaves as it is.
+- `array_unshift(ref, ...values)` prepends `values` and returns the new count.
+- `array_splice(ref, offset, length = null, replacement = [])` removes `length` entries from position `offset`
+  (clamped as PHP clamps them) and puts the values of `replacement` in their place, its keys dropped; a replacement
+  that is no array reads as PHP's `(array)` cast reads it (`null` is `[]`, a scalar `[scalar]`). It returns the
+  removed entries, int keys renumbered and string keys kept.
+- `array_shift`, `array_unshift` and `array_splice` renumber the int keys from 0 and keep the string keys, as PHP
+  does; the written-back array goes out through `arrayFromEntries`.
+- `array_pop` and the sorts keep the keys, and keep PHP's next free index (`nNextFreeElement`): a `PhpArray` input's,
+  lowered by one when `array_pop` removed the int key just below it. The written-back array goes out through
+  `arrayFromEntries`, unless that index differs from the one its keys give (the largest int key plus 1): then it is a
+  `PhpArray` carrying PHP's index, so a later `push` lands where PHP's `$a[] = …` lands (`[0 => 'a', 7 => 'c']` popped,
+  then appended, gives key 7). A JS array or plain object input's next free index is the one its keys give already.
+
+## Sorting: `asort` and `arsort`
+
+`asort(ref, flags = SORT_REGULAR)` sorts by value, ascending, keys kept, and returns `true`; `arsort` sorts descending.
+Both port PHP 8's `php_get_data_compare_func` over `zend_sort` with PHP's stable fallback (`RETURN_STABLE_SORT`):
+equal values keep their order, for `arsort` too, which negates the comparison, not the tie order.
+
+- `SORT_REGULAR` (and any flag PHP reads as it, `SORT_FLAG_CASE` ignored) compares by `zend_compare`, with
+  `array_unique`'s rule that moves enum cases after the other values.
+- `SORT_NUMERIC` compares the values as floats.
+- `SORT_STRING` compares the bytes of their strings (`toPhpString`); `SORT_STRING | SORT_FLAG_CASE` folds ASCII case.
+- `SORT_NATURAL` is a port of `strnatcmp_ex` (leading zeros and whitespace skipped, digit runs by value, a run after
+  a `0` as a fraction); `SORT_NATURAL | SORT_FLAG_CASE` folds ASCII case.
+- `SORT_LOCALE_STRING` is `strcoll` in the C locale, PHP's default: byte order, up to a NUL byte. No other locale is
+  ported (`setlocale` is not).
+- A value without a string form under a string comparison throws PHP's `Error`, a string holding a lone surrogate a
+  JS `TypeError` naming the function, and a `flags` that is no int PHP's `TypeError`.
+
 ## Math functions
 
 - `abs(num)`: an int or a float (a numeric string its number, `null` and `false` 0, `true` 1). An int stays an int,
   except `PHP_INT_MIN`, whose absolute value is a float; a float result is a `number`, marked `float()` when
   integral (`abs(-0.0)` is `float(0)`). Anything else throws PHP's `TypeError`
   `abs(): Argument #1 ($num) must be of type int|float, string given`.
+- `min(value, ...values)` and `max(value, ...values)`. With one argument, the least or greatest value of that array
+  (`zend_hash_minmax`: the first is kept unless a later one compares less, or greater). With two, PHP 8.5's direct-call
+  form (`ZEND_FRAMELESS_FUNCTION`): `min` keeps the first when it is less, else the second (`min(0, '0')` is `'0'`);
+  `max` keeps the first when it is greater or equal (`max(0, '0')` is `0`). With more, the first argument, replaced by
+  each later one that compares less (or greater), so the first of equal values is kept (`min(0, '0', 0)` is `0`).
+  Values compare by `zend_compare` (`spaceship`, with PHP's enum rule); two numbers compare directly, as PHP's fast
+  paths do, so a NAN wins or loses exactly as in PHP (`max(1.0, NAN)` is `NAN`, `max(NAN, 1.0)` is `1.0`). The value
+  returned is the argument itself, its int or float kind kept. No argument throws PHP's `ArgumentCountError`
+  `min() expects at least 1 argument, 0 given`; one argument that is no array throws PHP's `TypeError`
+  `min(): Argument #1 ($value) must be of type array, int given`, an empty array PHP's `ValueError`
+  `min(): Argument #1 ($value) must contain at least one element`.
 
 ## PHP names beside camelCase exports
 
 `get_debug_type` is `getDebugType` and `json_last_error` is `jsonLastError`, the same function objects under PHP's
-names (ESC-14.1-1, PORTING.md's bare-name rule).
+names (ESC-14.1-1, PORTING.md's bare-name rule), and so are `is_numeric` (`isNumeric`) and `is_float` (`isFloat`)
+(ESC-14.2-1).
+
+## `identical`
+
+`identical(a, b)` is PHP's `===` (`zend_is_identical`) over AD-9, for a ported `===` whose operand can be a PHP array
+(ESC-14.2-1): the same PHP type and value, so an int is never identical to a float (`identical(1, float(1))` is
+`false`); two arrays with the same keys in the same order and identical values (`identical({a: 1, b: 2}, {b: 2, a:
+1})` is `false`); an object only itself. An array that contains itself throws PHP's `Error`
+`Nesting level too deep - recursive dependency?`. `in_array`, `array_keys` and `array_search` use it in strict mode.
+
+## `property_exists` and `method_exists`
+
+`property_exists(object_or_class, property)` and `method_exists(object_or_class, method)` take an object, a class
+constructor or a contract token (a class-string, AD-9), or a class-string the Registry resolves (`lookUpName`, case-
+and leading-`\`-insensitive); a string naming nothing gives `false`. Any other value throws PHP's `TypeError`
+`property_exists(): Argument #1 ($object_or_class) must be of type object|string, int given`, and a name that is no
+string `… Argument #2 ($property) must be of type string, array given`.
+
+- `property_exists` is case-sensitive. An object has an own string-keyed property (a field, or one set later, PHP's
+  dynamic property). An object or a class has a static property on its class chain (an enumerable own data property
+  of the class or a parent, or a static accessor), a property its PHP property table declares
+  (`Symbol.for('xaravel.php.properties')`, ESC-9.7-1), and an accessor on its prototype chain (PHP 8.4's hooked
+  property). A Closure and a contract token have none.
+- `method_exists` matches PHP's case-insensitive method names: a method `findMethod` finds (a function on the
+  prototype chain below `Object.prototype`, then on the static chain, never `constructor`), exactly and then in any
+  case; `__toString` for a class with a `toString()` port (AD-26); PHP's `Closure` methods (`__invoke`, `bind`,
+  `bindTo`, `call`, `fromCallable`) for a Closure and for the class-string `Closure`; and for a contract token its
+  recorded methods, its built-in parents' (`getIterator` for `IteratorAggregate`) and its parents'. `__call` and
+  `__callStatic` do not make a missing method exist, as in PHP.
 
 ## `range`
 
@@ -201,6 +304,10 @@ array size (`HT_MAX_SIZE`, 2^30), with both of PHP's size messages; PHP's `TypeE
 ## String functions
 
 - `str_starts_with(haystack, needle)`: whether `haystack` begins with `needle` (`""` always).
+- `str_contains(haystack, needle)`: whether `needle` occurs in `haystack` (`""` always).
+- `strlen(string)`: the number of UTF-8 bytes (`strlen("héllo")` is 6, `strlen(12.5)` is 4).
+- `lcfirst(string)`: the first byte lowered when it is an ASCII `A`-`Z`; a multi-byte first character is unchanged
+  (`lcfirst("Élan")` is `"Élan"`).
 - `substr(string, offset, length = null)` counts UTF-8 bytes, as PHP's string is its bytes: a negative offset counts
   from the end, a negative length stops that many bytes before it, and `null` runs to the end.
 
@@ -244,7 +351,8 @@ A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold t
 limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a UTF-8 sequence
 (`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, a `sprintf` result that is no valid UTF-8 (a
 precision that splits a sequence, `%.1s` of `"é"`, or a `%c` byte of 0x80 or more on its own), and a string holding a
-lone surrogate passed to `substr`, `str_starts_with`, `range`, `explode` or `sprintf`.
+lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, `lcfirst`, `range`, `explode` or
+`sprintf`.
 
 ## Not ported
 
@@ -274,3 +382,15 @@ lone surrogate passed to `substr`, `str_starts_with`, `range`, `explode` or `spr
   groups equal cases, as PHP's comment says, and the kept keys are the same.
 - `in_array` and `array_unique` apply PHP's enum rule above to the values they compare, not to values nested inside
   them, which `looseEquals` and `spaceship` compare; those do not apply PHP's enum handler yet.
+- PHP callable strings and arrays as `array_any`, `array_all` and `array_find_key` callbacks (DIV-9.13), as for
+  `array_filter`.
+- A locale for `SORT_LOCALE_STRING`: it is the C locale's byte order, as PHP's default locale gives it.
+- The order PHP gives two distinct enum cases under `SORT_REGULAR` (`asort`, `arsort`, `array_unique`) is by object
+  address; the runtime orders them by first comparison, so only the grouping of equal cases and their place after
+  other values are PHP's.
+- `property_exists` on a class-string or a class reads only the static side, the PHP property table and accessors: an
+  instance field a class does not list in its property table is seen only on an object. A static field stands for a
+  static property, so a class constant ported as a static field reads as one.
+- `method_exists` counts a JS method named `toString` (the `__toString` port) under that name too.
+- `min` and `max` with two arguments always take PHP 8.5's direct-call form; PHP's variadic form, which a call through
+  a callable or with a spread takes, keeps the first of two equal values for `min` too.

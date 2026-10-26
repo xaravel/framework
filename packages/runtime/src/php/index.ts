@@ -23,14 +23,25 @@ export { ArrayObject } from "./ArrayObject";
 export {
   ARRAY_FILTER_USE_BOTH,
   ARRAY_FILTER_USE_KEY,
+  array_all,
+  array_any,
   array_combine,
   array_filter,
+  array_find_key,
+  array_first,
+  array_flip,
+  array_intersect_assoc,
+  array_intersect_key,
   array_key_exists,
   array_key_first,
   array_key_last,
   array_keys,
+  array_last,
   array_map,
   array_merge,
+  array_reverse,
+  array_search,
+  array_slice,
   array_unique,
   array_values,
   COUNT_NORMAL,
@@ -40,11 +51,17 @@ export {
   is_scalar,
   iterator_count,
   iterator_to_array,
+  max,
+  min,
+  SORT_FLAG_CASE,
+  SORT_LOCALE_STRING,
+  SORT_NATURAL,
   SORT_NUMERIC,
   SORT_REGULAR,
   SORT_STRING,
   toPhpArray,
 } from "./arrayFunctions";
+export { array_pop, array_shift, array_splice, array_unshift, arsort, asort } from "./arrayRefFunctions";
 export { Attribute } from "./Attribute";
 export { BackedEnum } from "./BackedEnum";
 export { Closure } from "./Closure";
@@ -71,6 +88,7 @@ export { LogicException } from "./LogicException";
 export { OutOfBoundsException } from "./OutOfBoundsException";
 export { OutOfRangeException } from "./OutOfRangeException";
 export { OverflowException } from "./OverflowException";
+export { Randomizer } from "./Randomizer";
 export { range } from "./range";
 export { RangeException } from "./RangeException";
 export { ReflectionAttribute } from "./ReflectionAttribute";
@@ -94,9 +112,10 @@ export { ValueError } from "./ValueError";
 export { WeakMap } from "./WeakMap";
 export { __PHP_Incomplete_Class } from "./__PHP_Incomplete_Class";
 export { arrayEntries, toBool, toFloat, toInt, toPhpString } from "./casts";
-export { float, isFloat, PhpFloat } from "./PhpFloat";
+export { float, isFloat, isFloat as is_float, PhpFloat } from "./PhpFloat";
 export { hasBrand } from "./hasBrand";
-export { isNumeric } from "./isNumeric";
+export { identical } from "./identical";
+export { isNumeric, isNumeric as is_numeric } from "./isNumeric";
 export {
   JSON_BIGINT_AS_STRING,
   JSON_ERROR_CTRL_CHAR,
@@ -133,14 +152,16 @@ export { jsonEncode } from "./jsonEncode";
 export { jsonLastError, jsonLastError as json_last_error, jsonLastErrorMsg } from "./jsonLastError";
 export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
+export { method_exists, property_exists } from "./objectFunctions";
 export { arrayFromEntries, normalizeKey, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 export { phpSerialize } from "./phpSerialize";
 export { getDebugType, getDebugType as get_debug_type, gettype } from "./phpType";
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
+export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
 export { sprintf } from "./sprintf";
-export { explode, implode, str_starts_with, substr } from "./stringFunctions";
+export { explode, implode, lcfirst, str_contains, str_starts_with, strlen, substr } from "./stringFunctions";
 export { is_a, is_array, is_callable, is_iterable, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";

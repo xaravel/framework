@@ -1,8 +1,9 @@
 // PHP's `===` (`zend_is_identical` of PHP 8.5.11's `Zend/zend_operators.c`) over the AD-9 value model, for
 // `in_array`'s strict mode (action item epic-14-item-2-runtime-generators-functions): the same PHP type and value; an
 // int and a float never; a float by value (`NAN` never, `-0.0` and `0.0` alike); two arrays with the same keys in the
-// same order and identical values (`zend_hash_compare`, ordered); an object only itself. Internal: the package does
-// not export this module.
+// same order and identical values (`zend_hash_compare`, ordered); an object only itself. `@xaravel/runtime/php` and the
+// package root export it as `identical(a, b)` (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1), for a
+// ported `===` whose operand can be a PHP array.
 import { arrayEntries, floatValue } from "./casts";
 import { Error as PhpError } from "./Error";
 import type { PhpArrayKey } from "./PhpArray";

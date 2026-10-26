@@ -1,7 +1,8 @@
 // PHP's string functions the Collections tests call (ESC-14.1-6; action item
 // epic-14-item-2-runtime-generators-functions), under their PHP names, ports of PHP 8.5.11's `ext/standard/string.c`
 // in coercive typing mode: `str_starts_with`, `substr`, and (action item epic-14-item-3-runtime-type-tests-functions,
-// ESC-14.1-9) `implode` and `explode`. A PHP string is its bytes, so `substr` counts UTF-8 bytes.
+// ESC-14.1-9) `implode` and `explode`, and (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1)
+// `str_contains`, `strlen` and `lcfirst`. A PHP string is its bytes, so `substr` counts UTF-8 bytes.
 // A result or input JS cannot hold (a result that splits a UTF-8 sequence, an input holding a lone surrogate) throws a
 // JS `TypeError` naming the limit, as the codecs do.
 import { LONE_SURROGATE, utf8 } from "./mangle";
@@ -33,6 +34,35 @@ export function str_starts_with(haystack: unknown, needle: unknown): boolean {
   const h = wellFormed("str_starts_with", stringParameter("str_starts_with", 1, "haystack", haystack));
   const n = wellFormed("str_starts_with", stringParameter("str_starts_with", 2, "needle", needle));
   return h.startsWith(n);
+}
+
+/**
+ * PHP's `str_contains($haystack, $needle)`: whether `needle` occurs in `haystack` (`""` always). Both are coerced as
+ * `str_starts_with`'s are; anything else throws PHP's `TypeError`.
+ */
+export function str_contains(haystack: unknown, needle: unknown): boolean {
+  const h = wellFormed("str_contains", stringParameter("str_contains", 1, "haystack", haystack));
+  const n = wellFormed("str_contains", stringParameter("str_contains", 2, "needle", needle));
+  return h.includes(n);
+}
+
+/**
+ * PHP's `strlen($string)`: the number of UTF-8 bytes of `string`, coerced as PHP's `string` parameter (`12.5` is
+ * `"12.5"`, true `"1"`); anything else throws PHP's `TypeError`.
+ */
+export function strlen(string: unknown): number {
+  return utf8.encode(wellFormed("strlen", stringParameter("strlen", 1, "string", string))).length;
+}
+
+/**
+ * PHP's `lcfirst($string)`: `string` with its first byte lowered when it is an ASCII `A`-`Z` (`zend_tolower_ascii`), so
+ * a multi-byte first character is unchanged. Coerced as PHP's `string` parameter; anything else throws PHP's
+ * `TypeError`.
+ */
+export function lcfirst(string: unknown): string {
+  const s = wellFormed("lcfirst", stringParameter("lcfirst", 1, "string", string));
+  const first = s.charCodeAt(0);
+  return first >= 0x41 && first <= 0x5a ? String.fromCharCode(first + 0x20) + s.slice(1) : s;
 }
 
 /**

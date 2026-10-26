@@ -4,18 +4,22 @@
 // `array_combine`, `array_filter`, `array_unique`, `iterator_to_array`, `iterator_count`, the constants they take,
 // and PHP's `(array)` cast as `toPhpArray`; and (action item epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9)
 // `array_map`, `array_keys`, `array_values`, `array_key_exists`, `array_key_first`, `array_key_last`, `array_merge`,
-// `count` with `COUNT_NORMAL` / `COUNT_RECURSIVE`. A PHP array comes in as `arrayEntries` reads it and goes out through
+// `count` with `COUNT_NORMAL` / `COUNT_RECURSIVE`; and (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1)
+// `array_any`, `array_all`, `array_find_key`, `array_first`, `array_last`, `array_search`, `array_flip`, `array_slice`,
+// `array_reverse`, `array_intersect_key`, `array_intersect_assoc`, `min`, `max` and the sort flag constants (the
+// by-reference functions are in `arrayRefFunctions.ts`). A PHP array comes in as `arrayEntries` reads it and goes out through
 // `arrayFromEntries` (the AD-9 form); `toPhpArray` alone returns a `PhpArray`. `undefined` reads as null (AD-9), and
 // an omitted optional argument is PHP's default. PHP's warnings and deprecations are not reproduced. Everything is
 // synchronous.
 import { isContractToken } from "../registry/registry";
-import { arrayCount, arrayEntries, isTrue, toFloat, toInt, toPhpString } from "./casts";
+import { ArgumentCountError } from "./ArgumentCountError";
+import { arrayCount, arrayEntries, floatValue, isTrue, toFloat, toInt, toPhpString } from "./casts";
 import { isEnumCase } from "./classExistence";
 import { isClassConstructor } from "./Closure";
 import { identical } from "./identical";
 import { looseEquals, spaceship } from "./looseEquals";
 import { objectProps } from "./mangle";
-import { arrayParameter, boolParameter, intParameter } from "./phpArguments";
+import { arrayParameter, boolParameter, intParameter, nullableIntParameter } from "./phpArguments";
 import { arrayFromEntries, normalizeKey, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf } from "./throwableArguments";
@@ -36,8 +40,15 @@ export const SORT_NUMERIC = 1;
 /** PHP's `SORT_STRING`: compare as strings. */
 export const SORT_STRING = 2;
 
-/** PHP's `SORT_FLAG_CASE`, which `array_unique` masks off before it picks a comparator. */
-const SORT_FLAG_CASE = 8n;
+/** PHP's `SORT_LOCALE_STRING`: compare as strings in the current locale (`strcoll`; the runtime's is the C locale). */
+export const SORT_LOCALE_STRING = 5;
+/** PHP's `SORT_NATURAL`: compare as strings in natural order (`strnatcmp`). */
+export const SORT_NATURAL = 6;
+/** PHP's `SORT_FLAG_CASE`: with `SORT_STRING` or `SORT_NATURAL`, compare case-insensitively. */
+export const SORT_FLAG_CASE = 8;
+
+/** `SORT_FLAG_CASE` as a bigint, which `array_unique` masks off before it picks a comparator. */
+const FLAG_CASE = 8n;
 
 /** PHP's `is_scalar($value)`: true for an int, a float, a string or a bool. */
 export function is_scalar(value: unknown): boolean {
@@ -87,11 +98,16 @@ function unportedCallable(fn: string, position: number, form: string): PhpTypeEr
  * A `?callable` callback parameter as `array_filter` and `array_map` take it: a function, an object with an
  * `__invoke` method (called with exactly the given arguments), or null. Throws PHP's `TypeError` naming the unported
  * form for a PHP callable string or array (DIV-9.13), and PHP's `must be a valid callback or null, no array or string
- * given` for anything else.
+ * given` for anything else. With `nullable` false it is a `callable` parameter (`array_any`, `array_all`,
+ * `array_find_key`): null throws PHP's `must be a valid callback, no array or string given` too.
  */
-function callbackParameter(fn: string, position: number, callback: unknown): ((...args: unknown[]) => unknown) | null {
+function callbackParameter(fn: string, position: number, callback: unknown, nullable: boolean = true): ((...args: unknown[]) => unknown) | null {
+  const refused = `${fn}(): Argument #${position} ($callback) must be a valid callback${nullable ? " or null" : ""}, no array or string given`;
   if (callback === null || callback === undefined) {
-    return null;
+    if (nullable) {
+      return null;
+    }
+    throw new PhpTypeError(refused);
   }
   // A class constructor and a contract token are class-strings (AD-9, DIV-12.19).
   if (isClassConstructor(callback) || isContractToken(callback)) {
@@ -110,7 +126,7 @@ function callbackParameter(fn: string, position: number, callback: unknown): ((.
   if (typeof callback === "object" && phpType(callback) === "array") {
     throw unportedCallable(fn, position, "array");
   }
-  throw new PhpTypeError(`${fn}(): Argument #${position} ($callback) must be a valid callback or null, no array or string given`);
+  throw new PhpTypeError(refused);
 }
 
 /**
@@ -183,7 +199,7 @@ function enumRule(a: unknown, b: unknown): boolean {
  * does not apply yet. It applies to the compared values themselves; a case nested in an array or a property is
  * compared by `spaceship`.
  */
-function zendCompare(a: unknown, b: unknown): number {
+export function zendCompare(a: unknown, b: unknown): number {
   if (a !== b && enumRule(a, b)) {
     return 1;
   }
@@ -202,7 +218,7 @@ function zendEquals(a: unknown, b: unknown): boolean {
 }
 
 /** `php_array_data_compare_unstable_i`: `zend_compare` (`zendCompare`), with `array_unique`'s rule that groups enum cases. */
-function regularCompare(a: unknown, b: unknown): number {
+export function regularCompare(a: unknown, b: unknown): number {
   const result = zendCompare(a, b);
   if (result === 1 && isEnumCase(b)) {
     if (isEnumCase(a)) {
@@ -217,7 +233,7 @@ function regularCompare(a: unknown, b: unknown): number {
 }
 
 /** `numeric_compare_function`: both as floats, `ZEND_THREEWAY_COMPARE` (NAN gives 1). */
-function numericCompare(a: unknown, b: unknown): number {
+export function numericCompare(a: unknown, b: unknown): number {
   const x = toFloat(a);
   const y = toFloat(b);
   return x === y ? 0 : x < y ? -1 : 1;
@@ -230,12 +246,12 @@ function unportedFlag(flag: string): ValueError {
 
 /** `flag`, with ` | SORT_FLAG_CASE` when `sortType` sets it. */
 function withCase(flag: string, sortType: bigint): string {
-  return (sortType & SORT_FLAG_CASE) !== 0n ? `${flag} | SORT_FLAG_CASE` : flag;
+  return (sortType & FLAG_CASE) !== 0n ? `${flag} | SORT_FLAG_CASE` : flag;
 }
 
 /** `php_get_data_compare_func_unstable(sort_type, 0)`, for the comparators the runtime ports. */
 function compareFor(sortType: bigint): (a: unknown, b: unknown) => number {
-  switch (sortType & ~SORT_FLAG_CASE) {
+  switch (sortType & ~FLAG_CASE) {
     case 1n:
       return numericCompare;
     case 2n:
@@ -545,4 +561,352 @@ export function count(value: unknown, mode: unknown = COUNT_NORMAL): number | bi
     }
   }
   throw new PhpTypeError(`count(): Argument #1 ($value) must be of type Countable|array, ${valueTypeName(value)} given`);
+}
+
+/**
+ * A `callable` callback parameter (`array_any`, `array_all`, `array_find_key`): taken as `array_filter` takes one
+ * (DIV-9.13), except that null throws PHP's `TypeError` `must be a valid callback, no array or string given`.
+ */
+function requiredCallback(fn: string, position: number, callback: unknown): (...args: unknown[]) => unknown {
+  return callbackParameter(fn, position, callback, false) as (...args: unknown[]) => unknown;
+}
+
+/**
+ * The first entry of `array` for which `callback(value, key)` is `decisive` (by `zend_is_true`), or null; the
+ * callback is not called after it. `php_array_find` of `ext/standard/array.c`.
+ */
+function findEntry(fn: string, array: unknown, callback: unknown, decisive: boolean): [PhpArrayKey, unknown] | null {
+  const entries = arrayParameter(fn, 1, "array", array);
+  const test = requiredCallback(fn, 2, callback);
+  for (const entry of entries) {
+    if (isTrue(test(entry[1], entry[0])) === decisive) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+/**
+ * PHP's `array_any($array, $callback)`: whether `callback(value, key)` is true (by `zend_is_true`) for some entry,
+ * stopping at the first; false for `[]`. The callback is taken as `array_filter` takes one (DIV-9.13), and must not be
+ * null. Throws PHP's `TypeError` for a non-array and for a callback PHP or the runtime refuses.
+ */
+export function array_any(array: unknown, callback: unknown): boolean {
+  return findEntry("array_any", array, callback, true) !== null;
+}
+
+/**
+ * PHP's `array_all($array, $callback)`: whether `callback(value, key)` is true (by `zend_is_true`) for every entry,
+ * stopping at the first that is not; true for `[]`. Throws as `array_any` does.
+ */
+export function array_all(array: unknown, callback: unknown): boolean {
+  return findEntry("array_all", array, callback, false) === null;
+}
+
+/**
+ * PHP's `array_find_key($array, $callback)`: the key of the first entry for which `callback(value, key)` is true (by
+ * `zend_is_true`), or null; the callback is not called after it. Throws as `array_any` does.
+ */
+export function array_find_key(array: unknown, callback: unknown): PhpArrayKey | null {
+  return findEntry("array_find_key", array, callback, true)?.[0] ?? null;
+}
+
+/** The first (`last` false) or last value of the PHP array `array`, or null when it is empty. */
+function edgeValue(fn: string, array: unknown, last: boolean): unknown {
+  if (Array.isArray(array)) {
+    return array.length === 0 ? null : ((array[last ? array.length - 1 : 0] as unknown) ?? null);
+  }
+  const entries = arrayParameter(fn, 1, "array", array);
+  return entries.length === 0 ? null : entries[last ? entries.length - 1 : 0]![1];
+}
+
+/** PHP's `array_first($array)`: the first value of `array`, or null when it is empty. Throws PHP's `TypeError` for a non-array. */
+export function array_first(array: unknown): unknown {
+  return edgeValue("array_first", array, false);
+}
+
+/** PHP's `array_last($array)`: the last value of `array`, or null when it is empty. Throws PHP's `TypeError` for a non-array. */
+export function array_last(array: unknown): unknown {
+  return edgeValue("array_last", array, true);
+}
+
+/**
+ * PHP's `array_search($needle, $haystack, $strict = false)`: the key of the first value of `haystack` that is `==`
+ * `needle` (`in_array`'s comparison, the enum rule included), or `===` it (`identical`) when `strict`; false when none
+ * is. Throws PHP's `TypeError` for a non-array `haystack` and a `strict` that is no bool, int, float, string or null.
+ */
+export function array_search(needle: unknown, haystack: unknown, strict: unknown = false): PhpArrayKey | false {
+  const entries = arrayParameter("array_search", 2, "haystack", haystack);
+  const isStrict = boolParameter("array_search", 3, "strict", strict);
+  const value = needle ?? null;
+  const found = entries.find(([, entry]) => (isStrict ? identical(value, entry) : zendEquals(value, entry)));
+  return found === undefined ? false : found[0];
+}
+
+/**
+ * PHP's `array_flip($array)`: each value of `array` as a key (a numeric string normalised to its int, as PHP's
+ * `zend_symtable_update` does) whose value is its key; a repeated value keeps its first place and its last key. A
+ * value that is no int or string is skipped (PHP warns). Throws PHP's `TypeError` for a non-array.
+ */
+export function array_flip(array: unknown): unknown {
+  const entries = arrayParameter("array_flip", 1, "array", array);
+  const flipped = new PhpArray<PhpKeyInput, unknown>();
+  for (const [key, value] of entries) {
+    const type = phpType(value);
+    if (type === "int") {
+      flipped.set(value as number | bigint, key);
+    } else if (type === "string") {
+      flipped.set(value as string, key);
+    }
+  }
+  return arrayFromEntries(flipped);
+}
+
+/**
+ * The entries `entries` gives, a string key kept and an int key kept when `preserveKeys`, else renumbered from 0 in
+ * order (`zend_hash_next_index_insert_new`).
+ */
+function renumbered(entries: Iterable<readonly [PhpArrayKey, unknown]>, preserveKeys: boolean): unknown {
+  const result = new PhpArray<PhpKeyInput, unknown>();
+  for (const [key, value] of entries) {
+    if (typeof key === "string" || preserveKeys) {
+      result.set(key, value);
+    } else {
+      result.push(value);
+    }
+  }
+  return arrayFromEntries(result);
+}
+
+/**
+ * PHP's `array_slice($array, $offset, $length = null, $preserve_keys = false)`: `length` entries of `array` from
+ * position `offset` (a negative `offset` counts from the end; a negative `length` stops that many entries before it;
+ * null runs to the end). A string key is kept; an int key is kept with `preserve_keys`, else renumbered from 0.
+ * Throws PHP's `TypeError` for a non-array, an `offset` that is no int, a `length` that is no int or null, and a
+ * `preserve_keys` that is no bool.
+ */
+export function array_slice(array: unknown, offset: unknown, length: unknown = null, preserve_keys: unknown = false): unknown {
+  const entries = arrayParameter("array_slice", 1, "array", array);
+  let from = BigInt(intParameter("array_slice", 2, "offset", offset));
+  const userLength = nullableIntParameter("array_slice", 3, "length", length);
+  const preserve = boolParameter("array_slice", 4, "preserve_keys", preserve_keys);
+  const count = BigInt(entries.length);
+  let size = userLength === null ? count : BigInt(userLength);
+  if (from > count) {
+    return [];
+  }
+  if (from < 0n && (from = count + from) < 0n) {
+    from = 0n;
+  }
+  if (size < 0n) {
+    size = count - from + size;
+  } else if (from + size > count) {
+    size = count - from;
+  }
+  if (size <= 0n) {
+    return [];
+  }
+  return renumbered(entries.slice(Number(from), Number(from + size)), preserve);
+}
+
+/**
+ * PHP's `array_reverse($array, $preserve_keys = false)`: the entries of `array` in reverse order, a string key kept
+ * and an int key kept with `preserve_keys`, else renumbered from 0. Throws PHP's `TypeError` for a non-array and a
+ * `preserve_keys` that is no bool.
+ */
+export function array_reverse(array: unknown, preserve_keys: unknown = false): unknown {
+  const entries = arrayParameter("array_reverse", 1, "array", array);
+  const preserve = boolParameter("array_reverse", 2, "preserve_keys", preserve_keys);
+  return renumbered(entries.reverse(), preserve);
+}
+
+/** The arrays of `array_intersect_key` / `array_intersect_assoc`, each checked as PHP checks them, in order. */
+function intersectArguments(fn: string, array: unknown, arrays: unknown[]): { first: [PhpArrayKey, unknown][]; others: Map<string, unknown>[] } {
+  const first = arrayParameter(fn, 1, "array", array);
+  const others = arrays.map((other, index) => {
+    if (typeof other === "object" && other !== null && phpType(other) === "array") {
+      return new Map(arrayEntries(other).map(([key, value]) => [keyId(key), value] as const));
+    }
+    throw new PhpTypeError(`${fn}(): Argument #${index + 2} must be of type array, ${phpTypeName(phpValueOf(other ?? null))} given`);
+  });
+  return { first, others };
+}
+
+/** A normalised key as a map key: an int as `i<digits>`, a string as `s<string>`. */
+function keyId(key: PhpArrayKey): string {
+  return typeof key === "string" ? `s${key}` : `i${key}`;
+}
+
+/**
+ * PHP's `array_intersect_key($array, ...$arrays)`: the entries of `array`, keys kept, whose key every other array has
+ * (`"1"` and `1` are one key); `array` itself with no other array. Throws PHP's `TypeError` for a non-array
+ * (`Argument #1 ($array)`, then `Argument #2` and on, unnamed).
+ */
+export function array_intersect_key(array: unknown, ...arrays: unknown[]): unknown {
+  const { first, others } = intersectArguments("array_intersect_key", array, arrays);
+  return arrayFromEntries(first.filter(([key]) => others.every((other) => other.has(keyId(key)))));
+}
+
+/**
+ * PHP's `array_intersect_assoc($array, ...$arrays)`: the entries of `array`, keys kept, whose key every other array
+ * has with a value whose string is the same (`string_compare_function`: `(string) $a === (string) $b`, so an array
+ * reads as `"Array"`). Throws PHP's `TypeError` for a non-array (as `array_intersect_key` does) and PHP's `Error` for an
+ * object without a `__toString` port.
+ */
+export function array_intersect_assoc(array: unknown, ...arrays: unknown[]): unknown {
+  const { first, others } = intersectArguments("array_intersect_assoc", array, arrays);
+  return arrayFromEntries(
+    first.filter(([key, value]) =>
+      others.every((other) => {
+        const id = keyId(key);
+        return other.has(id) && toPhpString(value) === toPhpString(other.get(id));
+      }),
+    ),
+  );
+}
+
+/** An int or a float as `min` / `max`'s fast paths read it, or null for any other value. */
+type FastNumber = { readonly int: bigint } | { readonly float: number } | null;
+
+function fastNumber(value: unknown): FastNumber {
+  switch (phpType(value)) {
+    case "int":
+      return { int: BigInt(value as number | bigint) };
+    case "float":
+      return { float: floatValue(value) };
+    default:
+      return null;
+  }
+}
+
+/** Whether the int `value` is exactly a double (`zend_dval_to_lval_silent((double) value) == value`). */
+function exactDouble(value: bigint): boolean {
+  const double = Number(value);
+  return double !== 2 ** 63 && BigInt(double) === value;
+}
+
+/**
+ * PHP 8.5's two-argument `min` / `max` (`ZEND_FRAMELESS_FUNCTION(min, 2)` / `(max, 2)`, what a direct call
+ * compiles to): `min` keeps `lhs` when it is less (`rhs` when equal), `max` keeps `lhs` when it is greater or equal,
+ * comparing two numbers directly (so a NAN loses only as PHP's comparisons make it) and anything else by `zend_compare`.
+ */
+function minMaxPair(lhs: unknown, rhs: unknown, max: boolean): unknown {
+  const left = fastNumber(lhs);
+  const right = fastNumber(rhs);
+  const keepLeft = (x: number, y: number): boolean => (max ? x >= y : x < y);
+  if (left !== null && right !== null) {
+    if ("int" in left && "int" in right) {
+      return (max ? left.int >= right.int : left.int < right.int) ? lhs : rhs;
+    }
+    if ("int" in left && "float" in right && exactDouble(left.int)) {
+      return keepLeft(Number(left.int), right.float) ? lhs : rhs;
+    }
+    if ("float" in left && "float" in right) {
+      return keepLeft(left.float, right.float) ? lhs : rhs;
+    }
+    if ("float" in left && "int" in right && exactDouble(right.int)) {
+      return keepLeft(left.float, Number(right.int)) ? lhs : rhs;
+    }
+  }
+  const order = zendCompare(lhs, rhs);
+  return (max ? order >= 0 : order < 0) ? lhs : rhs;
+}
+
+/**
+ * PHP's variadic `min` / `max` over three or more arguments: the first argument, replaced by each later one that is
+ * less (`min`) or greater (`max`), comparing ints and floats directly while every value so far is one (PHP's fast
+ * paths) and anything else by `zend_compare`.
+ */
+function minMaxList(values: unknown[], max: boolean): unknown {
+  let best = values[0];
+  const first = fastNumber(best);
+  let mode: "int" | "float" | "generic" = first === null ? "generic" : "int" in first ? "int" : "float";
+  let intBest = first !== null && "int" in first ? first.int : 0n;
+  let floatBest = first !== null && "float" in first ? first.float : 0;
+  const better = (x: number, y: number): boolean => (max ? x < y : x > y);
+  for (const value of values.slice(1)) {
+    const fast = fastNumber(value);
+    if (mode === "int") {
+      if (fast !== null && "int" in fast) {
+        if (max ? intBest < fast.int : intBest > fast.int) {
+          intBest = fast.int;
+          best = value;
+        }
+        continue;
+      }
+      if (fast !== null && "float" in fast && exactDouble(intBest)) {
+        floatBest = Number(intBest);
+        mode = "float";
+      } else {
+        mode = "generic";
+      }
+    }
+    if (mode === "float") {
+      if (fast !== null && "float" in fast) {
+        if (better(floatBest, fast.float)) {
+          floatBest = fast.float;
+          best = value;
+        }
+        continue;
+      }
+      if (fast !== null && "int" in fast && exactDouble(fast.int)) {
+        if (better(floatBest, Number(fast.int))) {
+          floatBest = Number(fast.int);
+          best = value;
+        }
+        continue;
+      }
+      mode = "generic";
+    }
+    const order = zendCompare(value, best);
+    if (max ? order > 0 : order < 0) {
+      best = value;
+    }
+  }
+  return best;
+}
+
+/** `min` / `max` (`fn`) over `values`, as PHP 8.5's `min` / `max` read their arguments. */
+function minMax(fn: "min" | "max", values: unknown[]): unknown {
+  const max = fn === "max";
+  const args = values.map((value) => value ?? null);
+  if (args.length === 0) {
+    throw new ArgumentCountError(`${fn}() expects at least 1 argument, 0 given`);
+  }
+  if (args.length === 1) {
+    const entries = arrayParameter(fn, 1, "value", args[0]);
+    if (entries.length === 0) {
+      throw new ValueError(`${fn}(): Argument #1 ($value) must contain at least one element`);
+    }
+    // `zend_hash_minmax`: the kept value against each later one.
+    let best = entries[0]![1];
+    for (const [, value] of entries.slice(1)) {
+      const order = zendCompare(best, value);
+      if (max ? order < 0 : order > 0) {
+        best = value;
+      }
+    }
+    return best;
+  }
+  return args.length === 2 ? minMaxPair(args[0], args[1], max) : minMaxList(args, max);
+}
+
+/**
+ * PHP's `min($value, ...$values)`. With one argument, the least value of that array (`zend_hash_minmax`: the first
+ * kept unless a later one compares less). With two, PHP 8.5's direct-call form: the first when it is less, else the
+ * second. With more, the first argument replaced by each later one that is less. Values compare by `zend_compare`
+ * (`spaceship`, with PHP's enum rule), two numbers directly as PHP's fast paths do. Throws PHP's
+ * `ArgumentCountError` with no argument, `TypeError` for one argument that is no array, and `ValueError` for an
+ * empty array.
+ */
+export function min(...values: unknown[]): unknown {
+  return minMax("min", values);
+}
+
+/**
+ * PHP's `max($value, ...$values)`, as `min` with the comparison reversed; with two arguments the first is kept when it
+ * is greater or equal.
+ */
+export function max(...values: unknown[]): unknown {
+  return minMax("max", values);
 }

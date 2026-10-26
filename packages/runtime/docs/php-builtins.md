@@ -123,6 +123,27 @@ an `undefined` key too) throws PHP's `Error` `Cannot append to WeakMap`; reading
 handles do, not PHP's object id. `phpSerialize` throws PHP's `Exception` `Serialization of 'WeakMap' is not allowed`,
 and `phpUnserialize` `Unserialization of 'WeakMap' is not allowed`.
 
+## `Random\Randomizer`
+
+`Randomizer` (`new Randomizer()`, registered as `Random\Randomizer`, ESC-14.2-1, action item
+`epic-14-item-5-runtime-array-functions`) ports PHP 8.5.11's `ext/random/randomizer.c` with a secure engine, as PHP's
+default `Random\Engine\Secure` is, drawing from `crypto.getRandomValues`. `pickArrayKeys(array, num)` returns `num`
+distinct keys of `array`, as a list in the array's order, each subset of that size equally likely (PHP's
+`php_array_pick_keys`: it marks the positions it keeps, or, for more than half, those it leaves out). An empty array
+throws PHP's `ValueError` `Random\Randomizer::pickArrayKeys(): Argument #1 ($array) must not be empty`, a `num` below 1
+or above the count `… Argument #2 ($num) must be between 1 and the number of elements in argument #1 ($array)`, and a
+non-array or a `num` that is no int PHP's `TypeError`.
+
+## `SortDirection`
+
+`SortDirection` is PHP 8.6's enum, as symfony/polyfill-php86 v1.43.0 declares it for PHP 8.1 to 8.5: a pure AD-26
+enum with the cases `SortDirection.Ascending` and `SortDirection.Descending`, each a frozen instance with its `name`,
+and `SortDirection.cases()` in that order. It declares no `backingType`, so a case is `instanceof UnitEnum` and not
+`instanceof BackedEnum`, and `enumExists('SortDirection')` is `true`. `new SortDirection()` throws PHP's `Error`
+`Cannot instantiate enum SortDirection`. It is registered as `SortDirection`.
+
+Neither class is in the `Symbol.for('xaravel.php.classes')` map; `resolveClass` and the class lookup find both.
+
 ## Not ported
 
 - `ARRAY_AS_PROPS` and `STD_PROP_LIST` are kept by `getFlags()` / `setFlags()` but not acted on.
@@ -142,3 +163,7 @@ and `phpUnserialize` `Unserialization of 'WeakMap' is not allowed`.
   of a hash table PHP has not compacted yet.
 - `getDebugType` names an unregistered class with no registered parent `class@anonymous`, where PHP names it after its
   first interface; the runtime cannot read a class's interface order.
+- `Random\Randomizer`'s engines and its `engine` property: passing an engine to `new Randomizer(...)` throws a JS
+  `TypeError` naming the limit, and the keys PHP picks for a given engine seed are not reproduced. Its other methods
+  (`nextInt`, `getInt`, `nextFloat`, `getFloat`, `getBytes`, `getBytesFromString`, `shuffleArray`, `shuffleBytes`) are
+  not ported.
