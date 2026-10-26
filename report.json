@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "commit": "38ee033f972d75b86d4128ac6b490d0776211f0b",
+  "commit": "f5c097b2864cc3a59a07e7898398f23f90687683",
   "pin": {
     "tag": "v13.37.0",
     "commit": "685f8d6c2ab4547287500bc80ccdf2ca12635109"
@@ -12,18 +12,18 @@
   },
   "overall": {
     "pairs": 23291,
-    "passing": 22,
-    "rate": 0.0009445708642823408,
+    "passing": 40,
+    "rate": 0.001717401571422438,
     "statuses": {
-      "pass": 22,
+      "pass": 40,
       "fail-known": 0,
-      "skip": 23269,
+      "skip": 23251,
       "quarantined": 0
     },
     "failKnown": 0,
     "reasons": {
-      "not-ported-yet": 19886,
-      "blocked-by": 2,
+      "not-ported-yet": 19862,
+      "blocked-by": 8,
       "intentional-divergence": 0,
       "php-only": 0,
       "upstream-skip": 0,
@@ -31,11 +31,14 @@
       "out-of-scope": 0
     },
     "reasonsDetail": {
-      "blocked-by:database": 2,
+      "blocked-by:bus": 1,
+      "blocked-by:collections": 1,
+      "blocked-by:database": 4,
+      "blocked-by:mail": 2,
       "deferred:ai-sdk": 3381,
-      "not-ported-yet": 19886
+      "not-ported-yet": 19862
     },
-    "adapted": 3
+    "adapted": 20
   },
   "components": {
     "ai": {
@@ -838,18 +841,18 @@
     },
     "reflection": {
       "pairs": 24,
-      "passing": 0,
-      "rate": 0,
+      "passing": 18,
+      "rate": 0.75,
       "statuses": {
-        "pass": 0,
+        "pass": 18,
         "fail-known": 0,
-        "skip": 24,
+        "skip": 6,
         "quarantined": 0
       },
       "failKnown": 0,
       "reasons": {
-        "not-ported-yet": 24,
-        "blocked-by": 0,
+        "not-ported-yet": 0,
+        "blocked-by": 6,
         "intentional-divergence": 0,
         "php-only": 0,
         "upstream-skip": 0,
@@ -857,9 +860,12 @@
         "out-of-scope": 0
       },
       "reasonsDetail": {
-        "not-ported-yet": 24
+        "blocked-by:bus": 1,
+        "blocked-by:collections": 1,
+        "blocked-by:database": 2,
+        "blocked-by:mail": 2
       },
-      "adapted": 0
+      "adapted": 17
     },
     "routing": {
       "pairs": 579,
@@ -1039,8 +1045,8 @@
   },
   "alpha": {
     "applicable": 18395,
-    "passing": 22,
-    "rate": 0.0011959771677086165,
+    "passing": 40,
+    "rate": 0.0021745039412883935,
     "target": 0.9,
     "variants": [
       "none",
@@ -1105,7 +1111,7 @@
     "perVariant": {
       "none": {
         "applicable": 17690,
-        "passing": 22
+        "passing": 40
       },
       "pgsql": {
         "applicable": 92,
@@ -1133,8 +1139,8 @@
       }
     },
     "remaining": {
-      "not-ported-yet": 19234,
-      "blocked-by": 2
+      "not-ported-yet": 19210,
+      "blocked-by": 8
     },
     "noAlphaLine": 294,
     "met": false
