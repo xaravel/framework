@@ -57,7 +57,8 @@ deferred: []
 
 - `conformance/upstream/framework/tests/Support/SupportCollectionTest.php` -- the Upstream tests. `collectionClassProvider` (:6495) gives the class; in PHP it is a class-name string, which matters for testEnsureForObjects' expected `gettype($collection)` (`string`). The fixtures are in `Fixtures/Common.php` (Arrayable, Jsonable, JsonSerializable and Traversable objects) and `Fixtures/Enums.php`, plus the test-local `TestJsonSerializeToStringObject` (:6616) and `TestCollectionSubclass` (:6634).
 - `conformance/upstream/framework/src/Illuminate/Collections/` -- `Traits/EnumeratesValues.php`: make, wrap, unwrap, empty, times (:174, through `range()->unless()->map()`), fromJson (:193), dump (:261), each, ensure (:387), toArray (:1009), jsonSerialize (:1019), toJson, toPrettyJson, getCachingIterator (:1059), `__toString`, proxy, `__get` (:1108), getArrayableItems (:1123). `Collection.php`: `__construct` (:43), all, lazy (:87), filter, map, unique, values, getIterator (:1927), count, countBy (:1946, through `lazy()`), add, offset* (:1982-2025). `LazyCollection.php`: `__construct` (:48), make, range (:98), all (:122), countBy (:336), isEmpty, getIterator, count, makeIterator (:1891). `Arr.php`: from (:474), map (:863), where (:1267), wrap (:1336).
-- `packages/runtime/src/php/PhpArray.ts` -- `PhpArray` (exported) with insertion order, `push` and normalised keys; `arrayFromEntries` (:209) and `normalizeKey` (:64) are internal (ESC-14.1-1). `packages/runtime/src/php/casts.ts:26` `arrayEntries` and `phpType.ts` `phpTypeName` are internal as well.
+- `packages/runtime/src/php/PhpArray.ts` -- `PhpArray` (exported) with insertion order, `push` and normalised keys; `arrayFromEntries` (:209) and `normalizeKey` (:64) are exported since epic-14-item-1 (#456, ESC-14.1-1), with `arrayEntries` (`casts.ts:26`), `gettype` and `getDebugType` (`phpType.ts`). `objectProps` (the `(array)` reader, `mangle.ts:148`), `arrayCount` and `phpTypeName` stay internal.
+- `packages/runtime/src/php/{Traversable,Iterator,IteratorAggregate,JsonSerializable,Stringable,Throwable}.ts` -- `phpInterface` tokens (#456, ESC-14.1-2): `x instanceof T` reads `x[T.brand] === true`, so a class declares a getter per token in its chain (`IteratorAggregate` and `Traversable`). `Countable` and `ArrayAccess` are raw `Symbol.for(...)` brands the grader reads (`packages/assert/src/comparison/PhpValues.ts:193-211`). `ArrayIterator`, `ArrayObject`, `CachingIterator` (needs an Iterator-branded argument) and `WeakMap` are specified in `packages/runtime/docs/php-builtins.md`. The runtime exports no PHP `Generator` class and no keyed-yield form; its `foreach` generators (`liveCursor.ts`) are internal.
 - `packages/runtime/src/php/jsonEncode.ts:102` -- reads `Symbol.for('JsonSerializable')` on nested values and `Jsonable` / `Arrayable` brands only at the top level, so `jsonSerialize()` must do the per-item conversion itself, as Upstream does.
 - `packages/macroable/src/Traits/Macroable.ts` and `packages/conditionable/src/HigherOrderWhenProxy.ts` -- `mixin(null, Macroable, Conditionable)`; the `times` path needs the `unless` proxy's generated `map` member (DIV-12.12).
 - `packages/contracts/src/support` -- `Arrayable`, `Jsonable`, `CanBeEscapedWhenCastToString` tokens (implement with a `[Token.brand]` getter); the structural `Collection` type (`packages/contracts/src/structural/Collection.ts`) that the port must satisfy.
@@ -91,6 +92,19 @@ Planning traced every Test ID through the Upstream source before building (the E
 - **ESC-14.1-4 (divergence, 3 Test IDs and XT-collections-2).** DIV-12.6 covers index reads only. Assigning, appending, `isset` and `unset` through index syntax have no clause.
 - **testDump** is `blocked-by:support`. `tools/expectations/reasons.ts` accepts it, because support is in a later Phase, so it needs no Escalation.
 
+**Second planning round (2026-10-25, after the Maintainer's rulings).** The Story resumed once ESC-14.1-1..4 were ruled option 1 (`decisions/MAINT-2026-10-25-story-14-1.md`) and epic-14-item-1 landed (#456). Planning traced every Test ID again through the runtime as it now stands. Four questions remain that neither the rulings, DIV-1..12, PORTING.md nor the spine settle. Each is raised in this one round, as the Epic 11 and 13 lessons ask:
+
+- **ESC-14.1-5 (divergence and contract): keyed generators.** LazyCollection is built on `yield $k => $v`, `yield from`, `iterator_to_array` and `Generator::valid()` (LazyCollection.php:48-122, :336, :692, :1891-1910). The runtime has no PHP `Generator` and no keyed-yield form. How a source generator function gives keys is public API: Story 14.7's tests pass `function () { yield 'a' => 1; }` (SupportLazyCollectionTest.php:64). It stops every `#1` Test ID and XT-collections-3.
+- **ESC-14.1-6 (contract): PHP built-in functions and the `(array)` cast.** The core needs `range`, `array_unique` (SORT_REGULAR), `in_array` (loose), `iterator_to_array`, `iterator_count`, `array_filter`, `array_combine`, `str_starts_with`, `substr`, `is_scalar` and PHP's `(array)` of an object. None is exported by `@xaravel/runtime/php`, and PORTING.md:50 and AD-19 say nothing else re-implements PHP semantics.
+- **ESC-14.1-7 (divergence): testEnsureForObjects.** Upstream puts the dataset's class-name string into the items and expects `gettype($collection)` (`'string'`). PORTING.md:76 makes the row a constructor, so the port gives `'object'`. No clause covers using a class-name dataset value as a value. The test also calls `class_basename`, a support helper (Phase 2).
+- **ESC-14.1-8 (divergence): the DIV-12.17 scope and one `adapted` clause per line.** testConstructMethodFromWeakMap writes `$map[$object] = 3` on the runtime's `WeakMap`, and DIV-12.17 names only Collection. testOffsetAccess and testBehavesLikeAnArrayWithArrayAccess need DIV-12.6 and DIV-12.17 in one test, but an Expectations line carries one `adapted` clause.
+
+Settled without an Escalation:
+
+- `proxy()`'s static `$proxies` is a `frameStatic` (spine AD-5, "every Upstream static setter").
+- 14.1 ports `filter`, `map`, `unique`, `values` and `countBy` because its tests reach them. Their own tests stay with 14.3 and 14.5.
+- `__toString`'s escape branch (`e()`), `dump` / `dd` and `TransformsToResourceCollection` are not reached by any 14.1 Test ID. They belong to the Stories that port their tests.
+
 ## Verification
 
 **Commands:**
@@ -102,3 +116,14 @@ Planning traced every Test ID through the Upstream source before building (the E
 
 Status: blocked
 Blocking condition: ESC-14.1-1..4 wait on the Maintainer. ESC-14.1-1 (the runtime's PHP-array helpers are internal) stops the whole build. ESC-14.1-2 (the SPL and core PHP types are missing), ESC-14.1-3 (higher-order `__get`) and ESC-14.1-4 (ArrayAccess writes, `isset` and `unset`) each stop their own Test IDs. No package code was written. The 110 escalated Expectations lines name their Escalation.
+
+### Second run (2026-10-25)
+
+Status: blocked
+Blocking condition: intent gap. The Story resumed after the Maintainer ruled ESC-14.1-1..4 option 1 and epic-14-item-1 landed (#456). Re-planning traced every Test ID through the runtime as it now stands and raised the four questions that remain, all in this round (Design Notes, "Second planning round"):
+- ESC-14.1-5 (divergence): how a generator gives keys (`yield $k => $v`) and PHP's `Generator`. It stops 14 Test IDs and XT-collections-3, and decides Story 14.7's API.
+- ESC-14.1-6 (contract): the PHP functions (`is_scalar`, `iterator_to_array`, `array_combine`, `array_filter`, `array_unique`, `in_array`, `range`, `substr`, `str_starts_with`) and the `(array)` cast that the runtime does not export. Every constructor needs `is_scalar`, so it stops the build.
+- ESC-14.1-7 (divergence): testEnsureForObjects uses the dataset's class-name string as an item. It also needs support's `class_basename`.
+- ESC-14.1-8 (divergence): DIV-12.17's scope (the `WeakMap` write), and one `adapted` clause per Expectations line where a test needs DIV-12.6 and DIV-12.17.
+
+No package code was written. The Story's Expectations lines now name the open Escalation that holds each one: 14 name ESC-14.1-5, 86 ESC-14.1-6, 2 ESC-14.1-7 and 4 ESC-14.1-8. The four `unwrap` rows with an array or a scalar, and testDump (`blocked-by:support`), name none. `bun run escalations:check` and `bun run expectations:check` pass.
