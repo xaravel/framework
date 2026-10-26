@@ -7,7 +7,8 @@
 // - `class_exists($n)` is "the Class Registry resolves `n`" (`resolveClass`), and `interface_exists($n)` is the
 //   runtime's `interfaceExists`, which finds the contract tokens `contract(...)` records (ESC-13.1-7's ruling).
 // - `isCallable` follows DIV-9.14: a class is a registered constructor or an FQCN string, visibility is erased, and a
-//   non-array string is callable only as a `'Class::method'` string (or under `syntaxOnly`).
+//   non-array string is callable only as a `'Class::method'` string naming a static method or reaching `__callStatic`
+//   (or under `syntaxOnly`), as PHP 8's `is_callable` gives.
 // - `getClassAttributes` returns a `Collection`, which does not exist before Epic 14, so it throws
 //   `BlockedByComponentError("collections")`. `getClassAttribute` builds the same per-class instance lists as plain
 //   arrays and takes the first instance (ESC-13.1-4's ruling, DIV-12.15).
@@ -92,7 +93,8 @@ export class Reflector {
   /**
    * PHP 7.4's `is_callable` (DIV-9.14). A non-array value is callable when it is a function (other than a registered
    * class, which stands for its class-string), an object whose `__invoke` is a function, or a `'Class::method'` string
-   * that the array rules accept as `[Class, method]` with no object; under `syntaxOnly`, any string is callable. An
+   * that the array rules accept as `[Class, method]` with no object, its method static when the class has it (PHP 8's
+   * `is_callable`; a missing method falls back to `__callStatic`); under `syntaxOnly`, any string is callable. An
    * array `[classOrObject, method]` is callable when the class (a registered constructor, an object's class, or an
    * FQCN string the Class Registry resolves) has the method, or when it has `__call` (for an object) or
    * `__callStatic` (for a class). Visibility is erased, so every method found is public; a `#private` method is never
@@ -245,15 +247,21 @@ export class Reflector {
   /**
    * Determine if the parameter's type is a subclass of the given type (a class, a contract token, or an FQCN). The
    * parameter's class name must name a registered class or a recorded contract token (PHP's interface), and a
-   * token-typed parameter is a subclass of the token's parents. Throws `ReflectionException` for a `className` FQCN
-   * that names neither, as PHP does.
+   * token-typed parameter is a subclass of the token's parents. The class reflected is the parameter's own class or
+   * token (`ReflectionNamedType.getClassOrToken()`, DIV-3.2), so a second token recorded under an FQCN answers for
+   * itself; a `self` / `parent` hint, which holds none, reflects its resolved name. Throws `ReflectionException` for a
+   * `className` FQCN that names neither, as PHP does.
    */
   static isParameterSubclassOf(parameter: ReflectionParameter, className: object | string): boolean {
     const paramClassName = this.getParameterClassName(parameter);
 
+    const paramType = parameter.getType();
+
+    const paramClassOrToken = paramType instanceof ReflectionNamedType ? paramType.getClassOrToken() : null;
+
     return toBool(paramClassName)
       && (classExists(paramClassName) || interfaceExists(paramClassName as string))
-      && new ReflectionClass(paramClassName as string).isSubclassOf(className);
+      && new ReflectionClass(paramClassOrToken ?? (paramClassName as string)).isSubclassOf(className);
   }
 
   /**
@@ -286,7 +294,8 @@ export class Reflector {
 /**
  * PHP's `is_callable($var, $syntaxOnly)` for a non-array value (DIV-9.14): a function that is not a registered class,
  * an object whose `__invoke` is a function, or a string (any string under `syntaxOnly`, else a `'Class::method'`
- * string `Reflector.isCallable([Class, method])` accepts). A registered class stands for its class-string.
+ * string `Reflector.isCallable([Class, method])` accepts whose method, when the class has it, is static, as PHP 8
+ * requires). A registered class stands for its class-string; an unregistered one is a plain function, so callable.
  */
 function isCallableValue(value: unknown, syntaxOnly: boolean): boolean {
   if (typeof value === "function") {
@@ -311,7 +320,38 @@ function isCallableValue(value: unknown, syntaxOnly: boolean): boolean {
     return false;
   }
 
-  return Reflector.isCallable([value.slice(0, separator), value.slice(separator + 2)]);
+  const klass = value.slice(0, separator);
+
+  const method = value.slice(separator + 2);
+
+  // PHP 8: a method named statically must be static; only a missing one falls back to `__callStatic`.
+  if (classExists(klass) && methodExists(klass, method) && hasInstanceMethod(resolveClass(klass), method)) {
+    return false;
+  }
+
+  return Reflector.isCallable([klass, method]);
+}
+
+/**
+ * Whether the method `ReflectionMethod` finds as `method` on `klass` is an instance method: a function-valued own
+ * member of its prototype chain below `Object.prototype` (never `constructor`), which `ReflectionMethod` searches
+ * before the static chain, so an instance method shadows a static one of the same name. Visibility being erased
+ * (DIV-9.14), where the method is found is the only sign that it is not static.
+ */
+function hasInstanceMethod(klass: object, method: string): boolean {
+  if (method === "constructor") {
+    return false;
+  }
+
+  for (let holder: unknown = (klass as { prototype?: unknown }).prototype; typeof holder === "object" && holder !== null && holder !== Object.prototype; holder = Object.getPrototypeOf(holder)) {
+    const descriptor = Object.getOwnPropertyDescriptor(holder, method);
+
+    if (descriptor !== undefined && typeof descriptor.value === "function") {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 registerClass("Illuminate\\Support\\Reflector", Reflector);
