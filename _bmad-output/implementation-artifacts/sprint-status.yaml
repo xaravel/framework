@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 17:34
+last_updated: 10-25-2026 18:24
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -154,7 +154,7 @@ development_status:
 
   epic-13: done
   13-1-reflector-and-reflectsclosures: done
-  epic-13-retrospective: optional
+  epic-13-retrospective: done
 
   epic-14: backlog
   14-1-enumerable-core-construction-conversion-and-serialization: backlog
@@ -1813,18 +1813,79 @@ action_items:
       in scope packages/runtime, packages/contracts and packages/assert: packages/runtime:
       a table from a contract token's FQCN to the token, with a runtime export that
       packages/contracts' contract(...) calls to record each token, read by interface_exists
-      and new ReflectionClass(<token FQCN>) (ESC-13.1-7); ReflectionEnum (isBacked, getBackingType)
-      and enum_exists in @xaravel/runtime/php, reading a backed enum's static backingType
-      (spine AD-26, ESC-13.1-8); packages/assert: assertInstanceOf / assertNotInstanceOf
-      accept a class-string resolved through the Class Registry or the token table,
-      else UnknownClassOrInterfaceException (ESC-13.1-9). An XT case for each; no assertion
-      removed or weakened; lands before Story 13.1 resumes. The reasons.ts part (ESC-13.1-10)
-      landed in the Maintainer's PR and is not part of this item. Also in scope (amendment
-      2 of the ruling): only the class-lookup set-up in packages/mockery/tests/** and packages/assert/tests/**.
-      Each fixture layers its stand-in on whatever Symbol.for('xaravel.class.lookup')
-      is installed (its own test classes first, else delegate) and restores it on teardown,
-      so the grader's tests never depend on the runtime's lookup, and the runtime installs
+      and new ReflectionClass(<token FQCN>) (ESC-13.1-7); ReflectionEnum (isBacked,
+      getBackingType) and enum_exists in @xaravel/runtime/php, reading a backed enum's
+      static backingType (spine AD-26, ESC-13.1-8); packages/assert: assertInstanceOf
+      / assertNotInstanceOf accept a class-string resolved through the Class Registry
+      or the token table, else UnknownClassOrInterfaceException (ESC-13.1-9). An XT
+      case for each; no assertion removed or weakened; lands before Story 13.1 resumes.
+      The reasons.ts part (ESC-13.1-10) landed in the Maintainer's PR and is not part
+      of this item. Also in scope (amendment 2 of the ruling): only the class-lookup
+      set-up in packages/mockery/tests/** and packages/assert/tests/**. Each fixture
+      layers its stand-in on whatever Symbol.for('xaravel.class.lookup') is installed
+      (its own test classes first, else delegate) and restores it on teardown, so
+      the grader's tests never depend on the runtime's lookup, and the runtime installs
       the global so that it can be layered. No assertion or expected value changes"
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"
+  - id: "epic-13-retro-item-1-consequence-rows"
+    epic: 13
+    action: "Consequence rows for the Components after contracts (S2): add CONSEQUENCE_SOURCES
+      rows in tools/xt-coverage/consequences.ts by the rule of decisions/MAINT-2026-10-22-consequence-rows.md
+      for macroable, conditionable and reflection (Epics 11-13 cover FR-26, which
+      has no consequence list, so each row is AD-2 and AD-6) and for collections (Epic
+      14, FR-23) before Story 14.1; generate their files with bun run xt:consequences
+      and extend XT-conformance-126 to derive and check each new row. If the coverage
+      check then rejects XT-reflection-1..3's FR-26 citation, re-cite them in packages/reflection
+      to ids in the reflection row, with no assertion changed."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+  - id: "epic-13-retro-item-2-remove-scratch-note"
+    epic: 13
+    action: "Remove the committed scratch note _bmad-output/implementation-artifacts/bmad-build-auto-result-retro-13-reflection-contracts.md,
+      since epic-13-item-2-reflection-contracts is done (#442) (P3)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+  - id: "epic-13-retro-item-3-blocked-by-reverification"
+    epic: 13
+    action: "Name a re-verification for Story 13.1's blocked-by:collections and blocked-by:mail
+      lines (S1): add to an Epic 14 Story (or a Phase 1 blocked-by sweep Story) the
+      re-verification of SupportReflectorTest::testGetClassAttributes with component:
+      reflection, and add to Story 56.4 (or a Phase 7 sweep) the same for ::testGetClassName
+      and ::testEmptyClassName (epics.md)."
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+  - id: "epic-13-retro-item-4-scratch-note-check"
+    epic: 13
+    action: "Decide a check for stale bmad-build-auto-result-* notes (P3), since the
+      clean-up lesson has failed four times: for example a step in tools/orchestrator/iteration.md
+      or a conformance check that fails when a note's action item or Story is done."
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+  - id: "epic-13-retro-item-5-reflector-own-type"
+    epic: 13
+    action: "packages/reflection (L1, L4, L5): Reflector.isParameterSubclassOf tests
+      the parameter's own type value (the class or token its Spec holds) rather than
+      resolving its name again, so a second token under the same FQCN answers for
+      itself, with an XT-reflection case for two tokens under one FQCN; pin in XT-reflection
+      whether a bare unregistered constructor is callable and that a parameter typed
+      with an unregistered class throws, and say both in packages/reflection/docs/reflection.md.
+      No assertion removed or weakened."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+  - id: "epic-13-retro-item-6-reflection-php-edges"
+    epic: 13
+    action: "Rule two PHP edges of reflection (L2, L3): (a) whether a closure's self
+      / parent resolves against a scope class (for example an optional scope argument
+      to inject) or stays as written under a DIV-3.2 sentence; (b) whether Reflector::isCallable('Class::instanceMethod')
+      gives false as PHP 8's is_callable does, or true recorded as a third DIV-9.14
+      edge (XT-reflection-1 pins true)."
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
