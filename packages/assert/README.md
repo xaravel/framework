@@ -24,6 +24,8 @@ None at run time.
 
 `Assert` also has `assertThat(value, constraint)`, the file, directory and JSON assertions, `fail()` and `markTestSkipped()`, and the constraint factories `logicalAnd`, `greaterThanOrEqual`, `lessThanOrEqual`, `isInstanceOf` and `stringContains(string, case = true)` (PHPUnit passes `case` as the constraint's `ignoreCase`). Laravel's `assertArraySubset` records the kind `assertThat`, the PHPUnit assertion it calls (`decisions/ESC-4.3-1.md` item 8).
 
+`assertInstanceOf(expected, actual)` and `assertNotInstanceOf` take a class, a contract token, or a class-string, as PHPUnit's do (ESC-13.1-9). The grader imports no runtime, so it resolves a string through `globalThis[Symbol.for('xaravel.class.lookup')]`, which a loaded `@xaravel/runtime` publishes: a registered class (a test class first) or a recorded contract token. A string that names neither, or any string when no runtime is loaded, throws `UnknownClassOrInterfaceException` `Class or interface "<name>" does not exist`. `expectException` and `assertContainsOnlyInstancesOf` still take no string.
+
 ## PHP values: ints and floats
 
 The grader reads PHP values by brand and protocol only and never imports `@xaravel/runtime` (AD-2). A number's PHP type is:

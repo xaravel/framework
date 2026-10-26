@@ -1,15 +1,14 @@
 // PHP's `ReflectionClass` (DIV-3.2, DIV-12.15) over a class or a contract token, which PHP sees as an interface. A
 // class's parents are its registered ancestors on the constructor chain: an unregistered one (a `mixin()` layer, the
 // JS `Error`) is skipped. Its attributes are its own `@attribute(...)` list.
-import { fqcn, isContractToken, type RegisteredClass, registerClass, resolveClass } from "../registry/registry";
+import { fqcn, isContractToken, type RegisteredClass, registerClass } from "../registry/registry";
 import { ownAttributes } from "./attributes";
 import { hasBrand } from "./hasBrand";
 import { ReflectionAttribute } from "./ReflectionAttribute";
-import { ReflectionException } from "./ReflectionException";
 import { ReflectionMethod } from "./ReflectionMethod";
 import { phpTypeName } from "./phpType";
 import { TypeError as PhpTypeError } from "./TypeError";
-import { classChain, type ReflectionTarget, reflectionTarget, registeredName } from "./reflectionTargets";
+import { classChain, type ReflectionTarget, reflectionTarget, registeredName, resolveReflectionName } from "./reflectionTargets";
 
 /** A contract token's parent tokens (`@xaravel/contracts`' `CONTRACT_PARENTS`), read without importing contracts. */
 const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
@@ -36,9 +35,9 @@ export class ReflectionClass {
   readonly #target: ReflectionTarget;
 
   /**
-   * Reflects `objectOrClass`: a class, an object's class, a contract token, or the class a registered FQCN names.
-   * Throws `ReflectionException` `Class "<name>" does not exist` for an FQCN the Registry does not hold (a token's
-   * FQCN included, a token being no registered class).
+   * Reflects `objectOrClass`: a class, an object's class, a contract token, the class a registered FQCN names, or the
+   * token a recorded token FQCN names (ESC-13.1-7). Throws `ReflectionException` `Class "<name>" does not exist` for a
+   * name that is neither (a token never passed to `registerContractToken` included).
    */
   constructor(objectOrClass: object | string) {
     this.#target = reflectionTarget(objectOrClass, "ReflectionClass::__construct(): Argument #1 ($objectOrClass)");
@@ -64,21 +63,17 @@ export class ReflectionClass {
   }
 
   /**
-   * PHP's `isSubclassOf(class)`, `class` a class, a token, a `ReflectionClass` or a registered FQCN: a class against a
-   * class is its strict constructor chain; a class against a token is `hasBrand`; a token against a token walks the
-   * token's parents. Never itself. An FQCN the Registry does not hold throws `ReflectionException`, any other value
-   * PHP's `TypeError`.
+   * PHP's `isSubclassOf(class)`, `class` a class, a token, a `ReflectionClass`, a registered FQCN or a recorded token
+   * FQCN: a class against a class is its strict constructor chain; a class against a token is `hasBrand`; a token
+   * against a token walks the token's parents. Never itself. A name that is neither throws `ReflectionException`, any
+   * other value PHP's `TypeError`.
    */
   isSubclassOf(klass: object | string): boolean {
     let other: unknown;
     if (klass instanceof ReflectionClass) {
       other = klass.#target;
     } else if (typeof klass === "string") {
-      try {
-        other = resolveClass(klass);
-      } catch {
-        throw new ReflectionException(`Class "${klass}" does not exist`);
-      }
+      other = resolveReflectionName(klass);
     } else if (typeof klass === "function" || isContractToken(klass)) {
       other = klass;
     } else {

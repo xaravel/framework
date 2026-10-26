@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-25-2026 16:10
+last_updated: 10-25-2026 17:34
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1826,5 +1826,5 @@ action_items:
       so the grader's tests never depend on the runtime's lookup, and the runtime installs
       the global so that it can be layered. No assertion or expected value changes"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"

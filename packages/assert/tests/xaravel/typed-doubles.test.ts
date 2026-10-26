@@ -16,7 +16,8 @@
 //
 // The globals a fixture-free row needs (`Symbol.for('xaravel.api.signature')`,
 // `Symbol.for('xaravel.class.lookup')`) are installed with configurable
-// defines and restored after it; no class map is ever faked. The Oracle cells
+// defines and restored after it (a class-lookup stand-in is layered on the
+// installed lookup, delegating names it does not know); no class map is ever faked. The Oracle cells
 // run in a child `bun` that loads @xaravel/runtime first (AD-2: the grader
 // never imports it), so `object` gets the runtime's own `stdClass`.
 import { expect } from "bun:test";
@@ -65,9 +66,18 @@ function withGlobals<T>(values: ReadonlyMap<symbol, unknown>, fn: () => T): T {
 }
 
 /**
+ * A class-lookup stand-in layered on the lookup installed now: `answer`'s non-null result first, then the previous
+ * lookup's (null when there was none), so the fixture never depends on whether the runtime's is installed.
+ */
+function layered(answer: (name: string) => unknown): (name: string) => unknown {
+  const previous: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
+  return (name: string): unknown => answer(name) ?? (typeof previous === "function" ? (previous as (name: string) => unknown)(name) : null);
+}
+
+/**
  * The Oracle cells' TS runs, in a fresh `bun` from the repo root that loads @xaravel/runtime first, so `object`
  * returns the runtime's own `stdClass` (the grader never imports the runtime, AD-2). The child installs the twin's
- * rows and a class lookup that knows `XtTypedBase`, then prints each cell's `runCase47` outcome as JSON.
+ * rows and a class lookup that knows `XtTypedBase` (layered on the runtime's: any other name is delegated), then prints each cell's `runCase47` outcome as JSON.
  */
 const CELLS_CHILD = `
 await import("./packages/runtime/src/index.ts");
@@ -75,7 +85,8 @@ const cells = await import("./packages/assert/tests/xaravel/typed-double-cells.t
 const { runCase47 } = await import("./packages/assert/tests/xaravel/double-cells.ts");
 const define = (key, value) => Object.defineProperty(globalThis, key, { value, writable: false, enumerable: false, configurable: true });
 define(Symbol.for("xaravel.api.signature"), cells.typedLookup);
-define(Symbol.for("xaravel.class.lookup"), (name) => (name === "XtTypedBase" ? cells.XtTypedBase : null));
+const previousLookup = globalThis[Symbol.for("xaravel.class.lookup")];
+define(Symbol.for("xaravel.class.lookup"), (name) => (name === "XtTypedBase" ? cells.XtTypedBase : typeof previousLookup === "function" ? previousLookup(name) : null));
 process.stdout.write(JSON.stringify(cells.TYPED_CELLS.map((cell) => runCase47(cell.ts))));
 `;
 
@@ -367,7 +378,7 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
       null,
       0,
     ]);
-    withGlobals(new Map([[LOOKUP, (): null => null]]), () => {
+    withGlobals(new Map([[LOOKUP, layered((): null => null)]]), () => {
       expect(failureOf(() => (new TestCase().createMock(XtExtra) as Extra).cls())).toEqual([
         "RuntimeException",
         `Return value for XtExtra::cls() cannot be generated: Symbol.for('xaravel.class.lookup') does not resolve the class "XtDep"`,
@@ -376,7 +387,7 @@ xaravelTest("XT-assert-20", "given Story 5.4's signature lookup and a PHPUnit te
       ]);
     });
     // With a lookup that resolves it: a stub of the class.
-    withGlobals(new Map([[LOOKUP, (name: string): unknown => (name === "XtDep" ? XtDep : null)]]), () => {
+    withGlobals(new Map([[LOOKUP, layered((name: string): unknown => (name === "XtDep" ? XtDep : null))]]), () => {
       const stub = (new TestCase().createMock(XtExtra) as Extra).cls() as XtDep;
       expect([stub instanceof XtDep, classNameOf(stub).startsWith("TestStub_XtDep_"), stub.name()]).toEqual([true, true, null]);
     });

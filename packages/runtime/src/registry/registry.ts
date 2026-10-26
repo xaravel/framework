@@ -8,6 +8,9 @@
 //   never the brand, save for one case: a `contract<T>()` token, a frozen non-function object carrying the key as an
 //   own, non-writable string data property, gives that string (ESC-10.1-3, Story 9.14). No token is registered, so
 //   `resolveClass` never resolves a token's name.
+// - `registerContractToken(token)` records a token under its FQCN in a separate table (ESC-13.1-7), first one wins;
+//   `resolveContractToken` and `lookUpName` (classes first, then tokens) read it for reflection, `interfaceExists` and
+//   the grader's `Symbol.for('xaravel.class.lookup')`.
 // - `resolveClass(fqcn)` is the class registered under an FQCN, else throws PHP's `Error` `Class "<FQCN>" not found`
 //   with the name as given, a leading `\` kept (Story 9.13):
 //   the class registered as `Error` (Story 9.10, `php/Error.ts`), read from the base map so this file imports no
@@ -211,6 +214,48 @@ function notFound(fqcn: string): Error {
  */
 export function registeredBaseClass(fqcn: string): RegisteredClass | null {
   return byKey.get(normalise(fqcn).toLowerCase())?.klass ?? null;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Contract tokens (ESC-13.1-7)
+
+/** Recorded contract tokens by lower-cased FQCN (`registerContractToken`); the first token under a name stays. */
+const tokensByKey = new Map<string, object>();
+
+/**
+ * Records the contract token `token` under its own FQCN (case-insensitive, a leading `\` dropped), so the name
+ * resolves to the token as PHP's interface name does (ESC-13.1-7): `@xaravel/contracts`' `contract(...)` calls it for
+ * each token it makes, the runtime importing no contract (AD-2). The token is never registered as a class
+ * (ESC-10.1-3): `resolveClass` and `fqcn` are unchanged. The first token recorded under a name stays; a later one under
+ * the same name, and the same token again, are no-ops, as no program PHP accepts re-declares an interface. Throws a
+ * `TypeError` when `token` is not a contract token (`isContractToken`).
+ */
+export function registerContractToken(token: object): void {
+  if (!isContractToken(token)) {
+    throw new TypeError("registerContractToken(): the value is not a contract token");
+  }
+  const key = normalise(tokenFqcn(token) as string).toLowerCase();
+  if (key !== "" && !tokensByKey.has(key)) {
+    tokensByKey.set(key, token);
+  }
+}
+
+/** The contract token recorded under the FQCN `name` (case-insensitive, a leading `\` ignored), or null. Internal. */
+export function resolveContractToken(name: string): object | null {
+  return typeof name === "string" ? (tokensByKey.get(normalise(name).toLowerCase()) ?? null) : null;
+}
+
+/**
+ * What the PHP class or interface name `name` names (case-insensitive, a leading `\` ignored): a class registered in a
+ * `test` unit up the active frame chain, else a base registration, else a recorded contract token; null when none
+ * holds it or `name` is not a string. Never imports a file (AD-10.4). Internal: published to the grader as
+ * `globalThis[Symbol.for('xaravel.class.lookup')]` (`php/classLookup.ts`).
+ */
+export function lookUpName(name: string): RegisteredClass | object | null {
+  if (typeof name !== "string") {
+    return null;
+  }
+  return lookUp(name)?.klass ?? resolveContractToken(name);
 }
 
 /** The test-frame entry, else the base entry, for `fqcn`; null when neither holds it. */

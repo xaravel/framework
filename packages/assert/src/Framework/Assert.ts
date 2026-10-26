@@ -63,6 +63,7 @@ import {
   LessThan,
   ObjectHasProperty,
   RegularExpression,
+  resolveClassString,
   sameSize,
   StringContains,
   StringEndsWith,
@@ -196,18 +197,22 @@ export class Assert {
 
   // Types and instanceOf
 
-  static assertInstanceOf(expected: ClassOrInterface, actual: unknown, message_: string = ""): void {
+  /** `expected` is a class, a contract token, or a class-string the runtime's lookup resolves (ESC-13.1-9). */
+  static assertInstanceOf(expected: ClassOrInterface | string, actual: unknown, message_: string = ""): void {
     recordAssertion("assertInstanceOf");
     const description = message("assertInstanceOf", 3, message_);
-    classOrInterface(expected);
-    assertThat(actual, new IsInstanceOf(expected), description);
+    const type = typeof expected === "string" ? resolveClassString(expected) : expected;
+    classOrInterface(type);
+    assertThat(actual, new IsInstanceOf(type), description);
   }
 
-  static assertNotInstanceOf(expected: ClassOrInterface, actual: unknown, message_: string = ""): void {
+  /** `expected` is a class, a contract token, or a class-string the runtime's lookup resolves (ESC-13.1-9). */
+  static assertNotInstanceOf(expected: ClassOrInterface | string, actual: unknown, message_: string = ""): void {
     recordAssertion("assertNotInstanceOf");
     const description = message("assertNotInstanceOf", 3, message_);
-    classOrInterface(expected);
-    assertThat(actual, new LogicalNot(new IsInstanceOf(expected)), description);
+    const type = typeof expected === "string" ? resolveClassString(expected) : expected;
+    classOrInterface(type);
+    assertThat(actual, new LogicalNot(new IsInstanceOf(type)), description);
   }
 
   static assertIsArray(actual: unknown, message_: string = ""): void {
@@ -628,8 +633,8 @@ export interface Assert {
   assertNotFalse(condition: unknown, message?: string): void;
   assertNull(actual: unknown, message?: string): void;
   assertNotNull(actual: unknown, message?: string): void;
-  assertInstanceOf(expected: ClassOrInterface, actual: unknown, message?: string): void;
-  assertNotInstanceOf(expected: ClassOrInterface, actual: unknown, message?: string): void;
+  assertInstanceOf(expected: ClassOrInterface | string, actual: unknown, message?: string): void;
+  assertNotInstanceOf(expected: ClassOrInterface | string, actual: unknown, message?: string): void;
   assertIsArray(actual: unknown, message?: string): void;
   assertIsNotArray(actual: unknown, message?: string): void;
   assertIsBool(actual: unknown, message?: string): void;

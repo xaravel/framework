@@ -2,6 +2,8 @@
 import "../metadata/polyfill";
 // Publishes PHP's built-in classes on `Symbol.for('xaravel.php.classes')` (Story 9.10).
 import "../php/phpClasses";
+// Publishes the class and interface name lookup on `Symbol.for('xaravel.class.lookup')` (ESC-13.1-9).
+import "../php/classLookup";
 // The scope module installs the Registry's access to the test units on load (registerTestClass, AD-10.5).
 import "../scope/scope";
 
@@ -15,4 +17,4 @@ import { installClassmapEncoder } from "./registry";
 // PHP's `[]`); its values are strings, so the flag changes nothing else.
 installClassmapEncoder((value) => jsonEncode(value, JSON_THROW_ON_ERROR | JSON_FORCE_OBJECT) as string);
 
-export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry";
+export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerContractToken, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry";

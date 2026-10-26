@@ -41,7 +41,7 @@ registerClass("App\\Models\\Post", Post);
 - `fqcn(classOrInstance)` is the FQCN a class, or an instance's class, was registered under. It throws for an
   unregistered class. Never use `constructor.name` for identity. A `contract<T>()` token gives its own FQCN: a frozen,
   non-function object whose own, non-writable `Symbol.for('xaravel.class.fqcn')` data property is a string. A token is
-  never registered, so `resolveClass` does not resolve its name.
+  never registered, so `resolveClass` does not resolve its name; the token table below does.
 - `isContractToken(value)` says whether a value is such a token, by the same definition `fqcn()` reads. It is the
   runtime side's one token predicate, and `@xaravel/contracts` uses it. `@xaravel/assert` keeps the grader's copy,
   which XT-contracts-20 pins equal.
@@ -51,6 +51,31 @@ registerClass("App\\Models\\Post", Post);
   ignores it. It never imports a file.
 - `resolveClassAsync(fqcn)` is the one async miss path (AD-10.4). On a miss it imports the file the classmap gives,
   else the file the PSR-4 map gives, and resolves with the class that file registered.
+
+## Contract tokens
+
+A PHP interface is a contract token, never a registered class (ESC-10.1-3). So that its name still resolves, as PHP's
+interface name does, the Registry keeps a separate token table (ESC-13.1-7).
+
+- `registerContractToken(token)` records `token` under its own FQCN, case-insensitive, a leading `\` dropped.
+  `@xaravel/contracts`' `contract(...)` calls it for every token it makes (the runtime imports no contract, AD-2). The
+  first token recorded under a name stays: a later token under the same name, and the same token again, do nothing,
+  since a program PHP accepts never re-declares an interface. A value that is not a contract token throws a `TypeError`
+  `registerContractToken(): the value is not a contract token`.
+- A name resolves to a registered class first (a test class up the frame chain, then the base), then to a recorded
+  token. `new ReflectionClass(name)` and `isSubclassOf(name)` resolve a token's FQCN this way, and `interfaceExists(name)`
+  is true for it ([reflection.md](reflection.md)). `resolveClass` and `fqcn` are unchanged.
+
+### The `Symbol.for('xaravel.class.lookup')` protocol
+
+Loading any of the four package entries defines `globalThis[Symbol.for('xaravel.class.lookup')]`: a function from a
+class or interface name to what it names, a registered class or a recorded token, else `null`, by the order above. The
+grader reads it without importing the runtime, so `assertInstanceOf` and `assertNotInstanceOf` take a class-string as
+PHPUnit's do (ESC-13.1-9). It follows `Symbol.for('xaravel.php.classes')`'s install rules
+([exceptions.md](exceptions.md)), except that the property is writable and configurable, so a grader test fixture can
+layer its own stand-in over it (answering its own names first and delegating the rest) and restore it afterwards; it
+stays non-enumerable; loading throws a `LogicException` when the symbol is already defined with another value; and
+`XARAVEL_NO_SCOPE_GLOBAL=1` skips the install.
 
 ## Autoload and the classmap
 

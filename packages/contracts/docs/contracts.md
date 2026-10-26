@@ -29,7 +29,10 @@ new ArrayRepository() instanceof Repository; // true: Symbol.hasInstance reads t
 ```
 
 `fqcn(Repository)` is `"Illuminate\\Contracts\\Cache\\Repository"`. A token is never registered as a class, so
-`resolveClass` does not resolve its name. The token also carries, read from the committed API surface:
+`resolveClass` does not resolve its name. `contract(...)` records each token it makes with `@xaravel/runtime`'s
+`registerContractToken` instead (ESC-13.1-7), so the FQCN resolves to the token as PHP's interface name does:
+`interfaceExists(name)` is true and `new ReflectionClass(name)` reflects the token. Names are case-insensitive, and the
+first token made under a name stays recorded. The token also carries, read from the committed API surface:
 
 - its method names at `Symbol.for('xaravel.contract.methods')`, and each method's parameter names at
   `Symbol.for('xaravel.contract.parameters')`, which Mockery and PHPUnit doubles read;

@@ -56,18 +56,40 @@ class; a closure's `getDeclaringClass()` is `null`, JS keeping no class scope.
 
 ## `ReflectionClass`
 
-`new ReflectionClass(x)` takes a class, an object (its class), a contract token (PHP's interface), or a registered
-FQCN string. An FQCN the Class Registry does not hold throws a `ReflectionException` `Class "<name>" does not exist`,
-the name as given. A token's FQCN is not in the Registry, so a token resolves only as a value.
+`new ReflectionClass(x)` takes a class, an object (its class), a contract token (PHP's interface), a registered FQCN
+string, or the FQCN of a recorded token. `contract(...)` records each token it makes with `registerContractToken`
+(ESC-13.1-7; see [class-registry.md](class-registry.md)), so a token's FQCN resolves to the token, after the
+registered classes. A name that is neither throws a `ReflectionException` `Class "<name>" does not exist`, the name as
+given.
 
 - `name` and `getName()`: the FQCN.
 - `getParentClass()`: the nearest registered class up the constructor chain, or `false`. An unregistered class on the
   chain (a `mixin()` layer, the JS `Error` under PHP's `Exception`) is skipped. A token has none.
-- `isSubclassOf(t)`, `t` a class, a token, a `ReflectionClass` or a registered FQCN: a class against a class is the
-  strict constructor chain; a class against a token is `hasBrand`; a token against a token walks the token's parents
-  (`Symbol.for('xaravel.contract.parents')`). Never itself.
+- `isSubclassOf(t)`, `t` a class, a token, a `ReflectionClass`, a registered FQCN or a recorded token's FQCN: a class
+  against a class is the strict constructor chain; a class against a token is `hasBrand`; a token against a token
+  walks the token's parents (`Symbol.for('xaravel.contract.parents')`). Never itself.
 - `getMethod(name)`: a `ReflectionMethod`, or a `ReflectionException` `Method <FQCN>::<name>() does not exist`.
 - `getAttributes(filter)`: see below.
+
+## `ReflectionEnum`
+
+An enum is a registered class whose static side has a `cases` function (AD-26); a backed enum also declares
+`static backingType`, `'string'` or `'int'`. `new ReflectionEnum(x)` extends `ReflectionClass` and takes an enum
+class, one of its cases, or its FQCN. A class or token that is not an enum throws a `ReflectionException`
+`Class "<FQCN>" is not an enum`; a name nothing holds, `Class "<name>" does not exist`.
+
+- `isBacked()`: whether the enum declares `backingType`.
+- `getBackingType()`: a builtin `ReflectionNamedType` named `string` or `int`, or `null` for a pure enum.
+
+A `backingType` other than `'string'` or `'int'` makes both throw PHP's `TypeError`.
+
+## `interfaceExists` and `enumExists`
+
+PHP's `interface_exists($interface)` and `enum_exists($enum)`, named as PORTING.md names PHP functions.
+`interfaceExists(name)` is true when `name` names a recorded contract token and no registered class;
+`enumExists(name)` when it names a registered enum class. Names are case-insensitive, a leading `\` ignored. Both
+read only what is loaded, as `resolveClass` does: there is no `$autoload` parameter (AD-10.4). A non-string throws
+PHP's `TypeError`, `interface_exists(): Argument #1 ($interface) must be of type string, int given` (`enum_exists(): Argument #1 ($enum) …`).
 
 ## `ReflectionMethod`
 
@@ -123,7 +145,7 @@ PHP's `ReflectionException`, an `Exception`.
 
 ## Not ported
 
-- `ReflectionEnum`, `ReflectionProperty`, `ReflectionType` as a base class, and any member not listed above.
+- `ReflectionEnumBackedCase`, `ReflectionEnum`'s `getCases()` / `getCase()`, `ReflectionProperty`, `ReflectionType` as a base class, and any member not listed above.
 - Attributes on methods, properties, parameters and constants, and `getAttributes`' flags argument (the filter is
   always `instanceof`).
 - `lazy()` / `proxy()` (DIV-12.14).
