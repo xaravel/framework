@@ -12,7 +12,9 @@
 // - `yieldFrom(source)` delegates to an array, a Traversable or another `Generator`, passing `send` and `next` on to
 //   that generator, and gives the inner generator's return value (null for an array or a Traversable).
 //
-// It carries the `Iterator` and `Traversable` brands; `[Symbol.iterator]()`, `entries()` and `keys()` run PHP's
+// `x instanceof Generator` is also true for a bare JS generator object (action item
+// epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9), as PHP sees one; `isGeneratorObject` is the wrapper-class
+// test the runtime's own sites use. It carries the `Iterator` and `Traversable` brands; `[Symbol.iterator]()`, `entries()` and `keys()` run PHP's
 // `foreach` protocol and refuse a closed generator when called. `phpSerialize` and `phpUnserialize` refuse it with
 // PHP's `Exception`. Not ported: `Generator::throw`, and a JS generator advanced before it is wrapped (its earlier
 // yields are not seen). It is registered as `Generator`, and is not in `Symbol.for('xaravel.php.classes')`. It and
@@ -65,6 +67,14 @@ let start: (generator: Generator) => void;
 let traversal: (generator: Generator) => Generator;
 
 export class Generator implements Iterator {
+  /**
+   * `x instanceof Generator`: an instance of the wrapper class (or, for a subclass, of that subclass), or, for
+   * `Generator` itself, a bare JS generator object.
+   */
+  static [Symbol.hasInstance](value: unknown): value is Generator | JsGenerator {
+    return Function.prototype[Symbol.hasInstance].call(this, value) || (this === Generator && isJsGenerator(value));
+  }
+
   readonly #js: JsGenerator;
   /** The generator has yielded (PHP's `value` is defined). */
   #started = false;
@@ -256,6 +266,11 @@ export class Generator implements Iterator {
   }
 }
 
+/** Whether `value` is an instance of the `Generator` wrapper class itself, a bare JS generator object not counted. Internal. */
+export function isGeneratorObject(value: unknown): value is Generator {
+  return Function.prototype[Symbol.hasInstance].call(Generator, value);
+}
+
 /** `generator` checked for traversal (`zend_generator_get_iterator`): throws PHP's `Exception` once closed. Internal. */
 export function generatorTraversal(generator: Generator): Generator {
   return traversal(generator);
@@ -292,7 +307,7 @@ function* delegateTo(inner: Generator): globalThis.Generator<KeyedYield, unknown
  */
 export function* yieldFrom(source: unknown): globalThis.Generator<KeyedYield, unknown, unknown> {
   const from = isJsGenerator(source) ? new Generator(source) : source;
-  if (from instanceof Generator) {
+  if (isGeneratorObject(from)) {
     return yield* delegateTo(from);
   }
   if (typeof from === "object" && from !== null && phpType(from) === "array") {

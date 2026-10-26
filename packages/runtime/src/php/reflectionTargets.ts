@@ -70,6 +70,8 @@ export function* classChain(klass: object): Generator<RegisteredClass> {
 export interface FoundMethod {
   readonly fn: (...args: never[]) => unknown;
   readonly declaringClass: RegisteredClass;
+  /** Whether the match came from the static chain (PHP's `static` method). */
+  readonly isStatic: boolean;
 }
 
 /**
@@ -92,7 +94,7 @@ export function findMethod(target: ReflectionTarget, name: string): FoundMethod 
       }
       const descriptor = Object.getOwnPropertyDescriptor(holder, name);
       if (descriptor !== undefined && typeof descriptor.value === "function") {
-        return { fn: descriptor.value as FoundMethod["fn"], declaringClass: last };
+        return { fn: descriptor.value as FoundMethod["fn"], declaringClass: last, isStatic: false };
       }
     }
   }
@@ -103,7 +105,7 @@ export function findMethod(target: ReflectionTarget, name: string): FoundMethod 
     }
     const descriptor = Object.getOwnPropertyDescriptor(klass, name);
     if (descriptor !== undefined && typeof descriptor.value === "function") {
-      return { fn: descriptor.value as FoundMethod["fn"], declaringClass: last };
+      return { fn: descriptor.value as FoundMethod["fn"], declaringClass: last, isStatic: true };
     }
   }
   return null;

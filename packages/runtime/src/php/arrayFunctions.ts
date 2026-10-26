@@ -2,18 +2,23 @@
 // epic-14-item-2-runtime-generators-functions), under their PHP names, each a port of PHP 8.5.11's
 // `ext/standard/array.c` or `ext/spl/spl_iterators.c` in coercive typing mode: `is_scalar`, `in_array`,
 // `array_combine`, `array_filter`, `array_unique`, `iterator_to_array`, `iterator_count`, the constants they take,
-// and PHP's `(array)` cast as `toPhpArray`. A PHP array comes in as `arrayEntries` reads it and goes out through
+// and PHP's `(array)` cast as `toPhpArray`; and (action item epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9)
+// `array_map`, `array_keys`, `array_values`, `array_key_exists`, `array_key_first`, `array_key_last`, `array_merge`,
+// `count` with `COUNT_NORMAL` / `COUNT_RECURSIVE`. A PHP array comes in as `arrayEntries` reads it and goes out through
 // `arrayFromEntries` (the AD-9 form); `toPhpArray` alone returns a `PhpArray`. `undefined` reads as null (AD-9), and
 // an omitted optional argument is PHP's default. PHP's warnings and deprecations are not reproduced. Everything is
 // synchronous.
-import { arrayEntries, isTrue, toFloat, toPhpString } from "./casts";
-import { isEnumClass } from "./classExistence";
+import { isContractToken } from "../registry/registry";
+import { arrayCount, arrayEntries, isTrue, toFloat, toInt, toPhpString } from "./casts";
+import { isEnumCase } from "./classExistence";
+import { isClassConstructor } from "./Closure";
 import { identical } from "./identical";
 import { looseEquals, spaceship } from "./looseEquals";
 import { objectProps } from "./mangle";
 import { arrayParameter, boolParameter, intParameter } from "./phpArguments";
-import { arrayFromEntries, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
-import { phpType } from "./phpType";
+import { arrayFromEntries, normalizeKey, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
+import { phpType, phpTypeName } from "./phpType";
+import { phpValueOf } from "./throwableArguments";
 import { iterableArgument, iterableCount, iterableToArray } from "./traverse";
 import { TypeError as PhpTypeError } from "./TypeError";
 import { ValueError } from "./ValueError";
@@ -73,9 +78,39 @@ export function array_combine(keys: unknown, values: unknown): unknown {
   return arrayFromEntries(result);
 }
 
-/** The error for an `array_filter` callback that is a PHP callable string or array, which the runtime does not port. */
-function unportedCallable(form: string): PhpTypeError {
-  return new PhpTypeError(`array_filter(): Argument #2 ($callback) is a PHP callable ${form}, which Xaravel does not port; pass a function`);
+/** The error for a callback that is a PHP callable string or array, which the runtime does not port (DIV-9.13). */
+function unportedCallable(fn: string, position: number, form: string): PhpTypeError {
+  return new PhpTypeError(`${fn}(): Argument #${position} ($callback) is a PHP callable ${form}, which Xaravel does not port; pass a function`);
+}
+
+/**
+ * A `?callable` callback parameter as `array_filter` and `array_map` take it: a function, an object with an
+ * `__invoke` method (called with exactly the given arguments), or null. Throws PHP's `TypeError` naming the unported
+ * form for a PHP callable string or array (DIV-9.13), and PHP's `must be a valid callback or null, no array or string
+ * given` for anything else.
+ */
+function callbackParameter(fn: string, position: number, callback: unknown): ((...args: unknown[]) => unknown) | null {
+  if (callback === null || callback === undefined) {
+    return null;
+  }
+  // A class constructor and a contract token are class-strings (AD-9, DIV-12.19).
+  if (isClassConstructor(callback) || isContractToken(callback)) {
+    throw unportedCallable(fn, position, "string");
+  }
+  const invoke: unknown = typeof callback === "object" ? Reflect.get(callback, "__invoke") : null;
+  if (typeof callback === "function") {
+    return callback as (...args: unknown[]) => unknown;
+  }
+  if (typeof invoke === "function" && phpType(callback) === "object") {
+    return (...args: unknown[]) => Reflect.apply(invoke, callback, args) as unknown;
+  }
+  if (typeof callback === "string") {
+    throw unportedCallable(fn, position, "string");
+  }
+  if (typeof callback === "object" && phpType(callback) === "array") {
+    throw unportedCallable(fn, position, "array");
+  }
+  throw new PhpTypeError(`${fn}(): Argument #${position} ($callback) must be a valid callback or null, no array or string given`);
 }
 
 /**
@@ -87,21 +122,7 @@ function unportedCallable(form: string): PhpTypeError {
  */
 export function array_filter(array: unknown, callback: unknown = null, mode: unknown = 0): unknown {
   const entries = arrayParameter("array_filter", 1, "array", array);
-  let fn: ((...args: unknown[]) => unknown) | null = null;
-  if (callback !== null && callback !== undefined) {
-    const invoke: unknown = typeof callback === "object" ? Reflect.get(callback, "__invoke") : null;
-    if (typeof callback === "function") {
-      fn = callback as (...args: unknown[]) => unknown;
-    } else if (typeof invoke === "function" && phpType(callback) === "object") {
-      fn = (...args: unknown[]) => Reflect.apply(invoke, callback, args) as unknown;
-    } else if (typeof callback === "string") {
-      throw unportedCallable("string");
-    } else if (typeof callback === "object" && phpType(callback) === "array") {
-      throw unportedCallable("array");
-    } else {
-      throw new PhpTypeError("array_filter(): Argument #2 ($callback) must be a valid callback or null, no array or string given");
-    }
-  }
+  const fn = callbackParameter("array_filter", 2, callback);
   const useType = Number(intParameter("array_filter", 3, "mode", mode));
   if (entries.length === 0) {
     return [];
@@ -128,15 +149,6 @@ export function array_filter(array: unknown, callback: unknown = null, mode: unk
     kept.push([key, value]);
   }
   return arrayFromEntries(kept);
-}
-
-/** Whether `value` is a case of an AD-26 enum (PHP's `ZEND_ACC_ENUM` class). */
-function isEnumCase(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return typeof prototype === "object" && prototype !== null && isEnumClass(Reflect.get(prototype, "constructor"));
 }
 
 /** An order of enum cases, standing in for the object addresses PHP compares; it only groups equal cases. */
@@ -327,4 +339,210 @@ export function toPhpArray(value: unknown): PhpArray {
     default:
       return new PhpArray([[0, value]]);
   }
+}
+
+/** PHP's `COUNT_NORMAL`: `count` counts the top level. */
+export const COUNT_NORMAL = 0;
+/** PHP's `COUNT_RECURSIVE`: `count` also counts the elements of nested arrays. */
+export const COUNT_RECURSIVE = 1;
+
+const COUNTABLE = Symbol.for("Countable");
+
+/** The PHP type name of `value` in a message; a contract token is its class-string, a `string` (AD-9). */
+function valueTypeName(value: unknown): string {
+  return isContractToken(value) ? "string" : phpTypeName(phpValueOf(value ?? null));
+}
+
+/** An array argument, else PHP's `TypeError`; `name` null for a variadic argument, which PHP's message leaves unnamed. */
+function arrayArgument(fn: string, position: number, name: string | null, value: unknown): [PhpArrayKey, unknown][] {
+  if (typeof value === "object" && value !== null && !isContractToken(value) && phpType(value) === "array") {
+    return arrayEntries(value);
+  }
+  throw new PhpTypeError(`${fn}(): Argument #${position}${name === null ? "" : ` ($${name})`} must be of type array, ${valueTypeName(value)} given`);
+}
+
+/**
+ * PHP's `array_map($callback, $array, ...$arrays)`. With one array: `callback(value)` for each entry, keys kept (string
+ * and int), or the array itself without a callback. With several: a list as long as the longest array, each element
+ * `callback(v1, v2, …)` over the arrays' values in order, a shorter array giving null, or, without a callback, the
+ * list of those value lists. The callback is taken as `array_filter` takes it (DIV-9.13). Throws PHP's `TypeError`
+ * for a non-array (`Argument #2 ($array)`, then `Argument #3` and on unnamed) and for a callback PHP or the runtime
+ * refuses.
+ */
+export function array_map(callback: unknown, array: unknown, ...arrays: unknown[]): unknown {
+  const fn = callbackParameter("array_map", 1, callback);
+  if (arrays.length === 0) {
+    const entries = arrayArgument("array_map", 2, "array", array);
+    if (fn === null || entries.length === 0) {
+      return arrayFromEntries(entries);
+    }
+    return arrayFromEntries(entries.map(([key, value]) => [key, fn(value) ?? null] as const));
+  }
+  const lists = [array, ...arrays].map((value, index) => arrayArgument("array_map", index + 2, index === 0 ? "array" : null, value).map(([, item]) => item));
+  const length = Math.max(...lists.map((list) => list.length));
+  const result: unknown[] = [];
+  for (let index = 0; index < length; index++) {
+    const values = lists.map((list) => (index < list.length ? list[index] : null));
+    result.push(fn === null ? values : (fn(...values) ?? null));
+  }
+  return result;
+}
+
+/**
+ * PHP's `array_keys($array, $filter_value, $strict = false)`: the keys of `array` as a list, or, when `filter_value`
+ * is passed (by argument count: `null` and `undefined` are PHP's null), the keys whose value is `==` it (`in_array`'s
+ * comparison), or `===` it when `strict`. Throws PHP's `TypeError` for a non-array and a `strict` that is no bool.
+ */
+export function array_keys(array: unknown, ...rest: [filter_value?: unknown, strict?: unknown]): PhpArrayKey[] {
+  const entries = arrayArgument("array_keys", 1, "array", array);
+  const isStrict = boolParameter("array_keys", 3, "strict", rest.length >= 2 ? rest[1] : false);
+  if (rest.length === 0) {
+    return entries.map(([key]) => key);
+  }
+  const filter = rest[0] ?? null;
+  return entries.filter(([, value]) => (isStrict ? identical(filter, value) : zendEquals(filter, value))).map(([key]) => key);
+}
+
+/** PHP's `array_values($array)`: the values of `array` as a list. Throws PHP's `TypeError` for a non-array. */
+export function array_values(array: unknown): unknown[] {
+  return arrayArgument("array_values", 1, "array", array).map(([, value]) => value);
+}
+
+/** Whether two normalised keys are the same key: two equal strings, or two equal ints. */
+function sameKey(a: PhpArrayKey, b: PhpArrayKey): boolean {
+  if (typeof a === "string" || typeof b === "string") {
+    return a === b;
+  }
+  return BigInt(a) === BigInt(b);
+}
+
+/** `value` as an array argument, unread, else PHP's `TypeError` (`arrayArgument` without copying the entries). */
+function arrayObject(fn: string, position: number, value: unknown): object {
+  if (typeof value === "object" && value !== null && !isContractToken(value) && phpType(value) === "array") {
+    return value;
+  }
+  throw new PhpTypeError(`${fn}(): Argument #${position} ($array) must be of type array, ${valueTypeName(value)} given`);
+}
+
+/** Whether the PHP array `array` has the normalised key `key`, looked up without copying its entries. */
+function hasKey(array: object, key: PhpArrayKey): boolean {
+  if (Array.isArray(array)) {
+    return typeof key !== "string" && BigInt(key) >= 0n && BigInt(key) < BigInt(array.length);
+  }
+  if (array instanceof PhpArray) {
+    return array.has(key);
+  }
+  if ((array as Record<symbol, unknown>)[PHP_ARRAY_BRAND] === true) {
+    return arrayEntries(array).some(([entry]) => sameKey(entry, key));
+  }
+  return Object.hasOwn(array, String(key));
+}
+
+const PHP_ARRAY_BRAND = Symbol.for("xaravel.php.array");
+
+/**
+ * PHP's `array_key_exists($key, $array)`: whether `array` has the key `key` as PHP's array offset reads it: a numeric
+ * string is its int, null is `""`, a float truncates, a bool is 0 or 1. Throws PHP's `TypeError` for a non-array, and
+ * `Cannot access offset of type <type> on array` for a key no array takes.
+ */
+export function array_key_exists(key: unknown, array: unknown): boolean {
+  const subject = arrayObject("array_key_exists", 2, array);
+  return hasKey(subject, normalizeKey(key ?? null));
+}
+
+/** The first (`last` false) or last key of the PHP array `array`, or null when it is empty, without copying its entries. */
+function edgeKey(array: object, last: boolean): PhpArrayKey | null {
+  if (Array.isArray(array)) {
+    return array.length === 0 ? null : last ? array.length - 1 : 0;
+  }
+  if (array instanceof PhpArray || (array as Record<symbol, unknown>)[PHP_ARRAY_BRAND] === true) {
+    let found: PhpArrayKey | null = null;
+    for (const key of array instanceof PhpArray ? array.keys() : arrayEntries(array).map(([k]) => k)) {
+      found = key;
+      if (!last) {
+        break;
+      }
+    }
+    return found;
+  }
+  if (!last) {
+    for (const key in array) {
+      if (Object.hasOwn(array, key)) {
+        return normalizeKey(key);
+      }
+    }
+    return null;
+  }
+  const keys = Object.keys(array);
+  return keys.length === 0 ? null : normalizeKey(keys[keys.length - 1]);
+}
+
+/** PHP's `array_key_first($array)`: the first key of `array`, or null when it is empty. */
+export function array_key_first(array: unknown): PhpArrayKey | null {
+  return edgeKey(arrayObject("array_key_first", 1, array), false);
+}
+
+/** PHP's `array_key_last($array)`: the last key of `array`, or null when it is empty. */
+export function array_key_last(array: unknown): PhpArrayKey | null {
+  return edgeKey(arrayObject("array_key_last", 1, array), true);
+}
+
+/**
+ * PHP's `array_merge(...$arrays)`: the entries of each array in turn, a string key overwriting an earlier one in its
+ * place, an int key renumbered from 0; `[]` with no arguments. Throws PHP's `TypeError` `array_merge(): Argument #<n>
+ * must be of type array, <type> given` for a non-array.
+ */
+export function array_merge(...arrays: unknown[]): unknown {
+  const lists = arrays.map((value, index) => arrayArgument("array_merge", index + 1, null, value));
+  const result = new PhpArray<PhpKeyInput, unknown>();
+  for (const entries of lists) {
+    for (const [key, value] of entries) {
+      if (typeof key === "string") {
+        result.set(key, value);
+      } else {
+        result.push(value);
+      }
+    }
+  }
+  return arrayFromEntries(result);
+}
+
+/** `php_count_recursive`: the entries of `array` and of every array nested in it; an array already being counted is 0. */
+function countRecursive(array: object, counting: Set<object>): number {
+  if (counting.has(array)) {
+    return 0;
+  }
+  counting.add(array);
+  const entries = arrayEntries(array);
+  let count = entries.length;
+  for (const [, value] of entries) {
+    if (typeof value === "object" && value !== null && !isContractToken(value) && phpType(value) === "array") {
+      count += countRecursive(value, counting);
+    }
+  }
+  counting.delete(array);
+  return count;
+}
+
+/**
+ * PHP's `count($value, $mode = COUNT_NORMAL)`: the entries of an array (with `COUNT_RECURSIVE`, those of nested arrays
+ * too), or, for an object carrying the `Countable` brand (`Symbol.for("Countable")`), its `count()` as an int. Throws
+ * PHP's `ValueError` for a mode other than `COUNT_NORMAL` and `COUNT_RECURSIVE`, and PHP's `TypeError` for any other
+ * value.
+ */
+export function count(value: unknown, mode: unknown = COUNT_NORMAL): number | bigint {
+  const countMode = BigInt(intParameter("count", 2, "mode", mode));
+  if (countMode !== BigInt(COUNT_NORMAL) && countMode !== BigInt(COUNT_RECURSIVE)) {
+    throw new ValueError("count(): Argument #2 ($mode) must be either COUNT_NORMAL or COUNT_RECURSIVE");
+  }
+  if (typeof value === "object" && value !== null && !isContractToken(value)) {
+    const type = phpType(value);
+    if (type === "array") {
+      return countMode === BigInt(COUNT_RECURSIVE) ? countRecursive(value, new Set()) : arrayCount(value);
+    }
+    if (type === "object" && (value as Record<symbol, unknown>)[COUNTABLE] === true) {
+      return toInt((value as { count(): unknown }).count());
+    }
+  }
+  throw new PhpTypeError(`count(): Argument #1 ($value) must be of type Countable|array, ${valueTypeName(value)} given`);
 }

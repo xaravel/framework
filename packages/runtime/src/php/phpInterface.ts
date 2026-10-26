@@ -5,6 +5,9 @@
 // names, their parameter lists, the parents, and the `Symbol.hasInstance` / `Symbol.toPrimitive` methods. It copies
 // the shape rather than sharing it, because the runtime never imports `@xaravel/contracts` (AD-2). The token is
 // recorded with `registerContractToken`, so the class lookup, `interfaceExists` and reflection resolve its PHP name.
+// `instanceTest`, when given, replaces the brand test in `Symbol.hasInstance` (the `UnitEnum` and `BackedEnum` tokens,
+// whose AD-26 cases carry no brand; action item epic-14-item-3-runtime-type-tests-functions); every other token reads
+// the brand.
 // The arguments are the runtime's own constants, so nothing is validated here.
 import { registerContractToken } from "../registry/registry";
 
@@ -27,6 +30,7 @@ export function phpInterface<T extends object, B extends symbol>(
   members: Readonly<Record<string, readonly string[]>> = {},
   parents: readonly object[] = [],
   builtins: readonly string[] = [],
+  instanceTest: ((value: unknown) => boolean) | null = null,
 ): PhpInterfaceToken<T, B> {
   const parameters = Object.freeze(Object.fromEntries(Object.entries(members).map(([method, list]) => [method, Object.freeze([...list])])));
   const builtinMethods = Object.freeze([...builtins]);
@@ -39,6 +43,9 @@ export function phpInterface<T extends object, B extends symbol>(
     [CONTRACT_PARAMETERS]: parameters,
     [CONTRACT_PARENTS]: Object.freeze([...parents]),
     [Symbol.hasInstance](value: unknown): boolean {
+      if (instanceTest !== null) {
+        return instanceTest(value);
+      }
       return ((typeof value === "object" && value !== null) || typeof value === "function") && (value as Record<symbol, unknown>)[brand] === true;
     },
     [Symbol.toPrimitive](): symbol {
