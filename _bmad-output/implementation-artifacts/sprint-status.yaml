@@ -1877,7 +1877,11 @@ action_items:
       with an unregistered class throws, and say both in packages/reflection/docs/reflection.md.
       Also (item 6 (b), decisions/MAINT-2026-10-25-epic-13-items.md): Reflector.isCallable('Class::method')
       for a non-static method gives false, as PHP 8's is_callable does; XT-reflection-1's
-      pin of true is re-pinned to false. No assertion removed or weakened."
+      pin of true is re-pinned to false. No assertion removed or weakened. Also in scope
+      (Maintainer 2026-10-25, decisions/MAINT-2026-10-25-epic-13-items.md, item 5): packages/runtime,
+      limited to letting ReflectionNamedType (and the parameter reflection that builds
+      it) carry the parameter's Spec value, the class or token, beside its FQCN name,
+      with an XT-runtime case; L1 then tests that value"
     owner: "orchestrator"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
