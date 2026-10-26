@@ -45,14 +45,23 @@ function range(from: number, to: number): number[] {
  * Capability Map row. `runtime` takes the ADs the spine gives `packages/runtime` that have a Rule list (AD-26's is a
  * table) and no FRs (ESC-9.1-3). From `contracts` on, a Component's row is what its Epic declares on its `**Covers:**`
  * line (the ADs it covers or implements, with a Rule list, and the FRs it covers or supports, with a consequence
- * list), plus AD-2 and AD-6 for every package (MAINT-2026-10-22-consequence-rows). Each is added in an Infrastructure
- * change before the Component's first Story with Xaravel Tests (ESC-5.9-1, ESC-9.1-3).
+ * list; an FR without one, such as FR-26, is dropped), plus AD-2 and AD-6 for every package
+ * (MAINT-2026-10-22-consequence-rows). Each is added in an Infrastructure change before the Component's first Story
+ * with Xaravel Tests (ESC-5.9-1, ESC-9.1-3).
  */
 export const CONSEQUENCE_SOURCES: Readonly<Record<string, ConsequenceSource>> = {
   conformance: { frs: [...range(1, 9), ...range(111, 116)], ads: [15, 16, 17, 21, 28] },
   runtime: { frs: [], ads: [2, 5, 6, 9, 10, 23] },
   // Epic 10: "Covers: AD-1, AD-27; supports FR-10, FR-19 and FR-21", plus AD-2 and AD-6.
   contracts: { frs: [10, 19, 21], ads: [1, 2, 6, 27] },
+  // Epic 11: "Covers: FR-26." FR-26 has no consequence list, so only AD-2 and AD-6.
+  macroable: { frs: [], ads: [2, 6] },
+  // Epic 12: "Covers: FR-26." FR-26 has no consequence list, so only AD-2 and AD-6.
+  conditionable: { frs: [], ads: [2, 6] },
+  // Epic 13: "Covers: FR-26." FR-26 has no consequence list, so only AD-2 and AD-6.
+  reflection: { frs: [], ads: [2, 6] },
+  // Epic 14: "Covers: FR-23.", plus AD-2 and AD-6.
+  collections: { frs: [23], ads: [2, 6] },
 };
 
 export interface Consequence {
