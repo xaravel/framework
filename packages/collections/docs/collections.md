@@ -1,8 +1,8 @@
 # Collections
 
-`@xaravel/collections` ports Laravel 13's `illuminate/collections` component: `Collection`, `LazyCollection`, the `Enumerable` interface, the `EnumeratesValues` trait, `HigherOrderCollectionProxy`, `Arr` and the `collect()`, `data_get()` and `value()` helpers. Collections are synchronous, and they keep PHP's array semantics: key order, integer-like key normalisation, and the list-or-object JSON shape.
+`@xaravel/collections` ports Laravel 13's `illuminate/collections` component: `Collection`, `LazyCollection`, the `Enumerable` interface, the `EnumeratesValues` trait, `HigherOrderCollectionProxy`, `Arr`, `ItemNotFoundException`, `MultipleItemsFoundException` and the `collect()`, `data_get()`, `data_has()` and `value()` helpers. Collections are synchronous, and they keep PHP's array semantics: key order, integer-like key normalisation, and the list-or-object JSON shape.
 
-This page covers the core that Story 14.1 ports: construction, conversion, serialization, array access, iteration, macros and higher-order proxies. The other methods (`first`, `where`, `sortBy`, `groupBy`, …) arrive with the Collections Stories that port their tests.
+This page covers what Stories 14.1 and 14.2 port: construction, conversion, serialization, array access, iteration, macros and higher-order proxies, and the methods that read, find, add and remove items. The other methods (`sortBy`, `groupBy`, `chunk`, …) arrive with the Collections Stories that port their tests.
 
 ## PHP arrays
 
@@ -56,7 +56,21 @@ JavaScript has no index operators on objects, so a collection's `ArrayAccess` is
 | `isset($c['k'])` | `c.offsetExists('k')` |
 | `unset($c['k'])` | `c.offsetUnset('k')` |
 
-A collection is a Traversable. `for (const value of c)` gives the values, `c.entries()` the `[key, value]` pairs and `c.keys()` the keys, as `foreach ($c as $v)` and `foreach ($c as $k => $v)` do. `getIterator()` is Laravel's (`ArrayIterator` for a `Collection`), `getCachingIterator()` wraps it in a `CachingIterator`, and `count()` is the number of items.
+A collection is a Traversable. `for (const value of c)` gives the values and `c.entries()` the `[key, value]` pairs, as `foreach ($c as $v)` and `foreach ($c as $k => $v)` do. `c.keys()` is Laravel's `keys()`: a new collection (a `LazyCollection` for a lazy one) whose items are the keys, so `for (const key of c.keys())` iterates the keys and `c.keys().all()` is their list. `getIterator()` is Laravel's (`ArrayIterator` for a `Collection`), `getCachingIterator()` wraps it in a `CachingIterator`, and `count()` is the number of items.
+
+## Retrieving, searching and changing items
+
+Laravel's names, arguments and results, over PHP's comparisons from `@xaravel/runtime`:
+
+- **Reading.** `first(callback, default)`, `last(callback, default)`, `firstWhere(key, operator, value)`, `value(key, default)` (the key's value in the first item that has it, "dot" notation), `get`, `pluck(value, key)`, `keys()`, `random(number, preserveKeys)`, `nth(step, offset)`, `skip`, `slice`, `take`.
+- **Searching.** `contains(value)` compares with PHP's `==` (`looseEquals`) and `containsStrict(value)` with PHP's `===` (`identical`, so two arrays are identical only with the same keys in the same order); with a callback they test each item, and with a key, an operator and a value they test each item's key as `where` does. `doesntContain`, `doesntContainStrict`, `some`, `search(value, strict)` (the key, or `false`), `before` and `after` follow the same rules. `has(...keys)` and `hasAny(...keys)` take a list of keys or the keys as arguments.
+- **Exactly one, or at least one.** `sole()` returns the only (matching) item and throws `ItemNotFoundException` for none and `MultipleItemsFoundException` (with `getCount()`) for more; `firstOrFail()` throws `ItemNotFoundException` for none. `hasSole()` and `hasMany()` answer the same questions without throwing. `containsOneItem()` and `containsManyItems()` do the same, but Laravel deprecates them (12.49.0 and 12.50.0); use `hasSole()` and `hasMany()`. Both exceptions extend the runtime's `RuntimeException` and are registered under their Laravel FQCNs.
+- **Subsets.** `only(...keys)`, `except(...keys)` and `select(...keys)` take a list, an `Enumerable` or the keys as arguments; `null` keeps everything.
+- **Changing a `Collection`.** `push(...values)`, `prepend(value, key)`, `unshift(...values)`, `put(key, value)`, `getOrPut(key, value)` (it writes the value when the key is missing), `add(value)`, `pop(count)`, `shift(count)`, `pull(key, default)` ("dot" notation, nested collections included), `forget(keys)` and `splice(offset, length, replacement)` change the collection in place, as Laravel's do. `shift`, `unshift` and `splice` renumber int keys, as PHP's array functions do; `pop` keeps the keys and lowers only the next free index. A `LazyCollection` has none of these, as in Laravel.
+
+`random` (both classes), `splice` (`Collection`), `Arr.first`, `Arr.last` and `Arr.random` take two optional parameters, so they also accept an options object (AD-26) as their last argument, in the first optional position: `c.random({ number: 2, preserveKeys: true })`, `c.splice(1, { length: 1, replacement: ["x"] })`, `Arr.first(array, { callback, default })`, `Arr.last(array, { callback, default })` and `Arr.random(array, { number, preserveKeys })`. PHP never takes an array in those positions, so a plain object there is always the options object.
+
+`Arr` gains the members these methods call: `except`, `first`, `forget`, `get`, `last`, `only`, `pluck`, `prepend`, `pull`, `random` and `select`. `Arr.forget(ref, keys)` and `Arr.pull(ref, key, default)` take PHP's by-reference array as a `Ref` from `@xaravel/runtime` and write the new array to `ref.value` (DIV-9.2).
 
 ## Lazy collections
 
@@ -88,12 +102,13 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 
 ## Divergences
 
+- **DIV-9.2:** PHP's by-reference arrays (`Arr.forget`, `Arr.pull`) are a `Ref`.
+- **DIV-9.15:** spreading a keyed PHP array into `push(...)` or `unshift(...)` spreads its values, `...array_values(a)`.
 - **DIV-12.6:** index reads are `get(k)` (or `offsetGet(k)`), not `c[k]`.
 - **DIV-12.16:** higher-order messages are `__get(name)` and `__call(method, args)` calls, not magic properties.
 - **DIV-12.17:** index writes, `isset` and `unset` are `offsetSet`, `offsetExists` and `offsetUnset`.
 - **DIV-12.18:** a generator source writes keyed yields as `yield keyed(k, v)` and `yield from` as `yield* yieldFrom(it)`.
 - **DIV-12.19:** where a test passes a collection class as a value, it is the class's FQCN, `fqcn(Collection)`.
+- **DIV-12.20:** `contains`, `doesntContain`, `doesntContainStrict`, `some`, `where`, `firstWhere`, `hasSole`, `hasMany`, `sole`, `firstOrFail`, `first` and `last` take only positional arguments: their first parameter is a PHP value or a callback, so a lone object is always the value, never an options object. Laravel's named arguments to them become the positional call.
 
 Not ported yet: `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.
-
-`has()` arrives with Story 14.2, so until then `data_get` and `Arr.exists` on a `Collection` or `LazyCollection` target throw, and so do a key-based `unique(key)` or `countBy(key)` over items that are collections.

@@ -1,6 +1,10 @@
 // Xaravel Tests for Story 14.1: PHP array keys and shapes through Collection and LazyCollection (XT-collections-1),
 // the ArrayAccess forms of DIV-12.6 and DIV-12.17 (XT-collections-2), and LazyCollection's sources (XT-collections-3).
-// One test per Xaravel acceptance-criterion row of the manifest, in order.
+// One test per Xaravel acceptance-criterion row of the manifest, in order. Story 14.2 adds XT-collections-4 (how the
+// search members read their arguments, through the runtime's PHP comparisons and DIV-12.20, and the AD-26 options forms
+// of `random`, `splice`, `Arr.first`, `Arr.last` and `Arr.random`) and XT-collections-5 (`sole` and `firstOrFail`
+// throwing `ItemNotFoundException` / `MultipleItemsFoundException`, registered under their Upstream FQCNs, and the
+// messages of `random` and `shift`).
 //
 // XT-collections-1 compares with the signed Oracle fixture of `conformance/oracle-requests/14.1.jsonl`; a missing
 // fixture fails the test. F-10 recorded reason: XT-collections-1 is a Xaravel Test, so no Upstream test exists whose
@@ -13,9 +17,9 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { Arr, Collection, collect, LazyCollection } from "@xaravel/collections";
+import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
-import { arrayEntries, InvalidArgumentException, jsonEncode, keyed, PhpArray } from "@xaravel/runtime";
+import { arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, PhpArray, resolveClass, RuntimeException } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -303,5 +307,153 @@ xaravelTest(
     }
     Assert.assertInstanceOf(InvalidArgumentException, zeroStep);
     Assert.assertSame("Step value cannot be zero.", (zeroStep as InvalidArgumentException).getMessage());
+  },
+);
+
+xaravelTest(
+  "XT-collections-4",
+  "contains('1') on collect([1]) is true and containsStrict('1') on the same collection is false: contains compares with the runtime's PHP loose comparison (looseEquals, so '1' == 1 and, in PHP 8, 0 != 'a') and containsStrict with PHP's === (identical, so an int is never its numeric string, and two arrays are identical only with the same keys in the same order); contains(key, value) and containsStrict(key, value) compare an item's key the same way; contains(callback) is true exactly when the callback accepts an item; doesntContain(value) and doesntContain(key, value) are the negations of contains; some(value) and some(callback) agree with contains; a lone object argument to these members is the PHP value, never an options object (DIV-12.20); all of this holds on Collection and LazyCollection. On the AD-26 side, a trailing plain object is the options object: random({ number: 2 }) and random({ number: 2, preserveKeys: true }) match random(2) and random(2, true) in count and kept keys, on both classes, and LazyCollection's returns a LazyCollection; splice(1, { length: 1, replacement: ['x'] }) matches splice(1, 1, ['x']); and Arr.first(array, { callback, default }), Arr.last(array, { callback, default }) and Arr.random(array, { number, preserveKeys }) match their positional forms (AD-26). first(null, { a: 1 }) and last(null, { a: 1 }) on an empty collection give { a: 1 }: a lone object after the callback is the PHP default, never Arr.first / Arr.last's options object (DIV-12.20), on both classes. A dotted pull('a.b') on collect({ a: { b: 1, c: 2 } }) returns 1 and leaves { a: { c: 2 } }, its nested child a plain object rather than a PhpArray, and except('a.b') gives the same result while leaving the original collection unchanged",
+  () => {
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
+      Assert.assertTrue(make([1]).contains("1"), "loose: '1' == 1");
+      Assert.assertFalse(make([1]).containsStrict("1"), "strict: '1' !== 1");
+      Assert.assertTrue(make([1]).containsStrict(1));
+      Assert.assertFalse(make([0]).contains("a"), "PHP 8: 0 != 'a'");
+      Assert.assertTrue(make([null]).contains(false), "null == false");
+      Assert.assertFalse(make([null]).containsStrict(false));
+
+      Assert.assertTrue(make([{ a: 1, b: 2 }]).contains({ b: 2, a: 1 }), "a lone object is the PHP value: == ignores key order");
+      Assert.assertFalse(make([{ a: 1, b: 2 }]).containsStrict({ b: 2, a: 1 }), "=== needs the same key order");
+      Assert.assertTrue(make([{ a: 1, b: 2 }]).containsStrict({ a: 1, b: 2 }));
+
+      Assert.assertTrue(make([{ v: "1" }]).contains("v", 1), "contains(key, value) is loose");
+      Assert.assertFalse(make([{ v: "1" }]).containsStrict("v", 1), "containsStrict(key, value) is strict");
+      Assert.assertTrue(make([{ v: "1" }]).containsStrict("v", "1"));
+
+      Assert.assertTrue(make([1, 2, 3]).contains((value: number) => value > 2), "contains(callback) accepted");
+      Assert.assertFalse(make([1, 2, 3]).contains((value: number) => value > 5), "contains(callback) rejected");
+
+      Assert.assertFalse(make([1]).doesntContain("1"), "doesntContain(value) negates the loose contains");
+      Assert.assertTrue(make([1]).doesntContain(2));
+      Assert.assertFalse(make([{ a: 1, b: 2 }]).doesntContain({ b: 2, a: 1 }), "a lone object is the PHP value");
+      Assert.assertFalse(make([{ v: "1" }]).doesntContain("v", 1), "doesntContain(key, value) negates contains(key, value)");
+      Assert.assertTrue(make([{ v: "1" }]).doesntContain("v", 2));
+
+      Assert.assertTrue(make([1]).some("1"), "some(value) is contains(value)");
+      Assert.assertFalse(make([1]).some(2));
+      Assert.assertTrue(make([{ a: 1, b: 2 }]).some({ b: 2, a: 1 }), "a lone object is the PHP value");
+      Assert.assertTrue(make([1, 2, 3]).some((value: number) => value > 2), "some(callback) is contains(callback)");
+      Assert.assertFalse(make([1, 2, 3]).some((value: number) => value > 5));
+
+      Assert.assertEquals({ a: 1 }, make([]).first(null, { a: 1 }), "first's lone object default is the PHP value");
+      Assert.assertEquals({ a: 1 }, make([]).last(null, { a: 1 }), "last's lone object default is the PHP value");
+
+      const source = { a: 1, b: 2, c: 3 };
+      for (const picked of [make(source).random({ number: 2 }), make(source).random(2)]) {
+        Assert.assertInstanceOf(make([]).constructor, picked);
+        Assert.assertSame(2, picked.count());
+        Assert.assertEquals([0, 1], picked.keys().all(), "without preserveKeys the picks are a list");
+      }
+      for (const picked of [make(source).random({ number: 2, preserveKeys: true }), make(source).random(2, true)]) {
+        Assert.assertInstanceOf(make([]).constructor, picked);
+        Assert.assertSame(2, picked.count());
+        for (const [key, item] of arrayEntries(picked.all() as object)) {
+          Assert.assertSame((source as Record<string, unknown>)[key as string], item, "preserveKeys keeps each pick under its own key");
+        }
+      }
+    }
+
+    Assert.assertInstanceOf(LazyCollection, new LazyCollection([1, 2, 3]).random({ number: 2 }));
+
+    const pulled = collect({ a: { b: 1, c: 2 } });
+    Assert.assertSame(1, pulled.pull("a.b"));
+    Assert.assertEquals({ a: { c: 2 } }, pulled.all());
+    Assert.assertFalse(pulled.get("a") instanceof PhpArray, "the rebuilt nested child keeps its plain-object form");
+    Assert.assertSame(Object.prototype, Object.getPrototypeOf(pulled.get("a")));
+
+    const original = collect({ a: { b: 1, c: 2 } });
+    const excepted = original.except("a.b");
+    Assert.assertEquals({ a: { c: 2 } }, excepted.all());
+    Assert.assertFalse(excepted.get("a") instanceof PhpArray);
+    Assert.assertSame(Object.prototype, Object.getPrototypeOf(excepted.get("a")));
+    Assert.assertEquals({ a: { b: 1, c: 2 } }, original.all(), "except leaves the original unchanged");
+
+    const optionsForm = collect(["a", "b", "c"]);
+    const positional = collect(["a", "b", "c"]);
+    Assert.assertEquals(positional.splice(1, 1, ["x"]).all(), optionsForm.splice(1, { length: 1, replacement: ["x"] }).all());
+    Assert.assertEquals(["a", "x", "c"], optionsForm.all());
+    Assert.assertEquals(positional.all(), optionsForm.all());
+
+    const above = (value: number) => value > 1;
+    Assert.assertSame(Arr.first([1, 2, 3], above), Arr.first([1, 2, 3], { callback: above }));
+    Assert.assertSame(2, Arr.first([1, 2, 3], { callback: above }));
+    Assert.assertSame(Arr.first([], null, "d"), Arr.first([], { default: "d" }));
+    Assert.assertSame("d", Arr.first([1], { callback: (value: number) => value > 5, default: "d" }));
+    Assert.assertSame(Arr.last([1, 2, 3], above), Arr.last([1, 2, 3], { callback: above }));
+    Assert.assertSame(3, Arr.last([1, 2, 3], { callback: above }));
+    Assert.assertSame(Arr.last([], null, "d"), Arr.last([], { default: "d" }));
+
+    for (const picked of [Arr.random([1, 2, 3], { number: 2 }), Arr.random([1, 2, 3], 2)]) {
+      Assert.assertCount(2, picked);
+      Assert.assertTrue(Array.isArray(picked), "without preserveKeys the picks are a list");
+    }
+    for (const picked of [Arr.random({ a: 1, b: 2, c: 3 }, { number: 2, preserveKeys: true }), Arr.random({ a: 1, b: 2, c: 3 }, 2, true)]) {
+      Assert.assertCount(2, picked);
+      for (const [key, item] of arrayEntries(picked as object)) {
+        Assert.assertSame(({ a: 1, b: 2, c: 3 } as Record<string, unknown>)[key as string], item);
+      }
+    }
+  },
+);
+
+xaravelTest(
+  "XT-collections-5",
+  "sole() with no item, or no matching item, throws ItemNotFoundException, and with two matching items throws MultipleItemsFoundException whose getCount() is 2 and whose message is '2 items were found.'; firstOrFail() with no matching item throws ItemNotFoundException and with several returns the first; both exceptions are RuntimeExceptions whose fqcn() is their Upstream FQCN (Illuminate\\Support\\ItemNotFoundException, Illuminate\\Support\\MultipleItemsFoundException), resolved through the Class Registry; the same holds for LazyCollection. random(4) on three items throws InvalidArgumentException 'You requested 4 items, but there are only 3 items available.' on Collection and LazyCollection, and Collection's shift(-1) throws InvalidArgumentException 'Number of shifted items may not be less than zero.'",
+  () => {
+    const caught = (run: () => unknown): unknown => {
+      try {
+        run();
+      } catch (error) {
+        return error;
+      }
+      return null;
+    };
+
+    Assert.assertSame("Illuminate\\Support\\ItemNotFoundException", fqcn(ItemNotFoundException));
+    Assert.assertSame("Illuminate\\Support\\MultipleItemsFoundException", fqcn(MultipleItemsFoundException));
+    Assert.assertSame(ItemNotFoundException, resolveClass("Illuminate\\Support\\ItemNotFoundException"));
+    Assert.assertSame(MultipleItemsFoundException, resolveClass("Illuminate\\Support\\MultipleItemsFoundException"));
+
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
+      const none = caught(() => make([]).sole());
+      Assert.assertInstanceOf(ItemNotFoundException, none, "sole() on no item");
+      Assert.assertInstanceOf(RuntimeException, none);
+      Assert.assertSame("Illuminate\\Support\\ItemNotFoundException", fqcn(none as object));
+
+      Assert.assertInstanceOf(ItemNotFoundException, caught(() => make([1, 2]).sole((value: number) => value > 5)), "sole() with no match");
+
+      const several = caught(() => make([{ name: "foo" }, { name: "foo" }, { name: "bar" }]).sole("name", "foo"));
+      Assert.assertInstanceOf(MultipleItemsFoundException, several, "sole() with two matches");
+      Assert.assertInstanceOf(RuntimeException, several);
+      Assert.assertSame("Illuminate\\Support\\MultipleItemsFoundException", fqcn(several as object));
+      Assert.assertSame(2, (several as MultipleItemsFoundException).getCount());
+      Assert.assertSame("2 items were found.", (several as MultipleItemsFoundException).getMessage());
+
+      Assert.assertSame("bar", make(["foo", "bar"]).sole((value: string) => value === "bar"), "sole() with one match");
+
+      Assert.assertInstanceOf(ItemNotFoundException, caught(() => make([]).firstOrFail()), "firstOrFail() on no item");
+      Assert.assertInstanceOf(ItemNotFoundException, caught(() => make([{ name: "foo" }]).firstOrFail("name", "bar")), "firstOrFail() with no match");
+      Assert.assertSame("foo", make(["foo", "foo", "bar"]).firstOrFail(), "firstOrFail() with several items gives the first");
+    }
+
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
+      const tooMany = caught(() => make([1, 2, 3]).random(4));
+      Assert.assertInstanceOf(InvalidArgumentException, tooMany, "random() over the count");
+      Assert.assertSame("You requested 4 items, but there are only 3 items available.", (tooMany as InvalidArgumentException).getMessage());
+    }
+
+    const negative = caught(() => collect(["foo", "bar", "baz"]).shift(-1));
+    Assert.assertInstanceOf(InvalidArgumentException, negative, "shift() with a negative count");
+    Assert.assertSame("Number of shifted items may not be less than zero.", (negative as InvalidArgumentException).getMessage());
   },
 );

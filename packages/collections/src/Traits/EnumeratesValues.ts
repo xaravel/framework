@@ -1,7 +1,7 @@
-// Laravel's `Illuminate\Support\Traits\EnumeratesValues` (v13.37.0), the members Story 14.1 ports, as a runtime trait
-// (AD-26 Traits row): `Collection` and `LazyCollection` are `mixin(null, EnumeratesValues, Macroable)`, and the trait
-// uses `Conditionable` as Upstream's does. The other members belong to the Collections Stories that port their tests;
-// `dump` and `dd` call Symfony's VarDumper through Support (Epic 19).
+// Laravel's `Illuminate\Support\Traits\EnumeratesValues` (v13.37.0), the members Stories 14.1 and 14.2 port, as a
+// runtime trait (AD-26 Traits row): `Collection` and `LazyCollection` are `mixin(null, EnumeratesValues, Macroable)`,
+// and the trait uses `Conditionable` as Upstream's does. The other members belong to the Collections Stories that port
+// their tests; `dump` and `dd` call Symfony's VarDumper through Support (Epic 19).
 //
 // `static::$proxies` is one Upstream static per using class, held per Scope Frame unit with `frameStatic` (AD-5): the
 // key is the class whose own `proxy` is this trait's (the layer `mixin` builds), so `Collection`, its subclasses and
@@ -10,6 +10,11 @@
 // `$escapeWhenCastingToString` shares its name with a method (DIV-12.2): the method keeps the name, and the state is
 // the `escapeWhenCastingToStringProperty` field.
 //
+// `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
+// `...arguments` unchanged. Members whose first parameter is a PHP value or a callback, or that read the argument count
+// (`some`, `firstWhere`, `hasMany`, `where`), keep only the positional form, and a lone object is the PHP value
+// (DIV-12.20).
+//
 // The trait's methods call the using class's own members (`all`, `map`, `getIterator`, …), so each declares `this`
 // as `EnumeratesValuesHost`. This module and `Collection.ts` import each other; it uses `Collection` only at call time
 // (`collect()`), and `Collection.ts` loads first (the package index exports it first, and `LazyCollection.ts` imports it
@@ -17,19 +22,23 @@
 import { Conditionable } from "@xaravel/conditionable";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import {
+  array_filter,
   array_map,
   arrayEntries,
   BlockedByComponentError,
   CachingIterator,
+  count,
   Exception,
   fqcn,
   frameStatic,
   get_debug_type,
+  identical,
   implode,
   in_array,
   is_a,
   is_array,
   is_callable,
+  is_object,
   is_scalar,
   is_string,
   isContractToken,
@@ -42,7 +51,9 @@ import {
   mixin,
   type PhpArrayKey,
   registerClass,
+  spaceship,
   sprintf,
+  Stringable,
   toBool,
   toPhpString,
   valueCopy,
@@ -53,7 +64,8 @@ import {
 import { Arr } from "../Arr";
 import { Collection } from "../Collection";
 import { Enumerable } from "../Enumerable";
-import { data_get } from "../helpers";
+import { enum_value } from "../functions";
+import { data_get, data_has } from "../helpers";
 import { HigherOrderCollectionProxy } from "../HigherOrderCollectionProxy";
 import { callCallable } from "../support/callables";
 
@@ -66,6 +78,9 @@ type CollectionClass<R> = new (items?: unknown, ...args: any[]) => R;
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
 
+/** The arguments of a `($key, $operator = null, $value = null)` member, as `func_get_args()` forwards them. */
+type WhereArguments = [key: unknown, operator?: unknown, value?: unknown];
+
 /** The members of the using class (`Collection`, `LazyCollection`) that the trait's methods call. */
 export interface EnumeratesValuesHost {
   all(): unknown;
@@ -76,6 +91,15 @@ export interface EnumeratesValuesHost {
   entries(): Iterable<[PhpArrayKey, unknown]>;
   jsonSerialize(): unknown;
   toJson(options?: number): string;
+  contains(key: unknown, operator?: unknown, value?: unknown): boolean;
+  first(callback?: ItemCallback | null, defaultValue?: unknown): unknown;
+  take(limit: number): EnumeratesValuesHost;
+  count(): number;
+}
+
+/** What a `HigherOrderWhenProxy` from `unless($condition)` answers: the collection's `filter`, or the collection. */
+interface WhenFilterProxy {
+  filter(callback: unknown): EnumeratesValuesHost;
 }
 
 /** The `frameStatic` key of a using class's `static::$proxies`. */
@@ -249,6 +273,47 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     return this.filter((value: unknown, key: unknown) => (useAsCallable ? !toBool(callCallable(callback, valueCopy(value), key)) : !looseEquals(value, callback))) as T;
   }
 
+  /** Alias for the "contains" method. */
+  some(this: EnumeratesValuesHost, key: unknown, operator: unknown = null, value: unknown = null): boolean {
+    void operator;
+    void value;
+    return this.contains(...([...arguments] as WhereArguments));
+  }
+
+  /** Get the first item by the given key value pair (or the first item a callback accepts). */
+  firstWhere(this: EnumeratesValuesHost & EnumeratesValues, key: unknown, operator: unknown = null, value: unknown = null): unknown {
+    void key;
+    void operator;
+    void value;
+    return this.first(this.operatorForWhere(...([...arguments] as WhereArguments)) as ItemCallback);
+  }
+
+  /** Determine if the collection contains multiple items, optionally matching the given criteria. */
+  hasMany(this: EnumeratesValuesHost & EnumeratesValues, key: unknown = null, operator: unknown = null, value: unknown = null): boolean {
+    void operator;
+    void value;
+    const filter = arguments.length > 1 ? this.operatorForWhere(...([...arguments] as WhereArguments)) : key;
+
+    return (this.unless(looseEquals(filter, null)) as unknown as WhenFilterProxy).filter(filter).take(2).count() === 2;
+  }
+
+  /** Get a single key's value ("dot" notation) from the first item that has the key, or `default`. */
+  value(this: EnumeratesValuesHost, key: unknown, defaultValue: unknown = null): unknown {
+    const value_ = this.first((target: unknown) => {
+      return data_has(target, key);
+    });
+
+    return data_get(value_, key, defaultValue);
+  }
+
+  /** Filter items by the given key value pair (or by a callback). */
+  where<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, operator: unknown = null, value: unknown = null): T {
+    void key;
+    void operator;
+    void value;
+    return this.filter(this.operatorForWhere(...([...arguments] as WhereArguments)) as ItemCallback) as T;
+  }
+
   /** Collect the values into a `Collection`. */
   collect(this: EnumeratesValuesHost): Collection {
     return new Collection(this.all());
@@ -335,6 +400,68 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   /** Results array of items from Collection or Arrayable: a scalar, `null` or enum case wrapped, anything else `Arr.from`. */
   protected getArrayableItems(items: unknown): unknown {
     return items === null || items === undefined || is_scalar(items) || items instanceof UnitEnum ? Arr.wrap(items ?? null) : Arr.from(items);
+  }
+
+  /**
+   * Get an operator checker callback: a callback key is returned as it is; otherwise a callback that compares each
+   * item's `data_get(item, key)` with `value` under `operator` (`=` when only the key, or the key and a value, are
+   * given), enum cases read through `enum_value`, and PHP's comparisons.
+   */
+  protected operatorForWhere(key: unknown, operator: unknown = null, value: unknown = null): unknown {
+    if (this.useAsCallable(key)) {
+      return key;
+    }
+
+    if (arguments.length === 1) {
+      value = true;
+
+      operator = "=";
+    }
+
+    if (arguments.length === 2) {
+      value = operator;
+
+      operator = "=";
+    }
+
+    return (item: unknown): unknown => {
+      const retrieved = enum_value(data_get(item, key));
+      // PHP's closure `use ($value)` copies the value into each call, which reassigns its own copy.
+      const compared = enum_value(value);
+
+      const strings = array_filter([retrieved, compared], (value_: unknown) => {
+        return is_string(value_) ? true : value_ instanceof Stringable ? true : false;
+      });
+
+      if (Number(count(strings)) < 2 && looseEquals(count(array_filter([retrieved, compared], is_object)), 1)) {
+        return in_array(operator, ["!=", "<>", "!=="]);
+      }
+
+      switch (operator) {
+        default:
+        case "=":
+        case "==":
+          return looseEquals(retrieved, compared);
+        case "!=":
+        case "<>":
+          return !looseEquals(retrieved, compared);
+        case "<":
+          return spaceship(retrieved, compared) < 0;
+        // PHP's `$a > $b` and `$a >= $b` compare the operands swapped: `$b < $a` and `$b <= $a`.
+        case ">":
+          return spaceship(compared, retrieved) < 0;
+        case "<=":
+          return spaceship(retrieved, compared) <= 0;
+        case ">=":
+          return spaceship(compared, retrieved) <= 0;
+        case "===":
+          return identical(retrieved, compared);
+        case "!==":
+          return !identical(retrieved, compared);
+        case "<=>":
+          return spaceship(retrieved, compared);
+      }
+    };
   }
 
   /** Determine if the given value is callable, but not a string. */
