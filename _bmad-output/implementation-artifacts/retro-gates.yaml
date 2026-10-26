@@ -98,4 +98,5 @@ epic-13:
   doc: _bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-13-retro-item-5-reflector-own-type
