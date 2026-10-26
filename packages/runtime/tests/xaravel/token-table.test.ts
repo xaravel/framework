@@ -108,7 +108,7 @@ function isSubclassOfByName(paramClassName: string | null, className: string): b
 
 xaravelTest(
   "XT-runtime-48",
-  "the Registry records a contract token under its FQCN with registerContractToken (exported from the root and registry), case-insensitive with a leading \\ dropped, first token wins and the same token again is a no-op, a non-token a TypeError; interfaceExists (root and php) is true for a recorded token's FQCN and false for a class, an unknown name and an unrecorded token, and a non-string a PHP TypeError; new ReflectionClass and isSubclassOf resolve a recorded token's FQCN after the classes, so Reflector::isParameterSubclassOf ports line for line for an interface hint; fqcn and resolveClass are unchanged; Symbol.for('xaravel.class.lookup') gives a class (test class first) or a token or null, and is installed by each of the four entries, non-writable, non-configurable and non-enumerable, refuses another value with LogicException and is skipped under XARAVEL_NO_SCOPE_GLOBAL=1 (ESC-13.1-7, ESC-13.1-9)",
+  "the Registry records a contract token under its FQCN with registerContractToken (exported from the root and registry), case-insensitive with a leading \\ dropped, first token wins and the same token again is a no-op, a non-token a TypeError; interfaceExists (root and php) is true for a recorded token's FQCN and false for a class, an unknown name and an unrecorded token, and a non-string a PHP TypeError; new ReflectionClass and isSubclassOf resolve a recorded token's FQCN after the classes, so Reflector::isParameterSubclassOf ports line for line for an interface hint; fqcn and resolveClass are unchanged; Symbol.for('xaravel.class.lookup') gives a class (test class first) or a token or null, and is installed by each of the four entries, writable and configurable (so a grader fixture can layer over it and restore it) and non-enumerable, refuses another value with LogicException and is skipped under XARAVEL_NO_SCOPE_GLOBAL=1 (ESC-13.1-7, ESC-13.1-9)",
   () => {
     // Exports.
     Assert.assertSame(registerContractToken, (root as Record<string, unknown>)["registerContractToken"]);
@@ -198,13 +198,13 @@ xaravelTest(
     });
     Assert.assertSame(null, lookup(`${NS}\\TestOnly`));
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, CLASS_LOOKUP)!;
-    Assert.assertSame([false, false, false], [descriptor.writable, descriptor.configurable, descriptor.enumerable]);
+    Assert.assertSame([true, true, false], [descriptor.writable, descriptor.configurable, descriptor.enumerable]);
 
     // Each of the four entries installs it in a fresh process.
     for (const entry of ENTRIES) {
       const run = child(`await import(${JSON.stringify(join(PACKAGE_DIR, entry))}); const f = globalThis[Symbol.for("xaravel.class.lookup")]; const d = Object.getOwnPropertyDescriptor(globalThis, Symbol.for("xaravel.class.lookup")); console.log(typeof f, f("stdclass") !== null, f("Nope"), d.writable, d.configurable, d.enumerable);`);
       Assert.assertSame(0, run.code, `${entry}: ${run.err}`);
-      Assert.assertSame("function true null false false false", run.out, entry);
+      Assert.assertSame("function true null true true false", run.out, entry);
     }
     // The Registry alone installs nothing.
     const bare = child(`await import(${JSON.stringify(join(PACKAGE_DIR, "src/registry/registry.ts"))}); console.log(globalThis[Symbol.for("xaravel.class.lookup")] === undefined);`);

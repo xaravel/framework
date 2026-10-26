@@ -13,14 +13,17 @@
 //
 // Story 4.6's twins (`XtIface`, `XtReal`) are declared in SETUP_ADVANCED
 // only, after 4.5's SETUP, so 4.5's requests keep their bytes. TS has no
-// class registry yet, so this module installs a stand-in for the class-lookup
-// protocol (`globalThis[Symbol.for('xaravel.class.lookup')]`, ESC-4.6-1 item
-// 9) that resolves the twins' names, as Story 9.4's registry is to.
+// class registry of its own (the grader never imports the runtime), so this
+// module layers a stand-in for the class-lookup protocol
+// (`globalThis[Symbol.for('xaravel.class.lookup')]`, ESC-4.6-1 item 9) that
+// resolves the twins' names over any lookup already installed, and restores
+// it after the importing file's tests.
 //
 // A scenario appends what it observes to `$r` / `r`. The wrapper closes the
 // container and gives `['ok', $r]`, or `['throws', <short class>, <message>]`
 // for the first throw (then closes again, ignoring a second throw). `xt_try` /
 // `xtTry` records a throw without ending the scenario.
+import { afterAll } from "bun:test";
 import type { Mockery as MockeryClass } from "../../src/index";
 import { BadMethodCallException as SplBadMethodCallException } from "../../src/php/BadMethodCallException";
 import { UnexpectedValueException as SplUnexpectedValueException } from "../../src/php/UnexpectedValueException";
@@ -156,14 +159,25 @@ const TWINS = new Map<string, unknown>([
   ["xtreal", XtReal],
   ["xtmodel", XtModel],
 ]);
-if (!(LOOKUP in globalThis)) {
-  Object.defineProperty(globalThis, LOOKUP, {
-    value: (name: string): unknown => TWINS.get(name.toLowerCase()) ?? null,
-    writable: true,
-    configurable: true,
-    enumerable: false,
-  });
-}
+// Layered on whatever lookup is installed (the runtime's, when a file loaded it): the twins first, every other name
+// delegated to the previous lookup (null when there was none); the previous property, or its absence, is restored
+// after the importing file's tests, so the grader's results never depend on the runtime's lookup.
+const previousLookupDescriptor = Object.getOwnPropertyDescriptor(globalThis, LOOKUP);
+const previousLookup: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
+Object.defineProperty(globalThis, LOOKUP, {
+  value: (name: string): unknown =>
+    TWINS.get(name.toLowerCase()) ?? (typeof previousLookup === "function" ? (previousLookup as (name: string) => unknown)(name) : null),
+  writable: true,
+  configurable: true,
+  enumerable: false,
+});
+afterAll(() => {
+  if (previousLookupDescriptor === undefined) {
+    delete (globalThis as Record<symbol, unknown>)[LOOKUP];
+  } else {
+    Object.defineProperty(globalThis, LOOKUP, previousLookupDescriptor);
+  }
+});
 
 export const SETUP: readonly string[] = [
   "class XtFoo { public function bar($x = null) {} public function baz() {} public function qux() {} }",

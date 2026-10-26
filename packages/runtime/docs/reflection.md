@@ -66,9 +66,8 @@ given.
 - `getParentClass()`: the nearest registered class up the constructor chain, or `false`. An unregistered class on the
   chain (a `mixin()` layer, the JS `Error` under PHP's `Exception`) is skipped. A token has none.
 - `isSubclassOf(t)`, `t` a class, a token, a `ReflectionClass`, a registered FQCN or a recorded token's FQCN: a class
-  against a class is the
-  strict constructor chain; a class against a token is `hasBrand`; a token against a token walks the token's parents
-  (`Symbol.for('xaravel.contract.parents')`). Never itself.
+  against a class is the strict constructor chain; a class against a token is `hasBrand`; a token against a token
+  walks the token's parents (`Symbol.for('xaravel.contract.parents')`). Never itself.
 - `getMethod(name)`: a `ReflectionMethod`, or a `ReflectionException` `Method <FQCN>::<name>() does not exist`.
 - `getAttributes(filter)`: see below.
 

@@ -69,12 +69,13 @@ interface name does, the Registry keeps a separate token table (ESC-13.1-7).
 ### The `Symbol.for('xaravel.class.lookup')` protocol
 
 Loading any of the four package entries defines `globalThis[Symbol.for('xaravel.class.lookup')]`: a function from a
-class or interface name to what it names, a registered class or a recorded token, else `null`, by the order above.
-The grader reads it without importing the runtime, so `assertInstanceOf` and `assertNotInstanceOf` take a
-class-string as PHPUnit's do (ESC-13.1-9). It follows `Symbol.for('xaravel.php.classes')`'s install rules
-([exceptions.md](exceptions.md)): the property is non-writable, non-configurable and non-enumerable; loading throws a
-`LogicException` when the symbol is already defined with another value; and `XARAVEL_NO_SCOPE_GLOBAL=1` skips the
-install.
+class or interface name to what it names, a registered class or a recorded token, else `null`, by the order above. The
+grader reads it without importing the runtime, so `assertInstanceOf` and `assertNotInstanceOf` take a class-string as
+PHPUnit's do (ESC-13.1-9). It follows `Symbol.for('xaravel.php.classes')`'s install rules
+([exceptions.md](exceptions.md)), except that the property is writable and configurable, so a grader test fixture can
+layer its own stand-in over it (answering its own names first and delegating the rest) and restore it afterwards; it
+stays non-enumerable; loading throws a `LogicException` when the symbol is already defined with another value; and
+`XARAVEL_NO_SCOPE_GLOBAL=1` skips the install.
 
 ## Autoload and the classmap
 

@@ -28,7 +28,7 @@ ${body}`;
   return JSON.parse(run.stdout.toString()) as Record<string, string>;
 }
 
-const WITH_RUNTIME = `const { Assert } = await import(${ASSERT});
+const WITH_RUNTIME = `const { Assert, TestCase } = await import(${ASSERT});
 const runtime = await import(${RUNTIME});
 const { contract } = await import(${CONTRACTS});`;
 
@@ -66,6 +66,7 @@ const out = {
   unknown: outcome(() => Assert.assertInstanceOf("Nope", new Post())),
   unknownNot: outcome(() => Assert.assertNotInstanceOf("Nope", new Post())),
   containsOnly: outcome(() => Assert.assertContainsOnlyInstancesOf(POST, [new Post()])),
+  expectException: outcome(() => new TestCase().expectException(POST)),
 };
 class Fixture {}
 runInRootFrame("test", () => {
@@ -97,6 +98,8 @@ console.log(JSON.stringify(out));`,
     expect(rows["unknownNot"]).toBe('UnknownClassOrInterfaceException: Class or interface "Nope" does not exist');
     // Not in the ruling: assertContainsOnlyInstancesOf still refuses a string.
     expect(rows["containsOnly"]).toBe(`UnknownClassOrInterfaceException: Class or interface "${post}" does not exist`);
+    // Not in the ruling either: expectException still refuses a class-string, even one the runtime's lookup resolves.
+    expect(rows["expectException"]).toBe(`UnknownClassOrInterfaceException: Class or interface "${post}" does not exist`);
     expect(rows["testClassPass"]).toBe("(pass)");
     expect(rows["testClassFail"]).toBe(`ExpectationFailedException: Failed asserting that an instance of class ${post} is an instance of class ${fixture}.`);
     expect(rows["testClassAfter"]).toBe(`UnknownClassOrInterfaceException: Class or interface "${fixture}" does not exist`);

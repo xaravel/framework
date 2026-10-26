@@ -112,7 +112,13 @@ xaravelTest(
     // The class lookup of a return type yields an object only when it is a contract token.
     const answers: Record<string, unknown> = { "XtT\\Root": Root, "XtT\\Forged": forged };
     const saved = Object.getOwnPropertyDescriptor(globalThis, LOOKUP);
-    Object.defineProperty(globalThis, LOOKUP, { value: (name: string): unknown => answers[name] ?? null, configurable: true, writable: true });
+    // Layered on the installed lookup: these names first, every other name delegated (null when none is installed).
+    const previous: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
+    Object.defineProperty(globalThis, LOOKUP, {
+      value: (name: string): unknown => answers[name] ?? (typeof previous === "function" ? (previous as (name: string) => unknown)(name) : null),
+      configurable: true,
+      writable: true,
+    });
     try {
       expect(lookupClass("XtT\\Root")).toBe(Root);
       expect(lookupClass("\\XtT\\Root")).toBe(Root);

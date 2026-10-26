@@ -103,7 +103,13 @@ xaravelTest(
     const bare = Object.freeze({ [CLASS_FQCN]: "XtMT\\Bare", [CONTRACT_METHODS]: Object.freeze(["bare"]) });
     const answers: Record<string, unknown> = { "XtMT\\Bare": bare, "XtMT\\Forged": forged };
     const saved = Object.getOwnPropertyDescriptor(globalThis, LOOKUP);
-    Object.defineProperty(globalThis, LOOKUP, { value: (name: string): unknown => answers[name] ?? null, configurable: true, writable: true });
+    // Layered on the installed lookup: these names first, every other name delegated (null when none is installed).
+    const previous: unknown = (globalThis as Record<symbol, unknown>)[LOOKUP];
+    Object.defineProperty(globalThis, LOOKUP, {
+      value: (name: string): unknown => answers[name] ?? (typeof previous === "function" ? (previous as (name: string) => unknown)(name) : null),
+      configurable: true,
+      writable: true,
+    });
     try {
       const fromName = double("XtMT\\Bare");
       expect(brandDescriptor(Object.getPrototypeOf(fromName) as object, Symbol.for("XtMT\\Bare"))).toEqual(BRAND);
