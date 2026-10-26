@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: blocked  # 159 of 171 built; ESC-14.2-4 ruled option 1 by the monitor under the runtime-builtins standing rule (decisions/ESC-14.2-4.md), action item epic-14-item-6-runtime-sort-string-functions lands first and frees its 12 Test IDs; ESC-14.2-5 (Fidelity F-4 evidence) is the orchestrator's to rule (amendment 2026-10-21), and that ruling unblocks the Story
+  14-2-retrieval-search-and-mutation-methods: in-progress  # 159 of 171 built; ESC-14.2-4 ruled option 1 by the monitor under the runtime-builtins standing rule (decisions/ESC-14.2-4.md), action item epic-14-item-6-runtime-sort-string-functions lands first and frees its 12 Test IDs; ESC-14.2-5 approved by the orchestrator (amendment 2026-10-21, decisions/ESC-14.2-5.md): F-4 evidence (i) added, re-run the Fidelity Review on the changed tree
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
