@@ -14,7 +14,9 @@ export XARAVEL_ORCH_STATE="${XARAVEL_TRIAL_STATE:-$HOME/.xaravel-codex-trial-sta
 STATE="$XARAVEL_ORCH_STATE"
 BRANCH="${XARAVEL_TRIAL_BRANCH:-planning/codex-loop-trial}"
 CODEX="${XARAVEL_TRIAL_CODEX:-codex}"
-mkdir -p "$STATE/logs" "$STATE/gh-signed-out"
+mkdir -p "$STATE/logs" "$STATE/gh-signed-out" "$STATE/tmp"
+# Temporary files stay inside a writable root (run 4 halted writing a diff outside them).
+export TMPDIR="$STATE/tmp"
 
 # Isolation for every command below: no GitHub credentials, no push target.
 unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN

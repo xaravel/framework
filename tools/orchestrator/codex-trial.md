@@ -17,8 +17,12 @@ These override anything below that conflicts with them.
    - Run at most one test process at a time.
 4. **Skills.** The BMAD skills are in `.agents/skills`, a copy of `.claude/skills`. Load a skill the way the instructions name it, for example `bmad-build-auto`. Where an instruction names a Claude Code tool you don't have (Agent, Skill, TaskCreate, ScheduleWakeup, auto permission mode), use your closest equivalent and record what you used. Use subagents for the subagent steps.
 5. **The workflow's own writes are not a dirty tree.** Some steps write tracked files before a later clean-tree check, for example step-01's context compilation refreshing `epic-<N>-context.md`. Those files are the workflow's own output, so commit them on the unit's branch (`<id>: refresh epic context`), then pass the check. Only changes the workflow did not make count as dirty.
-6. **Fidelity Review.** Run it as the workflow says, with `--loop-cli codex`. It then uses Claude for reviewer 1.
-7. **Stop at the workflow's HALT.** Do one unit, as the iteration says.
+6. **Codex specifics.**
+   - Write temporary files, review diffs included, under `$TMPDIR`, which is `$XARAVEL_ORCH_STATE/tmp`. Never use `/tmp` or another path outside the writable roots.
+   - Keep each `apply_patch` small, a few hunks. Write or rewrite a large file from the shell (`cat > file <<'EOF'`) or with a short script.
+   - The session has 4 subagent slots, counting you. Run the review layers in batches that fit, for example two and then two, and the Fidelity Review as a background shell command, not a subagent.
+7. **Fidelity Review.** Run it as the workflow says, with `--loop-cli codex`. It then uses Claude for reviewer 1.
+8. **Stop at the workflow's HALT.** Do one unit, as the iteration says.
 
 ## The report
 
