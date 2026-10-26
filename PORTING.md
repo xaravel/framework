@@ -57,6 +57,7 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 | The int/float distinction | the runtime float marker; `isFloat(v)` reads it | Story 9.5, AD-9, DIV-9.4 |
 | `undefined` reaching a boundary | `normalizeNull(v)`: `null` is the only absent value, and no API returns `undefined` | Story 9.5, AD-9, DIV-9.1 |
 | `==` | `looseEquals(a, b)` | Story 9.6 |
+| `===` / `!==` where an operand can be a PHP array | `identical(a, b)` / `!identical(a, b)` | ESC-14.2-1 |
 | `<=>` | `spaceship(a, b)` | Story 9.6 |
 | `is_numeric` | `isNumeric(v)` | Story 9.6 |
 | `(int)`, `(float)`, `(string)`, `(bool)` | `toInt`, `toFloat`, `toPhpString`, `toBool` | Story 9.6 |
@@ -119,7 +120,7 @@ bun run porting:translate --blade '<blade template>'
 | integral float literal `1.0` | `float(1)` (DIV-9 float marker) |
 | `'s'`, `"s\t$v {$o->p}"` | a JS single-quoted string; interpolation becomes `'s\t' + toPhpString(v) + ' ' + toPhpString(o.p)` |
 | `a . b` | `toPhpString(a) + toPhpString(b)`; a string-literal operand is not wrapped |
-| list `[1, 2]`, `array(1, 2)`, spread `...$a` | `[1, 2]`, `...a` |
+| list `[1, 2]`, `array(1, 2)`, spread `...$a` | `[1, 2]`, `...a`; a spread of a `PhpArray` with integer keys is `...array_values(a)` (DIV-9.15) |
 | every key a non-integer-like string literal | `{ a: 1, 'b-c': 2 }` |
 | any other keyed array | `new PhpArray([[k, v], …])`; an implicit key gets the next literal integer index, and a non-literal key before an implicit one is untranslatable. Explicit (or mixed implicit and explicit) keys that normalise to `0..n-1` in order are a list, ported as a JS `Array` per § Test-adaptation rules / Array literals (DIV-9.2); `porting:translate` does not yet apply this. |
 | `$a[k]` | `a[k]` (ArrayAccess receivers adapt to `.get(k)` under DIV-12) |
