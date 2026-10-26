@@ -1819,7 +1819,12 @@ action_items:
       accept a class-string resolved through the Class Registry or the token table,
       else UnknownClassOrInterfaceException (ESC-13.1-9). An XT case for each; no assertion
       removed or weakened; lands before Story 13.1 resumes. The reasons.ts part (ESC-13.1-10)
-      landed in the Maintainer's PR and is not part of this item"
+      landed in the Maintainer's PR and is not part of this item. Also in scope (amendment
+      2 of the ruling): only the class-lookup set-up in packages/mockery/tests/** and packages/assert/tests/**.
+      Each fixture layers its stand-in on whatever Symbol.for('xaravel.class.lookup')
+      is installed (its own test classes first, else delegate) and restores it on teardown,
+      so the grader's tests never depend on the runtime's lookup, and the runtime installs
+      the global so that it can be layered. No assertion or expected value changes"
     owner: "orchestrator"
     status: in-progress
     ref: "decisions/MAINT-2026-10-25-story-13-1-second.md"

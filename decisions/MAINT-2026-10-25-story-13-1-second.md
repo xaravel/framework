@@ -41,4 +41,17 @@ The Maintainer's session settled both, within this ruling:
 
 The item leaves epic 13's `waiting_on_maintainer` and stays `in-progress`. Its planning notes are in `bmad-build-auto-result-retro-13-reflection-contracts.md`.
 
+### Amendment 2: the class-lookup fixtures
+
+#440 found that the item's token and registry lookup collides with a protocol that already exists. It installs the global `Symbol.for('xaravel.class.lookup')`, the protocol ESC-4.6-1 item 9 always meant the class registry to install. Five Protected grader tests in `packages/mockery/tests/**` and `packages/assert/tests/**` stub that global themselves, because nothing installed the real one, so the full harness gave `differ=5`.
+
+The Maintainer approved option 1 with a guard:
+
+- **Scope.** The item may also change the class-lookup set-up in `packages/mockery/tests/**` and `packages/assert/tests/**`, and nothing else there.
+- **The guard.** Each fixture layers its stand-in on whatever lookup is installed: it answers for its own test classes first, delegates every other name, and restores the original on teardown. The runtime installs the global so that it can be layered this way.
+- **Why the guard.** The grader's tests then stay hermetic and never depend on the graded runtime's lookup (AD-15 grader isolation). Without it, plain deferral would tie the grader's results to runtime code and to load order.
+- **Limits.** No assertion or expected value changes, and the Fidelity Review checks that.
+
+The item leaves epic 13's `waiting_on_maintainer` again. It resumes from `planning/retro-13-reflection-contracts-impl`.
+
 The six `blocked-by` lines for later Phases (mail, bus, database) need no AC of their own. The global rule and the Phase sweep Stories re-verify them, as `decisions/MAINT-2026-10-25-epic-12-items.md` item 4 settled.

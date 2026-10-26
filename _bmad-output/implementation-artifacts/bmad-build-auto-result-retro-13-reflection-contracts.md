@@ -5,9 +5,13 @@ status: blocked
 # BMad Build Auto Result
 
 Status: blocked
-Blocking condition: action item `epic-13-item-2-reflection-contracts` needs a change outside the components its `action` names, so under the 2026-10-22 amendment of `decisions/MAINT-2026-10-16-unattended-orchestrator.md` ("Outside the scope") it waits for the Maintainer.
+Blocking condition: action item `epic-13-item-2-reflection-contracts` needs a change outside its scope (second run: Protected tests that stub `Symbol.for('xaravel.class.lookup')`), so under the 2026-10-22 amendment of `decisions/MAINT-2026-10-16-unattended-orchestrator.md` ("Outside the scope") it waits for the Maintainer.
 
-## Why
+## Second run (2026-10-25): blocked on the class-lookup protocol
+
+The Maintainer's 2026-10-25 amendment settled both questions below, and the item was built in full: spec `spec-retro-13-reflection-contracts.md`, code saved on branch `planning/retro-13-reflection-contracts-impl`. It stops because the runtime's name lookup is `globalThis[Symbol.for('xaravel.class.lookup')]`, the grader protocol ESC-4.6-1 item 9 says the class registry installs. Protected tests in `packages/mockery` and `packages/assert` stub that global themselves, so with the runtime installing it the full harness gives `differ=5` (XT-mockery-4, -5, -7, -15, XT-assert-20; XT-assert-100 depends on file order). Fixing them needs `packages/mockery/tests/**`, which the item does not name and `--stale-test` refuses as a Protected Path. The spec's `## Auto Run Result` lists each failure and three options; option 1, letting the item change those tests so they wrap or stand aside for the runtime's lookup, is recommended.
+
+## Why (first run)
 
 The run stopped in planning (step 2), before any code was written. Two questions are open:
 
