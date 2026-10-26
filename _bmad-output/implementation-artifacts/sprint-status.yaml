@@ -1847,8 +1847,8 @@ action_items:
     action: "Remove the committed scratch note _bmad-output/implementation-artifacts/bmad-build-auto-result-retro-13-reflection-contracts.md,
       since epic-13-item-2-reflection-contracts is done (#442) (P3)."
     owner: "orchestrator"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-13-items.md"
   - id: "epic-13-retro-item-3-blocked-by-reverification"
     epic: 13
     action: "Name a re-verification for Story 13.1's blocked-by:collections and blocked-by:mail
@@ -1857,16 +1857,16 @@ action_items:
       reflection, and add to Story 56.4 (or a Phase 7 sweep) the same for ::testGetClassName
       and ::testEmptyClassName (epics.md)."
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-13-items.md"
   - id: "epic-13-retro-item-4-scratch-note-check"
     epic: 13
     action: "Decide a check for stale bmad-build-auto-result-* notes (P3), since the
       clean-up lesson has failed four times: for example a step in tools/orchestrator/iteration.md
       or a conformance check that fails when a note's action item or Story is done."
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-13-items.md"
   - id: "epic-13-retro-item-5-reflector-own-type"
     epic: 13
     action: "packages/reflection (L1, L4, L5): Reflector.isParameterSubclassOf tests
@@ -1875,7 +1875,9 @@ action_items:
       itself, with an XT-reflection case for two tokens under one FQCN; pin in XT-reflection
       whether a bare unregistered constructor is callable and that a parameter typed
       with an unregistered class throws, and say both in packages/reflection/docs/reflection.md.
-      No assertion removed or weakened."
+      Also (item 6 (b), decisions/MAINT-2026-10-25-epic-13-items.md): Reflector.isCallable('Class::method')
+      for a non-static method gives false, as PHP 8's is_callable does; XT-reflection-1's
+      pin of true is re-pinned to false. No assertion removed or weakened."
     owner: "orchestrator"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
@@ -1887,5 +1889,5 @@ action_items:
       gives false as PHP 8's is_callable does, or true recorded as a third DIV-9.14
       edge (XT-reflection-1 pins true)."
     owner: "Maintainer"
-    status: open
-    ref: "_bmad-output/implementation-artifacts/epic-13-retro-2026-10-25.md"
+    status: done
+    ref: "decisions/MAINT-2026-10-25-epic-13-items.md"

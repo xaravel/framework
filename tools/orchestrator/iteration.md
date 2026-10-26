@@ -44,7 +44,7 @@ C. **Retrospective due.** Take the lowest-numbered epic `N` that is `done` in ST
    1. Create branch `planning/retro-epic-<N>`, or `planning/retro-epic-<N>-rerun` for a second attempt.
    2. Run the `bmad-retrospective` skill as `-H <N>`, headless with the epic named explicitly. Follow it to the end. It writes the retrospective document, appends action items to STATUS and marks `epic-<N>-retrospective: done`.
    3. Record the result in GATES: the verdict from the document's frontmatter, `attempts` incremented, and `doc`.
-   4. Route every action item this retrospective appended that needs the Maintainer, now, in this PR: each one whose owner is `Maintainer` or that meets the waiting test in D. Add their ids to the epic's `waiting_on_maintainer` all at once. Do not spend a later iteration on each one.
+   4. Route every action item this retrospective appended that needs the Maintainer, now, in this PR: each one whose owner is `Maintainer` or that meets the waiting test in D. Add their ids to the epic's `waiting_on_maintainer` all at once. Do not spend a later iteration on each one. One kind is never routed: an item that only asks for a named re-verification AC for new `blocked-by:<c>` lines. The `epics.md` global rule already makes the Epic that delivers `<c>`, or its Phase's sweep Story, re-verify them. Set such an item `done` in this PR, citing `decisions/MAINT-2026-10-25-epic-13-items.md` (standing answer).
    5. Update LESSONS. Add only durable, cross-epic process lessons from this retrospective: pitfalls, conventions that held or failed, and verification habits that caught real problems. Write one or two lines each, in the form `- (epic N) <lesson>. Source: <doc path>`. Skip anything specific to one Story. Merge duplicates into the existing entry. Keep the file under 150 lines; when it grows past that, consolidate older entries rather than deleting their substance.
    6. Apply the verdict:
       - `accepted`: nothing more.
@@ -100,6 +100,7 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 - Never weaken the grader. Never stub another Component; mark the Story `blocked-by:<component>`.
 - Never set `checkpoint_approved` or write a `MAINT-checkpoint-*` decision without a Maintainer `go` comment.
 - Commit messages: `<story-id>: <summary>` or `planning: <summary>`. Prefix a CI-fix commit with `[orchestrator fix]`. End each message with the trailer `Co-Authored-By: Claude <noreply@anthropic.com>`.
+- Result notes: when `bmad-build-auto` writes a `bmad-build-auto-result-*.md` note that you commit, add `unit: <action item id or sprint key>` to its frontmatter. Delete the note in the PR that sets that unit `done`. XT-conformance-1000 fails otherwise (`decisions/MAINT-2026-10-25-epic-13-items.md`).
 
 ## 4. Opening and merging a PR
 
