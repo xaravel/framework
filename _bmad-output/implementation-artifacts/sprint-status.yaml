@@ -157,7 +157,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: in-progress
-  14-1-enumerable-core-construction-conversion-and-serialization: blocked  # ESC-14.1-11 waits on the Maintainer: Mockery.mock(<contract token>) is not instanceof the token (fix in packages/mockery, a Protected grader path); 106/112 Test IDs pass, 4 wait on it, 2 blocked-by:support; Fidelity Review to re-run once ruled and XT-collections-1's Oracle fixture is signed
+  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # ESC-14.1-11 ruled option 1 (decisions/MAINT-2026-10-26-story-14-1-mockery.md); action item epic-14-item-4-mockery-contract-token-targets lands first, then the 4 Mockery Test IDs port and the Story re-runs its done check and Fidelity Review (106/112 passed at #463, 2 blocked-by:support)
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
@@ -1960,3 +1960,20 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-26-story-14-1-third.md"
+  - id: "epic-14-item-4-mockery-contract-token-targets"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-26-story-14-1-mockery.md),
+      in scope packages/mockery (and packages/assert only to export an existing ContractParents
+      helper, no behaviour change): Mockery.mock(X) accepts a contract token target, an
+      @xaravel/contracts token (Arrayable) or a runtime PHP-interface token (JsonSerializable),
+      as PORTING.md's Mockery rule names; Container.parseArguments recognises it with
+      isContractToken instead of reading the frozen token as a PHP array of quick definitions;
+      the generated mock class defines the token's brand and every parent brand
+      (defineContractBrand over contractParentBrands), as the JMac generator does, so the mock
+      is instanceof the token and its parents; expectations on the token's methods work as for
+      a class target (ESC-14.1-11). XT-mockery cases for both token kinds, plus unchanged class,
+      string, symbol and quick-definition targets; no other Mockery or grader behaviour
+      changes; no assertion weakened; lands before Story 14.1 resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-26-story-14-1-mockery.md"
