@@ -157,7 +157,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: in-progress
-  14-1-enumerable-core-construction-conversion-and-serialization: blocked  # ESC-14.1-9 and ESC-14.1-10 (contract) wait on the Maintainer: third planning round, after ESC-14.1-1..8 were ruled (decisions/MAINT-2026-10-25-story-14-1.md, decisions/MAINT-2026-10-25-story-14-1-second.md) and epic-14-item-1/-2 landed; the runtime still lacks PHP predicates and functions every constructor reaches (UnitEnum, is_callable, …) and ReflectionMethod::invokeArgs
+  14-1-enumerable-core-construction-conversion-and-serialization: in-progress  # Maintainer rulings: ESC-14.1-1..4 (decisions/MAINT-2026-10-25-story-14-1.md), ESC-14.1-5..8 (decisions/MAINT-2026-10-25-story-14-1-second.md) and ESC-14.1-9..10 (decisions/MAINT-2026-10-26-story-14-1-third.md), all option 1; action item epic-14-item-3-runtime-type-tests-functions lands first
   14-2-retrieval-search-and-mutation-methods: backlog
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
@@ -1935,3 +1935,27 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-25-story-14-1-second.md"
+  - id: "epic-14-item-3-runtime-type-tests-functions"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-26-story-14-1-third.md),
+      in scope packages/runtime and packages/contracts (contracts only if a token needs it):
+      under their PHP names and PHP behaviour, @xaravel/runtime/php exports the type tests
+      is_array and is_object (AD-9's forms), is_string, is_iterable, is_callable (closures,
+      invokable objects and callable arrays, with DIV-9.13 / DIV-9.14's edges) and
+      is_a($value, $name, $allowString) (a registered class or a recorded contract token,
+      false on a miss); the instanceof targets UnitEnum and BackedEnum (answered by an AD-26
+      enum case), Closure (answered by a plain or arrow function, not a class constructor),
+      ArrayAccess (a token over the existing brand) and Generator also answering a bare JS
+      generator object; the functions sprintf, implode, explode, array_map (one array keeps
+      its keys, several arrays as PHP), array_keys, array_values, array_key_exists,
+      array_key_first, array_key_last, array_merge, count and abs; and get_debug_type and
+      json_last_error beside the existing getDebugType and jsonLastError (ESC-14.1-9). The
+      runtime's ReflectionMethod gains invoke($object, ...$args) and invokeArgs($object,
+      $args), calling the method whatever its visibility, on the class for a static method,
+      throwing ReflectionException when the object is not an instance of the declaring
+      class, and setAccessible() as a no-op (ESC-14.1-10). XT-runtime cases for each,
+      against PHP's results; the existing exports stay; the runtime does not import
+      contracts (AD-2); no other runtime behaviour changes; lands before Story 14.1 resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-26-story-14-1-third.md"
