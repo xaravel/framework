@@ -366,3 +366,8 @@ Review incomplete: blind and edge layers ran; verification-gap and intent-alignm
 - Edge: Collection.collapseWithKeys spreads its nested arrays into array_replace, potentially exceeding the argument limit with one million arrays.
 
 Residual risk: the implementation has not completed all mandatory review layers; do not mark this Story done or rely on its Fidelity approval until the denied reviewer can run. Follow-up review remains recommended only through the normal resumed workflow; this halted pass applied no review patches.
+
+### 2026-10-27 — Blocked-spec dispatch
+
+Status: blocked
+Blocking condition: blocked spec supplied (bmad-build-auto step-01 explicit-spec route). PR #486 has merged the nested-reviewer permission fix and sprint status requested a resume, but this existing spec still has `status: blocked`. The workflow halts before implementation or review; no reviewer was retried and no new verification is claimed. A resume transition of the spec to `in-review` is required before dispatching it again.

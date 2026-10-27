@@ -160,7 +160,7 @@ development_status:
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
-  14-4-set-operations-and-combining: blocked  # permission denied: Fidelity Review reviewer 2 Codex app-server initialization (Operation not permitted); implementation and 124 Story checks complete, review incomplete
+  14-4-set-operations-and-combining: blocked  # blocked spec supplied: bmad-build-auto step-01 halts on the existing blocked spec; permission fix #486 merged, but spec still requires a resume transition
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog
@@ -1991,7 +1991,7 @@ action_items:
       lcfirst, property_exists, method_exists, and asort / arsort with PHP's sort flags over
       the existing zend sort; PHP's identity operator for arrays and objects as the exported
       identical(a, b); is_numeric and is_float beside the existing isNumeric and isFloat;
-      Random\\Randomizer with pickArrayKeys; and PHP 8.6's SortDirection enum as an AD-26 enum
+      PHP's Randomizer class (Random namespace) with pickArrayKeys; and PHP 8.6's SortDirection enum as an AD-26 enum
       (ESC-14.2-1). XT-runtime cases for each, against PHP's results; the existing exports
       stay; the runtime does not import contracts (AD-2); no other runtime behaviour changes;
       lands before Story 14.2 resumes"

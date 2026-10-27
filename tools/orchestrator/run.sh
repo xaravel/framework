@@ -83,7 +83,10 @@ fi
 # skills from .agents/skills, so it gets a fresh copy of .claude/skills, kept out
 # of git status. Its workspace-write sandbox writes only the clone (.git named
 # explicitly), the state dir and the caches the tools need; approval_policy=never
-# makes anything outside fail at once instead of waiting on an approver.
+# makes anything outside fail at once instead of waiting on an approver. ~/.codex
+# is writable so a nested `codex exec`, the Fidelity Review's Codex reviewer, can
+# start its app-server; without it the reviewer fails with "Operation not
+# permitted (os error 1)". The Maintainer approved this on 2026-10-26.
 codex_iteration() {
   local model=()
   [ -n "${XARAVEL_ORCH_CODEX_MODEL:-}" ] && model=(-m "$XARAVEL_ORCH_CODEX_MODEL")
@@ -92,6 +95,7 @@ codex_iteration() {
   grep -qx '.agents/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.agents/' >> "$REPO/.git/info/exclude"
   (cd "$REPO" && TMPDIR="$STATE/tmp" codex exec -C "$REPO" --add-dir "$REPO/.git" --add-dir "$STATE" \
       --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" --add-dir "$HOME/.bun" --add-dir "$HOME/.config/gh" \
+      --add-dir "$HOME/.codex" \
       --sandbox workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true \
       ${model[@]+"${model[@]}"} --json --color never \
       "$(cat tools/orchestrator/codex.md tools/orchestrator/iteration.md)" </dev/null)
