@@ -16,7 +16,13 @@
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { type ContractToken, contract } from "@xaravel/contracts";
 import type { SyncCallback, ValueOrSyncCallback } from "./support/callables";
-import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArrayKey, type SortDirection, type Traversable } from "@xaravel/runtime";
+import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArray, type PhpArrayKey, type SortDirection, type Traversable } from "@xaravel/runtime";
+
+/** A sort key or synchronous comparison, optionally paired with a direction. */
+export type SortByDescComparison<R> = string | number | bigint | SyncCallback<[a: any, b: any], R> | [string | number | bigint | SyncCallback<[a: any, b: any], R>, boolean | string | SortDirection];
+
+/** Descending sort accepts a key, a synchronous retriever, or PHP comparison-array forms. */
+export type SortByDescCallback<R> = string | number | bigint | boolean | null | SyncCallback<[value: any, key: any], R> | SortByDescComparison<R>[] | PhpArray<PhpArrayKey, SortByDescComparison<R>> | Record<string, SortByDescComparison<R>>;
 
 declare const EnumerableBrand: unique symbol;
 
@@ -133,6 +139,49 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
 
   /** Run a map over each of the items. */
   map<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+
+  /** Map and collapse the result by one level. */
+  flatMap<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+  /** Map the items into associative key/value pairs. */
+  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+  /** Reverse the items, keeping keys. */
+  reverse(): Enumerable;
+  /** Sort the items with a callback or PHP sort flags, keeping keys. */
+  sort<R>(callback?: SyncCallback<[a: any, b: any], R> | string | number | null): Enumerable;
+  /** Sort by a retriever descending. */
+  sortByDesc<R>(callback: SortByDescCallback<R>, options?: number): Enumerable;
+  /** Sort descending, keeping keys. */
+  sortDesc(options?: number): Enumerable;
+  /** Get the most frequent values. */
+  mode(key?: unknown): unknown;
+  /** Get the minimum resolved value. */
+  min<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown;
+  /** Get the maximum resolved value. */
+  max<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown;
+  /** Reduce the collection. */
+  reduce<R>(callback: SyncCallback<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
+  /** Reduce an associative collection. */
+  reduceWithKeys<R>(callback: SyncCallback<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
+  /** Reduce by mutating an initial value. */
+  reduceInto<I, R>(initial: I, callback: SyncCallback<[carry: import("@xaravel/runtime").Ref<I>, value: any, key: any], R>): I;
+  /** Pass the collection to a callback. */
+  pipe<R>(callback: SyncCallback<[collection: this], R>): R;
+  /** Pass the collection to a constructor. */
+  pipeInto<R>(class_: new (collection: this) => R): R;
+  /** Pass the collection through callbacks in order. */
+  pipeThrough<R>(callbacks: SyncCallback<[carry: any], R>[]): unknown;
+  /** Invoke a callback and return the collection. */
+  tap<R>(callback: SyncCallback<[collection: this], R>): this;
+  /** Paginate using a slice. */
+  forPage(page: number, perPage: number): Enumerable;
+  /** Map sequentially in key order.
+   * @asyncRoot callback
+   */
+  mapAsync(callback: (value: any, key: any) => unknown): Promise<Enumerable>;
+  /** Iterate sequentially in key order.
+   * @asyncRoot callback
+   */
+  eachAsync(callback: (value: any, key: any) => unknown): Promise<this>;
 
   /** Create a collection of all elements that do not pass a given truth test. */
   reject<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
