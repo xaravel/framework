@@ -46,7 +46,7 @@ When the Maintainer's Claude subscription is spent, the loop can run on the Code
 - **What `run.sh` does differently:**
   - It copies `.claude/skills` to `.agents/skills`, where Codex reads skills, and keeps that copy out of `git status`.
   - It runs `codex exec` with `tools/orchestrator/codex.md` in front of `iteration.md`. That preamble maps Claude Code's tools to Codex and records the trial lessons.
-  - Codex runs in its `workspace-write` sandbox with `approval_policy=never` and the network on. It may write only the clone (`.git` included), the state dir and `~/.cache`, `~/.claude`, `~/.bun` and `~/.config/gh`. `git push` and `gh` authenticate through `~/.config/gh/hosts.yml`.
+  - Codex runs in its `workspace-write` sandbox with `--approve-for-me` and the network on. It may write only the clone (`.git` included), the state dir and `~/.cache`, `~/.claude`, `~/.bun`, `~/.config/gh` and `~/.codex`. A command the sandbox refuses can be escalated once to Codex's automatic reviewer, which decides as Claude's auto-mode classifier does (`codex.md` item 2). `git push` and `gh` authenticate through `~/.config/gh/hosts.yml`.
   - After Codex's "Selected model is at capacity" error, it waits 5 minutes instead of 15.
 - **Known limits, from the 2026-10-25 trial:**
   - Capacity errors are frequent.

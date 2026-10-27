@@ -82,8 +82,10 @@ fi
 # One Codex iteration (tools/orchestrator/codex.md, then iteration.md). Codex reads
 # skills from .agents/skills, so it gets a fresh copy of .claude/skills, kept out
 # of git status. Its workspace-write sandbox writes only the clone (.git named
-# explicitly), the state dir and the caches the tools need; approval_policy=never
-# makes anything outside fail at once instead of waiting on an approver. ~/.codex
+# explicitly), the state dir and the caches the tools need. --approve-for-me routes
+# a request to run a command outside the sandbox to Codex's automatic reviewer,
+# as Claude's auto permission mode routes risky actions to its classifier; a
+# reviewer denial counts as denied (codex.md item 2; Maintainer, 2026-10-27). ~/.codex
 # is writable so a nested `codex exec`, the Fidelity Review's Codex reviewer, can
 # start its app-server; without it the reviewer fails with "Operation not
 # permitted (os error 1)". The Maintainer approved this on 2026-10-26.
@@ -96,7 +98,7 @@ codex_iteration() {
   (cd "$REPO" && TMPDIR="$STATE/tmp" codex exec -C "$REPO" --add-dir "$REPO/.git" --add-dir "$STATE" \
       --add-dir "$HOME/.cache" --add-dir "$HOME/.claude" --add-dir "$HOME/.bun" --add-dir "$HOME/.config/gh" \
       --add-dir "$HOME/.codex" \
-      --sandbox workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true \
+      --sandbox workspace-write --approve-for-me -c sandbox_workspace_write.network_access=true \
       ${model[@]+"${model[@]}"} --json --color never \
       "$(cat tools/orchestrator/codex.md tools/orchestrator/iteration.md)" </dev/null)
 }
