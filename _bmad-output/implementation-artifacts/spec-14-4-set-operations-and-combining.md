@@ -2,8 +2,8 @@
 title: 'Story 14.4: Set operations and combining'
 type: 'feature'
 created: '2026-10-26'
-status: 'blocked'
-baseline_revision: '572bdc92bed0d3d9a86170a267fe3539aa930f0e'
+status: 'in-progress'
+baseline_revision: '31266421b53261a6d34e4e3eb27c88f2ba2530ea'
 review_loop_iteration: 1
 followup_review_recommended: false
 context:
@@ -14,6 +14,8 @@ context:
   - '{project-root}/decisions/DIV-12.md'
   - '{project-root}/decisions/MAINT-2026-10-26-runtime-builtins.md'
   - '{project-root}/conformance/review/fidelity.md'
+  - '{project-root}/decisions/ESC-14.4-1.md'
+  - '{project-root}/decisions/ESC-14.4-2.md'
 warnings: ['oversized']
 deferred:
   - summary: >-
@@ -94,6 +96,16 @@ deferred:
 - Given the Fidelity Review of the final tree, when it runs, then two `pass` verdicts are recorded (a missing-evidence-only reject counts per `decisions/MAINT-2026-10-24-evidence-gaps.md`).
 
 ## Spec Change Log
+
+**Second planning round (2026-10-26, after ESC-14.4-1, ESC-14.4-2 and epic-14-item-9).** ESC-14.4-1 was ruled option 1 by the monitor under the runtime-builtins standing rule (`decisions/ESC-14.4-1.md`) and ESC-14.4-2 option 1 by the Maintainer (`decisions/ESC-14.4-2.md`, DIV-9.13 / DIV-9.14 amended). epic-14-item-9 landed in 31266421: `@xaravel/runtime/php` exports `array_merge_recursive`, `array_replace`, `array_replace_recursive`, `array_diff`, `array_diff_assoc`, `array_diff_key`, `array_intersect`, `array_udiff`, `array_diff_uassoc`, `array_diff_ukey`, `array_uintersect`, `array_intersect_uassoc`, `array_pad`, `is_int` and `arrayUnion`, and `callbackParameter` / `is_callable` resolve a PHP global-function name such as `'strcasecmp'` to the runtime's export. XT-collections-8's signed Oracle fixture (`conformance/fixtures/collections/d7dcd359….json`) landed on `main` with #482, so its deferral is closed. This run does the work the first two Execution tasks name for after the rulings, in the same scope and rules:
+
+- `packages/collections/src/{Collection,LazyCollection,Enumerable}.ts` -- port `mergeRecursive`, `replace`, `replaceRecursive`, `union`, `diff`, `diffUsing`, `diffAssoc`, `diffAssocUsing`, `diffKeys`, `diffKeysUsing`, `intersect`, `intersectUsing`, `intersectAssocUsing`, `collapseWithKeys`, `flip` and `pad` line for line on both classes (LazyCollection `passthru` or generator exactly as Upstream), declared on `Enumerable` where Upstream declares them, with the runtime builtins under their PHP names and `arrayUnion` for `+`; callbacks typed `SyncCallback`.
+- `packages/collections/tests/ported/.../SupportCollectionTest.test.ts` -- port the 33 held tests as Upstream wrote them, in Upstream order, replacing each one-line ESC-14.4-1 / ESC-14.4-2 comment; callable strings stay strings (PORTING.md).
+- `packages/collections/tests/xaravel/collections.test.ts` -- XT-collections-8 also asserts the staged `union` exprs against the signed fixture on both classes.
+- Expectations -- the 66 lines become `pass` (with `adapted` per the clause rule), dropping `escalation`.
+- `packages/collections/docs/collections.md` -- document the new members and remove the held-members note.
+
+The acceptance criteria become: `bun run harness --story 14.4` shows no difference with 120 pass, 2 `blocked-by:support` and 2 `blocked-by:database`; XT-collections-1..8 pass with the fixture present; the other checks as listed; and two Fidelity `pass` verdicts at the final tree.
 
 ## Review Triage Log
 

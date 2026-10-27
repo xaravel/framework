@@ -5,7 +5,7 @@
 // token in its chain (`get [Enumerable.brand]()`, `get [Arrayable.brand]()`, …), as `instanceof` reads only a token's
 // own brand.
 //
-// The TypeScript interface covers the members Stories 14.1-14.4 port; later Collections Stories extend it with
+// The TypeScript interface covers the members Stories 14.1-14.4 port (`collapseWithKeys` is the classes' own, as in PHP's interface); later Collections Stories extend it with
 // theirs. As in PHP's interface, `dot` and `multiply` are the classes' own members, not the interface's. It also declares the async companions (`filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`,
 // `containsAsync`, `firstAsync`; DIV-1 Callbacks, DIV-1.2), which are Xaravel's and not PHP's, so the token's method
 // map, which records PHP's interface, does not list them. Sync members type their callbacks with `SyncCallback`, so
@@ -275,14 +275,44 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Cross join with the given lists, returning all possible permutations. */
   crossJoin(...lists: unknown[]): Enumerable;
 
+  /** Get the items in the collection that are not present in the given items. */
+  diff(items: unknown): Enumerable;
+
+  /** Get the items in the collection that are not present in the given items, using the callback. */
+  diffUsing<R>(items: unknown, callback: SyncCallback<[a: any, b: any], R> | string): Enumerable;
+
+  /** Get the items in the collection whose keys and values are not present in the given items. */
+  diffAssoc(items: unknown): Enumerable;
+
+  /** Get the items in the collection whose keys and values are not present in the given items, using the callback. */
+  diffAssocUsing<R>(items: unknown, callback: SyncCallback<[a: any, b: any], R> | string): Enumerable;
+
+  /** Get the items in the collection whose keys are not present in the given items. */
+  diffKeys(items: unknown): Enumerable;
+
+  /** Get the items in the collection whose keys are not present in the given items, using the callback. */
+  diffKeysUsing<R>(items: unknown, callback: SyncCallback<[a: any, b: any], R> | string): Enumerable;
+
   /** Get a flattened list of the items in the collection. */
   flatten(depth?: number): Enumerable;
+
+  /** Flip the values with their keys. */
+  flip(): Enumerable;
 
   /** Concatenate values of a given key as a string. */
   implode<R>(value: SyncCallback<[value: any, key: any], R> | string | null, glue?: string | null): string;
 
+  /** Intersect the collection with the given items. */
+  intersect(items: unknown): Enumerable;
+
+  /** Intersect the collection with the given items, using the callback. */
+  intersectUsing<R>(items: unknown, callback: SyncCallback<[a: any, b: any], R> | string): Enumerable;
+
   /** Intersect the collection with the given items with additional index check. */
   intersectAssoc(items: unknown): Enumerable;
+
+  /** Intersect the collection with the given items with additional index check, using the callback. */
+  intersectAssocUsing<R>(items: unknown, callback: SyncCallback<[a: any, b: any], R> | string): Enumerable;
 
   /** Intersect the collection with the given items by key. */
   intersectByKeys(items: unknown): Enumerable;
@@ -293,14 +323,29 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Merge the collection with the given items. */
   merge(items: unknown): Enumerable;
 
+  /** Recursively merge the collection with the given items. */
+  mergeRecursive(items: unknown): Enumerable;
+
   /** Create a collection by using this collection for keys and another for its values. */
   combine(values: unknown): Enumerable;
+
+  /** Union the collection with the given items. */
+  union(items: unknown): Enumerable;
+
+  /** Replace the collection items with the given items. */
+  replace(items: unknown): Enumerable;
+
+  /** Recursively replace the collection items with the given items. */
+  replaceRecursive(items: unknown): Enumerable;
 
   /** Convert a flatten "dot" notation array into an expanded array. */
   undot(): Enumerable;
 
   /** Zip the collection together with one or more arrays. */
   zip(items: unknown, ...moreItems: unknown[]): Enumerable;
+
+  /** Pad collection to the specified length with a value. */
+  pad(size: number, value: unknown): Enumerable;
 
   /**
    * `filter` with a callback that may be async (DIV-1 Callbacks, DIV-1.2), awaited in key order.
@@ -426,15 +471,30 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     uniqueStrict: ["key"],
     collapse: [],
     crossJoin: ["lists"],
+    diff: ["items"],
+    diffUsing: ["items", "callback"],
+    diffAssoc: ["items"],
+    diffAssocUsing: ["items", "callback"],
+    diffKeys: ["items"],
+    diffKeysUsing: ["items", "callback"],
     flatten: ["depth"],
+    flip: [],
     implode: ["value", "glue"],
+    intersect: ["items"],
+    intersectUsing: ["items", "callback"],
     intersectAssoc: ["items"],
+    intersectAssocUsing: ["items", "callback"],
     intersectByKeys: ["items"],
     join: ["glue", "finalGlue"],
     merge: ["items"],
+    mergeRecursive: ["items"],
     combine: ["values"],
+    union: ["items"],
+    replace: ["items"],
+    replaceRecursive: ["items"],
     undot: [],
     zip: ["items"],
+    pad: ["size", "value"],
     __get: ["key"],
   },
   [Arrayable, IteratorAggregate as unknown as ContractToken<object>, Jsonable, JsonSerializable as unknown as ContractToken<object>],
