@@ -159,7 +159,7 @@ development_status:
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
-  14-3-filtering-slicing-and-conditional-methods: backlog
+  14-3-filtering-slicing-and-conditional-methods: in-progress
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
