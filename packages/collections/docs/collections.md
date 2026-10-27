@@ -2,7 +2,7 @@
 
 `@xaravel/collections` ports Laravel 13's `illuminate/collections` component: `Collection`, `LazyCollection`, the `Enumerable` interface, the `EnumeratesValues` trait, `HigherOrderCollectionProxy`, `Arr`, `ItemNotFoundException`, `MultipleItemsFoundException` and the `collect()`, `data_get()`, `data_has()` and `value()` helpers. Collections are synchronous, and they keep PHP's array semantics: key order, integer-like key normalisation, and the list-or-object JSON shape.
 
-This page covers what Stories 14.1 and 14.2 port: construction, conversion, serialization, array access, iteration, macros and higher-order proxies, and the methods that read, find, add and remove items. It also covers `sortBy`, which one of those tests reaches. The other methods (`sort`, `sortByDesc`, `groupBy`, `chunk`, …) arrive with the Collections Stories that port their tests.
+This page covers what Stories 14.1-14.3 port: construction, conversion, serialization, array access, iteration, macros and higher-order proxies, the methods that read, find, add and remove items, and the methods that filter, slice and branch, with their async companions. It also covers `sortBy`, `keyBy` and `concat`, which those tests reach. The other methods (`sort`, `sortByDesc`, `groupBy`, `chunk`, …) arrive with the Collections Stories that port their tests.
 
 ## PHP arrays
 
@@ -69,9 +69,47 @@ Laravel's names, arguments and results, over PHP's comparisons from `@xaravel/ru
 - **Changing a `Collection`.** `push(...values)`, `prepend(value, key)`, `unshift(...values)`, `put(key, value)`, `getOrPut(key, value)` (it writes the value when the key is missing), `add(value)`, `pop(count)`, `shift(count)`, `pull(key, default)` ("dot" notation, nested collections included), `forget(keys)` and `splice(offset, length, replacement)` change the collection in place, as Laravel's do. `shift`, `unshift` and `splice` renumber int keys, as PHP's array functions do; `pop` keeps the keys and lowers only the next free index. A `LazyCollection` has none of these, as in Laravel.
 - **Sorting by a value.** `sortBy(callback, options, descending)` sorts by what `callback` gives for each item (a callback over the item and its key, or a key in "dot" notation), with PHP's sort flags (`SORT_REGULAR`, `SORT_NUMERIC`, `SORT_STRING`, …, from `@xaravel/runtime`), and keeps the keys. `descending` is `false` or `SortDirection.Ascending` for ascending, `true` or `SortDirection.Descending` for descending; any other value throws PHP's `UnhandledMatchError` (`Unhandled match case 0`, `Unhandled match case 'desc'`), as Laravel's `match` does. A list of comparisons that is not callable (`[["name", "asc"], ["age", "desc"]]`, or comparator callbacks) sorts by each in turn. `LazyCollection.sortBy` sorts through a `Collection` when it is enumerated, so it throws only then. The rest of sorting (`sort`, `sortDesc`, `sortByDesc`, `sortKeys`, …) arrives with Story 14.5.
 
-`random` and `sortBy` (both classes), `splice` (`Collection`), `Arr.first`, `Arr.last` and `Arr.random` take two optional parameters, so they also accept an options object (AD-26) as their last argument, in the first optional position: `c.random({ number: 2, preserveKeys: true })`, `c.sortBy(callback, { options: SORT_STRING, descending: true })`, `c.splice(1, { length: 1, replacement: ["x"] })`, `Arr.first(array, { callback, default })`, `Arr.last(array, { callback, default })` and `Arr.random(array, { number, preserveKeys })`. PHP never takes an array in those positions, so a plain object there is always the options object.
+## Filtering, slicing and branching
 
-`Arr` gains the members these methods call: `except`, `first`, `forget`, `get`, `last`, `only`, `pluck`, `prepend`, `pull`, `random` and `select`. `Arr.forget(ref, keys)` and `Arr.pull(ref, key, default)` take PHP's by-reference array as a `Ref` from `@xaravel/runtime` and write the new array to `ref.value` (DIV-9.2).
+Laravel's names, arguments and results, keys kept unless the method says otherwise (`values()` re-indexes):
+
+- **Filtering.** `filter(callback)` (without a callback, the truthy items), `reject(callback)` (or `reject(value)`, the items not `==` it; without an argument, the items not `== true`), `where(key, operator, value)`, `whereStrict(key, value)`, `whereNull(key)` and `whereNotNull(key)` (the item itself when `key` is `null`), `whereIn(key, values, strict)`, `whereInStrict`, `whereNotIn`, `whereNotInStrict` and `whereInstanceOf(type)` (a class, a class name, or a list of them).
+- **Unique and duplicate items.** `unique(key, strict)` and `uniqueStrict(key)` keep the first of each value (by `==`, or `===` when strict), and `duplicates(callback, strict)` and `duplicatesStrict(callback)` give each later one, keyed as in the collection; `callback` is a callback or a `data_get` key. `duplicates` also takes an options object (AD-26): `c.duplicates({ callback: "k", strict: true })` is `c.duplicates("k", true)`. Two `Collection`s are `==` when their items are, as in PHP: a `Collection` gives the runtime its PHP properties through the props protocol (AD-9.6).
+- **Testing every item.** `every(callback)` (or `every(key, operator, value)`, as `where`) is `true` when every item passes, and when the collection is empty. `partition(callback)` (or `partition(key, operator, value)`) returns a collection of two collections, `[passed, failed]`, each keeping its items' keys: `const [passed, failed] = c.partition(cb).all()`. `Arr.partition(array, callback)` gives the two arrays.
+- **Slicing.** `slice(offset, length)` and `take(limit)` take negative arguments as PHP's `array_slice` does (`take(-2)` is the last two items); `skip(count)`, `skipUntil(value)`, `skipWhile(value)`, `takeUntil(value)` and `takeWhile(value)` take a callback, or a value an item must be `===` to.
+- **Keying and combining.** `keyBy(keyBy)` keys each item by a callback's result or a `data_get` key (an enum case key is its value, an object key its string, `null` is `""`), and `concat(source)` appends another array's or collection's values to a new collection. Their own tests arrive with Stories 14.5 and 14.4.
+- **Branching.** `when` and `unless` are `Conditionable`'s. `whenEmpty(callback, default)`, `whenNotEmpty`, `unlessEmpty` and `unlessNotEmpty` call `when` with the collection's emptiness; like `when`, they return their callback's result, or the collection when that is `null`. Higher-order `when` / `unless` (`c.when(true).concat([…])`) delegate the next call when the condition holds.
+
+### Sync callbacks and the async companions
+
+Collections are sync (AD-6). The callback of a sync member that takes only a callback (`filter`, `map`, `each`, `first`, `last`, `containsOneItem` on both classes, `containsManyItems` on `Collection`, whose `LazyCollection` form takes no callback, `Arr.first`, `Arr.last`, `Arr.map`, `Arr.where` and `Arr.partition`) and of `duplicates` / `duplicatesStrict` is typed `SyncCallback`: an intersection of `(...args) => NotPromise<R>` and `(...args) => void`. The first half makes `tsc` reject an async callback (`collect([1]).filter(async () => true)` does not compile), and the second lets oxlint's `no-misused-promises` report the call. A sync callback keeps its contextual parameter types and any result.
+
+The members that take a value or a callback (`contains`, `every`, `reject`, `partition`, `unique`, `uniqueStrict`, `keyBy`, `skipUntil`, `skipWhile`, `takeUntil` and `takeWhile`) have two overloads: a `SyncCallback` one, then one whose parameter is `ValueOrSyncCallback<K>`, the value as it is or, for a function, its `SyncCallback`. So `c.every(async () => false)` does not compile either, and lint reports it, while `c.every("age", ">=", 18)`, `c.contains(1)` and `c.reject()` are unchanged. They keep only the positional form (DIV-12.20).
+
+For a callback that may be async, such as one that performs IO, use the async companion (DIV-1 Callbacks, DIV-1.2):
+
+| Sync | Async companion | Resolves |
+| --- | --- | --- |
+| `filter(callback)` | `filterAsync(callback)` | a collection of the items whose awaited result is truthy, keys kept |
+| `reject(callback)` | `rejectAsync(callback)` | a collection of the items whose awaited result is falsy, keys kept |
+| `partition(callback)` | `partitionAsync(callback)` | a collection of `[passed, failed]` collections, keys kept |
+| `every(callback)` | `everyAsync(callback)` | `true` when every awaited result is truthy (stops at the first falsy) |
+| `contains(callback)` | `containsAsync(callback)` | `true` when some awaited result is truthy (stops at the first) |
+| `first(callback, default)` | `firstAsync(callback, default)` | the first item whose awaited result is truthy, else `value(default)` |
+
+```ts
+const active = await users.filterAsync(async (user) => await isActive(user));
+```
+
+Each companion calls `callback(value, key)` for one item at a time, in key order, and awaits it before calling the next; it never runs two callbacks at once. A callback that rejects rejects the companion's Promise, and no later callback is called. On a `LazyCollection`, a companion enumerates the whole source once, before it resolves, and resolves a `LazyCollection` over the kept items: it is not lazy, so never call one on an infinite source (`everyAsync`, `containsAsync` and `firstAsync` stop early only when a result decides them). `eachAsync` and `mapAsync` arrive with Story 14.5. Each companion is listed in `async-surface.json` with `@asyncRoot callback`.
+
+### Not ported yet
+
+`whereBetween` and `whereNotBetween` (PHP's `reset` / `end`), `percentage` (PHP's `round`) and `groupBy` (PHP's `is_bool`) wait for the runtime to export those PHP builtins (ESC-14.3-1), as do the tests whose fixtures call `strtoupper`, `trim` and `chunk_split`.
+
+`random`, `sortBy` and `duplicates` (both classes), `splice` (`Collection`), `Arr.first`, `Arr.last` and `Arr.random` take two optional parameters, so they also accept an options object (AD-26) as their last argument, in the first optional position: `c.random({ number: 2, preserveKeys: true })`, `c.sortBy(callback, { options: SORT_STRING, descending: true })`, `c.duplicates({ callback, strict })`, `c.splice(1, { length: 1, replacement: ["x"] })`, `Arr.first(array, { callback, default })`, `Arr.last(array, { callback, default })` and `Arr.random(array, { number, preserveKeys })`. PHP never takes an array in those positions, so a plain object there is the options object, unless its `__invoke` is a function.
+
+`Arr` gains the members these methods call: `except`, `first`, `forget`, `get`, `last`, `only`, `partition`, `pluck`, `prepend`, `pull`, `random` and `select`. `Arr.forget(ref, keys)` and `Arr.pull(ref, key, default)` take PHP's by-reference array as a `Ref` from `@xaravel/runtime` and write the new array to `ref.value` (DIV-9.2).
 
 ## Lazy collections
 
@@ -103,6 +141,7 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 
 ## Divergences
 
+- **DIV-1:** collections are sync; a sync member's callback must be sync, and a callback that may be async goes to the async companion (`filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`, `containsAsync`, `firstAsync`), which awaits it (DIV-1 Callbacks, DIV-1.2).
 - **DIV-9.2:** PHP's by-reference arrays (`Arr.forget`, `Arr.pull`) are a `Ref`.
 - **DIV-9.15:** spreading a keyed PHP array into `push(...)` or `unshift(...)` spreads its values, `...array_values(a)`.
 - **DIV-12.6:** index reads are `get(k)` (or `offsetGet(k)`), not `c[k]`.
@@ -110,6 +149,6 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 - **DIV-12.17:** index writes, `isset` and `unset` are `offsetSet`, `offsetExists` and `offsetUnset`.
 - **DIV-12.18:** a generator source writes keyed yields as `yield keyed(k, v)` and `yield from` as `yield* yieldFrom(it)`.
 - **DIV-12.19:** where a test passes a collection class as a value, it is the class's FQCN, `fqcn(Collection)`.
-- **DIV-12.20:** `contains`, `doesntContain`, `doesntContainStrict`, `some`, `where`, `firstWhere`, `hasSole`, `hasMany`, `sole`, `firstOrFail`, `first` and `last` take only positional arguments: their first parameter is a PHP value or a callback, so a lone object is always the value, never an options object. Laravel's named arguments to them become the positional call. These are the members this page covers; the full list of positional-only members is DIV-12.20 in `decisions/DIV-12.md` (and `conformance/api-surface/exceptions.jsonl`).
+- **DIV-12.20:** `contains`, `doesntContain`, `doesntContainStrict`, `every`, `some`, `partition`, `where`, `firstWhere`, `hasSole`, `hasMany`, `sole`, `firstOrFail`, `first` and `last` take only positional arguments: their first parameter is a PHP value or a callback, so a lone object is always the value, never an options object. Laravel's named arguments to them become the positional call. These are the members this page covers; the full list of positional-only members is DIV-12.20 in `decisions/DIV-12.md` (and `conformance/api-surface/exceptions.jsonl`).
 
 Not ported yet: `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.

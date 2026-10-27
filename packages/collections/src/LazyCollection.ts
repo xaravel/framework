@@ -1,5 +1,6 @@
-// Laravel's `Illuminate\Support\LazyCollection` (v13.37.0), the members Stories 14.1 and 14.2 port; the Collections
-// Stories that port their tests add the rest. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
+// Laravel's `Illuminate\Support\LazyCollection` (v13.37.0), the members Stories 14.1-14.3 port; the Collections
+// Stories that port their tests add the rest. The async companions (`filterAsync`, …; DIV-1 Callbacks, DIV-1.2)
+// enumerate the source once, awaiting each callback in key order, and resolve a lazy collection over the kept items. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
 // `use EnumeratesValues, Macroable`.
 //
 // Generators follow DIV-12.18: a source generator function writes `yield keyed(k, v)` for PHP's `yield $k => $v` and
@@ -14,8 +15,8 @@
 // `only`'s keys, `pluck`'s paths) copies it into a local on each enumeration, as PHP's `use` copies the value into
 // each call. `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
 // `...arguments` unchanged. `contains`, `doesntContain`, `doesntContainStrict`, `sole`, `hasSole`, `firstOrFail`,
-// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random` and
-// `sortBy` also take an options object (AD-26). Strict comparisons of items are PHP's `===` through `identical`, so two arrays
+// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random`,
+// `sortBy` and `duplicates` also take an options object (AD-26). Strict comparisons of items are PHP's `===` through `identical`, so two arrays
 // compare by their keys and values.
 //
 // This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined.
@@ -38,6 +39,7 @@ import {
   InvalidArgumentException,
   is_array,
   is_callable,
+  is_null,
   is_object,
   is_string,
   type Iterator,
@@ -63,6 +65,7 @@ import {
   toPhpArray,
   toPhpString,
   Traversable,
+  UnitEnum,
   valueCopy,
   yieldFrom,
 } from "@xaravel/runtime";
@@ -70,7 +73,7 @@ import { Arr } from "./Arr";
 import { Enumerable } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
-import { callCallable, isOptionsObject, offsetRead, propertyIsSet, propertyRead } from "./support/callables";
+import { callCallable, isOptionsObject, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type ValueOrSyncCallback } from "./support/callables";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
 
 /** The `Countable` brand `count()` and the grader read (no token; `packages/runtime/src/php/ArrayObject.ts`). */
@@ -215,7 +218,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a filter over each of the items: the callback gets each value and its key, and keys are kept. */
-  filter(callback: ItemCallback | null = null): this {
+  filter<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): this {
     const test: ItemCallback = callback ?? ((value_: unknown) => toBool(value_));
     return this.lazyInstance(function* (this: LazyCollection) {
       for (const [key, value_] of this.entries()) {
@@ -247,7 +250,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
-  map(callback: ItemCallback): this {
+  map<R>(callback: SyncCallback<[value: any, key: any], R>): this {
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {
       for (const [key, value_] of this.entries()) {
         yield keyed(key, callCallable(callback, valueCopy(value_), key));
@@ -256,6 +259,8 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Return only unique items from the collection, by `==` or, when `strict`, by `===`; the first of each is kept. */
+  unique<T, R>(this: T, key: SyncCallback<[value: any, key: any], R>, strict?: boolean): T;
+  unique<T, K>(this: T, key?: ValueOrSyncCallback<K>, strict?: boolean): T;
   unique(key: unknown = null, strict: boolean = false): this {
     const callback = this.valueRetriever(key);
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {
@@ -272,6 +277,24 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     });
   }
 
+  /**
+   * Retrieve duplicate items from the collection, through `Collection.duplicates`. Also takes AD-26's options object
+   * `{ callback, strict }`.
+   */
+  duplicates<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null, strict?: boolean): this;
+  duplicates<R>(options?: { callback?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): this;
+  duplicates(callback?: unknown, strict?: boolean): this {
+    void callback;
+    void strict;
+    return this.passthru("duplicates", [...arguments]);
+  }
+
+  /** Retrieve duplicate items from the collection using strict comparison, through `Collection.duplicatesStrict`. */
+  duplicatesStrict<R>(callback: SyncCallback<[value: any, key: any], R> | string | null = null): this {
+    void callback;
+    return this.passthru("duplicatesStrict", [...arguments]);
+  }
+
   /** Reset the keys on the underlying array. */
   values(): this {
     return this.lazyInstance(function* (this: LazyCollection) {
@@ -285,6 +308,8 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
    * Determine if an item exists in the enumerable: with one argument, an item `==` the value, or one a callback
    * accepts; with more, an item matching `where(key, operator, value)`.
    */
+  contains<R>(callback: SyncCallback<[value: any, key: any], R>): boolean;
+  contains<K>(key: ValueOrSyncCallback<K>, operator?: unknown, value?: unknown): boolean;
   contains(key: unknown, operator: unknown = null, value_: unknown = null): boolean {
     void operator;
     void value_;
@@ -354,7 +379,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the first item passing the given truth test (or the first item), or `value(default)`. */
-  first(callback: ItemCallback | null = null, defaultValue: unknown = null): any {
+  first<R>(callback: SyncCallback<[value: any, key: any], R> | null = null, defaultValue: unknown = null): any {
     const iterator = this.getIterator() as Iterator;
 
     if (callback === null) {
@@ -409,7 +434,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
    *
    * @deprecated 12.49.0 Use the `hasSole()` method instead.
    */
-  containsOneItem(callback: ItemCallback | null = null): boolean {
+  containsOneItem<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): boolean {
     return this.hasSole(callback);
   }
 
@@ -422,6 +447,33 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return this.hasMany();
   }
 
+  /**
+   * Key an associative array by a field or using a callback (a callable over the item and its key, or a `data_get`
+   * key), lazily: an enum case key is its value, and an object or `null` key its string.
+   */
+  keyBy<T, R>(this: T, keyBy: SyncCallback<[value: any, key: any], R>): T;
+  keyBy<T, K>(this: T, keyBy: ValueOrSyncCallback<K>): T;
+  keyBy(keyBy: unknown): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      // PHP's `use ($keyBy)` copies the argument into each call, which reassigns its own copy.
+      const retriever = this.valueRetriever(keyBy);
+
+      for (const [key, item] of this.entries()) {
+        let resolvedKey = retriever(item, key);
+
+        if (resolvedKey instanceof UnitEnum) {
+          resolvedKey = enum_value(resolvedKey);
+        }
+
+        if (is_object(resolvedKey) || is_null(resolvedKey)) {
+          resolvedKey = toPhpString(resolvedKey);
+        }
+
+        yield keyed(resolvedKey, item);
+      }
+    });
+  }
+
   /** Get the keys of the collection items, as a lazy collection. */
   keys(): this {
     return this.lazyInstance(function* (this: LazyCollection) {
@@ -432,7 +484,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the last item passing the given truth test (or the last item), or `value(default)`. */
-  last(callback: ItemCallback | null = null, defaultValue: unknown = null): any {
+  last<R>(callback: SyncCallback<[value: any, key: any], R> | null = null, defaultValue: unknown = null): any {
     const placeholder = new stdClass();
     let needle: unknown = placeholder;
 
@@ -554,6 +606,14 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     });
   }
 
+  /** Push all of the given items (an array or a Traversable) onto a new lazy collection, after these, keys reset. */
+  concat(source: unknown): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      yield* yieldFrom(this);
+      yield* yieldFrom(source);
+    }).values();
+  }
+
   /**
    * Get one item randomly (`number` null), or `number` items as a lazy collection, through `Collection.random`. Also
    * takes AD-26's options object `{ number, preserveKeys }`.
@@ -640,6 +700,36 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       const iterator = this.getIterator() as Iterator;
 
       while (iterator.valid() && toBool(remaining--)) {
+        iterator.next();
+      }
+
+      while (iterator.valid()) {
+        yield keyed(iterator.key(), iterator.current());
+
+        iterator.next();
+      }
+    });
+  }
+
+  /** Skip items in the collection until the given condition is met: an item `===` the value, or a callback's match. */
+  skipUntil<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  skipUntil<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  skipUntil(value_: unknown): this {
+    const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
+
+    return this.skipWhile(this.negate(callback));
+  }
+
+  /** Skip items in the collection while the given condition is met: an item `===` the value, or a callback's match. */
+  skipWhile<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  skipWhile<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  skipWhile(value_: unknown): this {
+    const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
+
+    return this.lazyInstance(function* (this: LazyCollection) {
+      const iterator = this.getIterator() as Iterator;
+
+      while (iterator.valid() && toBool(callCallable(callback, valueCopy(iterator.current()), iterator.key()))) {
         iterator.next();
       }
 
@@ -745,6 +835,143 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
         }
       }
     });
+  }
+
+  /** Take items in the collection until the given condition is met: an item `===` the value, or a callback's match. */
+  takeUntil<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  takeUntil<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  takeUntil(value_: unknown): this {
+    const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
+
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const [key, item] of this.entries()) {
+        if (toBool(callCallable(callback, valueCopy(item), key))) {
+          break;
+        }
+
+        yield keyed(key, item);
+      }
+    });
+  }
+
+  /** Take items in the collection while the given condition is met: an item `===` the value, or a callback's match. */
+  takeWhile<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  takeWhile<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  takeWhile(value_: unknown): this {
+    const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
+
+    return this.takeUntil((item: unknown, key: unknown) => !toBool(callCallable(callback, item, key)));
+  }
+
+  /**
+   * `filter`'s async companion (DIV-1 Callbacks, DIV-1.2): a lazy collection over the items for which the awaited
+   * `callback(value, key)` is truthy, keys kept. The source is enumerated once; each call is awaited before the next
+   * starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async filterAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const kept = new PhpArray();
+
+    for (const [key, value_] of this.entries()) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        kept.set(key, value_);
+      }
+    }
+
+    return this.newInstance(kept);
+  }
+
+  /**
+   * `reject`'s async companion (DIV-1 Callbacks, DIV-1.2): a lazy collection over the items for which the awaited
+   * `callback(value, key)` is falsy, keys kept. The source is enumerated once; each call is awaited before the next
+   * starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async rejectAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const kept = new PhpArray();
+
+    for (const [key, value_] of this.entries()) {
+      if (!toBool(await callCallable(callback, valueCopy(value_), key))) {
+        kept.set(key, value_);
+      }
+    }
+
+    return this.newInstance(kept);
+  }
+
+  /**
+   * `partition`'s async companion (DIV-1 Callbacks, DIV-1.2): a lazy collection of `[passed, failed]` lazy collections
+   * by the awaited `callback(value, key)`, each keeping its items' keys. The source is enumerated once; each call is
+   * awaited before the next starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async partitionAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const passed = new PhpArray();
+    const failed = new PhpArray();
+
+    for (const [key, value_] of this.entries()) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        passed.set(key, value_);
+      } else {
+        failed.set(key, value_);
+      }
+    }
+
+    return this.newInstance([this.newInstance(passed), this.newInstance(failed)]);
+  }
+
+  /**
+   * `every`'s async companion (DIV-1 Callbacks, DIV-1.2): whether the awaited `callback(value, key)` is truthy for every
+   * item, stopping at the first falsy one (`true` when empty). Each call is awaited before the next starts, in key
+   * order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async everyAsync(callback: (value: any, key: any) => unknown): Promise<boolean> {
+    for (const [key, value_] of this.entries()) {
+      if (!toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * `contains`'s async companion for a callback (DIV-1 Callbacks, DIV-1.2): whether the awaited `callback(value, key)`
+   * is truthy for some item, stopping at the first. Each call is awaited before the next starts, in key order. A
+   * rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async containsAsync(callback: (value: any, key: any) => unknown): Promise<boolean> {
+    for (const [key, value_] of this.entries()) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * `first`'s async companion for a callback (DIV-1 Callbacks, DIV-1.2): the first item for which the awaited
+   * `callback(value, key)` is truthy, else `value(default_)`. Each call is awaited before the next starts, in key
+   * order, stopping at the first match. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async firstAsync(callback: (value: any, key: any) => unknown, default_: unknown = null): Promise<any> {
+    for (const [key, value_] of this.entries()) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return valueCopy(value_);
+      }
+    }
+
+    return value(default_);
   }
 
   /** Get the values iterator. */

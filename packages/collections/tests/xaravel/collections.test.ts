@@ -6,20 +6,32 @@
 // `firstOrFail` throwing `ItemNotFoundException` / `MultipleItemsFoundException`, registered under their Upstream
 // FQCNs, the messages of `random` and `shift`, and `sortBy`'s `UnhandledMatchError` for an unmatched `descending`).
 //
-// XT-collections-1 compares with the signed Oracle fixture of `conformance/oracle-requests/14.1.jsonl`; a missing
-// fixture fails the test. F-10 recorded reason: XT-collections-1 is a Xaravel Test, so no Upstream test exists whose
+// Story 14.3 adds XT-collections-6 (`filter()` on a list keeps the original keys and `values()` re-indexes, against the
+// Oracle) and XT-collections-7 (sync members reject an async callback in `tsc` and in lint, and the async companions
+// await their callbacks in key order; AD-6, DIV-1).
+//
+// XT-collections-1 compares with the signed Oracle fixture of `conformance/oracle-requests/14.1.jsonl`, and
+// XT-collections-6 with that of `conformance/oracle-requests/14.3.jsonl`; a missing fixture fails the test. F-10 recorded reason: XT-collections-1 is a Xaravel Test, so no Upstream test exists whose
 // inputs the request could take. Per docs/ops/oracle.md § Per-Story requests, the request evaluates only the inputs its
 // acceptance criterion names (epics.md Story 14.1: "integer-like string keys and mixed keys … `toArray()` and
 // `jsonEncode` produce the list or object shape that the Oracle produces"): an array with integer-like, leading-zero,
 // negative, `-0` and repeated keys, a list written with string keys, a list with a gap, and a filtered list, each read
 // back through `toArray()`, `toJson()` and `json_encode`, on Collection and LazyCollection. It contains no Upstream
 // test and no fixture.
-import { readFileSync } from "node:fs";
+//
+// F-10 recorded reason for `14.3.jsonl`: XT-collections-6 is a Xaravel Test, so no Upstream test exists whose inputs
+// the request could take. The request evaluates only the inputs its acceptance criterion names (epics.md Story 14.3:
+// "`filter()` on a list … items are removed … the original keys are kept, and `values()` re-indexes, matching the
+// Oracle"): the list `[1, 2, 3, 4]` filtered to its even values, which removes the first item and a middle one, read
+// back through `toArray()`, `toJson()`, `values()->toArray()` and `values()->toJson()`, on Collection and
+// LazyCollection (`LazyCollection::make`). It contains no Upstream test and no fixture.
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
-import { arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, PhpArray, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError } from "@xaravel/runtime";
+import { array_values, arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -38,15 +50,14 @@ interface OracleValues {
 // at run time rather than re-implemented here.
 const ORACLE_VALUES = join(REPO, "packages", "assert", "tests", "xaravel", "oracle-values.ts");
 const { decode, readRequests, readSignedFixture } = (await import(ORACLE_VALUES)) as OracleValues;
-const REQUESTS = "conformance/oracle-requests/14.1.jsonl";
 const FIXTURES = "conformance/fixtures/collections";
 const PUBLIC_KEY = "conformance/oracle/oracle.pub";
 
-/** The signed Oracle output of the one request for `id`. */
-function oracle(id: string): Output {
-  const requests = readRequests(join(REPO, REQUESTS)).filter((request) => request.id === id);
+/** The signed Oracle output of the one request for `id` in the request file `requests` (repository-relative). */
+function oracle(id: string, requests_: string): Output {
+  const requests = readRequests(join(REPO, requests_)).filter((request) => request.id === id);
   if (requests.length !== 1) {
-    throw new Error(`${REQUESTS}: expected one request for ${id}, found ${requests.length}`);
+    throw new Error(`${requests_}: expected one request for ${id}, found ${requests.length}`);
   }
   const request = requests[0]!;
   const output = readSignedFixture(join(REPO, FIXTURES, `${request.sha256}.json`), request.sha256, readFileSync(join(REPO, PUBLIC_KEY), "utf8"));
@@ -156,7 +167,7 @@ xaravelTest(
     Assert.assertSame("Items cannot be represented by a scalar value.", (fromScalar as InvalidArgumentException).getMessage());
 
     // The shapes, against the Oracle.
-    const output = oracle("XT-collections-1");
+    const output = oracle("XT-collections-1", "conformance/oracle-requests/14.1.jsonl");
     const filtered = (): Collection => collect(["a", "b", "c"]).filter((v: string) => v !== "b");
     const actual: [string, unknown][] = [
       ["collect($mixed)->toArray()", collect(mixed).toArray()],
@@ -502,4 +513,414 @@ xaravelTest(
     Assert.assertInstanceOf(InvalidArgumentException, negative, "shift() with a negative count");
     Assert.assertSame("Number of shifted items may not be less than zero.", (negative as InvalidArgumentException).getMessage());
   },
+);
+
+xaravelTest(
+  "XT-collections-6",
+  "filter() on a list that removes the first item and a middle one keeps the original keys of the items it keeps, in order (FR-23.1), and values() re-indexes them from 0; toArray() and toJson() give the object shape for the kept keys ({\"1\":2,\"3\":4}) and the list shape after values() ([2,4]), as the Oracle gives for the same list (FR-23.3), on Collection and LazyCollection",
+  () => {
+    const list = [1, 2, 3, 4];
+    const even = (value: number): boolean => value % 2 === 0;
+
+    for (const [name, make] of [
+      ["Collection", () => collect(list)],
+      ["LazyCollection", () => LazyCollection.make(list)],
+    ] as const) {
+      const filtered = make().filter(even);
+      Assert.assertSame([1, 3], keysOf(filtered.toArray()), `${name} filter() keeps the original keys`);
+      Assert.assertSame([2, 4], filtered.values().toArray(), `${name} values() re-indexes as a list`);
+      Assert.assertSame('{"1":2,"3":4}', filtered.toJson(), `${name} filter() is an object in JSON`);
+      Assert.assertSame("[2,4]", filtered.values().toJson(), `${name} values() is a list in JSON`);
+      Assert.assertSame([1, 2, 3, 4], make().all(), `${name} filter() leaves the source unchanged`);
+    }
+
+    // The shapes, against the Oracle.
+    const output = oracle("XT-collections-6", "conformance/oracle-requests/14.3.jsonl");
+    const actual: [string, unknown][] = [
+      ["collect($list)->filter(fn ($v) => $v % 2 === 0)->toArray()", collect(list).filter(even).toArray()],
+      ["collect($list)->filter(fn ($v) => $v % 2 === 0)->toJson()", collect(list).filter(even).toJson()],
+      ["collect($list)->filter(fn ($v) => $v % 2 === 0)->values()->toArray()", collect(list).filter(even).values().toArray()],
+      ["collect($list)->filter(fn ($v) => $v % 2 === 0)->values()->toJson()", collect(list).filter(even).values().toJson()],
+      ["\\Illuminate\\Support\\LazyCollection::make($list)->filter(fn ($v) => $v % 2 === 0)->toArray()", LazyCollection.make(list).filter(even).toArray()],
+      ["\\Illuminate\\Support\\LazyCollection::make($list)->filter(fn ($v) => $v % 2 === 0)->toJson()", LazyCollection.make(list).filter(even).toJson()],
+      ["\\Illuminate\\Support\\LazyCollection::make($list)->filter(fn ($v) => $v % 2 === 0)->values()->toArray()", LazyCollection.make(list).filter(even).values().toArray()],
+      ["\\Illuminate\\Support\\LazyCollection::make($list)->filter(fn ($v) => $v % 2 === 0)->values()->toJson()", LazyCollection.make(list).filter(even).values().toJson()],
+    ];
+    Assert.assertSame(actual.length, output.results.length, "one Oracle result per expression");
+    actual.forEach(([expr, value], index) => {
+      Assert.assertSame(result(output, index), value, expr);
+    });
+  },
+);
+
+/**
+ * A fixture that passes an async callback to sync members: one call per line holding `async`, on Collection,
+ * LazyCollection, `Arr` and an `Enumerable`-typed receiver, for callback-only members and value-or-callback ones.
+ */
+const ASYNC_CALLBACKS = `import { Arr, collect, type Enumerable, LazyCollection } from "@xaravel/collections";
+
+const e: Enumerable = collect([1]);
+
+collect([1]).filter(async () => true);
+collect([1]).map(async (value: number) => value);
+LazyCollection.make([1]).filter(async () => true);
+collect([1]).each(async () => true);
+collect([1]).first(async () => true);
+collect([1]).reject(async () => true);
+collect([1]).every(async () => true);
+collect([1]).partition(async () => true);
+collect([1]).contains(async () => true);
+collect([1]).takeWhile(async () => true);
+Arr.where([1], async () => true);
+e.filter(async () => true);
+`;
+
+/** The lines of `ASYNC_CALLBACKS` that pass an async callback. */
+const ASYNC_LINES = ASYNC_CALLBACKS.split("\n").flatMap((line, index) => (line.includes("async") ? [index + 1] : []));
+
+/** The same calls with sync callbacks, and value forms of the value-or-callback members. */
+const SYNC_CALLBACKS = `import { Arr, collect, type Enumerable, LazyCollection } from "@xaravel/collections";
+
+const e: Enumerable = collect([1]);
+
+export const kept = collect([1, 2, 3]).filter((value: number) => value > 1);
+export const doubled = collect([1, 2, 3]).map((value: number, key: number) => value * key);
+export const unannotated = collect([1, 2, 3]).filter((value) => value > 1);
+export const lazyKept = LazyCollection.make([1]).filter((value) => value > 0);
+export const each = collect([1]).each(() => true);
+export const first = collect([1]).first((value, key) => value > key);
+export const rejected = collect([1]).reject((value) => value === 1);
+export const rejectedNone = collect([1]).reject();
+export const everyCallback = collect([1]).every((value) => value > 0);
+export const everyOperator = collect([{ age: 18 }]).every("age", ">=", 18);
+export const parts = collect([1]).partition((value) => value > 0);
+export const containsValue = collect([1]).contains(1);
+export const containsCallback = collect([1]).contains((value) => value === 1);
+export const taken = collect([1]).takeWhile((value) => value < 2);
+export const takenValue = collect([1]).takeWhile(1);
+export const where = Arr.where([1], (value) => value > 0);
+export const enumerable = e.filter((value) => value !== null);
+`;
+
+/**
+ * A temp project holding `fixture.ts`, which imports `@xaravel/collections` through a `node_modules` link to the
+ * package (seams.test.ts's form, with Bun's types); `run` gets its directory, and the directory is removed after.
+ */
+async function withFixture<T>(source: string, run: (dir: string) => Promise<T>): Promise<T> {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-collections-sync-"));
+  try {
+    writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ extends: "./tsconfig.base.json", compilerOptions: { types: ["bun"] }, include: ["fixture.ts"] }, null, 2) + "\n");
+    writeFileSync(join(dir, "tsconfig.base.json"), readFileSync(join(REPO, "tsconfig.base.json")));
+    mkdirSync(join(dir, "node_modules", "@xaravel"), { recursive: true });
+    mkdirSync(join(dir, "node_modules", "@types"), { recursive: true });
+    symlinkSync(join(REPO, "packages", "collections"), join(dir, "node_modules", "@xaravel", "collections"));
+    symlinkSync(join(REPO, "node_modules", "@types", "bun"), join(dir, "node_modules", "@types", "bun"));
+    writeFileSync(join(dir, "fixture.ts"), source);
+    return await run(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The repository's pinned `tsc -b` in `dir`: its exit code, its output, and the `fixture.ts(<line>,…): error TS<n>` pairs. */
+async function tscFixture(dir: string): Promise<{ code: number; output: string; errors: string[] }> {
+  const proc = Bun.spawn([process.execPath, "--bun", join(REPO, "node_modules", "typescript", "bin", "tsc"), "-b", "--pretty", "false"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+  const [code, stdout, stderr] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+  const output = `${stdout}${stderr}`;
+  const errors = [...output.matchAll(/^fixture\.ts\((\d+),\d+\): error (TS\d+)/gm)].map((match) => `${match[1]}:${match[2]}`);
+  return { code, output, errors };
+}
+
+/** oxlint with the repository's `.oxlintrc.json`, type-aware, from the repository root (lint.test.ts's form): `<line>:<rule>` per diagnostic. */
+function oxlintFixture(dir: string): { code: number; output: string; diagnostics: string[] } {
+  const proc = Bun.spawnSync([process.execPath, "--bun", "oxlint", "--type-aware", "-c", ".oxlintrc.json", "--format", "unix", join(dir, "fixture.ts")], { cwd: REPO, stdout: "pipe", stderr: "pipe" });
+  const output = proc.stdout.toString() + proc.stderr.toString();
+  const diagnostics: string[] = [];
+  for (const line of output.split("\n")) {
+    const match = /^.+?fixture\.ts:(\d+):\d+: .*\[(?:Error|Warning)\/[\w-]+\(([\w-]+)\)\]$/.exec(line);
+    if (match !== null) {
+      diagnostics.push(`${match[1]}:${match[2]}`);
+    }
+  }
+  return { code: proc.exitCode ?? -1, output, diagnostics };
+}
+
+/** An invokable object, the callable form of an object (`__invoke`), keying `duplicates` by `k`. */
+class XtInvokable {
+  __invoke(row: Record<string, unknown>): unknown {
+    return row["k"] ?? null;
+  }
+}
+
+/** A local class for whereInstanceOf, registered under its own FQCN. */
+class XtInstance {}
+registerClass("Xaravel\\Tests\\Collections\\XtInstance", XtInstance);
+
+/** A backed enum (AD-26) whose case keys keyBy by its value. */
+class XtSuit {
+  static readonly backingType = "string";
+  static readonly Hearts = new XtSuit("Hearts", "H");
+
+  constructor(
+    readonly name: string,
+    readonly value: string,
+  ) {}
+
+  static cases(): XtSuit[] {
+    return [XtSuit.Hearts];
+  }
+}
+
+/** An object with a `__toString` port, which keyBy keys by its string. */
+class XtStringable {
+  toString(): string {
+    return "stringable";
+  }
+}
+
+/** `duplicates`' two forms, as Collection and LazyCollection both declare them (one view, so each call is one overload set). */
+interface Duplicating {
+  duplicates(callback?: ((row: any) => unknown) | string | null, strict?: boolean): { all(): unknown };
+  duplicates(options?: { callback?: ((row: any) => unknown) | string | null; strict?: boolean }): { all(): unknown };
+}
+
+/** A callback for the companions that logs its start and end around two awaits, and accepts even values. */
+function loggedEven(log: string[]): (value: number, key: unknown) => Promise<boolean> {
+  return async (value: number, key: unknown): Promise<boolean> => {
+    log.push(`start ${String(key)}`);
+    await Promise.resolve();
+    await new Promise<void>((resolve_) => {
+      setTimeout(resolve_, 1);
+    });
+    log.push(`end ${String(key)}`);
+    return value % 2 === 0;
+  };
+}
+
+/** The `start` / `end` log of callbacks run one after another over `keys`, in order. */
+function sequential(keys: readonly unknown[]): string[] {
+  return keys.flatMap((key) => [`start ${String(key)}`, `end ${String(key)}`]);
+}
+
+/** The rejection of `promise`, or null when it fulfils. */
+async function rejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  return null;
+}
+
+xaravelTest(
+  "XT-collections-7",
+  "Collections are sync (AD-6): passing an async callback to a sync member (filter, map, each, first, reject, every, partition, contains and takeWhile on Collection, filter on LazyCollection, Arr.where, and filter on an Enumerable-typed receiver) fails to compile under the repository's tsc, through SyncCallback's NotPromise half (and ValueOrSyncCallback for the value-or-callback members), and oxlint's no-misused-promises reports every such call, through its void half, while the same calls with sync callbacks, and value forms such as every('age', '>=', 18) and reject(), compile and lint clean; the async companions filterAsync, rejectAsync, partitionAsync, everyAsync, containsAsync and firstAsync (DIV-1 Callbacks, DIV-1.2) exist on Collection and LazyCollection, await each callback before starting the next, in key order, keep the items' keys, return filter's, reject's, partition's, every's, contains' and first's results (every and contains stopping at the first decisive item, first resolving value(default) when none matches), and reject when a callback rejects; async-surface.json lists the six companions of Collection, LazyCollection and the Enumerable interface with root callback; duplicates' AD-26 options object { callback, strict } gives what its positional form gives, on both classes, while an invokable object is the callback and a plain object with a function __invoke is not read as the options object; whereInstanceOf filters by a class-name string, a constructor or a list of classes, keyBy keys an enum case by its value, an object by its string and null by \"\", concat appends a Collection's and a LazyCollection's values with keys reset, and two Collections of equal items are == through the props protocol (AD-9.6)",
+  async () => {
+    // (a) tsc and (b) oxlint reject async callbacks to sync members.
+    await withFixture(ASYNC_CALLBACKS, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertNotEquals(0, tsc.code, tsc.output);
+      Assert.assertSame(ASYNC_LINES.length, 12, "the fixture's async calls");
+      Assert.assertSame(
+        ASYNC_LINES,
+        tsc.errors.map((error) => Number(error.split(":")[0])),
+        `every async call fails to compile: ${tsc.output}`,
+      );
+      for (const error of tsc.errors) {
+        Assert.assertContains(error.split(":")[1], ["TS2322", "TS2345", "TS2769"], tsc.output);
+      }
+      Assert.assertTrue(tsc.output.includes("'Promise<boolean>' is not assignable to type 'never'"), tsc.output);
+      Assert.assertTrue(tsc.output.includes("'Promise<number>' is not assignable to type 'never'"), tsc.output);
+
+      const lint = oxlintFixture(dir);
+      Assert.assertNotEquals(0, lint.code, lint.output);
+      Assert.assertSame(
+        ASYNC_LINES.map((line) => `${line}:no-misused-promises`),
+        lint.diagnostics,
+        lint.output,
+      );
+    });
+    await withFixture(SYNC_CALLBACKS, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertSame(0, tsc.code, tsc.output);
+      const lint = oxlintFixture(dir);
+      Assert.assertSame([], lint.diagnostics, lint.output);
+      Assert.assertSame(0, lint.code, lint.output);
+    });
+
+    // (c) The companions, on both classes, over keys out of order.
+    const items = (): PhpArray =>
+      new PhpArray<string | number, number>([
+        [5, 1],
+        ["a", 2],
+        [0, 3],
+        [9, 4],
+      ]);
+    for (const [name, klass] of [
+      ["Collection", Collection],
+      ["LazyCollection", LazyCollection],
+    ] as const) {
+      const make = (): Collection | LazyCollection => new klass(items());
+      let log: string[] = [];
+
+      const filtered = await make().filterAsync(loggedEven(log));
+      Assert.assertInstanceOf(klass, filtered, `${name}.filterAsync() resolves the class`);
+      Assert.assertSame(
+        new PhpArray<string | number, number>([
+          ["a", 2],
+          [9, 4],
+        ]),
+        filtered.all(),
+        `${name}.filterAsync() keeps the passing items' keys`,
+      );
+      Assert.assertSame(sequential([5, "a", 0, 9]), log, `${name}.filterAsync() awaits in key order, one at a time`);
+
+      log = [];
+      const rejected = await make().rejectAsync(loggedEven(log));
+      Assert.assertInstanceOf(klass, rejected);
+      Assert.assertSame([5, 0], keysOf(rejected.all()), `${name}.rejectAsync() keeps the failing items' keys`);
+      Assert.assertSame([1, 3], array_values(rejected.all()));
+      Assert.assertSame(sequential([5, "a", 0, 9]), log, `${name}.rejectAsync() awaits in key order, one at a time`);
+
+      log = [];
+      const partitioned = await make().partitionAsync(loggedEven(log));
+      Assert.assertInstanceOf(klass, partitioned);
+      Assert.assertSame(2, partitioned.count(), `${name}.partitionAsync() resolves exactly [passed, failed]`);
+      const [passed, failed] = partitioned.all() as (Collection | LazyCollection)[];
+      Assert.assertInstanceOf(klass, passed);
+      Assert.assertInstanceOf(klass, failed);
+      Assert.assertSame(
+        new PhpArray<string | number, number>([
+          ["a", 2],
+          [9, 4],
+        ]),
+        passed!.all(),
+        `${name}.partitionAsync() passed items, keys kept`,
+      );
+      Assert.assertSame(
+        new PhpArray<number, number>([
+          [5, 1],
+          [0, 3],
+        ]),
+        failed!.all(),
+        `${name}.partitionAsync() failed items, keys kept`,
+      );
+      Assert.assertSame(sequential([5, "a", 0, 9]), log, `${name}.partitionAsync() awaits in key order, one at a time`);
+
+      log = [];
+      Assert.assertFalse(await make().everyAsync(loggedEven(log)), `${name}.everyAsync() is false for an odd item`);
+      Assert.assertSame(sequential([5]), log, `${name}.everyAsync() stops at the first falsy result`);
+      log = [];
+      const all = loggedEven(log);
+      Assert.assertTrue(await make().everyAsync(async (value: number, key: unknown) => (await all(value, key)) || true), `${name}.everyAsync() is true when every result is`);
+      Assert.assertSame(sequential([5, "a", 0, 9]), log);
+      Assert.assertTrue(await new klass([]).everyAsync(async () => false), `${name}.everyAsync() is true when empty`);
+
+      log = [];
+      Assert.assertTrue(await make().containsAsync(loggedEven(log)), `${name}.containsAsync() finds an even item`);
+      Assert.assertSame(sequential([5, "a"]), log, `${name}.containsAsync() stops at the first truthy result`);
+      Assert.assertFalse(await make().containsAsync(async () => false), `${name}.containsAsync() is false when nothing matches`);
+
+      log = [];
+      Assert.assertSame(2, await make().firstAsync(loggedEven(log)), `${name}.firstAsync() gives the first even item`);
+      Assert.assertSame(sequential([5, "a"]), log, `${name}.firstAsync() stops at the first match`);
+      Assert.assertNull(await make().firstAsync(async () => false), `${name}.firstAsync() defaults to null`);
+      Assert.assertSame("none", await make().firstAsync(async () => false, "none"));
+      Assert.assertSame("lazy", await make().firstAsync(async () => false, () => "lazy"), `${name}.firstAsync() resolves value(default)`);
+
+      const boom = new Error("boom");
+      for (const [companion, run] of [
+        ["filterAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().filterAsync(callback)],
+        ["rejectAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().rejectAsync(callback)],
+        ["partitionAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().partitionAsync(callback)],
+        ["everyAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().everyAsync(callback)],
+        ["containsAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().containsAsync(callback)],
+        ["firstAsync", (callback: (value: number, key: unknown) => Promise<boolean>) => make().firstAsync(callback)],
+      ] as const) {
+        const calls: unknown[] = [];
+        const error = await rejection(
+          run(async (value: number, key: unknown) => {
+            calls.push(key);
+            await Promise.resolve();
+            if (key === "a") {
+              throw boom;
+            }
+            // A result that never decides `every` / `contains` / `first`, so the walk reaches the rejection.
+            return value > 0 && companion === "everyAsync";
+          }),
+        );
+        Assert.assertSame(boom, error, `${name}.${companion}() rejects with the callback's rejection`);
+        Assert.assertSame([5, "a"], calls, `${name}.${companion}() calls no callback after the rejection`);
+      }
+    }
+
+    // (d) async-surface.json lists the companions.
+    const surface = readFileSync(join(REPO, "packages", "collections", "async-surface.json"), "utf8");
+    const entries = (JSON.parse(surface) as { method: string; file: string; root: string }[]).map((entry) => `${entry.method} ${entry.file} ${entry.root}`);
+    for (const [klass, file] of [
+      ["Collection", "src/Collection.ts"],
+      ["LazyCollection", "src/LazyCollection.ts"],
+      ["Enumerable", "src/Enumerable.ts"],
+    ]) {
+      for (const companion of ["filterAsync", "rejectAsync", "partitionAsync", "everyAsync", "containsAsync", "firstAsync"]) {
+        Assert.assertContains(`${klass}.${companion} ${file} callback`, entries, `async-surface.json lists ${klass}.${companion}`);
+      }
+    }
+
+    // (e) duplicates' options object.
+    const rows = [{ k: "a" }, { k: "b" }, { k: "a" }, { K: "a" }, { k: "1" }, { k: 1 }];
+    for (const make of [(items_: unknown): Duplicating => collect(items_), (items_: unknown): Duplicating => LazyCollection.make(items_)]) {
+      Assert.assertSame(make(rows).duplicates("k", true).all(), make(rows).duplicates({ callback: "k", strict: true }).all(), "{ callback, strict } is duplicates(callback, strict)");
+      Assert.assertSame(make(rows).duplicates("k").all(), make(rows).duplicates({ callback: "k" }).all(), "{ callback } is duplicates(callback)");
+      Assert.assertSame(make([1, "1", 1]).duplicates(null, true).all(), make([1, "1", 1]).duplicates({ strict: true }).all(), "{ strict } is duplicates(null, strict)");
+      const byK = (row: Record<string, unknown>): unknown => row["k"] ?? null;
+      Assert.assertSame(make(rows).duplicates(byK, true).all(), make(rows).duplicates({ callback: byK, strict: true }).all(), "a callback in the options object");
+      Assert.assertSame(new PhpArray<number, unknown>([[2, "a"], [5, 1]]), make(rows).duplicates({ callback: "k" }).all(), "the loose form's duplicates");
+      Assert.assertSame(new PhpArray<number, unknown>([[2, "a"]]), make(rows).duplicates({ callback: "k", strict: true }).all(), "the strict form's duplicates");
+      // An invokable object is a callable at run time, which the static type does not list, so the calls go through a view.
+      const loose = (c: Duplicating) => c as unknown as { duplicates(callback: unknown): { all(): unknown } };
+      Assert.assertSame(make(rows).duplicates("k").all(), loose(make(rows)).duplicates(new XtInvokable()).all(), "an invokable object is the callback");
+      // A plain object with a function `__invoke` is not the options object; it is a PHP array, used as a data_get path,
+      // which PHP's array offset refuses, as it refuses an array holding a Closure there.
+      let plain: unknown = null;
+      try {
+        loose(make(rows))
+          .duplicates({ __invoke: (row: Record<string, unknown>): unknown => row["k"] ?? null })
+          .all();
+      } catch (error) {
+        plain = error;
+      }
+      Assert.assertInstanceOf(PhpTypeError, plain, "a plain object with a function __invoke is not read as options");
+    }
+
+    // (f) Members this Story adds that no ported test runs: whereInstanceOf, keyBy, concat, and Collection's props protocol.
+    for (const [name, make] of [
+      ["Collection", (items_: unknown): Collection | LazyCollection => collect(items_)],
+      ["LazyCollection", (items_: unknown): Collection | LazyCollection => LazyCollection.make(items_)],
+    ] as const) {
+      const std = new stdClass();
+      const local = new XtInstance();
+      const typed = make([std, local, "x", 1, new stdClass()]);
+      Assert.assertSame([0, 4], keysOf(typed.whereInstanceOf(fqcn(stdClass)).all()), `${name}.whereInstanceOf() with a class-name string`);
+      Assert.assertSame([0, 4], keysOf(typed.whereInstanceOf(stdClass).all()), `${name}.whereInstanceOf() with a constructor`);
+      Assert.assertSame([1], keysOf(typed.whereInstanceOf(XtInstance).all()), `${name}.whereInstanceOf() with a registered local class`);
+      Assert.assertSame([1], keysOf(typed.whereInstanceOf(fqcn(XtInstance)).all()), `${name}.whereInstanceOf() with its class-name string`);
+      Assert.assertSame([0, 1, 4], keysOf(typed.whereInstanceOf([stdClass, XtInstance]).all()), `${name}.whereInstanceOf() with a list of classes`);
+
+      const keyed_ = make([
+        { id: XtSuit.Hearts, v: 1 },
+        { id: new XtStringable(), v: 2 },
+        { id: null, v: 3 },
+        { id: 7, v: 4 },
+      ]).keyBy("id");
+      Assert.assertSame(["H", "stringable", "", 7], keysOf(keyed_.all()), `${name}.keyBy(): an enum case's value, an object's string, null as ""`);
+      Assert.assertSame([1, 2, 3, 4], array_values(keyed_.map((row: Record<string, unknown>) => row["v"]).all()));
+
+      Assert.assertSame(["a", "b", "c", "d"], make(["a"]).concat(collect(["b"])).concat(LazyCollection.make({ k: "c", j: "d" })).all(), `${name}.concat() of a Collection and a LazyCollection, keys reset`);
+    }
+    Assert.assertTrue(looseEquals(collect([1]), collect([1])), "two Collections of equal items are == (AD-9.6)");
+    Assert.assertFalse(looseEquals(collect([1]), collect([2])), "Collections of different items are not ==");
+    Assert.assertFalse(looseEquals(collect([1]), new LazyCollection([1])), "a Collection is not == a LazyCollection");
+  },
+  120_000,
 );

@@ -1,5 +1,6 @@
-// Laravel's `Illuminate\Support\Collection` (v13.37.0), the members Stories 14.1 and 14.2 port; the Collections
-// Stories that port their tests add the rest. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
+// Laravel's `Illuminate\Support\Collection` (v13.37.0), the members Stories 14.1-14.3 port; the Collections
+// Stories that port their tests add the rest (`groupBy`, which needs PHP's `is_bool` from the runtime, waits on
+// ESC-14.3-1). It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
 // `use EnumeratesValues, Macroable` (`TransformsToResourceCollection` needs `@xaravel/http` and comes with the Story
 // that ports its tests).
 //
@@ -17,7 +18,13 @@
 // `PhpArray`. `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
 // `...arguments` unchanged. `contains`, `doesntContain`, `doesntContainStrict`, `sole`, `hasSole`, `firstOrFail`,
 // `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random`,
-// `sortBy` and `splice` also take an options object (AD-26).
+// `sortBy`, `splice` and `duplicates` also take an options object (AD-26).
+//
+// Collections are sync (AD-6): a sync member's callback is a `SyncCallback`, which `tsc` and lint refuse to be async,
+// and `filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`, `containsAsync` and `firstAsync` are the async
+// companions (DIV-1 Callbacks, DIV-1.2), tagged `@asyncRoot callback`: each awaits its callback for one item at a
+// time, in key order. PHP's `==` on two collections compares their properties, which the props protocol gives the
+// runtime (AD-9.6).
 import { CanBeEscapedWhenCastToString } from "@xaravel/contracts/support";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -49,6 +56,8 @@ import {
   InvalidArgumentException,
   is_array,
   is_callable,
+  is_null,
+  is_object,
   is_string,
   IteratorAggregate,
   JsonSerializable,
@@ -78,23 +87,29 @@ import {
   strnatcmp,
   toFloat,
   toInt,
+  toBool,
   toPhpString,
   Traversable,
   uasort,
   unhandledMatch,
+  UnitEnum,
   valueCopy,
 } from "@xaravel/runtime";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
 import { Arr } from "./Arr";
 import { Enumerable } from "./Enumerable";
+import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
 import { ItemNotFoundException } from "./ItemNotFoundException";
 import { LazyCollection } from "./LazyCollection";
 import { MultipleItemsFoundException } from "./MultipleItemsFoundException";
-import { arrayRead, callCallable, isOptionsObject } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject, type SyncCallback, type ValueOrSyncCallback } from "./support/callables";
 
 /** The `Countable` brand `count()` and the grader read (no token; `packages/runtime/src/php/ArrayObject.ts`). */
 const COUNTABLE = Symbol.for("Countable");
+
+/** The props protocol's key (AD-9.6): the properties PHP compares and casts. */
+const PHP_PROPS = Symbol.for("xaravel.php.props");
 
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
@@ -118,6 +133,11 @@ function itemsOf(ref: Ref<unknown>): PhpArray {
 /** A PHP array as the collection keeps its items: a `PhpArray` as it is, any other form as a `PhpArray` of it. */
 function asItems(array: unknown): PhpArray {
   return array instanceof PhpArray ? array : new PhpArray(arrayEntries(array as object));
+}
+
+/** The values PHP's `foreach ($source as $item)` gives for an array or a Traversable. */
+function valuesOf(source: unknown): Iterable<unknown> {
+  return is_array(source) ? arrayEntries(source as object).map(([, item]) => item) : (source as Iterable<unknown>);
 }
 
 /** A callback that gets a value copy of each item (AD-9), as every callback of the collection does. */
@@ -176,6 +196,18 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return true;
   }
 
+  /**
+   * The props protocol (AD-9.6): the PHP properties PHP's `==`, `<=>` and `(array)` read, with their mangled protected
+   * names, in PHP's order (the class's own `$items`, then the trait's `$escapeWhenCastingToString`). So two collections
+   * of equal items are `==`, as in PHP (`looseEquals`, `array_unique`'s `SORT_REGULAR`, `in_array`).
+   */
+  [PHP_PROPS](): PhpArray {
+    return new PhpArray([
+      ["\0*\0items", this.all()],
+      ["\0*\0escapeWhenCastingToString", this.escapeWhenCastingToStringProperty],
+    ]);
+  }
+
   /** Create a new instance of the collection. */
   protected newInstance(items: unknown = []): this {
     return new (this.constructor as new (items?: unknown) => this)(items);
@@ -197,7 +229,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a filter over each of the items: the callback gets each value and its key, and keys are kept. */
-  filter(callback: ItemCallback | null = null): this {
+  filter<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): this {
     if (callback !== null) {
       return this.newInstance(Arr.where(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
     }
@@ -222,11 +254,13 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
-  map(callback: ItemCallback): this {
+  map<R>(callback: SyncCallback<[value: any, key: any], R>): this {
     return this.newInstance(Arr.map(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
   }
 
   /** Return only unique items from the collection array, by `==` or, when `strict`, by `===`. */
+  unique<T, R>(this: T, key: SyncCallback<[value: any, key: any], R>, strict?: boolean): T;
+  unique<T, K>(this: T, key?: ValueOrSyncCallback<K>, strict?: boolean): T;
   unique(key: unknown = null, strict: boolean = false): this {
     if (key === null && strict === false) {
       return this.newInstance(array_unique(this.items, SORT_REGULAR));
@@ -247,6 +281,52 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     });
   }
 
+  /**
+   * Retrieve duplicate items from the collection: each item (or each item's value by `callback`, a callable or a
+   * `data_get` key) after the first equal one, keyed as here, compared by `==` or, when `strict`, by `===`. Also takes
+   * AD-26's options object `{ callback, strict }`: PHP types `$callback` `callable|string|null`, so a plain object there
+   * is the options object, unless its `__invoke` is a function, which makes it a callable (`isOptionsObject`).
+   */
+  duplicates<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null, strict?: boolean): this;
+  duplicates<R>(options?: { callback?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): this;
+  duplicates(callback: unknown = null, strict: boolean = false): this {
+    if (arguments.length === 1 && isOptionsObject(callback)) {
+      ({ callback = null, strict = false } = callback as { callback?: unknown; strict?: boolean });
+    }
+
+    const items = this.map(this.valueRetriever(callback));
+
+    const uniqueItems = items.unique(null, strict);
+
+    const compare = this.duplicateComparator(strict);
+
+    const duplicates = this.newInstance();
+
+    for (const [key, value_] of items.entries()) {
+      if (uniqueItems.isNotEmpty() && compare(value_, uniqueItems.first())) {
+        uniqueItems.shift();
+      } else {
+        duplicates.offsetSet(key, value_);
+      }
+    }
+
+    return duplicates;
+  }
+
+  /** Retrieve duplicate items from the collection using strict comparison (PHP's `===`). */
+  duplicatesStrict<R>(callback: SyncCallback<[value: any, key: any], R> | string | null = null): this {
+    return this.duplicates(callback, true);
+  }
+
+  /** Get the comparison function to detect duplicates: PHP's `===` (`identical`) when `strict`, else `==`. */
+  protected duplicateComparator(strict: boolean): (a: unknown, b: unknown) => boolean {
+    if (strict) {
+      return (a: unknown, b: unknown) => identical(a, b);
+    }
+
+    return (a: unknown, b: unknown) => looseEquals(a, b);
+  }
+
   /** Reset the keys on the underlying array. */
   values(): this {
     return this.newInstance(array_values(this.items));
@@ -256,6 +336,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    * Determine if an item exists in the collection: with one argument, an item `==` the value, or one a callback
    * accepts; with more, an item matching `where(key, operator, value)`.
    */
+  contains<R>(callback: SyncCallback<[value: any, key: any], R>): boolean;
+  contains<K>(key: ValueOrSyncCallback<K>, operator?: unknown, value?: unknown): boolean;
   contains(key: unknown, operator: unknown = null, value_: unknown = null): boolean {
     void operator;
     void value_;
@@ -316,7 +398,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the first item passing the given truth test (or the first item), or `value(default)`. */
-  first(callback: ItemCallback | null = null, defaultValue: unknown = null): any {
+  first<R>(callback: SyncCallback<[value: any, key: any], R> | null = null, defaultValue: unknown = null): any {
     return Arr.first(this.items, callback, defaultValue);
   }
 
@@ -365,7 +447,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    *
    * @deprecated 12.49.0 Use the `hasSole()` method instead.
    */
-  containsOneItem(callback: ItemCallback | null = null): boolean {
+  containsOneItem<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): boolean {
     return this.hasSole(callback);
   }
 
@@ -374,8 +456,41 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    *
    * @deprecated 12.50.0 Use the `hasMany()` method instead.
    */
-  containsManyItems(callback: ItemCallback | null = null): boolean {
+  containsManyItems<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): boolean {
     return this.hasMany(callback);
+  }
+
+  /**
+   * Key an associative array by a field or using a callback (a callable over the item and its key, or a `data_get`
+   * key): an enum case key is its value, an object key its string, and a `null` key `""`; a later item with the same
+   * key replaces an earlier one.
+   */
+  keyBy<T, R>(this: T, keyBy: SyncCallback<[value: any, key: any], R>): T;
+  keyBy<T, K>(this: T, keyBy: ValueOrSyncCallback<K>): T;
+  keyBy(keyBy: unknown): this {
+    const retriever = this.valueRetriever(keyBy);
+
+    const results = new PhpArray();
+
+    for (const [key, item] of arrayEntries(this.items)) {
+      let resolvedKey = retriever(item, key);
+
+      if (resolvedKey instanceof UnitEnum) {
+        resolvedKey = enum_value(resolvedKey);
+      }
+
+      if (is_object(resolvedKey)) {
+        resolvedKey = toPhpString(resolvedKey);
+      }
+
+      if (is_null(resolvedKey)) {
+        resolvedKey = toPhpString(resolvedKey);
+      }
+
+      results.set(resolvedKey as PhpKeyInput, item);
+    }
+
+    return this.newInstance(results);
   }
 
   /** Get the keys of the collection items, as a collection. */
@@ -384,7 +499,7 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the last item passing the given truth test (or the last item), or `value(default)`. */
-  last(callback: ItemCallback | null = null, defaultValue: unknown = null): any {
+  last<R>(callback: SyncCallback<[value: any, key: any], R> | null = null, defaultValue: unknown = null): any {
     return Arr.last(this.items, callback, defaultValue);
   }
 
@@ -588,6 +703,17 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this.get(keys.get((position as number) + 1));
   }
 
+  /** Push all of the given items (an array or a Traversable's values) onto a new collection, after these. */
+  concat(source: unknown): this {
+    const result = this.newInstance(this);
+
+    for (const item of valuesOf(source)) {
+      result.push(item);
+    }
+
+    return result;
+  }
+
   /** Get and remove the first item (`count` 1), or the first `count` items as a collection. Throws below zero. */
   shift(count: number = 1): any {
     if (count < 0) {
@@ -626,6 +752,20 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   /** Skip the first `count` items. */
   skip(count: number): this {
     return this.slice(count);
+  }
+
+  /** Skip items in the collection until the given condition is met: an item `===` the value, or a callback's match. */
+  skipUntil<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  skipUntil<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  skipUntil(value_: unknown): this {
+    return this.newInstance(this.lazy().skipUntil(value_).all());
+  }
+
+  /** Skip items in the collection while the given condition is met: an item `===` the value, or a callback's match. */
+  skipWhile<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  skipWhile<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  skipWhile(value_: unknown): this {
+    return this.newInstance(this.lazy().skipWhile(value_).all());
   }
 
   /** Slice the underlying collection array, keys kept. */
@@ -829,6 +969,131 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     }
 
     return this.slice(0, limit);
+  }
+
+  /** Take items in the collection until the given condition is met: an item `===` the value, or a callback's match. */
+  takeUntil<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  takeUntil<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  takeUntil(value_: unknown): this {
+    return this.newInstance(this.lazy().takeUntil(value_).all());
+  }
+
+  /** Take items in the collection while the given condition is met: an item `===` the value, or a callback's match. */
+  takeWhile<T, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  takeWhile<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
+  takeWhile(value_: unknown): this {
+    return this.newInstance(this.lazy().takeWhile(value_).all());
+  }
+
+  /**
+   * `filter`'s async companion (DIV-1 Callbacks, DIV-1.2): the items for which the awaited `callback(value, key)` is
+   * truthy, keys kept. The callback may be async; each call is awaited before the next starts, in key order. A rejected
+   * callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async filterAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const kept = new PhpArray();
+
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        kept.set(key, value_);
+      }
+    }
+
+    return this.newInstance(kept);
+  }
+
+  /**
+   * `reject`'s async companion (DIV-1 Callbacks, DIV-1.2): the items for which the awaited `callback(value, key)` is
+   * falsy, keys kept. The callback may be async; each call is awaited before the next starts, in key order. A rejected
+   * callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async rejectAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const kept = new PhpArray();
+
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (!toBool(await callCallable(callback, valueCopy(value_), key))) {
+        kept.set(key, value_);
+      }
+    }
+
+    return this.newInstance(kept);
+  }
+
+  /**
+   * `partition`'s async companion (DIV-1 Callbacks, DIV-1.2): a collection of `[passed, failed]` by the awaited
+   * `callback(value, key)`, each keeping its items' keys. The callback may be async; each call is awaited before the
+   * next starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async partitionAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const passed = new PhpArray();
+    const failed = new PhpArray();
+
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        passed.set(key, value_);
+      } else {
+        failed.set(key, value_);
+      }
+    }
+
+    return this.newInstance([this.newInstance(passed), this.newInstance(failed)]);
+  }
+
+  /**
+   * `every`'s async companion (DIV-1 Callbacks, DIV-1.2): whether the awaited `callback(value, key)` is truthy for every
+   * item, stopping at the first falsy one (`true` when empty). The callback may be async; each call is awaited before
+   * the next starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async everyAsync(callback: (value: any, key: any) => unknown): Promise<boolean> {
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (!toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * `contains`'s async companion for a callback (DIV-1 Callbacks, DIV-1.2): whether the awaited `callback(value, key)`
+   * is truthy for some item, stopping at the first. The callback may be async; each call is awaited before the next
+   * starts, in key order. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async containsAsync(callback: (value: any, key: any) => unknown): Promise<boolean> {
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * `first`'s async companion for a callback (DIV-1 Callbacks, DIV-1.2): the first item for which the awaited
+   * `callback(value, key)` is truthy, else `value(default_)`. The callback may be async; each call is awaited before the
+   * next starts, in key order, stopping at the first match. A rejected callback rejects the result.
+   *
+   * @asyncRoot callback
+   */
+  async firstAsync(callback: (value: any, key: any) => unknown, default_: unknown = null): Promise<any> {
+    for (const [key, value_] of arrayEntries(this.items)) {
+      if (toBool(await callCallable(callback, valueCopy(value_), key))) {
+        return valueCopy(value_);
+      }
+    }
+
+    return value(default_);
   }
 
   /** Get an iterator for the items: an `ArrayIterator` over a copy of them. */

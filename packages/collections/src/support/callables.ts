@@ -1,8 +1,27 @@
-// Calling a PHP callable and reading a PHP array or object by key, as the Collections core does. Internal: not
-// exported from the package.
+// Calling a PHP callable and reading a PHP array or object by key, as the Collections core does, and the type of a
+// sync member's callback. Internal: not exported from the package.
+import type { NotPromise } from "@xaravel/contracts/async";
 import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool } from "@xaravel/runtime";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
+
+/**
+ * The callback of a sync member (`filter`, `map`, `each`, `first`, …), whose result `R` the member infers. Collections
+ * are sync (AD-6, DIV-1 Callbacks): an async callback is refused, and goes to the async companion instead
+ * (`filterAsync`, …, DIV-1.2). The type is an intersection of two signatures, and each half catches it for one tool:
+ * the `NotPromise<R>` half makes `tsc` reject an async callback (`TS2322`, its Promise result is `never`), and the
+ * `void` half lets oxlint's `no-misused-promises` (`checksVoidReturn`) see a void-returning parameter and report the
+ * Promise-returning function passed to it. A bare `NotPromise<R>` is caught only by `tsc`, and `NotPromise<R> | void`
+ * only by lint. A sync callback keeps its contextual parameter types and any result.
+ */
+export type SyncCallback<A extends unknown[], R> = ((...args: A) => NotPromise<R>) & ((...args: A) => void);
+
+/**
+ * A value-or-callback parameter (`contains`, `every`, `reject`, `skipUntil`, …): the value as it is, or, when the
+ * argument is a function, its `SyncCallback`, so an async callback is refused there too (AD-6). Members declare it in
+ * an overload after a `SyncCallback` one, which keeps a callback's contextual parameter types.
+ */
+export type ValueOrSyncCallback<K> = K extends (...args: infer A) => infer R ? SyncCallback<A, R> : K;
 
 /**
  * PHP's `$callback(...$args)`: a function is called with `args`, and an object whose `__invoke` is a function through
@@ -101,13 +120,18 @@ export function offsetIsSet(target: object, key: unknown): boolean {
 }
 
 /**
- * Whether `value` is an AD-26 options object: a plain object (prototype `Object.prototype` or `null`). A member reads
- * one only in a position where PHP never takes an array, so the reading is unambiguous: `random`'s `$number` (an int,
- * a callable or null), `splice`'s `$length` (an int or null), `sortBy`'s `$options` (an int), and `Arr.first` /
- * `Arr.last`'s `$callback` (a `?callable`, so a plain object there is never the callback).
+ * Whether `value` is an AD-26 options object: a plain object (prototype `Object.prototype` or `null`) whose `__invoke`
+ * is not a function. A member reads one only in a position where PHP never takes an array, so the reading is
+ * unambiguous: `random`'s `$number` (an int, a callable or null), `splice`'s `$length` (an int or null), `sortBy`'s
+ * `$options` (an int), and the `$callback` of `Arr.first` / `Arr.last` (a `?callable`) and of `duplicates` (a callable,
+ * a key string or null). An object with a function `__invoke` is a callable in this port (`callCallable` invokes it),
+ * so it is never read as options.
  */
 export function isOptionsObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  if (typeof (value as { __invoke?: unknown }).__invoke === "function") {
     return false;
   }
   const prototype: unknown = Object.getPrototypeOf(value);
