@@ -3,6 +3,7 @@
 // (AD-9.5). Its `[Symbol.iterator]()` yields normalised `[key, value]` pairs, the protocol the grader reads without
 // importing the runtime (decisions/ESC-4.1-1.md). A key is a safe-integer `number`, a `bigint` for an int beyond
 // ±(2^53 − 1), or a `string`. `jsonEncode` encodes it by the list rule.
+import { copyArrayPointer } from "./arrayPointer";
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
 import { Error as PhpError } from "./Error";
@@ -182,7 +183,7 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
       copy.#entries.set(key, value);
     }
     copy.#nextFree = this.#nextFree;
-    return copy;
+    return copyArrayPointer(this, copy);
   }
 
   /** The keys, in insertion order. */

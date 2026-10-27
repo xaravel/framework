@@ -22,11 +22,11 @@ import { isBackedEnumClass, isEnumClass } from "./classExistence";
 import { isClassConstructor, isClosureValue } from "./Closure";
 import { hasBrand } from "./hasBrand";
 import { boolParameter, stringParameter } from "./phpArguments";
-import { phpFunction } from "./phpFunctions";
+import { resolveCallable } from "./callables";
 import type { PhpArrayKey } from "./PhpArray";
 import { className, phpType } from "./phpType";
 import { Ref } from "./Ref";
-import { findMethod, registeredName } from "./reflectionTargets";
+import { registeredName } from "./reflectionTargets";
 import { isTraversable } from "./traverse";
 import { UnitEnum } from "./UnitEnum";
 
@@ -187,32 +187,8 @@ export function is_a(object_or_class: unknown, class_: unknown, allow_string: un
   return false;
 }
 
-/** The class-string rule: `method` is a static method of `klass`, or it has none of that name and has `__callStatic`. */
-function staticCallable(klass: ClassLike | object, method: string): boolean {
-  const found = findMethod(klass, method);
-  if (found !== null) {
-    return found.isStatic;
-  }
-  return findMethod(klass, "__callStatic") !== null;
-}
-
 /** PHP's `Closure` methods, lower-cased (PHP method names are case-insensitive). Internal: `method_exists` reads them too. */
 export const CLOSURE_METHODS: ReadonlySet<string> = new Set(["__invoke", "bind", "bindto", "call", "fromcallable"]);
-
-/**
- * The object rule: `method` is a method of `object`'s class (either chain), or the class has `__call`. A Closure's
- * methods are PHP's `Closure` methods, named in any case.
- */
-function objectCallable(object: object, method: string): boolean {
-  if (isClosureValue(object)) {
-    return CLOSURE_METHODS.has(method.toLowerCase());
-  }
-  const klass = objectClass(object);
-  if (klass === null) {
-    return false;
-  }
-  return findMethod(klass, method) !== null || findMethod(klass, "__call") !== null;
-}
 
 /** Entries `0` and `1` of a PHP array of exactly two entries, or null. */
 function callablePair(value: object): [unknown, unknown] | null {
@@ -231,44 +207,12 @@ function callablePair(value: object): [unknown, unknown] | null {
 
 /** `zend_is_callable_at_frame` with no calling scope (DIV-9.13, DIV-9.14). */
 function isCallable(value: unknown, syntaxOnly: boolean): boolean {
-  if (isStringLike(value)) {
-    if (syntaxOnly) {
-      return true;
-    }
-    const string = stringOf(value);
-    const separator = string.indexOf("::");
-    if (separator < 0) {
-      // A global function name: the runtime's export of that name (ESC-14.4-2).
-      return phpFunction(string) !== null;
-    }
-    if (separator === 0) {
-      return false;
-    }
-    const klass = lookUpName(string.slice(0, separator));
-    return klass !== null && staticCallable(klass, string.slice(separator + 2));
-  }
-  if (isPhpObject(value)) {
-    return isClosureValue(value) || typeof (value as { __invoke?: unknown }).__invoke === "function";
-  }
-  if (!is_array(value)) {
-    return false;
-  }
+  if (!syntaxOnly) return resolveCallable(value) !== null;
+  if (isStringLike(value)) return true;
+  if (isPhpObject(value)) return resolveCallable(value) !== null;
+  if (!is_array(value)) return false;
   const pair = callablePair(value as object);
-  if (pair === null) {
-    return false;
-  }
-  const [target, method] = pair;
-  if ((!isStringLike(target) && !isPhpObject(target)) || typeof method !== "string") {
-    return false;
-  }
-  if (syntaxOnly) {
-    return true;
-  }
-  if (isStringLike(target)) {
-    const klass = classOf(target);
-    return klass !== null && staticCallable(klass, method);
-  }
-  return objectCallable(target as object, method);
+  return pair !== null && (isStringLike(pair[0]) || isPhpObject(pair[0])) && typeof pair[1] === "string";
 }
 
 /** `zend_get_callable_name_ex`, except that a Closure is `Closure::__invoke` (PHP 8.5 names it by file and line). */
@@ -315,4 +259,14 @@ export function is_callable(value: unknown, syntax_only: unknown = false, callab
     callable_name.value = callableName(subject);
   }
   return result;
+}
+
+/** PHP's `is_subclass_of`: excludes the identical class, with class-strings enabled by default. */
+export function is_subclass_of(object_or_class: unknown, class_: unknown, allow_string: unknown = true): boolean {
+  const name = stringParameter("is_subclass_of", 2, "class", class_);
+  const allowString = boolParameter("is_subclass_of", 3, "allow_string", allow_string);
+  const target = lookUpName(name);
+  const instance = isStringLike(object_or_class) ? (allowString ? classOf(object_or_class) : null)
+    : isPhpObject(object_or_class) ? objectClass(object_or_class) : null;
+  return instance !== null && target !== null && instance !== target && classIsA(instance, target);
 }

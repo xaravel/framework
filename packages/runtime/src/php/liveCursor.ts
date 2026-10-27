@@ -130,8 +130,11 @@ export class LiveCursor<T> {
   }
 }
 
+export const TRAVERSAL_EXIT: unique symbol = Symbol("xaravel.generator.traversal-exit");
+
 /** The five methods of PHP's `Iterator`, as the `foreach` generators call them. */
 export interface IteratorMethods {
+  [TRAVERSAL_EXIT]?(): void;
   rewind(): void;
   valid(): boolean;
   current(): unknown;
@@ -144,12 +147,16 @@ export interface IteratorMethods {
  * `[key, value]` pair, then `next()`. The `entries()` of the runtime's Iterator classes.
  */
 export function* foreachIterator(iterator: IteratorMethods): Generator<[unknown, unknown], void, undefined> {
-  iterator.rewind();
-  while (iterator.valid()) {
-    const value = iterator.current();
-    const key = iterator.key();
-    yield [key, value];
-    iterator.next();
+  try {
+    iterator.rewind();
+    while (iterator.valid()) {
+      const value = iterator.current();
+      const key = iterator.key();
+      yield [key, value];
+      iterator.next();
+    }
+  } finally {
+    iterator[TRAVERSAL_EXIT]?.();
   }
 }
 
@@ -158,10 +165,14 @@ export function* foreachIterator(iterator: IteratorMethods): Generator<[unknown,
  * The `[Symbol.iterator]()` of the runtime's Iterator classes.
  */
 export function* foreachValues(iterator: IteratorMethods): Generator<unknown, void, undefined> {
-  iterator.rewind();
-  while (iterator.valid()) {
-    yield iterator.current();
-    iterator.next();
+  try {
+    iterator.rewind();
+    while (iterator.valid()) {
+      yield iterator.current();
+      iterator.next();
+    }
+  } finally {
+    iterator[TRAVERSAL_EXIT]?.();
   }
 }
 

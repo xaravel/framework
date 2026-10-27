@@ -172,7 +172,7 @@ function ownMethod(holder: object, name: string, lower: string, isStatic: boolea
  * then case-insensitively, as PHP's case-insensitive names let a subclass's `FOO` override a parent's `foo`; then
  * `__toString` as the `toString()` port. Null when none is found.
  */
-function resolveMethod(klass: object, name: string): ResolvedMethod | null {
+export function resolveMethod(klass: object, name: string): ResolvedMethod | null {
   const lower = name.toLowerCase();
   const prototype: unknown = (klass as { prototype?: unknown }).prototype;
   for (let holder: unknown = prototype; typeof holder === "object" && holder !== null && holder !== Object.prototype; holder = Object.getPrototypeOf(holder)) {

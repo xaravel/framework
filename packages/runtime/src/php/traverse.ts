@@ -10,7 +10,7 @@ import { Exception } from "./Exception";
 import { Generator, generatorTraversal, isGeneratorObject, isJsGenerator } from "./Generator";
 import { Iterator } from "./Iterator";
 import { IteratorAggregate } from "./IteratorAggregate";
-import { foreachIterator, foreachValues, type IteratorMethods } from "./liveCursor";
+import { foreachIterator, foreachValues, TRAVERSAL_EXIT, type IteratorMethods } from "./liveCursor";
 import { PhpArray, type PhpKeyInput } from "./PhpArray";
 import { className, phpType, phpTypeName } from "./phpType";
 import { phpValueOf } from "./throwableArguments";
@@ -130,10 +130,14 @@ export function iterableCount(fn: string, value: unknown): number {
   }
   const iterator = iteratorOf(value as object);
   let count = 0;
-  iterator.rewind();
-  while (iterator.valid()) {
-    count++;
-    iterator.next();
+  try {
+    iterator.rewind();
+    while (iterator.valid()) {
+      count++;
+      iterator.next();
+    }
+  } finally {
+    iterator[TRAVERSAL_EXIT]?.();
   }
   return count;
 }

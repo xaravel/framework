@@ -745,21 +745,21 @@ xaravelTest(
     // Xaravel-only: the unported callable forms (DIV-9.13: a name the runtime does not export, ESC-14.4-2), as
     // array_filter refuses them.
     Assert.assertSame(
-      "TypeError: array_map(): Argument #1 ($callback) is a PHP callable string, which Xaravel does not port; pass a function",
+      "TypeError: array_map(): Argument #1 ($callback) must be a valid callback or null, function \"str_rot13\" not found or invalid function name",
       thrownText(() => array_map("str_rot13", ["a"])),
     );
     Assert.assertSame(
-      "TypeError: array_map(): Argument #1 ($callback) is a PHP callable array, which Xaravel does not port; pass a function",
-      thrownText(() => array_map([new Methods(), "m"], ["a"])),
+      '["m"]',
+      json(array_map([new Methods(), "m"], ["a"])),
     );
     // Xaravel-only: a class constructor and a contract token are class-strings, so PHP callable strings.
     for (const callback of [Methods, Traversable]) {
       Assert.assertSame(
-        "TypeError: array_map(): Argument #1 ($callback) is a PHP callable string, which Xaravel does not port; pass a function",
+        `TypeError: array_map(): Argument #1 ($callback) must be a valid callback or null, function "${fqcn(callback)}" not found or invalid function name`,
         thrownText(() => array_map(callback, ["a"])),
       );
       Assert.assertSame(
-        "TypeError: array_filter(): Argument #2 ($callback) is a PHP callable string, which Xaravel does not port; pass a function",
+        `TypeError: array_filter(): Argument #2 ($callback) must be a valid callback or null, function "${fqcn(callback)}" not found or invalid function name`,
         thrownText(() => php.array_filter(["a"], callback)),
       );
     }
