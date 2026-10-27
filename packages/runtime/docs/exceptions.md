@@ -12,7 +12,7 @@ them from `@xaravel/runtime` (or `@xaravel/runtime/php`), never from another pac
 | `Exception` | `ErrorException`, `JsonException`, `RuntimeException`, `LogicException` |
 | `LogicException` | `InvalidArgumentException`, `DomainException`, `LengthException`, `OutOfRangeException`, `BadFunctionCallException` (and its `BadMethodCallException`) |
 | `RuntimeException` | `OutOfBoundsException`, `RangeException`, `OverflowException`, `UnderflowException`, `UnexpectedValueException` |
-| `Error` | `TypeError` (and its `ArgumentCountError`), `ValueError`, `ArithmeticError` (and its `DivisionByZeroError`) |
+| `Error` | `TypeError` (and its `ArgumentCountError`), `ValueError`, `ArithmeticError` (and its `DivisionByZeroError`), `UnhandledMatchError` |
 
 PHP's `Exception` and `Error` each extend the JS `Error` directly. Every class is therefore `instanceof` the JS
 `Error`, and no class is under both PHP roots, as in PHP. The chains match PHP 8.5's `class_parents`, which the Oracle
@@ -21,6 +21,27 @@ tests check. `Exception` and `Error` carry the `Throwable` and `Stringable` bran
 
 The names `Error` and `TypeError` shadow the JS globals in a module that imports them. A module that needs both
 imports the PHP class under an alias: `import { Error as PhpError, TypeError as PhpTypeError } from "@xaravel/runtime"`.
+
+`UnhandledMatchError` is what PHP's `match` throws when no arm matches and there is no `default` arm (ESC-14.2-6).
+A port writes `throw unhandledMatch(subject)` at that point. `unhandledMatch(subject)` returns a new
+`UnhandledMatchError` and does not throw it. Its message is PHP 8.5.11's, at PHP's defaults (`precision` 14,
+`exception_string_param_max_len` 15):
+
+- `Unhandled match case NULL` for `null` (and `undefined`), `true` / `false`, and an int (a `number` or a `bigint`)
+  in decimal.
+- A float as PHP's `(string)` gives it, with `.0` added when it is finite and has no `.`: `1.0`, `-0.0`, `0.3`,
+  `1.0E+20`, `INF`, `NAN`.
+- A string in `'` quotes, read as its UTF-8 bytes. At most the first 15 bytes are kept, and `...` is added inside the
+  quotes when it is longer. A newline, carriage return, tab, form feed, vertical tab, ESC and backslash are written as
+  `\n`, `\r`, `\t`, `\f`, `\v`, `\e` and `\\`, and any other byte below 32 or above 126 as `\xHH` in upper-case
+  hex: `'\xC3\xA9...'`. A class constructor or a contract token is its class-string.
+- `Unhandled match case of type array` for an array, and `of type <get_debug_type>` for an object
+  (`of type stdClass`, `of type Closure`).
+
+A symbol or a `bigint` outside int64, which is no PHP value, throws the runtime's JS `TypeError`, as `phpType` does.
+So does a string holding a lone surrogate, which has no UTF-8 form
+(`unhandledMatch(): the string holds a lone surrogate, which has no UTF-8 form`).
+Unlike the classes above, `UnhandledMatchError` is not on the grader's `Symbol.for('xaravel.php.classes')` map.
 
 ## Constructors and getters
 
@@ -137,8 +158,8 @@ portedTest(`${ID}::testWhen`, { case: ConditionableTest }, function () {
 Loading any of the four package entries (the package root, `scope`, `registry` or `php`) defines
 `globalThis[Symbol.for('xaravel.php.classes')]`; a module below them, loaded first, publishes nothing
 (`decisions/ESC-9.10-2.md` (a)). It is a frozen null-prototype object that maps each PHP built-in class
-the runtime ports, by PHP's declared name, to the class: the 22 classes above, plus `stdClass` and
-`__PHP_Incomplete_Class`. The property is non-writable, non-configurable and non-enumerable.
+the runtime ports, by PHP's declared name, to the class: the classes above other than `UnhandledMatchError` (22), plus
+`stdClass` and `__PHP_Incomplete_Class`. The property is non-writable, non-configurable and non-enumerable.
 
 The grader reads it without importing the runtime. It tells PHP's `\Error` from `\Exception` with
 `error instanceof map.Error` and `error instanceof map.Exception`, and folds case itself, because PHP class names are

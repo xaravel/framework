@@ -46,8 +46,11 @@ function isStringLike(value: unknown): boolean {
   return typeof value === "string" || isContractToken(value) || isClassConstructor(value);
 }
 
-/** The PHP string a string-like value stands for: the string, a token's FQCN, a class's Registry FQCN or JS name. */
-function stringOf(value: unknown): string {
+/**
+ * The PHP string a string-like value stands for: the string, a token's FQCN, a class's Registry FQCN or JS name.
+ * Internal: `unhandledMatch` reads a class-string subject through it too.
+ */
+export function stringOf(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
