@@ -369,17 +369,26 @@ function localeCompare(a: Uint8Array, b: Uint8Array): number {
 }
 
 /** `php_get_data_compare_func(sort_type, 0)`'s unstable comparator. */
-function dataCompare(fn: string, sortType: bigint): (a: unknown, b: unknown) => number {
+function dataCompare(fn: string, sortType: bigint, failed: { error: { thrown: unknown } | null } | null = null): (a: unknown, b: unknown) => number {
   const foldCase = (sortType & 8n) !== 0n;
+  const bytes = (value: unknown): Uint8Array => {
+    try { return bytesOf(fn, value); }
+    catch (thrown) {
+      if (failed === null) throw thrown;
+      failed.error ??= { thrown };
+      // zend_string conversion keeps sorting with an empty string while the exception is pending.
+      return new Uint8Array();
+    }
+  };
   switch (sortType & ~8n) {
     case 1n:
       return numericCompare;
     case 2n:
-      return (a, b) => (typeof a === "string" && a === b ? 0 : binaryCompare(bytesOf(fn, a), bytesOf(fn, b), foldCase));
+      return (a, b) => (typeof a === "string" && a === b ? 0 : binaryCompare(bytes(a), bytes(b), foldCase));
     case 5n:
-      return (a, b) => localeCompare(bytesOf(fn, a), bytesOf(fn, b));
+      return (a, b) => localeCompare(bytes(a), bytes(b));
     case 6n:
-      return (a, b) => strnatcmpEx(bytesOf(fn, a), bytesOf(fn, b), foldCase);
+      return (a, b) => strnatcmpEx(bytes(a), bytes(b), foldCase);
     default:
       return regularCompare;
   }
@@ -532,10 +541,12 @@ function newSort(fn: string, array: Ref<unknown>, flags: unknown, reverse: boole
   const { array: input, entries } = referencedArray(fn, array);
   const failed: { error: { thrown: unknown } | null } = { error: null };
   const compare = fn === "uksort" ? userCompare(requiredCallback(fn, 2, callback), failed)
-    : dataCompare(fn, BigInt(intParameter(fn, 2, "flags", flags)));
+    : dataCompare(fn, BigInt(intParameter(fn, 2, "flags", flags)), failed);
   const buckets = entries.map(([key, value], index) => ({ key, value, index }));
   zendSort(buckets, (a, b) => {
-    const result = compare(byKey ? a.key : a.value, byKey ? b.key : b.value);
+    let result = 0;
+    try { result = compare(byKey ? a.key : a.value, byKey ? b.key : b.value); }
+    catch (thrown) { failed.error ??= { thrown }; }
     return result === 0 ? a.index - b.index : reverse ? -result : result;
   });
   const sorted = buckets.map(({ key, value }) => [key, valueCopy(value)] as const);

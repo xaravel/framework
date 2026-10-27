@@ -17,6 +17,7 @@
 // alone returns a `PhpArray`. `undefined` reads as null (AD-9), and an omitted optional argument is PHP's default.
 // PHP's warnings and deprecations are not reproduced. Everything is synchronous.
 import { isContractToken } from "../registry/registry";
+import { arrayPointer, setArrayPointer } from "./arrayPointer";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { arrayCount, arrayEntries, floatValue, isTrue, toFloat, toInt, toPhpString } from "./casts";
 import { isEnumCase } from "./classExistence";
@@ -1553,7 +1554,11 @@ export function arrayUnion(a: unknown, b: unknown): unknown {
       result.set(key, value);
     }
   }
-  return keptDup(result);
+  const copy = valueCopy(keptDup(result)) as object;
+  const pointer = arrayPointer(a);
+  // zend_array_dup restarts an invalid pointer; a surviving selected bucket keeps its position.
+  setArrayPointer(copy, pointer < arrayEntries(a).length ? pointer : 0);
+  return copy;
 }
 
 /** PHP's `array_chunk`, preserving all keys when requested and otherwise reindexing each chunk. */

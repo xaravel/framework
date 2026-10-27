@@ -1,8 +1,9 @@
 // Bounded PHP locale support (ESC-14.5-1): only proven byte-order locales, scoped to the current unit.
 import { frameSlot } from "../scope/scope";
-import { arrayEntries } from "./casts";
-import { intParameter, stringParameter } from "./phpArguments";
+import { arrayEntries, toPhpString } from "./casts";
+import { argumentTypeError, intParameter } from "./phpArguments";
 import { phpType } from "./phpType";
+import { toStringArgument } from "./throwableArguments";
 
 /** PHP's LC_ALL category on the Oracle host. */
 export const LC_ALL = 6;
@@ -26,19 +27,27 @@ export function currentLocale(): string { return query(LC_COLLATE); }
 
 /** PHP's `setlocale`: query or select the first supported locale. C/POSIX use identical collation. */
 export function setlocale(category: unknown, locales: unknown, ...rest: unknown[]): string | false {
-  const cat = intParameter("setlocale", 1, "category", category);
+  const cat = Number(intParameter("setlocale", 1, "category", category));
   if (cat !== LC_ALL && cat !== 0 && cat !== 1 && cat !== 2 && cat !== 3 && cat !== 4 && cat !== 5) {
     return false;
   }
-  const candidates = typeof locales === "object" && locales !== null && phpType(locales) === "array"
-    ? arrayEntries(locales).map(([, value]) => value) : [locales, ...rest];
-  for (const value of candidates) {
-    if (value === null || value === "0") return query(Number(cat));
-    const locale = stringParameter("setlocale", 2, "locales", value).split("\0", 1)[0]!;
-    if (locale === "0") return query(Number(cat));
-    if (locale === "C" || locale === "POSIX") {
-      localeSlot.set(localeSlot.get().map((previous, index) => cat === LC_ALL || index === Number(cat) ? "C" : previous));
-      return query(Number(cat));
+  for (const [index, argument] of [locales, ...rest].entries()) {
+    const arrayCandidates = typeof argument === "object" && argument !== null && phpType(argument) === "array";
+    const candidates = arrayCandidates ? arrayEntries(argument as object).map(([, value]) => value) : [argument];
+    for (const value of candidates) {
+      if ((!arrayCandidates && value === null) || value === "0") return query(cat);
+      const converted = arrayCandidates ? toPhpString(value) : toStringArgument(value);
+      if (converted === null) {
+        const error = argumentTypeError("setlocale", index + 2, "locales", "array|string|null", value);
+        if (index > 0) error.message = error.message.replace(" ($locales)", "");
+        throw error;
+      }
+      const locale = converted.split("\0", 1)[0]!;
+      if (locale === "0") return query(cat);
+      if (locale === "C" || locale === "POSIX") {
+        localeSlot.set(localeSlot.get().map((previous, categoryIndex) => cat === LC_ALL || categoryIndex === cat ? "C" : previous));
+        return query(cat);
+      }
     }
   }
   return false;

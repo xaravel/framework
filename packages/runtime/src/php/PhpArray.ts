@@ -156,9 +156,15 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   /** `unset($a[$key])`; whether the key was present. The next free index never goes down. */
   delete(key: K | PhpKeyInput): boolean {
     const normal = normalizeKey(key);
-    const position = [...this.#entries.keys()].indexOf(normal);
-    if (position < 0) return false;
+    if (!this.#entries.has(normal)) return false;
     const pointer = arrayPointer(this);
+    let position = 0;
+    if (pointer > 0) {
+      for (const entry of this.#entries.keys()) {
+        if (entry === normal || position >= pointer) break;
+        position++;
+      }
+    }
     this.#entries.delete(normal);
     if (position < pointer) setArrayPointer(this, pointer - 1);
     return true;

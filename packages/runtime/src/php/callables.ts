@@ -3,12 +3,13 @@ import { isContractToken, lookUpName } from "../registry/registry";
 import { arrayEntries } from "./casts";
 import { isClassConstructor, isClosureValue } from "./Closure";
 import { Error as PhpError } from "./Error";
-import { callMethod, resolveMethod } from "./objectFunctions";
+import { asciiMethodName, callMethod, resolveMethod } from "./objectFunctions";
 import { foreachIterator } from "./liveCursor";
 import { isTraversable, iteratorOf } from "./traverse";
 import { arrayParameter } from "./phpArguments";
 import { phpFunction } from "./phpFunctions";
 import { INT_MAX, INT_MIN } from "./phpInt";
+import { classChain } from "./reflectionTargets";
 import { className, phpType, phpTypeName } from "./phpType";
 import { CLOSURE_METHODS, stringOf } from "./typeTests";
 import { TypeError as PhpTypeError } from "./TypeError";
@@ -32,37 +33,63 @@ function objectLike(value: unknown): value is object {
 
 /** A method callable, or its PHP diagnostic when it cannot resolve. */
 function methodCallable(target: unknown, name: string): PhpCallable | string {
-  if (stringLike(target)) {
-    const klass = typeof target === "string" ? lookUpName(target) : target as object;
-    if (klass === null) return `class "${stringOf(target)}" not found`;
-    const method = resolveMethod(klass, name);
-    if (method !== null) {
-      if (!method.isStatic) return `non-static method ${stringOf(target)}::${name}() cannot be called statically`;
-      return withOptions((...args) => Reflect.apply(method.fn, klass, args) ?? null, method.fn);
-    }
-    const magic = resolveMethod(klass, "__callStatic");
-    if (magic !== null && magic.isStatic) return (...args) => Reflect.apply(magic.fn, klass, [name, args]) ?? null;
-    return `class ${stringOf(target)} does not have a method "${name}"`;
+  const classTarget = stringLike(target);
+  if (!classTarget && !objectLike(target)) return "first array member is not a valid class name or object";
+  if (!classTarget && isClosureValue(target) && CLOSURE_METHODS.has(asciiMethodName(name))) {
+    return withOptions((...args) => callMethod(target, name, ...args), target);
   }
-  if (objectLike(target)) {
-    if (isClosureValue(target) && CLOSURE_METHODS.has(name.toLowerCase())) return withOptions((...args) => callMethod(target, name, ...args), target);
-    const klass: unknown = (Object.getPrototypeOf(target) as { constructor?: unknown } | null)?.constructor;
-    if (typeof klass === "function") {
-      const method = resolveMethod(klass, name);
-      const magic = resolveMethod(klass, "__call");
-      if (method !== null) return withOptions((...args) => callMethod(target, name, ...args), method.fn);
-      if (magic !== null && !magic.isStatic) return (...args) => callMethod(target, name, ...args);
-    }
-    return `class ${className(target)} does not have a method "${name}"`;
+  const original: unknown = classTarget
+    ? typeof target === "string" ? lookUpName(target) : target
+    : (Object.getPrototypeOf(target as object) as { constructor?: unknown } | null)?.constructor;
+  if (original === null) return `class "${stringOf(target)}" not found`;
+  if ((typeof original !== "function" && typeof original !== "object") || original === null) {
+    return `class ${className(target as object)} does not have a method "${name}"`;
   }
-  return "first array member is not a valid class name or object";
+  let selected: object = original;
+  let selectedName = classTarget ? stringOf(target) : className(target as object);
+  const at = name.lastIndexOf("::");
+  if (at >= 0) {
+    const qualifier = name.slice(0, at);
+    name = name.slice(at + 2);
+    if (qualifier === "" || name === "") return "invalid function name";
+    switch (asciiMethodName(qualifier)) {
+      case "self": break;
+      case "parent": {
+        const parent = classChain(original).next().value;
+        if (parent === undefined) return 'cannot access "parent" when current class scope has no parent';
+        selected = parent;
+        break;
+      }
+      default: {
+        const declared = lookUpName(qualifier);
+        if (declared === null) return `class "${qualifier}" not found`;
+        if (declared !== original && ![...classChain(original)].some((parent) => parent === declared)) {
+          return `class ${selectedName} is not a subclass of ${stringOf(declared)}`;
+        }
+        selected = declared;
+      }
+    }
+    selectedName = stringOf(selected);
+  }
+  const method = resolveMethod(selected, name);
+  // An object keeps its original called scope even when a parent declaration is selected.
+  const receiver = classTarget ? selected : original;
+  if (method !== null) {
+    if (classTarget && !method.isStatic) return `non-static method ${selectedName}::${name}() cannot be called statically`;
+    return withOptions((...args) => Reflect.apply(method.fn, method.isStatic ? receiver : target, args) ?? null, method.fn);
+  }
+  const magic = resolveMethod(selected, classTarget ? "__callStatic" : "__call");
+  if (magic !== null && magic.isStatic === classTarget) {
+    return (...args) => Reflect.apply(magic.fn, classTarget ? receiver : target, [name, args]) ?? null;
+  }
+  return `class ${selectedName} does not have a method "${name}"`;
 }
 
 function resolution(value: unknown): PhpCallable | string {
   if (isClosureValue(value)) return withOptions((...args) => Reflect.apply(value, null, args) ?? null, value);
   if (stringLike(value)) {
     const name = stringOf(value);
-    const at = name.indexOf("::");
+    const at = name.lastIndexOf("::");
     if (at >= 0) return methodCallable(name.slice(0, at), name.slice(at + 2));
     return phpFunction(name) ?? `function "${name}" not found or invalid function name`;
   }
@@ -117,7 +144,7 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
   const named: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   let hasNamed = false;
   for (const [key, value] of entries) {
-    if (typeof key !== "string" && !(typeof key === "bigint" && key >= INT_MIN && key <= INT_MAX) && !(typeof key === "number" && Number.isSafeInteger(key))) throw new PhpError("Keys must be of type int|string during argument unpacking");
+    if (typeof key !== "string" && !(typeof key === "bigint" && key >= INT_MIN && key <= INT_MAX) && !(typeof key === "number" && Number.isSafeInteger(key) && !Object.is(key, -0))) throw new PhpError("Keys must be of type int|string during argument unpacking");
     if (typeof key === "string") {
       if (Object.hasOwn(named, key)) throw new PhpError(`Named parameter $${key} overwrites previous argument`);
       hasNamed = true;

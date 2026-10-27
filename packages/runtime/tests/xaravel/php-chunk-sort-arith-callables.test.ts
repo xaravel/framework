@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import * as root from "@xaravel/runtime";
 import * as p from "@xaravel/runtime/php";
-import { registerClass, fqcn } from "@xaravel/runtime/registry";
+import { registerClass, registerContractToken, fqcn } from "@xaravel/runtime/registry";
 import { frameSlot, interleave, runInFrame } from "@xaravel/runtime/scope";
 import { PHP_FUNCTIONS } from "../../src/php/phpFunctions";
 
@@ -23,6 +23,62 @@ class Magic {
   static __callStatic(name: string, args: unknown[]): unknown { return [name, args]; }
 }
 class Invokable { __invoke(x: unknown): unknown { return p.plus(x, 1); } }
+class QualifiedBase {
+  instance(): unknown { return ["base", fqcn(this)]; }
+  static stat(): unknown { return ["base", fqcn(this)]; }
+  static inherited(): unknown { return ["base", fqcn(this)]; }
+  options(value: unknown, options: unknown): unknown { return ["base", fqcn(this), value, options]; }
+  static optionsStatic(value: unknown, options: unknown): unknown { return ["base", fqcn(this), value, options]; }
+}
+class QualifiedMiddle extends QualifiedBase {
+  override instance(): unknown { return ["middle", fqcn(this)]; }
+  static override stat(): unknown { return ["middle", fqcn(this)]; }
+  override options(value: unknown, options: unknown): unknown { return ["middle", fqcn(this), value, options]; }
+  static override optionsStatic(value: unknown, options: unknown): unknown { return ["middle", fqcn(this), value, options]; }
+}
+class QualifiedChild extends QualifiedMiddle {}
+class Unrelated { static stat(): string { return "unrelated"; } }
+class UnicodeMethods {
+  K(): string { return "kelvin"; }
+  K(): string { return "ascii"; }
+  Écho(): string { return "accent"; }
+}
+for (const klass of [QualifiedBase, QualifiedMiddle]) {
+  for (const [holder, name] of [[klass.prototype, "options"], [klass, "optionsStatic"]] as const) {
+    Object.defineProperty(Object.getOwnPropertyDescriptor(holder, name)!.value as object, Symbol.for("xaravel.php.options"), { value: true });
+  }
+}
+for (const [name, klass] of [["QualifiedBase", QualifiedBase], ["QualifiedMiddle", QualifiedMiddle], ["QualifiedChild", QualifiedChild], ["Unrelated", Unrelated], ["UnicodeMethods", UnicodeMethods]] as const) registerClass(`${NS}\\${name}`, klass);
+// Runtime cannot import contracts: use the same recorded token protocol as token-table.test.ts.
+function customToken(name: string, parents: readonly object[] = []): { readonly brand: symbol } {
+  const brand = Symbol.for(name);
+  const token = Object.freeze({ brand, [Symbol.for("xaravel.class.fqcn")]: name, [Symbol.for("xaravel.contract.parents")]: parents, [Symbol.toPrimitive]: (): symbol => brand });
+  registerContractToken(token); return token;
+}
+const CustomParent = customToken(`${NS}\\CustomParent`);
+const CustomChild = customToken(`${NS}\\CustomChild`, [CustomParent]);
+class ContractImpl {
+  get [CustomParent.brand](): true { return true; }
+  get [CustomChild.brand](): true { return true; }
+}
+registerClass(`${NS}\\ContractImpl`, ContractImpl);
+class PairIterator {
+  #position = 0;
+  constructor(private readonly pairs: readonly (readonly [unknown, unknown])[]) {}
+  get [p.Iterator.brand](): true { return true; }
+  get [p.Traversable.brand](): true { return true; }
+  current(): unknown { return this.pairs[this.#position]![1]; }
+  key(): unknown { return this.pairs[this.#position]![0]; }
+  rewind(): void { this.#position = 0; }
+  next(): void { this.#position++; }
+  valid(): boolean { return this.#position < this.pairs.length; }
+}
+class PairAggregate {
+  constructor(private readonly pairs: readonly (readonly [unknown, unknown])[]) {}
+  get [p.IteratorAggregate.brand](): true { return true; }
+  get [p.Traversable.brand](): true { return true; }
+  getIterator(): PairIterator { return new PairIterator(this.pairs); }
+}
 class Status {
   static cases(): Status[] { return [Status.Ready]; }
   static readonly Ready = new Status();
@@ -78,8 +134,66 @@ const cases: Record<string, () => unknown> = {
   "append.errors": () => ["", 1, true, new p.stdClass()].map((value) => attempt(() => p.arrayAppend(new p.Ref<unknown>(value), 1))),
   "unpack.float-key": () => attempt(() => p.callUnpacked(() => 1, (function* () { yield p.keyed(9007199254740992, 1); })())),
   "sort.numeric-keys": () => [p.ksort, p.krsort].flatMap((fn) => [p.SORT_REGULAR, p.SORT_NUMERIC, p.SORT_STRING].map((flag) => { const ref = new p.Ref<unknown>(new p.PhpArray<p.PhpKeyInput, unknown>([["02", "a"], [2, "b"], ["2.0", "c"], ["2e0", "d"], ["10", "e"], [-1, "f"]])); fn(ref, flag); return ref.value; })),
+  "pointer.native-delete": () => { const ref = new p.Ref<unknown>({ a: 1, b: 2, c: 3 }); p.end(ref); const map = ref.value as Record<string, unknown>; delete map.a; const before = p.key(map); delete map.c; const after = p.key(map); p.arrayAppend(ref, 4); return [before, after, p.key(ref.value), ref.value]; },
+  "unpack.negative-zero": () => attempt(() => p.callUnpacked(() => 1, (function* () { yield p.keyed(-0, 1); })())),
+  "sort.nested-copy": () => [p.ksort, p.krsort, (ref: p.Ref<unknown>) => p.uksort(ref, p.strcmp), p.sort, p.rsort].map((sort) => { const original = { b: [2], a: [1] }; const ref = new p.Ref<unknown>(original); sort(ref); const first = p.arrayEntries(ref.value as object)[0]![1] as number[]; first.push(9); return [original, ref.value]; }),
+  "locale.int-categories": () => runInFrame("unit", () => [p.LC_CTYPE, p.LC_NUMERIC, p.LC_TIME, p.LC_COLLATE, p.LC_MONETARY, p.LC_MESSAGES, p.LC_ALL].map((cat) => [p.setlocale(BigInt(cat), "C"), p.setlocale(BigInt(cat), "0")])),
+  "locale.array-casts": () => runInFrame("unit", () => [p.setlocale(p.LC_ALL, [[]]), p.setlocale(p.LC_ALL, [[1], "C"]), attempt(() => p.setlocale(p.LC_ALL, [new p.stdClass()])), attempt(() => p.setlocale(p.LC_ALL, new p.stdClass())), attempt(() => p.setlocale(p.LC_ALL, "C", []))]),
+  "arith.union-copy": () => {
+    const a = new p.Ref<unknown>(new p.PhpArray<p.PhpKeyInput, unknown>([["a", [1]], ["b", [2]], [9, "gone"]]));
+    (a.value as p.PhpArray).delete(9); p.end(a);
+    const right = { c: [3] }; const sum = new p.Ref<unknown>(p.plus(a.value, right)); const before = p.key(sum.value);
+    const entries = new Map(p.arrayEntries(sum.value as object)); (entries.get("a") as number[]).push(8); (entries.get("c") as number[]).push(9);
+    p.arrayAppend(sum, 4); return [before, p.key(a.value), p.key(sum.value), a.value, right, sum.value];
+  },
+  "arith.union-invalid-pointer": () => [[[], { x: 1 }], [{ a: 1, b: 2 }, { c: 3 }]].map(([input, right]) => {
+    const ref = new p.Ref<unknown>(input); p.end(ref); if (!Array.isArray(ref.value)) delete (ref.value as Record<string, unknown>).b;
+    const sum = p.plus(ref.value, right); return [p.key(ref.value), p.key(sum), sum];
+  }),
+  "callables.unicode": () => ["K", "K", "k", "écho", "ÉCHO"].map((name) => [p.is_callable([new UnicodeMethods(), name]), attempt(() => p.call_user_func_array([new UnicodeMethods(), name], []))]),
+  "callables.qualified": () => {
+    const methods = ["instance", "stat", "inherited", `${fqcn(QualifiedBase)}::instance`, `${fqcn(QualifiedBase)}::stat`, `${fqcn(QualifiedBase)}::inherited`, `${fqcn(QualifiedMiddle)}::stat`, "self::instance", "self::stat", "parent::instance", "parent::stat", "parent::inherited", `${fqcn(Unrelated)}::stat`, "Missing::stat", `${fqcn(QualifiedBase)}::missing`, "::stat", `${fqcn(QualifiedBase)}::bad::stat`];
+    return [new QualifiedChild(), fqcn(QualifiedChild)].flatMap((target) => methods.map((name) => [p.is_callable([target, name]), attempt(() => p.call_user_func_array([target, name], []))]))
+      .concat([new QualifiedBase(), fqcn(QualifiedBase)].map((target) => [p.is_callable([target, "parent::stat"]), attempt(() => p.call_user_func_array([target, "parent::stat"], []))]));
+  },
+  "callables.qualified-strings": () => [`${fqcn(QualifiedChild)}::${fqcn(QualifiedBase)}::stat`, `${fqcn(QualifiedChild)}::parent::stat`, `${fqcn(QualifiedChild)}::self::stat`].map((callable) => [p.is_callable(callable), attempt(() => p.call_user_func_array(callable, []))]),
+  "callables.qualified-options": () => {
+    const args = new p.PhpArray<p.PhpKeyInput, unknown>([[0, 1], ["limit", 2]]);
+    const forms = [new QualifiedChild(), fqcn(QualifiedChild)].flatMap((target) => [`${fqcn(QualifiedBase)}::optionsStatic`, "self::optionsStatic", "parent::optionsStatic"].map((name) => [target, name]))
+      .concat([`${fqcn(QualifiedBase)}::options`, "self::options", "parent::options"].map((name) => [new QualifiedChild(), name]));
+    return forms.map((callable) => {
+      const value = p.call_user_func_array(callable, args);
+      Assert.assertSame(encode(value), encode(p.callUnpacked(callable, args)));
+      if (typeof callable[0] === "string") Assert.assertSame(encode(value), encode(p.callUnpacked([QualifiedChild, callable[1]], args)));
+      return value;
+    });
+  },
+  "arith.special": () => specialArithmetic().map((value) => [p.isFloat(value) ? "double" : "integer", Number.isNaN(Number(value)) ? "NAN" : Number(value) === Infinity ? "INF" : Number(value) === -Infinity ? "-INF" : Number(value) === 0 ? Object.is(Number(value), -0) ? "-0" : "+0" : Number(value)]),
+  "arith.negative-zero-divisor": () => attempt(() => p.divide(1, -0)),
+  "sort.builtin-error": () => [p.sort, p.rsort].map((sort) => {
+    const ref = new p.Ref<unknown>(["z", "y", new p.stdClass(), "x", "a"]);
+    const error = attempt(() => sort(ref, p.SORT_STRING)); return [error, ref.value];
+  }),
+  "locale.variadic-errors": () => runInFrame("unit", () => [attempt(() => p.setlocale(p.LC_ALL, "missing", new p.stdClass())), attempt(() => p.setlocale(p.LC_ALL, "missing", "missing", new p.stdClass())), p.setlocale(p.LC_ALL, "missing", ["C"]), p.setlocale(p.LC_ALL, [], "C")]),
+  "subclass.custom": () => [p.is_subclass_of(new ContractImpl(), `${NS}\\CustomChild`), p.is_subclass_of(new ContractImpl(), `${NS}\\CustomParent`), p.is_subclass_of(ContractImpl, `${NS}\\CustomParent`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`), p.is_subclass_of(CustomParent, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`, false)],
+  "unpack.custom-traversable": () => [PairIterator, PairAggregate].flatMap((klass) => ([[[8, "a"], [3, "b"]], [[null, 1]], [["named", 1], [0, 2]]] as const).map((pairs) => attempt(() => p.callUnpacked((...values: unknown[]) => values, new klass(pairs))))),
+  "append.negative-index": () => ([[-5, false], [-5, true], [-1, true]] as const).map(([key, remove]) => {
+    const array = new p.PhpArray([[key, "old"]]); if (remove) array.delete(key);
+    const ref = new p.Ref<unknown>(array); p.arrayAppend(ref, "new"); p.arrayAppend(ref, "next"); return ref.value;
+  }),
+  "sort.large-values": () => [p.sort, p.rsort].map((sort) => {
+    const input: Record<string, string> = {}; for (let index = 25; index >= 0; index--) input[`key${index}`] = ["A", "a", "B", "b"][index % 4]!;
+    const ref = new p.Ref<unknown>(input); sort(ref, p.SORT_STRING | p.SORT_FLAG_CASE); return ref.value;
+  }),
+  "sort.pointer-reset": () => [p.ksort, p.krsort, (ref: p.Ref<unknown>) => p.uksort(ref, p.strcmp), p.sort, p.rsort].map((sort) => {
+    const ref = new p.Ref<unknown>({ c: 3, a: 1, b: 2 }); p.end(ref); const alias = ref.value;
+    sort(ref); return [p.key(ref.value), p.key(alias), ref.value, alias];
+  }),
   registry: () => names.map((name) => { const f = PHP_FUNCTIONS[name]!; return [name, f.required, f.total, f.variadic, [...f.byRef]]; }),
 };
+function specialArithmetic(): unknown[] {
+  return [p.plus(NaN, 1), p.plus(Infinity, -Infinity), p.plus(Infinity, 1), p.plus(-Infinity, -1), p.plus(-0, -0), p.plus(-0, p.float(0)), p.divide(NaN, 2), p.divide(Infinity, 2), p.divide(-Infinity, 2), p.divide(1, Infinity), p.divide(1, -Infinity), p.divide(-0, 2), p.divide(p.float(0), 2), p.floor(NaN), p.floor(Infinity), p.floor(-Infinity), p.floor(-0), p.floor(0), p.ceil(NaN), p.ceil(Infinity), p.ceil(-Infinity), p.ceil(-0), p.ceil(0), p.ceil(-0.2)];
+}
 function* source(log: string[]): globalThis.Generator<unknown, void, unknown> {
   try { log.push("start"); yield 1; log.push("later"); yield 2; } finally { log.push("finally"); }
 }
@@ -110,6 +224,22 @@ xaravelTest("XT-runtime-86", "PHP chunk, pointer and stable key/value sorts matc
 });
 xaravelTest("XT-runtime-87", "Exact int64 arithmetic, numeric coercion, float markers, string bytes and Registry subclasses match PHP evidence", () => {
   check(["arith", "string", "subclass"]);
+  for (const value of specialArithmetic()) Assert.assertTrue(p.isFloat(value));
+  for (const index of [4, 10, 11, 16, 21, 23]) Assert.assertTrue(Object.is(Number(specialArithmetic()[index]), -0));
+  for (const index of [5, 9, 12, 17, 22]) Assert.assertTrue(Object.is(Number(specialArithmetic()[index]), 0));
+  Assert.assertTrue(Number.isNaN(Number(p.plus(NaN, 1))));
+  Assert.assertTrue(Object.is(Number(p.divide(Infinity, 2)), Infinity));
+  Assert.assertTrue(Object.is(Number(p.divide(-Infinity, 2)), -Infinity));
+  for (const original of [[[1], [2]], { a: [1], b: [2] }, new p.PhpArray([["a", [1]], ["b", [2]]])]) {
+    const ref = new p.Ref<unknown>(original); p.end(ref);
+    const shared = new p.stdClass(); const right = { c: [3], shared };
+    const union = p.plus(ref.value, right);
+    Assert.assertSame(p.key(ref.value), p.key(union));
+    const entries = new Map(p.arrayEntries(union as object));
+    (entries.values().next().value as number[]).push(8); (entries.get("c") as number[]).push(9);
+    Assert.assertSame("[1]", encode(p.arrayEntries(ref.value as object)[0]![1]));
+    Assert.assertSame("[3]", encode(right.c)); Assert.assertTrue(entries.get("shared") === shared);
+  }
   Assert.assertTrue(p.is_subclass_of(p.BackedEnum, "UnitEnum"));
   Assert.assertFalse(p.is_subclass_of(p.UnitEnum, "UnitEnum"));
   Assert.assertTrue(p.isFloat(p.floor(2))); Assert.assertTrue(p.isFloat(p.divide(p.float(6), 3)));
@@ -187,6 +317,32 @@ xaravelTest("XT-runtime-89", "Locale slots isolate concurrent frames and owned g
   const yielding = p.Generator.owned((function* () { try { yield 1; } finally { forceLog.push("before"); yield 2; forceLog.push("after"); } })());
   Assert.assertSame("Error: Cannot yield from finally in a force-closed generator", attempt(() => { for (const _ of yielding) break; }));
   Assert.assertSame('["before"]', encode(forceLog));
+  // DIV-9.16: JavaScript keeps a loop-body exception when closing finally also throws.
+  const competingLog: string[] = [];
+  const bodyError = new p.RuntimeException("body");
+  const closeError = new p.RuntimeException("close");
+  const throwClose = (): never => { throw closeError; };
+  const competing = p.Generator.owned((function* () { try { yield 1; } finally { competingLog.push("finally"); throwClose(); } })());
+  let competingCaught: unknown = null;
+  try { for (const _ of competing) throw bodyError; } catch (error) { competingCaught = error; }
+  Assert.assertTrue(competingCaught === bodyError); // adapted:DIV-9.16
+  Assert.assertSame('["finally"]', encode(competingLog)); Assert.assertFalse(competing.valid());
+  const sourceError = new p.RuntimeException("source");
+  const sourceLog: string[] = [];
+  const throwing = p.Generator.owned((function* () { try { yield 1; throw sourceError; } finally { sourceLog.push("finally"); } })());
+  let sourceCaught: unknown = null;
+  try { for (const _ of throwing) { /* consume */ } } catch (error) { sourceCaught = error; }
+  Assert.assertTrue(sourceCaught === sourceError); Assert.assertFalse(throwing.valid()); Assert.assertSame('["finally"]', encode(sourceLog));
+  for (const owned of [false, true]) {
+    const cleanupLog: string[] = [];
+    const raw = (function* () { try { yield p.keyed(null, 1); yield 2; } finally { cleanupLog.push("finally"); } })();
+    const unpacked = owned ? p.Generator.owned(raw) : new p.Generator(raw);
+    Assert.assertSame("Error: Keys must be of type int|string during argument unpacking", attempt(() => p.callUnpacked(() => 1, unpacked)));
+    Assert.assertSame(owned ? '["finally"]' : '[]', encode(cleanupLog));
+    Assert.assertSame(!owned, unpacked.valid());
+    if (!owned) { unpacked.next(); Assert.assertSame(2, unpacked.current()); unpacked.next(); }
+    Assert.assertSame('["finally"]', encode(cleanupLog));
+  }
   const log: string[] = [];
   const failFinally = (): never => { throw new p.RuntimeException("finally"); };
   const g = p.Generator.owned((function* () { try { yield 1; yield 2; } finally { log.push("finally"); failFinally(); } })());
@@ -194,7 +350,7 @@ xaravelTest("XT-runtime-89", "Locale slots isolate concurrent frames and owned g
 });
 xaravelTest("XT-runtime-90", "Every newly exported operation resolves from PHP and root entrypoints with PHP reflection metadata and every evidence label is executed", () => {
   check([""]);
-  for (const name of [...names, "plus", "divide", "arrayAppend", "callUnpacked", "resolveCallable", "PHP_INT_MAX", "PHP_INT_MIN", "LC_ALL"] as const) Assert.assertSame(p[name], root[name], name);
+  for (const name of [...names, "plus", "divide", "arrayAppend", "callUnpacked", "resolveCallable", "PHP_INT_MAX", "PHP_INT_MIN", "LC_ALL", "LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE", "LC_MONETARY", "LC_MESSAGES"] as const) Assert.assertSame(p[name], root[name], name);
   for (const name of names) Assert.assertSame(PHP_FUNCTIONS[name]!.fn, p[name], name);
   const labels = readFileSync(`${import.meta.dir}/php-chunk-sort-arith-callables.probe.txt`, "utf8").trim().split("\n").map((line) => line.split("\t")[0]!).sort(); Assert.assertSame(labels, Object.keys(cases).sort());
 });
