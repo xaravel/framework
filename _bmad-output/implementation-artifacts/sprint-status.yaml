@@ -161,7 +161,7 @@ development_status:
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
-  14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
+  14-5-mapping-grouping-sorting-chunking-and-aggregates: in-progress
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
