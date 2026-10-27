@@ -1,9 +1,10 @@
 // Laravel's `Illuminate\Support\Arr` (v13.37.0), the members the Collections core calls: `accessible`, `collapse`,
-// `except`, `exists`, `first`, `forget`, `from`, `get`, `last`, `map`, `only`, `partition`, `pluck`, `prepend`, `pull`,
-// `random`, `select`, `where` and `wrap`. Story 14.6 ports the rest with its tests. Every member reads its PHP array
+// `crossJoin`, `dot`, `except`, `exists`, `first`, `flatten`, `forget`, `from`, `get`, `last`, `map`, `only`,
+// `partition`, `pluck`, `prepend`, `pull`, `random`, `select`, `set`, `undot`, `where` and `wrap`. Story 14.6 ports the
+// rest with its tests. PHP's `INF` (the default `$depth` of `dot` and `flatten`) is `Infinity`. Every member reads its PHP array
 // argument as `@xaravel/runtime` does (a list, a plain object or a `PhpArray`) and never mutates or returns the
 // caller's array: an array that Upstream returns as it is comes back as a value copy (AD-9). PHP's by-reference
-// `&$array` (`forget`, `pull`) is a `Ref` (DIV-9.2): the member writes a new array to `ref.value`, and an `ArrayAccess`
+// `&$array` (`forget`, `pull`, `set`) is a `Ref` (DIV-9.2): the member writes a new array to `ref.value`, and an `ArrayAccess`
 // object it reaches is a handle, changed in place, as in PHP. Callbacks are sync (`SyncCallback`, AD-6).
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -25,6 +26,7 @@ import {
   array_reverse,
   array_shift,
   array_unshift,
+  array_values,
   arrayEntries,
   arrayFromEntries,
   Closure,
@@ -32,6 +34,7 @@ import {
   explode,
   InvalidArgumentException,
   is_array,
+  is_null,
   is_object,
   is_string,
   isFloat,
@@ -142,6 +145,72 @@ export class Arr extends mixin(null, Macroable) {
     return array_merge([], ...results);
   }
 
+  /** Cross join the given arrays (or iterables), returning all possible permutations: a list of lists, one item each. */
+  static crossJoin(...arrays: unknown[]): unknown[] {
+    let results: unknown[] = [[]];
+
+    for (const [index, array] of arrays.entries()) {
+      const append: unknown[] = [];
+
+      for (const product_ of results) {
+        // PHP's `foreach ($results as $product)` gives each product as a copy of its own.
+        const product = ownPhpArray(product_);
+
+        for (const item of iterateValues(array)) {
+          product.set(index, valueCopy(item));
+
+          append.push(arrayFromEntries(product.copy()));
+        }
+      }
+
+      results = append;
+    }
+
+    return results;
+  }
+
+  /**
+   * Flatten a multi-dimensional associative array with dots: each leaf (a value that is not a non-empty array, or one
+   * `depth` levels down) under its keys joined by `.`, after `prepend`. Also takes AD-26's options object
+   * `{ prepend, depth }` after the array: PHP types `$prepend` `string`, so a plain object there is never the prefix.
+   */
+  static dot(array: unknown, prepend?: string, depth?: number): unknown;
+  static dot(array: unknown, options?: { prepend?: string; depth?: number }): unknown;
+  static dot(array: unknown, prepend: unknown = "", depth: number = Infinity): unknown {
+    if (arguments.length === 2 && isOptionsObject(prepend)) {
+      ({ prepend = "", depth = Infinity } = prepend as { prepend?: string; depth?: number });
+    }
+
+    const results = new PhpArray();
+
+    const flatten = (data: unknown, prefix: unknown, currentDepth: number): void => {
+      for (const [key, value_] of iterateEntries(data)) {
+        const newKey = toPhpString(prefix) + toPhpString(key);
+
+        if (is_array(value_) && toBool(value_) && currentDepth < depth) {
+          flatten(value_, newKey + ".", currentDepth + 1);
+        } else {
+          results.set(newKey, value_);
+        }
+      }
+    };
+
+    flatten(array, prepend, 0);
+
+    return valueCopy(arrayFromEntries(results));
+  }
+
+  /** Convert a flatten "dot" notation array into an expanded array: each value `set` under its key. */
+  static undot(array: unknown): unknown {
+    const results = new Ref<unknown>([]);
+
+    for (const [key, value_] of iterateEntries(array)) {
+      Arr.set(results, key, value_);
+    }
+
+    return results.value;
+  }
+
   /** Get all of the given array except for a specified array of keys (dot notation reaches nested arrays). */
   static except(array: unknown, keys: unknown): unknown {
     const ref = new Ref(array);
@@ -215,6 +284,30 @@ export class Arr extends mixin(null, Macroable) {
     const key = array_find_key(array, (value_: unknown, key_: unknown) => callCallable(callback, valueCopy(value_), key_));
 
     return key !== null ? valueCopy(arrayRead(array as object, key)) : value(defaultValue);
+  }
+
+  /**
+   * Flatten a multi-dimensional array (`Enumerable`s read through `all()`) into a single level: a list of the values,
+   * keys ignored, nested arrays flattened `depth` levels down.
+   */
+  static flatten(array: unknown, depth: number = Infinity): unknown[] {
+    const result: unknown[] = [];
+
+    for (let item of iterateValues(array)) {
+      item = item instanceof Enumerable ? item.all() : item;
+
+      if (!is_array(item)) {
+        result.push(item);
+      } else {
+        const values = depth === 1 ? array_values(item) : Arr.flatten(item, depth - 1);
+
+        for (const value_ of values) {
+          result.push(value_);
+        }
+      }
+    }
+
+    return valueCopy(result);
   }
 
   /**
@@ -547,6 +640,58 @@ export class Arr extends mixin(null, Macroable) {
     }
 
     return valueCopy(arrayFromEntries(results));
+  }
+
+  /**
+   * Set an array item to a given value using "dot" notation, creating the arrays on the way down; a `null` key replaces
+   * the entire array. `array` is PHP's `&$array` (DIV-9.2): the new array is written to `array.value`. Returns the
+   * innermost array the value was set in.
+   */
+  static set(array: Ref<unknown>, key: unknown, value_: unknown): unknown {
+    if (is_null(key)) {
+      array.value = valueCopy(value_);
+
+      return valueCopy(array.value);
+    }
+
+    const keys = new Ref<unknown>(explode(".", key));
+
+    // PHP's `$array = &$array[$key]`: each array passed on the way down, with the key it is left by. PHP writes into a
+    // `null` as into an empty array.
+    const path: [unknown, unknown][] = [];
+    let current: unknown = array.value ?? [];
+
+    for (const [i, segment] of arrayEntries(keys.value as object)) {
+      if (Number(count(keys.value)) === 1) {
+        break;
+      }
+
+      keys.value = unsetKey(keys.value, i);
+
+      // If the key doesn't exist at this depth, we will just create an empty array
+      // to hold the next value, allowing us to create the arrays to hold final
+      // values at the correct depth. Then we'll keep digging into the array.
+      let child = arrayRead(current as object, segment);
+      if (child === null || !is_array(child)) {
+        child = [];
+      }
+
+      path.push([current, segment]);
+      current = child;
+    }
+
+    let updated = asCallerForm(current, ownPhpArray(current).set(array_shift(keys) as never, valueCopy(value_)));
+    const innermost = updated;
+
+    // Each rebuilt level keeps the form its keys give, and a `PhpArray` stays one.
+    for (let index = path.length - 1; index >= 0; index--) {
+      const [parent, part] = path[index]!;
+      updated = asCallerForm(parent, setKey(parent, part, updated));
+    }
+
+    array.value = updated;
+
+    return valueCopy(innermost);
   }
 
   /** Filter the array using the given callback, which gets each value and its key. */

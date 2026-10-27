@@ -25,13 +25,27 @@
 // Oracle"): the list `[1, 2, 3, 4]` filtered to its even values, which removes the first item and a middle one, read
 // back through `toArray()`, `toJson()`, `values()->toArray()` and `values()->toJson()`, on Collection and
 // LazyCollection (`LazyCollection::make`). It contains no Upstream test and no fixture.
+//
+// Story 14.4 adds XT-collections-8 (`merge()` renumbers integer keys and lets string keys overwrite, as `array_merge`
+// does, against the Oracle). F-10 recorded reason for `14.4.jsonl`: XT-collections-8 is a Xaravel Test, so no Upstream
+// test exists whose inputs the request could take. The request evaluates only the inputs its acceptance criterion
+// names (epics.md Story 14.4: "`merge()` with integer keys and with string keys … integer keys are renumbered and
+// string keys overwrite, as PHP's `array_merge` does … `union()` keeps the left-hand keys, as `+` does"): an
+// integer-keyed array (`[1 => 'a', 2 => 'b']` merged with `[5 => 'c']`), a string-keyed one (`['a' => 1, 'b' => 2]`
+// merged with `['b' => 3, 'c' => 4]`) and a mixed one (`['a' => 1, 5 => 'x', 'b' => 2]` merged with
+// `['b' => 3, 7 => 'y']`), each through `merge()` and through `union()`, read back through `toArray()` and `toJson()`,
+// on Collection (`collect`) and LazyCollection (`LazyCollection::make`). It contains no Upstream test and no fixture.
+// The `union()` results are asserted once `union` is ported (ESC-14.4-1 holds it); the test checks that the Oracle
+// answered them. XT-collections-8 also checks, inline and with no Oracle request, members this Story adds that no ported
+// test runs: `implode` (testImplode is `blocked-by:support`), `Arr.dot`'s AD-26 options form and prefix, and
+// `combine`'s `ValueError` (LazyCollection's only when enumerated, with Laravel's message).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
-import { array_values, arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError } from "@xaravel/runtime";
+import { array_values, arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -932,4 +946,115 @@ xaravelTest(
     Assert.assertFalse(looseEquals(collect([1]), new LazyCollection([1])), "a Collection is not == a LazyCollection");
   },
   120_000,
+);
+
+xaravelTest(
+  "XT-collections-8",
+  "merge() renumbers integer keys from 0 and lets a later string key overwrite an earlier one in its first position, as PHP's array_merge does, keeping key order (FR-23.1, FR-23.2): an integer-keyed array becomes a list ([\"a\",\"b\",\"c\"]), a string-keyed one an object ({\"a\":1,\"b\":3,\"c\":4}), and a mixed one keeps its string keys and renumbers its integer keys in order; toArray() and toJson() give the list or object shape the Oracle gives for the same arrays (FR-23.3), on Collection and LazyCollection; implode joins scalar items by its first argument and a callback's results by glue, and plucks a key from arrays or objects that are not Support's Stringable",
+  () => {
+    const int = new PhpArray<number, string>([
+      [1, "a"],
+      [2, "b"],
+    ]);
+    const intItems = new PhpArray<number, string>([[5, "c"]]);
+    const string = { a: 1, b: 2 };
+    const stringItems = { b: 3, c: 4 };
+    const mixed = new PhpArray<string | number, unknown>([
+      ["a", 1],
+      [5, "x"],
+      ["b", 2],
+    ]);
+    const mixedItems = new PhpArray<string | number, unknown>([
+      ["b", 3],
+      [7, "y"],
+    ]);
+
+    for (const [name, make] of [
+      ["Collection", (items: unknown) => collect(items)],
+      ["LazyCollection", (items: unknown) => LazyCollection.make(items)],
+    ] as const) {
+      Assert.assertSame(["a", "b", "c"], make(int).merge(intItems).toArray(), `${name} merge() renumbers integer keys into a list`);
+      Assert.assertSame('["a","b","c"]', make(int).merge(intItems).toJson(), `${name} merge() of integer keys is a list in JSON`);
+      Assert.assertSame(["a", "b", "c"], keysOf(make(string).merge(stringItems).toArray()), `${name} merge() keeps the first position of an overwritten string key`);
+      Assert.assertSame('{"a":1,"b":3,"c":4}', make(string).merge(stringItems).toJson(), `${name} merge() lets the later string key's value win`);
+      Assert.assertSame(["a", 0, "b", 1], keysOf(make(mixed).merge(mixedItems).toArray()), `${name} merge() keeps string keys and renumbers integer keys in order`);
+      Assert.assertSame('{"a":1,"0":"x","b":3,"1":"y"}', make(mixed).merge(mixedItems).toJson(), `${name} merge() of mixed keys is an object in JSON`);
+      const receiver = make(int);
+      receiver.merge(intItems);
+      Assert.assertSame([1, 2], keysOf(receiver.all()), `${name} merge() leaves its receiver unchanged`);
+
+      // An integer-like string key is the int PHP makes of it, so merge() renumbers it as array_merge does.
+      const numericString = new PhpArray<string, string>([
+        ["5", "a"],
+        ["x", "b"],
+      ]);
+      Assert.assertSame([5, "x"], keysOf(make(numericString).all()), `${name} normalises the key '5' to the int 5`);
+      Assert.assertSame([0, "x", 1], keysOf(make(numericString).merge(new PhpArray<string, string>([["7", "c"]])).toArray()), `${name} merge() renumbers the integer-like string keys '5' and '7'`);
+    }
+
+    // A member this Story adds that no ported test runs (testImplode is blocked-by:support): implode.
+    for (const [name, make] of [
+      ["Collection", (items: unknown) => collect(items)],
+      ["LazyCollection", (items: unknown) => LazyCollection.make(items)],
+    ] as const) {
+      Assert.assertSame("a,b", make(["a", "b"]).implode(","), `${name}.implode() joins scalar items by its first argument`);
+      Assert.assertSame("ab", make(["a", "b"]).implode(null), `${name}.implode(null) joins scalar items with ''`);
+      Assert.assertSame("a!-b!", make(["a", "b"]).implode((value: string) => `${value}!`, "-"), `${name}.implode() joins a callback's results by glue`);
+      Assert.assertSame("x, y", make([{ name: "x" }, { name: "y" }]).implode("name", ", "), `${name}.implode() plucks a key from array items`);
+      const objects = [Object.assign(new stdClass(), { name: "x" }), Object.assign(new stdClass(), { name: "y" })];
+      Assert.assertSame("xy", make(objects).implode("name"), `${name}.implode() plucks a property from objects that are not Support's Stringable`);
+    }
+
+    // Arr.dot's AD-26 options form equals its positional form, and a prefix lands on every key.
+    const nested = { a: { b: { c: 1 } }, d: 2 };
+    const dotted = Arr.dot(nested, "p.", 1);
+    Assert.assertSame(dotted, Arr.dot(nested, { prepend: "p.", depth: 1 }), "Arr.dot's options object equals its positional form");
+    Assert.assertSame(["p.a.b", "p.d"], keysOf(dotted), "Arr.dot puts the prefix on every key, depth levels down");
+
+    // combine() with mismatched counts: Collection throws PHP's ValueError at once, LazyCollection when enumerated.
+    const thrown = (run: () => unknown): unknown => {
+      try {
+        run();
+      } catch (error) {
+        return error;
+      }
+      return null;
+    };
+    Assert.assertInstanceOf(ValueError, thrown(() => collect([1, 2]).combine([3])), "Collection.combine() throws ValueError");
+    let lazyCombined: unknown = null;
+    Assert.assertNull(
+      thrown(() => (lazyCombined = LazyCollection.make([1, 2]).combine([3]))),
+      "LazyCollection.combine() does not throw before it is enumerated",
+    );
+    const lazyError = thrown(() => (lazyCombined as LazyCollection).all());
+    Assert.assertInstanceOf(ValueError, lazyError, "LazyCollection.combine() throws ValueError when enumerated");
+    Assert.assertSame("Both parameters should have an equal number of elements", (lazyError as ValueError).getMessage(), "LazyCollection.combine()'s message");
+
+    // The shapes, against the Oracle.
+    const output = oracle("XT-collections-8", "conformance/oracle-requests/14.4.jsonl");
+    const lazy = "\\Illuminate\\Support\\LazyCollection::make";
+    const actual: [string, unknown][] = [
+      ["collect($int)->merge($intItems)->toArray()", collect(int).merge(intItems).toArray()],
+      ["collect($int)->merge($intItems)->toJson()", collect(int).merge(intItems).toJson()],
+      [`${lazy}($int)->merge($intItems)->toArray()`, LazyCollection.make(int).merge(intItems).toArray()],
+      [`${lazy}($int)->merge($intItems)->toJson()`, LazyCollection.make(int).merge(intItems).toJson()],
+      ["collect($string)->merge($stringItems)->toArray()", collect(string).merge(stringItems).toArray()],
+      ["collect($string)->merge($stringItems)->toJson()", collect(string).merge(stringItems).toJson()],
+      [`${lazy}($string)->merge($stringItems)->toArray()`, LazyCollection.make(string).merge(stringItems).toArray()],
+      [`${lazy}($string)->merge($stringItems)->toJson()`, LazyCollection.make(string).merge(stringItems).toJson()],
+      ["collect($mixed)->merge($mixedItems)->toArray()", collect(mixed).merge(mixedItems).toArray()],
+      ["collect($mixed)->merge($mixedItems)->toJson()", collect(mixed).merge(mixedItems).toJson()],
+      [`${lazy}($mixed)->merge($mixedItems)->toArray()`, LazyCollection.make(mixed).merge(mixedItems).toArray()],
+      [`${lazy}($mixed)->merge($mixedItems)->toJson()`, LazyCollection.make(mixed).merge(mixedItems).toJson()],
+    ];
+    // The request's other twelve expressions are the same inputs through union(), held by ESC-14.4-1.
+    Assert.assertSame(actual.length * 2, output.results.length, "one Oracle result per expression, merge() then union()");
+    actual.forEach(([expr, value], index) => {
+      Assert.assertSame(result(output, index), value, expr);
+    });
+    for (let index = actual.length; index < output.results.length; index++) {
+      result(output, index);
+    }
+
+  },
 );
