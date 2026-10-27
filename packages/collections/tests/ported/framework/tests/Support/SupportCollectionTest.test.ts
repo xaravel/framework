@@ -36,8 +36,7 @@
 // case, through a local `Stringable` that throws `BlockedByComponentError("support")`. testImplodeModels builds Eloquent
 // models, so it keeps Upstream's body in `SupportCollectionBlockedByDatabaseTest`, whose `setUp` throws
 // `BlockedByComponentError("database")`, through a local `Model` that throws the same error. The tests of the members
-// that need PHP builtins the runtime does not export yet (ESC-14.4-1), or a PHP callable string such as `'strcasecmp'`
-// (ESC-14.4-2), are not ported; a one-line comment names the Escalation where each would sit.
+// include the runtime set builtins and PHP callable strings approved by ESC-14.4-1 / ESC-14.4-2.
 //
 // `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
@@ -3886,7 +3885,23 @@ portedTest(`${ID}::testMergeCollection`, { case: SupportCollectionTest, dataset:
   this.assertEquals({ name: "World", id: 1 }, c.merge(new collection({ name: "World", id: 1 })).all());
 });
 
-// testMergeRecursiveNull, testMergeRecursiveArray, testMergeRecursiveCollection: held by ESC-14.4-1 (`array_merge_recursive`).
+portedTest(`${ID}::testMergeRecursiveNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello' });
+  this.assertEquals({ 'name': 'Hello' }, c.mergeRecursive(null).all());
+});
+
+portedTest(`${ID}::testMergeRecursiveArray`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello', 'id': 1 });
+  this.assertEquals({ 'name': 'Hello', 'id': [1, 2] }, c.mergeRecursive({ 'id': 2 }).all());
+});
+
+portedTest(`${ID}::testMergeRecursiveCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello', 'id': 1, 'meta': { 'tags': ['a', 'b'], 'roles': 'admin' } });
+  this.assertEquals(
+  { 'name': 'Hello', 'id': 1, 'meta': { 'tags': ['a', 'b', 'c'], 'roles': ['admin', 'editor'] } },
+  c.mergeRecursive(new collection({ 'meta': { 'tags': ['c'], 'roles': 'editor' } })).all()
+  );
+});
 
 portedTest(`${ID}::testMultiplyCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const c = new collection([
@@ -3938,29 +3953,152 @@ portedTest(`${ID}::testMultiplyCollection`, { case: SupportCollectionTest, datas
   );
 });
 
-// testReplaceNull, testReplaceArray, testReplaceCollection: held by ESC-14.4-1 (`array_replace`).
+portedTest(`${ID}::testReplaceNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(['a', 'b', 'c']);
+  this.assertEquals(['a', 'b', 'c'], c.replace(null).all());
+});
 
-// testReplaceRecursiveNull, testReplaceRecursiveArray, testReplaceRecursiveCollection: held by ESC-14.4-1 (`array_replace_recursive`).
+portedTest(`${ID}::testReplaceArray`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(['a', 'b', 'c']);
+  this.assertEquals(['a', 'd', 'e'], c.replace(new PhpArray<string | number, unknown>([[1, 'd'], [2, 'e']])).all());
 
-// testUnionNull, testUnionArray, testUnionCollection: held by ESC-14.4-1 (PHP's array `+`).
+  c = new collection(['a', 'b', 'c']);
+  this.assertEquals(['a', 'd', 'e', 'f', 'g'], c.replace(new PhpArray<string | number, unknown>([[1, 'd'], [2, 'e'], [3, 'f'], [4, 'g']])).all());
 
-// testDiffCollection: held by ESC-14.4-1 (`array_diff`).
+  c = new collection({ 'name': 'amir', 'family': 'otwell' });
+  this.assertEquals({ 'name': 'taylor', 'family': 'otwell', 'age': 26 }, c.replace({ 'name': 'taylor', 'age': 26 }).all());
+});
 
-// testDiffUsingWithCollection, testDiffUsingWithNull: held by ESC-14.4-2 (the callable string `'strcasecmp'`).
+portedTest(`${ID}::testReplaceCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(['a', 'b', 'c']);
+  this.assertEquals(
+  ['a', 'd', 'e'],
+  c.replace(new collection(new PhpArray<string | number, unknown>([[1, 'd'], [2, 'e']]))).all()
+  );
 
-// testDiffNull: held by ESC-14.4-1 (`array_diff`).
+  c = new collection(['a', 'b', 'c']);
+  this.assertEquals(
+  ['a', 'd', 'e', 'f', 'g'],
+  c.replace(new collection(new PhpArray<string | number, unknown>([[1, 'd'], [2, 'e'], [3, 'f'], [4, 'g']]))).all()
+  );
 
-// testDiffKeys: held by ESC-14.4-1 (`array_diff_key`).
+  c = new collection({ 'name': 'amir', 'family': 'otwell' });
+  this.assertEquals(
+  { 'name': 'taylor', 'family': 'otwell', 'age': 26 },
+  c.replace(new collection({ 'name': 'taylor', 'age': 26 })).all()
+  );
+});
 
-// testDiffKeysUsing: held by ESC-14.4-2 (the callable string `'strcasecmp'`).
+portedTest(`${ID}::testReplaceRecursiveNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(['a', 'b', ['c', 'd']]);
+  this.assertEquals(['a', 'b', ['c', 'd']], c.replaceRecursive(null).all());
+});
 
-// testDiffAssoc: held by ESC-14.4-1 (`array_diff_assoc`).
+portedTest(`${ID}::testReplaceRecursiveArray`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(['a', 'b', ['c', 'd']]);
+  this.assertEquals(['z', 'b', ['c', 'e']], c.replaceRecursive(new PhpArray<string | number, unknown>([[0, 'z'], [2, new PhpArray<string | number, unknown>([[1, 'e']])]])).all());
 
-// testDiffAssocUsing: held by ESC-14.4-2 (the callable string `'strcasecmp'`).
+  c = new collection(['a', 'b', ['c', 'd']]);
+  this.assertEquals(['z', 'b', ['c', 'e'], 'f'], c.replaceRecursive(new PhpArray<string | number, unknown>([[0, 'z'], [2, new PhpArray<string | number, unknown>([[1, 'e']])], [3, 'f']])).all());
+});
 
-// testIntersectNull, testIntersectCollection: held by ESC-14.4-1 (`array_intersect`).
+portedTest(`${ID}::testReplaceRecursiveCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(['a', 'b', ['c', 'd']]);
+  this.assertEquals(
+  ['z', 'b', ['c', 'e']],
+  c.replaceRecursive(new collection(new PhpArray<string | number, unknown>([[0, 'z'], [2, new PhpArray<string | number, unknown>([[1, 'e']])]]))).all()
+  );
+});
 
-// testIntersectUsingWithNull, testIntersectUsingCollection: held by ESC-14.4-2 (the callable string `'strcasecmp'`).
+portedTest(`${ID}::testUnionNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello' });
+  this.assertEquals({ 'name': 'Hello' }, c.union(null).all());
+});
+
+portedTest(`${ID}::testUnionArray`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello' });
+  this.assertEquals({ 'name': 'Hello', 'id': 1 }, c.union({ 'id': 1 }).all());
+});
+
+portedTest(`${ID}::testUnionCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'name': 'Hello' });
+  this.assertEquals({ 'name': 'Hello', 'id': 1 }, c.union(new collection({ 'name': 'World', 'id': 1 })).all());
+});
+
+portedTest(`${ID}::testDiffCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'id': 1, 'first_word': 'Hello' });
+  this.assertEquals({ 'id': 1 }, c.diff(new collection({ 'first_word': 'Hello', 'last_word': 'World' })).all());
+});
+
+portedTest(`${ID}::testDiffUsingWithCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(['en_GB', 'fr', 'HR']);
+
+  this.assertEquals(['en_GB', 'fr', 'HR'], c.diff(new collection(['en_gb', 'hr'])).values().toArray());
+
+  this.assertEquals(['fr'], c.diffUsing(new collection(['en_gb', 'hr']), 'strcasecmp').values().toArray());
+});
+
+portedTest(`${ID}::testDiffUsingWithNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(['en_GB', 'fr', 'HR']);
+  this.assertEquals(['en_GB', 'fr', 'HR'], c.diffUsing(null, 'strcasecmp').values().toArray());
+});
+
+portedTest(`${ID}::testDiffNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'id': 1, 'first_word': 'Hello' });
+  this.assertEquals({ 'id': 1, 'first_word': 'Hello' }, c.diff(null).all());
+});
+
+portedTest(`${ID}::testDiffKeys`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c1 = new collection({ 'id': 1, 'first_word': 'Hello' });
+  const c2 = new collection({ 'id': 123, 'foo_bar': 'Hello' });
+  this.assertEquals({ 'first_word': 'Hello' }, c1.diffKeys(c2).all());
+});
+
+portedTest(`${ID}::testDiffKeysUsing`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c1 = new collection({ 'id': 1, 'first_word': 'Hello' });
+  const c2 = new collection({ 'ID': 123, 'foo_bar': 'Hello' });
+
+  this.assertEquals({ 'id': 1, 'first_word': 'Hello' }, c1.diffKeys(c2).all());
+
+  this.assertEquals({ 'first_word': 'Hello' }, c1.diffKeysUsing(c2, 'strcasecmp').all());
+});
+
+portedTest(`${ID}::testDiffAssoc`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c1 = new collection({ 'id': 1, 'first_word': 'Hello', 'not_affected': 'value' });
+  const c2 = new collection({ 'id': 123, 'foo_bar': 'Hello', 'not_affected': 'value' });
+  this.assertEquals({ 'id': 1, 'first_word': 'Hello' }, c1.diffAssoc(c2).all());
+});
+
+portedTest(`${ID}::testDiffAssocUsing`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c1 = new collection(new PhpArray<string | number, unknown>([['a', 'green'], ['b', 'brown'], ['c', 'blue'], [0, 'red']]));
+  const c2 = new collection(new PhpArray<string | number, unknown>([['A', 'green'], [0, 'yellow'], [1, 'red']]));
+
+  this.assertEquals(new PhpArray<string | number, unknown>([['a', 'green'], ['b', 'brown'], ['c', 'blue'], [0, 'red']]), c1.diffAssoc(c2).all());
+
+  this.assertEquals(new PhpArray<string | number, unknown>([['b', 'brown'], ['c', 'blue'], [0, 'red']]), c1.diffAssocUsing(c2, 'strcasecmp').all());
+});
+
+portedTest(`${ID}::testIntersectNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'id': 1, 'first_word': 'Hello' });
+  this.assertSame([], c.intersect(null).all());
+});
+
+portedTest(`${ID}::testIntersectCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection({ 'id': 1, 'first_word': 'Hello' });
+  this.assertEquals({ 'first_word': 'Hello' }, c.intersect(new collection({ 'first_world': 'Hello', 'last_word': 'World' })).all());
+});
+
+portedTest(`${ID}::testIntersectUsingWithNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const collect = new collection(['green', 'brown', 'blue']);
+
+  this.assertSame([], collect.intersectUsing(null, 'strcasecmp').all());
+});
+
+portedTest(`${ID}::testIntersectUsingCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const collect = new collection(['green', 'brown', 'blue']);
+
+  this.assertEquals(['green', 'brown'], collect.intersectUsing(new collection(['GREEN', 'brown', 'yellow']), 'strcasecmp').all());
+});
 
 portedTest(`${ID}::testIntersectAssocWithNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const array1 = new collection(
@@ -3996,7 +4134,18 @@ portedTest(`${ID}::testIntersectAssocCollection`, { case: SupportCollectionTest,
   this.assertEquals({ a: "green" }, array1.intersectAssoc(array2).all());
 });
 
-// testIntersectAssocUsingWithNull, testIntersectAssocUsingCollection: held by ESC-14.4-2 (the callable string `'strcasecmp'`).
+portedTest(`${ID}::testIntersectAssocUsingWithNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const array1 = new collection(new PhpArray<string | number, unknown>([['a', 'green'], ['b', 'brown'], ['c', 'blue'], [0, 'red']]));
+
+  this.assertSame([], array1.intersectAssocUsing(null, 'strcasecmp').all());
+});
+
+portedTest(`${ID}::testIntersectAssocUsingCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const array1 = new collection(new PhpArray<string | number, unknown>([['a', 'green'], ['b', 'brown'], ['c', 'blue'], [0, 'red']]));
+  const array2 = new collection(new PhpArray<string | number, unknown>([['a', 'GREEN'], ['B', 'brown'], [0, 'yellow'], [1, 'red']]));
+
+  this.assertEquals({ 'b': 'brown' }, array1.intersectAssocUsing(array2, 'strcasecmp').all());
+});
 
 portedTest(`${ID}::testIntersectByKeysNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const c = new collection({ name: "Mateus", age: 18 });
@@ -4046,8 +4195,33 @@ portedTest(`${ID}::testCollapseWithMixedCollectionTypes`, { case: SupportCollect
   this.assertEquals([1, 2, 3, 4, 5], data.collapse().all());
 });
 
-// testCollapseWithKeys, testCollapseWithKeysOnNestedCollections, testCollapseWithKeysWithMixedCollectionTypes,
-// testCollapseWithKeysWithStringKeys: held by ESC-14.4-1 (`array_replace`).
+portedTest(`${ID}::testCollapseWithKeys`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([new PhpArray<string | number, unknown>([[1, 'a']]), new PhpArray<string | number, unknown>([[3, 'c']]), new PhpArray<string | number, unknown>([[2, 'b']]), 'drop']);
+  this.assertEquals(new PhpArray<string | number, unknown>([[1, 'a'], [3, 'c'], [2, 'b']]), data.collapseWithKeys().all());
+
+
+  data = new collection(['a', 'b', 'c']);
+  this.assertSame([], data.collapseWithKeys().all());
+});
+
+portedTest(`${ID}::testCollapseWithKeysOnNestedCollections`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([new collection({ 'a': '1a', 'b': '1b' }), new collection({ 'b': '2b', 'c': '2c' }), 'drop']);
+  this.assertEquals({ 'a': '1a', 'b': '2b', 'c': '2c' }, data.collapseWithKeys().all());
+});
+
+portedTest(`${ID}::testCollapseWithKeysWithMixedCollectionTypes`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([new Collection({ 'a': 1, 'b': 2 }), new LazyCollection({ 'b': 3, 'c': 4 })]);
+  this.assertEquals({ 'a': 1, 'b': 3, 'c': 4 }, data.collapseWithKeys().all());
+});
+
+portedTest(`${ID}::testCollapseWithKeysWithStringKeys`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection({ 'first': { 'a': 1, 'b': 2 }, 'second': { 'c': 3 } });
+  this.assertSame({ 'a': 1, 'b': 2, 'c': 3 }, data.collapseWithKeys().all());
+
+
+  data = new collection(new PhpArray<string | number, unknown>([[5, { 'a': 1 }], ['second', new collection({ 'b': 2, 'a': 3 })]]));
+  this.assertSame({ 'a': 3, 'b': 2 }, data.collapseWithKeys().all());
+});
 
 portedTest(`${ID}::testJoin`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   this.assertSame("a, b, c", new collection(["a", "b", "c"]).join(", "));
@@ -4100,7 +4274,19 @@ portedTest(`${ID}::testCrossJoin`, { case: SupportCollectionTest, dataset: COLLE
   );
 });
 
-// testFlip, testFlipSkipsUnsupportedValues: held by ESC-14.4-1 (`is_int`, LazyCollection's `flip`).
+portedTest(`${ID}::testFlip`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  this.assertSame([], (new collection()).flip().all());
+  this.assertSame({ 'taylor': 'name' }, (new collection({ 'name': 'taylor' })).flip().all());
+
+  const data = new collection({ 'name': 'taylor', 'framework': 'laravel' });
+  this.assertEquals({ 'taylor': 'name', 'laravel': 'framework' }, data.flip().toArray());
+});
+
+portedTest(`${ID}::testFlipSkipsUnsupportedValues`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection({ 'string': 'taylor', 'integer': 1, 'null': null, 'false': false, 'true': true, 'float': 1.5, 'array': [], 'object': new stdClass() });
+
+  this.assertSame(new PhpArray<string | number, unknown>([['taylor', 'string'], [1, 'integer']]), data.flip().all());
+});
 
 portedTest(`${ID}::testImplode`, { case: SupportCollectionBlockedBySupportTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let data = new collection([
@@ -4178,7 +4364,23 @@ portedTest(`${ID}::testZip`, { case: SupportCollectionTest, dataset: COLLECTION_
   this.assertEquals([3, 6, null], (c.get(2) as AnyCollection).all());
 });
 
-// testPadPadsArrayWithValue: held by ESC-14.4-1 (`array_pad`).
+portedTest(`${ID}::testPadPadsArrayWithValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([1, 2, 3]);
+  c = c.pad(4, 0);
+  this.assertEquals([1, 2, 3, 0], c.all());
+
+  c = new collection([1, 2, 3, 4, 5]);
+  c = c.pad(4, 0);
+  this.assertEquals([1, 2, 3, 4, 5], c.all());
+
+  c = new collection([1, 2, 3]);
+  c = c.pad(-4, 0);
+  this.assertEquals([0, 1, 2, 3], c.all());
+
+  c = new collection([1, 2, 3, 4, 5]);
+  c = c.pad(-4, 0);
+  this.assertEquals([1, 2, 3, 4, 5], c.all());
+});
 
 portedTest(`${ID}::testCombineWithArray`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let c = new collection([1, 2, 3]);

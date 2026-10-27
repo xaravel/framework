@@ -35,8 +35,7 @@
 // merged with `['b' => 3, 'c' => 4]`) and a mixed one (`['a' => 1, 5 => 'x', 'b' => 2]` merged with
 // `['b' => 3, 7 => 'y']`), each through `merge()` and through `union()`, read back through `toArray()` and `toJson()`,
 // on Collection (`collect`) and LazyCollection (`LazyCollection::make`). It contains no Upstream test and no fixture.
-// The `union()` results are asserted once `union` is ported (ESC-14.4-1 holds it); the test checks that the Oracle
-// answered them. XT-collections-8 also checks, inline and with no Oracle request, members this Story adds that no ported
+// Both the `merge()` and `union()` results are compared with the signed Oracle output. XT-collections-8 also checks, inline and with no Oracle request, members this Story adds that no ported
 // test runs: `implode` (testImplode is `blocked-by:support`), `Arr.dot`'s AD-26 options form and prefix, and
 // `combine`'s `ValueError` (LazyCollection's only when enumerated, with Laravel's message).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -1046,15 +1045,24 @@ xaravelTest(
       ["collect($mixed)->merge($mixedItems)->toJson()", collect(mixed).merge(mixedItems).toJson()],
       [`${lazy}($mixed)->merge($mixedItems)->toArray()`, LazyCollection.make(mixed).merge(mixedItems).toArray()],
       [`${lazy}($mixed)->merge($mixedItems)->toJson()`, LazyCollection.make(mixed).merge(mixedItems).toJson()],
+
+      ["collect($int)->union($intItems)->toArray()", collect(int).union(intItems).toArray()],
+      ["collect($int)->union($intItems)->toJson()", collect(int).union(intItems).toJson()],
+      [`${lazy}($int)->union($intItems)->toArray()`, LazyCollection.make(int).union(intItems).toArray()],
+      [`${lazy}($int)->union($intItems)->toJson()`, LazyCollection.make(int).union(intItems).toJson()],
+      ["collect($string)->union($stringItems)->toArray()", collect(string).union(stringItems).toArray()],
+      ["collect($string)->union($stringItems)->toJson()", collect(string).union(stringItems).toJson()],
+      [`${lazy}($string)->union($stringItems)->toArray()`, LazyCollection.make(string).union(stringItems).toArray()],
+      [`${lazy}($string)->union($stringItems)->toJson()`, LazyCollection.make(string).union(stringItems).toJson()],
+      ["collect($mixed)->union($mixedItems)->toArray()", collect(mixed).union(mixedItems).toArray()],
+      ["collect($mixed)->union($mixedItems)->toJson()", collect(mixed).union(mixedItems).toJson()],
+      [`${lazy}($mixed)->union($mixedItems)->toArray()`, LazyCollection.make(mixed).union(mixedItems).toArray()],
+      [`${lazy}($mixed)->union($mixedItems)->toJson()`, LazyCollection.make(mixed).union(mixedItems).toJson()],
     ];
-    // The request's other twelve expressions are the same inputs through union(), held by ESC-14.4-1.
-    Assert.assertSame(actual.length * 2, output.results.length, "one Oracle result per expression, merge() then union()");
+    Assert.assertSame(actual.length, output.results.length, "one Oracle result per expression, merge() then union()");
     actual.forEach(([expr, value], index) => {
       Assert.assertSame(result(output, index), value, expr);
     });
-    for (let index = actual.length; index < output.results.length; index++) {
-      result(output, index);
-    }
 
   },
 );
