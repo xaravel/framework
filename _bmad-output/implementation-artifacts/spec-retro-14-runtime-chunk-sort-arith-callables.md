@@ -2,7 +2,7 @@
 title: 'Epic 14 item 10: runtime chunk, sort, arithmetic and callables'
 type: feature
 created: '2026-10-27'
-status: blocked
+status: in-review
 baseline_revision: 0f4708b536cb1d7c678886ee5fcc5334eb3b5f72
 review_loop_iteration: 1
 followup_review_recommended: false
@@ -90,6 +90,8 @@ deferred:
 - Given the complete repository, when harness/typecheck/lint and item Fidelity Review run, then there are no harness differences, checks pass and Fidelity status is current before merge.
 
 ## Spec Change Log
+
+- 2026-10-27 Maintainer resume (monitor): the full-verification block was environmental, not a defect. Outside the Codex sandbox, at this branch's head, `bun run harness` exited 0 with `SUMMARY variants=11 run=6 not-run=5 checked=22547 differ=0` and `XARAVEL tests=450 passed=439 failed=0 skipped=11`. The repaired-tree timeouts (dependency-graph and signed-fixture checks) followed m1's GitHub HTTPS outage of 05:48–07:35 PDT, when GitHub queries were still stalling. CI on #492 is green apart from the expected `ownership` scope check. Status is set to `in-review`, and the item leaves epic 14's `waiting_on_maintainer`. Resume at step 4: re-run the full harness on m1, then review pass 2 and the item Fidelity Review on the current tree.
 
 - 2026-10-27 review repair 1: re-derive with pointer value-copy/separation, category-specific locale slots, Traversable unpack and resolved-method options metadata, real __invoke detection, and the missing null/false/large-sort/late-static evidence. Known-bad state: passing short probes concealed alias and invocation errors. KEEP all approved exports, bigint arithmetic/markers, PHP errors, stable Zend sort engine, frame-local locale availability, owned-versus-held lifetime behavior, all 55 probe labels and stronger XT48 fresh-process assertion. Previous attempted diff retained at `/Users/ea/.xaravel-orchestrator/tmp/item10-before-repair.diff` as a reference; it is not a substitute for re-derivation and verification.
 
