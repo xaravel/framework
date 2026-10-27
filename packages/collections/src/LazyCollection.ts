@@ -1,4 +1,4 @@
-// Laravel's `Illuminate\Support\LazyCollection` (v13.37.0), the members Stories 14.1-14.3 port; the Collections
+// Laravel's `Illuminate\Support\LazyCollection` (v13.37.0), the members Stories 14.1-14.4 port; the Collections
 // Stories that port their tests add the rest. The async companions (`filterAsync`, …; DIV-1 Callbacks, DIV-1.2)
 // enumerate the source once, awaiting each callback in key order, and resolve a lazy collection over the kept items. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
 // `use EnumeratesValues, Macroable`.
@@ -19,8 +19,11 @@
 // `sortBy` and `duplicates` also take an options object (AD-26). Strict comparisons of items are PHP's `===` through `identical`, so two arrays
 // compare by their keys and values.
 //
-// This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined.
-import "./Collection";
+// This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined. `zip` reads
+// its iterators' `contains->valid()`, `map->current()` and `each->next()` as the `__get` / `__call` calls PHP makes
+// (DIV-12.16's form), and PHP's `INF` (`flatten`, `dot`) is `Infinity`. The members ESC-14.4-1 and ESC-14.4-2 hold
+// are not ported yet.
+import { Collection } from "./Collection";
 import { Arrayable, CanBeEscapedWhenCastToString, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
 import {
@@ -66,6 +69,7 @@ import {
   toPhpString,
   Traversable,
   UnitEnum,
+  ValueError,
   valueCopy,
   yieldFrom,
 } from "@xaravel/runtime";
@@ -73,6 +77,7 @@ import { Arr } from "./Arr";
 import { Enumerable } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
+import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
 import { callCallable, isOptionsObject, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type ValueOrSyncCallback } from "./support/callables";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
 
@@ -88,6 +93,11 @@ type WhereArguments = [key: unknown, operator?: unknown, value?: unknown];
 /** What a `HigherOrderWhenProxy` from `unless($condition)` answers: the collection's `filter`, or the collection. */
 interface WhenFilterProxy {
   filter(callback: unknown): LazyCollection;
+}
+
+/** The values PHP's `foreach ($values as $value)` gives for an array or a Traversable. */
+function valuesOf(values: unknown): Iterable<unknown> {
+  return is_array(values) ? arrayEntries(values as object).map(([, value_]) => value_) : (values as Iterable<unknown>);
 }
 
 /** A generator function, PHP's `Closure(): Generator` source (DIV-12.18). */
@@ -621,6 +631,144 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       yield* yieldFrom(this);
       yield* yieldFrom(source);
     }).values();
+  }
+
+  /**
+   * Collapse the collection of items (arrays and `Enumerable`s; other items are dropped) into a single list of their
+   * values, lazily: their keys are dropped.
+   */
+  collapse(): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const values of this) {
+        if (is_array(values) || values instanceof Enumerable) {
+          for (const value_ of valuesOf(values)) {
+            yield value_;
+          }
+        }
+      }
+    });
+  }
+
+  /** Cross join with the given lists, returning all possible permutations, through `Collection.crossJoin`. */
+  crossJoin(...arrays: unknown[]): this {
+    void arrays;
+    return this.passthru("crossJoin", [...arguments]);
+  }
+
+  /** Get a flattened list of the items in the collection, nested arrays and `Enumerable`s flattened `depth` levels. */
+  flatten(depth: number = Infinity): this {
+    const instance = this.lazyInstance(function* (this: LazyCollection) {
+      for (const item of this) {
+        if (!is_array(item) && !(item instanceof Enumerable)) {
+          yield item;
+        } else if (depth === 1) {
+          yield* yieldFrom(item);
+        } else {
+          yield* yieldFrom(this.newInstance(item).flatten(depth - 1));
+        }
+      }
+    });
+
+    return instance.values();
+  }
+
+  /** Concatenate values of a given key as a string, through `Collection.implode`. */
+  implode<R>(value: SyncCallback<[value: any, key: any], R> | string | null, glue?: string | null): string;
+  implode(value_: unknown, glue: string | null = null): string {
+    void value_;
+    void glue;
+    return this.collect().implode(...([...arguments] as [string | null, (string | null)?]));
+  }
+
+  /** Intersect the collection with the given items with additional index check, through `Collection.intersectAssoc`. */
+  intersectAssoc(items: unknown): this {
+    void items;
+    return this.passthru("intersectAssoc", [...arguments]);
+  }
+
+  /** Intersect the collection with the given items by key, through `Collection.intersectByKeys`. */
+  intersectByKeys(items: unknown): this {
+    void items;
+    return this.passthru("intersectByKeys", [...arguments]);
+  }
+
+  /**
+   * Join all items from the collection using a string. The final items can use a separate glue string. Through
+   * `Collection.join`.
+   */
+  join(glue: string, finalGlue: string = ""): any {
+    void glue;
+    void finalGlue;
+    return this.collect().join(...([...arguments] as [string, string?]));
+  }
+
+  /** Merge the collection with the given items, through `Collection.merge`. */
+  merge(items: unknown): this {
+    void items;
+    return this.passthru("merge", [...arguments]);
+  }
+
+  /** Multiply the items in the collection by the multiplier, through `Collection.multiply`. */
+  multiply(multiplier: number): this {
+    void multiplier;
+    return this.passthru("multiply", [...arguments]);
+  }
+
+  /**
+   * Create a collection by using this collection for keys and another (an array, an `IteratorAggregate` or a generator
+   * function) for its values, lazily. Enumerating it throws PHP's `ValueError` when their counts differ.
+   */
+  combine(values: unknown): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      // PHP's `use ($values)` copies the argument into each call, which reassigns its own copy.
+      const iterator = this.makeIterator(values) as Iterator;
+
+      const errorMessage = "Both parameters should have an equal number of elements";
+
+      for (const key of this) {
+        if (!iterator.valid()) {
+          throw new ValueError(errorMessage);
+        }
+
+        yield keyed(key, iterator.current());
+
+        iterator.next();
+      }
+
+      if (iterator.valid()) {
+        throw new ValueError(errorMessage);
+      }
+    });
+  }
+
+  /** Flatten a multi-dimensional associative array with dots, `depth` levels down, through `Collection.dot`. */
+  dot(depth: number = Infinity): this {
+    return this.passthru("dot", [depth]);
+  }
+
+  /** Convert a flatten "dot" notation array into an expanded array, through `Collection.undot`. */
+  undot(): this {
+    return this.passthru("undot", []);
+  }
+
+  /**
+   * Zip the collection together with one or more arrays, lazily: lazy collections of the n-th items, while any source
+   * has one, `null` for a shorter source. `new LazyCollection([1, 2, 3]).zip([4, 5, 6])` is `[[1, 4], [2, 5], [3, 6]]`.
+   */
+  zip(items: unknown, ...moreItems: unknown[]): this {
+    void items;
+    void moreItems;
+    const iterables = [...arguments];
+
+    return this.lazyInstance(function* (this: LazyCollection) {
+      const iterators = new Collection(iterables).map((iterable: unknown) => this.makeIterator(iterable)).prepend(this.getIterator());
+
+      while (toBool((iterators.__get("contains") as HigherOrderCollectionProxy).__call("valid", []))) {
+        yield this.newInstance((iterators.__get("map") as HigherOrderCollectionProxy).__call("current", []));
+
+        (iterators.__get("each") as HigherOrderCollectionProxy).__call("next", []);
+      }
+    });
   }
 
   /**

@@ -5,8 +5,8 @@
 // token in its chain (`get [Enumerable.brand]()`, `get [Arrayable.brand]()`, …), as `instanceof` reads only a token's
 // own brand.
 //
-// The TypeScript interface covers the members Stories 14.1-14.3 port; later Collections Stories extend it with
-// theirs. It also declares the async companions (`filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`,
+// The TypeScript interface covers the members Stories 14.1-14.4 port; later Collections Stories extend it with
+// theirs. As in PHP's interface, `dot` and `multiply` are the classes' own members, not the interface's. It also declares the async companions (`filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`,
 // `containsAsync`, `firstAsync`; DIV-1 Callbacks, DIV-1.2), which are Xaravel's and not PHP's, so the token's method
 // map, which records PHP's interface, does not list them. Sync members type their callbacks with `SyncCallback`, so
 // an async callback does not compile and lint reports it (AD-6). `has`, `hasAny`, `except` and `only` take a list of
@@ -269,6 +269,39 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   uniqueStrict<R>(key: SyncCallback<[value: any, key: any], R>): Enumerable;
   uniqueStrict<K>(key?: ValueOrSyncCallback<K>): Enumerable;
 
+  /** Collapse the collection of items into a single array. */
+  collapse(): Enumerable;
+
+  /** Cross join with the given lists, returning all possible permutations. */
+  crossJoin(...lists: unknown[]): Enumerable;
+
+  /** Get a flattened list of the items in the collection. */
+  flatten(depth?: number): Enumerable;
+
+  /** Concatenate values of a given key as a string. */
+  implode<R>(value: SyncCallback<[value: any, key: any], R> | string | null, glue?: string | null): string;
+
+  /** Intersect the collection with the given items with additional index check. */
+  intersectAssoc(items: unknown): Enumerable;
+
+  /** Intersect the collection with the given items by key. */
+  intersectByKeys(items: unknown): Enumerable;
+
+  /** Join all items from the collection using a string. The final items can use a separate glue string. */
+  join(glue: string, finalGlue?: string): unknown;
+
+  /** Merge the collection with the given items. */
+  merge(items: unknown): Enumerable;
+
+  /** Create a collection by using this collection for keys and another for its values. */
+  combine(values: unknown): Enumerable;
+
+  /** Convert a flatten "dot" notation array into an expanded array. */
+  undot(): Enumerable;
+
+  /** Zip the collection together with one or more arrays. */
+  zip(items: unknown, ...moreItems: unknown[]): Enumerable;
+
   /**
    * `filter` with a callback that may be async (DIV-1 Callbacks, DIV-1.2), awaited in key order.
    *
@@ -391,6 +424,17 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     takeUntil: ["value"],
     takeWhile: ["value"],
     uniqueStrict: ["key"],
+    collapse: [],
+    crossJoin: ["lists"],
+    flatten: ["depth"],
+    implode: ["value", "glue"],
+    intersectAssoc: ["items"],
+    intersectByKeys: ["items"],
+    join: ["glue", "finalGlue"],
+    merge: ["items"],
+    combine: ["values"],
+    undot: [],
+    zip: ["items"],
     __get: ["key"],
   },
   [Arrayable, IteratorAggregate as unknown as ContractToken<object>, Jsonable, JsonSerializable as unknown as ContractToken<object>],

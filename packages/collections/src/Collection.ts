@@ -1,4 +1,4 @@
-// Laravel's `Illuminate\Support\Collection` (v13.37.0), the members Stories 14.1-14.3 port; the Collections
+// Laravel's `Illuminate\Support\Collection` (v13.37.0), the members Stories 14.1-14.4 port; the Collections
 // Stories that port their tests add the rest. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
 // `use EnumeratesValues, Macroable` (`TransformsToResourceCollection` needs `@xaravel/http` and comes with the Story
 // that ports its tests).
@@ -23,7 +23,10 @@
 // and `filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`, `containsAsync` and `firstAsync` are the async
 // companions (DIV-1 Callbacks, DIV-1.2), tagged `@asyncRoot callback`: each awaits its callback for one item at a
 // time, in key order. PHP's `==` on two collections compares their properties, which the props protocol gives the
-// runtime (AD-9.6).
+// runtime (AD-9.6). `implode`'s `instanceof Stringable` names Support's `Illuminate\Support\Stringable` (Collection.php
+// imports no `\Stringable`), so it is `is_a` through the Class Registry; PHP's `INF` (`flatten`, `dot`) is `Infinity`.
+// The members ESC-14.4-1 and ESC-14.4-2 hold (`mergeRecursive`, `replace*`, `union`, `diff*`, `intersect`,
+// `intersectUsing`, `intersectAssocUsing`, `collapseWithKeys`, `flip`, `pad`) are not ported yet.
 import { CanBeEscapedWhenCastToString } from "@xaravel/contracts/support";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -33,10 +36,15 @@ import {
   ArrayIterator,
   array_all,
   array_any,
+  array_combine,
   array_filter,
   array_find_key,
+  array_intersect_assoc,
+  array_intersect_key,
   array_key_exists,
   array_keys,
+  array_map,
+  array_merge,
   array_pop,
   array_reverse,
   array_search,
@@ -51,8 +59,10 @@ import {
   arsort,
   asort,
   identical,
+  implode,
   in_array,
   InvalidArgumentException,
+  is_a,
   is_array,
   is_bool,
   is_callable,
@@ -772,6 +782,134 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     }
 
     return result;
+  }
+
+  /**
+   * Collapse the collection of items (arrays and `Enumerable`s; other items are dropped) into a single array, as
+   * `array_merge` joins them: integer keys renumbered, a later string key overwriting an earlier one.
+   */
+  collapse(): this {
+    return this.newInstance(Arr.collapse(this.items));
+  }
+
+  /**
+   * Cross join with the given lists (arrays, `Arrayable`s or iterables), returning all possible permutations: a list
+   * of lists, one item of this collection and one of each list.
+   */
+  crossJoin(...lists: unknown[]): this {
+    return this.newInstance(Arr.crossJoin(this.items, ...(array_map((items: unknown) => this.getArrayableItems(items), lists) as unknown[])));
+  }
+
+  /** Get a flattened list of the items in the collection, nested arrays and `Enumerable`s flattened `depth` levels. */
+  flatten(depth: number = Infinity): this {
+    return this.newInstance(Arr.flatten(this.items, depth));
+  }
+
+  /**
+   * Concatenate values of a given key as a string: a callback's results, each item's `value` ("dot" notation) when
+   * the first item is an array or an object other than Support's `Stringable`, else the items themselves, joined by
+   * `glue` (or, for the items themselves, by `value`).
+   */
+  implode<R>(value: SyncCallback<[value: any, key: any], R> | string | null, glue?: string | null): string;
+  implode(value_: unknown, glue: string | null = null): string {
+    if (this.useAsCallable(value_)) {
+      return implode(glue ?? "", this.map(value_ as ItemCallback).all());
+    }
+
+    const first: unknown = this.first();
+
+    // `Stringable` is Support's `Illuminate\Support\Stringable` (Collection.php imports no `\Stringable`), read
+    // through the Class Registry: until Support registers it, no object is one, as PHP says of any other object.
+    if (is_array(first) || (is_object(first) && !is_a(first, "Illuminate\\Support\\Stringable"))) {
+      return implode(glue ?? "", this.pluck(value_).all());
+    }
+
+    return implode(value_ ?? "", this.items);
+  }
+
+  /** Intersect the collection with the given items with additional index check: the entries both have, by `(string)`. */
+  intersectAssoc(items: unknown): this {
+    return this.newInstance(array_intersect_assoc(this.items, this.getArrayableItems(items)));
+  }
+
+  /** Intersect the collection with the given items by key: the entries whose key the items have. */
+  intersectByKeys(items: unknown): this {
+    return this.newInstance(array_intersect_key(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Join all items from the collection using a string. The final items can use a separate glue string: then one item
+   * is returned as it is, and none gives `''`.
+   */
+  join(glue: string, finalGlue: string = ""): any {
+    if (finalGlue === "") {
+      return this.implode(glue);
+    }
+
+    const count = this.count();
+
+    if (count === 0) {
+      return "";
+    }
+
+    if (count === 1) {
+      return this.last();
+    }
+
+    const collection = this.newInstance(this.items);
+
+    const finalItem: unknown = collection.pop();
+
+    return toPhpString(collection.implode(glue)) + toPhpString(finalGlue) + toPhpString(finalItem);
+  }
+
+  /** Merge the collection with the given items (`array_merge`): integer keys renumbered, string keys overwritten. */
+  merge(items: unknown): this {
+    return this.newInstance(array_merge(this.items, this.getArrayableItems(items)));
+  }
+
+  /** Multiply the items in the collection by the multiplier: the items' values, `multiplier` times over, as a list. */
+  multiply(multiplier: number): this {
+    const new_ = this.newInstance();
+
+    for (let i = 0; i < multiplier; i++) {
+      new_.push(...array_values(this.items));
+    }
+
+    return new_;
+  }
+
+  /**
+   * Create a collection by using this collection for keys and another for its values. Throws PHP's `ValueError` when
+   * their counts differ.
+   */
+  combine(values: unknown): this {
+    return this.newInstance(array_combine(this.all(), this.getArrayableItems(values)));
+  }
+
+  /** Flatten a multi-dimensional associative array with dots, `depth` levels down. */
+  dot(depth: number = Infinity): this {
+    return this.newInstance(Arr.dot(this.all(), "", depth));
+  }
+
+  /** Convert a flatten "dot" notation array into an expanded array. */
+  undot(): this {
+    return this.newInstance(Arr.undot(this.all()));
+  }
+
+  /**
+   * Zip the collection together with one or more arrays: a list of collections, the n-th holding the n-th item of this
+   * collection and of each array, `null` where one is shorter. `new Collection([1, 2, 3]).zip([4, 5, 6])` is
+   * `[[1, 4], [2, 5], [3, 6]]`.
+   */
+  zip(items: unknown, ...moreItems: unknown[]): this {
+    void items;
+    void moreItems;
+    const arrayableItems = array_map((items_: unknown) => this.getArrayableItems(items_), [...arguments]);
+
+    const params = array_merge([(...args: unknown[]) => this.newInstance(args), this.items], arrayableItems) as [unknown, unknown, ...unknown[]];
+
+    return this.newInstance(array_map(...params));
   }
 
   /** Get and remove the first item (`count` 1), or the first `count` items as a collection. Throws below zero. */

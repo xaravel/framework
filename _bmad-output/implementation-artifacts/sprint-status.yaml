@@ -160,7 +160,7 @@ development_status:
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
-  14-4-set-operations-and-combining: backlog
+  14-4-set-operations-and-combining: blocked  # 58 of 124 built (first run); ESC-14.4-1 (14 runtime array builtins and PHP's array +; contract, qualifies for the monitor under the runtime-builtins standing rule) holds 50 Test IDs; ESC-14.4-2 (PHP callable strings to the *Using members; divergence, supersedes DIV-9.13, waits on the Maintainer) holds 16; XT-collections-8 waits for its CI-signed Oracle fixture, on which both Fidelity reviewers reject (F-7)
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog
