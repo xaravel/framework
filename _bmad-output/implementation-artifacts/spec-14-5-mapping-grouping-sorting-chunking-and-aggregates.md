@@ -382,3 +382,10 @@ Final Fidelity re-check: both reviewers reject at tree 29f9bfbdcb4401fa50b84dd7a
 
 
 Final full harness after the last source patches: 21817 ported pairs checked, no ported differences; 445 Xaravel Tests, 436 pass, five skip, four failures. XT-collections-9 fails for the missing signed fixture; XT-conformance-173/174/175 time out. Seven unavailable backend Variants are NOT-RUN. The earlier repaired-tree full run had only the missing fixture failure, but no clean final local full-suite result is claimed. No timeout or grader setting changed. Remote CI must pass before this blocked record can merge. Final focused Story/component/type/lint/metadata checks above are green. HALT: blocked.
+
+
+### PR #490 — publication and final block
+
+CI generated and signed the sorting fixture in commit 00d324ec94570b315b592dbd51e786d8f13ef6f3. After fast-forwarding that App commit, `bun run harness --xaravel --id XT-collections-9` passes (one test, zero differences), resolving the pending fixture dependency; the earlier Fidelity records remain untouched historical records, not current approvals. CI for that head completed successfully except protected-paths and ownership. The failed-check logs are required to judge their exceptions, but downloading both was denied: HTTP 401, `Server failed to authenticate the request. Please refer to the information in the www-authenticate header.` No alternative log route or merge was attempted after denial.
+
+Blocking condition additionally: permission denied: read failed-check logs (HTTP 401). The Story remains blocked by the four runtime contracts and unresolved Fidelity F-4 classification; XT10 is incomplete. PR #490 stays open for the Maintainer; this permission-denial bookkeeping is the only change after the signed fixture. Status issue #10 and Maintainer inbox #223 were updated successfully through the GitHub API when CLI queries stalled. Outcome: progress (blocked unit recorded in an open PR), not completed Story. No change to main was made.
