@@ -93,7 +93,9 @@ Laravel's names, arguments and results, with PHP's array functions from `@xarave
 
 `Arr` gains the members these call: `crossJoin(...arrays)`, `dot(array, prepend, depth)` (also with the options object `{ prepend, depth }`, AD-26), `undot(array)`, `flatten(array, depth)` and `set(ref, key, value)`, which takes PHP's by-reference array as a `Ref` and writes the new array to `ref.value` (DIV-9.2). Their own tests arrive with Story 14.6.
 
-Not ported yet: `mergeRecursive`, `replace`, `replaceRecursive`, `union`, `diff`, `diffUsing`, `diffAssoc`, `diffAssocUsing`, `diffKeys`, `diffKeysUsing`, `intersect`, `intersectUsing`, `intersectAssocUsing`, `collapseWithKeys`, `flip` and `pad`. They call PHP builtins the runtime does not export yet (`array_merge_recursive`, `array_replace`, `array_diff`, `array_pad`, `is_int`, …) or PHP's array `+`, and wait for ESC-14.4-1. The `*Using` members' Laravel tests pass the PHP callable string `'strcasecmp'`, and wait for ESC-14.4-2 too.
+`mergeRecursive()` merges nested arrays with PHP's `array_merge_recursive`; `replace()` and `replaceRecursive()` replace values by key with PHP's `array_replace` and `array_replace_recursive`. `union()` uses PHP's array `+`: the receiver's keys win, and new keys follow without renumbering.
+
+`diff()`, `diffAssoc()` and `diffKeys()` exclude matching values, key/value pairs or keys; `intersect()` keeps matching values. Their `*Using()` forms accept a sync comparison callback or a PHP global-function name such as `'strcasecmp'`, resolved by the runtime. `intersectAssocUsing()` compares keys with that callback and values as strings. `collapseWithKeys()` collapses nested arrays and collections while retaining keys, with later values winning. `flip()` swaps integer and string values with their keys and skips other values. `pad()` adds a value to the right for a positive size or the left for a negative size.
 
 ### Sync callbacks and the async companions
 
@@ -164,4 +166,4 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 - **DIV-12.19:** where a test passes a collection class as a value, it is the class's FQCN, `fqcn(Collection)`.
 - **DIV-12.20:** `contains`, `doesntContain`, `doesntContainStrict`, `every`, `some`, `partition`, `where`, `firstWhere`, `hasSole`, `hasMany`, `sole`, `firstOrFail`, `first` and `last` take only positional arguments: their first parameter is a PHP value or a callback, so a lone object is always the value, never an options object. Laravel's named arguments to them become the positional call. These are the members this page covers; the full list of positional-only members is DIV-12.20 in `decisions/DIV-12.md` (and `conformance/api-surface/exceptions.jsonl`).
 
-Not ported yet: the members ESC-14.4-1 and ESC-14.4-2 hold (see Combining arrays), `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.
+Not ported yet: `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.

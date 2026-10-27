@@ -160,7 +160,7 @@ development_status:
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
-  14-4-set-operations-and-combining: in-progress  # ESC-14.4-1 ruled option 1 by the monitor (runtime-builtins standing rule) and ESC-14.4-2 option 1 by the Maintainer (callable-name resolver, DIV-9.13 / DIV-9.14 amended); action item epic-14-item-9-runtime-set-functions-callable-names lands first and frees the 66 held Test IDs
+  14-4-set-operations-and-combining: blocked  # permission denied: Fidelity Review reviewer 2 Codex app-server initialization (Operation not permitted); implementation and 124 Story checks complete, review incomplete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog

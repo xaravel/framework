@@ -21,8 +21,9 @@
 //
 // This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined. `zip` reads
 // its iterators' `contains->valid()`, `map->current()` and `each->next()` as the `__get` / `__call` calls PHP makes
-// (DIV-12.16's form), and PHP's `INF` (`flatten`, `dot`) is `Infinity`. The members ESC-14.4-1 and ESC-14.4-2 hold
-// are not ported yet.
+// (DIV-12.16's form), and PHP's `INF` (`flatten`, `dot`) is `Infinity`. The `*Using` members pass their comparison
+// callback through to Collection's, so a PHP callable string such as `'strcasecmp'` reaches the runtime's `array_udiff`
+// & co., which call the runtime's export of that name (DIV-9.13, ESC-14.4-2).
 import { Collection } from "./Collection";
 import { Arrayable, CanBeEscapedWhenCastToString, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -42,6 +43,7 @@ import {
   InvalidArgumentException,
   is_array,
   is_callable,
+  is_int,
   is_null,
   is_object,
   is_string,
@@ -98,6 +100,17 @@ interface WhenFilterProxy {
 /** The values PHP's `foreach ($values as $value)` gives for an array or a Traversable. */
 function valuesOf(values: unknown): Iterable<unknown> {
   return is_array(values) ? arrayEntries(values as object).map(([, value_]) => value_) : (values as Iterable<unknown>);
+}
+
+/**
+ * PHP's `callable(T, T): int` comparison of two values or two keys: a sync function, or a PHP callable string naming a
+ * global function the runtime exports (`'strcasecmp'`, DIV-9.13).
+ */
+type CompareCallback<R> = SyncCallback<[a: any, b: any], R> | string;
+
+/** The `[key, value]` pairs PHP's `foreach ($values as $key => $value)` gives for an array or an `Enumerable`. */
+function entriesOf(values: unknown): Iterable<readonly [unknown, unknown]> {
+  return is_array(values) ? arrayEntries(values as object) : (values as { entries(): Iterable<readonly [unknown, unknown]> }).entries();
 }
 
 /** A generator function, PHP's `Closure(): Generator` source (DIV-12.18). */
@@ -645,6 +658,168 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
             yield value_;
           }
         }
+      }
+    });
+  }
+
+  /**
+   * Collapse the collection of items (arrays and `Enumerable`s; other items are dropped) into a single array while
+   * preserving its keys, lazily: each item's entries are yielded with their keys, so a later key wins when enumerated.
+   */
+  collapseWithKeys(): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const values of this) {
+        if (is_array(values) || values instanceof Enumerable) {
+          for (const [key, value_] of entriesOf(values)) {
+            yield keyed(key, value_);
+          }
+        }
+      }
+    });
+  }
+
+  /** Get the items that are not present in the given items, through `Collection.diff`. */
+  diff(items: unknown): this {
+    void items;
+    return this.passthru("diff", [...arguments]);
+  }
+
+  /** Get the items that are not present in the given items, using the callback, through `Collection.diffUsing`. */
+  diffUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    void items;
+    void callback;
+    return this.passthru("diffUsing", [...arguments]);
+  }
+
+  /** Get the items whose keys and values are not present in the given items, through `Collection.diffAssoc`. */
+  diffAssoc(items: unknown): this {
+    void items;
+    return this.passthru("diffAssoc", [...arguments]);
+  }
+
+  /**
+   * Get the items whose keys and values are not present in the given items, using the callback on the keys, through
+   * `Collection.diffAssocUsing`.
+   */
+  diffAssocUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    void items;
+    void callback;
+    return this.passthru("diffAssocUsing", [...arguments]);
+  }
+
+  /** Get the items whose keys are not present in the given items, through `Collection.diffKeys`. */
+  diffKeys(items: unknown): this {
+    void items;
+    return this.passthru("diffKeys", [...arguments]);
+  }
+
+  /** Get the items whose keys are not present in the given items, using the callback, through `Collection.diffKeysUsing`. */
+  diffKeysUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    void items;
+    void callback;
+    return this.passthru("diffKeysUsing", [...arguments]);
+  }
+
+  /**
+   * Flip the items in the collection, lazily: each string or int value is yielded as a key whose value is its key; any
+   * other value is skipped.
+   */
+  flip(): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const [key, value_] of this.entries()) {
+        if (is_string(value_) || is_int(value_)) {
+          yield keyed(value_, key);
+        }
+      }
+    });
+  }
+
+  /** Intersect the collection with the given items, through `Collection.intersect`. */
+  intersect(items: unknown): this {
+    void items;
+    return this.passthru("intersect", [...arguments]);
+  }
+
+  /** Intersect the collection with the given items, using the callback, through `Collection.intersectUsing`. */
+  intersectUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    void items;
+    void callback;
+    return this.passthru("intersectUsing", [...arguments]);
+  }
+
+  /**
+   * Intersect the collection with the given items with additional index check, using the callback on the keys, through
+   * `Collection.intersectAssocUsing`.
+   */
+  intersectAssocUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    void items;
+    void callback;
+    return this.passthru("intersectAssocUsing", [...arguments]);
+  }
+
+  /** Recursively merge the collection with the given items, through `Collection.mergeRecursive`. */
+  mergeRecursive(items: unknown): this {
+    void items;
+    return this.passthru("mergeRecursive", [...arguments]);
+  }
+
+  /** Union the collection with the given items (PHP's array `+`), through `Collection.union`. */
+  union(items: unknown): this {
+    void items;
+    return this.passthru("union", [...arguments]);
+  }
+
+  /**
+   * Replace the collection items with the given items, lazily: each key the given items hold yields their value in
+   * this key's place, and their other entries follow, in order.
+   */
+  replace(items: unknown): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      // PHP's `use ($items)` copies the argument into each call, which reassigns and unsets its own copy.
+      const items_ = new PhpArray(arrayEntries(this.getArrayableItems(items) as object));
+
+      for (const [key, value_] of this.entries()) {
+        if (array_key_exists(key, items_)) {
+          yield keyed(key, items_.get(key));
+
+          items_.delete(key);
+        } else {
+          yield keyed(key, value_);
+        }
+      }
+
+      for (const [key, value_] of items_) {
+        yield keyed(key, value_);
+      }
+    });
+  }
+
+  /** Recursively replace the collection items with the given items, through `Collection.replaceRecursive`. */
+  replaceRecursive(items: unknown): this {
+    void items;
+    return this.passthru("replaceRecursive", [...arguments]);
+  }
+
+  /**
+   * Pad collection to the specified length with a value: for a positive `size`, lazily, the items and then `value`
+   * until `size` items are yielded; for a negative one, through `Collection.pad`, on the left.
+   */
+  pad(size: number, value_: unknown): this {
+    if (size < 0) {
+      return this.passthru("pad", [...arguments]);
+    }
+
+    return this.lazyInstance(function* (this: LazyCollection) {
+      let yielded = 0;
+
+      for (const [index, item] of this.entries()) {
+        yield keyed(index, item);
+
+        yielded++;
+      }
+
+      while (yielded++ < size) {
+        yield value_;
       }
     });
   }

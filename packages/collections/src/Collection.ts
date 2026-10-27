@@ -25,8 +25,9 @@
 // time, in key order. PHP's `==` on two collections compares their properties, which the props protocol gives the
 // runtime (AD-9.6). `implode`'s `instanceof Stringable` names Support's `Illuminate\Support\Stringable` (Collection.php
 // imports no `\Stringable`), so it is `is_a` through the Class Registry; PHP's `INF` (`flatten`, `dot`) is `Infinity`.
-// The members ESC-14.4-1 and ESC-14.4-2 hold (`mergeRecursive`, `replace*`, `union`, `diff*`, `intersect`,
-// `intersectUsing`, `intersectAssocUsing`, `collapseWithKeys`, `flip`, `pad`) are not ported yet.
+// PHP's `+` on two arrays (`union`) is the runtime's `arrayUnion` (ESC-14.4-1). The `*Using` members hand their
+// comparison callback to the runtime's `array_udiff` & co. as Upstream does, so a PHP callable string that names a
+// global function (`'strcasecmp'`) is called as the runtime's export of that name (DIV-9.13, ESC-14.4-2).
 import { CanBeEscapedWhenCastToString } from "@xaravel/contracts/support";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -37,25 +38,40 @@ import {
   array_all,
   array_any,
   array_combine,
+  array_diff,
+  array_diff_assoc,
+  array_diff_key,
+  array_diff_uassoc,
+  array_diff_ukey,
   array_filter,
   array_find_key,
+  array_flip,
+  array_intersect,
   array_intersect_assoc,
   array_intersect_key,
+  array_intersect_uassoc,
   array_key_exists,
   array_keys,
   array_map,
   array_merge,
+  array_merge_recursive,
+  array_pad,
   array_pop,
+  array_replace,
+  array_replace_recursive,
   array_reverse,
   array_search,
   array_shift,
   array_slice,
   array_splice,
+  array_udiff,
+  array_uintersect,
   array_unique,
   array_unshift,
   array_values,
   arrayEntries,
   arrayFromEntries,
+  arrayUnion,
   arsort,
   asort,
   identical,
@@ -124,6 +140,12 @@ const PHP_PROPS = Symbol.for("xaravel.php.props");
 
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
+
+/**
+ * PHP's `callable(T, T): int` comparison of two values or two keys: a sync function, or a PHP callable string naming a
+ * global function the runtime exports (`'strcasecmp'`, DIV-9.13).
+ */
+type CompareCallback<R> = SyncCallback<[a: any, b: any], R> | string;
 
 /** The arguments of a `($key, $operator = null, $value = null)` member, as `func_get_args()` forwards them. */
 type WhereArguments = [key: unknown, operator?: unknown, value?: unknown];
@@ -790,6 +812,134 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    */
   collapse(): this {
     return this.newInstance(Arr.collapse(this.items));
+  }
+
+  /**
+   * Collapse the collection of items (arrays and `Enumerable`s; other items are dropped) into a single array while
+   * preserving its keys, as `array_replace` joins them: a later key, integer or string, overwrites an earlier one in its
+   * first position.
+   */
+  collapseWithKeys(): this {
+    if (this.items.size === 0) {
+      return this.newInstance();
+    }
+
+    const results: unknown[] = [];
+
+    for (let values of this.items.values()) {
+      if (values instanceof Enumerable) {
+        values = values.all();
+      } else if (!is_array(values)) {
+        continue;
+      }
+
+      results.push(values);
+    }
+
+    if (results.length === 0) {
+      return this.newInstance();
+    }
+
+    return this.newInstance(array_replace(...(results as [unknown, ...unknown[]])));
+  }
+
+  /** Get the items in the collection that are not present in the given items: by value, compared as `(string)`. */
+  diff(items: unknown): this {
+    return this.newInstance(array_diff(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Get the items in the collection that are not present in the given items, using the callback: `callback(a, b)`
+   * compares two values and returns a negative, zero or positive int, as `array_udiff` reads it.
+   */
+  diffUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    return this.newInstance(array_udiff(this.items, this.getArrayableItems(items), callback));
+  }
+
+  /** Get the items in the collection whose keys and values are not present in the given items (values as `(string)`). */
+  diffAssoc(items: unknown): this {
+    return this.newInstance(array_diff_assoc(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Get the items in the collection whose keys and values are not present in the given items, using the callback:
+   * `callback(a, b)` compares two keys, as `array_diff_uassoc` reads it, and the values are compared as `(string)`.
+   */
+  diffAssocUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    return this.newInstance(array_diff_uassoc(this.items, this.getArrayableItems(items), callback));
+  }
+
+  /** Get the items in the collection whose keys are not present in the given items. */
+  diffKeys(items: unknown): this {
+    return this.newInstance(array_diff_key(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Get the items in the collection whose keys are not present in the given items, using the callback: `callback(a, b)`
+   * compares two keys, as `array_diff_ukey` reads it.
+   */
+  diffKeysUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    return this.newInstance(array_diff_ukey(this.items, this.getArrayableItems(items), callback));
+  }
+
+  /**
+   * Flip the items in the collection: each int or string value becomes a key whose value is its key (`array_flip`);
+   * any other value is skipped, as PHP skips it with a warning.
+   */
+  flip(): this {
+    return this.newInstance(array_flip(this.items));
+  }
+
+  /** Intersect the collection with the given items: the entries whose value the items hold, compared as `(string)`. */
+  intersect(items: unknown): this {
+    return this.newInstance(array_intersect(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Intersect the collection with the given items, using the callback: `callback(a, b)` compares two values, as
+   * `array_uintersect` reads it.
+   */
+  intersectUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    return this.newInstance(array_uintersect(this.items, this.getArrayableItems(items), callback));
+  }
+
+  /**
+   * Intersect the collection with the given items with additional index check, using the callback: `callback(a, b)`
+   * compares two keys, as `array_intersect_uassoc` reads it, and the values are compared as `(string)`.
+   */
+  intersectAssocUsing<R>(items: unknown, callback: CompareCallback<R>): this {
+    return this.newInstance(array_intersect_uassoc(this.items, this.getArrayableItems(items), callback));
+  }
+
+  /**
+   * Recursively merge the collection with the given items (`array_merge_recursive`): integer keys renumbered, and the
+   * values of a string key both hold merged into one array.
+   */
+  mergeRecursive(items: unknown): this {
+    return this.newInstance(array_merge_recursive(this.items, this.getArrayableItems(items)));
+  }
+
+  /** Union the collection with the given items, as PHP's array `+`: these entries, then each given one whose key is new. */
+  union(items: unknown): this {
+    return this.newInstance(arrayUnion(this.items, this.getArrayableItems(items)));
+  }
+
+  /** Replace the collection items with the given items (`array_replace`): a given key's value replaces this one's. */
+  replace(items: unknown): this {
+    return this.newInstance(array_replace(this.items, this.getArrayableItems(items)));
+  }
+
+  /** Recursively replace the collection items with the given items (`array_replace_recursive`), nested arrays by key. */
+  replaceRecursive(items: unknown): this {
+    return this.newInstance(array_replace_recursive(this.items, this.getArrayableItems(items)));
+  }
+
+  /**
+   * Pad collection to the specified length with a value (`array_pad`): on the right for a positive `size`, on the left
+   * for a negative one; integer keys are renumbered. Throws PHP's `ValueError` beyond PHP's array size limit.
+   */
+  pad(size: number, value_: unknown): this {
+    return this.newInstance(array_pad(this.items, size, value_));
   }
 
   /**
