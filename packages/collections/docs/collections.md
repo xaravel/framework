@@ -95,7 +95,7 @@ Laravel's names, arguments and results, with PHP's array functions from `@xarave
 
 `mergeRecursive()` merges nested arrays with PHP's `array_merge_recursive`; `replace()` and `replaceRecursive()` replace values by key with PHP's `array_replace` and `array_replace_recursive`. `union()` uses PHP's array `+`: the receiver's keys win, and new keys follow without renumbering.
 
-`diff()`, `diffAssoc()` and `diffKeys()` exclude matching values, key/value pairs or keys; `intersect()` keeps matching values. Their `*Using()` forms accept a sync comparison callback or a PHP global-function name such as `'strcasecmp'`, resolved by the runtime. `intersectAssocUsing()` compares keys with that callback and values as strings. `collapseWithKeys()` collapses nested arrays and collections while retaining keys, with later values winning. `flip()` swaps integer and string values with their keys and skips other values. `pad()` adds a value to the right for a positive size or the left for a negative size.
+`diff()`, `diffAssoc()` and `diffKeys()` exclude matching values, key/value pairs or keys; `intersect()` keeps matching values. Their `*Using()` forms accept a sync comparison callback or a PHP global-function name such as `'strcasecmp'`, resolved by the runtime. `intersectAssocUsing()` compares keys with that callback and values as strings. `collapseWithKeys()` collapses nested arrays and collections while retaining keys. On a `LazyCollection`, iteration yields every entry, including repeated keys; when `all()` materialises the result, later values win. `flip()` swaps integer and string values with their keys and skips other values. `pad()` adds a value to the right for a positive size or the left for a negative size.
 
 ### Sync callbacks and the async companions
 
