@@ -188,16 +188,32 @@ stops when a callback resolves to `false`. Rejections stop iteration and reject
 the operation. Sync `map` and `each` reject async callbacks in TypeScript and lint
 (DIV-1.2).
 
-The Story remains blocked. ESC-14.5-1 holds `median`, `mapToDictionary`,
-`mapToGroups`, `mapInto`, `sliding`, `split`, `splitIn`, `chunk`, `chunkWhile`,
-`chunkBy`, `sortKeys`, `sortKeysDesc`, `sortKeysUsing` and `reduceSpread` until
-their runtime contracts arrive. ESC-14.5-2 holds `sum`, `avg` and `average` until
-runtime supplies PHP mixed-operand addition and division, including errors and
-float markers. Some tests of existing methods also wait for test-side builtins;
-`pipe` and `pipeThrough` tests transitively wait for `sum`. The stringable group
-key test needs Support. XT-collections-10 waits for `mapInto`, and
-XT-collections-9 requires its CI-signed Oracle fixture; absent fixtures fail.
+Both classes also provide `median`, `sum`, `avg` / `average`, `mapToDictionary`,
+`mapToGroups`, `mapInto`, `mapSpread`, `eachSpread`, `sliding`, `split`, `splitIn`,
+`chunk`, `chunkWhile`, `chunkBy` and the `sortKeys` family. `mapInto` uses backed
+enums' `from` method, preserving case identity, or passes value and key to a
+constructor. Aggregate arithmetic, sorting, callback resolution and argument
+unpacking use the runtime's PHP helpers. `reduceSpread` preserves accumulator
+arrays by value; its invalid-result diagnostic needs Support's `class_basename`
+and throws `BlockedByComponentError("support")` until that component arrives.
 
-`mapSpread` and `eachSpread` are held whole under ESC-14.5-3 until runtime supplies PHP array append and argument unpacking, including scalar and named-argument errors. The callable-array `groupBy` tests are held under the same contract; existing independent `groupBy` behavior remains available. Both `reduceSpread` tests retain verbatim Upstream bodies as held evidence: runtime also lacks public `PHP_INT_MIN`/`PHP_INT_MAX`, so their complete runnable translations and the later Support blocker remain incomplete.
+Callbacks accept runtime-supported PHP function strings, callable arrays and
+invokable objects as well as synchronous functions. `avg` and `average` pass
+only the value to their callback. In retriever APIs such as `sum`, `avg`,
+`average`, `min` and `max`, a string is a property path: `sum("price")` reads
+each item’s `price`. Callback-only APIs such as `map`, `filter` and
+`sortKeysUsing` resolve strings as PHP function names or `Class::method` names.
 
-Owned temporary generator finalization after early termination remains unverified pending the runtime lifetime/disposal contract in ESC-14.5-4. The new XT11 finally regression is retained as pending evidence there; existing sequential callbacks, early-false behavior and source-error propagation are tested independently.
+Temporary JS generator sources created for framework enumeration are owned by
+the runtime. Direct enumeration and composed `chunk`, `sliding` and `chunkWhile`
+operations close those sources on early exit or callback error. The common
+`first`, `take`, `isEmpty`, `skip` and `skipWhile` paths also use public traversal
+cleanup. Manual iterator APIs preserve an advanced held Generator’s current
+position and return no items from an exhausted one, without rewinding it.
+Explicit runtime Generators held by the user remain resumable. A cleanup
+exception propagates when no callback exception is already active; if both throw,
+the callback exception wins (DIV-9.16).
+
+`combine` and `zip` still coordinate manual iterators and can leave temporary
+input generators open on early exit. Their cleanup remains for the later
+LazyCollection Story; the guarantees above do not cover those wrappers.

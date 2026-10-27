@@ -1,7 +1,7 @@
 // Calling a PHP callable and reading a PHP array or object by key, as the Collections core does, and the type of a
 // sync member's callback. Internal: not exported from the package.
 import type { NotPromise } from "@xaravel/contracts/async";
-import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool } from "@xaravel/runtime";
+import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool, resolveCallable } from "@xaravel/runtime";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 
@@ -16,6 +16,12 @@ const PHP_ARRAY = Symbol.for("xaravel.php.array");
  */
 export type SyncCallback<A extends unknown[], R> = ((...args: A) => NotPromise<R>) & ((...args: A) => void);
 
+/** Non-function PHP callable forms; invocation and validation belong to the shared runtime resolver. */
+export type NonFunctionCallable<A extends unknown[] = any[], R = unknown> = string | readonly [object | string, string] | PhpArray | { __invoke: SyncCallback<A, R> };
+
+/** A synchronous callback with the PHP string, callable-array and invokable-object forms. */
+export type SyncCallable<A extends unknown[], R> = SyncCallback<A, R> | NonFunctionCallable<A, R>;
+
 /**
  * A value-or-callback parameter (`contains`, `every`, `reject`, `skipUntil`, …): the value as it is, or, when the
  * argument is a function, its `SyncCallback`, so an async callback is refused there too (AD-6). Members declare it in
@@ -23,18 +29,10 @@ export type SyncCallback<A extends unknown[], R> = ((...args: A) => NotPromise<R
  */
 export type ValueOrSyncCallback<K> = K extends (...args: infer A) => infer R ? SyncCallback<A, R> : K;
 
-/**
- * PHP's `$callback(...$args)`: a function is called with `args`, and an object whose `__invoke` is a function through
- * it. Anything else throws PHP's `Error` `Value not callable`. A PHP callable string or array is not ported here
- * (DIV-9.13), so it throws too.
- */
+/** Invoke a PHP callable through the runtime's shared resolver (DIV-9.13). */
 export function callCallable(callback: unknown, ...args: unknown[]): unknown {
-  if (typeof callback === "function") {
-    return (Reflect.apply(callback, undefined, args) as unknown) ?? null;
-  }
-  if (typeof callback === "object" && callback !== null && typeof (callback as { __invoke?: unknown }).__invoke === "function") {
-    return (callback as { __invoke: (...parameters: unknown[]) => unknown }).__invoke(...args) ?? null;
-  }
+  const target = resolveCallable(callback);
+  if (target !== null) return target(...args) ?? null;
   throw new PhpError(`Value of type ${getDebugType(callback)} is not callable`);
 }
 

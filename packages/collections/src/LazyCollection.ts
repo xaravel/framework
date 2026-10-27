@@ -29,6 +29,9 @@ import { Arrayable, CanBeEscapedWhenCastToString, Jsonable } from "@xaravel/cont
 import { Macroable } from "@xaravel/macroable";
 import {
   abs,
+  array_slice,
+  ceil,
+  toFloat,
   array_flip,
   array_key_exists,
   arrayEntries,
@@ -81,7 +84,7 @@ import { Enumerable, type SortByDescCallback } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
 import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
-import { callCallable, isOptionsObject, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type ValueOrSyncCallback } from "./support/callables";
+import { callCallable, isOptionsObject, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type SyncCallable, type ValueOrSyncCallback } from "./support/callables";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
 
 /** The `Countable` brand `count()` and the grader read (no token; `packages/runtime/src/php/ArrayObject.ts`). */
@@ -107,7 +110,7 @@ function valuesOf(values: unknown): Iterable<unknown> {
  * PHP's `callable(T, T): int` comparison of two values or two keys: a sync function, or a PHP callable string naming a
  * global function the runtime exports (`'strcasecmp'`, DIV-9.13).
  */
-type CompareCallback<R> = SyncCallback<[a: any, b: any], R> | string;
+type CompareCallback<R> = SyncCallable<[a: any, b: any], R> | string;
 
 /** The `[key, value]` pairs PHP's `foreach ($values as $key => $value)` gives for an array or an `Enumerable`. */
 function entriesOf(values: unknown): Iterable<readonly [unknown, unknown]> {
@@ -121,6 +124,9 @@ type SourceFunction = () => unknown;
 export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   /** The source from which to generate items: a generator function, another lazy collection, or a PHP array. */
   source: unknown;
+
+  /** Only wrappers this collection created own their source; caller-held iterators are never marked. */
+  readonly #ownedIterators = new WeakSet<Traversable>();
 
   /**
    * Create a new lazy collection instance from a generator function (or any function), another lazy collection, a PHP
@@ -242,8 +248,8 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a filter over each of the items: the callback gets each value and its key, and keys are kept. */
-  filter<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): this {
-    const test: ItemCallback = callback ?? ((value_: unknown) => toBool(value_));
+  filter<R>(callback: SyncCallable<[value: any, key: any], R> | null = null): this {
+    const test = callback ?? ((value_: unknown) => toBool(value_));
     return this.lazyInstance(function* (this: LazyCollection) {
       for (const [key, value_] of this.entries()) {
         if (toBool(callCallable(test, valueCopy(value_), key))) {
@@ -270,11 +276,12 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
 
   /** Determine if the items are empty or not. */
   isEmpty(): boolean {
-    return !(this.getIterator() as Iterator).valid();
+    for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) return !iterator.valid();
+    return true;
   }
 
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
-  map<R>(callback: SyncCallback<[value: any, key: any], R>): this {
+  map<R>(callback: SyncCallable<[value: any, key: any], R>): this {
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {
       for (const [key, value_] of this.entries()) {
         yield keyed(key, callCallable(callback, valueCopy(value_), key));
@@ -283,13 +290,109 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Lazily yield each key and value returned by the callback. */
-  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): this {
+  mapWithKeys<R>(callback: SyncCallable<[value: any, key: any], R>): this {
     return this.lazyInstance(function* (this: LazyCollection) {
       for (const [key, item] of this.entries()) {
         yield* yieldFrom(callCallable(callback, valueCopy(item), key));
       }
     });
   }
+
+  /** Get the median by collecting the source. */
+  median(key: unknown = null): unknown { return this.collect().median(key); }
+
+  /** Group callback pairs into a dictionary when enumerated. */
+  mapToDictionary<R>(callback: SyncCallable<[value: any, key: any], R>): this { return this.passthru("mapToDictionary", [callback]); }
+
+  /** Return complete sliding windows while preserving their keys. */
+  sliding(size: number | { size?: number; step?: number } = 2, step: number = 1): this {
+    if (isOptionsObject(size)) { step = size.step ?? 1; size = size.size ?? 2; }
+    if (size < 1) throw new InvalidArgumentException("Size value must be at least 1.");
+    if (step < 1) throw new InvalidArgumentException("Step value must be at least 1.");
+    const windowSize = size;
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) {
+        let chunk = new PhpArray();
+        while (iterator.valid()) {
+          chunk.set(iterator.key() as PhpKeyInput, valueCopy(iterator.current()));
+          if (chunk.size === windowSize) {
+            const result = new (this.constructor as typeof LazyCollection)(chunk);
+            chunk = new PhpArray(arrayEntries(array_slice(chunk, step, null, true) as object));
+            yield result;
+            if (step > windowSize) {
+              for (let i = 0; i < step - windowSize && iterator.valid(); i++) iterator.next();
+            }
+          }
+          iterator.next();
+        }
+      }
+    });
+  }
+
+  /** Split the collected values into balanced groups. */
+  split(numberOfGroups: number): this {
+    if (numberOfGroups < 1) throw new InvalidArgumentException("Number of groups must be at least 1.");
+    return this.passthru("split", [numberOfGroups]);
+  }
+
+  /** Split into groups filling the first groups completely. */
+  splitIn(numberOfGroups: number): this {
+    if (numberOfGroups < 1) throw new InvalidArgumentException("Number of groups must be at least 1.");
+    return this.chunk(toFloat(ceil(this.count() / numberOfGroups)));
+  }
+
+  /** Lazily chunk items, preserving inner keys by default. */
+  chunk(size: number, preserveKeys: boolean | { preserveKeys?: boolean } = true): this {
+    if (isOptionsObject(preserveKeys)) preserveKeys = preserveKeys.preserveKeys ?? true;
+    if (size <= 0) return new (this.constructor as new (source?: unknown) => this)([]);
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) {
+        while (iterator.valid()) {
+          const chunk = new PhpArray();
+          while (true) {
+            chunk.set(preserveKeys ? iterator.key() as PhpKeyInput : chunk.size, valueCopy(iterator.current()));
+            if (chunk.size < size) {
+              iterator.next();
+              if (!iterator.valid()) break;
+            } else break;
+          }
+          yield new (this.constructor as typeof LazyCollection)(chunk);
+          iterator.next();
+        }
+      }
+    });
+  }
+
+  /** Lazily chunk consecutive items while the callback returns true. */
+  chunkWhile<R>(callback: SyncCallable<[value: any, key: any, chunk: Collection], R>): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) {
+        let chunk = new Collection();
+        if (iterator.valid()) {
+          chunk.offsetSet(iterator.key(), iterator.current());
+          iterator.next();
+        }
+        while (iterator.valid()) {
+          if (!toBool(callCallable(callback, valueCopy(iterator.current()), iterator.key(), chunk))) {
+            yield new (this.constructor as typeof LazyCollection)(chunk);
+            chunk = new Collection();
+          }
+          chunk.offsetSet(iterator.key(), iterator.current());
+          iterator.next();
+        }
+        if (chunk.isNotEmpty()) yield new (this.constructor as typeof LazyCollection)(chunk);
+      }
+    });
+  }
+
+  /** Sort keys lazily through Collection. */
+  sortKeys(options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): this { return this.passthru("sortKeys", [options, descending]); }
+
+  /** Sort keys in descending order when consumed. */
+  sortKeysDesc(options: number = SORT_REGULAR): this { return this.passthru("sortKeysDesc", [options]); }
+
+  /** Sort keys with a synchronous comparison callback when consumed. */
+  sortKeysUsing<R>(callback: CompareCallback<R>): this { return this.passthru("sortKeysUsing", [callback]); }
 
   /** Reverse the items lazily through the eager collection, keeping keys. */
   reverse(): this {
@@ -302,7 +405,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Sort lazily through the eager collection, keeping keys. */
-  sort<R>(callback: SyncCallback<[a: any, b: any], R> | string | number | null = null): this {
+  sort<R>(callback: SyncCallable<[a: any, b: any], R> | string | number | null = null): this {
     return this.passthru("sort", [callback]);
   }
 
@@ -441,11 +544,11 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     const iterator = this.getIterator() as Iterator;
 
     if (callback === null) {
-      if (!iterator.valid()) {
-        return value(defaultValue);
+      for (const cursor of this.iteratorScope(iterator)) {
+        if (!cursor.valid()) return value(defaultValue);
+        return cursor.current();
       }
-
-      return iterator.current();
+      return value(defaultValue);
     }
 
     for (const [key, value_] of iterator.entries() as Iterable<[PhpArrayKey, unknown]>) {
@@ -1064,16 +1167,12 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return this.lazyInstance(function* (this: LazyCollection) {
       // PHP's `use ($count)` copies the count into each call, which counts down its own copy.
       let remaining = count;
-      const iterator = this.getIterator() as Iterator;
-
-      while (iterator.valid() && toBool(remaining--)) {
-        iterator.next();
-      }
-
-      while (iterator.valid()) {
-        yield keyed(iterator.key(), iterator.current());
-
-        iterator.next();
+      for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) {
+        while (iterator.valid() && toBool(remaining--)) iterator.next();
+        while (iterator.valid()) {
+          yield keyed(iterator.key(), iterator.current());
+          iterator.next();
+        }
       }
     });
   }
@@ -1094,16 +1193,12 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
 
     return this.lazyInstance(function* (this: LazyCollection) {
-      const iterator = this.getIterator() as Iterator;
-
-      while (iterator.valid() && toBool(callCallable(callback, valueCopy(iterator.current()), iterator.key()))) {
-        iterator.next();
-      }
-
-      while (iterator.valid()) {
-        yield keyed(iterator.key(), iterator.current());
-
-        iterator.next();
+      for (const iterator of this.iteratorScope(this.getIterator() as Iterator)) {
+        while (iterator.valid() && toBool(callCallable(callback, valueCopy(iterator.current()), iterator.key()))) iterator.next();
+        while (iterator.valid()) {
+          yield keyed(iterator.key(), iterator.current());
+          iterator.next();
+        }
       }
     });
   }
@@ -1190,15 +1285,12 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       let remaining = limit;
       const iterator = this.getIterator() as Iterator;
 
-      while (toBool(remaining--)) {
-        if (!iterator.valid()) {
-          break;
-        }
-
-        yield keyed(iterator.key(), iterator.current());
-
-        if (toBool(remaining)) {
-          iterator.next();
+      if (!toBool(remaining)) return;
+      for (const cursor of this.iteratorScope(iterator)) {
+        while (toBool(remaining--)) {
+          if (!cursor.valid()) break;
+          yield keyed(cursor.key(), cursor.current());
+          if (toBool(remaining)) cursor.next();
         }
       }
     });
@@ -1405,6 +1497,22 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     });
   }
 
+  /** Keep a fresh owned generator's public cleanup traversal open around an otherwise untouched manual cursor. */
+  protected *iteratorScope(iterator: Iterator): globalThis.Generator<Iterator, void, undefined> {
+    if (!this.#ownedIterators.has(iterator)) {
+      yield iterator;
+      return;
+    }
+    const traversal = iterator.entries()[Symbol.iterator]();
+    try {
+      // Only our fresh runtime Generator wrappers are primed; their current/key reads have no user effects.
+      traversal.next();
+      yield iterator;
+    } finally {
+      traversal.return?.();
+    }
+  }
+
   /**
    * Make an iterator from the given source: an `IteratorAggregate`'s iterator, an `ArrayIterator` over an array, or
    * what a callable source returns (a generator, wrapped in the runtime's `Generator` under DIV-12.18; any other
@@ -1412,7 +1520,10 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
    */
   protected makeIterator(source: unknown): Traversable {
     if (source instanceof IteratorAggregate) {
-      return source.getIterator();
+      const iterator = source.getIterator();
+      if (source instanceof LazyCollection && source.#ownedIterators.has(iterator)) this.#ownedIterators.add(iterator);
+      else this.#ownedIterators.delete(iterator);
+      return iterator;
     }
 
     if (is_array(source)) {
@@ -1421,10 +1532,13 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
 
     if (is_callable(source)) {
       let maybeTraversable = callCallable(source as SourceFunction);
+      // A returned runtime iterator may have been captured by the caller, even if we created it earlier.
+      if (maybeTraversable instanceof Traversable) this.#ownedIterators.delete(maybeTraversable);
 
       // DIV-12.18: a generator function's bare JS generator object iterates as the runtime's `Generator`.
       if (maybeTraversable instanceof Generator && !(maybeTraversable instanceof Traversable)) {
-        maybeTraversable = new Generator(maybeTraversable);
+        maybeTraversable = Generator.owned(maybeTraversable as globalThis.Generator<unknown, unknown, unknown>);
+        this.#ownedIterators.add(maybeTraversable as Generator);
       }
 
       return maybeTraversable instanceof Traversable ? maybeTraversable : new ArrayIterator(Arr.wrap(maybeTraversable));
