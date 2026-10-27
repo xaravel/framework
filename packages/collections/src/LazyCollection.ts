@@ -280,6 +280,16 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return true;
   }
 
+  /** Pass each item to a synchronous callback, lazily, keeping its key and value. */
+  tapEach<R>(callback: SyncCallable<[value: any, key: any], R>): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const [key, value_] of this.entries()) {
+        callCallable(callback, valueCopy(value_), key);
+        yield keyed(key, value_);
+      }
+    });
+  }
+
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
   map<R>(callback: SyncCallable<[value: any, key: any], R>): this {
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {

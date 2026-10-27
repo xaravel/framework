@@ -1,17 +1,26 @@
-// Laravel's `Illuminate\Support\Arr` (v13.37.0), the members the Collections core calls: `accessible`, `collapse`,
-// `crossJoin`, `dot`, `except`, `exists`, `first`, `flatten`, `forget`, `from`, `get`, `last`, `map`, `only`,
-// `partition`, `pluck`, `prepend`, `pull`, `random`, `select`, `set`, `undot`, `where` and `wrap`. Story 14.6 ports the
-// rest with its tests. PHP's `INF` (the default `$depth` of `dot` and `flatten`) is `Infinity`. Every member reads its PHP array
-// argument as `@xaravel/runtime` does (a list, a plain object or a `PhpArray`) and never mutates or returns the
-// caller's array: an array that Upstream returns as it is comes back as a value copy (AD-9). PHP's by-reference
-// `&$array` (`forget`, `pull`, `set`) is a `Ref` (DIV-9.2): the member writes a new array to `ref.value`, and an `ArrayAccess`
-// object it reaches is a handle, changed in place, as in PHP. Callbacks are sync (`SyncCallback`, AD-6).
+// Laravel's Illuminate\Support\Arr (v13.37.0). Story 14.6 completes the independent array helpers.
+// Runtime contract-held methods (isAssoc, isList, recursive sorting, push, query and shuffle) remain whole and absent
+// pending ESC-14.6-1. CSS styles reach Support through a throwing Str.finish dependency seam.
+// PHP array arguments accept lists, plain maps and PhpArrays, with value-copy isolation (AD-9).
+// By-reference parameters use Ref (DIV-9.2), while ArrayAccess objects retain PHP's handle semantics.
+// Callbacks are synchronous (AD-6); PHP callable forms resolve through the shared runtime.
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
 import {
   ARRAY_FILTER_USE_BOTH,
+  abs,
   ArgumentCountError,
   ArrayAccess,
+  array_all,
+  array_any,
+  arrayAppend,
+  callUnpacked,
+  array_pop,
+  array_slice,
+  in_array,
+  implode,
+  is_numeric,
+  BlockedByComponentError,
   array_combine,
   array_filter,
   array_find_key,
@@ -30,6 +39,8 @@ import {
   arrayEntries,
   arrayFromEntries,
   Closure,
+  Generator,
+  yieldFrom,
   count,
   explode,
   InvalidArgumentException,
@@ -57,12 +68,21 @@ import {
   valueCopy,
   WeakMap,
 } from "@xaravel/runtime";
-import { Enumerable } from "./Enumerable";
+import { Collection } from "./Collection";
+import { ItemNotFoundException } from "./ItemNotFoundException";
+import { MultipleItemsFoundException } from "./MultipleItemsFoundException";
+import { Enumerable, type SortByDescCallback } from "./Enumerable";
 import { data_get, value } from "./helpers";
-import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type SyncCallable } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead, type SyncCallable, type ValueOrSyncCallback } from "./support/callables";
 
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
+
+/** Arr also accepts the runtime PHP callable tuple and invokable forms for sorting. */
+type ArrValueOrCallback<K> = K extends { __invoke: unknown } ? never : ValueOrSyncCallback<K>;
+
+/** A sorting retriever or PHP callable, all synchronous. */
+type ArrSortCallback<R> = SortByDescCallback<R> | SyncCallable<[value: any, key: any], R>;
 
 /** A PHP array as the value model holds it (AD-9): a list, an all-string-keyed plain object, or a `PhpArray`. */
 function asValueModel(array: unknown): unknown {
@@ -82,7 +102,7 @@ function iterateEntries(array: unknown): Iterable<readonly [unknown, unknown]> {
   if (is_array(array)) {
     return arrayEntries(array as object);
   }
-  return (array as { entries(): Iterable<readonly [unknown, unknown]> }).entries();
+  return Generator.owned(yieldFrom(array)).entries();
 }
 
 /** A PHP array as a `PhpArray` of its own, `$b = $a`: a `PhpArray` keeps its next free index (`PhpArray.copy`). */
@@ -131,6 +151,18 @@ export class Arr extends mixin(null, Macroable) {
     return is_array(value) || value instanceof ArrayAccess;
   }
 
+  /** Determine whether a value can be represented through an array contract. */
+  static arrayable(value: unknown): boolean {
+    return is_array(value) || value instanceof Arrayable || value instanceof Generator || value instanceof Traversable || value instanceof Jsonable || value instanceof JsonSerializable;
+  }
+
+  /** Add a dot-keyed value when the current value is null or missing. */
+  static add(array: unknown, key: unknown, value_: unknown): unknown {
+    const result = new Ref(valueCopy(array));
+    if (is_null(this.get(array, key))) this.set(result, key, value_);
+    return result.value;
+  }
+
   /** Collapse an array of arrays (or of `Enumerable`s) into a single array. */
   static collapse(array: unknown): unknown {
     const results: unknown[] = [];
@@ -170,6 +202,11 @@ export class Arr extends mixin(null, Macroable) {
     return results;
   }
 
+  /** Divide an array into its keys and its values. */
+  static divide(array: unknown): [unknown[], unknown[]] {
+    return valueCopy([array_keys(array), array_values(array)]);
+  }
+
   /**
    * Flatten a multi-dimensional associative array with dots: each leaf (a value that is not a non-empty array, or one
    * `depth` levels down) under its keys joined by `.`, after `prepend`. Also takes AD-26's options object
@@ -206,7 +243,7 @@ export class Arr extends mixin(null, Macroable) {
     const results = new Ref<unknown>([]);
 
     for (const [key, value_] of iterateEntries(array)) {
-      Arr.set(results, key, value_);
+      this.set(results, key, value_);
     }
 
     return results.value;
@@ -215,9 +252,15 @@ export class Arr extends mixin(null, Macroable) {
   /** Get all of the given array except for a specified array of keys (dot notation reaches nested arrays). */
   static except(array: unknown, keys: unknown): unknown {
     const ref = new Ref(array);
-    Arr.forget(ref, keys);
+    this.forget(ref, keys);
 
     return valueCopy(ref.value);
+  }
+
+  /** Exclude entries having one of the supplied values, preserving keys. */
+  static exceptValues(array: unknown, values: unknown, strict: boolean = false): unknown {
+    values = toPhpArray(values);
+    return valueCopy(array_filter(array, (item: unknown) => !in_array(item, values, strict)));
   }
 
   /**
@@ -247,8 +290,8 @@ export class Arr extends mixin(null, Macroable) {
    * `{ callback, default }` after the array: PHP types `$callback` `callable|null`, so a plain object there is never the
    * callback.
    */
-  static first<R>(array: unknown, callback?: SyncCallback<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
-  static first<R>(array: unknown, options?: { callback?: SyncCallback<[value: any, key: any], R> | null; default?: unknown }): unknown;
+  static first<R>(array: unknown, callback?: SyncCallable<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
+  static first<R>(array: unknown, options?: { callback?: SyncCallable<[value: any, key: any], R> | null; default?: unknown }): unknown;
   static first(array: unknown, callback: unknown = null, defaultValue: unknown = null): unknown {
     if (arguments.length === 2 && isOptionsObject(callback)) {
       ({ callback = null, default: defaultValue = null } = callback as { callback?: ItemCallback | null; default?: unknown });
@@ -263,14 +306,14 @@ export class Arr extends mixin(null, Macroable) {
         return valueCopy(array_first(array));
       }
 
-      for (const item of iterateValues(array)) {
+      for (const [, item] of iterateEntries(array)) {
         return valueCopy(item);
       }
 
       return value(defaultValue);
     }
 
-    if (array instanceof Traversable) {
+    if (array instanceof Traversable || array instanceof Generator) {
       for (const [key, value_] of iterateEntries(array)) {
         if (toBool(callCallable(callback, valueCopy(value_), key))) {
           return valueCopy(value_);
@@ -280,11 +323,41 @@ export class Arr extends mixin(null, Macroable) {
       return value(defaultValue);
     }
 
-    array = Arr.from(array);
+    array = this.from(array);
 
     const key = array_find_key(array, (value_: unknown, key_: unknown) => callCallable(callback, valueCopy(value_), key_));
 
     return key !== null ? valueCopy(arrayRead(array as object, key)) : value(defaultValue);
+  }
+
+  /**
+   * Return the last element in an array passing a given truth test (the callback gets each value and its key), or
+   * `value(default)` when none does; with no callback, the last element. Also takes AD-26's options object
+   * `{ callback, default }` after the array, read as `first` reads it.
+   */
+  static last<R>(array: unknown, callback?: SyncCallable<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
+  static last<R>(array: unknown, options?: { callback?: SyncCallable<[value: any, key: any], R> | null; default?: unknown }): unknown;
+  static last(array: unknown, callback: unknown = null, defaultValue: unknown = null): unknown {
+    if (arguments.length === 2 && isOptionsObject(callback)) {
+      ({ callback = null, default: defaultValue = null } = callback as { callback?: ItemCallback | null; default?: unknown });
+    }
+
+    if (array === null || array === undefined) {
+      return value(defaultValue);
+    }
+
+    array = this.from(array);
+
+    if (callback === null) {
+      return !toBool(array) ? value(defaultValue) : valueCopy(array_last(array));
+    }
+
+    return this.first(array_reverse(array, true), callback as ItemCallback, defaultValue);
+  }
+
+  /** Take the first or last limit items, renumbering integer keys. */
+  static take(array: unknown, limit: number | bigint): unknown {
+    return valueCopy(limit < 0 ? array_slice(array, limit, abs(limit)) : array_slice(array, 0, limit));
   }
 
   /**
@@ -300,7 +373,7 @@ export class Arr extends mixin(null, Macroable) {
       if (!is_array(item)) {
         result.push(item);
       } else {
-        const values = depth === 1 ? array_values(item) : Arr.flatten(item, depth - 1);
+        const values = depth === 1 ? array_values(item) : this.flatten(item, depth - 1);
 
         for (const value_ of values) {
           result.push(value_);
@@ -326,10 +399,10 @@ export class Arr extends mixin(null, Macroable) {
 
     for (const key of keyList) {
       // clean up before each pass
-      const target = original.value;
+      const target = valueCopy(original.value);
 
       // if the exact key exists in the top-level, remove it
-      if (Arr.exists(target, key)) {
+      if (this.exists(target, key)) {
         original.value = asCallerForm(target, unsetKey(target, key));
 
         continue;
@@ -345,7 +418,7 @@ export class Arr extends mixin(null, Macroable) {
       while (Number(count(parts.value)) > 1) {
         const part = array_shift(parts);
 
-        if (offsetIsSet(current as object, part) && Arr.accessible(offsetRead(current as object, part))) {
+        if (offsetIsSet(current as object, part) && this.accessible(offsetRead(current as object, part))) {
           path.push([current, part]);
           current = offsetRead(current as object, part);
         } else {
@@ -409,7 +482,7 @@ export class Arr extends mixin(null, Macroable) {
    * missing; a `null` key gives the array itself.
    */
   static get(array: unknown, key: unknown, defaultValue: unknown = null): unknown {
-    if (!Arr.accessible(array)) {
+    if (!this.accessible(array)) {
       return value(defaultValue);
     }
 
@@ -417,7 +490,7 @@ export class Arr extends mixin(null, Macroable) {
       return valueCopy(array);
     }
 
-    if (Arr.exists(array, key)) {
+    if (this.exists(array, key)) {
       return valueCopy(offsetRead(array as object, key));
     }
 
@@ -426,7 +499,7 @@ export class Arr extends mixin(null, Macroable) {
     }
 
     for (const segment of explode(".", key)) {
-      if (Arr.accessible(array) && Arr.exists(array, segment)) {
+      if (this.accessible(array) && this.exists(array, segment)) {
         array = offsetRead(array as object, segment);
       } else {
         return value(defaultValue);
@@ -436,29 +509,143 @@ export class Arr extends mixin(null, Macroable) {
     return valueCopy(array);
   }
 
+  /** Determine whether every supplied dot key exists; null values still exist. */
+  static has(array: unknown, keys: unknown): boolean {
+    keys = toPhpArray(keys);
+    if (!toBool(array) || Number(count(keys)) === 0) return false;
+    for (const key of iterateValues(keys)) {
+      let subKeyArray = array;
+      if (this.exists(array, key)) continue;
+      for (const segment of explode(".", key)) {
+        if (this.accessible(subKeyArray) && this.exists(subKeyArray, segment)) subKeyArray = offsetRead(subKeyArray as object, segment);
+        else return false;
+      }
+    }
+    return true;
+  }
+
+  /** Determine whether all supplied dot keys exist. */
+  static hasAll(array: unknown, keys: unknown): boolean {
+    keys = toPhpArray(keys);
+    if (!toBool(array) || Number(count(keys)) === 0) return false;
+    return array_all(keys, (key: unknown) => this.has(array, key));
+  }
+
+  /** Determine whether any supplied dot key exists. */
+  static hasAny(array: unknown, keys: unknown): boolean {
+    if (is_null(keys)) return false;
+    keys = toPhpArray(keys);
+    if (!toBool(array) || Number(count(keys)) === 0) return false;
+    return array_any(keys, (key: unknown) => this.has(array, key));
+  }
+
+  /** Determine whether every item passes the synchronous truth test. */
+  static every<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): boolean {
+    if (is_array(array)) return array_all(array, (item: unknown, key: unknown) => callCallable(callback, valueCopy(item), key));
+    for (const [key, item] of iterateEntries(array)) if (!toBool(callCallable(callback, valueCopy(item), key))) return false;
+    return true;
+  }
+
+  /** Determine whether any item passes the synchronous truth test. */
+  static some<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): boolean {
+    if (is_array(array)) return array_any(array, (item: unknown, key: unknown) => callCallable(callback, valueCopy(item), key));
+    for (const [key, item] of iterateEntries(array)) if (toBool(callCallable(callback, valueCopy(item), key))) return true;
+    return false;
+  }
+
+  /** Join items, optionally using a separate glue before the final item. */
+  static join(array: unknown, glue: string, finalGlue: string = ""): unknown {
+    if (finalGlue === "") return implode(glue, array);
+    if (Number(count(array)) === 0) return "";
+    if (Number(count(array)) === 1) return valueCopy(array_last(array));
+    const remaining = new Ref(valueCopy(array));
+    const finalItem = array_pop(remaining);
+    return toPhpString(implode(glue, remaining.value)) + finalGlue + toPhpString(finalItem);
+  }
+
+  /** Key an array by a field or a synchronous callback. */
+  static keyBy<R>(array: unknown, keyBy: SyncCallable<[value: any, key: any], R>): unknown;
+  static keyBy<K>(array: unknown, keyBy: ArrValueOrCallback<K>): unknown;
+  static keyBy(array: unknown, keyBy: unknown): unknown {
+    return new Collection(array).keyBy(keyBy).all();
+  }
+
+  /** Prepend a string to each key. */
+  static prependKeysWith(array: unknown, prependWith: string): unknown {
+    return this.mapWithKeys(array, (item: unknown, key: unknown) => new PhpArray([[prependWith + toPhpString(key), item]]));
+  }
+
+  /** Get a subset of the items from the given array: the entries whose key is one of `keys`. */
+  static only(array: unknown, keys: unknown): unknown {
+    return valueCopy(array_intersect_key(array, array_flip(toPhpArray(keys))));
+  }
+
+  /** Keep entries having one of the supplied values, preserving keys. */
+  static onlyValues(array: unknown, values: unknown, strict: boolean = false): unknown {
+    values = toPhpArray(values);
+    return valueCopy(array_filter(array, (item: unknown) => in_array(item, values, strict)));
+  }
+
   /**
-   * Return the last element in an array passing a given truth test (the callback gets each value and its key), or
-   * `value(default)` when none does; with no callback, the last element. Also takes AD-26's options object
-   * `{ callback, default }` after the array, read as `first` reads it.
+   * Select an array of values from an array: for each item (a PHP array, an `ArrayAccess` object or an object), the
+   * array of the listed keys it has.
    */
-  static last<R>(array: unknown, callback?: SyncCallback<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
-  static last<R>(array: unknown, options?: { callback?: SyncCallback<[value: any, key: any], R> | null; default?: unknown }): unknown;
-  static last(array: unknown, callback: unknown = null, defaultValue: unknown = null): unknown {
-    if (arguments.length === 2 && isOptionsObject(callback)) {
-      ({ callback = null, default: defaultValue = null } = callback as { callback?: ItemCallback | null; default?: unknown });
+  static select(array: unknown, keys: unknown): unknown {
+    keys = this.wrap(keys);
+
+    return this.map(array, (item: unknown) => {
+      const result = new PhpArray();
+
+      for (const key of iterateValues(keys)) {
+        if (Arr.accessible(item) && Arr.exists(item, key)) {
+          result.set(key as never, offsetRead(item as object, key));
+        } else if (is_object(item) && propertyIsSet(item as object, key)) {
+          result.set(key as never, propertyRead(item as object, key));
+        }
+      }
+
+      return valueCopy(arrayFromEntries(result));
+    });
+  }
+
+  /**
+   * Pluck an array of values from an array: each item's `value` (a "dot" key, a list of segments, or a Closure of the
+   * item), keyed by its `key` when one is given (a `__toString` object key is its string).
+   */
+  static pluck(array: unknown, value_: unknown, key: unknown = null): unknown {
+    const results = new PhpArray();
+
+    [value_, key] = this.explodePluckParameters(value_, key);
+
+    for (const item of iterateValues(array)) {
+      const itemValue = value_ instanceof Closure ? callCallable(value_, valueCopy(item)) : data_get(item, value_);
+
+      // If the key is "null", we will just append the value to the array and keep
+      // looping. Otherwise we will key the array using the value of the key we
+      // received from the developer. Then we'll return the final array form.
+      if (key === null) {
+        results.push(itemValue);
+      } else {
+        let itemKey = key instanceof Closure ? callCallable(key, valueCopy(item)) : data_get(item, key);
+
+        if (is_object(itemKey) && method_exists(itemKey, "__toString")) {
+          itemKey = toPhpString(itemKey);
+        }
+
+        results.set(itemKey as never, itemValue);
+      }
     }
 
-    if (array === null || array === undefined) {
-      return value(defaultValue);
-    }
+    return valueCopy(arrayFromEntries(results));
+  }
 
-    array = Arr.from(array);
+  /** Explode the "value" and "key" arguments passed to "pluck": a string is its "dot" segments. */
+  protected static explodePluckParameters(value_: unknown, key: unknown): [unknown, unknown] {
+    value_ = is_string(value_) ? explode(".", value_) : value_;
 
-    if (callback === null) {
-      return !toBool(array) ? value(defaultValue) : valueCopy(array_last(array));
-    }
+    key = key === null || is_array(key) || key instanceof Closure ? key : explode(".", key);
 
-    return Arr.first(array_reverse(array, true), callback as ItemCallback, defaultValue);
+    return [value_, key];
   }
 
   /** Run a map over each of the items in the array; the callback gets each value and its key. */
@@ -493,90 +680,13 @@ export class Arr extends mixin(null, Macroable) {
     return arrayFromEntries(result);
   }
 
-  /**
-   * Partition the array (or Traversable) into two arrays using the given callback, which gets each value and its key:
-   * `[passed, failed]`, each keeping its entries' keys.
-   */
-  static partition<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): [unknown, unknown] {
-    const passed = new PhpArray();
-    const failed = new PhpArray();
-
-    for (const [key, item] of iterateEntries(array)) {
-      if (toBool(callCallable(callback, valueCopy(item), key))) {
-        passed.set(key as never, item);
-      } else {
-        failed.set(key as never, item);
-      }
-    }
-
-    return [valueCopy(arrayFromEntries(passed)), valueCopy(arrayFromEntries(failed))];
-  }
-
-  /** Get a subset of the items from the given array: the entries whose key is one of `keys`. */
-  static only(array: unknown, keys: unknown): unknown {
-    return valueCopy(array_intersect_key(array, array_flip(toPhpArray(keys))));
-  }
-
-  /**
-   * Select an array of values from an array: for each item (a PHP array, an `ArrayAccess` object or an object), the
-   * array of the listed keys it has.
-   */
-  static select(array: unknown, keys: unknown): unknown {
-    keys = Arr.wrap(keys);
-
-    return Arr.map(array, (item: unknown) => {
-      const result = new PhpArray();
-
-      for (const key of iterateValues(keys)) {
-        if (Arr.accessible(item) && Arr.exists(item, key)) {
-          result.set(key as never, offsetRead(item as object, key));
-        } else if (is_object(item) && propertyIsSet(item as object, key)) {
-          result.set(key as never, propertyRead(item as object, key));
-        }
-      }
-
-      return valueCopy(arrayFromEntries(result));
+  /** Map array chunks after appending each chunk's key to its arguments. */
+  static mapSpread<R>(array: unknown, callback: SyncCallable<any[], R>): unknown {
+    return this.map(array, (chunk: unknown, key: unknown) => {
+      const ref = new Ref(chunk);
+      arrayAppend(ref, key);
+      return callUnpacked(callback, ref.value);
     });
-  }
-
-  /**
-   * Pluck an array of values from an array: each item's `value` (a "dot" key, a list of segments, or a Closure of the
-   * item), keyed by its `key` when one is given (a `__toString` object key is its string).
-   */
-  static pluck(array: unknown, value_: unknown, key: unknown = null): unknown {
-    const results = new PhpArray();
-
-    [value_, key] = Arr.explodePluckParameters(value_, key);
-
-    for (const item of iterateValues(array)) {
-      const itemValue = value_ instanceof Closure ? callCallable(value_, valueCopy(item)) : data_get(item, value_);
-
-      // If the key is "null", we will just append the value to the array and keep
-      // looping. Otherwise we will key the array using the value of the key we
-      // received from the developer. Then we'll return the final array form.
-      if (key === null) {
-        results.push(itemValue);
-      } else {
-        let itemKey = key instanceof Closure ? callCallable(key, valueCopy(item)) : data_get(item, key);
-
-        if (is_object(itemKey) && method_exists(itemKey, "__toString")) {
-          itemKey = toPhpString(itemKey);
-        }
-
-        results.set(itemKey as never, itemValue);
-      }
-    }
-
-    return valueCopy(arrayFromEntries(results));
-  }
-
-  /** Explode the "value" and "key" arguments passed to "pluck": a string is its "dot" segments. */
-  protected static explodePluckParameters(value_: unknown, key: unknown): [unknown, unknown] {
-    value_ = is_string(value_) ? explode(".", value_) : value_;
-
-    key = key === null || is_array(key) || key instanceof Closure ? key : explode(".", key);
-
-    return [value_, key];
   }
 
   /**
@@ -604,9 +714,9 @@ export class Arr extends mixin(null, Macroable) {
 
   /** Get a value from the array, and remove it ("dot" notation). `array` is PHP's `&$array` (DIV-9.2). */
   static pull(array: Ref<unknown>, key: unknown, defaultValue: unknown = null): unknown {
-    const value_ = Arr.get(array.value, key, defaultValue);
+    const value_ = this.get(array.value, key, defaultValue);
 
-    Arr.forget(array, key);
+    this.forget(array, key);
 
     return value_;
   }
@@ -675,7 +785,7 @@ export class Arr extends mixin(null, Macroable) {
     // PHP's `$array = &$array[$key]`: each array passed on the way down, with the key it is left by. PHP writes into a
     // `null` as into an empty array.
     const path: [unknown, unknown][] = [];
-    let current: unknown = array.value ?? [];
+    let current: unknown = valueCopy(array.value ?? []);
 
     for (const [i, segment] of arrayEntries(keys.value as object)) {
       if (Number(count(keys.value)) === 1) {
@@ -710,9 +820,78 @@ export class Arr extends mixin(null, Macroable) {
     return valueCopy(innermost);
   }
 
+  /** Return the sole matching item, throwing when none or more than one match. */
+  static sole<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R> | null = null): unknown {
+    if (toBool(callback)) array = this.where(array, callback as SyncCallable<[any, any], R>);
+    const count_ = count(array);
+    if (count_ === 0) throw new ItemNotFoundException();
+    if (Number(count_) > 1) throw new MultipleItemsFoundException(Number(count_));
+    return this.first(array);
+  }
+
+  /** Sort using a callback, dot path or ordered comparison list. */
+  static sort<R>(array: unknown, callback: ArrSortCallback<R> = null): unknown {
+    return new Collection(array).sortBy(callback).all();
+  }
+
+  /** Sort in descending order using a callback or dot path. */
+  static sortDesc<R>(array: unknown, callback: ArrSortCallback<R> = null): unknown {
+    return new Collection(array).sortByDesc(callback as Parameters<Collection["sortByDesc"]>[0]).all();
+  }
+
+  /** Compile conditional CSS classes. */
+  static toCssClasses(array: unknown): string {
+    const classes: unknown[] = [];
+    for (const [class_, constraint] of iterateEntries(this.wrap(array))) {
+      if (is_numeric(class_)) classes.push(constraint);
+      else if (toBool(constraint)) classes.push(class_);
+    }
+    return implode(" ", classes);
+  }
+
+  /** Compile conditional CSS styles through Support's Str.finish dependency. */
+  static toCssStyles(array: unknown): string {
+    const styles: unknown[] = [];
+    const finish = (_value: unknown, _cap: string): never => { throw new BlockedByComponentError("support"); };
+    for (const [class_, constraint] of iterateEntries(this.wrap(array))) {
+      if (is_numeric(class_)) styles.push(finish(constraint, ";"));
+      else if (toBool(constraint)) styles.push(finish(class_, ";"));
+    }
+    return implode(" ", styles);
+  }
+
   /** Filter the array using the given callback, which gets each value and its key. */
-  static where<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
-    return array_filter(array, callback, ARRAY_FILTER_USE_BOTH);
+  static where<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
+    return valueCopy(array_filter(valueCopy(array), callback, ARRAY_FILTER_USE_BOTH));
+  }
+
+  /** Reject entries passing the synchronous truth test. */
+  static reject<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
+    return this.where(array, (item: unknown, key: unknown) => !toBool(callCallable(callback, item, key)));
+  }
+
+  /**
+   * Partition the array (or Traversable) into two arrays using the given callback, which gets each value and its key:
+   * `[passed, failed]`, each keeping its entries' keys.
+   */
+  static partition<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): [unknown, unknown] {
+    const passed = new PhpArray();
+    const failed = new PhpArray();
+
+    for (const [key, item] of iterateEntries(array)) {
+      if (toBool(callCallable(callback, valueCopy(item), key))) {
+        passed.set(key as never, item);
+      } else {
+        failed.set(key as never, item);
+      }
+    }
+
+    return [valueCopy(arrayFromEntries(passed)), valueCopy(arrayFromEntries(failed))];
+  }
+
+  /** Keep entries whose values are not null. */
+  static whereNotNull(array: unknown): unknown {
+    return this.where(array, (item: unknown) => !is_null(item));
   }
 
   /** If the given value is not an array and not null, wrap it in one. */
@@ -723,6 +902,7 @@ export class Arr extends mixin(null, Macroable) {
 
     return is_array(value) ? valueCopy(value) : [value];
   }
+
 }
 
 registerClass("Illuminate\\Support\\Arr", Arr);
