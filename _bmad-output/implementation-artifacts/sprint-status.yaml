@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: blocked  # 167 of 171 built (third run); ESC-14.2-6 (UnhandledMatchError for sortBy, contract, qualifies for the monitor under the runtime-builtins standing rule) holds testValueRetrieverAcceptsDotNotation#0/#1; ESC-14.2-7 (case-insensitive dynamic method call, contract, needs the Maintainer: PORTING.md row) holds testGetPluckValueWithAccessors#0/#1
+  14-2-retrieval-search-and-mutation-methods: in-progress  # 167 of 171 built; ESC-14.2-6 ruled option 1 by the monitor (runtime-builtins standing rule) and ESC-14.2-7 option 1 by the Maintainer; action item epic-14-item-7-runtime-match-error-dynamic-call lands first and frees the last 4 Test IDs
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
@@ -2013,3 +2013,20 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-14.2-4.md"
+  - id: "epic-14-item-7-runtime-match-error-dynamic-call"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.2-6.md, by the
+      monitor under decisions/MAINT-2026-10-26-runtime-builtins.md; decisions/ESC-14.2-7.md, by the Maintainer), in scope
+      packages/runtime: @xaravel/runtime/php exports PHP's UnhandledMatchError (extends Error,
+      registered under its PHP name, PHP's message: 'Unhandled match case ' and the subject as
+      PHP's smart_str_append_scalar renders it, strings quoted and cut at 15 bytes, or
+      'Unhandled match case of type <type>' for an array or object) (ESC-14.2-6); and
+      callMethod(object, name, ...args), PHP's $object->$name(...$args): exact then
+      case-insensitive lookup over the object's methods (method_exists' lookup), falling back
+      to the object's __call port, else PHP's Error 'Call to undefined method
+      <class>::<name>()' (ESC-14.2-7). XT-runtime cases for each against PHP's results, with a
+      PHP probe; the existing exports stay; no other runtime behaviour changes; lands before
+      Story 14.2's last 4 Test IDs are ported"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-14.2-7.md"

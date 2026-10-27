@@ -58,6 +58,7 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 | `undefined` reaching a boundary | `normalizeNull(v)`: `null` is the only absent value, and no API returns `undefined` | Story 9.5, AD-9, DIV-9.1 |
 | `==` | `looseEquals(a, b)` | Story 9.6 |
 | `===` / `!==` where an operand can be a PHP array | `identical(a, b)` / `!identical(a, b)` | ESC-14.2-1 |
+| `$o->$name(...$args)` (a dynamic method name) | `callMethod(o, name, ...args)`: PHP's case-insensitive method lookup, then `__call` | ESC-14.2-7 |
 | `<=>` | `spaceship(a, b)` | Story 9.6 |
 | `is_numeric` | `isNumeric(v)` | Story 9.6 |
 | `(int)`, `(float)`, `(string)`, `(bool)` | `toInt`, `toFloat`, `toPhpString`, `toBool` | Story 9.6 |
