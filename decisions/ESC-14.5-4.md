@@ -17,3 +17,7 @@ The monitor approved the orchestrator's recommended option on 2026-10-27 as the 
 - A `Generator` the user holds, or passed in, is not owned. Early exit leaves it resumable, as in PHP.
 
 XT-runtime cases against the Oracle cover both lifetimes. Unwrapping or exhausting the generator in collections (option 2) would bypass the runtime and run source code the user never asked for. This is action item `epic-14-item-10-runtime-chunk-sort-arith-callables`.
+
+## Amendment 2026-10-27: competing exceptions
+
+Item 10's review found one case that the ownership seam cannot match. A `foreach` body throws, and the owned generator's `finally` throws as it closes. PHP surfaces the `finally` exception. JavaScript's `for…of` keeps the body's exception. The Maintainer ruled that Xaravel follows JavaScript in that case only, recorded as **DIV-9.16** in `decisions/DIV-9.md`. Everything else in this ruling stands, and the `finally` still runs once.
