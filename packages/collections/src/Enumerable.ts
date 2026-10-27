@@ -15,7 +15,7 @@
 // and `duplicates` also take AD-26's options object (`{ options, descending }`, `{ callback, strict }`).
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { type ContractToken, contract } from "@xaravel/contracts";
-import type { SyncCallback, ValueOrSyncCallback } from "./support/callables";
+import type { SyncCallback, SyncCallable, ValueOrSyncCallback } from "./support/callables";
 import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArray, type PhpArrayKey, type SortDirection, type Traversable } from "@xaravel/runtime";
 
 /** A sort key or synchronous comparison, optionally paired with a direction. */
@@ -34,10 +34,10 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   all(): unknown;
 
   /** Execute a callback over each item. */
-  each<R>(callback: SyncCallback<[item: any, key: any], R>): this;
+  each<R>(callback: SyncCallable<[item: any, key: any], R>): this;
 
   /** Run a filter over each of the items. */
-  filter<R>(callback?: SyncCallback<[value: any, key: any], R> | null): Enumerable;
+  filter<R>(callback?: SyncCallable<[value: any, key: any], R> | null): Enumerable;
 
   /** Get an item from the collection by key. */
   get(key: unknown, defaultValue?: unknown): unknown;
@@ -138,16 +138,55 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   isNotEmpty(): boolean;
 
   /** Run a map over each of the items. */
-  map<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+  map<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
+
+  /** Get the median non-null value. */
+  median(key?: unknown): unknown;
+  /** Sum the resolved values. */
+  sum<R>(callback?: SyncCallable<[value: any, key: any], R> | string | null): unknown;
+  /** Average the non-null resolved values. */
+  avg<R>(callback?: SyncCallable<[value: any], R> | string | null): unknown;
+  /** Alias for avg. */
+  average<R>(callback?: SyncCallable<[value: any], R> | string | null): unknown;
+  /** Execute a callback over unpacked chunks. */
+  eachSpread<R>(callback: SyncCallable<any[], R> | string): this;
+  /** Map unpacked chunks. */
+  mapSpread<R>(callback: SyncCallable<any[], R> | string): Enumerable;
+  /** Group callback pairs into arrays. */
+  mapToDictionary<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
+  /** Group callback pairs into collections. */
+  mapToGroups<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
+  /** Map values into a constructor or backed enum. */
+  mapInto(class_: (new (...args: any[]) => unknown) | string): Enumerable;
+  /** Return complete sliding windows. */
+  sliding(size?: number | { size?: number; step?: number }, step?: number): Enumerable;
+  /** Split into balanced groups. */
+  split(numberOfGroups: number): Enumerable;
+  /** Split into groups filling the first completely. */
+  splitIn(numberOfGroups: number): Enumerable;
+  /** Chunk items preserving inner keys by default. */
+  chunk(size: number, preserveKeys?: boolean | { preserveKeys?: boolean }): Enumerable;
+  /** Chunk consecutive items while the callback returns true. */
+  chunkWhile<R>(callback: SyncCallable<[value: any, key: any, chunk: import("./Collection").Collection], R>): Enumerable;
+  /** Chunk consecutive items with equal resolved keys. */
+  chunkBy<R>(key: SyncCallable<[value: any, key: any], R> | string): Enumerable;
+  /** Sort keys with PHP flags. */
+  sortKeys(options?: number | { options?: number; descending?: boolean | SortDirection }, descending?: boolean | SortDirection): Enumerable;
+  /** Sort keys in descending order. */
+  sortKeysDesc(options?: number): Enumerable;
+  /** Sort keys using a synchronous comparator. */
+  sortKeysUsing<R>(callback: SyncCallable<[a: any, b: any], R> | string): Enumerable;
+  /** Reduce to several aggregate values. */
+  reduceSpread<R>(callback: SyncCallable<any[], R> | string, ...initial: unknown[]): unknown[] | Record<string, unknown> | PhpArray;
 
   /** Map and collapse the result by one level. */
-  flatMap<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+  flatMap<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
   /** Map the items into associative key/value pairs. */
-  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
+  mapWithKeys<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
   /** Reverse the items, keeping keys. */
   reverse(): Enumerable;
   /** Sort the items with a callback or PHP sort flags, keeping keys. */
-  sort<R>(callback?: SyncCallback<[a: any, b: any], R> | string | number | null): Enumerable;
+  sort<R>(callback?: SyncCallable<[a: any, b: any], R> | string | number | null): Enumerable;
   /** Sort by a retriever descending. */
   sortByDesc<R>(callback: SortByDescCallback<R>, options?: number): Enumerable;
   /** Sort descending, keeping keys. */
@@ -155,23 +194,23 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Get the most frequent values. */
   mode(key?: unknown): unknown;
   /** Get the minimum resolved value. */
-  min<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown;
+  min<R>(callback?: SyncCallable<[value: any, key: any], R> | string | null): unknown;
   /** Get the maximum resolved value. */
-  max<R>(callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown;
+  max<R>(callback?: SyncCallable<[value: any, key: any], R> | string | null): unknown;
   /** Reduce the collection. */
-  reduce<R>(callback: SyncCallback<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
+  reduce<R>(callback: SyncCallable<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
   /** Reduce an associative collection. */
-  reduceWithKeys<R>(callback: SyncCallback<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
+  reduceWithKeys<R>(callback: SyncCallable<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
   /** Reduce by mutating an initial value. */
-  reduceInto<I, R>(initial: I, callback: SyncCallback<[carry: import("@xaravel/runtime").Ref<I>, value: any, key: any], R>): I;
+  reduceInto<I, R>(initial: I, callback: SyncCallable<[carry: import("@xaravel/runtime").Ref<I>, value: any, key: any], R>): I;
   /** Pass the collection to a callback. */
-  pipe<R>(callback: SyncCallback<[collection: this], R>): R;
+  pipe<R>(callback: SyncCallable<[collection: this], R>): R;
   /** Pass the collection to a constructor. */
   pipeInto<R>(class_: new (collection: this) => R): R;
   /** Pass the collection through callbacks in order. */
-  pipeThrough<R>(callbacks: SyncCallback<[carry: any], R>[]): unknown;
+  pipeThrough<R>(callbacks: SyncCallable<[carry: any], R>[]): unknown;
   /** Invoke a callback and return the collection. */
-  tap<R>(callback: SyncCallback<[collection: this], R>): this;
+  tap<R>(callback: SyncCallable<[collection: this], R>): this;
   /** Paginate using a slice. */
   forPage(page: number, perPage: number): Enumerable;
   /** Map sequentially in key order.
@@ -445,6 +484,25 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
 export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
   "Illuminate\\Support\\Enumerable",
   {
+    median: ["key"],
+    sum: ["callback"],
+    avg: ["callback"],
+    average: ["callback"],
+    eachSpread: ["callback"],
+    mapSpread: ["callback"],
+    mapToDictionary: ["callback"],
+    mapToGroups: ["callback"],
+    mapInto: ["class"],
+    sliding: ["size", "step"],
+    split: ["numberOfGroups"],
+    splitIn: ["numberOfGroups"],
+    chunk: ["size", "preserveKeys"],
+    chunkWhile: ["callback"],
+    chunkBy: ["key"],
+    sortKeys: ["options", "descending"],
+    sortKeysDesc: ["options"],
+    sortKeysUsing: ["callback"],
+    reduceSpread: ["callback", "initial"],
     all: [],
     each: ["callback"],
     filter: ["callback"],

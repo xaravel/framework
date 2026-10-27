@@ -43,6 +43,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
+import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
+import { ArgumentCountError, ArrayIterator, Generator } from "@xaravel/runtime";
 import { Arrayable } from "@xaravel/contracts/support";
 import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
@@ -636,6 +638,7 @@ async function withFixture<T>(source: string, run: (dir: string) => Promise<T>):
     mkdirSync(join(dir, "node_modules", "@xaravel"), { recursive: true });
     mkdirSync(join(dir, "node_modules", "@types"), { recursive: true });
     symlinkSync(join(REPO, "packages", "collections"), join(dir, "node_modules", "@xaravel", "collections"));
+    symlinkSync(join(REPO, "packages", "runtime"), join(dir, "node_modules", "@xaravel", "runtime"));
     symlinkSync(join(REPO, "node_modules", "@types", "bun"), join(dir, "node_modules", "@types", "bun"));
     writeFileSync(join(dir, "fixture.ts"), source);
     return await run(dir);
@@ -1093,13 +1096,69 @@ xaravelTest(
   },
 );
 
-// XT-collections-10 remains incomplete under ESC-14.5-1 until mapInto's enum runtime contract lands.
+xaravelTest(
+  "XT-collections-10",
+  "mapInto maps int and string backed enum values through from, preserves static case identity and keys on both classes, ordinary constructors receive each source value and key, and AD-26 enum constructors, cases, from and tryFrom retain their value behavior",
+  () => {
+    for (const [name, klass] of ENUM_FIXTURES) registerClass(name, klass);
+    class CapturedMapInto {
+      constructor(readonly value: unknown, readonly key: unknown) {}
+    }
+    registerClass("XaravelTests\\Collections\\CapturedMapInto", CapturedMapInto);
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => LazyCollection.make(items)]) {
+      const constructed = make({ first: "alpha", second: "beta" }).mapInto(CapturedMapInto);
+      Assert.assertSame(["first", "second"], constructed.keys().all());
+      Assert.assertSame(["alpha", "first"], [(constructed.get("first") as CapturedMapInto).value, (constructed.get("first") as CapturedMapInto).key]);
+      Assert.assertSame(["beta", "second"], [(constructed.get("second") as CapturedMapInto).value, (constructed.get("second") as CapturedMapInto).key]);
+      const constructedByName = make({ first: "alpha", second: "beta" }).mapInto(fqcn(CapturedMapInto));
+      Assert.assertSame(["first", "second"], constructedByName.keys().all());
+      Assert.assertSame(["alpha", "first"], [(constructedByName.get("first") as CapturedMapInto).value, (constructedByName.get("first") as CapturedMapInto).key]);
+      Assert.assertSame(["beta", "second"], [(constructedByName.get("second") as CapturedMapInto).value, (constructedByName.get("second") as CapturedMapInto).key]);
+      const ints = make({ first: 1, second: 2 }).mapInto(TestBackedEnum);
+      Assert.assertSame(["first", "second"], ints.keys().all());
+      Assert.assertSame(TestBackedEnum.A, ints.get("first"));
+      Assert.assertSame(TestBackedEnum.B, ints.get("second"));
+      const strings = make({ first: "A", second: "B" }).mapInto(TestStringBackedEnum);
+      Assert.assertSame(["first", "second"], strings.keys().all());
+      Assert.assertSame(TestStringBackedEnum.A, strings.get("first"));
+      Assert.assertSame(TestStringBackedEnum.B, strings.get("second"));
+      Assert.assertSame([TestBackedEnum.A, TestBackedEnum.B], TestBackedEnum.cases());
+      Assert.assertSame([TestStringBackedEnum.A, TestStringBackedEnum.B], TestStringBackedEnum.cases());
+      Assert.assertSame(TestBackedEnum.A, TestBackedEnum.from(1));
+      Assert.assertSame(TestBackedEnum.B, TestBackedEnum.tryFrom(2));
+      Assert.assertNull(TestBackedEnum.tryFrom(3));
+      Assert.assertSame(TestStringBackedEnum.A, TestStringBackedEnum.from("A"));
+      Assert.assertSame(TestStringBackedEnum.B, TestStringBackedEnum.tryFrom("B"));
+      Assert.assertNull(TestStringBackedEnum.tryFrom("C"));
+      Assert.assertSame("Custom", new TestBackedEnum("Custom", 9).name);
+      Assert.assertSame(9, new TestBackedEnum("Custom", 9).value);
+      Assert.assertSame("custom", new TestStringBackedEnum("Custom", "custom").value);
+      Assert.assertSame([TestBackedEnum.A], make([1]).mapInto(fqcn(TestBackedEnum)).all());
+      for (const [values, klass] of [[[3], TestBackedEnum], [["C"], TestStringBackedEnum]] as const) {
+        let failure: unknown = null;
+        try { make(values).mapInto(klass).all(); } catch (error) { failure = error; }
+        Assert.assertInstanceOf(ValueError, failure);
+      }
+    }
+  },
+);
 
 xaravelTest(
   "XT-collections-11",
-  "mapAsync and eachAsync await callbacks sequentially in original key order on both classes, copy array values, map preserves keys and each stops on false; every independent new sync callback API rejects async callbacks in tsc and lint; pipe pipelines copy array results, run in order and propagate errors, while lazy mapping preserves duplicate keys before materialization and sorting/reverse defer enumeration (AD-6, DIV-1.2)",
+  "mapAsync and eachAsync await callbacks sequentially in original key order on both classes, copy array values, map preserves keys and each stops on false; every independent new sync callback API rejects async callbacks in tsc and lint; successful reduceSpread accumulates values and keys, dictionary/groups copy reused callback arrays including PhpArray results, PHP callable forms typecheck and execute with receiver binding and avg callbacks receive only values; pipe pipelines copy array results, run in order and propagate errors, while lazy mapping preserves duplicate keys before materialization and sorting/reverse defer enumeration; chunkWhile rereads an iterator advanced by its predicate; chunk reindexing, sliding step advancement and duplicate-key fullness preserve source behavior; owned direct and composed chunk/sliding/chunkWhile temporary sources run finally on early stop and callback errors, cleanup-only exceptions propagate and user-held Generators remain resumable, with callback exceptions taking precedence over competing finally exceptions (AD-6, DIV-1.2, DIV-9.16)",
   async () => {
     const operations = [
+      "sum(async (value: number) => value)",
+      "avg(async (value: number) => value)",
+      "average(async (value: number) => value)",
+      "mapSpread(async (value: number) => value)",
+      "eachSpread(async (value: number) => value)",
+      "mapToDictionary(async (value: number) => ({ key: value }))",
+      "mapToGroups(async (value: number) => ({ key: value }))",
+      "chunkWhile(async (value: number) => value)",
+      "chunkBy(async (value: number) => value)",
+      "sortKeysUsing(async (a: number, b: number) => a - b)",
+      "reduceSpread(async (value: number) => [value], 0)",
       "map(async (value: number) => value)",
       "each(async () => true)",
       "flatMap(async (value: number) => [value])",
@@ -1116,12 +1175,19 @@ xaravelTest(
       "pipe(async () => 1)",
       "pipeThrough([async (carry: number) => carry])",
       "tap(async () => true)",
+      "map({ __invoke: async (value: number) => value })",
+      "filter({ __invoke: async (value: number) => value })",
+      "mapToDictionary({ __invoke: async (value: number) => ({ key: value }) })",
+      "avg({ __invoke: async (value: number) => value })",
+      "chunkWhile({ __invoke: async (value: number) => value })",
+      "sortKeysUsing({ __invoke: async (a: number, b: number) => a - b })",
     ];
     const lines = [
       'import { Arr, collect, LazyCollection, type Enumerable } from "@xaravel/collections";',
       'const e: Enumerable = collect([1]);',
       ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => operations.map((operation) => `${operation.startsWith("pipe(") ? "void " : ""}${target}.${operation};`)),
       'Arr.mapWithKeys([1], async (value: number) => ({ value }));',
+      'Arr.map([1], async (value: number) => value);',
       'const descendingComparison: Extract<Parameters<typeof e.sortByDesc<number>>[0], (...args: number[]) => unknown> = async (a: number, b: number) => a - b; void descendingComparison;',
       'const pipelineCallback: Parameters<typeof e.pipeThrough<number>>[0][number] = async (carry: number) => carry; void pipelineCallback;',
     ];
@@ -1145,7 +1211,196 @@ xaravelTest(
       const lint = oxlintFixture(dir);
       Assert.assertSame(0, lint.code, lint.output);
     });
+    const callableForms = [
+      '"strrev"', '"Callbacks::apply"', '[Callbacks, "apply"]', '["Callbacks", "apply"]',
+      'new PhpArray<number, unknown>([[0, Callbacks], [1, "apply"]])', 'invokable',
+    ];
+    const callableOperations = ["map", "filter", "mapWithKeys", "mapToDictionary", "mapToGroups", "mapSpread", "eachSpread", "chunkWhile", "chunkBy", "sum", "avg", "average", "min", "max", "sortKeysUsing", "sort"];
+    const callableFixture = [
+      'import { collect, LazyCollection, type Enumerable } from "@xaravel/collections";',
+      'import { PhpArray } from "@xaravel/runtime";',
+      'class Callbacks { static apply(value: number) { return value; } }',
+      'const invokable = new class { __invoke(value: number) { return value; } };',
+      'const e: Enumerable = collect([1]);',
+      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => callableOperations.flatMap((operation) => callableForms.map((form) => `${target}.${operation}(${form});`))),
+      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => [
+        `${target}.avg(value => value);`, `${target}.average(value => value);`,
+        `const result${target === "e" ? "E" : target.startsWith("collect") ? "C" : "L"}: unknown[] | Record<string, unknown> | PhpArray = ${target}.reduceSpread((total: number, value: number) => [total + value], 0);`,
+      ]),
+      'void resultE; void resultC; void resultL;',
+    ].join("\n") + "\n";
+    await withFixture(callableFixture, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertSame(0, tsc.code, tsc.output);
+      const lint = oxlintFixture(dir);
+      Assert.assertSame(0, lint.code, lint.output);
+    });
+    const invalidAvg = [
+      'import { collect, LazyCollection, type Enumerable } from "@xaravel/collections";',
+      'const e: Enumerable = collect([1]);',
+      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => ["avg", "average"].map((method) => `${target}.${method}((value: number, key: number) => value + key);`)),
+    ].join("\n") + "\n";
+    await withFixture(invalidAvg, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertSame([3, 4, 5, 6, 7, 8], tsc.errors.map((entry) => Number(entry.split(":")[0])), tsc.output);
+    });
+    Assert.assertSame({ a: "ba", b: "dc" }, collect({ a: "ab", b: "cd" }).map("strrev").all());
+    Assert.assertSame({ a: "ba", b: "dc" }, Arr.map({ a: "ab", b: "cd" }, "strrev"));
+    let lazyArityFailure: unknown = null;
+    try { LazyCollection.make(["ab"]).map("strrev").all(); } catch (error) { lazyArityFailure = error; }
+    Assert.assertInstanceOf(ArgumentCountError, lazyArityFailure);
+    const mapInput = [[1], [2]];
+    Assert.assertSame([[1, 9], [2, 9]], collect(mapInput).map((item: number[]) => { item.push(9); return item; }).all());
+    Assert.assertSame([[1], [2]], mapInput);
+    const fallbackInput = [[1]];
+    const fallbackCounts: number[] = [];
+    Assert.assertSame([[1, 9]], collect(fallbackInput).map((...args: unknown[]) => {
+      fallbackCounts.push(args.length);
+      const item = args[0] as number[];
+      item.push(9);
+      if (args.length > 1) throw new ArgumentCountError("one argument only");
+      return item;
+    }).all());
+    Assert.assertSame([2, 1], fallbackCounts);
+    Assert.assertSame([[1]], fallbackInput);
+    class ExecutableCallable {
+      static prefix = "static:";
+      prefix = "instance:";
+      static staticMap(value: string): string { return this.prefix + value; }
+      map(value: string): string { return this.prefix + value; }
+      pair(value: number, key: string): Record<string, unknown> { return { [this.prefix]: [value, key] }; }
+      __invoke(value: string): string { return this.map(value); }
+    }
+    registerClass("XaravelTests\\Collections\\ExecutableCallable", ExecutableCallable);
+    for (const invalid of ["missing_story145_callback", [ExecutableCallable, "missing"], new PhpArray<number, unknown>([[0, ExecutableCallable], [1, "missing"]])] as const) {
+      let directFailure: unknown = null;
+      let collectionFailure: unknown = null;
+      try { Arr.map([], invalid); } catch (error) { directFailure = error; }
+      try { collect([]).map(invalid); } catch (error) { collectionFailure = error; }
+      Assert.assertInstanceOf(PhpTypeError, directFailure);
+      Assert.assertInstanceOf(PhpTypeError, collectionFailure);
+      Assert.assertSame((directFailure as PhpTypeError).getMessage(), (collectionFailure as PhpTypeError).getMessage());
+    }
+    class ArgumentCallable {
+      readonly calls: unknown[] = [];
+      predicate(value: number[], key: unknown): boolean {
+        this.calls.push([value.slice(), key]); value.push(9); return key !== "omit";
+      }
+      spread(left: number[], right: number[], key: unknown): unknown[] {
+        this.calls.push([left.slice(), right.slice(), key]); left.push(9); right.push(8); return [left, right, key];
+      }
+      aggregate(value: number[], ...keys: unknown[]): number {
+        this.calls.push([value.slice(), keys]); const result = value[0]!; value.push(9); return result;
+      }
+      consecutive(value: number[], key: unknown, chunk: Collection): boolean {
+        this.calls.push([value.slice(), key, chunk.toArray()]); value.push(9); return key !== "stop";
+      }
+    }
+    class AggregateInvoker extends ArgumentCallable {
+      __invoke(value: number[], ...keys: unknown[]): number { return this.aggregate(value, ...keys); }
+    }
+    class SpreadInvoker extends ArgumentCallable {
+      __invoke(left: number[], right: number[], key: unknown): unknown[] { return this.spread(left, right, key); }
+    }
+    class WhileInvoker extends ArgumentCallable {
+      __invoke(value: number[], key: unknown, chunk: Collection): boolean { return this.consecutive(value, key, chunk); }
+    }
+    registerClass("XaravelTests\\Collections\\ArgumentCallable", ArgumentCallable);
+    registerClass("XaravelTests\\Collections\\AggregateInvoker", AggregateInvoker);
+    registerClass("XaravelTests\\Collections\\SpreadInvoker", SpreadInvoker);
+    registerClass("XaravelTests\\Collections\\WhileInvoker", WhileInvoker);
     for (const make of [(items: unknown) => collect(items), (items: unknown) => LazyCollection.make(items)]) {
+      const arguments_ = new ArgumentCallable();
+      const filteredInput = new PhpArray<number | string, number[]>([[5, [1]], ["omit", [2]], [2, [3]]]);
+      Assert.assertSame(new PhpArray([[5, [1]], [2, [3]]]), make(filteredInput).filter([arguments_, "predicate"]).all());
+      Assert.assertSame([[[1], 5], [[2], "omit"], [[3], 2]], arguments_.calls);
+      Assert.assertSame(new PhpArray<number | string, number[]>([[5, [1]], ["omit", [2]], [2, [3]]]), filteredInput);
+      const spreadCallable = new ArgumentCallable();
+      const spreadInput = { outer: [[1], [2]] };
+      Assert.assertSame({ outer: [[1, 9], [2, 8], "outer"] }, make(spreadInput).mapSpread([spreadCallable, "spread"]).all());
+      Assert.assertSame([[[1], [2], "outer"]], spreadCallable.calls);
+      Assert.assertSame({ outer: [[1], [2]] }, spreadInput);
+      const spreadInvoker = new SpreadInvoker();
+      Assert.assertSame({ outer: [[1, 9], [2, 8], "outer"] }, make(spreadInput).mapSpread(spreadInvoker).all());
+      Assert.assertSame([[[1], [2], "outer"]], spreadInvoker.calls);
+      const eachSpreadInvoker = new SpreadInvoker();
+      const spreadSource = make(spreadInput);
+      Assert.assertSame(spreadSource, spreadSource.eachSpread(eachSpreadInvoker));
+      Assert.assertSame([[[1], [2], "outer"]], eachSpreadInvoker.calls);
+      Assert.assertSame({ outer: [[1], [2]] }, spreadInput);
+      const aggregateInvoker = new AggregateInvoker();
+      const aggregateInput = { a: [1], b: [3] };
+      Assert.assertSame(4, make(aggregateInput).sum(aggregateInvoker));
+      Assert.assertSame([[[1], ["a"]], [[3], ["b"]]], aggregateInvoker.calls);
+      const averageCallable = new ArgumentCallable();
+      Assert.assertSame(2, make(aggregateInput).avg([averageCallable, "aggregate"]));
+      Assert.assertSame([[[1], []], [[3], []]], averageCallable.calls);
+      Assert.assertSame({ a: [1], b: [3] }, aggregateInput);
+      const whileCallable = new ArgumentCallable();
+      const whileInput = { a: [1], stop: [2], last: [3] };
+      Assert.assertSame([{ a: [1] }, { stop: [2], last: [3] }], make(whileInput).chunkWhile([whileCallable, "consecutive"]).toArray());
+      Assert.assertSame([[[2], "stop", { a: [1] }], [[3], "last", { stop: [2] }]], whileCallable.calls);
+      Assert.assertSame({ a: [1], stop: [2], last: [3] }, whileInput);
+      const whileInvoker = new WhileInvoker();
+      Assert.assertSame([{ a: [1] }, { stop: [2], last: [3] }], make(whileInput).chunkWhile(whileInvoker).toArray());
+      Assert.assertSame([[[2], "stop", { a: [1] }], [[3], "last", { stop: [2] }]], whileInvoker.calls);
+      Assert.assertSame({ a: [1], stop: [2], last: [3] }, whileInput);
+      const callable = new ExecutableCallable();
+      Assert.assertSame({ a: 1, b: 2 }, make({ b: 2, a: 1 }).sortKeysUsing("strcmp").all());
+      for (const [form, prefix] of [
+        [[ExecutableCallable, "staticMap"], "static:"],
+        [[fqcn(ExecutableCallable), "staticMap"], "static:"],
+        [`${fqcn(ExecutableCallable)}::staticMap`, "static:"],
+        [[callable, "map"], "instance:"],
+        [new PhpArray<number, unknown>([[0, callable], [1, "map"]]), "instance:"],
+        [callable, "instance:"],
+      ] as const) {
+        Assert.assertSame({ a: prefix + "x", b: prefix + "y" }, make({ a: "x", b: "y" }).map(form).all());
+      }
+      Assert.assertSame({ "instance:": [[1, "a"], [2, "b"]] }, make({ a: 1, b: 2 }).mapToDictionary([callable, "pair"]).all());
+      Assert.assertSame({ "instance:": [[1, "a"], [2, "b"]] }, make({ a: 1, b: 2 }).mapToGroups(new PhpArray<number, unknown>([[0, callable], [1, "pair"]])).toArray());
+      const phpReducerCalls: unknown[] = [];
+      const phpReduced = make({ a: 2, b: 3 }).reduceSpread((total: number, keys: string, value: number, key: string) => {
+        phpReducerCalls.push([total, keys, value, key]);
+        return new PhpArray<number, unknown>([[7, total + value], [11, keys + key]]);
+      }, 0, "");
+      Assert.assertSame(new PhpArray<number, unknown>([[7, 5], [11, "ab"]]), phpReduced);
+      Assert.assertSame([[0, "", 2, "a"], [2, "a", 3, "b"]], phpReducerCalls);
+      Assert.assertSame({ total: 2 }, make([2]).reduceSpread((total: number, value: number) => ({ total: total + value }), 0));
+      const namedCalls: unknown[] = [];
+      let namedFailure: unknown = null;
+      try {
+        make([2, 3]).reduceSpread((total: number, value: number) => { namedCalls.push([total, value]); return { total: total + value }; }, 0);
+      } catch (error) { namedFailure = error; }
+      Assert.assertInstanceOf(PhpError, namedFailure);
+      Assert.assertSame("Cannot use positional argument after named argument", (namedFailure as PhpError).getMessage());
+      Assert.assertSame([[0, 2]], namedCalls);
+      const nested = [0];
+      const phpPair = new PhpArray<number, unknown>([[7, nested], [9, ["ignored"]]]);
+      const phpDictionary = make([1, 2]).mapToDictionary((value: number) => { nested[0] = value; return phpPair; }).all();
+      Assert.assertSame(new PhpArray([[7, [[1], [2]]]]), phpDictionary);
+      nested[0] = 9;
+      Assert.assertSame(new PhpArray([[7, [[1], [2]]]]), phpDictionary);
+      const phpGroups = make([3, 4]).mapToGroups((value: number) => { nested[0] = value; return phpPair; }).toArray();
+      Assert.assertSame(new PhpArray([[7, [[3], [4]]]]), phpGroups);
+      nested[0] = 10;
+      Assert.assertSame(new PhpArray([[7, [[3], [4]]]]), phpGroups);
+      Assert.assertSame([10, 3, "abc"], make({ a: 2, b: 3, c: 5 }).reduceSpread(
+        (total: number, count: number, keys: string, value: number, key: string) => [total + value, count + 1, keys + key], 0, 0, "",
+      ));
+      Assert.assertSame([0, "empty"], make([]).reduceSpread(() => { throw new RuntimeException("unreachable reducer"); }, 0, "empty"));
+      const averageCalls: unknown[][] = [];
+      Assert.assertSame(2, make([1, 3]).avg((...args: unknown[]) => { averageCalls.push(args); return args[0]; }));
+      Assert.assertSame([[1], [3]], averageCalls);
+      const reusedPair = { group: [0] };
+      const dictionary = make([1, 2]).mapToDictionary((value: number) => { reusedPair.group[0] = value; return reusedPair; }).all();
+      Assert.assertSame({ group: [[1], [2]] }, dictionary);
+      reusedPair.group[0] = 9;
+      Assert.assertSame({ group: [[1], [2]] }, dictionary);
+      const groups = make([3, 4]).mapToGroups((value: number) => { reusedPair.group[0] = value; return reusedPair; }).toArray();
+      Assert.assertSame({ group: [[3], [4]] }, groups);
+      reusedPair.group[0] = 10;
+      Assert.assertSame({ group: [[3], [4]] }, groups);
       const items = new PhpArray<string | number, number[]>([[5, [1]], ["a", [2]], [2, [3]]]);
       const source = make(items);
       const events: unknown[] = [];
@@ -1333,7 +1588,365 @@ xaravelTest(
       Assert.assertSame(expected, deferred.values().all());
       Assert.assertSame(before + 1, enumerations);
     }
-    // Owned-generator finally coverage is held under ESC-14.5-4; its complete regression is retained there.
+    const earlyEvents: unknown[] = [];
+    const earlySource = LazyCollection.make(function* () {
+      try { yield keyed("first", 1); earlyEvents.push("unreachable"); yield 2; }
+      finally { earlyEvents.push("finally"); }
+    });
+    Assert.assertSame(earlySource, await earlySource.eachAsync(async (_value: unknown, key: unknown) => {
+      earlyEvents.push(key);
+      await Promise.resolve();
+      return false;
+    }));
+    Assert.assertSame(["first", "finally"], earlyEvents);
+    for (const companion of ["mapAsync", "eachAsync"] as const) {
+      const events: unknown[] = [];
+      const bodyError = new RuntimeException("callback error");
+      const finalError = new RuntimeException("finally error");
+      const failFinally = (): never => { events.push("finally"); throw finalError; };
+      const source = LazyCollection.make(function* () {
+        try { yield 1; events.push("unreachable"); yield 2; }
+        finally { failFinally(); }
+      });
+      let failure: unknown = null;
+      try { await source[companion](async () => { await Promise.resolve(); throw bodyError; }); }
+      catch (error) { failure = error; }
+      Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
+      Assert.assertSame(["finally"], events);
+    }
+    const heldEvents: unknown[] = [];
+    const held = new Generator((function* () {
+      try { yield keyed("first", 1); heldEvents.push("resumed"); yield keyed("second", 2); }
+      finally { heldEvents.push("finally"); }
+    })());
+    await LazyCollection.make(() => held).eachAsync(async () => false);
+    Assert.assertSame([], heldEvents);
+    Assert.assertSame(1, held.current());
+    held.next();
+    Assert.assertSame(2, held.current());
+    Assert.assertSame(["resumed"], heldEvents);
+    held.next();
+    Assert.assertSame(["resumed", "finally"], heldEvents);
+    const advanced = new Generator((function* () { yield 1; yield 2; yield 3; yield 4; })());
+    let advancedOnce = false;
+    Assert.assertSame([[1], new PhpArray([[2, 3]]), new PhpArray([[3, 4]])], LazyCollection.make(() => advanced).chunkWhile(() => {
+      if (!advancedOnce) { advanced.next(); advancedOnce = true; }
+      return false;
+    }).map((chunk: LazyCollection) => chunk.all()).all());
+    const consumerAdvanced = new Generator((function* () { yield 1; yield 2; yield 3; yield 4; })());
+    const consumerChunks: unknown[] = [];
+    LazyCollection.make(() => consumerAdvanced).chunkWhile(() => false).each((chunk: LazyCollection) => {
+      consumerChunks.push(chunk.all());
+      if (consumerChunks.length === 1) consumerAdvanced.next();
+    });
+    Assert.assertSame([[1], new PhpArray([[2, 3]]), new PhpArray([[3, 4]])], consumerChunks);
+    for (const preserveKeys of [false, { preserveKeys: false }] as const) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try {
+          events.push("left"); yield keyed("left", "a");
+          events.push(5); yield keyed(5, "b");
+          events.push("unreachable"); yield keyed("right", "c");
+        } finally { events.push("finally"); }
+      });
+      const chunks: unknown[] = [];
+      source.chunk(2, preserveKeys).each((chunk: LazyCollection) => { chunks.push(chunk.all()); return false; });
+      Assert.assertSame([["a", "b"]], chunks);
+      Assert.assertSame(["left", 5, "finally"], events);
+    }
+    for (const [size, step, expected, consumed] of [
+      [3, 1, [[[0, 1], [1, 2], [2, 3]], [[1, 2], [2, 3], [3, 4]]], [1, 2, 3, 4]],
+      [2, 2, [[[0, 1], [1, 2]], [[2, 3], [3, 4]]], [1, 2, 3, 4]],
+      [2, 4, [[[0, 1], [1, 2]], [[4, 5], [5, 6]]], [1, 2, 3, 4, 5, 6]],
+    ] as const) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try { for (let value = 1; value <= 8; value++) { events.push(value); yield value; } }
+        finally { events.push("finally"); }
+      });
+      const windows: unknown[] = [];
+      source.sliding(size, step).each((window: LazyCollection) => { windows.push(arrayEntries(window.all() as object)); return windows.length < 2; });
+      Assert.assertSame(expected, windows);
+      Assert.assertSame([...consumed, "finally"], events);
+    }
+    for (const operation of ["chunk", "sliding"] as const) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try {
+          events.push(1); yield keyed("same", 1);
+          events.push(2); yield keyed("same", 2);
+          events.push(3); yield keyed("other", 3);
+          events.push("unreachable"); yield 4;
+        } finally { events.push("finally"); }
+      });
+      const chunks: unknown[] = [];
+      source[operation](2).each((chunk: LazyCollection) => { chunks.push(chunk.all()); return false; });
+      Assert.assertSame([{ same: 2, other: 3 }], chunks);
+      Assert.assertSame([1, 2, 3, "finally"], events);
+    }
+    for (const terminal of ["first", "take", "each"] as const) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try { for (const item of [1, 2, 3, 4]) { events.push(item); yield item; } }
+        finally { events.push("finally"); }
+      });
+      const ready = source.chunk(2).sliding(1);
+      if (terminal === "first") Assert.assertSame([[1, 2]], ready.first().toArray());
+      else if (terminal === "take") Assert.assertSame([[[1, 2]]], ready.take(1).toArray());
+      else {
+        const bodyError = new RuntimeException("sync each error");
+        let failure: unknown = null;
+        try { ready.each(() => { throw bodyError; }); } catch (error) { failure = error; }
+        Assert.assertSame(bodyError, failure);
+      }
+      Assert.assertSame([1, 2, "finally"], events);
+    }
+    for (const [count, expected] of [
+      [0, [1, 2, 3, 4]],
+      [1, new PhpArray([[1, 2], [2, 3], [3, 4]])],
+      [2, new PhpArray([[2, 3], [3, 4]])],
+      [-1, []],
+    ] as const) {
+      Assert.assertSame(expected, LazyCollection.make([1, 2, 3, 4]).skip(count).all());
+      Assert.assertSame(expected, LazyCollection.make(function* () { yield 1; yield 2; yield 3; yield 4; }).skip(count).all());
+      Assert.assertSame([], LazyCollection.make([]).skip(count).all());
+    }
+    const exhaustedValues = [[1], [2]];
+    const exhaustionEvents: unknown[] = [];
+    const exhaustedByPredicate = new Generator((function* () {
+      try { yield exhaustedValues[0]; yield exhaustedValues[1]; }
+      finally { exhaustionEvents.push("finally"); }
+    })());
+    Assert.assertSame([], LazyCollection.make(() => exhaustedByPredicate).skipWhile((item: number[]) => {
+      item.push(9);
+      while (exhaustedByPredicate.valid()) exhaustedByPredicate.next();
+      return false;
+    }).sliding(1).all());
+    Assert.assertSame([[1], [2]], exhaustedValues);
+    Assert.assertSame(["finally"], exhaustionEvents);
+    Assert.assertFalse(exhaustedByPredicate.valid());
+    class ObservedIterator extends ArrayIterator {
+      readonly events: unknown[] = [];
+      override valid(): boolean { const result = super.valid(); this.events.push(["valid", result]); return result; }
+      override current(): unknown { const result = super.current(); this.events.push(["current", result]); return result; }
+      override key(): ReturnType<ArrayIterator["key"]> { const result = super.key(); this.events.push(["key", result]); return result; }
+      override next(): void { this.events.push(["next"]); super.next(); }
+      override rewind(): void { this.events.push(["rewind"]); super.rewind(); }
+    }
+    registerClass("XaravelTests\\Collections\\ObservedIterator", ObservedIterator);
+    const emptyProbe = new ObservedIterator([1, 2]);
+    Assert.assertFalse(LazyCollection.make(() => emptyProbe).isEmpty());
+    Assert.assertSame([["valid", true]], emptyProbe.events);
+    const firstProbe = new ObservedIterator([1, 2]);
+    Assert.assertSame(1, LazyCollection.make(() => firstProbe).first());
+    Assert.assertSame([["valid", true], ["current", 1]], firstProbe.events);
+    const skipProbe = new ObservedIterator([1, 2, 3, 4]);
+    Assert.assertSame(new PhpArray([[2, 3]]), LazyCollection.make(() => skipProbe).skip(2).take(1).all());
+    Assert.assertSame([
+      ["valid", true], ["next"], ["valid", true], ["next"], ["valid", true],
+      ["valid", true], ["key", 2], ["current", 3],
+    ], skipProbe.events);
+    const whileProbe = new ObservedIterator([1, 2, 3]);
+    Assert.assertSame(new PhpArray([[1, 2]]), LazyCollection.make(() => whileProbe).skipWhile((value: number, key: number) => {
+      whileProbe.events.push(["callback", value, key]); return value < 2;
+    }).take(1).all());
+    Assert.assertSame([
+      ["valid", true], ["current", 1], ["key", 0], ["callback", 1, 0], ["next"],
+      ["valid", true], ["current", 2], ["key", 1], ["callback", 2, 1],
+      ["valid", true], ["key", 1], ["current", 2],
+    ], whileProbe.events);
+    const chunkProbe = new ObservedIterator([1, 2, 3]);
+    Assert.assertSame([1, 2], LazyCollection.make(() => chunkProbe).chunk(2, false).first().all());
+    Assert.assertSame([["valid", true], ["current", 1], ["next"], ["valid", true], ["current", 2]], chunkProbe.events);
+    const chunkWhileProbe = new ObservedIterator([1, 2, 3]);
+    Assert.assertSame([1], LazyCollection.make(() => chunkWhileProbe).chunkWhile((value: number, key: number) => {
+      chunkWhileProbe.events.push(["callback", value, key]); return false;
+    }).first().all());
+    Assert.assertSame([
+      ["valid", true], ["key", 0], ["current", 1], ["next"],
+      ["valid", true], ["current", 2], ["key", 1], ["callback", 2, 1],
+    ], chunkWhileProbe.events);
+    const slidingProbe = new ObservedIterator([1, 2, 3, 4, 5, 6, 7]);
+    Assert.assertSame([[1, 2], new PhpArray([[4, 5], [5, 6]])], LazyCollection.make(() => slidingProbe).sliding(2, 4).take(2).toArray());
+    Assert.assertSame([
+      ["valid", true], ["key", 0], ["current", 1], ["next"], ["valid", true], ["key", 1], ["current", 2],
+      ["valid", true], ["next"], ["valid", true], ["next"], ["next"],
+      ["valid", true], ["key", 4], ["current", 5], ["next"], ["valid", true], ["key", 5], ["current", 6],
+    ], slidingProbe.events);
+    const takeProbe = new ObservedIterator([1, 2]);
+    Assert.assertSame([1], LazyCollection.make(() => takeProbe).take(1).all());
+    Assert.assertSame([["valid", true], ["key", 0], ["current", 1]], takeProbe.events);
+    const zeroProbe = new ObservedIterator([1, 2]);
+    Assert.assertSame([], LazyCollection.make(() => zeroProbe).take(0).all());
+    Assert.assertSame([], zeroProbe.events);
+    const zeroEvents: unknown[] = [];
+    Assert.assertSame([], LazyCollection.make(function* () {
+      try { zeroEvents.push("started"); yield 1; }
+      finally { zeroEvents.push("finally"); }
+    }).take(0).all());
+    Assert.assertSame([], zeroEvents);
+    const manualPaths: [string, (source: LazyCollection) => unknown, unknown, unknown][] = [
+      ["first", source => source.first(), 2, null],
+      ["isEmpty", source => source.isEmpty(), false, true],
+      ["skip", source => source.skip(1).all(), new PhpArray([[2, 3], [3, 4]]), []],
+      ["skipWhile", source => source.skipWhile((value: number) => value < 3).all(), new PhpArray([[2, 3], [3, 4]]), []],
+      ["take", source => source.take(2).all(), new PhpArray([[1, 2], [2, 3]]), []],
+      ["chunk", source => source.chunk(2).toArray(), [new PhpArray([[1, 2], [2, 3]]), new PhpArray([[3, 4]])], []],
+      ["sliding", source => source.sliding(2).toArray(), [new PhpArray([[1, 2], [2, 3]]), new PhpArray([[2, 3], [3, 4]])], []],
+      ["chunkWhile", source => source.chunkWhile((value: number) => value < 4).toArray(), [new PhpArray([[1, 2], [2, 3]]), new PhpArray([[3, 4]])], []],
+    ];
+    for (const [name, operation, advancedExpected, exhaustedExpected] of manualPaths) {
+      for (const exhausted of [false, true]) {
+        const events: unknown[] = [];
+        const held = new Generator((function* () {
+          try { yield 1; yield 2; yield 3; yield 4; }
+          finally { events.push("finally"); }
+        })());
+        held.next(); // Already advanced beyond the first yield, as Upstream's manual cursor APIs allow.
+        if (exhausted) while (held.valid()) held.next();
+        Assert.assertSame(exhausted ? exhaustedExpected : advancedExpected, operation(LazyCollection.make(() => held)), name);
+        if (!exhausted && (name === "first" || name === "isEmpty" || name === "take")) {
+          Assert.assertSame([], events, name);
+          Assert.assertSame(name === "take" ? 3 : 2, held.current(), name);
+        }
+        while (held.valid()) held.next();
+        Assert.assertSame(["finally"], events, name);
+      }
+    }
+    const movedWhile = new Generator((function* () { yield 1; yield 2; yield 3; yield 4; })());
+    movedWhile.next();
+    Assert.assertSame(new PhpArray([[2, 3], [3, 4]]), LazyCollection.make(() => movedWhile).skipWhile(() => { movedWhile.next(); return false; }).all());
+    const recapturedEvents: unknown[] = [];
+    const recapturedCollection = LazyCollection.make(function* () {
+      try { yield 1; yield 2; yield 3; }
+      finally { recapturedEvents.push("finally"); }
+    });
+    const recaptured = recapturedCollection.getIterator() as Generator;
+    recaptured.next();
+    recapturedCollection.source = () => recaptured;
+    Assert.assertSame(new PhpArray([[1, 2]]), recapturedCollection.take(1).all());
+    Assert.assertSame([], recapturedEvents);
+    Assert.assertSame(2, recaptured.current());
+    while (recaptured.valid()) recaptured.next();
+    Assert.assertSame(["finally"], recapturedEvents);
+    Assert.assertSame([], recapturedCollection.take(1).all());
+    const inheritedOwnershipEvents: unknown[] = [];
+    const temporarySource = LazyCollection.make(function* () {
+      try { yield 1; yield 2; yield 3; }
+      finally { inheritedOwnershipEvents.push("finally"); }
+    });
+    Assert.assertSame([1, 2], new LazyCollection(temporarySource).chunk(2).first().all());
+    Assert.assertSame(["finally"], inheritedOwnershipEvents);
+    for (const operation of ["isEmpty", "skip", "skipWhile"] as const) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try { for (const item of [1, 2, 3]) { events.push(item); yield item; } }
+        finally { events.push("finally"); }
+      });
+      if (operation === "isEmpty") Assert.assertFalse(source.isEmpty());
+      else if (operation === "skip") Assert.assertSame(2, source.skip(1).first());
+      else Assert.assertSame(2, source.skipWhile((value: number) => value < 2).first());
+      Assert.assertSame(operation === "isEmpty" ? [1, "finally"] : [1, 2, "finally"], events);
+      const heldEvents: unknown[] = [];
+      const held = new Generator((function* () {
+        try { yield 1; yield 2; yield 3; }
+        finally { heldEvents.push("finally"); }
+      })());
+      const referenced = LazyCollection.make(() => held);
+      if (operation === "isEmpty") Assert.assertFalse(referenced.isEmpty());
+      else if (operation === "skip") Assert.assertSame(2, referenced.skip(1).first());
+      else Assert.assertSame(2, referenced.skipWhile((value: number) => value < 2).first());
+      Assert.assertSame([], heldEvents);
+      Assert.assertSame(operation === "isEmpty" ? 1 : 2, held.current());
+      while (held.valid()) held.next();
+      Assert.assertSame(["finally"], heldEvents);
+    }
+    const traversals: ((source: LazyCollection) => LazyCollection)[] = [
+      (source) => source.chunk(2),
+      (source) => source.sliding(2),
+      (source) => source.chunkWhile(() => false),
+      (source) => source.chunk(2).sliding(1),
+      (source) => source.sliding(2).chunk(1),
+      (source) => source.chunkWhile(() => false).sliding(1),
+    ];
+    const nestedValues = (item: unknown): unknown => item instanceof LazyCollection || item instanceof Collection ? [...item].map(nestedValues) : item;
+    const completeExpected = [
+      [[1, 2], [3, 4]],
+      [[1, 2], [2, 3], [3, 4]],
+      [[1], [2], [3], [4]],
+      [[[1, 2]], [[3, 4]]],
+      [[[1, 2]], [[2, 3]], [[3, 4]]],
+      [[[1]], [[2]], [[3]], [[4]]],
+    ];
+    for (const [index, traverse] of traversals.entries()) {
+      const events: unknown[] = [];
+      const source = LazyCollection.make(function* () {
+        try { for (const value of [1, 2, 3, 4]) { events.push(value); yield value; } }
+        finally { events.push("finally"); }
+      });
+      Assert.assertSame(completeExpected[index], [...traverse(source)].map(nestedValues));
+      Assert.assertSame([1, 2, 3, 4, "finally"], events);
+      const sourceError = new RuntimeException("composed source error");
+      const sourceEvents: unknown[] = [];
+      const throwingSource = LazyCollection.make(function* () {
+        try { sourceEvents.push(1); yield 1; sourceEvents.push(2); yield 2; throw sourceError; }
+        finally { sourceEvents.push("finally"); }
+      });
+      let failure: unknown = null;
+      try { traverse(throwingSource).all(); } catch (error) { failure = error; }
+      Assert.assertSame(sourceError, failure);
+      Assert.assertSame([1, 2, "finally"], sourceEvents);
+    }
+    for (const traverse of traversals) {
+      for (const exit of ["false", "callback-error", "competing-error", "cleanup-error"] as const) {
+        const events: unknown[] = [];
+        const bodyError = new RuntimeException("composed body error");
+        const cleanupError = new RuntimeException("composed cleanup error");
+        const failCleanup = (): never => { throw cleanupError; };
+        const source = LazyCollection.make(function* () {
+          try { for (const item of [1, 2, 3, 4]) { events.push(item); yield keyed(item, item); } }
+          finally { events.push("finally"); if (exit === "competing-error" || exit === "cleanup-error") failCleanup(); }
+        });
+        let failure: unknown = null;
+        try {
+          await traverse(source).eachAsync(async () => {
+            await Promise.resolve();
+            if (exit === "callback-error" || exit === "competing-error") throw bodyError;
+            return false;
+          });
+        } catch (error) { failure = error; }
+        if (exit === "false") Assert.assertNull(failure);
+        else if (exit === "cleanup-error") Assert.assertSame(cleanupError, failure);
+        else Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
+        Assert.assertSame([1, 2, "finally"], events);
+      }
+      const events: unknown[] = [];
+      const held = new Generator((function* () {
+        try { for (const item of [1, 2, 3]) { events.push(item); yield item; } }
+        finally { events.push("finally"); }
+      })());
+      await traverse(LazyCollection.make(() => held)).eachAsync(async () => false);
+      Assert.assertSame([1, 2], events);
+      Assert.assertSame(2, held.current());
+      held.next();
+      Assert.assertSame(3, held.current());
+      held.next();
+      Assert.assertSame([1, 2, 3, "finally"], events);
+    }
+    for (const throwingFinally of [false, true]) {
+      const events: unknown[] = [];
+      const bodyError = new RuntimeException("chunkWhile predicate error");
+      const failCleanup = (): never => { throw new RuntimeException("chunkWhile cleanup error"); };
+      const source = LazyCollection.make(function* () {
+        try { yield 1; yield 2; events.push("unreachable"); yield 3; }
+        finally { events.push("finally"); if (throwingFinally) failCleanup(); }
+      });
+      let failure: unknown = null;
+      try { source.map(value => value).chunkWhile(() => { throw bodyError; }).all(); }
+      catch (error) { failure = error; }
+      Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
+      Assert.assertSame(["finally"], events);
+    }
     const surface = JSON.parse(readFileSync(join(REPO, "packages", "collections", "async-surface.json"), "utf8")) as { method: string; root: string }[];
     for (const klass of ["Collection", "LazyCollection", "Enumerable"]) {
       for (const companion of ["mapAsync", "eachAsync"]) {

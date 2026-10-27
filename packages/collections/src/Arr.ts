@@ -59,7 +59,7 @@ import {
 } from "@xaravel/runtime";
 import { Enumerable } from "./Enumerable";
 import { data_get, value } from "./helpers";
-import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead, type SyncCallback } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead, type SyncCallback, type SyncCallable } from "./support/callables";
 
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
@@ -462,7 +462,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Run a map over each of the items in the array; the callback gets each value and its key. */
-  static map<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
+  static map<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
     const keys = array_keys(array);
 
     let items: unknown;
@@ -479,7 +479,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Run an associative map over an array; later occurrences replace earlier values of the same key. */
-  static mapWithKeys<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
+  static mapWithKeys<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
     const result = new PhpArray();
     for (const [key, value_] of arrayEntries(array as object)) {
       const assoc = callCallable(callback, valueCopy(value_), key);

@@ -33,6 +33,15 @@ import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
 import {
   abs,
+  array_chunk,
+  key,
+  reset,
+  intdiv,
+  floor,
+  ceil,
+  ksort,
+  krsort,
+  uksort,
   ArrayAccess,
   ArrayIterator,
   array_all,
@@ -96,6 +105,7 @@ import {
   range as phpRange,
   Ref,
   registerClass,
+  resolveCallable,
   SORT_FLAG_CASE,
   SORT_LOCALE_STRING,
   SORT_NATURAL,
@@ -130,7 +140,7 @@ import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
 import { ItemNotFoundException } from "./ItemNotFoundException";
 import { LazyCollection } from "./LazyCollection";
 import { MultipleItemsFoundException } from "./MultipleItemsFoundException";
-import { arrayRead, callCallable, isOptionsObject, type SyncCallback, type ValueOrSyncCallback } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject, type SyncCallback, type SyncCallable, type ValueOrSyncCallback } from "./support/callables";
 
 /** The `Countable` brand `count()` and the grader read (no token; `packages/runtime/src/php/ArrayObject.ts`). */
 const COUNTABLE = Symbol.for("Countable");
@@ -145,7 +155,7 @@ type ItemCallback = (value: any, key: any) => unknown;
  * PHP's `callable(T, T): int` comparison of two values or two keys: a sync function, or a PHP callable string naming a
  * global function the runtime exports (`'strcasecmp'`, DIV-9.13).
  */
-type CompareCallback<R> = SyncCallback<[a: any, b: any], R> | string;
+type CompareCallback<R> = SyncCallable<[a: any, b: any], R> | string;
 
 /** The arguments of a `($key, $operator = null, $value = null)` member, as `func_get_args()` forwards them. */
 type WhereArguments = [key: unknown, operator?: unknown, value?: unknown];
@@ -262,9 +272,9 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a filter over each of the items: the callback gets each value and its key, and keys are kept. */
-  filter<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): this {
+  filter<R>(callback: SyncCallable<[value: any, key: any], R> | null = null): this {
     if (callback !== null) {
-      return this.newInstance(Arr.where(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
+      return this.newInstance(Arr.where(this.items, (value_: unknown, key: unknown) => callCallable(callback, valueCopy(value_), key)));
     }
 
     return this.newInstance(array_filter(this.items));
@@ -287,12 +297,105 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
-  map<R>(callback: SyncCallback<[value: any, key: any], R>): this {
-    return this.newInstance(Arr.map(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
+  map<R>(callback: SyncCallable<[value: any, key: any], R>): this {
+    const target = resolveCallable(callback);
+    if (target === null) return this.newInstance(Arr.map(this.items, callback));
+    return this.newInstance(Arr.map(this.items, (...args: unknown[]) => target(...args.map(argument => valueCopy(argument)))));
+  }
+
+  /** Get the median of the non-null values of a key. */
+  median(key_: unknown = null): unknown {
+    const values = (key_ !== null ? this.pluck(key_) : this).reject((item: unknown) => item === null).sort().values();
+    const count = values.count();
+    if (count === 0) return null;
+    const middle = Number(intdiv(count, 2));
+    if (count % 2) return values.get(middle);
+    return this.newInstance([values.get(middle - 1), values.get(middle)]).average();
+  }
+
+  /** Group the first pair returned by each callback into an array dictionary. */
+  mapToDictionary<R>(callback: SyncCallable<[value: any, key: any], R>): this {
+    const dictionary = new PhpArray<PhpArrayKey, unknown[]>();
+    for (const [key_, item] of this.items) {
+      const pair = new Ref<unknown>(valueCopy(callCallable(callback, valueCopy(item), key_)));
+      const pairKey = key(pair.value);
+      const value_ = reset(pair);
+      if (!dictionary.has(pairKey)) dictionary.set(pairKey, []);
+      dictionary.get(pairKey)!.push(valueCopy(value_));
+    }
+    return this.newInstance(dictionary);
+  }
+
+  /** Return complete sliding windows while preserving inner keys. */
+  sliding(size: number | { size?: number; step?: number } = 2, step: number = 1): this {
+    if (isOptionsObject(size)) { step = size.step ?? 1; size = size.size ?? 2; }
+    if (size < 1) throw new InvalidArgumentException("Size value must be at least 1.");
+    if (step < 1) throw new InvalidArgumentException("Step value must be at least 1.");
+    const chunks = toFloat(floor((this.count() - size) / step)) + 1;
+    return (this.constructor as typeof Collection).times(chunks, (number: number) => this.slice((number - 1) * step, size)) as this;
+  }
+
+  /** Split into balanced groups, renumbering integer keys inside each group. */
+  split(numberOfGroups: number): this {
+    if (numberOfGroups < 1) throw new InvalidArgumentException("Number of groups must be at least 1.");
+    if (this.isEmpty()) return this.newInstance();
+    const groups = this.newInstance();
+    const groupSize = toFloat(floor(this.count() / numberOfGroups));
+    const remain = this.count() % numberOfGroups;
+    let start = 0;
+    for (let i = 0; i < numberOfGroups; i++) {
+      const size = groupSize + (i < remain ? 1 : 0);
+      if (size) { groups.push(this.newInstance(array_slice(this.items, start, size))); start += size; }
+    }
+    return groups;
+  }
+
+  /** Split into groups, filling the first groups completely. */
+  splitIn(numberOfGroups: number): this {
+    if (numberOfGroups < 1) throw new InvalidArgumentException("Number of groups must be at least 1.");
+    return this.chunk(toFloat(ceil(this.count() / numberOfGroups)));
+  }
+
+  /** Chunk items into collections, preserving keys by default. */
+  chunk(size: number, preserveKeys: boolean | { preserveKeys?: boolean } = true): this {
+    if (isOptionsObject(preserveKeys)) preserveKeys = preserveKeys.preserveKeys ?? true;
+    if (size <= 0) return this.newInstance();
+    return this.newInstance(array_chunk(this.items, size, preserveKeys).map(chunk => this.newInstance(chunk)));
+  }
+
+  /** Chunk consecutive items while the callback returns true. */
+  chunkWhile<R>(callback: SyncCallable<[value: any, key: any, chunk: Collection], R>): this {
+    return this.newInstance(this.lazy().chunkWhile(callback).mapInto(this.constructor as new (...args: any[]) => this));
+  }
+
+  /** Sort keys with PHP sort flags, preserving values. */
+  sortKeys(options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): this {
+    if (isOptionsObject(options)) { descending = options.descending ?? false; options = options.options ?? SORT_REGULAR; }
+    const items = new Ref<unknown>(valueCopy(this.items));
+    if (descending === true || descending === SortDirection.Descending) krsort(items, options);
+    else if (descending === false || descending === SortDirection.Ascending) ksort(items, options);
+    else throw unhandledMatch(descending);
+    return this.newInstance(items.value);
+  }
+
+  /** Sort keys in descending order. */
+  sortKeysDesc(options: number = SORT_REGULAR): this { return this.sortKeys(options, SortDirection.Descending); }
+
+  /** Sort keys with a synchronous comparison callback. */
+  sortKeysUsing<R>(callback: CompareCallback<R>): this {
+    const items = new Ref<unknown>(valueCopy(this.items));
+    uksort(items, callback);
+    return this.newInstance(items.value);
+  }
+
+  /** Transform each item in place and return this collection. */
+  transform<R>(callback: SyncCallable<[value: any, key: any], R>): this {
+    this.items = new PhpArray(arrayEntries(this.map(callback).all()));
+    return this;
   }
 
   /** Run an associative map over the items, replacing earlier values with the same returned key. */
-  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): this {
+  mapWithKeys<R>(callback: SyncCallable<[value: any, key: any], R>): this {
     return this.newInstance(Arr.mapWithKeys(this.items, callback));
   }
 
