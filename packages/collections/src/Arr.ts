@@ -1,6 +1,5 @@
 // Laravel's Illuminate\Support\Arr (v13.37.0). Story 14.6 completes the independent array helpers.
-// Runtime contract-held methods (isAssoc, isList, recursive sorting, push, query and shuffle) remain whole and absent
-// pending ESC-14.6-1. CSS styles reach Support through a throwing Str.finish dependency seam.
+// Typed accessors and push remain whole and absent pending ESC-14.6-5. CSS styles reach Support through a throwing Str.finish dependency seam.
 // PHP array arguments accept lists, plain maps and PhpArrays, with value-copy isolation (AD-9).
 // By-reference parameters use Ref (DIV-9.2), while ArrayAccess objects retain PHP's handle semantics.
 // Callbacks are synchronous (AD-6); PHP callable forms resolve through the shared runtime.
@@ -8,6 +7,17 @@ import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
 import {
   ARRAY_FILTER_USE_BOTH,
+  array_is_list,
+  bindPhpArguments,
+  http_build_query,
+  PHP_QUERY_RFC3986,
+  ksort,
+  krsort,
+  sort,
+  rsort,
+  SORT_REGULAR,
+  SortDirection,
+  unhandledMatch,
   abs,
   ArgumentCountError,
   ArrayAccess,
@@ -553,6 +563,18 @@ export class Arr extends mixin(null, Macroable) {
     return false;
   }
 
+  /** Determine whether an array has keys other than sequential integers starting at zero. */
+  static isAssoc(array: unknown): boolean {
+    [array] = bindPhpArguments("Illuminate\\Support\\Arr::isAssoc", [{ name: "array", type: "array" }], [...arguments]);
+    return !array_is_list(array);
+  }
+
+  /** Determine whether all array keys are sequential integers starting at zero. */
+  static isList(array: unknown): boolean {
+    if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::isList(), 0 passed and exactly 1 expected");
+    return array_is_list(array);
+  }
+
   /** Join items, optionally using a separate glue before the final item. */
   static join(array: unknown, glue: string, finalGlue: string = ""): unknown {
     if (finalGlue === "") return implode(glue, array);
@@ -721,6 +743,12 @@ export class Arr extends mixin(null, Macroable) {
     return value_;
   }
 
+  /** Convert an array into an RFC 3986 query string. */
+  static query(array: unknown): string {
+    if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::query(), 0 passed and exactly 1 expected");
+    return http_build_query(array, "", "&", PHP_QUERY_RFC3986);
+  }
+
   /**
    * Get one or a specified number of random values from an array: one value when `number` is `null`, else a list of
    * `number` values (keyed as in the array with `preserveKeys`). Throws `InvalidArgumentException` when more items are
@@ -820,6 +848,12 @@ export class Arr extends mixin(null, Macroable) {
     return valueCopy(innermost);
   }
 
+  /** Shuffle an array into a reindexed list, copying nested array values. */
+  static shuffle(array: unknown): unknown[] {
+    if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::shuffle(), 0 passed and exactly 1 expected");
+    return new Randomizer().shuffleArray(array);
+  }
+
   /** Return the sole matching item, throwing when none or more than one match. */
   static sole<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R> | null = null): unknown {
     if (toBool(callback)) array = this.where(array, callback as SyncCallable<[any, any], R>);
@@ -837,6 +871,34 @@ export class Arr extends mixin(null, Macroable) {
   /** Sort in descending order using a callback or dot path. */
   static sortDesc<R>(array: unknown, callback: ArrSortCallback<R> = null): unknown {
     return new Collection(array).sortByDesc(callback as Parameters<Collection["sortByDesc"]>[0]).all();
+  }
+
+  /** Recursively sort array keys or list values, with sort flags and an optional direction (AD-26). */
+  static sortRecursive(array: unknown, options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): unknown {
+    if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::sortRecursive(), 0 passed and at least 1 expected");
+    if (isOptionsObject(options)) { descending = options.descending ?? false; options = options.options ?? SORT_REGULAR; }
+    array_is_list(array);
+    const copied = ownPhpArray(valueCopy(array));
+    for (const [key, item] of copied) {
+      if (is_array(item)) copied.set(key, this.sortRecursive(item, options, descending));
+    }
+    const result = new Ref<unknown>(copied);
+    if (!array_is_list(result.value)) {
+      if (descending === false || descending === SortDirection.Ascending) ksort(result, options);
+      else if (descending === true || descending === SortDirection.Descending) krsort(result, options);
+      else throw unhandledMatch(descending);
+    } else {
+      if (descending === false || descending === SortDirection.Ascending) sort(result, options);
+      else if (descending === true || descending === SortDirection.Descending) rsort(result, options);
+      else throw unhandledMatch(descending);
+    }
+    return result.value;
+  }
+
+  /** Recursively sort array keys or list values in descending order. */
+  static sortRecursiveDesc(array: unknown, options: number = SORT_REGULAR): unknown {
+    if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::sortRecursiveDesc(), 0 passed and at least 1 expected");
+    return this.sortRecursive(array, options, SortDirection.Descending);
   }
 
   /** Compile conditional CSS classes. */

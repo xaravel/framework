@@ -5,9 +5,117 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, LazyCollection } from "@xaravel/collections";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
-import { ArrayIterator, JsonSerializable, stdClass, arrayEntries, Error as PhpError, keyed, PhpArray, Ref, valueCopy } from "@xaravel/runtime";
+import { ArgumentCountError, ArrayIterator, JsonSerializable, stdClass, arrayAppend, arrayEntries, Error as PhpError, keyed, PhpArray, Ref, valueCopy, SortDirection, SORT_NATURAL, TypeError as PhpTypeError, UnhandledMatchError } from "@xaravel/runtime";
 
 xaravelTest("XT-collections-12", "FR-23: Arr dot get/set/has/forget preserve PHP keys, insertion order, null semantics and array value copies; synchronous callable forms reject async callbacks and lazy traversal stops and cleans up correctly", async () => {
+  const recursive = new PhpArray<string | number, unknown>([
+    ["z", new PhpArray<string, unknown>([["b", [10, 2, 1]], ["a", { value: [3, 1, 2] }]])],
+    [4, ["item10", "item2", "item1"]],
+  ]);
+  const recursiveSnapshot = valueCopy(recursive);
+  const ascending = Arr.sortRecursive(recursive, { options: SORT_NATURAL });
+  Assert.assertSame([4, "z"], arrayEntries(ascending as object).map(([key]) => key));
+  Assert.assertSame(["a", "b"], arrayEntries(Arr.get(ascending, "z") as object).map(([key]) => key));
+  Assert.assertSame(["item1", "item2", "item10"], Arr.get(ascending, 4));
+  Assert.assertSame([1, 2, 10], Arr.get(ascending, "z.b"));
+  const descending = Arr.sortRecursive(recursive, { options: SORT_NATURAL, descending: SortDirection.Descending });
+  Assert.assertSame(["z", 4], arrayEntries(descending as object).map(([key]) => key));
+  Assert.assertSame([10, 2, 1], Arr.get(descending, "z.b"));
+  Assert.assertSame(descending, Arr.sortRecursiveDesc(recursive, SORT_NATURAL));
+  Assert.assertSame(ascending, Arr.sortRecursive(recursive, SORT_NATURAL, SortDirection.Ascending));
+  Assert.assertSame(descending, Arr.sortRecursive(recursive, SORT_NATURAL, true));
+  Assert.assertSame(descending, Arr.sortRecursive(recursive, { options: SORT_NATURAL, descending: true }));
+  for (const invalid of [null, 1, "array", true, new stdClass()]) {
+    let error: unknown = null;
+    try { Arr.sortRecursive(invalid); } catch (caught) { error = caught; }
+    Assert.assertInstanceOf(PhpTypeError, error);
+  }
+  const deletedHighest = new PhpArray<string | number, unknown>([[9, "deleted"], ["b", 2], ["a", 1]]);
+  deletedHighest.delete(9);
+  const sortedWithHistory = new Ref(Arr.sortRecursive(deletedHighest));
+  arrayAppend(sortedWithHistory, "appended");
+  Assert.assertSame([["a", 1], ["b", 2], [10, "appended"]], arrayEntries(sortedWithHistory.value as object));
+  Assert.assertSame([["b", 2], ["a", 1]], arrayEntries(deletedHighest));
+  for (const descending_ of [false, true]) {
+    const nestedHistory = new Ref(Arr.get(Arr.sortRecursive({ nested: deletedHighest }, 0, descending_), "nested"));
+    arrayAppend(nestedHistory, "appended");
+    Assert.assertSame(descending_ ? [["b", 2], ["a", 1], [10, "appended"]] : [["a", 1], ["b", 2], [10, "appended"]], arrayEntries(nestedHistory.value as object));
+    const directHistory = new Ref(Arr.sortRecursive(deletedHighest, 0, descending_));
+    arrayAppend(directHistory, "appended");
+    Assert.assertSame(10, arrayEntries(directHistory.value as object).at(-1)![0]);
+    const listHistory = new PhpArray([[0, 2], [1, 1], [9, 99]]);
+    listHistory.delete(9);
+    const sortedList = new Ref(Arr.sortRecursive(listHistory, 0, descending_));
+    arrayAppend(sortedList, 3);
+    Assert.assertSame(descending_ ? [2, 1, 3] : [1, 2, 3], sortedList.value);
+  }
+  Assert.assertSame([1, 2], Arr.sortRecursive([2, 1], {}));
+  Assert.assertSame([2, 1], Arr.sortRecursive([1, 2], { descending: true }));
+  const handle = new class { value = 1; }();
+  Assert.assertTrue(Arr.get(Arr.sortRecursive({ nested: [handle] }), "nested.0") === handle);
+  Assert.assertTrue((Arr.shuffle([[handle]])[0] as unknown[])[0] === handle);
+
+  const recursiveCalls: [unknown, unknown, unknown][] = [];
+  class RecordingRecursiveArr extends Arr {
+    static override sortRecursive(array: unknown, options: number | { options?: number; descending?: boolean | SortDirection } = 0, descending: boolean | SortDirection = false): unknown {
+      recursiveCalls.push([valueCopy(array), options, descending]);
+      return super.sortRecursive(array, options, descending);
+    }
+  }
+  Assert.assertSame({ nested: ["item10", "item2"] }, RecordingRecursiveArr.sortRecursive({ nested: ["item2", "item10"] }, SORT_NATURAL, true));
+  Assert.assertSame([[{ nested: ["item2", "item10"] }, SORT_NATURAL, true], [["item2", "item10"], SORT_NATURAL, true]], recursiveCalls);
+  recursiveCalls.length = 0;
+  RecordingRecursiveArr.sortRecursive({ nested: ["item2", "item10"] }, { options: SORT_NATURAL, descending: true });
+  Assert.assertSame([[{ nested: ["item2", "item10"] }, { options: SORT_NATURAL, descending: true }, false], [["item2", "item10"], SORT_NATURAL, true]], recursiveCalls);
+  let associativeDirectionError: unknown = null;
+  try { Arr.sortRecursive({ key: 1 }, 0, "invalid" as never); } catch (error) { associativeDirectionError = error; }
+  Assert.assertInstanceOf(UnhandledMatchError, associativeDirectionError);
+  let directionError: unknown = null;
+  try { Arr.sortRecursive([], 0, "invalid" as never); } catch (error) { directionError = error; }
+  Assert.assertInstanceOf(UnhandledMatchError, directionError);
+  (recursive.get("z") as PhpArray).set("later", [9]);
+  Assert.assertFalse(Arr.has(ascending, "z.later"));
+  const isolated = new Ref(ascending);
+  Arr.set(isolated, "z.a.value.0", 99);
+  Assert.assertSame(recursiveSnapshot, Arr.except(recursive, "z.later"));
+  Assert.assertSame([1, 2, 3], Arr.get(ascending, "z.a.value"));
+  const returnedZ = arrayEntries(ascending as object).find(([key]) => key === "z")![1] as object;
+  const returnedA = arrayEntries(returnedZ).find(([key]) => key === "a")![1] as object;
+  const returnedValues = arrayEntries(returnedA).find(([key]) => key === "value")![1] as number[];
+  returnedValues[0] = 77;
+  Assert.assertSame([3, 1, 2], Arr.get(recursive, "z.a.value"));
+  class RecursiveArr extends Arr {
+    static override sortRecursive(array: unknown): unknown { return { overridden: array }; }
+  }
+  Assert.assertSame({ overridden: [2, 1] }, RecursiveArr.sortRecursiveDesc([2, 1]));
+  let arrayTypeError: unknown = null;
+  try { Arr.isAssoc(null); } catch (error) { arrayTypeError = error; }
+  Assert.assertInstanceOf(PhpTypeError, arrayTypeError);
+  Assert.assertSame("Illuminate\\Support\\Arr::isAssoc(): Argument #1 ($array) must be of type array, null given", (arrayTypeError as PhpTypeError).getMessage());
+  for (const invoke of [() => (Arr.isAssoc as () => boolean)(), () => Arr.isAssoc(1), () => Arr.isAssoc(new stdClass())]) {
+    let error: unknown = null;
+    try { invoke(); } catch (caught) { error = caught; }
+    Assert.assertInstanceOf(PhpTypeError, error);
+  }
+  for (const method of ["isAssoc", "isList", "query", "shuffle", "sortRecursive", "sortRecursiveDesc"] as const) {
+    let error: unknown = null;
+    try { (Arr[method] as () => unknown)(); } catch (caught) { error = caught; }
+    Assert.assertInstanceOf(PhpTypeError, error);
+    Assert.assertInstanceOf(ArgumentCountError, error);
+    const qualifier = method.startsWith("sortRecursive") ? "at least" : "exactly";
+    Assert.assertSame("Too few arguments to function Illuminate\\Support\\Arr::" + method + "(), 0 passed and " + qualifier + " 1 expected", (error as ArgumentCountError).getMessage());
+  }
+  Assert.assertFalse(Arr.isAssoc(["a", "b"]));
+  Assert.assertTrue(Arr.isAssoc({ a: 1 }));
+  Assert.assertTrue(Arr.isAssoc(new PhpArray([[2, "a"]])));
+  Assert.assertSame("q=a%20b%2B%26&nested%5B0%5D=%C3%A9&nested%5B1%5D=1", Arr.query({ q: "a b+&", nested: ["é", true], absent: null }));
+  const shuffleSource = new PhpArray<string | number, unknown>([[9, { nested: [1] }], ["last", { nested: [2] }]]);
+  const shuffled = Arr.shuffle(shuffleSource) as { nested: number[] }[];
+  Assert.assertTrue(Array.isArray(shuffled));
+  Assert.assertSame([1, 2], shuffled.map((item) => item.nested[0]!).sort((a, b) => a - b));
+  shuffled[0]!.nested[0] = 99;
+  Assert.assertSame(new PhpArray<string | number, unknown>([[9, { nested: [1] }], ["last", { nested: [2] }]]), shuffleSource);
+
   const arrayable = new class implements Arrayable {
     get [Arrayable.brand](): true { return true; }
     toArray(): unknown[] { return []; }

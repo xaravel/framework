@@ -1,7 +1,7 @@
 // Ported from Laravel v13.37.0 framework/tests/Support/SupportArrTest.php.
 import { portedTest, TestCase } from "@xaravel/assert";
 import { Arr, Collection, LazyCollection, collect, ItemNotFoundException, MultipleItemsFoundException } from "../../../../../src";
-import { ArrayIterator, ArrayObject, PhpArray, Ref, InvalidArgumentException, stdClass, WeakMap, Generator, array_values, array_intersect_assoc, is_string, is_numeric, toPhpString, strrev, str_contains, toBool, spaceship, phpSerialize as serialize, phpUnserialize as unserialize, registerTestClass, BlockedByComponentError, float, yieldFrom } from "@xaravel/runtime";
+import { ArrayIterator, ArrayObject, PhpArray, Ref, InvalidArgumentException, stdClass, WeakMap, Generator, array_values, array_intersect_assoc, is_string, is_numeric, toPhpString, strrev, str_contains, toBool, spaceship, phpSerialize as serialize, phpUnserialize as unserialize, registerTestClass, BlockedByComponentError, float, yieldFrom, range, sort, identical } from "@xaravel/runtime";
 import { FIXTURES, TestArrayableObject, TestJsonableObject, TestJsonSerializeObject, TestJsonSerializeWithScalarValueObject, TestTraversableAndJsonSerializableObject } from "./Fixtures/Common";
 import { TestEnum, TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "./Fixtures/Enums";
 class SupportArrTest extends TestCase {
@@ -936,4 +936,121 @@ portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testPartition', { case: 
   let array: any = ['John', 'Jane', 'Greg'];
   let result: any = Arr.partition(array, (value: string) => str_contains(value, 'J'));
   this.assertEquals([['John', 'Jane'], new PhpArray<any, any>([[2, 'Greg']])], result);
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testIsAssoc', { case: SupportArrTest }, async function () {
+  this.assertTrue(Arr.isAssoc(new PhpArray<string | number, string>([['a', 'a'], [0, 'b']])));
+  this.assertTrue(Arr.isAssoc(new PhpArray([[1, 'a'], [0, 'b']])));
+  this.assertTrue(Arr.isAssoc(new PhpArray([[1, 'a'], [2, 'b']])));
+  this.assertFalse(Arr.isAssoc(['a', 'b']));
+  this.assertFalse(Arr.isAssoc(['a', 'b']));
+  this.assertFalse(Arr.isAssoc([]));
+  this.assertFalse(Arr.isAssoc([1, 2, 3]));
+  this.assertFalse(Arr.isAssoc(['foo', 2, 3]));
+  this.assertFalse(Arr.isAssoc(['foo', 'bar']));
+  this.assertTrue(Arr.isAssoc(new PhpArray([[1, 'foo'], [2, 'bar']])));
+  this.assertTrue(Arr.isAssoc(new PhpArray<string | number, string>([[0, 'foo'], ['bar', 'baz']])));
+  this.assertTrue(Arr.isAssoc(new PhpArray([[0, 'foo'], [2, 'bar']])));
+  this.assertTrue(Arr.isAssoc({ foo: 'bar', baz: 'qux' }));
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testIsList', { case: SupportArrTest }, async function () {
+  this.assertTrue(Arr.isList([]));
+  this.assertTrue(Arr.isList([1, 2, 3]));
+  this.assertTrue(Arr.isList(['foo', 2, 3]));
+  this.assertTrue(Arr.isList(['foo', 'bar']));
+  this.assertTrue(Arr.isList(['foo', 'bar']));
+  this.assertTrue(Arr.isList(['foo', 'bar']));
+  this.assertFalse(Arr.isList(new PhpArray([[-1, 1]])));
+  this.assertFalse(Arr.isList(new PhpArray([[-1, 1], [0, 2]])));
+  this.assertFalse(Arr.isList(new PhpArray([[1, 'foo'], [2, 'bar']])));
+  this.assertFalse(Arr.isList(new PhpArray([[1, 'foo'], [0, 'bar']])));
+  this.assertFalse(Arr.isList(new PhpArray<string | number, string>([[0, 'foo'], ['bar', 'baz']])));
+  this.assertFalse(Arr.isList(new PhpArray([[0, 'foo'], [2, 'bar']])));
+  this.assertFalse(Arr.isList({ foo: 'bar', baz: 'qux' }));
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testQuery', { case: SupportArrTest }, async function () {
+  this.assertSame('', Arr.query([]));
+  this.assertSame('foo=bar', Arr.query({ foo: 'bar' }));
+  this.assertSame('foo=bar&bar=baz', Arr.query({ foo: 'bar', bar: 'baz' }));
+  this.assertSame('foo=bar&bar=1', Arr.query({ foo: 'bar', bar: true }));
+  this.assertSame('foo=bar', Arr.query({ foo: 'bar', bar: null }));
+  this.assertSame('foo=bar&bar=', Arr.query({ foo: 'bar', bar: '' }));
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testShuffleProducesDifferentShuffles', { case: SupportArrTest }, async function () {
+  const input = range('a', 'z');
+  this.assertFalse(identical(Arr.shuffle(input), Arr.shuffle(input)) && identical(Arr.shuffle(input), Arr.shuffle(input)), "The shuffles produced the same output each time, which shouldn't happen.");
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testShuffleActuallyShuffles', { case: SupportArrTest }, async function () {
+  const input = range('a', 'z');
+  this.assertFalse(identical(Arr.shuffle(input), input) && identical(Arr.shuffle(input), input), "The shuffles were unshuffled each time, which shouldn't happen.");
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testShuffleKeepsSameValues', { case: SupportArrTest }, async function () {
+  const input = range('a', 'z');
+  const shuffled = new Ref(Arr.shuffle(input)); // adapted:DIV-9.2
+  sort(shuffled); // adapted:DIV-9.2
+  this.assertEquals(input, shuffled.value); // adapted:DIV-9.2
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testEmptyShuffle', { case: SupportArrTest }, async function () {
+  this.assertSame([], Arr.shuffle([]));
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testSortRecursive', { case: SupportArrTest }, async function () {
+  const array = new PhpArray<string | number, unknown>([
+    ['users', [{ name: 'joe', mail: 'joe@example.com', numbers: [2, 1, 0] }, { name: 'jane', age: 25 }]],
+    ['repositories', [{ id: 1 }, { id: 0 }]], [20, [2, 1, 0]], [30, new PhpArray([[2, 'a'], [1, 'b'], [0, 'c']])],
+  ]);
+  const expected = new PhpArray<string | number, unknown>([
+    [20, [0, 1, 2]], [30, ['c', 'b', 'a']], ['repositories', [{ id: 0 }, { id: 1 }]],
+    ['users', [{ age: 25, name: 'jane' }, { mail: 'joe@example.com', name: 'joe', numbers: [0, 1, 2] }]],
+  ]);
+  this.assertEquals(expected, Arr.sortRecursive(array));
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testSortRecursiveDesc', { case: SupportArrTest }, async function () {
+  const array = {
+    empty: [], nested: { level1: { level2: { level3: [2, 3, 1] }, values: [4, 5, 6] } },
+    mixed: new PhpArray<string | number, unknown>([['a', 1], [2, 'b'], ['c', 3], [1, 'd']]),
+    numbered_index: new PhpArray([[1, 'e'], [3, 'c'], [4, 'b'], [5, 'a'], [2, 'd']]),
+  };
+  const expected = {
+    empty: [], mixed: new PhpArray<string | number, unknown>([['c', 3], ['a', 1], [2, 'b'], [1, 'd']]),
+    nested: { level1: { values: [6, 5, 4], level2: { level3: [3, 2, 1] } } },
+    numbered_index: new PhpArray([[5, 'a'], [4, 'b'], [3, 'c'], [2, 'd'], [1, 'e']]),
+  };
+  this.assertEquals(expected, Arr.sortRecursiveDesc(array));
+});
+
+// DateTime belongs to Support; these complete bodies stop at that dependency.
+class DateTime { constructor() { throw new BlockedByComponentError("support"); } }
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testAccessible', { case: SupportArrTest }, async function () {
+  this.assertTrue(Arr.accessible([]));
+  this.assertTrue(Arr.accessible([1, 2]));
+  this.assertTrue(Arr.accessible({ a: 1, b: 2 }));
+  this.assertTrue(Arr.accessible(new Collection()));
+  this.assertFalse(Arr.accessible(null));
+  this.assertFalse(Arr.accessible('abc'));
+  this.assertFalse(Arr.accessible(new stdClass()));
+  this.assertFalse(Arr.accessible(Object.assign(new stdClass(), { a: 1, b: 2 })));
+  this.assertFalse(Arr.accessible(123));
+  this.assertFalse(Arr.accessible(12.34));
+  this.assertFalse(Arr.accessible(true));
+  this.assertFalse(Arr.accessible(new DateTime()));
+  this.assertFalse(Arr.accessible(() => null));
+});
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testArrayable', { case: SupportArrTest }, async function () {
+  this.assertTrue(Arr.arrayable([]));
+  this.assertTrue(Arr.arrayable(new TestArrayableObject()));
+  this.assertTrue(Arr.arrayable(new TestJsonableObject()));
+  this.assertTrue(Arr.arrayable(new TestJsonSerializeObject()));
+  this.assertTrue(Arr.arrayable(new TestTraversableAndJsonSerializableObject()));
+  this.assertFalse(Arr.arrayable(null));
+  this.assertFalse(Arr.arrayable('abc'));
+  this.assertFalse(Arr.arrayable(new stdClass()));
+  this.assertFalse(Arr.arrayable(Object.assign(new stdClass(), { a: 1, b: 2 })));
+  this.assertFalse(Arr.arrayable(123));
+  this.assertFalse(Arr.arrayable(12.34));
+  this.assertFalse(Arr.arrayable(true));
+  this.assertFalse(Arr.arrayable(new DateTime()));
+  this.assertFalse(Arr.arrayable(() => null));
 });
