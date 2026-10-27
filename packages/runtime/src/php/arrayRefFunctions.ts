@@ -4,7 +4,9 @@
 // `Collection::sortBy` (action item epic-14-item-6-runtime-sort-string-functions, ESC-14.2-4): `uasort`, a port of
 // `php_usort` with `php_array_user_compare_unstable`, and the string comparisons `strcmp`, `strcasecmp`, `strnatcmp`,
 // `strnatcasecmp` and `strcoll` (`ext/standard/string.c`, `Zend/zend_operators.c`), which call the comparators the
-// sorts use.
+// sorts use. Beside them, for `whereBetween` / `whereNotBetween` (action item
+// epic-14-item-8-runtime-round-string-array-pointer, ESC-14.3-1): `reset` and `end`, which read the array without
+// moving anything, as the runtime's arrays carry no internal pointer.
 //
 // A by-reference parameter is a `Ref` (AD-9, DIV-9.2) whose `value` is an AD-9 array. PHP arrays are values, so each
 // function builds a new array and writes it to `ref.value` (PHP's copy-on-write: no other holder of the old JS value
@@ -13,6 +15,7 @@
 // sorts), the array goes out through `arrayFromEntries` too, unless the input is a `PhpArray` whose next free index
 // (`nNextFreeElement`, which a later `[]` append reads) differs from the one the result's keys give: then it stays a
 // `PhpArray` with PHP's index. PHP's warnings are not reproduced. Everything is synchronous.
+import { isContractToken } from "../registry/registry";
 import { numericCompare, regularCompare, requiredCallback, toPhpArray } from "./arrayFunctions";
 import { arrayEntries, toInt, toPhpString } from "./casts";
 import { LONE_SURROGATE, utf8 } from "./mangle";
@@ -103,6 +106,38 @@ export function array_pop(array: Ref<unknown>): unknown {
     array.value = arrayFromEntries(rest);
   }
   return removed;
+}
+
+/** The entries of the array a `reset` / `end` `Ref` holds; an object that is no array is PHP 8.1's deprecated form. */
+function pointerEntries(fn: string, ref: unknown): [PhpArrayKey, unknown][] {
+  if (ref instanceof Ref) {
+    const held: unknown = (ref as Ref<unknown>).value;
+    if (isContractToken(held)) {
+      // A contract token is its class-string (AD-9).
+      throw argumentTypeError(fn, 1, "array", "array", "");
+    }
+    if ((typeof held === "object" || typeof held === "function") && held !== null && !isContractToken(held) && phpType(held) === "object") {
+      throw new TypeError(`${fn}(): an object's internal pointer (deprecated since PHP 8.1) is not ported; pass a Ref holding an array`);
+    }
+  }
+  return referencedArray(fn, ref).entries;
+}
+
+/**
+ * PHP's `reset(&$array)`: the first value of `array.value`, or `false` for an empty array. `array.value` is left as it
+ * is: the runtime's arrays carry no internal pointer to move. Throws a JS `TypeError` for an argument that is no `Ref`
+ * (DIV-9.2) and for a `Ref` holding an object (PHP 8.1 deprecated `reset` on an object; not ported), and PHP's
+ * `TypeError` `reset(): Argument #1 ($array) must be of type array, int given` for a `Ref` holding a scalar or null.
+ */
+export function reset(array: Ref<unknown>): unknown {
+  const entries = pointerEntries("reset", array);
+  return entries.length === 0 ? false : (entries[0]![1] ?? null);
+}
+
+/** PHP's `end(&$array)`: the last value of `array.value`, or `false` for an empty array. Throws as `reset` does. */
+export function end(array: Ref<unknown>): unknown {
+  const entries = pointerEntries("end", array);
+  return entries.length === 0 ? false : (entries[entries.length - 1]![1] ?? null);
 }
 
 /**

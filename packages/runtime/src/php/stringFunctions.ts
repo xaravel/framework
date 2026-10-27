@@ -2,7 +2,9 @@
 // epic-14-item-2-runtime-generators-functions), under their PHP names, ports of PHP 8.5.11's `ext/standard/string.c`
 // in coercive typing mode: `str_starts_with`, `substr`, and (action item epic-14-item-3-runtime-type-tests-functions,
 // ESC-14.1-9) `implode` and `explode`, and (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1)
-// `str_contains`, `strlen` and `lcfirst`. A PHP string is its bytes, so `substr` counts UTF-8 bytes.
+// `str_contains`, `strlen` and `lcfirst`, and (action item epic-14-item-8-runtime-round-string-array-pointer,
+// ESC-14.3-1) `strtoupper`, `trim` (`php_trim_int` with `php_charmask`) and `chunk_split`. A PHP string is its bytes,
+// so `substr`, `trim` and `chunk_split` work on UTF-8 bytes.
 // A result or input JS cannot hold (a result that splits a UTF-8 sequence, an input holding a lone surrogate) throws a
 // JS `TypeError` naming the limit, as the codecs do.
 import { LONE_SURROGATE, utf8 } from "./mangle";
@@ -23,6 +25,15 @@ function wellFormed(fn: string, s: string): string {
     throw new TypeError(`${fn}(): the string holds a lone surrogate, which has no UTF-8 form`);
   }
   return s;
+}
+
+/** `bytes` as a JS string; a JS `TypeError` naming `fn` when they split a UTF-8 sequence. */
+function decodeResult(fn: string, bytes: Uint8Array): string {
+  try {
+    return decoder.decode(bytes);
+  } catch {
+    throw new TypeError(`${fn}(): the result splits a UTF-8 sequence, which JS cannot hold`);
+  }
 }
 
 /**
@@ -96,11 +107,7 @@ export function substr(string: unknown, offset: unknown, length: unknown = null)
   if (count === size) {
     return s;
   }
-  try {
-    return decoder.decode(bytes.subarray(Number(from), Number(from + count)));
-  } catch {
-    throw new TypeError("substr(): the result splits a UTF-8 sequence, which JS cannot hold");
-  }
+  return decodeResult("substr", bytes.subarray(Number(from), Number(from + count)));
 }
 
 /**
@@ -173,4 +180,95 @@ export function explode(separator: unknown, string: unknown, limit: unknown = 92
     return parts.length === 1 || keep <= 0n ? [] : parts.slice(0, Number(keep));
   }
   return [subject];
+}
+
+/**
+ * PHP's `strtoupper($string)` (`zend_string_toupper`): `string` with each ASCII `a`-`z` raised; every other byte, so
+ * every non-ASCII character, is unchanged (`strtoupper("é ß")` is `"é ß"`). Coerced as PHP's `string` parameter;
+ * anything else throws PHP's `TypeError`.
+ */
+export function strtoupper(string: unknown): string {
+  const s = wellFormed("strtoupper", stringParameter("strtoupper", 1, "string", string));
+  return s.replace(/[a-z]+/g, (run) => run.toUpperCase());
+}
+
+/**
+ * PHP's `php_charmask`: the 256-byte mask of `list`, `x..y` ranges included. A malformed `..` (no character on its
+ * left or right, a decreasing range, or `a..b..c`) skips its first `.` and goes on, as PHP does; PHP's warning is not
+ * reproduced.
+ */
+function charmask(list: Uint8Array): Uint8Array {
+  const mask = new Uint8Array(256);
+  const end = list.length;
+  for (let i = 0; i < end; i++) {
+    const c = list[i]!;
+    if (i + 3 < end && list[i + 1] === 0x2e && list[i + 2] === 0x2e && list[i + 3]! >= c) {
+      mask.fill(1, c, list[i + 3]! + 1);
+      i += 3;
+    } else if (i + 1 < end && c === 0x2e && list[i + 1] === 0x2e) {
+      continue;
+    } else {
+      mask[c] = 1;
+    }
+  }
+  return mask;
+}
+
+/**
+ * PHP's `trim($string, $characters = " \n\r\t\v\0")` (`php_trim_int`, mode 3): `string` with every leading and
+ * trailing byte in `characters` removed, over UTF-8 bytes. `characters` is a byte list with PHP's `x..y` ranges
+ * (`php_charmask`), a malformed `..` handled as PHP handles it, its warning not reproduced. Both are coerced as PHP's
+ * `string` parameters; anything else throws PHP's `TypeError`. A result that splits a UTF-8 sequence throws a JS
+ * `TypeError`.
+ */
+export function trim(string: unknown, characters: unknown = " \n\r\t\v\0"): string {
+  const s = wellFormed("trim", stringParameter("trim", 1, "string", string));
+  const list = wellFormed("trim", stringParameter("trim", 2, "characters", characters));
+  const bytes = utf8.encode(s);
+  const mask = charmask(utf8.encode(list));
+  let start = 0;
+  let end = bytes.length;
+  while (start !== end && mask[bytes[start]!] === 1) {
+    start++;
+  }
+  while (start !== end && mask[bytes[end - 1]!] === 1) {
+    end--;
+  }
+  if (end - start === bytes.length) {
+    return s;
+  }
+  return decodeResult("trim", bytes.subarray(start, end));
+}
+
+/**
+ * PHP's `chunk_split($string, $length = 76, $separator = "\r\n")`, over UTF-8 bytes: every `length` bytes of `string`,
+ * and the remainder, each followed by `separator`; a `length` above the byte length gives `string . separator` (so
+ * `""` gives `separator`). Coerced as PHP's `string`, `int` and `string` parameters; anything else throws PHP's
+ * `TypeError`, and a `length` below 1 PHP's `ValueError` `chunk_split(): Argument #2 ($length) must be greater than
+ * 0`. A result that splits a UTF-8 sequence throws a JS `TypeError`.
+ */
+export function chunk_split(string: unknown, length: unknown = 76, separator: unknown = "\r\n"): string {
+  const s = wellFormed("chunk_split", stringParameter("chunk_split", 1, "string", string));
+  const chunk = BigInt(intParameter("chunk_split", 2, "length", length));
+  const end = wellFormed("chunk_split", stringParameter("chunk_split", 3, "separator", separator));
+  if (chunk <= 0n) {
+    throw new ValueError("chunk_split(): Argument #2 ($length) must be greater than 0");
+  }
+  const bytes = utf8.encode(s);
+  if (chunk > BigInt(bytes.length)) {
+    return s + end;
+  }
+  const size = Number(chunk);
+  const tail = utf8.encode(end);
+  const chunks = Math.ceil(bytes.length / size);
+  const out = new Uint8Array(bytes.length + chunks * tail.length);
+  let q = 0;
+  for (let p = 0; p < bytes.length; p += size) {
+    const piece = bytes.subarray(p, Math.min(p + size, bytes.length));
+    out.set(piece, q);
+    q += piece.length;
+    out.set(tail, q);
+    q += tail.length;
+  }
+  return decodeResult("chunk_split", out);
 }

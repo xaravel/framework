@@ -16,7 +16,7 @@ import "./UnitEnum";
 import "./BackedEnum";
 export { ArgumentCountError } from "./ArgumentCountError";
 export { ArithmeticError } from "./ArithmeticError";
-export { abs } from "./mathFunctions";
+export { abs, PHP_ROUND_HALF_DOWN, PHP_ROUND_HALF_EVEN, PHP_ROUND_HALF_ODD, PHP_ROUND_HALF_UP, round } from "./mathFunctions";
 export { ArrayAccess } from "./ArrayAccess";
 export { ArrayIterator } from "./ArrayIterator";
 export { ArrayObject } from "./ArrayObject";
@@ -68,6 +68,8 @@ export {
   array_unshift,
   arsort,
   asort,
+  end,
+  reset,
   strcasecmp,
   strcmp,
   strcoll,
@@ -172,10 +174,11 @@ export { phpSerialize } from "./phpSerialize";
 export { getDebugType, getDebugType as get_debug_type, gettype } from "./phpType";
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
+export { RoundingMode } from "./RoundingMode";
 export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
 export { sprintf } from "./sprintf";
-export { explode, implode, lcfirst, str_contains, str_starts_with, strlen, substr } from "./stringFunctions";
-export { is_a, is_array, is_callable, is_iterable, is_null, is_object, is_string } from "./typeTests";
+export { chunk_split, explode, implode, lcfirst, str_contains, str_starts_with, strlen, strtoupper, substr, trim } from "./stringFunctions";
+export { is_a, is_array, is_bool, is_callable, is_iterable, is_null, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";
