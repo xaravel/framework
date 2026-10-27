@@ -2,9 +2,9 @@
 // the ArrayAccess forms of DIV-12.6 and DIV-12.17 (XT-collections-2), and LazyCollection's sources (XT-collections-3).
 // One test per Xaravel acceptance-criterion row of the manifest, in order. Story 14.2 adds XT-collections-4 (how the
 // search members read their arguments, through the runtime's PHP comparisons and DIV-12.20, and the AD-26 options forms
-// of `random`, `splice`, `Arr.first`, `Arr.last` and `Arr.random`) and XT-collections-5 (`sole` and `firstOrFail`
-// throwing `ItemNotFoundException` / `MultipleItemsFoundException`, registered under their Upstream FQCNs, and the
-// messages of `random` and `shift`).
+// of `random`, `splice`, `sortBy`, `Arr.first`, `Arr.last` and `Arr.random`) and XT-collections-5 (`sole` and
+// `firstOrFail` throwing `ItemNotFoundException` / `MultipleItemsFoundException`, registered under their Upstream
+// FQCNs, the messages of `random` and `shift`, and `sortBy`'s `UnhandledMatchError` for an unmatched `descending`).
 //
 // XT-collections-1 compares with the signed Oracle fixture of `conformance/oracle-requests/14.1.jsonl`; a missing
 // fixture fails the test. F-10 recorded reason: XT-collections-1 is a Xaravel Test, so no Upstream test exists whose
@@ -19,7 +19,7 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
-import { arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, PhpArray, resolveClass, RuntimeException } from "@xaravel/runtime";
+import { arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, PhpArray, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -312,7 +312,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-collections-4",
-  "contains('1') on collect([1]) is true and containsStrict('1') on the same collection is false: contains compares with the runtime's PHP loose comparison (looseEquals, so '1' == 1 and, in PHP 8, 0 != 'a') and containsStrict with PHP's === (identical, so an int is never its numeric string, and two arrays are identical only with the same keys in the same order); contains(key, value) and containsStrict(key, value) compare an item's key the same way; contains(callback) is true exactly when the callback accepts an item; doesntContain(value) and doesntContain(key, value) are the negations of contains; some(value) and some(callback) agree with contains; a lone object argument to these members is the PHP value, never an options object (DIV-12.20); all of this holds on Collection and LazyCollection. On the AD-26 side, a trailing plain object is the options object: random({ number: 2 }) and random({ number: 2, preserveKeys: true }) match random(2) and random(2, true) in count and kept keys, on both classes, and LazyCollection's returns a LazyCollection; splice(1, { length: 1, replacement: ['x'] }) matches splice(1, 1, ['x']); and Arr.first(array, { callback, default }), Arr.last(array, { callback, default }) and Arr.random(array, { number, preserveKeys }) match their positional forms (AD-26). first(null, { a: 1 }) and last(null, { a: 1 }) on an empty collection give { a: 1 }: a lone object after the callback is the PHP default, never Arr.first / Arr.last's options object (DIV-12.20), on both classes. A dotted pull('a.b') on collect({ a: { b: 1, c: 2 } }) returns 1 and leaves { a: { c: 2 } }, its nested child a plain object rather than a PhpArray, and except('a.b') gives the same result while leaving the original collection unchanged",
+  "contains('1') on collect([1]) is true and containsStrict('1') on the same collection is false: contains compares with the runtime's PHP loose comparison (looseEquals, so '1' == 1 and, in PHP 8, 0 != 'a') and containsStrict with PHP's === (identical, so an int is never its numeric string, and two arrays are identical only with the same keys in the same order); contains(key, value) and containsStrict(key, value) compare an item's key the same way; contains(callback) is true exactly when the callback accepts an item; doesntContain(value) and doesntContain(key, value) are the negations of contains; some(value) and some(callback) agree with contains; a lone object argument to these members is the PHP value, never an options object (DIV-12.20); all of this holds on Collection and LazyCollection. On the AD-26 side, a trailing plain object is the options object: random({ number: 2 }) and random({ number: 2, preserveKeys: true }) match random(2) and random(2, true) in count and kept keys, on both classes, and LazyCollection's returns a LazyCollection; splice(1, { length: 1, replacement: ['x'] }) matches splice(1, 1, ['x']); and Arr.first(array, { callback, default }), Arr.last(array, { callback, default }) and Arr.random(array, { number, preserveKeys }) match their positional forms (AD-26). first(null, { a: 1 }) and last(null, { a: 1 }) on an empty collection give { a: 1 }: a lone object after the callback is the PHP default, never Arr.first / Arr.last's options object (DIV-12.20), on both classes. A dotted pull('a.b') on collect({ a: { b: 1, c: 2 } }) returns 1 and leaves { a: { c: 2 } }, its nested child a plain object rather than a PhpArray, and except('a.b') gives the same result while leaving the original collection unchanged. sortBy(callback, { descending: true }) matches sortBy(callback, SORT_REGULAR, true), and sortBy(callback, { options: SORT_STRING }) matches sortBy(callback, SORT_STRING), keys kept, on both classes (AD-26); sortBy([['name', 'asc'], ['age', 'desc']]) sorts by each comparison in turn, and value('balance') reads an object's property and a nested collection's key, on both classes",
   () => {
     for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
       Assert.assertTrue(make([1]).contains("1"), "loose: '1' == 1");
@@ -363,6 +363,36 @@ xaravelTest(
       }
     }
 
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
+      const rows = [{ n: 10 }, { n: 9 }, { n: 2 }];
+      const byN = (row: { n: number }) => row.n;
+      const descending = make(rows).sortBy(byN, { descending: true }).all();
+      Assert.assertEquals(make(rows).sortBy(byN, SORT_REGULAR, true).all(), descending);
+      Assert.assertEquals([[0, { n: 10 }], [1, { n: 9 }], [2, { n: 2 }]], arrayEntries(descending as object), "descending, keys kept");
+      const asStrings = make(rows).sortBy(byN, { options: SORT_STRING }).all();
+      Assert.assertEquals(make(rows).sortBy(byN, SORT_STRING).all(), asStrings);
+      Assert.assertEquals([[0, { n: 10 }], [2, { n: 2 }], [1, { n: 9 }]], arrayEntries(asStrings as object), "SORT_STRING orders '10' < '2' < '9', keys kept");
+      Assert.assertEquals([[2, { n: 2 }], [1, { n: 9 }], [0, { n: 10 }]], arrayEntries(make(rows).sortBy(byN, {}).all() as object), "an empty options object is the defaults");
+
+      const people = [
+        { name: "b", age: 1 },
+        { name: "a", age: 2 },
+        { name: "a", age: 3 },
+      ];
+      Assert.assertEquals(
+        [
+          { name: "a", age: 3 },
+          { name: "a", age: 2 },
+          { name: "b", age: 1 },
+        ],
+        make(people).sortBy([["name", "asc"], ["age", "desc"]]).values().all(),
+        "a list of comparisons sorts by each in turn (sortByMany)",
+      );
+
+      Assert.assertSame(5, make([Object.assign(new stdClass(), { id: 1 }), Object.assign(new stdClass(), { balance: 5 })]).value("balance"), "value() reads an object's property");
+      Assert.assertSame(7, make([collect({ x: 1 }), collect({ balance: 7 })]).value("balance"), "value() reads a nested collection's key");
+    }
+
     Assert.assertInstanceOf(LazyCollection, new LazyCollection([1, 2, 3]).random({ number: 2 }));
 
     const pulled = collect({ a: { b: 1, c: 2 } });
@@ -408,7 +438,7 @@ xaravelTest(
 
 xaravelTest(
   "XT-collections-5",
-  "sole() with no item, or no matching item, throws ItemNotFoundException, and with two matching items throws MultipleItemsFoundException whose getCount() is 2 and whose message is '2 items were found.'; firstOrFail() with no matching item throws ItemNotFoundException and with several returns the first; both exceptions are RuntimeExceptions whose fqcn() is their Upstream FQCN (Illuminate\\Support\\ItemNotFoundException, Illuminate\\Support\\MultipleItemsFoundException), resolved through the Class Registry; the same holds for LazyCollection. random(4) on three items throws InvalidArgumentException 'You requested 4 items, but there are only 3 items available.' on Collection and LazyCollection, and Collection's shift(-1) throws InvalidArgumentException 'Number of shifted items may not be less than zero.'",
+  "sole() with no item, or no matching item, throws ItemNotFoundException, and with two matching items throws MultipleItemsFoundException whose getCount() is 2 and whose message is '2 items were found.'; firstOrFail() with no matching item throws ItemNotFoundException and with several returns the first; both exceptions are RuntimeExceptions whose fqcn() is their Upstream FQCN (Illuminate\\Support\\ItemNotFoundException, Illuminate\\Support\\MultipleItemsFoundException), resolved through the Class Registry; the same holds for LazyCollection. random(4) on three items throws InvalidArgumentException 'You requested 4 items, but there are only 3 items available.' on Collection and LazyCollection, and Collection's shift(-1) throws InvalidArgumentException 'Number of shifted items may not be less than zero.'; sortBy(callback, SORT_REGULAR, 0) throws UnhandledMatchError with the message Unhandled match case 0, and sortBy(callback, SORT_REGULAR, 'desc') with Unhandled match case 'desc', as PHP's match with no matching arm does, on Collection and LazyCollection; LazyCollection's sortBy returns without throwing and throws only when it is enumerated",
   () => {
     const caught = (run: () => unknown): unknown => {
       try {
@@ -451,6 +481,22 @@ xaravelTest(
       Assert.assertInstanceOf(InvalidArgumentException, tooMany, "random() over the count");
       Assert.assertSame("You requested 4 items, but there are only 3 items available.", (tooMany as InvalidArgumentException).getMessage());
     }
+
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => new LazyCollection(items)]) {
+      const byValue = (value: number) => value;
+      const zero = caught(() => make([2, 1]).sortBy(byValue, SORT_REGULAR, 0 as unknown as boolean).all());
+      Assert.assertInstanceOf(UnhandledMatchError, zero, "sortBy() with descending 0");
+      Assert.assertSame("Unhandled match case 0", (zero as UnhandledMatchError).getMessage());
+      const desc = caught(() => make([2, 1]).sortBy(byValue, SORT_REGULAR, "desc" as unknown as boolean).all());
+      Assert.assertInstanceOf(UnhandledMatchError, desc, "sortBy() with descending 'desc'");
+      Assert.assertSame("Unhandled match case 'desc'", (desc as UnhandledMatchError).getMessage());
+    }
+
+    const lazySorted = new LazyCollection([2, 1]).sortBy((value: number) => value, SORT_REGULAR, 0 as unknown as boolean);
+    Assert.assertInstanceOf(LazyCollection, lazySorted, "LazyCollection.sortBy() does not throw before it is enumerated");
+    const lazyZero = caught(() => lazySorted.all());
+    Assert.assertInstanceOf(UnhandledMatchError, lazyZero, "enumerating it throws");
+    Assert.assertSame("Unhandled match case 0", (lazyZero as UnhandledMatchError).getMessage());
 
     const negative = caught(() => collect(["foo", "bar", "baz"]).shift(-1));
     Assert.assertInstanceOf(InvalidArgumentException, negative, "shift() with a negative count");

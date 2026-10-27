@@ -16,8 +16,8 @@
 // `splice`, `pull`) hand them a `Ref` over the items (DIV-9.2) and keep what it holds afterwards as the items, a
 // `PhpArray`. `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
 // `...arguments` unchanged. `contains`, `doesntContain`, `doesntContainStrict`, `sole`, `hasSole`, `firstOrFail`,
-// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random` and
-// `splice` also take an options object (AD-26).
+// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random`,
+// `sortBy` and `splice` also take an options object (AD-26).
 import { CanBeEscapedWhenCastToString } from "@xaravel/contracts/support";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
@@ -32,6 +32,7 @@ import {
   array_key_exists,
   array_keys,
   array_pop,
+  array_reverse,
   array_search,
   array_shift,
   array_slice,
@@ -41,11 +42,14 @@ import {
   array_values,
   arrayEntries,
   arrayFromEntries,
+  arsort,
+  asort,
   identical,
   in_array,
   InvalidArgumentException,
   is_array,
   is_callable,
+  is_string,
   IteratorAggregate,
   JsonSerializable,
   looseEquals,
@@ -57,11 +61,27 @@ import {
   range as phpRange,
   Ref,
   registerClass,
+  SORT_FLAG_CASE,
+  SORT_LOCALE_STRING,
+  SORT_NATURAL,
+  SORT_NUMERIC,
   SORT_REGULAR,
+  SORT_STRING,
+  SortDirection,
+  spaceship,
   stdClass,
+  strcasecmp,
+  strcmp,
+  strcoll,
   Stringable,
+  strnatcasecmp,
+  strnatcmp,
+  toFloat,
   toInt,
+  toPhpString,
   Traversable,
+  uasort,
+  unhandledMatch,
   valueCopy,
 } from "@xaravel/runtime";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
@@ -71,7 +91,7 @@ import { data_get, value } from "./helpers";
 import { ItemNotFoundException } from "./ItemNotFoundException";
 import { LazyCollection } from "./LazyCollection";
 import { MultipleItemsFoundException } from "./MultipleItemsFoundException";
-import { callCallable, isOptionsObject } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject } from "./support/callables";
 
 /** The `Countable` brand `count()` and the grader read (no token; `packages/runtime/src/php/ArrayObject.ts`). */
 const COUNTABLE = Symbol.for("Countable");
@@ -661,6 +681,122 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     }
 
     return item;
+  }
+
+  /**
+   * Sort the collection by a value retriever (a callback over the item and its key, or a `data_get` key), with PHP's
+   * sort `options`, ascending or (`descending` true or `SortDirection.Descending`) descending, keys kept. A list of
+   * comparisons that is not callable sorts by each in turn (`sortByMany`). Also takes AD-26's options object
+   * `{ options, descending }` after the callback. Any other `descending` throws PHP's `UnhandledMatchError`.
+   */
+  sortBy(callback: unknown, options?: number, descending?: boolean | SortDirection): this;
+  sortBy(callback: unknown, options?: { options?: number; descending?: boolean | SortDirection }): this;
+  sortBy(callback: unknown, options: unknown = SORT_REGULAR, descending: unknown = false): this {
+    if (arguments.length === 2 && isOptionsObject(options)) {
+      ({ options = SORT_REGULAR, descending = false } = options as { options?: number; descending?: boolean | SortDirection });
+    }
+
+    if (is_array(callback) && !is_callable(callback)) {
+      return this.sortByMany(callback, options as number);
+    }
+
+    const results = new PhpArray();
+
+    const retriever = this.valueRetriever(callback);
+
+    // First we will loop through the items and get the comparator from a callback
+    // function which we were given. Then, we will sort the returned values and
+    // grab all the corresponding values for the sorted keys from this array.
+    for (const [key, value_] of arrayEntries(this.items)) {
+      results.set(key, retriever(value_, key));
+    }
+
+    const ref = new Ref<unknown>(results);
+    if (descending === false || descending === SortDirection.Ascending) {
+      asort(ref, options);
+    } else if (descending === true || descending === SortDirection.Descending) {
+      arsort(ref, options);
+    } else {
+      throw unhandledMatch(descending);
+    }
+    const sorted = itemsOf(ref);
+
+    // Once we have sorted all of the keys in the array, we will loop through them
+    // and grab the corresponding model so we can set the underlying items list
+    // to the sorted version. Then we'll just return the collection instance.
+    for (const key of array_keys(sorted) as PhpArrayKey[]) {
+      sorted.set(key, this.items.get(key));
+    }
+
+    return this.newInstance(sorted);
+  }
+
+  /** Sort the collection using multiple comparisons. */
+  protected sortByMany(comparisons: unknown = [], options: number = SORT_REGULAR): this {
+    const ref = new Ref<unknown>(this.items);
+
+    uasort(ref, (a: unknown, b: unknown) => {
+      for (const [, comparison_] of arrayEntries(comparisons as object)) {
+        const comparison = Arr.wrap(comparison_) as object;
+
+        const prop = arrayRead(comparison, 0);
+
+        const direction_ = Arr.get(comparison, 1, true);
+        const direction =
+          direction_ === true || direction_ === "asc" || direction_ === SortDirection.Ascending
+            ? SortDirection.Ascending
+            : direction_ === false || direction_ === "desc" || direction_ === SortDirection.Descending
+              ? SortDirection.Descending
+              : SortDirection.Descending; // for backwards compatibility
+
+        let result: unknown;
+
+        if (!is_string(prop) && is_callable(prop)) {
+          result = callCallable(prop, valueCopy(a), valueCopy(b));
+        } else {
+          let values: object = [data_get(a, prop), data_get(b, prop)];
+
+          if (direction === SortDirection.Descending) {
+            values = array_reverse(values) as object;
+          }
+
+          if ((options & SORT_FLAG_CASE) === SORT_FLAG_CASE) {
+            if ((options & SORT_NATURAL) === SORT_NATURAL) {
+              result = strnatcasecmp(arrayRead(values, 0), arrayRead(values, 1));
+            } else {
+              result = strcasecmp(arrayRead(values, 0), arrayRead(values, 1));
+            }
+          } else {
+            switch (options) {
+              case SORT_NUMERIC:
+                result = spaceship(toFloat(arrayRead(values, 0)), toFloat(arrayRead(values, 1)));
+                break;
+              case SORT_STRING:
+                result = strcmp(arrayRead(values, 0), arrayRead(values, 1));
+                break;
+              case SORT_NATURAL:
+                result = strnatcmp(toPhpString(arrayRead(values, 0)), toPhpString(arrayRead(values, 1)));
+                break;
+              case SORT_LOCALE_STRING:
+                result = strcoll(arrayRead(values, 0), arrayRead(values, 1));
+                break;
+              default:
+                result = spaceship(arrayRead(values, 0), arrayRead(values, 1));
+            }
+          }
+        }
+
+        if (result === 0) {
+          continue;
+        }
+
+        return result;
+      }
+
+      return null;
+    });
+
+    return this.newInstance(itemsOf(ref));
   }
 
   /**

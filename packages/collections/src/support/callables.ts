@@ -102,8 +102,9 @@ export function offsetIsSet(target: object, key: unknown): boolean {
 
 /**
  * Whether `value` is an AD-26 options object: a plain object (prototype `Object.prototype` or `null`). A member reads
- * one only in the position where PHP never takes an array (`random`'s `$number`, `splice`'s `$length`), so the reading
- * is unambiguous.
+ * one only in a position where PHP never takes an array, so the reading is unambiguous: `random`'s `$number` (an int,
+ * a callable or null), `splice`'s `$length` (an int or null), `sortBy`'s `$options` (an int), and `Arr.first` /
+ * `Arr.last`'s `$callback` (a `?callable`, so a plain object there is never the callback).
  */
 export function isOptionsObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {

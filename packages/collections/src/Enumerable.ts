@@ -7,10 +7,11 @@
 //
 // The TypeScript interface covers the members Stories 14.1 and 14.2 port; later Collections Stories extend it with
 // theirs. `has`, `hasAny`, `except` and `only` take a list of keys or the keys as arguments (PHP's `func_get_args()`).
-// `random` has only the positional form here, as Upstream's interface declares `random($number = null)`.
+// `random` has only the positional form here, as Upstream's interface declares `random($number = null)`; `sortBy`
+// also takes AD-26's options object `{ options, descending }`.
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { type ContractToken, contract } from "@xaravel/contracts";
-import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArrayKey, type Traversable } from "@xaravel/runtime";
+import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArrayKey, type SortDirection, type Traversable } from "@xaravel/runtime";
 
 declare const EnumerableBrand: unique symbol;
 
@@ -107,6 +108,10 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
 
   /** Get the first item in the collection but throw an exception if no matching items exist. */
   firstOrFail(key?: unknown, operator?: unknown, value?: unknown): unknown;
+
+  /** Sort the collection using the given callback. */
+  sortBy(callback: unknown, options?: number, descending?: boolean | SortDirection): Enumerable;
+  sortBy(callback: unknown, options?: { options?: number; descending?: boolean | SortDirection }): Enumerable;
 
   /** Take the first or last {$limit} items. */
   take(limit: number): Enumerable;
@@ -205,6 +210,7 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     slice: ["offset", "length"],
     sole: ["key", "operator", "value"],
     firstOrFail: ["key", "operator", "value"],
+    sortBy: ["callback", "options", "descending"],
     take: ["limit"],
     pluck: ["value", "key"],
     isEmpty: [],
