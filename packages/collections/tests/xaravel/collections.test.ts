@@ -44,7 +44,7 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
-import { array_values, arrayEntries, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
+import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -1065,4 +1065,281 @@ xaravelTest(
     });
 
   },
+);
+
+// F-10 recorded reason for 14.5.jsonl: XT-collections-9 has no Upstream test. Its request checks only the
+// criterion's numeric fractions, natural strings, multiple keys and stable ties, with mixed/string keys so keys(),
+// toArray() and toJson() expose FR-23.1-3 key order and array shapes on both classes. No fixture is embedded.
+xaravelTest(
+  "XT-collections-9",
+  "sortBy numeric fractions, natural strings, multiple sort keys and stable ties preserve Oracle key order and array/JSON shapes on Collection and LazyCollection (FR-23.1, FR-23.3); the signed fixture is required",
+  () => {
+    const cases = [
+      [new PhpArray<string | number, unknown>([["late", { price: 1.9 }], [7, { price: "10.2" }], ["first", { price: 1.2 }], ["tie", { price: 1.2 }], ["last", { price: "10.5" }]]), "price", SORT_NUMERIC],
+      [{ c: { name: "img10" }, a: { name: "img2" }, b: { name: "img1" } }, "name", SORT_NATURAL],
+      [new PhpArray<string | number, unknown>([[9, { group: 2, price: 1.5 }], ["first", { group: 1, price: 1.2 }], [3, { group: 1, price: 1.9 }], ["tie", { group: 1, price: 1.9 }]]), [["group", "asc"], ["price", "desc"]], SORT_NUMERIC],
+      [new PhpArray<string | number, unknown>([[5, { rank: 1 }], ["a", { rank: 1 }], [2, { rank: 1 }]]), "rank", SORT_NUMERIC],
+    ] as const;
+    const actual: unknown[] = [];
+    for (const [items, callback, options] of cases) {
+      for (const make of [(items: unknown) => collect(items), (items: unknown) => LazyCollection.make(items)]) {
+        const sorted = make(items).sortBy(callback, options);
+        actual.push(sorted.keys().all(), sorted.toArray(), sorted.toJson());
+      }
+    }
+    const output = oracle("XT-collections-9", "conformance/oracle-requests/14.5.jsonl");
+    Assert.assertSame(actual.length, output.results.length);
+    actual.forEach((value, index) => Assert.assertSame(result(output, index), value, `sort expression ${index}`));
+  },
+);
+
+// XT-collections-10 remains incomplete under ESC-14.5-1 until mapInto's enum runtime contract lands.
+
+xaravelTest(
+  "XT-collections-11",
+  "mapAsync and eachAsync await callbacks sequentially in original key order on both classes, copy array values, map preserves keys and each stops on false; every independent new sync callback API rejects async callbacks in tsc and lint; pipe pipelines copy array results, run in order and propagate errors, while lazy mapping preserves duplicate keys before materialization and sorting/reverse defer enumeration (AD-6, DIV-1.2)",
+  async () => {
+    const operations = [
+      "map(async (value: number) => value)",
+      "each(async () => true)",
+      "flatMap(async (value: number) => [value])",
+      "mapWithKeys(async (value: number) => ({ value }))",
+      "sort(async (a: number, b: number) => a - b)",
+      "sortByDesc(async (value: number) => value)",
+      "sortByDesc([async (a: number, b: number) => a - b])",
+      "sortByDesc([[async (a: number, b: number) => a - b, true]])",
+      "min(async (value: number) => value)",
+      "max(async (value: number) => value)",
+      "reduce(async (carry: number, value: number) => carry + value, 0)",
+      "reduceWithKeys(async (carry: number, value: number) => carry + value, 0)",
+      "reduceInto(0, async () => true)",
+      "pipe(async () => 1)",
+      "pipeThrough([async (carry: number) => carry])",
+      "tap(async () => true)",
+    ];
+    const lines = [
+      'import { Arr, collect, LazyCollection, type Enumerable } from "@xaravel/collections";',
+      'const e: Enumerable = collect([1]);',
+      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => operations.map((operation) => `${operation.startsWith("pipe(") ? "void " : ""}${target}.${operation};`)),
+      'Arr.mapWithKeys([1], async (value: number) => ({ value }));',
+      'const descendingComparison: Extract<Parameters<typeof e.sortByDesc<number>>[0], (...args: number[]) => unknown> = async (a: number, b: number) => a - b; void descendingComparison;',
+      'const pipelineCallback: Parameters<typeof e.pipeThrough<number>>[0][number] = async (carry: number) => carry; void pipelineCallback;',
+    ];
+    const invalid = lines.join("\n") + "\n";
+    const diagnosticLines = lines.slice(2).map((_, index) => index + 3);
+    await withFixture(invalid, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertNotEquals(0, tsc.code, tsc.output);
+      Assert.assertSame(diagnosticLines, tsc.errors.map((entry) => Number(entry.split(":")[0])), tsc.output);
+      const lint = oxlintFixture(dir);
+      Assert.assertNotEquals(0, lint.code, lint.output);
+      Assert.assertSame(diagnosticLines.filter((line) => !lines[line - 1]!.includes(".pipeThrough([") && !lines[line - 1]!.includes(".sortByDesc([")).map((line) => `${line}:no-misused-promises`), lint.diagnostics, lint.output);
+    });
+    const valid = invalid.replaceAll("async ", "") + [
+      'e.sortByDesc("name");', 'e.sortByDesc(0);', 'e.sortByDesc(null);',
+      'e.sortByDesc(["name", ["age", "desc"]]);',
+    ].join("\n");
+    await withFixture(valid, async (dir) => {
+      const tsc = await tscFixture(dir);
+      Assert.assertSame(0, tsc.code, tsc.output);
+      const lint = oxlintFixture(dir);
+      Assert.assertSame(0, lint.code, lint.output);
+    });
+    for (const make of [(items: unknown) => collect(items), (items: unknown) => LazyCollection.make(items)]) {
+      const items = new PhpArray<string | number, number[]>([[5, [1]], ["a", [2]], [2, [3]]]);
+      const source = make(items);
+      const events: unknown[] = [];
+      const mapped = await source.mapAsync(async (value: number[], key: unknown) => {
+        events.push(["start", key]);
+        await Promise.resolve();
+        value.push(9);
+        events.push(["end", key]);
+        return value;
+      });
+      Assert.assertSame([["start", 5], ["end", 5], ["start", "a"], ["end", "a"], ["start", 2], ["end", 2]], events);
+      Assert.assertSame([5, "a", 2], mapped.keys().all());
+      Assert.assertSame(new PhpArray<string | number, unknown>([[5, [1, 9]], ["a", [2, 9]], [2, [3, 9]]]), mapped.all());
+      Assert.assertSame(items, source.all(), "mapAsync gives each callback an array copy");
+      const reused: number[] = [];
+      const copied = await source.mapAsync(async (_value: unknown, key: unknown) => {
+        await Promise.resolve();
+        reused.push(typeof key === "number" ? key : 99);
+        return reused;
+      });
+      reused.push(100);
+      Assert.assertSame(new PhpArray<string | number, unknown>([[5, [5]], ["a", [5, 99]], [2, [5, 99, 2]]]), copied.all());
+      const retained = [1];
+      const piped = source.pipe(() => retained);
+      retained.push(2);
+      Assert.assertSame([1], piped, "pipe copies its callback result immediately");
+      const pipelineEvents: unknown[] = [];
+      const pipeline = source.pipeThrough([
+        (carry: unknown) => { Assert.assertSame(source, carry); pipelineEvents.push("first"); return retained; },
+        (carry: number[]) => { pipelineEvents.push("second"); carry.push(3); return carry; },
+      ]);
+      retained.push(4);
+      Assert.assertSame(["first", "second"], pipelineEvents);
+      Assert.assertSame([1, 2, 3], pipeline);
+      Assert.assertSame([1, 2, 4], retained, "pipeline callbacks receive value copies");
+      Assert.assertSame(source, source.pipeThrough([]));
+      const pipeError = new Error("pipe failed");
+      for (const execute of [
+        () => source.pipe(() => { throw pipeError; }),
+        () => source.pipeThrough([() => { throw pipeError; }, () => { pipelineEvents.push("unreachable"); }]),
+      ]) {
+        let failure: unknown = null;
+        try { execute(); } catch (error) { failure = error; }
+        Assert.assertSame(pipeError, failure);
+      }
+      Assert.assertSame(["first", "second"], pipelineEvents);
+      Assert.assertSame(1, make([1, Number.NaN]).max());
+      const maximumEvents: unknown[] = [];
+      const maximum = make([null, 1, 2]).max((value: number) => {
+        maximumEvents.push(value);
+        return value === 1 ? null : 7;
+      });
+      Assert.assertSame([1, 2], maximumEvents, "max filters null source items before invoking the retriever, while a null retrieved value remains an accumulator candidate");
+      Assert.assertSame(7, maximum);
+      const sortedKeys = make(new PhpArray<string | number, number>([[5, 2], ["name", 3], [2, 1]])).sortDesc();
+      Assert.assertSame(["name", 5, 2], sortedKeys.keys().all());
+      Assert.assertSame(new PhpArray<string | number, number>([["name", 3], [5, 2], [2, 1]]), sortedKeys.all());
+      Assert.assertSame({ mapped: 1 }, make([1]).mapWithKeys(() => collect({ mapped: 1 })).all());
+
+      class ComparableRating {
+        constructor(public rating: number) {}
+        [Symbol.for("xaravel.php.props")](): { rating: number } { return { rating: this.rating }; }
+      }
+      const first = new ComparableRating(2);
+      const second = new ComparableRating(1);
+      const third = new ComparableRating(3);
+      const candidates = [first, second, third];
+      let retrievals = 0;
+      const minimum = make([0, 1, 2]).min((value: number) => {
+        retrievals++;
+        if (value === 2) { second.rating = 4; }
+        return candidates[value]!;
+      });
+      Assert.assertSame(3, retrievals);
+      Assert.assertSame(source instanceof LazyCollection ? third : first, minimum, "minimum preserves eager map/reject/reduce versus lazy iteration boundaries");
+      events.length = 0;
+      const returned = await source.eachAsync(async (value: number[], key: unknown) => {
+        events.push(["start", key]);
+        await Promise.resolve();
+        value.push(8);
+        events.push(["end", key]);
+        return key === "a" ? false : null;
+      });
+      Assert.assertSame(source, returned);
+      Assert.assertSame([["start", 5], ["end", 5], ["start", "a"], ["end", "a"]], events);
+      Assert.assertSame(items, source.all(), "eachAsync gives each callback an array copy");
+      for (const companion of ["mapAsync", "eachAsync"] as const) {
+        const boom = new Error("callback failed");
+        const called: unknown[] = [];
+        let failure: unknown = null;
+        try {
+          await source[companion](async (_value: unknown, key: unknown) => {
+            called.push(key);
+            await Promise.resolve();
+            if (key === "a") { throw boom; }
+            return key;
+          });
+        } catch (error) { failure = error; }
+        Assert.assertSame(boom, failure);
+        Assert.assertSame([5, "a"], called);
+      }
+    }
+    Assert.assertSame({ mapped: 1 }, Arr.mapWithKeys([1], () => collect({ mapped: 1 })));
+    const retainedReduction: number[] = [];
+    const reduction = LazyCollection.make(function* () {
+      yield 1;
+      retainedReduction.push(99);
+      yield 2;
+    }).reduce((carry: number[], value: number) => {
+      if (value === 1) { retainedReduction.push(value); return retainedReduction; }
+      carry.push(value);
+      return carry;
+    }, []);
+    Assert.assertSame([1, 2], reduction, "reduce copies callback-return arrays before advancing a lazy source");
+    for (const companion of ["mapAsync", "eachAsync"] as const) {
+      const sourceFailure = new Error("source failed");
+      const sourceEvents: unknown[] = [];
+      const throwingSource = LazyCollection.make(function* () {
+        try { yield keyed("a", 1); throw sourceFailure; }
+        finally { sourceEvents.push("finally"); }
+      });
+      let failure: unknown = null;
+      try {
+        await throwingSource[companion](async (value: number, key: unknown) => {
+          sourceEvents.push([key, value]);
+          await Promise.resolve();
+          return value;
+        });
+      } catch (error) { failure = error; }
+      Assert.assertSame(sourceFailure, failure);
+      Assert.assertSame([["a", 1], "finally"], sourceEvents);
+    }
+    const duplicateEvents: unknown[] = [];
+    const duplicateResult = await LazyCollection.make(function* () {
+      yield keyed(5, 1); yield keyed("name", 2); yield keyed(5, 3);
+    }).mapAsync(async (value: number, key: unknown) => {
+      duplicateEvents.push([key, value]);
+      await Promise.resolve();
+      return value * 2;
+    });
+    Assert.assertSame([[5, 1], ["name", 2], [5, 3]], duplicateEvents);
+    Assert.assertSame([5, "name"], duplicateResult.keys().all());
+    Assert.assertSame(new PhpArray<string | number, number>([[5, 6], ["name", 4]]), duplicateResult.all());
+    const timing: unknown[] = [];
+    const timedMaximum = LazyCollection.make(function* () {
+      timing.push("null"); yield null;
+      timing.push("one"); yield 1;
+      timing.push("two"); yield 2;
+      timing.push("done");
+    }).max((value: number) => { timing.push(["retrieve", value]); return value; });
+    Assert.assertSame(2, timedMaximum);
+    Assert.assertSame(["null", "one", ["retrieve", 1], "two", ["retrieve", 2], "done"], timing);
+    for (const invalidResult of [null, false, 0, "scalar"]) {
+      Assert.assertSame([], Arr.mapWithKeys([1], () => invalidResult));
+      Assert.assertSame([], collect([1]).mapWithKeys(() => invalidResult).all());
+      const invalidLazy = LazyCollection.make([1]).mapWithKeys(() => invalidResult);
+      let failure: unknown = null;
+      try { invalidLazy.all(); } catch (error) { failure = error; }
+      Assert.assertInstanceOf(PhpError, failure);
+      Assert.assertSame('Can use "yield from" only with arrays and Traversables', (failure as PhpError).getMessage());
+    }
+    let enumerations = 0;
+    let visited = 0;
+    const lazy = LazyCollection.make(function* () {
+      enumerations++;
+      for (const value of [3, 1, 2]) { visited++; yield value; }
+    });
+    const associative = lazy.mapWithKeys((value: number) => ({ duplicate: value }));
+    Assert.assertSame(0, enumerations);
+    const iterator = associative.entries();
+    Assert.assertSame(["duplicate", 3], iterator.next().value);
+    Assert.assertSame(1, visited);
+    Assert.assertSame(["duplicate", 1], iterator.next().value);
+    Assert.assertSame(2, visited);
+    Assert.assertSame(["duplicate", 2], iterator.next().value);
+    Assert.assertSame(3, visited);
+    Assert.assertTrue(iterator.next().done);
+    Assert.assertSame({ duplicate: 2 }, associative.all());
+    Assert.assertSame(2, enumerations);
+    for (const operation of ["sort", "sortDesc", "reverse"] as const) {
+      const before = enumerations;
+      const deferred = lazy[operation]();
+      Assert.assertSame(before, enumerations);
+      const expected = operation === "sort" ? [1, 2, 3] : operation === "sortDesc" ? [3, 2, 1] : [2, 1, 3];
+      Assert.assertSame(expected, deferred.values().all());
+      Assert.assertSame(before + 1, enumerations);
+    }
+    // Owned-generator finally coverage is held under ESC-14.5-4; its complete regression is retained there.
+    const surface = JSON.parse(readFileSync(join(REPO, "packages", "collections", "async-surface.json"), "utf8")) as { method: string; root: string }[];
+    for (const klass of ["Collection", "LazyCollection", "Enumerable"]) {
+      for (const companion of ["mapAsync", "eachAsync"]) {
+        Assert.assertTrue(surface.some((entry) => entry.method === `${klass}.${companion}` && entry.root === "callback"));
+      }
+    }
+  },
+  120_000,
 );

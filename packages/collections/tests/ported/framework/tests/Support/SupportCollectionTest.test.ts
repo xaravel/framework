@@ -42,10 +42,16 @@
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
 // (PORTING.md § Test-adaptation rules, Mockery; decisions/ESC-14.1-11.md).
 import { phpArrayEntries, portedTest, TestCase } from "@xaravel/assert";
-import { Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
+import { Collection, collect, HigherOrderCollectionProxy, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { Arrayable } from "@xaravel/contracts/support";
 import { Mockery } from "@xaravel/mockery";
 import {
+  Ref,
+  SORT_NATURAL,
+  SORT_REGULAR,
+  SORT_STRING,
+  SORT_NUMERIC,
+  SortDirection,
   ArrayAccess,
   ArrayIterator,
   ArrayObject,
@@ -270,7 +276,26 @@ type StdClassWithFoo = stdClass & { foo?: unknown };
 /** A collection with the macro `foo` that testMacroable registers. */
 type WithFoo = { foo(): AnyCollection };
 
+/** Upstream's simple constructor fixture. */
+class TestCollectionMapIntoObject {
+  constructor(public value: unknown) {}
+}
+
+/** Upstream's subclass that forwards its state when constructing derived collections. */
+class TestCollectionWithExtraState extends Collection {
+  constructor(items: unknown = [], public tag: string = "") {
+    super(items);
+  }
+  protected override newInstance(items: unknown = []): this {
+    const Class = this.constructor as new (items: unknown, tag: string) => this;
+    return new Class(items, this.tag);
+  }
+}
+
 class SupportCollectionTest extends TestCase {
+  sortByRating(value: { rating: unknown }): unknown { return value.rating; }
+  sortByUrl(value: { url: unknown }): unknown { return value.url; }
+
   setUp(): void {
     for (const [name, klass] of [...COMMON_FIXTURES, ...ENUM_FIXTURES]) {
       registerTestClass(name, klass);
@@ -278,6 +303,8 @@ class SupportCollectionTest extends TestCase {
     registerTestClass("Illuminate\\Tests\\Support\\TestJsonSerializeToStringObject", TestJsonSerializeToStringObject);
     registerTestClass("Illuminate\\Tests\\Support\\TestCollectionSubclass", TestCollectionSubclass);
     registerTestClass("Illuminate\\Tests\\Support\\StaffEnum", StaffEnum);
+    registerTestClass("Illuminate\\Tests\\Support\\TestCollectionWithExtraState", TestCollectionWithExtraState);
+    registerTestClass("Illuminate\\Tests\\Support\\TestCollectionMapIntoObject", TestCollectionMapIntoObject);
     registerTestClass("Illuminate\\Tests\\Support\\TestAccessorEloquentTestStub", TestAccessorEloquentTestStub);
     registerTestClass("Illuminate\\Tests\\Support\\TestArrayAccessImplementation", TestArrayAccessImplementation);
     registerTestClass("Illuminate\\Tests\\Support\\TestSupportCollectionHigherOrderItem", TestSupportCollectionHigherOrderItem);
@@ -4601,4 +4628,691 @@ portedTest(`${ID}::testDotWithDepth`, { case: SupportCollectionTest, dataset: CO
     },
     data.all(),
   );
+});
+
+// Story 14.5, in Upstream order.
+// Illuminate\Tests\Support\SupportCollectionTest::testSliding#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSliding#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testCountByStandalone`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(['foo', 'foo', 'foo', 'bar', 'bar', 'foobar']);
+  this.assertEquals({ foo: 3, bar: 2, foobar: 1 }, c.countBy().all()); // adapted:DIV-9.2
+  c = new collection([true, true, false, false, false]);
+  this.assertEquals(new PhpArray<any, unknown>([[true, 2], [false, 3]]), c.countBy().all()); // adapted:DIV-9.2
+  c = new collection([1, 5, 1, 5, 5, 1]);
+  this.assertEquals(new PhpArray<any, unknown>([[1, 3], [5, 3]]), c.countBy().all()); // adapted:DIV-9.2
+  c = new collection([StaffEnum.James, StaffEnum.Joe, StaffEnum.Taylor]);
+  this.assertEquals({ James: 1, Joe: 1, Taylor: 1 }, c.countBy().all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testCountByWithKey`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([{ key: 'a' }, { key: 'a' }, { key: 'a' }, { key: 'a' }, { key: 'b' }, { key: 'b' }, { key: 'b' }]);
+  this.assertEquals({ a: 4, b: 3 }, c.countBy('key').all()); // adapted:DIV-9.2
+  c = new collection([{ key: TestBackedEnum.A }, { key: TestBackedEnum.B }, { key: TestBackedEnum.B }]);
+  this.assertEquals(new PhpArray<any, unknown>([[1, 1], [2, 2]]), c.countBy('key').all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testEach`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const original = new PhpArray<any, unknown>([[0, 1], [1, 2], ["foo", "bar"], ["bam", "baz"]]);
+  const c = new collection(original);
+  let result = new PhpArray<any, unknown>();
+  c.each((item: unknown, key: any) => { result.set(key, item); });
+  this.assertEquals(original, result);
+  result = new PhpArray<any, unknown>();
+  c.each((item: unknown, key: any) => {
+    result.set(key, item);
+    if (typeof key === "string") { return false; }
+    return null;
+  });
+  this.assertEquals(new PhpArray<any, unknown>([[0, 1], [1, 2], ["foo", "bar"]]), result); // adapted:DIV-9.2
+});
+
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testEachSpread#0: held whole under ESC-14.5-3.
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testEachSpread#1: held whole under ESC-14.5-3.
+
+portedTest(`${ID}::testSort`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([5, 3, 1, 2, 4]).sort();
+  this.assertEquals([1, 2, 3, 4, 5], data.values().all()); // adapted:DIV-9.2
+  data = new collection([-1, -3, -2, -4, -5, 0, 5, 3, 1, 2, 4]).sort();
+  this.assertEquals([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['foo', 'bar-10', 'bar-1']).sort();
+  this.assertEquals(['bar-1', 'bar-10', 'foo'], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['T2', 'T1', 'T10']).sort();
+  this.assertEquals(['T1', 'T10', 'T2'], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['T2', 'T1', 'T10']).sort(SORT_NATURAL);
+  this.assertEquals(['T1', 'T2', 'T10'], data.values().all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortDesc`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([5, 3, 1, 2, 4]).sortDesc();
+  this.assertEquals([5, 4, 3, 2, 1], data.values().all()); // adapted:DIV-9.2
+  data = new collection([-1, -3, -2, -4, -5, 0, 5, 3, 1, 2, 4]).sortDesc();
+  this.assertEquals([5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['bar-1', 'foo', 'bar-10']).sortDesc();
+  this.assertEquals(['foo', 'bar-10', 'bar-1'], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['T2', 'T1', 'T10']).sortDesc();
+  this.assertEquals(['T2', 'T10', 'T1'], data.values().all()); // adapted:DIV-9.2
+  data = new collection(['T2', 'T1', 'T10']).sortDesc(SORT_NATURAL);
+  this.assertEquals(['T10', 'T2', 'T1'], data.values().all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortWithCallback`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([5, 3, 1, 2, 4]).sort((a: any, b: any) => spaceship(a, b));
+  this.assertEquals(phpRange(1, 5), array_values(data.all()));
+});
+
+portedTest(`${ID}::testSortBy`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(['taylor', 'dayle']);
+  data = data.sortBy((x: any) => x);
+  this.assertEquals(['dayle', 'taylor'], array_values(data.all())); // adapted:DIV-9.2
+  data = new collection(['dayle', 'taylor']);
+  data = data.sortBy((x: any) => x, SORT_REGULAR, SortDirection.Descending);
+  this.assertEquals(['taylor', 'dayle'], array_values(data.all())); // adapted:DIV-9.2
+  data = new collection(['dayle', 'taylor']);
+  data = data.sortByDesc((x: any) => x);
+  this.assertEquals(['taylor', 'dayle'], array_values(data.all())); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortByString`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ name: 'taylor' }, { name: 'dayle' }]);
+  data = data.sortBy('name', SORT_STRING);
+  this.assertEquals([{ name: 'dayle' }, { name: 'taylor' }], array_values(data.all())); // adapted:DIV-9.2
+  data = new collection([{ name: 'taylor' }, { name: 'dayle' }]);
+  data = data.sortBy('name', SORT_STRING, true);
+  this.assertEquals([{ name: 'taylor' }, { name: 'dayle' }], array_values(data.all())); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortByCallableString`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ sort: 2 }, { sort: 1 }]);
+  data = data.sortBy([['sort', 'asc']]);
+  this.assertEquals([{ sort: 1 }, { sort: 2 }], array_values(data.all())); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortByCallableStringDesc`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ id: 1, name: 'foo' }, { id: 2, name: 'bar' }]);
+  data = data.sortByDesc(['id']);
+  this.assertEquals([{ id: 2, name: 'bar' }, { id: 1, name: 'foo' }], array_values(data.all())); // adapted:DIV-9.2
+  data = new collection([{ id: 1, name: 'foo' }, { id: 2, name: 'bar' }, { id: 2, name: 'baz' }]);
+  data = data.sortByDesc(['id']);
+  this.assertEquals([{ id: 2, name: 'bar' }, { id: 2, name: 'baz' }, { id: 1, name: 'foo' }], array_values(data.all())); // adapted:DIV-9.2
+  data = data.sortByDesc(['id', 'name']);
+  this.assertEquals([{ id: 2, name: 'baz' }, { id: 2, name: 'bar' }, { id: 1, name: 'foo' }], array_values(data.all())); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortByAlwaysReturnsAssoc`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection({ a: 'taylor', b: 'dayle' });
+  data = data.sortBy((x: any) => x);
+  this.assertEquals({ b: 'dayle', a: 'taylor' }, data.all()); // adapted:DIV-9.2
+  data = new collection(['taylor', 'dayle']);
+  data = data.sortBy((x: any) => x);
+  this.assertEquals(new PhpArray<any, unknown>([[1, 'dayle'], [0, 'taylor']]), data.all()); // adapted:DIV-9.2
+  data = new collection({ a: { sort: 2 }, b: { sort: 1 } });
+  data = data.sortBy([['sort', 'asc']]);
+  this.assertEquals({ b: { sort: 1 }, a: { sort: 2 } }, data.all()); // adapted:DIV-9.2
+  data = new collection([{ sort: 2 }, { sort: 1 }]);
+  data = data.sortBy([['sort', 'asc']]);
+  this.assertEquals(new PhpArray<any, unknown>([[1, { sort: 1 }], [0, { sort: 2 }]]), data.all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testSortByManyWithNumericFlagComparesFractionalValues`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ price: 1.5 }, { price: '10.5' }, { price: 1.2 }, { price: '10.2' }, { price: 1.9 }]);
+  this.assertSame([1.2, 1.5, 1.9, '10.2', '10.5'], data.sortBy([['price', 'asc']], SORT_NUMERIC).pluck('price').values().all()); // adapted:DIV-9.2
+  this.assertSame(['10.5', '10.2', 1.9, 1.5, 1.2], data.sortBy([['price', 'desc']], SORT_NUMERIC).pluck('price').values().all()); // adapted:DIV-9.2
+  this.assertSame(data.sortBy('price', SORT_NUMERIC).pluck('price').values().all(), data.sortBy([['price', 'asc']], SORT_NUMERIC).pluck('price').values().all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSortByMany#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSortByMany#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testNaturalSortByManyWithNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let itemFoo = new stdClass();
+  itemFoo.first = 'f';
+  itemFoo.second = null;
+  let itemBar = new stdClass();
+  itemBar.first = 'f';
+  itemBar.second = 's';
+  let data = new collection([itemFoo, itemBar]);
+  data = data.sortBy([['first', 'desc'], ['second', 'desc']], SORT_NATURAL);
+  this.assertEquals(itemBar, data.first());
+  this.assertEquals(itemFoo, data.skip(1).first());
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeys#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeysDesc#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeysDesc#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeysUsing#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSortKeysUsing#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testReverse`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(['zaeed', 'alan']);
+  let reversed = data.reverse();
+  this.assertSame(new PhpArray<any, unknown>([[1, 'alan'], [0, 'zaeed']]), reversed.all()); // adapted:DIV-9.2
+  data = new collection({ name: 'taylor', framework: 'laravel' });
+  reversed = data.reverse();
+  this.assertSame({ framework: 'laravel', name: 'taylor' }, reversed.all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunk#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunk#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhenGivenZeroAsSize#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhenGivenZeroAsSize#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhenGivenLessThanZero#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhenGivenLessThanZero#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkPreservingKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkPreservingKeys#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitIn#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitIn#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhileOnEqualElements#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhileOnEqualElements#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhileOnContiguouslyIncreasingIntegers#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhileOnContiguouslyIncreasingIntegers#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhilePreservingStringKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkWhilePreservingStringKeys#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithCallback#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithCallback#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithStringKey#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithStringKey#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByPreservesKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByPreservesKeys#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithDotNotation#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithDotNotation#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithEmptyCollection#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithEmptyCollection#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithSingleItem#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testChunkByWithSingleItem#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMap#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMap#1: held whole under ESC-14.5-1.
+
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testMapSpread#0: held whole under ESC-14.5-3.
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testMapSpread#1: held whole under ESC-14.5-3.
+
+portedTest(`${ID}::testFlatMap`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ name: 'taylor', hobbies: ['programming', 'basketball'] }, { name: 'adam', hobbies: ['music', 'powerlifting'] }]);
+  data = data.flatMap((person: any) => person['hobbies']);
+  this.assertEquals(['programming', 'basketball', 'music', 'powerlifting'], data.all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToDictionary#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToDictionary#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToDictionaryWithNumericKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToDictionaryWithNumericKeys#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToGroups#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToGroups#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToGroupsWithNumericKeys#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapToGroupsWithNumericKeys#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testMapWithKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ name: 'Blastoise', type: 'Water', idx: 9 }, { name: 'Charmander', type: 'Fire', idx: 4 }, { name: 'Dragonair', type: 'Dragon', idx: 148 }]);
+  data = data.mapWithKeys((pokemon: any) => new PhpArray<any, unknown>([[pokemon['name'], pokemon['type']]]));
+  this.assertEquals({ Blastoise: 'Water', Charmander: 'Fire', Dragonair: 'Dragon' }, data.all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testMapWithKeysIntegerKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ id: 1, name: 'A' }, { id: 3, name: 'B' }, { id: 2, name: 'C' }]);
+  data = data.mapWithKeys((item: any) => new PhpArray<any, unknown>([[item['id'], item]]));
+  this.assertSame([1, 3, 2], data.keys().all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testMapWithKeysMultipleRows`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 3, name: 'C' }]);
+  data = data.mapWithKeys((item: any) => new PhpArray<any, unknown>([[item['id'], item['name']], [item['name'], item['id']]]));
+  this.assertSame(new PhpArray<any, unknown>([[1, 'A'], ['A', 1], [2, 'B'], ['B', 2], [3, 'C'], ['C', 3]]), data.all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testMapWithKeysCallbackKey`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(new PhpArray<any, unknown>([[3, { id: 1, name: 'A' }], [5, { id: 3, name: 'B' }], [4, { id: 2, name: 'C' }]]));
+  data = data.mapWithKeys((item: any, key: any) => new PhpArray<any, unknown>([[key, item['id']]]));
+  this.assertSame([3, 5, 4], data.keys().all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapInto#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapInto#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapIntoWithIntBackedEnums#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapIntoWithIntBackedEnums#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMapIntoWithStringBackedEnums#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMapIntoWithStringBackedEnums#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitThrowsExceptionForInvalidNumberOfGroups#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitThrowsExceptionForInvalidNumberOfGroups#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitThrowsExceptionForNegativeNumberOfGroups#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitThrowsExceptionForNegativeNumberOfGroups#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitInThrowsExceptionForInvalidNumberOfGroups#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitInThrowsExceptionForInvalidNumberOfGroups#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitInThrowsExceptionForNegativeNumberOfGroups#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitInThrowsExceptionForNegativeNumberOfGroups#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testMapWithKeysOverwritingKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 1, name: 'C' }]);
+  data = data.mapWithKeys((item: any) => new PhpArray<any, unknown>([[item['id'], item['name']]]));
+  this.assertSame(new PhpArray<any, unknown>([[1, 'C'], [2, 'B']]), data.all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testTransform: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testGroupByAttribute`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ rating: 1, url: '1' }, { rating: 1, url: '1' }, { rating: 2, url: '2' }]);
+  let result = data.groupBy('rating');
+  this.assertEquals(new PhpArray<any, unknown>([[1, [{ rating: 1, url: '1' }, { rating: 1, url: '1' }]], [2, [{ rating: 2, url: '2' }]]]), result.toArray()); // adapted:DIV-9.2
+  result = data.groupBy('url');
+  this.assertEquals(new PhpArray<any, unknown>([[1, [{ rating: 1, url: '1' }, { rating: 1, url: '1' }]], [2, [{ rating: 2, url: '2' }]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testGroupByAttributeWithStringableKey`, { case: SupportCollectionBlockedBySupportTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const payload = [
+    { name: new Stringable("Laravel"), url: "1" },
+    { name: new HtmlString("Laravel"), url: "1" },
+    { name: new (class {
+      toString(): string { return "Framework"; }
+      [Symbol.toPrimitive](): string { return this.toString(); }
+    })(), url: "2" },
+  ];
+  const data = new collection(payload);
+  let result = data.groupBy("name");
+  this.assertEquals({ Laravel: [payload[0], payload[1]], Framework: [payload[2]] }, result.toArray()); // adapted:DIV-9.2
+  result = data.groupBy("url");
+  this.assertEquals(new PhpArray<any, unknown>([[1, [payload[0], payload[1]]], [2, [payload[2]]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testGroupByAttributeWithEnumKey`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let payload: any;
+  let data = new collection(payload = [{ name: TestEnum.A, url: '1' }, { name: TestBackedEnum.A, url: '1' }, { name: TestStringBackedEnum.A, url: '2' }]);
+  let result = data.groupBy('name');
+  this.assertEquals(new PhpArray<any, unknown>([['A', [payload[0], payload[2]]], ['1', [payload[1]]]]), result.toArray()); // adapted:DIV-9.2
+  result = data.groupBy('url');
+  this.assertEquals(new PhpArray<any, unknown>([['1', [payload[0], payload[1]]], ['2', [payload[2]]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testGroupByCallable#0: held whole under ESC-14.5-3.
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testGroupByCallable#1: held whole under ESC-14.5-3.
+
+portedTest(`${ID}::testGroupByAttributeWithBackedEnumKey`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ rating: TestBackedEnum.A, url: '1' }, { rating: TestBackedEnum.B, url: '1' }]);
+  let result = data.groupBy('rating');
+  this.assertEquals(new PhpArray<any, unknown>([[TestBackedEnum.A.value, [{ rating: TestBackedEnum.A, url: '1' }]], [TestBackedEnum.B.value, [{ rating: TestBackedEnum.B, url: '1' }]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testGroupByAttributePreservingKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(new PhpArray<any, unknown>([[10, { rating: 1, url: '1' }], [20, { rating: 1, url: '1' }], [30, { rating: 2, url: '2' }]]));
+  let result = data.groupBy('rating', true);
+  let expected_result = new PhpArray<any, unknown>([[1, new PhpArray<any, unknown>([[10, { rating: 1, url: '1' }], [20, { rating: 1, url: '1' }]])], [2, new PhpArray<any, unknown>([[30, { rating: 2, url: '2' }]])]]);
+  this.assertEquals(expected_result, result.toArray());
+});
+
+portedTest(`${ID}::testGroupByClosureWhereItemsHaveSingleGroup`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ rating: 1, url: '1' }, { rating: 1, url: '1' }, { rating: 2, url: '2' }]);
+  let result = data.groupBy((item: any) => item['rating']);
+  this.assertEquals(new PhpArray<any, unknown>([[1, [{ rating: 1, url: '1' }, { rating: 1, url: '1' }]], [2, [{ rating: 2, url: '2' }]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testGroupByClosureWhereItemsHaveSingleGroupPreservingKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(new PhpArray<any, unknown>([[10, { rating: 1, url: '1' }], [20, { rating: 1, url: '1' }], [30, { rating: 2, url: '2' }]]));
+  let result = data.groupBy((item: any) => item['rating'], true);
+  let expected_result = new PhpArray<any, unknown>([[1, new PhpArray<any, unknown>([[10, { rating: 1, url: '1' }], [20, { rating: 1, url: '1' }]])], [2, new PhpArray<any, unknown>([[30, { rating: 2, url: '2' }]])]]);
+  this.assertEquals(expected_result, result.toArray());
+});
+
+portedTest(`${ID}::testGroupByClosureWhereItemsHaveMultipleGroups`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ user: 1, roles: ['Role_1', 'Role_3'] }, { user: 2, roles: ['Role_1', 'Role_2'] }, { user: 3, roles: ['Role_1'] }]);
+  let result = data.groupBy((item: any) => item['roles']);
+  let expected_result = { Role_1: [{ user: 1, roles: ['Role_1', 'Role_3'] }, { user: 2, roles: ['Role_1', 'Role_2'] }, { user: 3, roles: ['Role_1'] }], Role_2: [{ user: 2, roles: ['Role_1', 'Role_2'] }], Role_3: [{ user: 1, roles: ['Role_1', 'Role_3'] }] };
+  this.assertEquals(expected_result, result.toArray());
+});
+
+portedTest(`${ID}::testGroupByClosureWhereItemsHaveMultipleGroupsPreservingKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(new PhpArray<any, unknown>([[10, { user: 1, roles: ['Role_1', 'Role_3'] }], [20, { user: 2, roles: ['Role_1', 'Role_2'] }], [30, { user: 3, roles: ['Role_1'] }]]));
+  let result = data.groupBy((item: any) => item['roles'], true);
+  let expected_result = { Role_1: new PhpArray<any, unknown>([[10, { user: 1, roles: ['Role_1', 'Role_3'] }], [20, { user: 2, roles: ['Role_1', 'Role_2'] }], [30, { user: 3, roles: ['Role_1'] }]]), Role_2: new PhpArray<any, unknown>([[20, { user: 2, roles: ['Role_1', 'Role_2'] }]]), Role_3: new PhpArray<any, unknown>([[10, { user: 1, roles: ['Role_1', 'Role_3'] }]]) };
+  this.assertEquals(expected_result, result.toArray());
+});
+
+portedTest(`${ID}::testGroupByMultiLevelAndClosurePreservingKeys`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(new PhpArray<any, unknown>([[10, { user: 1, skilllevel: 1, roles: ['Role_1', 'Role_3'] }], [20, { user: 2, skilllevel: 1, roles: ['Role_1', 'Role_2'] }], [30, { user: 3, skilllevel: 2, roles: ['Role_1'] }], [40, { user: 4, skilllevel: 2, roles: ['Role_2'] }]]));
+  let result = data.groupBy(['skilllevel', (item: any) => item['roles']], true);
+  let expected_result = new PhpArray<any, unknown>([[1, { Role_1: new PhpArray<any, unknown>([[10, { user: 1, skilllevel: 1, roles: ['Role_1', 'Role_3'] }], [20, { user: 2, skilllevel: 1, roles: ['Role_1', 'Role_2'] }]]), Role_3: new PhpArray<any, unknown>([[10, { user: 1, skilllevel: 1, roles: ['Role_1', 'Role_3'] }]]), Role_2: new PhpArray<any, unknown>([[20, { user: 2, skilllevel: 1, roles: ['Role_1', 'Role_2'] }]]) }], [2, { Role_1: new PhpArray<any, unknown>([[30, { user: 3, skilllevel: 2, roles: ['Role_1'] }]]), Role_2: new PhpArray<any, unknown>([[40, { user: 4, skilllevel: 2, roles: ['Role_2'] }]]) }]]);
+  this.assertEquals(expected_result, result.toArray());
+});
+
+portedTest(`${ID}::testGroupByNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let payload: any;
+  let data = new collection(payload = [{ name: 'a', url: '1' }, { name: 'b', url: null }, { name: 'c', url: null }]);
+  let result = data.groupBy('url');
+  this.assertEquals(new PhpArray<any, unknown>([['1', [payload[0]]], ['', [payload[1], payload[2]]]]), result.toArray()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testKeyByAttribute`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ rating: 1, name: '1' }, { rating: 2, name: '2' }, { rating: 3, name: '3' }]);
+  let result = data.keyBy('rating');
+  this.assertEquals(new PhpArray<any, unknown>([[1, { rating: 1, name: '1' }], [2, { rating: 2, name: '2' }], [3, { rating: 3, name: '3' }]]), result.all()); // adapted:DIV-9.2
+  result = data.keyBy((item: any) => item['rating'] * 2);
+  this.assertEquals(new PhpArray<any, unknown>([[2, { rating: 1, name: '1' }], [4, { rating: 2, name: '2' }], [6, { rating: 3, name: '3' }]]), result.all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testKeyByBackedEnum`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ id: 1, status: TestStringBackedEnum.A }, { id: 2, status: TestStringBackedEnum.B }]);
+  this.assertEquals(new PhpArray<any, unknown>([[TestStringBackedEnum.A.value, { id: 1, status: TestStringBackedEnum.A }], [TestStringBackedEnum.B.value, { id: 2, status: TestStringBackedEnum.B }]]), data.keyBy('status').all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testKeyByClosure#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testKeyByClosure#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testKeyByObject`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ firstname: 'Taylor', lastname: 'Otwell', locale: 'US' }, { firstname: 'Lucas', lastname: 'Michot', locale: 'FR' }]);
+  let result = data.keyBy((item: any, key: any) => new collection([key, item['firstname'], item['lastname']]));
+  this.assertEquals({ '[0,"Taylor","Otwell"]': { firstname: 'Taylor', lastname: 'Otwell', locale: 'US' }, '[1,"Lucas","Michot"]': { firstname: 'Lucas', lastname: 'Michot', locale: 'FR' } }, result.all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testKeyByNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([{ rating: 1, name: '1' }, { rating: 2, name: null }]);
+  let result = data.keyBy('name');
+  this.assertEquals(new PhpArray<any, unknown>([['1', { rating: 1, name: '1' }], ['', { rating: 2, name: null }]]), result.all()); // adapted:DIV-9.2
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingSumFromCollection#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingSumFromCollection#1: held whole under ESC-14.5-2.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testCanSumValuesWithoutACallback#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testCanSumValuesWithoutACallback#1: held whole under ESC-14.5-2.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingSumFromEmptyCollection#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingSumFromEmptyCollection#1: held whole under ESC-14.5-2.
+
+portedTest(`${ID}::testPaginate`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(['one', 'two', 'three', 'four']);
+  this.assertEquals(['one', 'two'], c.forPage(0, 2).all()); // adapted:DIV-9.2
+  this.assertEquals(['one', 'two'], c.forPage(1, 2).all()); // adapted:DIV-9.2
+  this.assertEquals(new PhpArray<any, unknown>([[2, 'three'], [3, 'four']]), c.forPage(2, 2).all()); // adapted:DIV-9.2
+  this.assertSame([], c.forPage(3, 2).all()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testGettingMaxItemsFromCollection`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([Object.assign(new stdClass(), { foo: 10 }), Object.assign(new stdClass(), { foo: 20 })]);
+  this.assertEquals(20, c.max((item: any) => item.foo));
+  this.assertEquals(20, c.max('foo'));
+  this.assertEquals(20, (c.__get("max") as HigherOrderCollectionProxy).__get("foo")); // adapted:DIV-12.16
+  c = new collection([{ foo: 10 }, { foo: 20 }]);
+  this.assertEquals(20, c.max('foo'));
+  this.assertEquals(20, (c.__get("max") as HigherOrderCollectionProxy).__get("foo")); // adapted:DIV-12.16
+  c = new collection([1, 2, 3, 4, 5]);
+  this.assertEquals(5, c.max());
+  c = new collection();
+  this.assertNull(c.max());
+});
+
+portedTest(`${ID}::testGettingMinItemsFromCollection`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([Object.assign(new stdClass(), { foo: 10 }), Object.assign(new stdClass(), { foo: 20 })]);
+  this.assertEquals(10, c.min((item: any) => item.foo));
+  this.assertEquals(10, c.min('foo'));
+  this.assertEquals(10, (c.__get("min") as HigherOrderCollectionProxy).__get("foo")); // adapted:DIV-12.16
+  c = new collection([{ foo: 10 }, { foo: 20 }]);
+  this.assertEquals(10, c.min('foo'));
+  this.assertEquals(10, (c.__get("min") as HigherOrderCollectionProxy).__get("foo")); // adapted:DIV-12.16
+  c = new collection([{ foo: 10 }, { foo: 20 }, { foo: null }]);
+  this.assertEquals(10, c.min('foo'));
+  this.assertEquals(10, (c.__get("min") as HigherOrderCollectionProxy).__get("foo")); // adapted:DIV-12.16
+  c = new collection([1, 2, 3, 4, 5]);
+  this.assertEquals(1, c.min());
+  c = new collection([1, null, 3, 4, 5]);
+  this.assertEquals(1, c.min());
+  c = new collection([0, 1, 2, 3, 4]);
+  this.assertEquals(0, c.min());
+  c = new collection();
+  this.assertNull(c.min());
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingAvgItemsFromCollection#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testGettingAvgItemsFromCollection#1: held whole under ESC-14.5-2.
+
+portedTest(`${ID}::testReduce`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3]);
+  this.assertEquals(6, data.reduce((carry: number | null, element: number) => (carry ?? 0) + element));
+  data = new collection({ foo: "bar", baz: "qux" });
+  this.assertSame("foobarbazqux", data.reduce((carry: unknown, element: unknown, key: unknown) => toPhpString(carry) + toPhpString(key) + toPhpString(element)));
+});
+
+portedTest(`${ID}::testReduceInto`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3]);
+  this.assertEquals(6, data.reduceInto(0, (result: Ref<number>, element: number) => { result.value += element; })); // adapted:DIV-9.2
+  data = new collection({ foo: "bar", baz: "qux" });
+  this.assertSame("foobarbazqux", data.reduceInto("", (result: Ref<string>, element: unknown, key: unknown) => { result.value += toPhpString(key) + toPhpString(element); })); // adapted:DIV-9.2
+  data = new collection([1, 2, 3, 4, 5]);
+  const result = data.reduceInto([] as number[], (result: Ref<number[]>, value: number) => {
+    if (value % 2 === 0) { result.value.push(value); }
+  });
+  this.assertSame([2, 4], result); // adapted:DIV-9.2
+});
+
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testReduceSpread#0: held whole under ESC-14.5-1; missing runtime PHP_INT_MIN/MAX prevents complete runnable translation.
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testReduceSpread#1: held whole under ESC-14.5-1; missing runtime PHP_INT_MIN/MAX prevents complete runnable translation.
+/* Upstream body retained unchanged pending runtime constants and Support class_basename:
+    public function testReduceSpread($collection)
+    {
+        $data = new $collection([-1, 0, 1, 2, 3, 4, 5]);
+
+        [$sum, $max, $min] = $data->reduceSpread(function ($sum, $max, $min, $value) {
+            $sum += $value;
+            $max = max($max, $value);
+            $min = min($min, $value);
+
+            return [$sum, $max, $min];
+        }, 0, PHP_INT_MIN, PHP_INT_MAX);
+
+        $this->assertEquals(14, $sum);
+        $this->assertEquals(5, $max);
+        $this->assertEquals(-1, $min);
+    }
+*/
+
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testReduceSpreadThrowsAnExceptionIfReducerDoesNotReturnAnArray#0: held whole under ESC-14.5-1; missing runtime PHP_INT_MIN/MAX prevents complete runnable translation.
+// Illuminate\\Tests\\Support\\SupportCollectionTest::testReduceSpreadThrowsAnExceptionIfReducerDoesNotReturnAnArray#1: held whole under ESC-14.5-1; missing runtime PHP_INT_MIN/MAX prevents complete runnable translation.
+/* Upstream body retained unchanged pending runtime constants and Support class_basename:
+    public function testReduceSpreadThrowsAnExceptionIfReducerDoesNotReturnAnArray($collection)
+    {
+        $data = new $collection([1]);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $data->reduceSpread(function () {
+            return false;
+        }, null);
+    }
+*/
+
+// Illuminate\Tests\Support\SupportCollectionTest::testPipe#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testPipe#1: held whole under ESC-14.5-2.
+
+portedTest(`${ID}::testPipeInto`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(['first', 'second']);
+  let instance = data.pipeInto(TestCollectionMapIntoObject);
+  this.assertSame(data, instance.value);
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testPipeThrough#0: held whole under ESC-14.5-2.
+// Illuminate\Tests\Support\SupportCollectionTest::testPipeThrough#1: held whole under ESC-14.5-2.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianValueWithArrayCollection#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianValueWithArrayCollection#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianValueByKey#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianValueByKey#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOnCollectionWithNull#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOnCollectionWithNull#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testEvenMedianCollection#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testEvenMedianCollection#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOutOfOrderCollection#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOutOfOrderCollection#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOnEmptyCollectionReturnsNull#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testMedianOnEmptyCollectionReturnsNull#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testModeOnNullCollection`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection();
+  this.assertNull(data.mode());
+});
+
+portedTest(`${ID}::testMode`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3, 4, 4, 5]);
+  this.assertIsArray(data.mode());
+  this.assertEquals([4], data.mode()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testModeValueByKey`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([Object.assign(new stdClass(), { foo: 1 }), Object.assign(new stdClass(), { foo: 1 }), Object.assign(new stdClass(), { foo: 2 }), Object.assign(new stdClass(), { foo: 4 })]);
+  let data2 = new Collection([{ foo: 1 }, { foo: 1 }, { foo: 2 }, { foo: 4 }]);
+  this.assertEquals([1], data.mode('foo')); // adapted:DIV-9.2
+  this.assertEquals(data2.mode('foo'), data.mode('foo'));
+});
+
+portedTest(`${ID}::testWithMultipleModeValues`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 2, 1]);
+  this.assertEquals([1, 2], data.mode()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testModeOnCollectionWithNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([Object.assign(new stdClass(), { foo: 5 }), Object.assign(new stdClass(), { foo: null }), Object.assign(new stdClass(), { foo: null })]);
+  this.assertEquals([5], data.mode('foo')); // adapted:DIV-9.2
+  data = new collection([null, 3]);
+  this.assertEquals([3], data.mode()); // adapted:DIV-9.2
+});
+
+portedTest(`${ID}::testModeOnCollectionWithOnlyNullsReturnsNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([null, null]);
+  this.assertNull(data.mode());
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithADivisibleCount#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithADivisibleCount#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithAnUndivisableCount#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithAnUndivisableCount#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithCountLessThenDivisor#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionWithCountLessThenDivisor#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoThreeWithCountOfFour#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoThreeWithCountOfFour#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoThreeWithCountOfFive#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoThreeWithCountOfFive#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoSixWithCountOfTen#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitCollectionIntoSixWithCountOfTen#1: held whole under ESC-14.5-1.
+
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitEmptyCollection#0: held whole under ESC-14.5-1.
+// Illuminate\Tests\Support\SupportCollectionTest::testSplitEmptyCollection#1: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testTap`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3]);
+  let fromTap: unknown = [];
+  let tappedInstance: AnyCollection | null = null;
+  data = data.tap((data: AnyCollection) => {
+    fromTap = data.slice(0, 1).toArray();
+    tappedInstance = data;
+  });
+  this.assertSame(data, tappedInstance);
+  this.assertSame([1], fromTap);
+  this.assertSame([1, 2, 3], data.toArray());
+});
+
+portedTest(`${ID}::testItThrowsExceptionWhenTryingToAccessNoProxyProperty`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection();
+  this.expectExceptionObject(new Exception('Property [foo] does not exist on this collection instance.'));
+  data.__get("foo"); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testGetWithNullReturnsNull`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3]);
+  this.assertNull(data.get(null));
+});
+
+portedTest(`${ID}::testGetWithDefaultValue`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection({ name: 'taylor', framework: 'laravel' });
+  this.assertSame('34', toPhpString(data.get('age', 34)));
+});
+
+portedTest(`${ID}::testGetWithCallbackAsDefaultValue`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection({ name: 'taylor', framework: 'laravel' });
+  let result = data.get('email', () => 'taylor@example.com');
+  this.assertSame('taylor@example.com', result);
+});
+
+portedTest(`${ID}::testPercentageWithFlatCollection`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let collection_ = new collection([1, 1, 2, 2, 2, 3]);
+  this.assertSame(33.33, collection_.percentage((value: any) => value === 1));
+  this.assertSame(float(50), collection_.percentage((value: any) => value === 2)); // adapted:DIV-9.4
+  this.assertSame(16.67, collection_.percentage((value: any) => value === 3));
+  this.assertSame(float(0), collection_.percentage((value: any) => value === 5)); // adapted:DIV-9.4
+});
+
+portedTest(`${ID}::testPercentageWithNestedCollection`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let collection_ = new collection([{ name: 'Taylor', foo: 'foo' }, { name: 'Nuno', foo: 'bar' }, { name: 'Dries', foo: 'bar' }, { name: 'Jess', foo: 'baz' }]);
+  this.assertSame(float(25), collection_.percentage((value: any) => value['foo'] === 'foo')); // adapted:DIV-9.4
+  this.assertSame(float(50), collection_.percentage((value: any) => value['foo'] === 'bar')); // adapted:DIV-9.4
+  this.assertSame(float(25), collection_.percentage((value: any) => value['foo'] === 'baz')); // adapted:DIV-9.4
+  this.assertSame(float(0), collection_.percentage((value: any) => value['foo'] === 'test')); // adapted:DIV-9.4
+});
+
+portedTest(`${ID}::testPercentageReturnsNullForEmptyCollections`, { case: SupportCollectionTest , dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let collection_ = new collection([]);
+  this.assertNull(collection_.percentage((value: any) => value === 1));
+});
+
+// Illuminate\Tests\Support\SupportCollectionTest::testNewInstanceIsUsedByCollectionMethods: held whole under ESC-14.5-1.
+
+portedTest(`${ID}::testStaticFactoryMethodsForwardExtraArguments`, { case: SupportCollectionTest }, async function () {
+  let made = TestCollectionWithExtraState.make([1, 2, 3], 'make-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, made);
+  this.assertSame('make-tag', made.tag);
+  this.assertSame([1, 2, 3], made.all()); // adapted:DIV-9.2
+  let wrapped = TestCollectionWithExtraState.wrap([4, 5], 'wrap-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, wrapped);
+  this.assertSame('wrap-tag', wrapped.tag);
+  this.assertSame([4, 5], wrapped.all()); // adapted:DIV-9.2
+  let empty = TestCollectionWithExtraState.empty('empty-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, empty);
+  this.assertSame('empty-tag', empty.tag);
+  this.assertEmpty(empty.all());
+  let range = TestCollectionWithExtraState.range(1, 3, 1, 'range-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, range);
+  this.assertSame('range-tag', range.tag);
+  this.assertSame([1, 2, 3], range.all()); // adapted:DIV-9.2
+  let times = TestCollectionWithExtraState.times(3, (i: any) => i * 10, 'times-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, times);
+  this.assertSame('times-tag', times.tag);
+  this.assertSame([10, 20, 30], times.all()); // adapted:DIV-9.2
+  let timesZero = TestCollectionWithExtraState.times(0, null, 'zero-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, timesZero);
+  this.assertSame('zero-tag', timesZero.tag);
+  this.assertEmpty(timesZero.all());
+  let json = TestCollectionWithExtraState.fromJson('["a","b"]', 512, 0, 'json-tag');
+  this.assertInstanceOf(TestCollectionWithExtraState, json);
+  this.assertSame('json-tag', json.tag);
+  this.assertSame(['a', 'b'], json.all()); // adapted:DIV-9.2
 });

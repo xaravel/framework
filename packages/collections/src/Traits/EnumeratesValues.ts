@@ -255,6 +255,78 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     return this;
   }
 
+  /** Map the collection and collapse the result by one level. */
+  flatMap<T extends EnumeratesValuesHost, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T {
+    return (this.map(callback) as T & { collapse(): T }).collapse();
+  }
+
+  /** Reduce the collection to a single value, passing each original key to the reducer. */
+  reduce<T extends EnumeratesValuesHost, R>(this: T, callback: SyncCallback<[carry: any, value: any, key: any], R>, initial: unknown = null): unknown {
+    let result = valueCopy(initial);
+    for (const [key, item] of this.entries()) {
+      result = valueCopy(callCallable(callback, valueCopy(result), valueCopy(item), key));
+    }
+    return valueCopy(result);
+  }
+
+  /** Reduce an associative collection to a single value. */
+  reduceWithKeys<T extends EnumeratesValuesHost, R>(this: T, callback: SyncCallback<[carry: any, value: any, key: any], R>, initial: unknown = null): unknown {
+    return (this as T & EnumeratesValues).reduce(callback, initial);
+  }
+
+  /** Reduce by mutating the initial value; object identity is preserved as in PHP. */
+  reduceInto<T extends EnumeratesValuesHost, I, R>(this: T, initial: I, callback: SyncCallback<[carry: Ref<I>, value: any, key: any], R>): I {
+    const result = new Ref<I>(valueCopy(initial) as I);
+    for (const [key, item] of this.entries()) {
+      callCallable(callback, result, valueCopy(item), key);
+    }
+    return valueCopy(result.value) as I;
+  }
+
+  /** Pass this collection to a callback and return its result. */
+  pipe<R>(callback: SyncCallback<[collection: this], R>): R {
+    return valueCopy(callCallable(callback, this)) as R;
+  }
+
+  /** Pass this collection to a class constructor. */
+  pipeInto<R>(class_: new (collection: this) => R): R {
+    return new class_(this);
+  }
+
+  /** Pass this collection through each callback in order. */
+  pipeThrough<R>(callbacks: SyncCallback<[carry: any], R>[]): unknown {
+    return new Collection(callbacks).reduce((carry: unknown, callback: unknown) => callCallable(callback, carry), this);
+  }
+
+  /** Call a callback with this collection and return this collection. */
+  tap<R>(callback: SyncCallback<[collection: this], R>): this {
+    callCallable(callback, this);
+    return this;
+  }
+
+  /** Paginate by slicing the collection, preserving keys. */
+  forPage<T extends EnumeratesValuesHost>(this: T, page: number, perPage: number): T {
+    return (this as T & { slice(offset: number, length: number): T }).slice(Math.max(0, (page - 1) * perPage), perPage);
+  }
+
+  /** Get the minimum non-null resolved value. */
+  min<T extends EnumeratesValuesHost, R>(this: T, callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown {
+    const retriever = (this as T & EnumeratesValues).valueRetriever(callback ?? null) as (value: unknown) => unknown;
+    return (this.map((item: unknown) => retriever(item)) as T & EnumeratesValues)
+      .reject((item: unknown) => item === null)
+      .reduce((result: unknown, item: unknown) => result === null || spaceship(item, result) < 0 ? item : result);
+  }
+
+  /** Get the maximum resolved value, excluding null source items. */
+  max<T extends EnumeratesValuesHost, R>(this: T, callback?: SyncCallback<[value: any, key: any], R> | string | null): unknown {
+    const retriever = (this as T & EnumeratesValues).valueRetriever(callback ?? null) as (value: unknown) => unknown;
+    return (this as T & EnumeratesValues).reject((item: unknown) => item === null)
+      .reduce((result: unknown, item: unknown) => {
+        const resolved = retriever(item);
+        return result === null || spaceship(result, resolved) < 0 ? resolved : result;
+      });
+  }
+
   /**
    * Ensure that every item in the collection is of the expected type: a type name (`'int'`, `'string'`, …), a class, a
    * contract token, or a list of them. Throws `UnexpectedValueException` naming the first item of another type.

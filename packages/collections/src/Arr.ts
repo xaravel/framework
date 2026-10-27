@@ -44,6 +44,7 @@ import {
   method_exists,
   mixin,
   PhpArray,
+  type PhpKeyInput,
   Randomizer,
   Ref,
   registerClass,
@@ -475,6 +476,21 @@ export class Arr extends mixin(null, Macroable) {
     }
 
     return array_combine(keys, items);
+  }
+
+  /** Run an associative map over an array; later occurrences replace earlier values of the same key. */
+  static mapWithKeys<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
+    const result = new PhpArray();
+    for (const [key, value_] of arrayEntries(array as object)) {
+      const assoc = callCallable(callback, valueCopy(value_), key);
+      if (!is_array(assoc) && !is_object(assoc)) {
+        continue;
+      }
+      for (const [mapKey, mapValue] of assoc instanceof Traversable ? iterateEntries(assoc) : arrayEntries(assoc as object)) {
+        result.set(mapKey as PhpKeyInput, valueCopy(mapValue));
+      }
+    }
+    return arrayFromEntries(result);
   }
 
   /**

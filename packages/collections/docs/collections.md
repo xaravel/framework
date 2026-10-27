@@ -167,3 +167,37 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 - **DIV-12.20:** `contains`, `doesntContain`, `doesntContainStrict`, `every`, `some`, `partition`, `where`, `firstWhere`, `hasSole`, `hasMany`, `sole`, `firstOrFail`, `first` and `last` take only positional arguments: their first parameter is a PHP value or a callback, so a lone object is always the value, never an options object. Laravel's named arguments to them become the positional call. These are the members this page covers; the full list of positional-only members is DIV-12.20 in `decisions/DIV-12.md` (and `conformance/api-surface/exceptions.jsonl`).
 
 Not ported yet: `dump()` and `dd()` (they need Support's VarDumper, Epic 19), and the escaped string form after `escapeWhenCastingToString()`, which needs Support's `e()` and throws `BlockedByComponentError("support")` until then.
+
+## Mapping, sorting and reduction (Story 14.5 increment)
+
+Both classes provide `flatMap`, `mapWithKeys`, `sort`,
+`sortDesc`, `sortByDesc`, `reverse`, `min`, `max`, `mode`, `reduce`,
+`reduceWithKeys`, `reduceInto`, `pipe`, `pipeInto`, `pipeThrough`, `tap` and
+`forPage`. `Arr.mapWithKeys` is available too. Sorts and reverse preserve keys;
+Eager `mapWithKeys` replaces an earlier value when the callback returns its key again. Lazy enumeration yields every occurrence of duplicate keys; materializing with `all()` keeps the last value at the key’s first position.
+LazyCollection keeps the upstream lazy boundaries: associative mapping yields
+callback entries lazily, sorts and reverse defer their eager collection pass
+until enumeration, and aggregate/reduction terminals enumerate immediately.
+
+`reduceInto` passes a `Ref` to its callback because PHP passes that accumulator
+by reference (DIV-9.2): `c.reduceInto(0, (carry, value) => { carry.value += value; })`.
+`mapAsync` and `eachAsync` await each callback before starting the next, in
+original key order, and give it a copy of array values. `mapAsync` preserves keys
+and materializes its result on both classes; `eachAsync` returns its receiver and
+stops when a callback resolves to `false`. Rejections stop iteration and reject
+the operation. Sync `map` and `each` reject async callbacks in TypeScript and lint
+(DIV-1.2).
+
+The Story remains blocked. ESC-14.5-1 holds `median`, `mapToDictionary`,
+`mapToGroups`, `mapInto`, `sliding`, `split`, `splitIn`, `chunk`, `chunkWhile`,
+`chunkBy`, `sortKeys`, `sortKeysDesc`, `sortKeysUsing` and `reduceSpread` until
+their runtime contracts arrive. ESC-14.5-2 holds `sum`, `avg` and `average` until
+runtime supplies PHP mixed-operand addition and division, including errors and
+float markers. Some tests of existing methods also wait for test-side builtins;
+`pipe` and `pipeThrough` tests transitively wait for `sum`. The stringable group
+key test needs Support. XT-collections-10 waits for `mapInto`, and
+XT-collections-9 requires its CI-signed Oracle fixture; absent fixtures fail.
+
+`mapSpread` and `eachSpread` are held whole under ESC-14.5-3 until runtime supplies PHP array append and argument unpacking, including scalar and named-argument errors. The callable-array `groupBy` tests are held under the same contract; existing independent `groupBy` behavior remains available. Both `reduceSpread` tests retain verbatim Upstream bodies as held evidence: runtime also lacks public `PHP_INT_MIN`/`PHP_INT_MAX`, so their complete runnable translations and the later Support blocker remain incomplete.
+
+Owned temporary generator finalization after early termination remains unverified pending the runtime lifetime/disposal contract in ESC-14.5-4. The new XT11 finally regression is retained as pending evidence there; existing sequential callbacks, early-false behavior and source-error propagation are tested independently.

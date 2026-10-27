@@ -123,7 +123,7 @@ import {
 } from "@xaravel/runtime";
 import { EnumeratesValues } from "./Traits/EnumeratesValues";
 import { Arr } from "./Arr";
-import { Enumerable } from "./Enumerable";
+import { Enumerable, type SortByDescCallback } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
 import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
@@ -289,6 +289,49 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   /** Run a map over each of the items: the callback gets each value and its key, and keys are kept. */
   map<R>(callback: SyncCallback<[value: any, key: any], R>): this {
     return this.newInstance(Arr.map(this.items, (value_: unknown, key: unknown) => callback(valueCopy(value_), key)));
+  }
+
+  /** Run an associative map over the items, replacing earlier values with the same returned key. */
+  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): this {
+    return this.newInstance(Arr.mapWithKeys(this.items, callback));
+  }
+
+  /** Reverse the items while preserving their keys. */
+  reverse(): this {
+    return this.newInstance(array_reverse(this.items, true));
+  }
+
+  /** Sort the items with a comparison callback or PHP sort flags, preserving keys. */
+  sort<R>(callback: CompareCallback<R> | number | null = null): this {
+    const ref = new Ref<unknown>(valueCopy(this.items));
+    if (toBool(callback) && is_callable(callback)) {
+      uasort(ref, callback);
+    } else {
+      asort(ref, callback ?? SORT_REGULAR);
+    }
+    return this.newInstance(itemsOf(ref));
+  }
+
+  /** Sort the items in descending order with PHP sort flags, preserving keys. */
+  sortDesc(options: number = SORT_REGULAR): this {
+    const ref = new Ref<unknown>(valueCopy(this.items));
+    arsort(ref, options);
+    return this.newInstance(itemsOf(ref));
+  }
+
+  /** Get the most frequent values of a key, or null when there are no non-null values. */
+  mode(key: unknown = null): unknown {
+    const collection = (key !== null ? this.pluck(key) : this).reject((item: unknown) => item === null);
+    if (collection.isEmpty()) {
+      return null;
+    }
+    const counts = this.newInstance();
+    collection.each((value_: unknown) => {
+      counts.offsetSet(value_, counts.offsetExists(value_) ? Number(counts.get(value_)) + 1 : 1);
+    });
+    const sorted = counts.sort();
+    const highestValue = sorted.last();
+    return sorted.filter((value_: unknown) => looseEquals(value_, highestValue)).sort().keys().all();
   }
 
   /** Return only unique items from the collection array, by `==` or, when `strict`, by `===`. */
@@ -1219,6 +1262,20 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this.newInstance(sorted);
   }
 
+  /** Sort by a retriever or multiple comparisons in descending order. */
+  sortByDesc<R>(callback: SortByDescCallback<R>, options: number = SORT_REGULAR): this {
+    if (is_array(callback) && !is_callable(callback)) {
+      const comparisons = asItems(valueCopy(callback));
+      for (const [index, key] of comparisons) {
+        const comparison = asItems(Arr.wrap(key));
+        comparison.set(1, SortDirection.Descending);
+        comparisons.set(index, comparison);
+      }
+      return this.sortBy(comparisons, options, true);
+    }
+    return this.sortBy(callback, options, true);
+  }
+
   /** Sort the collection using multiple comparisons. */
   protected sortByMany(comparisons: unknown = [], options: number = SORT_REGULAR): this {
     const ref = new Ref<unknown>(this.items);
@@ -1331,6 +1388,29 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   takeWhile<T, K>(this: T, value: ValueOrSyncCallback<K>): T;
   takeWhile(value_: unknown): this {
     return this.newInstance(this.lazy().takeWhile(value_).all());
+  }
+
+  /** Map values sequentially in key order, preserving keys and copying callback values.
+   * @asyncRoot callback
+   */
+  async mapAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const mapped = new PhpArray();
+    for (const [key, item] of this.entries()) {
+      mapped.set(key, valueCopy(await callCallable(callback, valueCopy(item), key)));
+    }
+    return this.newInstance(mapped);
+  }
+
+  /** Execute a callback sequentially in key order, stopping only on false.
+   * @asyncRoot callback
+   */
+  async eachAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    for (const [key, item] of this.entries()) {
+      if (await callCallable(callback, valueCopy(item), key) === false) {
+        break;
+      }
+    }
+    return this;
   }
 
   /**

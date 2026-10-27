@@ -63,6 +63,7 @@ import {
   type PhpKeyInput,
   registerClass,
   type SortDirection,
+  SORT_REGULAR,
   stdClass,
   Stringable,
   toBool,
@@ -76,7 +77,7 @@ import {
   yieldFrom,
 } from "@xaravel/runtime";
 import { Arr } from "./Arr";
-import { Enumerable } from "./Enumerable";
+import { Enumerable, type SortByDescCallback } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
 import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
@@ -279,6 +280,40 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
         yield keyed(key, callCallable(callback, valueCopy(value_), key));
       }
     });
+  }
+
+  /** Lazily yield each key and value returned by the callback. */
+  mapWithKeys<R>(callback: SyncCallback<[value: any, key: any], R>): this {
+    return this.lazyInstance(function* (this: LazyCollection) {
+      for (const [key, item] of this.entries()) {
+        yield* yieldFrom(callCallable(callback, valueCopy(item), key));
+      }
+    });
+  }
+
+  /** Reverse the items lazily through the eager collection, keeping keys. */
+  reverse(): this {
+    return this.passthru("reverse", []);
+  }
+
+  /** Sort by a retriever descending, lazily through the eager collection. */
+  sortByDesc<R>(callback: SortByDescCallback<R>, options: number = SORT_REGULAR): this {
+    return this.passthru("sortByDesc", [callback, options]);
+  }
+
+  /** Sort lazily through the eager collection, keeping keys. */
+  sort<R>(callback: SyncCallback<[a: any, b: any], R> | string | number | null = null): this {
+    return this.passthru("sort", [callback]);
+  }
+
+  /** Sort descending lazily through the eager collection, keeping keys. */
+  sortDesc(options: number = SORT_REGULAR): this {
+    return this.passthru("sortDesc", [options]);
+  }
+
+  /** Get the most frequent values through the eager collection. */
+  mode(key: unknown = null): unknown {
+    return this.collect().mode(key);
   }
 
   /** Return only unique items from the collection, by `==` or, when `strict`, by `===`; the first of each is kept. */
@@ -1193,6 +1228,29 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     const callback = this.useAsCallable(value_) ? value_ : this.equality(value_);
 
     return this.takeUntil((item: unknown, key: unknown) => !toBool(callCallable(callback, item, key)));
+  }
+
+  /** Materialize mapped values sequentially in key order, copying values and preserving keys.
+   * @asyncRoot callback
+   */
+  async mapAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    const mapped = new PhpArray();
+    for (const [key, item] of this.entries()) {
+      mapped.set(key, valueCopy(await callCallable(callback, valueCopy(item), key)));
+    }
+    return this.newInstance(mapped);
+  }
+
+  /** Execute a callback sequentially in key order, stopping only on false.
+   * @asyncRoot callback
+   */
+  async eachAsync(callback: (value: any, key: any) => unknown): Promise<this> {
+    for (const [key, item] of this.entries()) {
+      if (await callCallable(callback, valueCopy(item), key) === false) {
+        break;
+      }
+    }
+    return this;
   }
 
   /**
