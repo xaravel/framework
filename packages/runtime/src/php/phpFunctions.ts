@@ -1,3 +1,4 @@
+import { array_is_list, array_push, http_build_query } from "./arrBuiltins";
 // The PHP function-name resolver (action item epic-14-item-9-runtime-set-functions-callable-names, ESC-14.4-2, under
 // DIV-9.13 and DIV-9.14 as that ruling amends them): a frozen registry of every PHP global function the runtime exports
 // under its PHP name, each with the counts and by-reference positions PHP 8.5.11's `ReflectionFunction` gives it, and
@@ -97,6 +98,9 @@ function entry(name: string, fn: (...args: never[]) => unknown, required: number
 export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freeze(
   Object.fromEntries(
     [
+      entry("array_is_list", array_is_list, 1, 1),
+      entry("array_push", array_push, 1, 2, true, [0]),
+      entry("http_build_query", http_build_query, 1, 4),
       entry("abs", abs, 1, 1),
       entry("array_chunk", array_chunk, 2, 3),
       entry("key", key, 1, 1),

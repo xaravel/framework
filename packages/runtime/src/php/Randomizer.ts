@@ -1,12 +1,12 @@
-// PHP's `Random\Randomizer` (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1), with `pickArrayKeys`
-// only, a port of PHP 8.5.11's `ext/random/randomizer.c` and `php_array_pick_keys` (`ext/standard/array.c`) in
+// PHP's `Random\Randomizer` (action item epic-14-item-5-runtime-array-functions, ESC-14.2-1), with `pickArrayKeys` and `shuffleArray`, a port of PHP 8.5.11's `ext/random/randomizer.c` and `php_array_pick_keys` (`ext/standard/array.c`) in
 // coercive typing mode. `new Randomizer()` uses a secure engine, as PHP's default `Random\Engine\Secure` is
 // (`crypto.getRandomValues`). No engine is ported: passing one throws a JS `TypeError` naming the limit, the `engine`
 // property is absent, and the keys PHP picks for a given engine seed are not reproduced. The other methods
-// (`nextInt`, `getInt`, `shuffleArray`, …) are not ported. Registered as `Random\Randomizer`.
+// (`nextInt`, `getInt`, …) are not ported. Registered as `Random\Randomizer`.
 import { registerClass } from "../registry/registry";
 import { arrayParameter, intParameter } from "./phpArguments";
 import type { PhpArrayKey } from "./PhpArray";
+import { valueCopy } from "./valueCopy";
 import { ValueError } from "./ValueError";
 
 const PICK_ARRAY_KEYS = "Random\\Randomizer::pickArrayKeys";
@@ -32,6 +32,16 @@ export class Randomizer {
     if (engine !== null && engine !== undefined) {
       throw new TypeError("Random\\Randomizer::__construct(): Argument #1 ($engine) is not ported by Xaravel; omit it for the secure engine");
     }
+  }
+
+  /** PHP's shuffleArray: a uniformly shuffled, reindexed value copy, using the default secure engine. */
+  shuffleArray(array: unknown): unknown[] {
+    const values = arrayParameter("Random\\Randomizer::shuffleArray", 1, "array", array).map(([, value]) => valueCopy(value));
+    for (let remaining = values.length; remaining > 1; remaining--) {
+      const chosen = randomBelow(remaining);
+      [values[remaining - 1], values[chosen]] = [values[chosen], values[remaining - 1]];
+    }
+    return values;
   }
 
   /**

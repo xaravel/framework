@@ -262,3 +262,5 @@ export { readReturnMetadata, returns } from "./metadata/returns";
 export { allOf, oneOf, parent, primitive, self, static, variadic } from "./metadata/specs";
 export { bootTraits, classUsesRecursive, type ClassReference, clearBootedTraits, initializeTraits, type Mixed, mixin } from "./traits/mixin";
 export { plus, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_INT_MIN, LC_ALL, LC_CTYPE, LC_NUMERIC, LC_TIME, LC_COLLATE, LC_MONETARY, LC_MESSAGES, setlocale, array_chunk, arrayAppend, key, ksort, krsort, uksort, sort, rsort, callUnpacked, call_user_func_array, resolveCallable, strtolower, strrev, is_subclass_of } from "./php/index";
+
+export { array_is_list, array_push, http_build_query, PHP_QUERY_RFC1738, PHP_QUERY_RFC3986, type HttpBuildQueryOptions, bindPhpArguments, phpReturn, type PhpParameter, type PhpUserlandType } from "./php/index";

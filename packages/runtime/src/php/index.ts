@@ -205,3 +205,6 @@ export { arrayAppend, key, ksort, krsort, uksort, sort, rsort } from "./arrayRef
 export { callUnpacked, call_user_func_array, resolveCallable } from "./callables";
 export { strtolower, strrev } from "./stringFunctions";
 export { is_subclass_of } from "./typeTests";
+
+export { array_is_list, array_push, http_build_query, PHP_QUERY_RFC1738, PHP_QUERY_RFC3986, type HttpBuildQueryOptions } from "./arrBuiltins";
+export { bindPhpArguments, phpReturn, type PhpParameter, type PhpUserlandType } from "./userlandArguments";

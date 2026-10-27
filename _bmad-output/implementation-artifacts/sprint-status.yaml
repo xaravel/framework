@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-27-2026 12:11
+last_updated: 10-27-2026 15:43
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2101,19 +2101,19 @@ action_items:
     ref: "decisions/MAINT-2026-10-27-story-14-5.md"
   - id: "epic-14-item-11-runtime-arr-builtins-argument-binder"
     epic: 14
-    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-27-story-14-6.md), in scope
-      packages/runtime: under PHP names and PHP 8.5.11 behaviour checked against PHP,
-      @xaravel/runtime/php exports array_is_list, array_push over a Ref (next integer key),
-      http_build_query (nested arrays, numeric prefix, separators, enc_type) with
-      PHP_QUERY_RFC1738 and PHP_QUERY_RFC3986, and shuffleArray on the runtime Randomizer
-      (ESC-14.6-1); and publishes the runtime's internal PHP argument binder (phpArguments)
-      as a reusable seam that binds arguments to a userland method under PHP's coercive
-      typing: array, string, bool, int and float parameters, nullable defaults, union types,
-      every argument validated before the method runs with PHP's TypeError, and scalar
-      returns normalized (int as number or bigint, float as number or the float marker,
-      string-like class tokens as strings) (ESC-14.6-3). XT-runtime cases for each against
-      PHP; the existing exports stay; no other runtime behaviour changes; lands before Story
-      14.6 resumes"
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-27-story-14-6.md),
+      in scope packages/runtime: under PHP names and PHP 8.5.11 behaviour checked
+      against PHP, @xaravel/runtime/php exports array_is_list, array_push over a Ref
+      (next integer key), http_build_query (nested arrays, numeric prefix, separators,
+      enc_type) with PHP_QUERY_RFC1738 and PHP_QUERY_RFC3986, and shuffleArray on
+      the runtime Randomizer (ESC-14.6-1); and publishes the runtime's internal PHP
+      argument binder (phpArguments) as a reusable seam that binds arguments to a
+      userland method under PHP's coercive typing: array, string, bool, int and float
+      parameters, nullable defaults, union types, every argument validated before
+      the method runs with PHP's TypeError, and scalar returns normalized (int as
+      number or bigint, float as number or the float marker, string-like class tokens
+      as strings) (ESC-14.6-3). XT-runtime cases for each against PHP; the existing
+      exports stay; no other runtime behaviour changes; lands before Story 14.6 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-27-story-14-6.md"

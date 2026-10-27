@@ -1,0 +1,32 @@
+lists	[true,true,false,false]
+list-error	"TypeError: array_is_list(): Argument #1 ($array) must be of type array, null given"
+push	[3,{"x":"b","6":"c","7":null}]
+push-zero	[0,[]]
+push-negative	{"-5":"a","-4":"b"}
+push-overflow	"Error: Cannot add element to the array as the next element is already occupied"
+push-error	"TypeError: array_push(): Argument #1 ($array) must be of type array, int given"
+query	"p_2=a%20b&s=~%21%2A%28%29%20%2F%C3%A9&t=1&f=0&nested%5Ba%5D=x%20y&nested%5B3%5D=z"
+query1738	"s=%7E%21%2A%28%29+%2F%C3%A9;x=1"
+query-invalid-encoding	"x=%7E+a"
+query-coercion	"233=0"
+query-object	"x=1&nested%5Byes%5D=1"
+query-recursive	"o%5Bx%5D=1"
+query-repeated	"a%5Bx%5D=1&b%5Bx%5D=1"
+query-error	"TypeError: http_build_query(): Argument #1 ($data) must be of type array, null given"
+query-separator-error	"TypeError: http_build_query(): Argument #3 ($arg_separator) must be of type ?string, array given"
+shuffle-empty	[]
+shuffle-single	["a"]
+shuffle-error	"TypeError: Random\\Randomizer::shuffleArray(): Argument #1 ($array) must be of type array, int given"
+metadata	{"array_is_list":[1,1,false,[]],"array_push":[1,2,true,[0]],"http_build_query":[1,4,false,[]]}
+push-partial-overflow	["Error: Cannot add element to the array as the next element is already occupied",{"9223372036854775806":"a","9223372036854775807":"b"}]
+query-separator-throws	"RuntimeException: separator conversion"
+query-class-string	"token=Stringable&nested%5B0%5D=Stringable"
+query-class-error	"TypeError: http_build_query(): Argument #1 ($data) must be of type array, string given"
+query-options-all	"p_3=a%20b;nested%5B4%5D=c%20d"
+query-options-empty	"s=a+b"
+query-visibility	"yes=visible&child=public+child"
+list-forms	[false,true,true,true]
+query-constructor	"class=QueryConstructor"
+query-options-null	"s=a+b"
+query-options-invalid	"TypeError: http_build_query(): Argument #4 ($encoding_type) must be of type int, array given"
+query-options-throws	"RuntimeException: options conversion"
