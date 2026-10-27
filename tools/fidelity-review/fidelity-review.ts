@@ -771,6 +771,88 @@ export function fileImports(path: string, text: string, exists: (path: string) =
   return [...out].sort(compareUnits);
 }
 
+/** Local PHP trait dependencies, resolved from the declaring file's namespace/path (ESC-14.6-4). */
+export function upstreamTraitPaths(path: string, text: string, exists: (path: string) => boolean, read: (path: string) => string | null): string[] {
+  if (!path.startsWith(`${UPSTREAM_SNAPSHOT_DIR}/`) || !path.endsWith(".php")) {
+    return [];
+  }
+  // Comments and strings cannot declare a trait use; preserve whitespace and braces outside them.
+  const code = text.replace(/<<<[ \t]*(['"]?)([A-Za-z_]\w*)\1[ \t]*\r?\n[\s\S]*?^[ \t]*\2\b|\/\*[\s\S]*?\*\/|\/\/[^\n]*|#(?!\[)[^\n]*|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/gm, (part) => part.replace(/[^\n]/g, " "));
+  let namespace = "";
+  let prefix: string[] = [];
+  let base = posix.dirname(path);
+  const packageRoot = path.split("/").slice(0, 3).join("/");
+  const setNamespace = (name: string): void => {
+    namespace = name;
+    const ns = name.split("\\");
+    const dirs = posix.dirname(path).split("/");
+    let shared = 0;
+    while (shared < ns.length && shared < dirs.length && ns[ns.length - 1 - shared] === dirs[dirs.length - 1 - shared]) {
+      shared++;
+    }
+    prefix = ns.slice(0, ns.length - shared);
+    base = dirs.slice(0, dirs.length - shared).join("/");
+  };
+  const imports = new Map<string, string>();
+  const out = new Set<string>();
+  const bind = (clause: string, group = ""): void => {
+    for (const item of clause.split(",")) {
+      const match = /^\s*([\w\\]+)(?:\s+as\s+(\w+))?\s*$/i.exec(item);
+      if (match !== null) {
+        const fqcn = (group + match[1]!).replace(/^\\/, "");
+        imports.set((match[2] ?? fqcn.split("\\").at(-1)!).toLowerCase(), fqcn);
+      }
+    }
+  };
+  const tokens = /\bnamespace\s+([\w\\]+)\s*([;{])|\buse\s+([\w\\,\s]+?)([;{])|[{}]/g;
+  let depth = 0;
+  let namespaceDepth = 0;
+  for (let token = tokens.exec(code); token !== null; token = tokens.exec(code)) {
+    if (token[1] !== undefined) {
+      setNamespace(token[1]);
+      imports.clear();
+      if (token[2] === "{") {
+        depth++;
+      }
+      namespaceDepth = depth;
+    } else if (token[3] !== undefined) {
+      const clause = token[3]!.trim();
+      if (depth === namespaceDepth) {
+        if (token[4] === "{") {
+          const end = code.indexOf("}", tokens.lastIndex);
+          if (end !== -1) {
+            bind(code.slice(tokens.lastIndex, end), clause);
+            tokens.lastIndex = end + 1;
+          }
+        } else {
+          bind(clause);
+        }
+      } else if (depth > namespaceDepth) {
+        for (const name of clause.split(",").map((part) => part.trim())) {
+          const parts = name.split("\\");
+          const alias = imports.get(parts[0]!.toLowerCase());
+          const fqcn = name.startsWith("\\") ? name.slice(1) : parts[0]!.toLowerCase() === "namespace" ? `${namespace}\\${parts.slice(1).join("\\")}` : alias === undefined ? [namespace, name].filter(Boolean).join("\\") : [alias, ...parts.slice(1)].join("\\");
+          const segments = fqcn.split("\\");
+          const local = prefix.every((part, i) => part === segments[i]) ? `${base}/${segments.slice(prefix.length).join("/")}.php` : null;
+          const candidates = [...(local === null ? [] : [local]), `${packageRoot}/src/${segments.join("/")}.php`];
+          const target = candidates.find(exists) ?? candidates[0]!;
+          const source = exists(target) ? read(target) : null;
+          if (source === null || /\btrait\s+\w+/.test(source)) {
+            out.add(target);
+          }
+        }
+        if (token[4] === "{") {
+          depth++;
+        }
+      }
+    } else {
+      depth += token[0] === "{" ? 1 : -1;
+    }
+  }
+  out.delete(path);
+  return [...out].sort(compareUnits);
+}
+
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
  * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
@@ -783,7 +865,7 @@ export function fileImports(path: string, text: string, exists: (path: string) =
  * ESC-9.10-3) among them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit, is named as omitted for size,
  * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit.
  */
-export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true): WholeFileEntry[] {
+export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true, upstreamTests: readonly string[] = []): WholeFileEntry[] {
   const read = (path: string): string | null => {
     try {
       const full = join(root, path);
@@ -928,6 +1010,20 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   }
   for (const file of other) {
     add(4, file.filename, inScope(file.filename) ? "changed" : "changed, outside the Story's scope");
+  }
+  // Inventory shows method fragments, so resolve traits from the complete declaring test file (ESC-14.6-4).
+  const pending = [...upstreamTests, ...tiers.flat().map((entry) => entry.path)];
+  const visited = new Set<string>();
+  for (let i = 0; i < pending.length; i++) {
+    const path = pending[i]!;
+    if (visited.has(path) || !path.startsWith(`${UPSTREAM_SNAPSHOT_DIR}/`) || !path.endsWith(".php")) {
+      continue;
+    }
+    visited.add(path);
+    for (const target of upstreamTraitPaths(path, read(path) ?? "", exists, read)) {
+      add(1, target, `Upstream trait used by ${path}`);
+      pending.push(target);
+    }
   }
   const entries = tiers.flat();
   // Every entry renders a heading and, without its text, a note: reserve room for those before any file's text.
@@ -1541,7 +1637,11 @@ export function withWholeFiles(root: string, input: PromptInput, inScope: (path:
   const rest = buildPrompt({ ...input, evidence: { ...input.evidence, wholeFiles: [] } }).length;
   // Room for the section's heading and its per-file headings beyond the text `wholeFileEvidence` counts.
   const budget = PROMPT_CAP - rest - 2_000;
-  return fitWholeFiles(input, wholeFileEvidence(root, input.files, shown, budget, inScope));
+  const upstreamTests = input.inventory.flatMap((entry) => {
+    const source = entry.row === null ? null : parseSource(entry.row.source);
+    return source === null ? [] : [`${UPSTREAM_SNAPSHOT_DIR}/${source.name}/${source.rel}`];
+  });
+  return fitWholeFiles(input, wholeFileEvidence(root, input.files, shown, budget, inScope, upstreamTests));
 }
 
 /** The most characters of file paths (h)'s summary entry lists before it says how many more there are. */
