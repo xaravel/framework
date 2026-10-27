@@ -34,7 +34,7 @@ export function setlocale(category: unknown, locales: unknown, ...rest: unknown[
     ? arrayEntries(locales).map(([, value]) => value) : [locales, ...rest];
   for (const value of candidates) {
     if (value === null || value === "0") return query(Number(cat));
-    const locale = stringParameter("setlocale", 2, "locales", value);
+    const locale = stringParameter("setlocale", 2, "locales", value).split("\0", 1)[0]!;
     if (locale === "0") return query(Number(cat));
     if (locale === "C" || locale === "POSIX") {
       localeSlot.set(localeSlot.get().map((previous, index) => cat === LC_ALL || index === Number(cat) ? "C" : previous));

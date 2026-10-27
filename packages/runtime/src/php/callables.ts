@@ -8,6 +8,7 @@ import { foreachIterator } from "./liveCursor";
 import { isTraversable, iteratorOf } from "./traverse";
 import { arrayParameter } from "./phpArguments";
 import { phpFunction } from "./phpFunctions";
+import { INT_MAX, INT_MIN } from "./phpInt";
 import { className, phpType, phpTypeName } from "./phpType";
 import { CLOSURE_METHODS, stringOf } from "./typeTests";
 import { TypeError as PhpTypeError } from "./TypeError";
@@ -116,7 +117,7 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
   const named: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   let hasNamed = false;
   for (const [key, value] of entries) {
-    if (typeof key !== "string" && typeof key !== "bigint" && (typeof key !== "number" || !Number.isInteger(key))) throw new PhpError("Keys must be of type int|string during argument unpacking");
+    if (typeof key !== "string" && !(typeof key === "bigint" && key >= INT_MIN && key <= INT_MAX) && !(typeof key === "number" && Number.isSafeInteger(key))) throw new PhpError("Keys must be of type int|string during argument unpacking");
     if (typeof key === "string") {
       if (Object.hasOwn(named, key)) throw new PhpError(`Named parameter $${key} overwrites previous argument`);
       hasNamed = true;

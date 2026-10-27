@@ -118,7 +118,7 @@ export function reset(array: Ref<unknown>): unknown {
   const entries = pointerEntries("reset", array);
   array.value = valueCopy(array.value);
   setArrayPointer(array.value as object, 0);
-  return entries.length === 0 ? false : (entries[0]![1] ?? null);
+  return entries.length === 0 ? false : valueCopy(entries[0]![1] ?? null);
 }
 
 /** PHP's `end(&$array)`: the last value of `array.value`, or `false` for an empty array. Throws as `reset` does. */
@@ -126,7 +126,7 @@ export function end(array: Ref<unknown>): unknown {
   const entries = pointerEntries("end", array);
   array.value = valueCopy(array.value);
   setArrayPointer(array.value as object, Math.max(0, entries.length - 1));
-  return entries.length === 0 ? false : (entries[entries.length - 1]![1] ?? null);
+  return entries.length === 0 ? false : valueCopy(entries[entries.length - 1]![1] ?? null);
 }
 
 /**

@@ -4,7 +4,7 @@ import { Assert, xaravelTest } from "@xaravel/assert";
 import * as root from "@xaravel/runtime";
 import * as p from "@xaravel/runtime/php";
 import { registerClass, fqcn } from "@xaravel/runtime/registry";
-import { interleave, runInFrame } from "@xaravel/runtime/scope";
+import { frameSlot, interleave, runInFrame } from "@xaravel/runtime/scope";
 import { PHP_FUNCTIONS } from "../../src/php/phpFunctions";
 
 const NS = "XaravelFixture\\ChunkSort";
@@ -72,6 +72,12 @@ const cases: Record<string, () => unknown> = {
   "uksort.large-ties": () => { const large = largeArray(); const a = new p.Ref<unknown>(large); p.ksort(a, p.SORT_NUMERIC); const b = new p.Ref<unknown>(large); p.uksort(b, (a: unknown, b: unknown) => p.strlen(a) - p.strlen(b)); return [a.value, b.value]; },
   "uksort.large-throw": () => { const a = new p.Ref<unknown>(largeArray()); const calls: unknown[] = []; const error = attempt(() => p.uksort(a, (a: unknown, b: unknown) => { calls.push([a, b]); if (calls.length === 12) throw new p.RuntimeException("large-stop"); return p.spaceship(a, b); })); return [error, a.value, calls]; },
   "locale.categories": () => runInFrame("unit", () => { p.setlocale(p.LC_ALL, "C"); p.setlocale(p.LC_NUMERIC, "POSIX"); return [p.LC_CTYPE, p.LC_NUMERIC, p.LC_TIME, p.LC_COLLATE, p.LC_MONETARY, p.LC_MESSAGES].map((cat) => p.setlocale(cat, "0")); }),
+  "pointer.delete": () => { const a = new p.Ref<unknown>(new p.PhpArray([["a", 1], ["b", 2], ["c", 3]])); p.end(a); const v = a.value as p.PhpArray; v.delete("a"); const before = p.key(v); v.delete("c"); const after = p.key(v); p.arrayAppend(a, 4); return [before, after, p.key(a.value), a.value]; },
+  "pointer.return-copy": () => [p.reset, p.end].map((fn) => { const original = [[1], [2]]; const ref = new p.Ref<unknown>(original); const value = fn(ref) as number[]; value.push(9); return [original, ref.value, value]; }),
+  "locale.candidates": () => runInFrame("unit", () => [p.setlocale(p.LC_ALL, "C\0junk"), p.setlocale(p.LC_ALL, ["xaravel-missing", "C"]), p.setlocale(p.LC_ALL, "xaravel-missing", "C"), p.setlocale(p.LC_ALL, ["xaravel-missing"]), p.setlocale(p.LC_ALL, []), p.setlocale(p.LC_ALL, ["0"]), p.setlocale(p.LC_ALL, [true])]),
+  "append.errors": () => ["", 1, true, new p.stdClass()].map((value) => attempt(() => p.arrayAppend(new p.Ref<unknown>(value), 1))),
+  "unpack.float-key": () => attempt(() => p.callUnpacked(() => 1, (function* () { yield p.keyed(9007199254740992, 1); })())),
+  "sort.numeric-keys": () => [p.ksort, p.krsort].flatMap((fn) => [p.SORT_REGULAR, p.SORT_NUMERIC, p.SORT_STRING].map((flag) => { const ref = new p.Ref<unknown>(new p.PhpArray<p.PhpKeyInput, unknown>([["02", "a"], [2, "b"], ["2.0", "c"], ["2e0", "d"], ["10", "e"], [-1, "f"]])); fn(ref, flag); return ref.value; })),
   registry: () => names.map((name) => { const f = PHP_FUNCTIONS[name]!; return [name, f.required, f.total, f.variadic, [...f.byRef]]; }),
 };
 function* source(log: string[]): globalThis.Generator<unknown, void, unknown> {
@@ -122,6 +128,17 @@ xaravelTest("XT-runtime-88", "Every PHP callable form shares invocation, invalid
     Assert.assertSame(encode(expected), encode(p.call_user_func_array(callable, optionsArgs)));
   }
   Assert.assertSame("TypeError: call_user_func_array(): Argument #2 ($args) must be of type array, Generator given", attempt(() => p.call_user_func_array(options, new p.Generator((function* () { yield 1; })()))));
+  class OptionsInvoker { __invoke(value: unknown, opts: unknown): unknown { return [value, opts]; } }
+  Object.defineProperty(Object.getOwnPropertyDescriptor(OptionsInvoker.prototype, "__invoke")!.value as object, Symbol.for("xaravel.php.options"), { value: true });
+  registerClass(`${NS}\\OptionsInvoker`, OptionsInvoker);
+  for (const invoke of [p.callUnpacked, p.call_user_func_array]) {
+    Assert.assertSame('[1,{"limit":2}]', encode(invoke(new OptionsInvoker(), optionsArgs)));
+    const array = [1]; const object = new p.stdClass();
+    const mutate = Object.assign((positional: number[], opts: { named: number[]; object: object }) => { positional.push(2); opts.named.push(3); return opts.object; }, { [Symbol.for("xaravel.php.options")]: true });
+    const args = new p.PhpArray<p.PhpKeyInput, unknown>([[0, array], ["named", array], ["object", object]]);
+    Assert.assertTrue(invoke(mutate, args) === object);
+    Assert.assertSame("[1]", encode(array)); Assert.assertSame('[1]', encode(args.get("named")));
+  }
   const ref = new p.Ref<unknown>(0); Assert.assertSame("Error: Cannot use a scalar value as an array", attempt(() => p.arrayAppend(ref, 1)));
   Assert.assertSame("Error: [] operator not supported for strings", attempt(() => p.arrayAppend(new p.Ref<unknown>(""), 1)));
   Assert.assertSame("Error: Cannot use object of type stdClass as array", attempt(() => p.arrayAppend(new p.Ref<unknown>(new p.stdClass()), 1)));
@@ -130,7 +147,19 @@ xaravelTest("XT-runtime-88", "Every PHP callable form shares invocation, invalid
 });
 xaravelTest("XT-runtime-89", "Locale slots isolate concurrent frames and owned generators clean up entries, keys and values on every exit without exhausting held sources", async () => {
   check(["locale", "generator"]);
-  await interleave([async () => { Assert.assertSame("C", p.setlocale(p.LC_ALL, "C")); await Promise.resolve(); Assert.assertSame("C", p.setlocale(p.LC_ALL, null)); }, async () => { Assert.assertSame("C", p.setlocale(p.LC_ALL, "POSIX")); await Promise.resolve(); Assert.assertSame("C", p.setlocale(p.LC_ALL, null)); }]);
+  // Inspect the slot write as well as the canonical public result: C/POSIX cannot distinguish state by value.
+  const slot = frameSlot<string[]>("xaravel.php.locale", () => Array<string>(6).fill("C"));
+  const frameStates: string[][] = [];
+  await interleave(["C", "POSIX"].map((locale) => async () => {
+    const before = slot.get();
+    Assert.assertSame("C", p.setlocale(p.LC_ALL, locale));
+    const state = slot.get(); frameStates.push(state);
+    Assert.assertTrue(state !== before, "public locale selection writes the frame slot");
+    await Promise.resolve();
+    Assert.assertTrue(slot.get() === state, "another frame cannot replace this frame's locale state");
+    Assert.assertSame("C", p.setlocale(p.LC_ALL, null));
+  }));
+  Assert.assertTrue(frameStates[0] !== frameStates[1], "concurrent frames own separate locale vectors");
   runInFrame("unit", () => {
     const old = p.setlocale(p.LC_ALL, "0"); p.setlocale(p.LC_ALL, "POSIX"); Assert.assertSame("C", p.setlocale(p.LC_ALL, old)); Assert.assertSame(false, p.setlocale(999, "C")); Assert.assertSame("C", p.setlocale(p.LC_ALL, 0));
   });
@@ -149,6 +178,15 @@ xaravelTest("XT-runtime-89", "Locale slots isolate concurrent frames and owned g
   }
   const delegatedLog: string[] = []; const delegated = p.Generator.owned(source(delegatedLog));
   const outer = p.Generator.owned((function* () { yield* p.yieldFrom(delegated); })()); for (const _ of outer) break; Assert.assertSame('["start","finally"]', encode(delegatedLog));
+  const innerLog: string[] = []; const inner = new p.Generator(source(innerLog));
+  const wrapping = p.Generator.owned((function* () { yield* p.yieldFrom(inner); })());
+  for (const _ of wrapping) break;
+  Assert.assertSame('["start"]', encode(innerLog)); inner.next(); Assert.assertSame(2, inner.current());
+  Assert.assertSame('["start","later"]', encode(innerLog)); inner.next();
+  const forceLog: string[] = [];
+  const yielding = p.Generator.owned((function* () { try { yield 1; } finally { forceLog.push("before"); yield 2; forceLog.push("after"); } })());
+  Assert.assertSame("Error: Cannot yield from finally in a force-closed generator", attempt(() => { for (const _ of yielding) break; }));
+  Assert.assertSame('["before"]', encode(forceLog));
   const log: string[] = [];
   const failFinally = (): never => { throw new p.RuntimeException("finally"); };
   const g = p.Generator.owned((function* () { try { yield 1; yield 2; } finally { log.push("finally"); failFinally(); } })());

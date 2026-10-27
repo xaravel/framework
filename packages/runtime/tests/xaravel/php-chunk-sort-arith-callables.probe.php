@@ -62,6 +62,12 @@ namespace {
     $old=setlocale(LC_ALL,0);setlocale(LC_ALL,'C');setlocale(LC_NUMERIC,'POSIX');
     $categories=[LC_CTYPE,LC_NUMERIC,LC_TIME,LC_COLLATE,LC_MONETARY,LC_MESSAGES];
     out('locale.categories',array_map(fn($cat)=>setlocale($cat,0),$categories));setlocale(LC_ALL,$old);
+    $a=['a'=>1,'b'=>2,'c'=>3];end($a);unset($a['a']);$before=key($a);unset($a['c']);$after=key($a);$a[]=4;out('pointer.delete',[$before,$after,key($a),$a]);
+    $results=[];foreach(['reset','end']as$fn){$original=[[1],[2]];$a=$original;$value=$fn($a);$value[]=9;$results[]=[$original,$a,$value];}out('pointer.return-copy',$results);
+    $old=setlocale(LC_ALL,0);out('locale.candidates',[setlocale(LC_ALL,"C\0junk"),setlocale(LC_ALL,['xaravel-missing','C']),setlocale(LC_ALL,'xaravel-missing','C'),setlocale(LC_ALL,['xaravel-missing']),setlocale(LC_ALL,[]),setlocale(LC_ALL,['0']),setlocale(LC_ALL,[true])]);setlocale(LC_ALL,$old);
+    $results=[];foreach(['',1,true,new stdClass]as$value){$results[]=attempt(function()use($value){$value[]=1;});}out('append.errors',$results);
+    out('unpack.float-key',attempt(fn()=>(fn()=>1)(...(function(){yield 9007199254740992.0=>1;})())));
+    $results=[];foreach(['ksort','krsort']as$fn)foreach([SORT_REGULAR,SORT_NUMERIC,SORT_STRING]as$flag){$a=['02'=>'a',2=>'b','2.0'=>'c','2e0'=>'d','10'=>'e',-1=>'f'];$fn($a,$flag);$results[]=$a;}out('sort.numeric-keys',$results);
     $registry=['array_chunk','key','ksort','krsort','uksort','sort','rsort','intdiv','floor','ceil','is_subclass_of','call_user_func_array','strrev','strtolower','setlocale'];
     out('registry',array_map(function($name){$r=new ReflectionFunction($name);return [$name,$r->getNumberOfRequiredParameters(),$r->getNumberOfParameters(),$r->isVariadic(),array_keys(array_filter($r->getParameters(),fn($p)=>$p->isPassedByReference()))];},$registry));
 }

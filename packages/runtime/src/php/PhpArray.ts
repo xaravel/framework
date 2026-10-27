@@ -3,7 +3,7 @@
 // (AD-9.5). Its `[Symbol.iterator]()` yields normalised `[key, value]` pairs, the protocol the grader reads without
 // importing the runtime (decisions/ESC-4.1-1.md). A key is a safe-integer `number`, a `bigint` for an int beyond
 // ±(2^53 − 1), or a `string`. `jsonEncode` encodes it by the list rule.
-import { copyArrayPointer } from "./arrayPointer";
+import { arrayPointer, copyArrayPointer, setArrayPointer } from "./arrayPointer";
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
 import { Error as PhpError } from "./Error";
@@ -155,7 +155,13 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
 
   /** `unset($a[$key])`; whether the key was present. The next free index never goes down. */
   delete(key: K | PhpKeyInput): boolean {
-    return this.#entries.delete(normalizeKey(key));
+    const normal = normalizeKey(key);
+    const position = [...this.#entries.keys()].indexOf(normal);
+    if (position < 0) return false;
+    const pointer = arrayPointer(this);
+    this.#entries.delete(normal);
+    if (position < pointer) setArrayPointer(this, pointer - 1);
+    return true;
   }
 
   /**
