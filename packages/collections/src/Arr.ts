@@ -1,10 +1,10 @@
 // Laravel's `Illuminate\Support\Arr` (v13.37.0), the members the Collections core calls: `accessible`, `collapse`,
-// `except`, `exists`, `first`, `forget`, `from`, `get`, `last`, `map`, `only`, `pluck`, `prepend`, `pull`, `random`,
-// `select`, `where` and `wrap`. Story 14.6 ports the rest with its tests. Every member reads its PHP array argument as
-// `@xaravel/runtime` does (a list, a plain object or a `PhpArray`) and never mutates or returns the caller's array: an
-// array that Upstream returns as it is comes back as a value copy (AD-9). PHP's by-reference `&$array` (`forget`,
-// `pull`) is a `Ref` (DIV-9.2): the member writes a new array to `ref.value`, and an `ArrayAccess` object it reaches
-// is a handle, changed in place, as in PHP.
+// `except`, `exists`, `first`, `forget`, `from`, `get`, `last`, `map`, `only`, `partition`, `pluck`, `prepend`, `pull`,
+// `random`, `select`, `where` and `wrap`. Story 14.6 ports the rest with its tests. Every member reads its PHP array
+// argument as `@xaravel/runtime` does (a list, a plain object or a `PhpArray`) and never mutates or returns the
+// caller's array: an array that Upstream returns as it is comes back as a value copy (AD-9). PHP's by-reference
+// `&$array` (`forget`, `pull`) is a `Ref` (DIV-9.2): the member writes a new array to `ref.value`, and an `ArrayAccess`
+// object it reaches is a handle, changed in place, as in PHP. Callbacks are sync (`SyncCallback`, AD-6).
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
 import {
@@ -55,7 +55,7 @@ import {
 } from "@xaravel/runtime";
 import { Enumerable } from "./Enumerable";
 import { data_get, value } from "./helpers";
-import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead } from "./support/callables";
+import { arrayRead, callCallable, isOptionsObject, offsetIsSet, offsetRead, propertyIsSet, propertyRead, type SyncCallback } from "./support/callables";
 
 /** A callback over a value and its key. */
 type ItemCallback = (value: any, key: any) => unknown;
@@ -177,8 +177,8 @@ export class Arr extends mixin(null, Macroable) {
    * `{ callback, default }` after the array: PHP types `$callback` `callable|null`, so a plain object there is never the
    * callback.
    */
-  static first(array: unknown, callback?: ItemCallback | null, defaultValue?: unknown): unknown;
-  static first(array: unknown, options?: { callback?: ItemCallback | null; default?: unknown }): unknown;
+  static first<R>(array: unknown, callback?: SyncCallback<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
+  static first<R>(array: unknown, options?: { callback?: SyncCallback<[value: any, key: any], R> | null; default?: unknown }): unknown;
   static first(array: unknown, callback: unknown = null, defaultValue: unknown = null): unknown {
     if (arguments.length === 2 && isOptionsObject(callback)) {
       ({ callback = null, default: defaultValue = null } = callback as { callback?: ItemCallback | null; default?: unknown });
@@ -347,8 +347,8 @@ export class Arr extends mixin(null, Macroable) {
    * `value(default)` when none does; with no callback, the last element. Also takes AD-26's options object
    * `{ callback, default }` after the array, read as `first` reads it.
    */
-  static last(array: unknown, callback?: ItemCallback | null, defaultValue?: unknown): unknown;
-  static last(array: unknown, options?: { callback?: ItemCallback | null; default?: unknown }): unknown;
+  static last<R>(array: unknown, callback?: SyncCallback<[value: any, key: any], R> | null, defaultValue?: unknown): unknown;
+  static last<R>(array: unknown, options?: { callback?: SyncCallback<[value: any, key: any], R> | null; default?: unknown }): unknown;
   static last(array: unknown, callback: unknown = null, defaultValue: unknown = null): unknown {
     if (arguments.length === 2 && isOptionsObject(callback)) {
       ({ callback = null, default: defaultValue = null } = callback as { callback?: ItemCallback | null; default?: unknown });
@@ -368,7 +368,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Run a map over each of the items in the array; the callback gets each value and its key. */
-  static map(array: unknown, callback: (value: any, key: any) => unknown): unknown {
+  static map<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
     const keys = array_keys(array);
 
     let items: unknown;
@@ -382,6 +382,25 @@ export class Arr extends mixin(null, Macroable) {
     }
 
     return array_combine(keys, items);
+  }
+
+  /**
+   * Partition the array (or Traversable) into two arrays using the given callback, which gets each value and its key:
+   * `[passed, failed]`, each keeping its entries' keys.
+   */
+  static partition<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): [unknown, unknown] {
+    const passed = new PhpArray();
+    const failed = new PhpArray();
+
+    for (const [key, item] of iterateEntries(array)) {
+      if (toBool(callCallable(callback, valueCopy(item), key))) {
+        passed.set(key as never, item);
+      } else {
+        failed.set(key as never, item);
+      }
+    }
+
+    return [valueCopy(arrayFromEntries(passed)), valueCopy(arrayFromEntries(failed))];
   }
 
   /** Get a subset of the items from the given array: the entries whose key is one of `keys`. */
@@ -531,7 +550,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Filter the array using the given callback, which gets each value and its key. */
-  static where(array: unknown, callback: (value: any, key: any) => unknown): unknown {
+  static where<R>(array: unknown, callback: SyncCallback<[value: any, key: any], R>): unknown {
     return array_filter(array, callback, ARRAY_FILTER_USE_BOTH);
   }
 

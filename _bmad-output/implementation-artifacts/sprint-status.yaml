@@ -159,7 +159,7 @@ development_status:
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
-  14-3-filtering-slicing-and-conditional-methods: in-progress
+  14-3-filtering-slicing-and-conditional-methods: blocked  # 128 of 148 built (first run); ESC-14.3-1 (round, reset, end, is_bool, strtoupper, trim, chunk_split; contract, qualifies for the monitor under the runtime-builtins standing rule) holds 20 Test IDs; XT-collections-6 waits for its CI-signed Oracle fixture, on which both Fidelity reviewers reject (F-6 / F-7)
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog

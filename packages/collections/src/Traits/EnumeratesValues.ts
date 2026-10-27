@@ -1,7 +1,10 @@
-// Laravel's `Illuminate\Support\Traits\EnumeratesValues` (v13.37.0), the members Stories 14.1 and 14.2 port, as a
+// Laravel's `Illuminate\Support\Traits\EnumeratesValues` (v13.37.0), the members Stories 14.1-14.3 port, as a
 // runtime trait (AD-26 Traits row): `Collection` and `LazyCollection` are `mixin(null, EnumeratesValues, Macroable)`,
 // and the trait uses `Conditionable` as Upstream's does. The other members belong to the Collections Stories that port
-// their tests; `dump` and `dd` call Symfony's VarDumper through Support (Epic 19).
+// their tests; `dump` and `dd` call Symfony's VarDumper through Support (Epic 19). `percentage` (PHP's `round`) and
+// `whereBetween` / `whereNotBetween` (PHP's `reset` / `end`) wait for the runtime to export those builtins
+// (ESC-14.3-1). `whenEmpty` and its kin call Conditionable's `when`, so they are dual helpers as it is (AD-6, DIV-1.6):
+// no `@asyncRoot` tag and no declared Promise.
 //
 // `static::$proxies` is one Upstream static per using class, held per Scope Frame unit with `frameStatic` (AD-5): the
 // key is the class whose own `proxy` is this trait's (the layer `mixin` builds), so `Collection`, its subclasses and
@@ -12,8 +15,8 @@
 //
 // `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
 // `...arguments` unchanged. Members whose first parameter is a PHP value or a callback, or that read the argument count
-// (`some`, `firstWhere`, `hasMany`, `where`), keep only the positional form, and a lone object is the PHP value
-// (DIV-12.20).
+// (`some`, `firstWhere`, `hasMany`, `where`, `every`, `partition`), keep only the positional form, and a lone object
+// is the PHP value (DIV-12.20).
 //
 // The trait's methods call the using class's own members (`all`, `map`, `getIterator`, …), so each declares `this`
 // as `EnumeratesValuesHost`. This module and `Collection.ts` import each other; it uses `Collection` only at call time
@@ -22,6 +25,7 @@
 import { Conditionable } from "@xaravel/conditionable";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import {
+  array_any,
   array_filter,
   array_map,
   arrayEntries,
@@ -67,7 +71,7 @@ import { Enumerable } from "../Enumerable";
 import { enum_value } from "../functions";
 import { data_get, data_has } from "../helpers";
 import { HigherOrderCollectionProxy } from "../HigherOrderCollectionProxy";
-import { callCallable } from "../support/callables";
+import { callCallable, type SyncCallback, type ValueOrSyncCallback } from "../support/callables";
 
 /** Any class, abstract or not. */
 type AnyClass = abstract new (...args: never[]) => unknown;
@@ -80,6 +84,21 @@ type ItemCallback = (value: any, key: any) => unknown;
 
 /** The arguments of a `($key, $operator = null, $value = null)` member, as `func_get_args()` forwards them. */
 type WhereArguments = [key: unknown, operator?: unknown, value?: unknown];
+
+/** The protected `newInstance` of the using class, which `partition` calls as Upstream's `$this->newInstance(...)`. */
+interface NewInstanceHost<T> {
+  newInstance(items?: unknown): T;
+}
+
+/**
+ * The callback or default of `whenEmpty` and its kin: called with the collection (and the condition, as `when` passes
+ * it). A closure, or an invokable object whose `__invoke` is called. A dual helper's callback (AD-6, DIV-1.6): it may
+ * be async, and its own result type `R` is returned.
+ */
+type CollectionCallback<S, R> = ((self: S, value: boolean) => R) | { __invoke(self: S, value: boolean): R };
+
+/** What a `whenEmpty`-style callback's result `r` makes the member return: `r ?? this`, as `when` does. */
+type CollectionResult<R, S> = Exclude<R, null | undefined | void> | S;
 
 /** The members of the using class (`Collection`, `LazyCollection`) that the trait's methods call. */
 export interface EnumeratesValuesHost {
@@ -221,7 +240,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 
   /** Execute a callback over each item; returning `false` from it stops the iteration. */
-  each<T extends EnumeratesValuesHost>(this: T, callback: ItemCallback): T {
+  each<T extends EnumeratesValuesHost, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T {
     for (const [key, item] of this.entries()) {
       if (callCallable(callback, valueCopy(item), key) === false) {
         break;
@@ -266,11 +285,79 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     return !this.isEmpty();
   }
 
+  /**
+   * Determine if all items pass the given truth test: with one argument, a callback (or a `data_get` key) read as a
+   * bool for each item and its key; with more, every item matches `where(key, operator, value)`. `true` when empty.
+   */
+  every<R>(this: EnumeratesValuesHost & EnumeratesValues, callback: SyncCallback<[value: any, key: any], R>): boolean;
+  every<K>(this: EnumeratesValuesHost & EnumeratesValues, key: ValueOrSyncCallback<K>, operator?: unknown, value?: unknown): boolean;
+  every(this: EnumeratesValuesHost & EnumeratesValues, key: unknown, operator: unknown = null, value: unknown = null): boolean {
+    void operator;
+    void value;
+    if (arguments.length === 1) {
+      const callback = this.valueRetriever(key);
+
+      for (const [k, v] of this.entries()) {
+        if (!toBool(callback(v, k))) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return this.every(this.operatorForWhere(...([...arguments] as WhereArguments)));
+  }
+
   /** Create a collection of all elements that do not pass a given truth test, or that are not `==` the value. */
+  reject<T extends EnumeratesValuesHost, R>(this: T, callback: SyncCallback<[value: any, key: any], R>): T;
+  reject<T extends EnumeratesValuesHost, K>(this: T, callback?: ValueOrSyncCallback<K>): T;
   reject<T extends EnumeratesValuesHost>(this: T, callback: unknown = true): T {
     const useAsCallable = (this as T & EnumeratesValues).useAsCallable(callback);
 
     return this.filter((value: unknown, key: unknown) => (useAsCallable ? !toBool(callCallable(callback, valueCopy(value), key)) : !looseEquals(value, callback))) as T;
+  }
+
+  /**
+   * Partition the collection into two collections by the given callback (or `data_get` key), or, with more than one
+   * argument, by `where(key, operator, value)`: a collection of `[passed, failed]`, each keeping its items' keys.
+   */
+  partition<T extends EnumeratesValuesHost, R>(this: T & EnumeratesValues, callback: SyncCallback<[value: any, key: any], R>): T;
+  partition<T extends EnumeratesValuesHost, K>(this: T & EnumeratesValues, key: ValueOrSyncCallback<K>, operator?: unknown, value?: unknown): T;
+  partition<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, operator: unknown = null, value: unknown = null): T {
+    void operator;
+    void value;
+    const callback = arguments.length === 1 ? this.valueRetriever(key) : (this.operatorForWhere(...([...arguments] as WhereArguments)) as ItemCallback);
+
+    const [passed, failed] = Arr.partition(this.getIterator(), callback);
+
+    const self = this as unknown as NewInstanceHost<T>;
+
+    return self.newInstance([self.newInstance(passed), self.newInstance(failed)]);
+  }
+
+  /**
+   * Apply the callback if the collection is empty, else the `default` when one is given: `when(isEmpty(), callback,
+   * default)`. A dual helper, as `when` is (AD-6, DIV-1.6): it returns its callback's result, or the collection when
+   * that is `null`.
+   */
+  whenEmpty<R = never, D = never>(callback: CollectionCallback<this, R>, defaultValue: CollectionCallback<this, D> | null = null): CollectionResult<R | D, this> {
+    return this.when((this as unknown as EnumeratesValuesHost).isEmpty(), callback as never, defaultValue as never) as CollectionResult<R | D, this>;
+  }
+
+  /** Apply the callback if the collection is not empty, else the `default` when one is given (a dual helper, as `when`). */
+  whenNotEmpty<R = never, D = never>(callback: CollectionCallback<this, R>, defaultValue: CollectionCallback<this, D> | null = null): CollectionResult<R | D, this> {
+    return this.when(!(this as unknown as EnumeratesValuesHost).isEmpty(), callback as never, defaultValue as never) as CollectionResult<R | D, this>;
+  }
+
+  /** Apply the callback unless the collection is empty: `whenNotEmpty(callback, default)` (a dual helper, as `when`). */
+  unlessEmpty<R = never, D = never>(callback: CollectionCallback<this, R>, defaultValue: CollectionCallback<this, D> | null = null): CollectionResult<R | D, this> {
+    return this.whenNotEmpty(callback, defaultValue);
+  }
+
+  /** Apply the callback unless the collection is not empty: `whenEmpty(callback, default)` (a dual helper, as `when`). */
+  unlessNotEmpty<R = never, D = never>(callback: CollectionCallback<this, R>, defaultValue: CollectionCallback<this, D> | null = null): CollectionResult<R | D, this> {
+    return this.whenEmpty(callback, defaultValue);
   }
 
   /** Alias for the "contains" method. */
@@ -312,6 +399,63 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     void operator;
     void value;
     return this.filter(this.operatorForWhere(...([...arguments] as WhereArguments)) as ItemCallback) as T;
+  }
+
+  /** Filter items where the value for the given key ("dot" notation; the item itself when `null`) is `null`. */
+  whereNull<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown = null): T {
+    return this.whereStrict(key, null);
+  }
+
+  /** Filter items where the value for the given key ("dot" notation; the item itself when `null`) is not `null`. */
+  whereNotNull<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown = null): T {
+    return this.where(key, "!==", null);
+  }
+
+  /** Filter items by the given key value pair using strict comparison (PHP's `===`). */
+  whereStrict<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, value: unknown): T {
+    return this.where(key, "===", value);
+  }
+
+  /** Filter items whose value for the given key is in `values` (an array, `Arrayable` or Traversable), by `==` or `===`. */
+  whereIn<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown, strict: boolean = false): T {
+    values = this.getArrayableItems(values);
+
+    return this.filter((item: unknown) => in_array(data_get(item, key), values, strict)) as T;
+  }
+
+  /** Filter items whose value for the given key is in `values`, using strict comparison. */
+  whereInStrict<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown): T {
+    return this.whereIn(key, values, true);
+  }
+
+  /** Filter items whose value for the given key is not in `values` (an array, `Arrayable` or Traversable), by `==` or `===`. */
+  whereNotIn<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown, strict: boolean = false): T {
+    values = this.getArrayableItems(values);
+
+    return this.reject((item: unknown) => in_array(data_get(item, key), values, strict));
+  }
+
+  /** Filter items whose value for the given key is not in `values`, using strict comparison. */
+  whereNotInStrict<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown): T {
+    return this.whereNotIn(key, values, true);
+  }
+
+  /** Filter the items, removing any that are not instances of the given type (a class, a class name, or a list of them). */
+  whereInstanceOf<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, type: unknown): T {
+    return this.filter((value_: unknown) => {
+      if (is_array(type)) {
+        return array_any(type, (classType: unknown) => isInstanceOf(value_, classType));
+      }
+
+      return isInstanceOf(value_, type);
+    }) as T;
+  }
+
+  /** Return only unique items from the collection array using strict comparison (PHP's `===`). */
+  uniqueStrict<T extends EnumeratesValuesHost, R>(this: T & EnumeratesValues, key: SyncCallback<[value: any, key: any], R>): T;
+  uniqueStrict<T extends EnumeratesValuesHost, K>(this: T & EnumeratesValues, key?: ValueOrSyncCallback<K>): T;
+  uniqueStrict<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown = null): T {
+    return (this as unknown as { unique(key: unknown, strict: boolean): T }).unique(key, true);
   }
 
   /** Collect the values into a `Collection`. */
@@ -476,6 +620,16 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     }
 
     return (item: unknown) => data_get(item, value);
+  }
+
+  /** Make a function to check an item's equality: PHP's `$item === $value` (`identical`). */
+  protected equality(value: unknown): (item: unknown) => boolean {
+    return (item: unknown) => identical(item, value);
+  }
+
+  /** Make a function using another function, by negating its result (read as a bool). */
+  protected negate(callback: unknown): (...params: unknown[]) => boolean {
+    return (...params: unknown[]) => !toBool(callCallable(callback, ...params));
   }
 
   /** Make a function that returns what's passed to it. */

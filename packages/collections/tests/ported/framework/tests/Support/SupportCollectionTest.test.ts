@@ -1,5 +1,5 @@
 // Ported from framework/tests/Support/SupportCollectionTest.php (Laravel v13.37.0): Story 14.1's Test IDs, then Story
-// 14.2's, each in Upstream's order. The Collections Stories 14.3-14.5 add theirs to this file.
+// 14.2's, then Story 14.3's, each in Upstream's order. The Collections Stories 14.4-14.5 add theirs to this file.
 //
 // `collectionClassProvider` rows hold the constructors (PORTING.md § Data providers): `#0` is `Collection` and `#1`
 // `LazyCollection`. Index syntax on a collection or another `ArrayAccess` object is a method call: a read is `get(k)`
@@ -21,6 +21,16 @@
 // arrives with Support (Epic 19), so it keeps Upstream's body in the blocked case, through a local `literal` that
 // throws the same error. TestAccessorEloquentTestStub's `$this->$accessor()` is `callMethod(this, accessor)`, PHP's
 // case-insensitive dynamic method call (PORTING.md's idiom table).
+//
+// Story 14.3: `when`, `unless` and `duplicates` are overloaded generic members, which TypeScript cannot call through the
+// `AnyCollection` union, so those calls go through `OverloadedView`, one class's static type; the call itself is
+// Upstream's. `$c->when->contains(...)` is `c.__get('when').__call('contains', [...])` (DIV-12.16), and the
+// `HigherOrderWhenProxy` it returns answers `concat` (DIV-12.12). testWhere uses Support's `HtmlString` and
+// testWhereInstanceOf `Str`, so they keep Upstream's bodies in the blocked case, through local classes that throw
+// `BlockedByComponentError("support")`. ESC-14.3-1 holds 20 Test IDs whose members or fixtures call PHP builtins the
+// runtime does not export yet (`round`, `reset`, `end`, `is_bool`, `strtoupper`, `trim`, `chunk_split`); their lines
+// stay `not-ported-yet` (not `blocked-by:runtime`, as for ESC-14.2-4: tools/expectations/reasons.ts accepts
+// `blocked-by` only for a later Phase or Epic), and a comment marks where each would sit.
 //
 // `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
@@ -239,6 +249,31 @@ function literal(arguments_: Record<string, unknown>): unknown {
   void arguments_;
   throw new BlockedByComponentError("support");
 }
+
+/** Support's `Illuminate\Support\HtmlString`, which arrives with Support (Epic 19). */
+class HtmlString {
+  constructor(html: string = "") {
+    void html;
+    throw new BlockedByComponentError("support");
+  }
+}
+
+/** Support's `Illuminate\Support\Str`, which arrives with Support (Epic 19). */
+class Str {
+  constructor() {
+    throw new BlockedByComponentError("support");
+  }
+}
+
+/**
+ * One class's view of a collection under test, for the members TypeScript cannot call through the `AnyCollection`
+ * union: overloaded generic members (`when`, `unless`, `duplicates`), whose overloads it does not merge across the two
+ * classes. Both classes declare them alike, so the view changes only the static type, never the call.
+ */
+type OverloadedView = Collection;
+
+/** What a `HigherOrderWhenProxy` answers for `concat` (DIV-12.12): the collection's result, or the collection. */
+type WhenConcat = { concat(source: unknown): AnyCollection };
 
 /** Support's `class_basename` helper, which arrives with Support (Epic 19). */
 function class_basename(value: unknown): string {
@@ -2475,3 +2510,1102 @@ portedTest(`${ID}::testPutAddsItemToCollection`, { case: SupportCollectionTest }
   data.put("foo", 3);
   this.assertSame({ foo: 3, bar: { nested: "two" } }, data.toArray());
 });
+
+// Story 14.3: filtering, slicing and conditional methods, in Upstream's order. The Test IDs ESC-14.3-1 holds keep a
+// one-line comment where they would sit.
+
+portedTest(`${ID}::testSkipMethod`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6]);
+
+  // Total items to skip is smaller than collection length
+  this.assertSame([5, 6], data.skip(4).values().all());
+
+  // Total items to skip is more than collection length
+  this.assertSame([], data.skip(10).values().all());
+});
+
+portedTest(`${ID}::testSkipUntil`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 1, 2, 2, 3, 3, 4, 4]);
+
+  // Item at the beginning of the collection
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.skipUntil(1).values().all());
+
+  // Item at the middle of the collection
+  this.assertSame([3, 3, 4, 4], data.skipUntil(3).values().all());
+
+  // Item not in the collection
+  this.assertSame([], data.skipUntil(5).values().all());
+
+  // Item at the beginning of the collection
+  data = data
+    .skipUntil((value: number, key: number) => {
+      void key;
+      return value <= 1;
+    })
+    .values();
+
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.all());
+
+  // Item at the middle of the collection
+  data = data
+    .skipUntil((value: number, key: number) => {
+      void key;
+      return value >= 3;
+    })
+    .values();
+
+  this.assertSame([3, 3, 4, 4], data.all());
+
+  // Item not in the collection
+  data = data
+    .skipUntil((value: number, key: number) => {
+      void key;
+      return value >= 5;
+    })
+    .values();
+
+  this.assertSame([], data.all());
+});
+
+portedTest(`${ID}::testSkipWhile`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 1, 2, 2, 3, 3, 4, 4]);
+
+  // Item at the beginning of the collection
+  this.assertSame([2, 2, 3, 3, 4, 4], data.skipWhile(1).values().all());
+
+  // Item not in the collection
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.skipWhile(5).values().all());
+
+  // Item in the collection but not at the beginning
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.skipWhile(2).values().all());
+
+  // Item not in the collection
+  data = data
+    .skipWhile((value: number, key: number) => {
+      void key;
+      return value >= 5;
+    })
+    .values();
+
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.all());
+
+  // Item in the collection but not at the beginning
+  data = data
+    .skipWhile((value: number, key: number) => {
+      void key;
+      return value >= 2;
+    })
+    .values();
+
+  this.assertSame([1, 1, 2, 2, 3, 3, 4, 4], data.all());
+
+  // Item at the beginning of the collection
+  data = data
+    .skipWhile((value: number, key: number) => {
+      void key;
+      return value < 3;
+    })
+    .values();
+
+  this.assertSame([3, 3, 4, 4], data.all());
+});
+
+portedTest(`${ID}::testFilter`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([
+    { id: 1, name: "Hello" },
+    { id: 2, name: "World" },
+  ]);
+  this.assertEquals(
+    new PhpArray([[1, { id: 2, name: "World" }]]),
+    c
+      .filter((item: Record<string, unknown>) => {
+        return looseEquals(item["id"], 2);
+      })
+      .all(),
+  );
+
+  c = new collection(["", "Hello", "", "World"]);
+  this.assertEquals(["Hello", "World"], c.filter().values().toArray());
+
+  c = new collection({ id: 1, first: "Hello", second: "World" });
+  this.assertEquals(
+    { first: "Hello", second: "World" },
+    c
+      .filter((item: unknown, key: string) => {
+        return key !== "id";
+      })
+      .all(),
+  );
+
+  c = new collection([1, 2, 3, null, false, "", 0, []]);
+  this.assertEquals([1, 2, 3], c.filter().all());
+});
+
+portedTest(`${ID}::testHigherOrderKeyBy`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([
+    { id: "id1", name: "first" },
+    { id: "id2", name: "second" },
+  ]);
+
+  this.assertEquals({ id1: "first", id2: "second" }, ((c.__get("keyBy").__get("id") as AnyCollection).__get("map").__get("name") as AnyCollection).all()); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testHigherOrderUnique`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([
+    { id: "1", name: "first" },
+    { id: "1", name: "second" },
+  ]);
+
+  this.assertCount(1, c.__get("unique").__get("id")); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testHigherOrderFilter`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([
+    new (class {
+      name = "Alex";
+
+      active(): boolean {
+        return true;
+      }
+    })(),
+    new (class {
+      name = "John";
+
+      active(): boolean {
+        return false;
+      }
+    })(),
+  ]);
+
+  this.assertCount(1, c.__get("filter").__call("active", [])); // adapted:DIV-12.16
+});
+
+// testHigherOrderSole#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+
+portedTest(`${ID}::testWhere`, { case: SupportCollectionBlockedBySupportTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.where("v", 3).values().all());
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.where("v", "=", 3).values().all());
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.where("v", "==", 3).values().all());
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.where("v", "garbage", 3).values().all());
+  this.assertEquals([{ v: 3 }], c.where("v", "===", 3).values().all());
+
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 4 }], c.where("v", "<>", 3).values().all());
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 4 }], c.where("v", "!=", 3).values().all());
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: "3" }, { v: 4 }], c.where("v", "!==", 3).values().all());
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }], c.where("v", "<=", 3).values().all());
+  this.assertEquals([{ v: 3 }, { v: "3" }, { v: 4 }], c.where("v", ">=", 3).values().all());
+  this.assertEquals([{ v: 1 }, { v: 2 }], c.where("v", "<", 3).values().all());
+  this.assertEquals([{ v: 4 }], c.where("v", ">", 3).values().all());
+
+  const object = Object.assign(new stdClass(), { foo: "bar" });
+
+  this.assertEquals([], c.where("v", object).values().all());
+
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }], c.where("v", "<>", object).values().all());
+
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }], c.where("v", "!=", object).values().all());
+
+  this.assertEquals([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }], c.where("v", "!==", object).values().all());
+
+  this.assertEquals([], c.where("v", ">", object).values().all());
+
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.where((value: Record<string, unknown>) => looseEquals(value["v"], 3)).values().all());
+
+  this.assertEquals([{ v: 3 }], c.where((value: Record<string, unknown>) => value["v"] === 3).values().all());
+
+  c = new collection([{ v: 1 }, { v: object }]);
+  this.assertEquals([{ v: object }], c.where("v", object).values().all());
+
+  this.assertEquals([{ v: 1 }, { v: object }], c.where("v", "<>", null).values().all());
+
+  this.assertEquals([], c.where("v", "<", null).values().all());
+
+  c = new collection([{ v: 1 }, { v: new HtmlString("hello") }]);
+  this.assertEquals([{ v: new HtmlString("hello") }], c.where("v", "hello").values().all());
+
+  c = new collection([{ v: 1 }, { v: "hello" }]);
+  this.assertEquals([{ v: "hello" }], c.where("v", new HtmlString("hello")).values().all());
+
+  c = new collection([{ v: 1 }, { v: 2 }, { v: null }]);
+  this.assertEquals([{ v: 1 }, { v: 2 }], c.where("v").values().all());
+
+  c = new collection([
+    { v: 1, g: 3 },
+    { v: 2, g: 2 },
+    { v: 2, g: 3 },
+    { v: 2, g: null },
+  ]);
+  this.assertEquals([{ v: 2, g: 3 }], c.where("v", 2).where("g", 3).values().all());
+  this.assertEquals([{ v: 2, g: 3 }], c.where("v", 2).where("g", ">", 2).values().all());
+  this.assertSame([], c.where("v", 2).where("g", 4).values().all());
+  this.assertEquals([{ v: 2, g: null }], c.where("v", 2).whereNull("g").values().all());
+});
+
+portedTest(`${ID}::testWhereStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 3 }, { v: "3" }]);
+
+  this.assertEquals([{ v: 3 }], c.whereStrict("v", 3).values().all());
+});
+
+portedTest(`${ID}::testWhereInstanceOf`, { case: SupportCollectionBlockedBySupportTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([new stdClass(), new stdClass(), new collection(), new stdClass(), new Str()]);
+  this.assertCount(3, c.whereInstanceOf(stdClass));
+
+  this.assertCount(4, c.whereInstanceOf([stdClass, Str]));
+});
+
+portedTest(`${ID}::testWhereIn`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+  this.assertEquals([{ v: 1 }, { v: 3 }, { v: "3" }], c.whereIn("v", [1, 3]).values().all());
+  this.assertSame([], c.whereIn("v", [2]).whereIn("v", [1, 3]).values().all());
+  this.assertEquals([{ v: 1 }], c.whereIn("v", [1]).whereIn("v", [1, 3]).values().all());
+});
+
+portedTest(`${ID}::testWhereInStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+  this.assertEquals([{ v: 1 }, { v: 3 }], c.whereInStrict("v", [1, 3]).values().all());
+});
+
+portedTest(`${ID}::testWhereNotIn`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+  this.assertEquals([{ v: 2 }, { v: 4 }], c.whereNotIn("v", [1, 3]).values().all());
+  this.assertEquals([{ v: 4 }], c.whereNotIn("v", [2]).whereNotIn("v", [1, 3]).values().all());
+});
+
+portedTest(`${ID}::testWhereNotInStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+  this.assertEquals([{ v: 2 }, { v: "3" }, { v: 4 }], c.whereNotInStrict("v", [1, 3]).values().all());
+});
+
+// testBetween#0/#1 and testWhereNotBetween#0/#1 are held by ESC-14.3-1 (`whereBetween` / `whereNotBetween` need
+// `reset` / `end`).
+
+portedTest(`${ID}::testDuplicates`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let duplicates = (collection.make([1, 2, 1, "laravel", null, "laravel", "php", null]) as OverloadedView).duplicates().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [2, 1],
+      [5, "laravel"],
+      [7, null],
+    ]),
+    duplicates,
+  );
+
+  // does loose comparison
+  duplicates = (collection.make([2, "2", [], null]) as OverloadedView).duplicates().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [1, "2"],
+      [3, null],
+    ]),
+    duplicates,
+  );
+
+  // works with mix of primitives
+  duplicates = (collection.make([1, "2", ["laravel"], ["laravel"], null, "2"]) as OverloadedView).duplicates().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [3, ["laravel"]],
+      [5, "2"],
+    ]),
+    duplicates,
+  );
+
+  // works with mix of objects and primitives **excepts numbers**.
+  const expected = new Collection(["laravel"]);
+  duplicates = (collection.make([new Collection(["laravel"]), expected, expected, [], "2", "2"]) as OverloadedView).duplicates().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [1, expected],
+      [2, expected],
+      [5, "2"],
+    ]),
+    duplicates,
+  );
+});
+
+portedTest(`${ID}::testDuplicatesWithKey`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let items: Record<string, string>[] = [{ framework: "vue" }, { framework: "laravel" }, { framework: "laravel" }];
+  let duplicates = (collection.make(items) as OverloadedView).duplicates("framework").all();
+  this.assertSame(new PhpArray([[2, "laravel"]]), duplicates);
+
+  // works with key and strict
+  items = [{ Framework: "vue" }, { framework: "vue" }, { Framework: "vue" }];
+  duplicates = (collection.make(items) as OverloadedView).duplicates("Framework", true).all();
+  this.assertSame(new PhpArray([[2, "vue"]]), duplicates);
+});
+
+portedTest(`${ID}::testDuplicatesWithCallback`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const items = [{ framework: "vue" }, { framework: "laravel" }, { framework: "laravel" }];
+  const duplicates = (collection.make(items) as OverloadedView)
+    .duplicates((item: Record<string, unknown>) => {
+      return item["framework"];
+    })
+    .all();
+  this.assertSame(new PhpArray([[2, "laravel"]]), duplicates);
+});
+
+portedTest(`${ID}::testDuplicatesWithStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let duplicates = collection.make([1, 2, 1, "laravel", null, "laravel", "php", null]).duplicatesStrict().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [2, 1],
+      [5, "laravel"],
+      [7, null],
+    ]),
+    duplicates,
+  );
+
+  // does strict comparison
+  duplicates = collection.make([2, "2", [], null]).duplicatesStrict().all();
+  this.assertSame([], duplicates);
+
+  // works with mix of primitives
+  duplicates = collection.make([1, "2", ["laravel"], ["laravel"], null, "2"]).duplicatesStrict().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [3, ["laravel"]],
+      [5, "2"],
+    ]),
+    duplicates,
+  );
+
+  // works with mix of primitives, objects, and numbers
+  const expected = new collection(["laravel"]);
+  duplicates = collection.make([new collection(["laravel"]), expected, expected, [], "2", "2"]).duplicatesStrict().all();
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [2, expected],
+      [5, "2"],
+    ]),
+    duplicates,
+  );
+});
+
+portedTest(`${ID}::testUnique`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(["Hello", "World", "World"]);
+  this.assertEquals(["Hello", "World"], c.unique().all());
+
+  c = new collection([
+    [1, 2],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [2, 3],
+  ]);
+  this.assertEquals(
+    [
+      [1, 2],
+      [2, 3],
+      [3, 4],
+    ],
+    c.unique().values().all(),
+  );
+});
+
+portedTest(`${ID}::testUniqueWithCallback`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection(
+    new PhpArray([
+      [1, { id: 1, first: "Taylor", last: "Otwell" }],
+      [2, { id: 2, first: "Taylor", last: "Otwell" }],
+      [3, { id: 3, first: "Abigail", last: "Otwell" }],
+      [4, { id: 4, first: "Abigail", last: "Otwell" }],
+      [5, { id: 5, first: "Taylor", last: "Swift" }],
+      [6, { id: 6, first: "Taylor", last: "Swift" }],
+    ]),
+  );
+
+  this.assertEquals(
+    new PhpArray([
+      [1, { id: 1, first: "Taylor", last: "Otwell" }],
+      [3, { id: 3, first: "Abigail", last: "Otwell" }],
+    ]),
+    c.unique("first").all(),
+  );
+
+  this.assertEquals(
+    new PhpArray([
+      [1, { id: 1, first: "Taylor", last: "Otwell" }],
+      [3, { id: 3, first: "Abigail", last: "Otwell" }],
+      [5, { id: 5, first: "Taylor", last: "Swift" }],
+    ]),
+    c
+      .unique((item: Record<string, unknown>) => {
+        return toPhpString(item["first"]) + toPhpString(item["last"]);
+      })
+      .all(),
+  );
+
+  this.assertEquals(
+    new PhpArray([
+      [1, { id: 1, first: "Taylor", last: "Otwell" }],
+      [2, { id: 2, first: "Taylor", last: "Otwell" }],
+    ]),
+    c
+      .unique((item: unknown, key: number) => {
+        return key % 2;
+      })
+      .all(),
+  );
+});
+
+portedTest(`${ID}::testUniqueStrict`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([
+    {
+      id: "0",
+      name: "zero",
+    },
+    {
+      id: "00",
+      name: "double zero",
+    },
+    {
+      id: "0",
+      name: "again zero",
+    },
+  ]);
+
+  this.assertEquals(
+    [
+      {
+        id: "0",
+        name: "zero",
+      },
+      {
+        id: "00",
+        name: "double zero",
+      },
+    ],
+    c.uniqueStrict("id").all(),
+  );
+});
+
+portedTest(`${ID}::testEvery`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([]);
+  this.assertTrue(c.every("key", "value"));
+  this.assertTrue(
+    c.every(() => {
+      return false;
+    }),
+  );
+
+  c = new collection([{ age: 18 }, { age: 20 }, { age: 20 }]);
+  this.assertFalse(c.every("age", 18));
+  this.assertTrue(c.every("age", ">=", 18));
+  this.assertTrue(
+    c.every((item: Record<string, number>) => {
+      return item["age"]! >= 18;
+    }),
+  );
+  this.assertFalse(
+    c.every((item: Record<string, number>) => {
+      return item["age"]! >= 20;
+    }),
+  );
+
+  c = new collection([null, null]);
+  this.assertTrue(
+    c.every((item: unknown) => {
+      return item === null;
+    }),
+  );
+
+  c = new collection([{ active: true }, { active: true }]);
+  this.assertTrue(c.every("active"));
+  this.assertTrue(c.__get("every").__get("active")); // adapted:DIV-12.16
+  this.assertFalse(c.concat([{ active: false }]).__get("every").__get("active")); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testTake`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["taylor", "dayle", "shawn"]);
+  data = data.take(2);
+  this.assertEquals(["taylor", "dayle"], data.all());
+});
+
+portedTest(`${ID}::testTakeLast`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["taylor", "dayle", "shawn"]);
+  data = data.take(-2);
+  this.assertEquals(
+    new PhpArray([
+      [1, "dayle"],
+      [2, "shawn"],
+    ]),
+    data.all(),
+  );
+});
+
+portedTest(`${ID}::testTakeLastWithLimitGreaterThanCollectionSize`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["taylor", "dayle", "shawn"]);
+  data = data.take(-5);
+  this.assertEquals(["taylor", "dayle", "shawn"], data.all());
+});
+
+portedTest(`${ID}::testTakeUntilUsingValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3, 4]);
+
+  data = data.takeUntil(3);
+
+  this.assertSame([1, 2], data.toArray());
+});
+
+portedTest(`${ID}::testTakeUntilUsingCallback`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3, 4]);
+
+  data = data.takeUntil((item: number) => {
+    return item >= 3;
+  });
+
+  this.assertSame([1, 2], data.toArray());
+});
+
+portedTest(`${ID}::testTakeUntilReturnsAllItemsForUnmetValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4]);
+
+  let actual = data.takeUntil(99);
+
+  this.assertSame(data.toArray(), actual.toArray());
+
+  actual = data.takeUntil((item: number) => {
+    return item >= 99;
+  });
+
+  this.assertSame(data.toArray(), actual.toArray());
+});
+
+// testTakeUntilCanBeProxied#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+
+portedTest(`${ID}::testTakeWhileUsingValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 1, 2, 2, 3, 3]);
+
+  data = data.takeWhile(1);
+
+  this.assertSame([1, 1], data.toArray());
+});
+
+portedTest(`${ID}::testTakeWhileUsingCallback`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection([1, 2, 3, 4]);
+
+  data = data.takeWhile((item: number) => {
+    return item < 3;
+  });
+
+  this.assertSame([1, 2], data.toArray());
+});
+
+portedTest(`${ID}::testTakeWhileReturnsNoItemsForUnmetValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4]);
+
+  let actual = data.takeWhile(2);
+
+  this.assertSame([], actual.toArray());
+
+  actual = data.takeWhile((item: unknown) => {
+    return looseEquals(item, 99);
+  });
+
+  this.assertSame([], actual.toArray());
+});
+
+// testTakeWhileCanBeProxied#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+
+portedTest(`${ID}::testRejectRemovesElementsPassingTruthTest`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection(["foo", "bar"]);
+  this.assertEquals(["foo"], c.reject("bar").values().all());
+
+  c = new collection(["foo", "bar"]);
+  this.assertEquals(
+    ["foo"],
+    c
+      .reject((v: unknown) => {
+        return v === "bar";
+      })
+      .values()
+      .all(),
+  );
+
+  c = new collection(["foo", null]);
+  this.assertEquals(["foo"], c.reject(null).values().all());
+
+  c = new collection(["foo", "bar"]);
+  this.assertEquals(["foo", "bar"], c.reject("baz").values().all());
+
+  c = new collection(["foo", "bar"]);
+  this.assertEquals(
+    ["foo", "bar"],
+    c
+      .reject((v: unknown) => {
+        return v === "baz";
+      })
+      .values()
+      .all(),
+  );
+
+  c = new collection({ id: 1, primary: "foo", secondary: "bar" });
+  this.assertEquals(
+    { primary: "foo", secondary: "bar" },
+    c
+      .reject((item: unknown, key: string) => {
+        return key === "id";
+      })
+      .all(),
+  );
+});
+
+portedTest(`${ID}::testRejectWithoutAnArgumentRemovesTruthyValues`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data1 = new collection([false, true, new collection(), 0]);
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [0, false],
+      [3, 0],
+    ]),
+    data1.reject().all(),
+  );
+
+  const data2 = new collection({
+    a: true,
+    b: true,
+    c: true,
+  });
+  this.assertTrue(data2.reject().isEmpty());
+});
+
+portedTest(`${ID}::testSliceOffset`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([4, 5, 6, 7, 8], data.slice(3).values().toArray());
+});
+
+portedTest(`${ID}::testSliceNegativeOffset`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([6, 7, 8], data.slice(-3).values().toArray());
+});
+
+portedTest(`${ID}::testSliceOffsetAndLength`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([4, 5, 6], data.slice(3, 3).values().toArray());
+});
+
+portedTest(`${ID}::testSliceOffsetAndNegativeLength`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([4, 5, 6, 7], data.slice(3, -1).values().toArray());
+});
+
+portedTest(`${ID}::testSliceNegativeOffsetAndLength`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([4, 5, 6], data.slice(-5, 3).values().toArray());
+});
+
+portedTest(`${ID}::testSliceNegativeOffsetAndNegativeLength`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, 2, 3, 4, 5, 6, 7, 8]);
+  this.assertEquals([3, 4, 5, 6], data.slice(-6, -2).values().toArray());
+});
+
+// testHigherOrderCollectionGroupBy, testHigherOrderCollectionMap, testHigherOrderCollectionMapFromArrays and
+// testHigherOrderCollectionStaticCall (#0/#1 each) are held by ESC-14.3-1 (`groupBy` needs `is_bool`, and the
+// fixtures need `strtoupper`, `trim` and `chunk_split`).
+
+portedTest(`${ID}::testPartition`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection(phpRange(1, 10));
+
+  const [firstPartition, secondPartition] = data
+    .partition((i: number) => {
+      return i <= 5;
+    })
+    .all() as AnyCollection[];
+
+  this.assertEquals([1, 2, 3, 4, 5], firstPartition!.values().toArray());
+  this.assertEquals([6, 7, 8, 9, 10], secondPartition!.values().toArray());
+});
+
+portedTest(`${ID}::testPartitionCallbackWithKey`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection(["zero", "one", "two", "three"]);
+
+  const [even, odd] = data
+    .partition((item: unknown, index: number) => {
+      return index % 2 === 0;
+    })
+    .all() as AnyCollection[];
+
+  this.assertEquals(["zero", "two"], even!.values().toArray());
+  this.assertEquals(["one", "three"], odd!.values().toArray());
+});
+
+portedTest(`${ID}::testPartitionByKey`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const courses = new collection([
+    { free: true, title: "Basic" },
+    { free: false, title: "Premium" },
+  ]);
+
+  const [free, premium] = courses.partition("free").all() as AnyCollection[];
+
+  this.assertSame([{ free: true, title: "Basic" }], free!.values().toArray());
+  this.assertSame([{ free: false, title: "Premium" }], premium!.values().toArray());
+});
+
+portedTest(`${ID}::testPartitionWithOperators`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([
+    { name: "Tim", age: 17 },
+    { name: "Agatha", age: 62 },
+    { name: "Kristina", age: 33 },
+    { name: "Tim", age: 41 },
+  ]);
+
+  const [tims, others] = data.partition("name", "Tim").all() as AnyCollection[];
+
+  this.assertEquals(
+    [
+      { name: "Tim", age: 17 },
+      { name: "Tim", age: 41 },
+    ],
+    tims!.values().all(),
+  );
+
+  this.assertEquals(
+    [
+      { name: "Agatha", age: 62 },
+      { name: "Kristina", age: 33 },
+    ],
+    others!.values().all(),
+  );
+
+  const [adults, minors] = data.partition("age", ">=", 18).all() as AnyCollection[];
+
+  this.assertEquals(
+    [
+      { name: "Agatha", age: 62 },
+      { name: "Kristina", age: 33 },
+      { name: "Tim", age: 41 },
+    ],
+    adults!.values().all(),
+  );
+
+  this.assertEquals([{ name: "Tim", age: 17 }], minors!.values().all());
+});
+
+portedTest(`${ID}::testPartitionPreservesKeys`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const courses = new collection({
+    a: { free: true },
+    b: { free: false },
+    c: { free: true },
+  });
+
+  const [free, premium] = courses.partition("free").all() as AnyCollection[];
+
+  this.assertSame({ a: { free: true }, c: { free: true } }, free!.toArray());
+  this.assertSame({ b: { free: false } }, premium!.toArray());
+});
+
+portedTest(`${ID}::testPartitionEmptyCollection`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection();
+
+  this.assertCount(
+    2,
+    data.partition(() => {
+      return true;
+    }),
+  );
+});
+
+portedTest(`${ID}::testHigherOrderPartition`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const courses = new collection({
+    a: { free: true },
+    b: { free: false },
+    c: { free: true },
+  });
+
+  const [free, premium] = (courses.__get("partition").__get("free") as AnyCollection).all() as AnyCollection[]; // adapted:DIV-12.16
+
+  this.assertSame({ a: { free: true }, c: { free: true } }, free!.toArray());
+
+  this.assertSame({ b: { free: false } }, premium!.toArray());
+});
+
+portedTest(`${ID}::testWhen`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).when("adam", (data: AnyCollection, newName: string) => {
+    return data.concat([newName]);
+  });
+
+  this.assertSame(["michael", "tom", "adam"], data.toArray());
+
+  data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).when(false, (data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["michael", "tom"], data.toArray());
+});
+
+portedTest(`${ID}::testWhenDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).when(
+    false,
+    (data: AnyCollection) => {
+      return data.concat(["adam"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "taylor"], data.toArray());
+});
+
+portedTest(`${ID}::testWhenEmpty`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.whenEmpty(() => {
+    throw new Exception("whenEmpty() should not trigger on a collection with items");
+  });
+
+  this.assertSame(["michael", "tom"], data.toArray());
+
+  data = new collection();
+
+  data = data.whenEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["adam"], data.toArray());
+});
+
+portedTest(`${ID}::testWhenEmptyDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.whenEmpty(
+    (data: AnyCollection) => {
+      return data.concat(["adam"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "taylor"], data.toArray());
+});
+
+portedTest(`${ID}::testWhenNotEmpty`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.whenNotEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["michael", "tom", "adam"], data.toArray());
+
+  data = new collection();
+
+  data = data.whenNotEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame([], data.toArray());
+});
+
+portedTest(`${ID}::testWhenNotEmptyDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.whenNotEmpty(
+    (data: AnyCollection) => {
+      return data.concat(["adam"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "adam"], data.toArray());
+});
+
+portedTest(`${ID}::testHigherOrderWhenAndUnless`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).when(true).concat(["chris"]);
+
+  this.assertSame(["michael", "tom", "chris"], data.toArray());
+
+  data = (data as OverloadedView).when(false).concat(["adam"]);
+
+  this.assertSame(["michael", "tom", "chris"], data.toArray());
+
+  data = (data as OverloadedView).unless(false).concat(["adam"]);
+
+  this.assertSame(["michael", "tom", "chris", "adam"], data.toArray());
+
+  data = (data as OverloadedView).unless(true).concat(["bogdan"]);
+
+  this.assertSame(["michael", "tom", "chris", "adam"], data.toArray());
+});
+
+portedTest(`${ID}::testHigherOrderWhenAndUnlessWithProxy`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data.__get("when").__call("contains", ["michael"]) as WhenConcat).concat(["chris"]); // adapted:DIV-12.16
+
+  this.assertSame(["michael", "tom", "chris"], data.toArray());
+
+  data = (data.__get("when").__call("contains", ["missing"]) as WhenConcat).concat(["adam"]); // adapted:DIV-12.16
+
+  this.assertSame(["michael", "tom", "chris"], data.toArray());
+
+  data = (data.__get("unless").__call("contains", ["missing"]) as WhenConcat).concat(["adam"]); // adapted:DIV-12.16
+
+  this.assertSame(["michael", "tom", "chris", "adam"], data.toArray());
+
+  data = (data.__get("unless").__call("contains", ["adam"]) as WhenConcat).concat(["bogdan"]); // adapted:DIV-12.16
+
+  this.assertSame(["michael", "tom", "chris", "adam"], data.toArray());
+});
+
+portedTest(`${ID}::testUnless`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).unless(false, (data: AnyCollection) => {
+    return data.concat(["caleb"]);
+  });
+
+  this.assertSame(["michael", "tom", "caleb"], data.toArray());
+
+  data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).unless(true, (data: AnyCollection) => {
+    return data.concat(["caleb"]);
+  });
+
+  this.assertSame(["michael", "tom"], data.toArray());
+});
+
+portedTest(`${ID}::testUnlessDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = (data as OverloadedView).unless(
+    true,
+    (data: AnyCollection) => {
+      return data.concat(["caleb"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "taylor"], data.toArray());
+});
+
+portedTest(`${ID}::testUnlessEmpty`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.unlessEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["michael", "tom", "adam"], data.toArray());
+
+  data = new collection();
+
+  data = data.unlessEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame([], data.toArray());
+});
+
+portedTest(`${ID}::testUnlessEmptyDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.unlessEmpty(
+    (data: AnyCollection) => {
+      return data.concat(["adam"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "adam"], data.toArray());
+});
+
+portedTest(`${ID}::testUnlessNotEmpty`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.unlessNotEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["michael", "tom"], data.toArray());
+
+  data = new collection();
+
+  data = data.unlessNotEmpty((data: AnyCollection) => {
+    return data.concat(["adam"]);
+  });
+
+  this.assertSame(["adam"], data.toArray());
+});
+
+portedTest(`${ID}::testUnlessNotEmptyDefault`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let data = new collection(["michael", "tom"]);
+
+  data = data.unlessNotEmpty(
+    (data: AnyCollection) => {
+      return data.concat(["adam"]);
+    },
+    (data: AnyCollection) => {
+      return data.concat(["taylor"]);
+    },
+  );
+
+  this.assertSame(["michael", "tom", "taylor"], data.toArray());
+});
+
+portedTest(`${ID}::testWhereNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([{ name: "Taylor" }, { name: null }, { name: "Bert" }, { name: false }, { name: "" }]);
+
+  this.assertSame(new PhpArray([[1, { name: null }]]), data.whereNull("name").all());
+
+  this.assertSame([], data.whereNull().all());
+});
+
+portedTest(`${ID}::testWhereNullWithoutKey`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const collection_ = new collection([1, null, 3, "null", false, true]);
+  this.assertSame(new PhpArray([[1, null]]), collection_.whereNull().all());
+});
+
+portedTest(`${ID}::testWhereNotNull`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let originalData: unknown;
+  const data = new collection(
+    (originalData = [{ name: "Taylor" }, { name: null }, { name: "Bert" }, { name: false }, { name: "" }]),
+  );
+
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [0, { name: "Taylor" }],
+      [2, { name: "Bert" }],
+      [3, { name: false }],
+      [4, { name: "" }],
+    ]),
+    data.whereNotNull("name").all(),
+  );
+
+  this.assertSame(originalData, data.whereNotNull().all());
+});
+
+portedTest(`${ID}::testWhereNotNullWithoutKey`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([1, null, 3, "null", false, true]);
+
+  this.assertSame(
+    new PhpArray<number, unknown>([
+      [0, 1],
+      [2, 3],
+      [3, "null"],
+      [4, false],
+      [5, true],
+    ]),
+    data.whereNotNull().all(),
+  );
+});
+
+// testHighOrderPercentage#0/#1 are held by ESC-14.3-1 (`percentage` needs `round`).
