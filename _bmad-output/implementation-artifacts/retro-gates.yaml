@@ -100,6 +100,6 @@ epic-13:
   checkpoint_approved: false
   waiting_on_maintainer: []
 epic-14:
-  # No retrospective yet: the runtime item needs authoritative Oracle execution before its draft PR may merge.
+  # Draft #492 needs authoritative Oracle execution and a clean full harness; see its blocked spec and status issue.
   waiting_on_maintainer:
     - epic-14-item-10-runtime-chunk-sort-arith-callables
