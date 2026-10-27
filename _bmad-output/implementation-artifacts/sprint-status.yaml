@@ -159,7 +159,7 @@ development_status:
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
-  14-3-filtering-slicing-and-conditional-methods: blocked  # 128 of 148 built (first run); ESC-14.3-1 (round, reset, end, is_bool, strtoupper, trim, chunk_split; contract, qualifies for the monitor under the runtime-builtins standing rule) holds 20 Test IDs; XT-collections-6 waits for its CI-signed Oracle fixture, on which both Fidelity reviewers reject (F-6 / F-7)
+  14-3-filtering-slicing-and-conditional-methods: in-progress  # 128 of 148 built; ESC-14.3-1 ruled option 1 by the monitor under the runtime-builtins standing rule (decisions/ESC-14.3-1.md); action item epic-14-item-8-runtime-round-string-array-pointer lands first and frees the last 20 Test IDs
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
@@ -2031,3 +2031,21 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-14.2-7.md"
+  - id: "epic-14-item-8-runtime-round-string-array-pointer"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.3-1.md, approved
+      by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md), in scope packages/runtime: under their PHP names and the
+      behaviour of the Oracle's PHP 8.5.11, @xaravel/runtime/php exports round(num, precision
+      = 0, mode = PHP_ROUND_HALF_UP) with the PHP_ROUND_HALF_UP / _DOWN / _EVEN / _ODD
+      constants and PHP 8.4's RoundingMode enum as an AD-26 enum (either accepted as mode),
+      PHP 8.5's _php_math_round (pre-rounding check, negative precision), ValueError for an
+      invalid int mode, and a float result carrying the float marker when integral; reset(ref)
+      and end(ref) over a Ref<array> (DIV-9.2), returning the first / last value or false
+      when empty; is_bool; strtoupper (ASCII-only); trim(string, characters) with PHP's
+      default list and a..z ranges; and chunk_split(string, length = 76, separator) with
+      PHP's ValueError for a length below 1 (ESC-14.3-1). XT-runtime cases for each against
+      PHP's results, with a PHP probe; the existing exports stay; no other runtime behaviour
+      changes; lands before Story 14.3's last 20 Test IDs are ported"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-14.3-1.md"
