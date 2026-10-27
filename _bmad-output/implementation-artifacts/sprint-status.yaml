@@ -2079,9 +2079,9 @@ action_items:
       @xaravel/runtime/php exports array_chunk (preserve_keys), key, ksort, krsort and uksort
       over a Ref, sort and rsort with PHP's flags, intdiv, floor, ceil, is_subclass_of (Class
       Registry and enum inheritance), call_user_func_array, strrev, strtolower, setlocale and
-      LC_ALL (locale kept in a Scope Frame slot, AD-5; C and POSIX always available; another
-      locale only when its collation matches the Oracle's, else setlocale returns false;
-      strcoll and SORT_LOCALE_STRING read the slot), and PHP_INT_MIN / PHP_INT_MAX
+      LC_ALL (locale kept in a Scope Frame slot, AD-5; C and POSIX only, setlocale returning
+      false for any other locale, narrowed by the Maintainer 2026-10-27 so no Oracle run is
+      needed; strcoll and SORT_LOCALE_STRING read the slot), and PHP_INT_MIN / PHP_INT_MAX
       (ESC-14.5-1); plus(a, b) and divide(a, b) for PHP's numeric + and /, with PHP's
       coercion, int or float result, float marker, overflow, TypeError, DivisionByZeroError,
       and arrayUnion for two arrays (ESC-14.5-2); arrayAppend(ref, value) for $a[] = $v and

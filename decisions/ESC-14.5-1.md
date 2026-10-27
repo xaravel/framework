@@ -27,7 +27,10 @@ The monitor approved the orchestrator's recommended option on 2026-10-27 as the 
 - `setlocale` keeps the locale in a Scope Frame slot (AD-5), not in process state. It returns the current locale when asked with `"0"` or `null`, and it can be restored.
 - `strcoll` and `SORT_LOCALE_STRING` read that slot.
 - `C` and `POSIX` are always available.
-- Any other locale is available only when the runtime reproduces the Oracle's collation for it, checked by XT-runtime cases against the Oracle. For any locale it cannot reproduce, `setlocale` returns `false`, as PHP does on a host that lacks the locale.
+- **Narrowed by the Maintainer on 2026-10-27:** this item ships `C` and `POSIX` only. `setlocale` returns `false` for every other locale, as PHP does on a host that lacks it. The Oracle is a Linux (glibc) Docker image, which the loop's host cannot run, and macOS collation is not the Oracle's.
+- A later item may add a locale once the runtime reproduces its collation, checked against the Oracle in CI.
 - So the runtime never claims a locale whose collation it does not match.
+- No Oracle run is required for this item.
+- A Test ID whose expected result depends on another locale's collation stays held, citing this decision.
 
 Private copies in `packages/collections` (option 2) would put PHP semantics outside the runtime. This is action item `epic-14-item-10-runtime-chunk-sort-arith-callables`.
