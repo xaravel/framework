@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: in-progress  # ESC-14.6-1 and -3 approved by the monitor, ESC-14.6-2 rejected by the Maintainer (its 2 DateTime Test IDs become blocked-by:support) (decisions/MAINT-2026-10-27-story-14-6.md); action item epic-14-item-11-runtime-arr-builtins-argument-binder lands first; resume the spec as draft
+  14-6-arr-helpers: blocked  # ESC-14.6-5: runtime bindPhpArguments lacks ArrayAccess|array; five typed accessors and push held, nine independent tests released, DateTime tests blocked-by:support
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
