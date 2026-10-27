@@ -35,6 +35,7 @@ import {
   fileImports,
   gatherEvidence,
   importedDeclarations,
+  inventoryContext,
   inItemScope,
   itemXaravelTestIds,
   touchedTestFixtures,
@@ -81,6 +82,7 @@ import {
   UPSTREAM_SNAPSHOT_DIR,
   importedPathConsts,
   phpMethodBodies,
+  upstreamTraitPaths,
   upstreamCitedSources,
   upstreamMethodsCited,
   upstreamReadDirs,
@@ -1698,6 +1700,124 @@ xaravelTest(
     // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
     // file named without its text means.
     const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
+    // ESC-14.6-4: Inventory shows only method fragments; full test declarations carry their helper traits.
+    const traitRoot = tempDir("fidelity-traits-");
+    const traitBase = "conformance/upstream/framework/tests/Support";
+    const traitTest = `${traitBase}/SupportArrTest.php`;
+    const traitA = `${traitBase}/Concerns/CountsEnumerations.php`;
+    const traitB = `${traitBase}/Concerns/Recorder.php`;
+    const traitC = `${traitBase}/Concerns/Extra.php`;
+    const traitFiles = new Map([
+      [traitTest, String.raw`<?php
+namespace Illuminate\Tests\Support;
+use Illuminate\Tests\Support\Concerns as Helpers;
+use Illuminate\Tests\Support\Concerns\Extra;
+class SupportArrTest {
+    use Concerns\CountsEnumerations;
+    use Helpers\Recorder;
+    use \Illuminate\Tests\Support\Concerns\Extra, namespace\Concerns\CountsEnumerations {
+        Extra::record insteadof CountsEnumerations;
+    }
+    public function testFirstIsLazy() { $this->assertEnumerates(2); }
+}`],
+      [traitA, String.raw`<?php
+namespace Illuminate\Tests\Support\Concerns;
+trait CountsEnumerations {
+    use Recorder;
+    protected function assertEnumerates($count) { $this->assertEnumerations($count); }
+    protected function assertEnumerations($count) { $this->assertEquals(2, $count); }
+}`],
+      [traitB, String.raw`<?php
+namespace Illuminate\Tests\Support\Concerns;
+trait Recorder { use CountsEnumerations; protected function record() { return 1; } }`],
+      [traitC, String.raw`<?php
+namespace Illuminate\Tests\Support\Concerns;
+trait Extra { protected function record() { return 2; } }`],
+    ]);
+    for (const [path, text] of traitFiles) {
+      mkdirSync(dirname(join(traitRoot, path)), { recursive: true });
+      writeFileSync(join(traitRoot, path), text);
+    }
+    const traitExists = (path: string) => traitFiles.has(path);
+    const traitRead = (path: string) => traitFiles.get(path) ?? null;
+    expect(upstreamTraitPaths(traitTest, traitFiles.get(traitTest)!, traitExists, traitRead)).toEqual([traitA, traitC, traitB].sort());
+    expect(upstreamTraitPaths(traitTest, String.raw`<?php
+namespace Illuminate\Tests\Support;
+use Illuminate\Tests\Support\Concerns\CountsEnumerations;
+// use Concerns\Recorder;
+class EmptyTest {
+    public function testClosure() {
+        $callback = function () use ($value) { return $value; };
+        $text = 'use Concerns\Extra;';
+    }
+}`, traitExists, traitRead)).toEqual([]);
+    const traitWhole = wholeFileEvidence(traitRoot, [], new Map(), 400_000, () => true, [traitTest]);
+    for (const path of [traitA, traitB, traitC]) {
+      expect(traitWhole.filter((entry) => entry.path === path).length).toBe(1);
+      expect(traitWhole.find((entry) => entry.path === path)!.text).toBe(traitFiles.get(path)!);
+    }
+    expect(traitWhole.find((entry) => entry.path === traitA)!.text).toContain("protected function assertEnumerations");
+    const traitTight = wholeFileEvidence(traitRoot, [], new Map(), 0, () => true, [traitTest]);
+    for (const path of [traitA, traitB, traitC]) {
+      expect(traitTight.find((entry) => entry.path === path)!.note).toStartWith("omitted for size:");
+    }
+    // Insert after promptBase is declared: section (b)'s method fragment does not suppress trait bodies in (h).
+    const traitPrompt = withWholeFiles(traitRoot, {
+      ...promptBase,
+      files: [],
+      inventory: [{
+        id: "Illuminate\\Tests\\Support\\SupportArrTest::testFirstIsLazy",
+        row: { id: "Illuminate\\Tests\\Support\\SupportArrTest::testFirstIsLazy", component: "support", kind: "unit", backends: ["none"], source: "framework/tests/Support/SupportArrTest.php:12-12", hash: "0".repeat(64), assertions: { assertSame: 1 }, oracle: { none: "pass" } },
+        upstream: "public function testFirstIsLazy() { $this->assertEnumerates(2); }",
+        note: null,
+      }],
+      evidence: NO_EVIDENCE,
+    });
+    expect(traitPrompt.evidence.wholeFiles.find((entry) => entry.path === traitA)!.text).toBe(traitFiles.get(traitA)!);
+    expect(buildPrompt(traitPrompt).user).toContain("protected function assertEnumerations");
+    expect(buildPrompt(traitPrompt).length).toBeLessThanOrEqual(PROMPT_CAP);
+    const srcTrait = "conformance/upstream/framework/src/Illuminate/Support/Traits/Shared.php";
+    traitFiles.set(srcTrait, "<?php namespace Illuminate\\Support\\Traits; trait Shared {}");
+    write(traitRoot, srcTrait, traitFiles.get(srcTrait)!);
+    const mixedNamespaces = String.raw`<?php
+namespace Illuminate\Tests\Support {
+use Illuminate\Tests\Support\Concerns\CountsEnumerations as Selected;
+class First { public function example() { $inner = new class { use Selected; }; } }
+}
+namespace Illuminate\Tests\Other {
+use Illuminate\Support\Traits\{Shared as Selected};
+class Second { use Selected; }
+}`;
+    expect(upstreamTraitPaths(traitTest, mixedNamespaces, traitExists, traitRead)).toEqual([srcTrait, traitA].sort());
+    const literalTraits = String.raw`<?php
+namespace Illuminate\Tests\Support;
+$one = <<<PHP
+} use Concerns\Extra; {
+PHP;
+$two = <<<'RAW'
+} use Concerns\Extra; {
+RAW;
+class Real { use Concerns\CountsEnumerations; }
+`;
+    expect(upstreamTraitPaths(traitTest, literalTraits, traitExists, traitRead)).toEqual([traitA]);
+    const missingTrait = `${traitBase}/Concerns/Missing.php`;
+    const missingTest = `${traitBase}/MissingTest.php`;
+    write(traitRoot, missingTest, String.raw`<?php namespace Illuminate\Tests\Support; class MissingTest { use Concerns\Missing; }`);
+    const missingEvidence = wholeFileEvidence(traitRoot, [], new Map(), 400_000, () => true, [missingTest]);
+    expect(missingEvidence.find((entry) => entry.path === missingTrait)!.note).toContain("does not exist or cannot be read");
+    // This exact snapshot source caused the core F-2/F-3 reject, rather than only the synthetic graph above.
+    const realTraits = withWholeFiles(root, {
+      ...promptBase,
+      files: [],
+      inventory: inventoryContext(root, ["Illuminate\\Tests\\Support\\SupportArrTest::testFirstIsLazy"]),
+      evidence: NO_EVIDENCE,
+    });
+    const realTraitText = realTraits.evidence.wholeFiles.find((entry) => entry.path === traitA)!.text;
+    expect(realTraitText).toBe(read(traitA));
+    expect(realTraitText).toContain("return $collection->tapEach(function () use (&$count)");
+    expect(realTraitText).toContain("$this->assertEnumerations($count, $enumerated)");
+    expect(realTraitText).toContain("$this->assertEquals(");
+    expect(buildPrompt(realTraits).user).toContain(realTraitText!);
     const filled = withWholeFiles(root, { ...promptBase, evidence: { ...NO_EVIDENCE, decisions: gatherEvidence(root, registryPatch(registryPath), none).decisions } });
     expect(filled.evidence.wholeFiles.find((item) => item.path === "decisions/ESC-9.4-1.md")!.note).toBe("shown in full above, in (f)");
     const wholeUser = buildPrompt(filled).user;
