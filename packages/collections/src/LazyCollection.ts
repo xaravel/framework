@@ -14,8 +14,8 @@
 // `only`'s keys, `pluck`'s paths) copies it into a local on each enumeration, as PHP's `use` copies the value into
 // each call. `func_num_args()` is `arguments.length`, read in `function` methods only, and `func_get_args()` forwards
 // `...arguments` unchanged. `contains`, `doesntContain`, `doesntContainStrict`, `sole`, `hasSole`, `firstOrFail`,
-// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random` also
-// takes an options object (AD-26). Strict comparisons of items are PHP's `===` through `identical`, so two arrays
+// `first` and `last` keep only the positional form, and a lone object is the PHP value (DIV-12.20); `random` and
+// `sortBy` also take an options object (AD-26). Strict comparisons of items are PHP's `===` through `identical`, so two arrays
 // compare by their keys and values.
 //
 // This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined.
@@ -55,6 +55,7 @@ import {
   type PhpArrayKey,
   type PhpKeyInput,
   registerClass,
+  type SortDirection,
   stdClass,
   Stringable,
   toBool,
@@ -689,6 +690,19 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     const filter = arguments.length > 1 ? this.operatorForWhere(...([...arguments] as WhereArguments)) : key;
 
     return (this.unless(looseEquals(filter, null)) as unknown as WhenFilterProxy).filter(filter).take(1).collect().firstOrFail();
+  }
+
+  /**
+   * Sort the collection using the given callback, lazily through `Collection.sortBy`. Also takes AD-26's options
+   * object `{ options, descending }` after the callback.
+   */
+  sortBy(callback: unknown, options?: number, descending?: boolean | SortDirection): this;
+  sortBy(callback: unknown, options?: { options?: number; descending?: boolean | SortDirection }): this;
+  sortBy(callback: unknown, options?: unknown, descending?: unknown): this {
+    void callback;
+    void options;
+    void descending;
+    return this.passthru("sortBy", [...arguments]);
   }
 
   /** Take the first `limit` items, or the last `-limit` for a negative one. */

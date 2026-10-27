@@ -243,8 +243,8 @@
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetArrayableItems#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetOrPut","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetOrPutWithNoKey","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.2-7"}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.2-7"}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetPluckValueWithAccessors#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetWithCallbackAsDefaultValue#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetWithCallbackAsDefaultValue#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testGetWithDefaultValue#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
@@ -712,8 +712,8 @@
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testUnwrapCollectionWithScalar#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValue#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValue#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueRetrieverAcceptsDotNotation#0","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.2-6"}
-{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueRetrieverAcceptsDotNotation#1","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.2-6"}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueRetrieverAcceptsDotNotation#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueRetrieverAcceptsDotNotation#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueUsingEnum#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueUsingEnum#1","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportCollectionTest::testValueWithNegativeValue#0","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

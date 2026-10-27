@@ -158,7 +158,7 @@ development_status:
 
   epic-14: in-progress
   14-1-enumerable-core-construction-conversion-and-serialization: done
-  14-2-retrieval-search-and-mutation-methods: in-progress  # 167 of 171 built; ESC-14.2-6 ruled option 1 by the monitor (runtime-builtins standing rule) and ESC-14.2-7 option 1 by the Maintainer; action item epic-14-item-7-runtime-match-error-dynamic-call lands first and frees the last 4 Test IDs
+  14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: backlog
   14-4-set-operations-and-combining: backlog
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog

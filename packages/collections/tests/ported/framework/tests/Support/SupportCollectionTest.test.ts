@@ -19,12 +19,8 @@
 // through `phpArrayEntries` (PORTING.md § Reading a PHP array), and a `<` / `>` whose operand may be a string is
 // `spaceship` (PORTING.md § Mechanical expression rule). testValueWithObjects calls Support's `literal()` helper, which
 // arrives with Support (Epic 19), so it keeps Upstream's body in the blocked case, through a local `literal` that
-// throws the same error. testValueRetrieverAcceptsDotNotation reaches `sortBy`, whose `match ($descending)` throws
-// PHP's `UnhandledMatchError`, which the runtime does not export; it waits on ESC-14.2-6 and is not ported here. Its
-// Expectations lines are `not-ported-yet`, not `blocked-by:runtime`: `tools/expectations/reasons.ts` accepts
-// `blocked-by:<c>` only for a Component in a later Phase or Epic than collections, and the runtime is Phase 0/1.
-// testGetPluckValueWithAccessors's fixture calls `$this->$accessor()`, which PHP resolves case-insensitively; the
-// runtime exports no such call, so it waits on ESC-14.2-7, and its lines are `not-ported-yet` for the same reason.
+// throws the same error. TestAccessorEloquentTestStub's `$this->$accessor()` is `callMethod(this, accessor)`, PHP's
+// case-insensitive dynamic method call (PORTING.md's idiom table).
 //
 // `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
@@ -40,6 +36,7 @@ import {
   array_intersect_assoc,
   array_values,
   BlockedByComponentError,
+  callMethod,
   CachingIterator,
   count,
   Error as PhpError,
@@ -56,7 +53,9 @@ import {
   JsonSerializable,
   jsonEncode,
   json_last_error,
+  lcfirst,
   looseEquals,
+  method_exists,
   min,
   PhpArray,
   range as phpRange,
@@ -136,6 +135,38 @@ class StaffEnum {
   }
 }
 
+/** Upstream's test-local `TestAccessorEloquentTestStub`: `__get` / `__isset` through `get<Attribute>Attribute()`. */
+class TestAccessorEloquentTestStub {
+  protected attributes: Record<string, unknown> = {};
+
+  constructor(attributes: Record<string, unknown>) {
+    this.attributes = valueCopy(attributes);
+  }
+
+  __get(attribute: string): unknown {
+    const accessor = "get" + lcfirst(attribute) + "Attribute";
+    if (method_exists(this, accessor)) {
+      return callMethod(this, accessor);
+    }
+
+    return Object.hasOwn(this, attribute) ? ((this as unknown as Record<string, unknown>)[attribute] ?? null) : null;
+  }
+
+  __isset(attribute: string): boolean {
+    const accessor = "get" + lcfirst(attribute) + "Attribute";
+
+    if (method_exists(this, accessor)) {
+      return !is_null(callMethod(this, accessor));
+    }
+
+    return Object.hasOwn(this, attribute) && ((this as unknown as Record<string, unknown>)[attribute] ?? null) !== null;
+  }
+
+  getSomeAttribute(): unknown {
+    return Object.hasOwn(this.attributes, "some") ? (this.attributes["some"] ?? null) : null;
+  }
+}
+
 /** Upstream's test-local `TestArrayAccessImplementation`: an `ArrayAccess` over a private array. */
 class TestArrayAccessImplementation {
   private arr: Record<string, unknown>;
@@ -186,6 +217,7 @@ class SupportCollectionTest extends TestCase {
     registerTestClass("Illuminate\\Tests\\Support\\TestJsonSerializeToStringObject", TestJsonSerializeToStringObject);
     registerTestClass("Illuminate\\Tests\\Support\\TestCollectionSubclass", TestCollectionSubclass);
     registerTestClass("Illuminate\\Tests\\Support\\StaffEnum", StaffEnum);
+    registerTestClass("Illuminate\\Tests\\Support\\TestAccessorEloquentTestStub", TestAccessorEloquentTestStub);
     registerTestClass("Illuminate\\Tests\\Support\\TestArrayAccessImplementation", TestArrayAccessImplementation);
   }
 }
@@ -1219,8 +1251,6 @@ portedTest(`${ID}::testValue`, { case: SupportCollectionTest, dataset: COLLECTIO
   this.assertSame("bar", c.where("id", 2).value("pivot.value"));
 });
 
-// testValueRetrieverAcceptsDotNotation (#0/#1) reaches `sortBy`, whose `match ($descending)` throws PHP's
-// `UnhandledMatchError`. It waits on ESC-14.2-6 and is not ported; see the header note on its `not-ported-yet` lines.
 portedTest(`${ID}::testValueUsingEnum`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const c = new collection([
     { id: 1, name: StaffEnum.Taylor },
@@ -1290,10 +1320,6 @@ portedTest(`${ID}::testExceptSelf`, { case: SupportCollectionTest, dataset: COLL
   this.assertEquals({ first: "Taylor", last: "Otwell" }, data.except(data).all());
 });
 
-// testGetPluckValueWithAccessors (#0/#1): its fixture TestAccessorEloquentTestStub calls `$this->$accessor()` with
-// the name `getsomeAttribute`, which PHP resolves case-insensitively to `getSomeAttribute()`. The runtime exports no
-// such call, so the test and the fixture wait on ESC-14.2-7 and are not ported; see the header note on its
-// `not-ported-yet` lines.
 portedTest(`${ID}::testPluckWithArrayAndObjectValues`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const data = new collection([Object.assign(new stdClass(), { name: "taylor", email: "foo" }), { name: "dayle", email: "bar" }]);
   this.assertEquals({ taylor: "foo", dayle: "bar" }, data.pluck("email", "name").all());
@@ -1540,6 +1566,14 @@ portedTest(`${ID}::testSplice`, { case: SupportCollectionTest }, async function 
   data = new Collection(["foo", "baz"]);
   data.splice(1, 0, new Collection(["bar"]));
   this.assertEquals(["foo", "bar", "baz"], data.all());
+});
+
+portedTest(`${ID}::testGetPluckValueWithAccessors`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const model = new TestAccessorEloquentTestStub({ some: "foo" });
+  const modelTwo = new TestAccessorEloquentTestStub({ some: "bar" });
+  const data = new collection([model, modelTwo]);
+
+  this.assertEquals(["foo", "bar"], data.pluck("some").all());
 });
 
 portedTest(`${ID}::testNth`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
@@ -1860,6 +1894,13 @@ portedTest(`${ID}::testContainsWithOperator`, { case: SupportCollectionTest, dat
   this.assertTrue(c.contains("v", "==", 4));
   this.assertFalse(c.contains("v", "===", 4));
   this.assertTrue(c.contains("v", ">", 4));
+});
+
+portedTest(`${ID}::testValueRetrieverAcceptsDotNotation`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  let c = new collection([Object.assign(new stdClass(), { id: 1, foo: { bar: "B" } }), Object.assign(new stdClass(), { id: 2, foo: { bar: "A" } })]);
+
+  c = c.sortBy("foo.bar");
+  this.assertEquals([2, 1], c.pluck("id").all());
 });
 
 portedTest(`${ID}::testPullRetrievesItemFromCollection`, { case: SupportCollectionTest }, async function () {
