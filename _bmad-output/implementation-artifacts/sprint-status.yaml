@@ -160,7 +160,7 @@ development_status:
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
-  14-4-set-operations-and-combining: blocked  # blocked spec supplied: bmad-build-auto step-01 halts on the existing blocked spec; permission fix #486 merged, but spec still requires a resume transition
+  14-4-set-operations-and-combining: in-progress  # implementation and the 124 Story checks complete (#485); its blocker, the Codex reviewer's sandbox, is fixed (#486); the spec is set to in-review so bmad-build-auto resumes at step 4 and runs the review
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog
