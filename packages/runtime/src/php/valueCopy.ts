@@ -1,6 +1,7 @@
 // PHP's value copy of arrays (AD-9.2, Story 9.6): `$b = $a` copies an array, nested arrays included, while objects
 // are shared by handle.
 import { arrayEntries, phpType } from "./casts";
+import { copyArrayPointer } from "./arrayPointer";
 import { PhpArray } from "./PhpArray";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
@@ -26,25 +27,25 @@ function copyValue(x: unknown, path: Set<object>): unknown {
           copy[index] = copyValue(x[index], path);
         }
       }
-      return copy;
+      return copyArrayPointer(x, copy);
     }
     if (x instanceof PhpArray) {
       const copy = x.copy();
       for (const [key, value] of x) {
         copy.set(key, copyValue(value, path));
       }
-      return copy;
+      return copyArrayPointer(x, copy);
     }
     if ((x as Record<symbol, unknown>)[PHP_ARRAY] === true) {
       // A branded array of another implementation (the grader's) is copied into a PhpArray.
-      return new PhpArray(arrayEntries(x).map(([key, value]) => [key, copyValue(value, path)] as const));
+      return copyArrayPointer(x, new PhpArray(arrayEntries(x).map(([key, value]) => [key, copyValue(value, path)] as const)));
     }
     const copy = Object.create(Object.getPrototypeOf(x) as object | null) as Record<string, unknown>;
     for (const key of Object.keys(x)) {
       // defineProperty, so an own "__proto__" key stays an entry and never replaces the copy's prototype.
       Object.defineProperty(copy, key, { value: copyValue((x as Record<string, unknown>)[key], path), enumerable: true, writable: true, configurable: true });
     }
-    return copy;
+    return copyArrayPointer(x, copy);
   } finally {
     path.delete(x);
   }

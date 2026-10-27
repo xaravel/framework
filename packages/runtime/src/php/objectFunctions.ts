@@ -29,6 +29,11 @@ import { phpValueOf } from "./throwableArguments";
 import { CLOSURE_METHODS } from "./typeTests";
 import { TypeError as PhpTypeError } from "./TypeError";
 
+/** PHP folds method names in the ASCII range only; non-ASCII bytes retain identity. Internal. */
+export function asciiMethodName(name: string): string {
+  return name.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
 const CONTRACT_BUILTINS = Symbol.for("xaravel.contract.builtins");
 const CONTRACT_METHODS = Symbol.for("xaravel.contract.methods");
 const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
@@ -119,7 +124,7 @@ function tokenMethods(token: object, into: Set<string> = new Set()): Set<string>
     if (Array.isArray(methods)) {
       for (const method of methods as unknown[]) {
         if (typeof method === "string") {
-          into.add(method.toLowerCase());
+          into.add(asciiMethodName(method));
         }
       }
     }
@@ -144,7 +149,7 @@ interface ResolvedMethod {
 /** `holder`'s own function-valued data property whose name, lower-cased, is `lower` (never `constructor`), or null. */
 function methodNamed(holder: object, lower: string): ((...args: never[]) => unknown) | null {
   for (const own of Object.getOwnPropertyNames(holder)) {
-    if (own === "constructor" || own.toLowerCase() !== lower) {
+    if (own === "constructor" || asciiMethodName(own) !== lower) {
       continue;
     }
     const value: unknown = Object.getOwnPropertyDescriptor(holder, own)?.value;
@@ -172,8 +177,8 @@ function ownMethod(holder: object, name: string, lower: string, isStatic: boolea
  * then case-insensitively, as PHP's case-insensitive names let a subclass's `FOO` override a parent's `foo`; then
  * `__toString` as the `toString()` port. Null when none is found.
  */
-function resolveMethod(klass: object, name: string): ResolvedMethod | null {
-  const lower = name.toLowerCase();
+export function resolveMethod(klass: object, name: string): ResolvedMethod | null {
+  const lower = asciiMethodName(name);
   const prototype: unknown = (klass as { prototype?: unknown }).prototype;
   for (let holder: unknown = prototype; typeof holder === "object" && holder !== null && holder !== Object.prototype; holder = Object.getPrototypeOf(holder)) {
     const fn = ownMethod(holder, name, lower, false);
@@ -214,9 +219,9 @@ export function method_exists(object_or_class: unknown, method: unknown): boolea
   const subject = subjectOf("method_exists", object_or_class);
   switch (subject?.kind) {
     case "closure":
-      return CLOSURE_METHODS.has(name.toLowerCase());
+      return CLOSURE_METHODS.has(asciiMethodName(name));
     case "token":
-      return tokenMethods(subject.token).has(name.toLowerCase());
+      return tokenMethods(subject.token).has(asciiMethodName(name));
     case "class":
       return classHasMethod(subject.klass, name);
     case "object":
@@ -270,7 +275,7 @@ export function callMethod(object: unknown, name: unknown, ...args: unknown[]): 
   }
   const target = value as object;
   if (isClosureValue(target)) {
-    const lower = name.toLowerCase();
+    const lower = asciiMethodName(name);
     if (lower === "__invoke") {
       return normalizeNull((target as (...values: unknown[]) => unknown)(...args));
     }

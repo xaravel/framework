@@ -5,8 +5,8 @@
 // `php_usort` with `php_array_user_compare_unstable`, and the string comparisons `strcmp`, `strcasecmp`, `strnatcmp`,
 // `strnatcasecmp` and `strcoll` (`ext/standard/string.c`, `Zend/zend_operators.c`), which call the comparators the
 // sorts use. Beside them, for `whereBetween` / `whereNotBetween` (action item
-// epic-14-item-8-runtime-round-string-array-pointer, ESC-14.3-1): `reset` and `end`, which read the array without
-// moving anything, as the runtime's arrays carry no internal pointer.
+// epic-14-item-8-runtime-round-string-array-pointer, ESC-14.3-1): `reset` and `end`; their internal pointer is
+// tracked for `key`, with array-value separation on pointer writes.
 //
 // A by-reference parameter is a `Ref` (AD-9, DIV-9.2) whose `value` is an AD-9 array. PHP arrays are values, so each
 // function builds a new array and writes it to `ref.value` (PHP's copy-on-write: no other holder of the old JS value
@@ -21,9 +21,13 @@ import { arrayEntries, toPhpString } from "./casts";
 import { LONE_SURROGATE, utf8 } from "./mangle";
 import { argumentTypeError, intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
 import { arrayFromEntries, nextFreeIndex, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
-import { phpType } from "./phpType";
+import { className, phpType } from "./phpType";
 import { Ref } from "./Ref";
 import { zendSort } from "./zendSort";
+import { currentLocale } from "./locale";
+import { arrayPointer, copyArrayPointer, setArrayPointer } from "./arrayPointer";
+import { valueCopy } from "./valueCopy";
+import { Error as PhpError } from "./Error";
 
 /** The array a by-reference `$array` parameter holds, and its entries; throws for a non-`Ref` and a non-array. */
 function referencedArray(fn: string, ref: unknown): { array: object; entries: [PhpArrayKey, unknown][] } {
@@ -105,20 +109,24 @@ function pointerEntries(fn: string, ref: unknown): [PhpArrayKey, unknown][] {
 }
 
 /**
- * PHP's `reset(&$array)`: the first value of `array.value`, or `false` for an empty array. `array.value` is left as it
- * is: the runtime's arrays carry no internal pointer to move. Throws a JS `TypeError` for an argument that is no `Ref`
+ * PHP's `reset(&$array)`: the first value of `array.value`, or `false` for an empty array. `array.value` is separated before
+ * its internal pointer moves to its first entry. Throws a JS `TypeError` for an argument that is no `Ref`
  * (DIV-9.2) and for a `Ref` holding an object (PHP 8.1 deprecated `reset` on an object; not ported), and PHP's
  * `TypeError` `reset(): Argument #1 ($array) must be of type array, int given` for a `Ref` holding a scalar or null.
  */
 export function reset(array: Ref<unknown>): unknown {
   const entries = pointerEntries("reset", array);
-  return entries.length === 0 ? false : (entries[0]![1] ?? null);
+  array.value = valueCopy(array.value);
+  setArrayPointer(array.value as object, 0);
+  return entries.length === 0 ? false : valueCopy(entries[0]![1] ?? null);
 }
 
 /** PHP's `end(&$array)`: the last value of `array.value`, or `false` for an empty array. Throws as `reset` does. */
 export function end(array: Ref<unknown>): unknown {
   const entries = pointerEntries("end", array);
-  return entries.length === 0 ? false : (entries[entries.length - 1]![1] ?? null);
+  array.value = valueCopy(array.value);
+  setArrayPointer(array.value as object, Math.max(0, entries.length - 1));
+  return entries.length === 0 ? false : valueCopy(entries[entries.length - 1]![1] ?? null);
 }
 
 /**
@@ -350,6 +358,7 @@ function bytesOf(fn: string, value: unknown): Uint8Array {
  * included (`"ab"` against `"a"` is 98), stopping at a NUL byte.
  */
 function localeCompare(a: Uint8Array, b: Uint8Array): number {
+  currentLocale(); // C and POSIX are the only Oracle-proven locales; both use this byte comparator.
   for (let index = 0; ; index++) {
     const x = byteAt(a, index);
     const y = byteAt(b, index);
@@ -360,17 +369,26 @@ function localeCompare(a: Uint8Array, b: Uint8Array): number {
 }
 
 /** `php_get_data_compare_func(sort_type, 0)`'s unstable comparator. */
-function dataCompare(fn: string, sortType: bigint): (a: unknown, b: unknown) => number {
+function dataCompare(fn: string, sortType: bigint, failed: { error: { thrown: unknown } | null } | null = null): (a: unknown, b: unknown) => number {
   const foldCase = (sortType & 8n) !== 0n;
+  const bytes = (value: unknown): Uint8Array => {
+    try { return bytesOf(fn, value); }
+    catch (thrown) {
+      if (failed === null) throw thrown;
+      failed.error ??= { thrown };
+      // zend_string conversion keeps sorting with an empty string while the exception is pending.
+      return new Uint8Array();
+    }
+  };
   switch (sortType & ~8n) {
     case 1n:
       return numericCompare;
     case 2n:
-      return (a, b) => (typeof a === "string" && a === b ? 0 : binaryCompare(bytesOf(fn, a), bytesOf(fn, b), foldCase));
+      return (a, b) => (typeof a === "string" && a === b ? 0 : binaryCompare(bytes(a), bytes(b), foldCase));
     case 5n:
-      return (a, b) => localeCompare(bytesOf(fn, a), bytesOf(fn, b));
+      return (a, b) => localeCompare(bytes(a), bytes(b));
     case 6n:
-      return (a, b) => strnatcmpEx(bytesOf(fn, a), bytesOf(fn, b), foldCase);
+      return (a, b) => strnatcmpEx(bytes(a), bytes(b), foldCase);
     default:
       return regularCompare;
   }
@@ -435,7 +453,7 @@ export function arsort(array: Ref<unknown>, flags: unknown = 0): true {
  * back, as PHP writes it, and the exception propagates. Throws as `asort` does for `array`, and, for `callback`, as
  * `array_any` does: PHP's `TypeError` `uasort(): Argument #2 ($callback) must be a valid callback, no array or string
  * given` for null; a PHP function name the runtime exports resolves (`phpFunction`, ESC-14.4-2), and any other PHP
- * callable string or array throws the DIV-9.13 `TypeError`.
+ * callable string or array resolves through the shared resolver (DIV-9.13/14).
  */
 export function uasort(array: Ref<unknown>, callback: unknown): true {
   const { array: input, entries } = referencedArray("uasort", array);
@@ -495,3 +513,56 @@ export function strnatcasecmp(string1: unknown, string2: unknown): number {
 export function strcoll(string1: unknown, string2: unknown): number {
   return localeCompare(stringBytes("strcoll", 1, string1), stringBytes("strcoll", 2, string2));
 }
+
+/** PHP's `key($array)`: the internal pointer's key, or null on an empty array. */
+export function key(array: unknown): PhpArrayKey | null {
+  const input = array instanceof Ref ? array.value as unknown : array;
+  const entries = referencedArray("key", new Ref(input)).entries;
+  return entries[arrayPointer(input as object)]?.[0] ?? null;
+}
+
+/** PHP's `$array[] = $value`, separating the held array and copying its new value. */
+export function arrayAppend(array: Ref<unknown>, value: unknown): void {
+  if (!(array instanceof Ref)) throw new TypeError("arrayAppend(): pass a Ref holding the array (DIV-9.2)");
+  const input = array.value;
+  if (input === null || input === undefined || input === false) {
+    array.value = [valueCopy(value)];
+    return;
+  }
+  if (phpType(input) !== "array") {
+    throw new PhpError(typeof input === "string" ? "[] operator not supported for strings" : phpType(input) === "object" ? `Cannot use object of type ${className(input)} as array` : "Cannot use a scalar value as an array");
+  }
+  const copy = toPhpArray(valueCopy(input));
+  copy.push(valueCopy(value));
+  array.value = copyArrayPointer(input as object, keptArray([...copy], nextFreeIndex(copy)) as object);
+}
+
+function newSort(fn: string, array: Ref<unknown>, flags: unknown, reverse: boolean, byKey: boolean, callback: unknown = null): true {
+  const { array: input, entries } = referencedArray(fn, array);
+  const failed: { error: { thrown: unknown } | null } = { error: null };
+  const compare = fn === "uksort" ? userCompare(requiredCallback(fn, 2, callback), failed)
+    : dataCompare(fn, BigInt(intParameter(fn, 2, "flags", flags)), failed);
+  const buckets = entries.map(([key, value], index) => ({ key, value, index }));
+  zendSort(buckets, (a, b) => {
+    let result = 0;
+    try { result = compare(byKey ? a.key : a.value, byKey ? b.key : b.value); }
+    catch (thrown) { failed.error ??= { thrown }; }
+    return result === 0 ? a.index - b.index : reverse ? -result : result;
+  });
+  const sorted = buckets.map(({ key, value }) => [key, valueCopy(value)] as const);
+  array.value = byKey ? (input instanceof PhpArray ? keptArray(sorted, nextFreeIndex(input)) : arrayFromEntries(sorted))
+    : buckets.map(({ value }) => valueCopy(value));
+  if (failed.error !== null) throw failed.error.thrown;
+  return true;
+}
+
+/** PHP's `ksort`, sorting keys ascending with stable ties. */
+export function ksort(array: Ref<unknown>, flags: unknown = 0): true { return newSort("ksort", array, flags, false, true); }
+/** PHP's `krsort`, sorting keys descending with stable ties. */
+export function krsort(array: Ref<unknown>, flags: unknown = 0): true { return newSort("krsort", array, flags, true, true); }
+/** PHP's `uksort`, sorting keys with a PHP callable comparator. */
+export function uksort(array: Ref<unknown>, callback: unknown): true { return newSort("uksort", array, 0, false, true, callback); }
+/** PHP's `sort`, sorting values ascending and reindexing all keys. */
+export function sort(array: Ref<unknown>, flags: unknown = 0): true { return newSort("sort", array, flags, false, false); }
+/** PHP's `rsort`, sorting values descending and reindexing all keys. */
+export function rsort(array: Ref<unknown>, flags: unknown = 0): true { return newSort("rsort", array, flags, true, false); }

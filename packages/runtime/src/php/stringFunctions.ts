@@ -272,3 +272,14 @@ export function chunk_split(string: unknown, length: unknown = 76, separator: un
   }
   return decodeResult("chunk_split", out);
 }
+
+/** PHP's `strtolower`: only ASCII letters change; multibyte UTF-8 text stays intact. */
+export function strtolower(string: unknown): string {
+  return wellFormed("strtolower", stringParameter("strtolower", 1, "string", string)).replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
+/** PHP's `strrev`, reversing bytes; a non-UTF-8 result follows the existing unsupported-byte-string policy. */
+export function strrev(string: unknown): string {
+  const input = wellFormed("strrev", stringParameter("strrev", 1, "string", string));
+  return decodeResult("strrev", utf8.encode(input).reverse());
+}

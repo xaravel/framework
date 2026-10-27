@@ -378,12 +378,12 @@ xaravelTest(
     assertJsTypeError("uasort(): Argument #1 ($array) is by reference; pass a Ref holding the array (DIV-9.2)", () => uasort([1] as unknown as Ref<unknown>, () => 0));
     // Xaravel-only: a PHP callable string naming no function the runtime exports, or a callable array, is not ported
     // (DIV-9.13; a name the runtime exports resolves, ESC-14.4-2).
-    for (const [callback, form] of [
-      ["str_rot13", "string"],
-      [[Text, "toString"], "array"],
+    for (const [callback, diagnostic] of [
+      ["str_rot13", 'function "str_rot13" not found or invalid function name'],
+      [[Text, "toString"], `non-static method ${fqcn(Text)}::toString() cannot be called statically`],
     ] as const) {
       const error = thrownBy(() => uasort(new Ref<unknown>([2, 1]), callback));
-      Assert.assertSame(`TypeError: uasort(): Argument #2 ($callback) is a PHP callable ${form}, which Xaravel does not port; pass a function`, attempt(() => { throw error; }));
+      Assert.assertSame(`TypeError: uasort(): Argument #2 ($callback) must be a valid callback, ${diagnostic}`, attempt(() => { throw error; }));
     }
     // Xaravel-only: an object with an __invoke method is called; a callback returning undefined reads as null, 0.
     const invoked = new Ref<unknown>([1, 3, 2]);

@@ -680,13 +680,14 @@ xaravelTest(
 
     // Xaravel-only: the unported callable forms (DIV-9.13: a name the runtime does not export, ESC-14.4-2), and a class
     // constructor or a token as a class-string.
-    for (const callback of ["str_rot13", [new Kid(), "fooBar"], Kid, Traversable]) {
-      const form = Array.isArray(callback) ? "array" : "string";
+    for (const callback of ["str_rot13", Kid, Traversable]) {
+      const name = typeof callback === "string" ? callback : fqcn(callback);
       Assert.assertSame(
-        `TypeError: array_any(): Argument #2 ($callback) is a PHP callable ${form}, which Xaravel does not port; pass a function`,
+        `TypeError: array_any(): Argument #2 ($callback) must be a valid callback, function "${name}" not found or invalid function name`,
         attempt(() => array_any([1], callback)),
       );
     }
+    Assert.assertFalse(array_any([1], [new Kid(), "fooBar"]));
     // Accepted: an object of a class with an `__invoke` method.
     Assert.assertSame(1, array_find_key([1, 2], new (class Invokable {
       __invoke(v: unknown): boolean {
@@ -696,7 +697,7 @@ xaravelTest(
     // Refused: an `undefined` callback is PHP's null, and a plain object with an `__invoke` key is a PHP array (AD-9).
     Assert.assertSame("TypeError: array_all(): Argument #2 ($callback) must be a valid callback, no array or string given", attempt(() => array_all([1], undefined)));
     const arrayWithInvoke = { __invoke: (v: unknown): boolean => v === 2 };
-    Assert.assertSame("TypeError: array_all(): Argument #2 ($callback) is a PHP callable array, which Xaravel does not port; pass a function", attempt(() => array_all([1], arrayWithInvoke)));
+    Assert.assertSame("TypeError: array_all(): Argument #2 ($callback) must be a valid callback, array callback must have exactly two members", attempt(() => array_all([1], arrayWithInvoke)));
     // The input is not changed.
     const input = ["a", "b"];
     array_flip(input);

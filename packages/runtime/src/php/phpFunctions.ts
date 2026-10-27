@@ -11,6 +11,13 @@
 //
 // The registry imports the exports it lists, and `arrayFunctions.ts` and `typeTests.ts` import `phpFunction`
 // back: every listed export is a function declaration, initialised before any module body runs, so the cycle is safe.
+import { array_chunk } from "./arrayFunctions";
+import { key, ksort, krsort, uksort, sort, rsort } from "./arrayRefFunctions";
+import { intdiv, floor, ceil } from "./arithmetic";
+import { call_user_func_array } from "./callables";
+import { setlocale } from "./locale";
+import { strtolower, strrev } from "./stringFunctions";
+import { is_subclass_of } from "./typeTests";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { array_all, array_any, array_combine, array_diff, array_diff_assoc, array_diff_key, array_diff_uassoc, array_diff_ukey, array_filter, array_find_key, array_first, array_flip, array_intersect, array_intersect_assoc, array_intersect_key, array_intersect_uassoc, array_key_exists, array_key_first, array_key_last, array_keys, array_last, array_map, array_merge, array_merge_recursive, array_pad, array_replace, array_replace_recursive, array_reverse, array_search, array_slice, array_udiff, array_uintersect, array_unique, array_values, count, in_array, is_scalar, iterator_count, iterator_to_array, max, min } from "./arrayFunctions";
 import { array_pop, array_shift, array_splice, array_unshift, arsort, asort, end, reset, strcasecmp, strcmp, strcoll, strnatcasecmp, strnatcmp, uasort } from "./arrayRefFunctions";
@@ -91,6 +98,21 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
   Object.fromEntries(
     [
       entry("abs", abs, 1, 1),
+      entry("array_chunk", array_chunk, 2, 3),
+      entry("key", key, 1, 1),
+      entry("ksort", ksort, 1, 2, false, [0]),
+      entry("krsort", krsort, 1, 2, false, [0]),
+      entry("uksort", uksort, 2, 2, false, [0]),
+      entry("sort", sort, 1, 2, false, [0]),
+      entry("rsort", rsort, 1, 2, false, [0]),
+      entry("intdiv", intdiv, 2, 2),
+      entry("floor", floor, 1, 1),
+      entry("ceil", ceil, 1, 1),
+      entry("call_user_func_array", call_user_func_array, 2, 2),
+      entry("setlocale", setlocale, 2, 3, true),
+      entry("strtolower", strtolower, 1, 1),
+      entry("strrev", strrev, 1, 1),
+      entry("is_subclass_of", is_subclass_of, 2, 3),
       entry("array_all", array_all, 2, 2),
       entry("array_any", array_any, 2, 2),
       entry("array_combine", array_combine, 2, 2),

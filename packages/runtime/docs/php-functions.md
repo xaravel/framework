@@ -280,8 +280,8 @@ given`; an argument that is no `Ref` throws a JS `TypeError` naming DIV-9.2.
   `PhpArray` carrying PHP's index, so a later `push` lands where PHP's `$a[] = …` lands (`[0 => 'a', 7 => 'c']` popped,
   then appended, gives key 7). A JS array or plain object input's next free index is the one its keys give already.
 - `reset(ref)` and `end(ref)` return the first and the last value, or `false` for an empty array (`reset` of
-  `[null]` is `null`). The runtime's arrays carry no internal pointer, so `ref.value` is left as it is, the same JS
-  value. A `Ref` holding an object that is no array (PHP 8.1 deprecated `reset` / `end` on an object) throws a JS
+  `[null]` is `null`). They move the internal pointer read by `key`, stored non-enumerably on the array value;
+  `ref.value` is separated first so independent aliases keep their own position; value copies and appends preserve it. A `Ref` holding an object that is no array (PHP 8.1 deprecated `reset` / `end` on an object) throws a JS
   `TypeError` naming the unported form; a scalar or null throws PHP's `TypeError` `reset(): Argument #1 ($array) must
   be of type array, int given`.
 
@@ -365,8 +365,8 @@ callback, or `null` when the runtime exports no PHP function of that name.
   `'get_debug_type'` does), a class or a constant. It is frozen, and records PHP 8.5.11's `ReflectionFunction` counts,
   variadic flag and by-reference positions for each.
 - A name resolves case-insensitively (ASCII, as PHP lower-cases it), after one leading `\` (`'\strlen'`; a name with
-  two leading backslashes does not), and only with no `::` in it: `'Class::method'` strings, callable arrays, class
-  constructors and contract tokens keep their DIV-9.13 handling, except that a class constructor or contract token
+  two leading backslashes does not), and only with no `::` in it. `resolveCallable` handles method strings and callable
+  arrays; a class constructor or contract token
   whose class-string names an exported function in any case (a class named `Count`) is called as that function, as
   PHP calls the function a callable string names, and `is_callable` is `true` for it.
 - The resolved callback checks the argument count as PHP checks an internal function's, and throws PHP's
@@ -378,7 +378,7 @@ callback, or `null` when the runtime exports no PHP function of that name.
   warning that the argument should be passed by reference is not reproduced. A `Ref` is passed as it is.
 - `callbackParameter`, which every runtime function that takes a callback uses (`array_filter`, `array_map`,
   `array_any`, `array_all`, `array_find_key`, `uasort`, the callback set functions), calls a resolved name; a name
-  the registry lacks keeps the DIV-9.13 `TypeError` naming the callable form. `is_callable` gives `true` for a
+  the registry lacks gives PHP's invalid-callback TypeError. Method callbacks share `resolveCallable` (DIV-9.13/14). `is_callable` gives `true` for a
   resolved name; `callable_name` stays the string as given.
 
 ## PHP names beside camelCase exports
@@ -535,17 +535,14 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 ## Not ported
 
 - `Generator::throw()`.
-- An unfinished `Generator` that is dropped never runs its JS generator's `finally` blocks; PHP runs them when it
-  destroys the generator.
+- A user-held unfinished `Generator` dropped without explicit completion depends on JS garbage collection; owned
+  temporaries use `Generator.owned` for deterministic early-exit cleanup (see [ownership](php-chunk-sort-arith-callables.md)).
 - A JS generator object advanced before it is wrapped in `Generator`: its earlier yields are not seen, and a wrapped
   one must only be driven through its `Generator`.
 - `array_unique`'s `SORT_LOCALE_STRING`, `SORT_NATURAL` and `SORT_STRING | SORT_FLAG_CASE` comparators (and the
   `SORT_FLAG_CASE` forms of the first two): each throws a `ValueError` naming the flag in full. PHP compares no value of an array of one element, so no flag is refused there.
-- PHP callable strings naming a function the runtime does not export (`'strtolower'`), `'Class::method'` strings and
-  callable arrays (`[Str::class, 'upper']`) as callbacks (DIV-9.13): each throws a `TypeError` naming the callable
-  form; pass a function, or an object with an `__invoke` method. `is_callable` gives `false` for such a function name
-  (DIV-9.14). `Reflector::isCallable` (`packages/reflection`) and Collections' `callCallable` do not read the resolver
-  yet; `phpFunction` is exported for their Stories.
+- PHP global function names without a runtime export resolve to no callable. Class and object method callbacks
+  resolve through `resolveCallable`, including callable arrays and `Class::method` strings (DIV-9.13/14).
 - `sprintf`'s locale handling (`setlocale`, a locale decimal point for `%f` / `%g`): the point is always `.`.
 - `Traversable` and `Iterator` answering a bare JS generator object: it answers `instanceof Generator` and
   `is_a(gen, 'Generator')`, but not `instanceof Traversable` / `Iterator`, nor `is_a(gen, 'Traversable')` /
@@ -555,10 +552,9 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - A contract token passed to `sprintf`, `implode`, `explode` or `array_key_exists` is not read as its class-string:
   those go through the existing string and key casts, which read a token as an array.
 - A Closure's PHP callable name (`{closure:<file>:<line>}`): `is_callable` gives `Closure::__invoke`.
-- `reset` and `end` on an object (PHP 8.1 deprecated them), and the internal array pointer itself (`next`, `prev`,
-  `current`, `key`): `reset` / `end` read the array and move nothing.
+- `reset` and `end` on an object (PHP 8.1 deprecated them), and the pointer operations `next`, `prev` and `current`.
+  `reset`, `end` and `key` share the array's internal pointer.
 - PHP's `php_charmask` warnings for a malformed `..` range in `trim`'s `characters`.
-- `is_callable` for a method name in another case: JS names are case-sensitive, so `[obj, 'M']` misses `m`.
 - `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it
   (see [`callMethod`](#callmethod)).
 - `callMethod(object, "toString")` finds the `__toString` port under its JS name, where PHP has no `toString` method:

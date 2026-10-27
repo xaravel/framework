@@ -634,12 +634,12 @@ xaravelTest(
       }
     })())));
     Assert.assertSame(
-      "TypeError: array_udiff(): Argument #3 is a PHP callable string, which Xaravel does not port; pass a function",
+      "TypeError: array_udiff(): Argument #3 must be a valid callback, function \"nope\" not found or invalid function name",
       attempt(() => array_udiff([1], [1], "nope")),
     );
     Assert.assertSame(
-      "TypeError: array_diff_ukey(): Argument #3 is a PHP callable array, which Xaravel does not port; pass a function",
-      attempt(() => array_diff_ukey([1], [1], [new Text(), "toString"])),
+      "[]",
+      json(array_diff_ukey([1], [1], [new Text(), "toString"])),
     );
     // Xaravel-only: a contract token is its class-string, so no array.
     Assert.assertSame("TypeError: array_diff(): Argument #2 must be of type array, string given", attempt(() => array_diff([1], Stringable)));
@@ -687,7 +687,7 @@ xaravelTest(
       Assert.assertSame((root as Record<string, unknown>)[fn.name], fn.fn, fn.name);
       Assert.assertSame((php as Record<string, unknown>)[fn.name], fn.fn, fn.name);
     }
-    Assert.assertSame(85, registry().length);
+    Assert.assertSame(100, registry().length);
 
     // Xaravel-only: the helpers, classes and constants are never resolved; a non-string is no name.
     for (const helper of ["arrayUnion", "arrayEntries", "phpFunction", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {
@@ -716,7 +716,7 @@ xaravelTest(
     Assert.assertSame("[2]", json(array_map(StrLen, ["ab"])));
     // Xaravel-only: a class constructor or a contract token naming no exported function is a class-string only.
     Assert.assertSame(
-      "TypeError: array_map(): Argument #1 ($callback) is a PHP callable string, which Xaravel does not port; pass a function",
+      "TypeError: array_map(): Argument #1 ($callback) must be a valid callback or null, function \"Stringable\" not found or invalid function name",
       attempt(() => array_map(Stringable, ["a"])),
     );
   },

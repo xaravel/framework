@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-27-2026 09:24
+last_updated: 10-27-2026 12:11
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -1980,21 +1980,22 @@ action_items:
     ref: "decisions/MAINT-2026-10-26-story-14-1-mockery.md"
   - id: "epic-14-item-5-runtime-array-functions"
     epic: 14
-    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-26-story-14-2.md, approved by
-      the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md), in scope packages/runtime (packages/contracts only if a
-      token needs it): under their PHP names and PHP behaviour, @xaravel/runtime/php exports
-      array_any, array_all, array_find_key, array_first, array_last, array_search (loose and
-      strict), array_flip, array_slice and array_reverse (preserve_keys), array_intersect_key
-      and array_intersect_assoc over AD-9's three array forms with PHP's kept keys; the
-      by-reference array_shift, array_pop, array_unshift and array_splice over a Ref<T>
-      (AD-9, DIV-9.2), renumbering integer keys as PHP; min, max, str_contains, strlen,
-      lcfirst, property_exists, method_exists, and asort / arsort with PHP's sort flags over
-      the existing zend sort; PHP's identity operator for arrays and objects as the exported
-      identical(a, b); is_numeric and is_float beside the existing isNumeric and isFloat;
-      PHP's Randomizer class (Random namespace) with pickArrayKeys; and PHP 8.6's SortDirection enum as an AD-26 enum
-      (ESC-14.2-1). XT-runtime cases for each, against PHP's results; the existing exports
-      stay; the runtime does not import contracts (AD-2); no other runtime behaviour changes;
-      lands before Story 14.2 resumes"
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-26-story-14-2.md,
+      approved by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md),
+      in scope packages/runtime (packages/contracts only if a token needs it): under
+      their PHP names and PHP behaviour, @xaravel/runtime/php exports array_any, array_all,
+      array_find_key, array_first, array_last, array_search (loose and strict), array_flip,
+      array_slice and array_reverse (preserve_keys), array_intersect_key and array_intersect_assoc
+      over AD-9's three array forms with PHP's kept keys; the by-reference array_shift,
+      array_pop, array_unshift and array_splice over a Ref<T> (AD-9, DIV-9.2), renumbering
+      integer keys as PHP; min, max, str_contains, strlen, lcfirst, property_exists,
+      method_exists, and asort / arsort with PHP's sort flags over the existing zend
+      sort; PHP's identity operator for arrays and objects as the exported identical(a,
+      b); is_numeric and is_float beside the existing isNumeric and isFloat; PHP's
+      Randomizer class (Random namespace) with pickArrayKeys; and PHP 8.6's SortDirection
+      enum as an AD-26 enum (ESC-14.2-1). XT-runtime cases for each, against PHP's
+      results; the existing exports stay; the runtime does not import contracts (AD-2);
+      no other runtime behaviour changes; lands before Story 14.2 resumes"
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-26-story-14-2.md"
@@ -2074,26 +2075,27 @@ action_items:
     ref: "decisions/ESC-14.4-2.md"
   - id: "epic-14-item-10-runtime-chunk-sort-arith-callables"
     epic: 14
-    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-27-story-14-5.md), in scope
-      packages/runtime: under PHP names and PHP 8.5.11 behaviour checked against the Oracle,
-      @xaravel/runtime/php exports array_chunk (preserve_keys), key, ksort, krsort and uksort
-      over a Ref, sort and rsort with PHP's flags, intdiv, floor, ceil, is_subclass_of (Class
-      Registry and enum inheritance), call_user_func_array, strrev, strtolower, setlocale and
-      LC_ALL (locale kept in a Scope Frame slot, AD-5; C and POSIX only, setlocale returning
-      false for any other locale, narrowed by the Maintainer 2026-10-27 so no Oracle run is
-      needed; strcoll and SORT_LOCALE_STRING read the slot), and PHP_INT_MIN / PHP_INT_MAX
-      (ESC-14.5-1); plus(a, b) and divide(a, b) for PHP's numeric + and /, with PHP's
-      coercion, int or float result, float marker, overflow, TypeError, DivisionByZeroError,
-      and arrayUnion for two arrays (ESC-14.5-2); arrayAppend(ref, value) for $a[] = $v and
-      callUnpacked(callable, args) for $f(...$args), and the shared callable resolver
-      extended to callable arrays and 'Class::method' strings by DIV-9.14's rules, wherever
-      the runtime takes a callable (ESC-14.5-3, DIV-9.13 as amended); and an ownership seam
-      on the runtime Generator so that a Generator the framework creates for its own
-      enumeration is closed (its finally runs) when enumeration stops early, while a
-      user-held Generator stays resumable (ESC-14.5-4). XT-runtime cases for each against
-      PHP's results, with a PHP probe; the existing exports stay; no other runtime behaviour
-      changes; the runtime does not import contracts (AD-2); lands before Story 14.5's held
-      Test IDs are ported"
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-27-story-14-5.md),
+      in scope packages/runtime: under PHP names and PHP 8.5.11 behaviour checked
+      against the Oracle, @xaravel/runtime/php exports array_chunk (preserve_keys),
+      key, ksort, krsort and uksort over a Ref, sort and rsort with PHP's flags, intdiv,
+      floor, ceil, is_subclass_of (Class Registry and enum inheritance), call_user_func_array,
+      strrev, strtolower, setlocale and LC_ALL (locale kept in a Scope Frame slot,
+      AD-5; C and POSIX only, setlocale returning false for any other locale, narrowed
+      by the Maintainer 2026-10-27 so no Oracle run is needed; strcoll and SORT_LOCALE_STRING
+      read the slot), and PHP_INT_MIN / PHP_INT_MAX (ESC-14.5-1); plus(a, b) and divide(a,
+      b) for PHP's numeric + and /, with PHP's coercion, int or float result, float
+      marker, overflow, TypeError, DivisionByZeroError, and arrayUnion for two arrays
+      (ESC-14.5-2); arrayAppend(ref, value) for $a[] = $v and callUnpacked(callable,
+      args) for $f(...$args), and the shared callable resolver extended to callable
+      arrays and 'Class::method' strings by DIV-9.14's rules, wherever the runtime
+      takes a callable (ESC-14.5-3, DIV-9.13 as amended); and an ownership seam on
+      the runtime Generator so that a Generator the framework creates for its own
+      enumeration is closed (its finally runs) when enumeration stops early, while
+      a user-held Generator stays resumable (ESC-14.5-4). XT-runtime cases for each
+      against PHP's results, with a PHP probe; the existing exports stay; no other
+      runtime behaviour changes; the runtime does not import contracts (AD-2); lands
+      before Story 14.5's held Test IDs are ported"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "decisions/MAINT-2026-10-27-story-14-5.md"

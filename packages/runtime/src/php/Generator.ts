@@ -25,7 +25,7 @@ import { Error as PhpError } from "./Error";
 import { Exception } from "./Exception";
 import { Iterator } from "./Iterator";
 import { delegated, isDelegated, KeyedYield } from "./keyed";
-import { foreachIterator, foreachKeys, foreachValues } from "./liveCursor";
+import { foreachIterator, foreachKeys, foreachValues, TRAVERSAL_EXIT } from "./liveCursor";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 import { phpType } from "./phpType";
 import { isTraversable, iteratorOf } from "./traverse";
@@ -76,6 +76,7 @@ export class Generator implements Iterator {
   }
 
   readonly #js: JsGenerator;
+  #owned = false;
   /** The generator has yielded (PHP's `value` is defined). */
   #started = false;
   /** The generator returned or threw (PHP's `execute_data` is null). */
@@ -112,6 +113,24 @@ export class Generator implements Iterator {
       throw new PhpError('The "Generator" class is reserved for internal use and cannot be manually instantiated');
     }
     this.#js = generator;
+  }
+
+  /** Wrap a framework-created temporary. Early traversal exit runs finally without advancing later source. */
+  static owned(generator: JsGenerator): Generator {
+    const wrapper = new Generator(generator);
+    wrapper.#owned = true;
+    return wrapper;
+  }
+
+  /** Internal foreach exit hook. User-held generators remain resumable. */
+  [TRAVERSAL_EXIT](): void {
+    if (!this.#owned || this.#finished) return;
+    try {
+      const step = this.#js.return(null);
+      if (step.done !== true) throw new PhpError("Cannot yield from finally in a force-closed generator");
+    } finally {
+      this.#close();
+    }
   }
 
   get [Iterator.brand](): true {
@@ -289,9 +308,13 @@ function* delegateTo(inner: Generator): globalThis.Generator<KeyedYield, unknown
   if (!state.started) {
     start(inner);
   }
-  while (!stateOf(inner).finished) {
-    const sent: unknown = yield delegated(inner.key(), inner.current());
-    inner.send(sent ?? null);
+  try {
+    while (!stateOf(inner).finished) {
+      const sent: unknown = yield delegated(inner.key(), inner.current());
+      inner.send(sent ?? null);
+    }
+  } finally {
+    inner[TRAVERSAL_EXIT]();
   }
   const end = stateOf(inner);
   return end.returned ? end.value : null;

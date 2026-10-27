@@ -184,7 +184,11 @@ xaravelTest(
     Assert.assertSame(Plain, lookup(`\\${NS}\\plain`));
     Assert.assertSame(null, lookup("Nope"));
     Assert.assertSame(null, lookup(`${NS}\\Unrecorded`));
-    Assert.assertSame(null, lookup(5 as unknown as string));
+    // Mockery's suite layers a string-only fixture lookup over this global during harness imports.
+    // Exercise the installed runtime global in a fresh process, retaining the non-string contract.
+    const nonStringLookup = child('await import("@xaravel/runtime"); console.log(globalThis[Symbol.for("xaravel.class.lookup")](5));');
+    Assert.assertSame(0, nonStringLookup.code);
+    Assert.assertSame("null", nonStringLookup.out);
     const shadow = token(`${NS}\\Plain`);
     registerContractToken(shadow);
     Assert.assertSame(Plain, lookup(`${NS}\\Plain`), "a class wins over a token of the same name");

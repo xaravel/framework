@@ -17,22 +17,21 @@
 // alone returns a `PhpArray`. `undefined` reads as null (AD-9), and an omitted optional argument is PHP's default.
 // PHP's warnings and deprecations are not reproduced. Everything is synchronous.
 import { isContractToken } from "../registry/registry";
+import { arrayPointer, setArrayPointer } from "./arrayPointer";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { arrayCount, arrayEntries, floatValue, isTrue, toFloat, toInt, toPhpString } from "./casts";
 import { isEnumCase } from "./classExistence";
-import { isClassConstructor } from "./Closure";
+import { callableParameter } from "./callables";
 import { Error as PhpError } from "./Error";
 import { identical } from "./identical";
 import { binaryStrcmp, looseEquals, spaceship } from "./looseEquals";
 import { objectProps } from "./mangle";
 import { arrayParameter, boolParameter, intParameter, nullableIntParameter } from "./phpArguments";
 import { arrayFromEntries, nextFreeIndex, normalizeKey, PhpArray, phpArrayWithNextFree, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
-import { phpFunction } from "./phpFunctions";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf } from "./throwableArguments";
 import { iterableArgument, iterableCount, iterableToArray } from "./traverse";
 import { TypeError as PhpTypeError } from "./TypeError";
-import { stringOf } from "./typeTests";
 import { ValueError } from "./ValueError";
 import { valueCopy } from "./valueCopy";
 import { zendSort } from "./zendSort";
@@ -97,56 +96,9 @@ export function array_combine(keys: unknown, values: unknown): unknown {
   return arrayFromEntries(result);
 }
 
-/** The error for a callback that is a PHP callable string or array, which the runtime does not port (DIV-9.13). */
-function unportedCallable(fn: string, position: number, label: string, form: string): PhpTypeError {
-  return new PhpTypeError(`${fn}(): Argument #${position}${label} is a PHP callable ${form}, which Xaravel does not port; pass a function`);
-}
-
-/**
- * A `?callable` callback parameter as `array_filter` and `array_map` take it: a function, an object with an
- * `__invoke` method (called with exactly the given arguments), a PHP callable string naming a global function the
- * runtime exports (`phpFunction`, DIV-9.13 / DIV-9.14 as ESC-14.4-2 amends them), or null. Throws PHP's `TypeError`
- * naming the unported form for any other PHP callable string or array (DIV-9.13), and PHP's `must be a valid callback
- * or null, no array or string given` for anything else. With `nullable` false it is a `callable` parameter
- * (`array_any`, `array_all`, `array_find_key`): null throws PHP's `must be a valid callback, no array or string given`
- * too. `name` is the parameter's name in the message (` ($callback)`), or null for an unnamed variadic argument.
- */
+/** Shared PHP callable resolution, including class and object methods (DIV-9.13/14). */
 function callbackParameter(fn: string, position: number, callback: unknown, nullable: boolean = true, name: string | null = "callback"): ((...args: unknown[]) => unknown) | null {
-  const label = name === null ? "" : ` ($${name})`;
-  const refused = `${fn}(): Argument #${position}${label} must be a valid callback${nullable ? " or null" : ""}, no array or string given`;
-  if (callback === null || callback === undefined) {
-    if (nullable) {
-      return null;
-    }
-    throw new PhpTypeError(refused);
-  }
-  // A class constructor and a contract token are class-strings (AD-9, DIV-12.19): PHP calls the function their name
-  // names, if the runtime exports one (`is_callable` agrees).
-  if (isClassConstructor(callback) || isContractToken(callback)) {
-    const resolved = phpFunction(stringOf(callback));
-    if (resolved !== null) {
-      return resolved;
-    }
-    throw unportedCallable(fn, position, label, "string");
-  }
-  const invoke: unknown = typeof callback === "object" ? Reflect.get(callback, "__invoke") : null;
-  if (typeof callback === "function") {
-    return callback as (...args: unknown[]) => unknown;
-  }
-  if (typeof invoke === "function" && phpType(callback) === "object") {
-    return (...args: unknown[]) => Reflect.apply(invoke, callback, args) as unknown;
-  }
-  if (typeof callback === "string") {
-    const resolved = phpFunction(callback);
-    if (resolved !== null) {
-      return resolved;
-    }
-    throw unportedCallable(fn, position, label, "string");
-  }
-  if (typeof callback === "object" && phpType(callback) === "array") {
-    throw unportedCallable(fn, position, label, "array");
-  }
-  throw new PhpTypeError(refused);
+  return callableParameter(fn, position, callback, nullable, name);
 }
 
 /**
@@ -154,9 +106,8 @@ function callbackParameter(fn: string, position: number, callback: unknown, null
  * `callback` returns a true value (by `zend_is_true`), or that are true themselves when there is no callback. The
  * callback gets exactly one argument, the value, or the key with `ARRAY_FILTER_USE_KEY`; with
  * `ARRAY_FILTER_USE_BOTH` the value and the key. The callback may be a PHP function name the runtime exports, which
- * resolves (`phpFunction`, ESC-14.4-2). Throws PHP's `TypeError` for a non-array, a callback that is neither a
- * function, an object with an `__invoke` method, a resolved name nor null, any other callable string or a callable
- * array (not ported, DIV-9.13), and a non-int `mode`.
+ * resolves along with class/object method forms (DIV-9.13/14). Throws PHP's `TypeError` for a non-array,
+ * an invalid callback, and a non-int `mode`.
  */
 export function array_filter(array: unknown, callback: unknown = null, mode: unknown = 0): unknown {
   const entries = arrayParameter("array_filter", 1, "array", array);
@@ -404,7 +355,7 @@ function arrayArgument(fn: string, position: number, name: string | null, value:
  * and int), or the array itself without a callback. With several: a list as long as the longest array, each element
  * `callback(v1, v2, …)` over the arrays' values in order, a shorter array giving null, or, without a callback, the
  * list of those value lists. The callback is taken as `array_filter` takes it: a PHP function name the runtime exports
- * resolves (`phpFunction`, ESC-14.4-2), any other callable string is refused (DIV-9.13). Throws PHP's `TypeError`
+ * resolves along with class/object method forms (DIV-9.13/14). Throws PHP's `TypeError`
  * for a non-array (`Argument #2 ($array)`, then `Argument #3` and on unnamed) and for a callback PHP or the runtime
  * refuses.
  */
@@ -588,8 +539,8 @@ export function count(value: unknown, mode: unknown = COUNT_NORMAL): number | bi
 
 /**
  * A `callable` callback parameter (`array_any`, `array_all`, `array_find_key`, `uasort`): taken as `array_filter`
- * takes one (a PHP function name the runtime exports resolves through `phpFunction`, ESC-14.4-2; any other callable
- * string or array is refused, DIV-9.13), except that null throws PHP's `TypeError` `must be a valid callback, no array
+ * takes one (the shared resolver accepts every approved form, DIV-9.13/14), except that null throws PHP's
+ * `TypeError` `must be a valid callback, no array
  * or string given`. Internal: the package does not export it.
  */
 export function requiredCallback(fn: string, position: number, callback: unknown): (...args: unknown[]) => unknown {
@@ -614,7 +565,7 @@ function findEntry(fn: string, array: unknown, callback: unknown, decisive: bool
 /**
  * PHP's `array_any($array, $callback)`: whether `callback(value, key)` is true (by `zend_is_true`) for some entry,
  * stopping at the first; false for `[]`. The callback is taken as `array_filter` takes one (a PHP function name the
- * runtime exports resolves, ESC-14.4-2; any other callable string is refused, DIV-9.13), and must not be null. Throws PHP's `TypeError` for a non-array and for a callback PHP or the runtime refuses.
+ * runtime exports or a class/object method resolves, DIV-9.13/14), and must not be null. Throws PHP's `TypeError` for a non-array and for a callback PHP or the runtime refuses.
  */
 export function array_any(array: unknown, callback: unknown): boolean {
   return findEntry("array_any", array, callback, true) !== null;
@@ -1603,5 +1554,24 @@ export function arrayUnion(a: unknown, b: unknown): unknown {
       result.set(key, value);
     }
   }
-  return keptDup(result);
+  const copy = valueCopy(keptDup(result)) as object;
+  const pointer = arrayPointer(a);
+  // zend_array_dup restarts an invalid pointer; a surviving selected bucket keeps its position.
+  setArrayPointer(copy, pointer < arrayEntries(a).length ? pointer : 0);
+  return copy;
+}
+
+/** PHP's `array_chunk`, preserving all keys when requested and otherwise reindexing each chunk. */
+export function array_chunk(array: unknown, length: unknown, preserve_keys: unknown = false): unknown[] {
+  const entries = arrayParameter("array_chunk", 1, "array", array);
+  const size = BigInt(intParameter("array_chunk", 2, "length", length));
+  const preserve = boolParameter("array_chunk", 3, "preserve_keys", preserve_keys);
+  if (size < 1n) throw new ValueError("array_chunk(): Argument #2 ($length) must be greater than 0");
+  const count = Number(size > BigInt(entries.length) ? BigInt(entries.length) : size);
+  const result: unknown[] = [];
+  for (let index = 0; index < entries.length; index += count) {
+    const chunk = entries.slice(index, index + count);
+    result.push(valueCopy(preserve ? arrayFromEntries(chunk) : chunk.map(([, value]) => value)));
+  }
+  return result;
 }
