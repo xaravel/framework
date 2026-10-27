@@ -2,7 +2,7 @@
 title: 'Story 14.4: Set operations and combining'
 type: 'feature'
 created: '2026-10-26'
-status: 'blocked'
+status: 'in-review'
 baseline_revision: '17524c48f4c0d80c357fe8b6afe727d0b5d035fa'
 review_loop_iteration: 1
 followup_review_recommended: false
