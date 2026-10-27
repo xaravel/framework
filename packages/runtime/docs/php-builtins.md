@@ -142,7 +142,18 @@ and `SortDirection.cases()` in that order. It declares no `backingType`, so a ca
 `instanceof BackedEnum`, and `enumExists('SortDirection')` is `true`. `new SortDirection()` throws PHP's `Error`
 `Cannot instantiate enum SortDirection`. It is registered as `SortDirection`.
 
-Neither class is in the `Symbol.for('xaravel.php.classes')` map; `resolveClass` and the class lookup find both.
+## `RoundingMode`
+
+`RoundingMode` is PHP 8.4's enum, as PHP 8.5.11 declares it: a pure AD-26 enum built as `SortDirection` is, with the
+cases `HalfAwayFromZero`, `HalfTowardsZero`, `HalfEven`, `HalfOdd`, `TowardsZero`, `AwayFromZero`, `NegativeInfinity`
+and `PositiveInfinity`, in that order (`RoundingMode.cases()`), each a frozen instance with its `name`. A case is
+`instanceof UnitEnum` and not `instanceof BackedEnum`, and `enumExists('RoundingMode')` is `true`.
+`new RoundingMode()` throws PHP's `Error` `Cannot instantiate enum RoundingMode`. It is registered as `RoundingMode`.
+`round` takes a case as its `mode`: the four `Half*` cases are `PHP_ROUND_HALF_UP` to `PHP_ROUND_HALF_ODD`, and
+`TowardsZero`, `AwayFromZero`, `NegativeInfinity` and `PositiveInfinity` are PHP's internal modes 7, 8, 6 and 5.
+
+None of `Random\Randomizer`, `SortDirection` and `RoundingMode` is in the `Symbol.for('xaravel.php.classes')` map;
+`resolveClass` and the class lookup find each.
 
 ## Not ported
 

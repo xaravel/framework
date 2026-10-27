@@ -86,6 +86,7 @@ map it:
 ## Type tests
 
 - `is_array(value)`, `is_object(value)`, `is_string(value)`: as above.
+- `is_bool(value)`: `true` for `true` and `false`, `false` for anything else (`0`, `"true"`, `null`).
 - `is_null(value)`: `true` for `null` and for `undefined`, which reads as null (AD-9), `false` for anything else (a
   contract token is a string, a `PhpFloat` NaN a float).
 - `is_iterable(value)`: an array, or a Traversable object (a bare JS generator object included).
@@ -225,6 +226,11 @@ given`; an argument that is no `Ref` throws a JS `TypeError` naming DIV-9.2.
   `arrayFromEntries`, unless that index differs from the one its keys give (the largest int key plus 1): then it is a
   `PhpArray` carrying PHP's index, so a later `push` lands where PHP's `$a[] = …` lands (`[0 => 'a', 7 => 'c']` popped,
   then appended, gives key 7). A JS array or plain object input's next free index is the one its keys give already.
+- `reset(ref)` and `end(ref)` return the first and the last value, or `false` for an empty array (`reset` of
+  `[null]` is `null`). The runtime's arrays carry no internal pointer, so `ref.value` is left as it is, the same JS
+  value. A `Ref` holding an object that is no array (PHP 8.1 deprecated `reset` / `end` on an object) throws a JS
+  `TypeError` naming the unported form; a scalar or null throws PHP's `TypeError` `reset(): Argument #1 ($array) must
+  be of type array, int given`.
 
 ## Sorting: `asort` and `arsort`
 
@@ -279,6 +285,20 @@ called with the same operands, in the same order, as PHP calls it.
   `min() expects at least 1 argument, 0 given`; one argument that is no array throws PHP's `TypeError`
   `min(): Argument #1 ($value) must be of type array, int given`, an empty array PHP's `ValueError`
   `min(): Argument #1 ($value) must contain at least one element`.
+
+- `round(num, precision = 0, mode = PHP_ROUND_HALF_UP)` ports PHP 8.5's `_php_math_round`. `num` is an int or a
+  float (a numeric string its number, `null` and `false` 0, `true` 1); `precision` an int, clamped to C's `int`, so
+  a negative one rounds to tens, hundreds, …; `mode` a `RoundingMode` case or an int (`PHP_ROUND_HALF_UP` 1,
+  `PHP_ROUND_HALF_DOWN` 2, `PHP_ROUND_HALF_EVEN` 3, `PHP_ROUND_HALF_ODD` 4, and PHP's internal ceiling 5, floor 6,
+  toward-zero 7 and away-from-zero 8, which PHP 8.5.11 accepts too). The result is always a float: a `number`,
+  marked `float()` when integral (`round(75.0, 2)` and `round(5, 2)` are `float(75)` and `float(5)`, `round(-0.4)`
+  `float(-0)`); `INF`, `-INF` and `NAN` are returned as they are. An int with a `precision` of 0 or more is its
+  float; otherwise PHP's pre-rounding check (`round(0.285, 2)` is `0.29`), its `1e16` cut-off and, for a
+  `|precision|` of 23 or more, its `"%15fe%d"` text read back, are reproduced (`round(-1.5, -30)` is `0.0`, as PHP's
+  `snprintf` writes no sign for -0). Throws PHP's `TypeError` `round(): Argument #3 ($mode) must be of type
+  RoundingMode|int, string given` (and the `int|float` / `int` ones for `num` / `precision`), and PHP's `ValueError`
+  `round(): Argument #3 ($mode) must be a valid rounding mode (RoundingMode::*)` for an int outside 1 to 8, `null`
+  included.
 
 ## PHP names beside camelCase exports
 
@@ -371,6 +391,19 @@ array size (`HT_MAX_SIZE`, 2^30), with both of PHP's size messages; PHP's `TypeE
 - Their arguments are PHP `string` parameters: an int, float, bool or null is its string, an object its `__toString`
   port, and anything else throws PHP's `TypeError` `strcmp(): Argument #1 ($string1) must be of type string, array
   given`.
+- `strtoupper(string)` raises each ASCII `a`-`z`; every other byte is unchanged, so a non-ASCII character is too
+  (`strtoupper("é ß")` is `"é ß"`).
+- `trim(string, characters = " \n\r\t\v\0")` removes the leading and trailing bytes in `characters`, over UTF-8
+  bytes: PHP's default list, or a byte list with `php_charmask`'s `x..y` ranges (`trim(s, "a..e")`). A malformed `..`
+  (`"..a"`, `"a.."`, `"z..a"`, `"a..b..e"`) is read as PHP reads it: its first `.` is skipped and the rest taken as
+  bytes; PHP's warning is not reproduced. A non-ASCII character in `characters` stands for its bytes, so it can trim
+  part of another character, and such a result throws a JS `TypeError`. An omitted or `undefined` list is the
+  default; an explicit `null` is `""`, which trims nothing.
+- `chunk_split(string, length = 76, separator = "\r\n")` puts `separator` after every `length` bytes of `string` and
+  after the rest (`chunk_split("abcdefg", 3)` is `"abc\r\ndef\r\ng\r\n"`); a `length` above the byte length gives
+  `string` and `separator` (so `""` gives `separator`). A `length` below 1 throws PHP's `ValueError`
+  `chunk_split(): Argument #2 ($length) must be greater than 0`. A result that splits a UTF-8 sequence throws a JS
+  `TypeError` (`chunk_split("é", 1, "|")`); one that rejoins it does not (`chunk_split("é", 1, "")` is `"é"`).
 - `substr(string, offset, length = null)` counts UTF-8 bytes, as PHP's string is its bytes: a negative offset counts
   from the end, a negative length stops that many bytes before it, and `null` runs to the end.
 
@@ -411,11 +444,12 @@ with the flags `-`, `+`, ` `, `0` and `'<char>`, a `*` width or precision taken 
 ## Values JS cannot hold
 
 A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold throws a JS `TypeError` that names the
-limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a UTF-8 sequence
-(`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, a `sprintf` result that is no valid UTF-8 (a
-precision that splits a sequence, `%.1s` of `"é"`, or a `%c` byte of 0x80 or more on its own), and a string holding a
-lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, `lcfirst`, `range`, `explode`,
-`sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`, `strnatcasecmp`, `strcoll` or `unhandledMatch`.
+limit, as the codecs do ([codecs](codecs.md)): a `substr`, `trim` or `chunk_split` result that splits a UTF-8
+sequence (`substr("héllo", 1, 1)`, `trim("ê", "é")`, `chunk_split("é", 1, "|")`), a `range` character of 0x80 or
+more, a `sprintf` result that is no valid UTF-8 (a precision that splits a sequence, `%.1s` of `"é"`, or a `%c`
+byte of 0x80 or more on its own), and a string holding a lone surrogate passed to `substr`, `str_starts_with`,
+`str_contains`, `strlen`, `lcfirst`, `range`, `explode`, `sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`,
+`strnatcasecmp`, `strcoll`, `unhandledMatch`, `strtoupper`, `trim` or `chunk_split`.
 
 ## Not ported
 
@@ -438,6 +472,9 @@ lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, 
 - A contract token passed to `sprintf`, `implode`, `explode` or `array_key_exists` is not read as its class-string:
   those go through the existing string and key casts, which read a token as an array.
 - A Closure's PHP callable name (`{closure:<file>:<line>}`): `is_callable` gives `Closure::__invoke`.
+- `reset` and `end` on an object (PHP 8.1 deprecated them), and the internal array pointer itself (`next`, `prev`,
+  `current`, `key`): `reset` / `end` read the array and move nothing.
+- PHP's `php_charmask` warnings for a malformed `..` range in `trim`'s `characters`.
 - `is_callable` for a method name in another case: JS names are case-sensitive, so `[obj, 'M']` misses `m`.
 - `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it
   (see [`callMethod`](#callmethod)).

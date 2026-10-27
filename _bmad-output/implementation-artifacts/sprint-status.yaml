@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-26-2026 18:22
+last_updated: 10-26-2026 20:33
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2033,19 +2033,20 @@ action_items:
     ref: "decisions/ESC-14.2-7.md"
   - id: "epic-14-item-8-runtime-round-string-array-pointer"
     epic: 14
-    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.3-1.md, approved
-      by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md), in scope packages/runtime: under their PHP names and the
-      behaviour of the Oracle's PHP 8.5.11, @xaravel/runtime/php exports round(num, precision
-      = 0, mode = PHP_ROUND_HALF_UP) with the PHP_ROUND_HALF_UP / _DOWN / _EVEN / _ODD
-      constants and PHP 8.4's RoundingMode enum as an AD-26 enum (either accepted as mode),
-      PHP 8.5's _php_math_round (pre-rounding check, negative precision), ValueError for an
-      invalid int mode, and a float result carrying the float marker when integral; reset(ref)
-      and end(ref) over a Ref<array> (DIV-9.2), returning the first / last value or false
-      when empty; is_bool; strtoupper (ASCII-only); trim(string, characters) with PHP's
-      default list and a..z ranges; and chunk_split(string, length = 76, separator) with
-      PHP's ValueError for a length below 1 (ESC-14.3-1). XT-runtime cases for each against
-      PHP's results, with a PHP probe; the existing exports stay; no other runtime behaviour
-      changes; lands before Story 14.3's last 20 Test IDs are ported"
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.3-1.md,
+      approved by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md),
+      in scope packages/runtime: under their PHP names and the behaviour of the Oracle's
+      PHP 8.5.11, @xaravel/runtime/php exports round(num, precision = 0, mode = PHP_ROUND_HALF_UP)
+      with the PHP_ROUND_HALF_UP / _DOWN / _EVEN / _ODD constants and PHP 8.4's RoundingMode
+      enum as an AD-26 enum (either accepted as mode), PHP 8.5's _php_math_round (pre-rounding
+      check, negative precision), ValueError for an invalid int mode, and a float
+      result carrying the float marker when integral; reset(ref) and end(ref) over
+      a Ref<array> (DIV-9.2), returning the first / last value or false when empty;
+      is_bool; strtoupper (ASCII-only); trim(string, characters) with PHP's default
+      list and a..z ranges; and chunk_split(string, length = 76, separator) with PHP's
+      ValueError for a length below 1 (ESC-14.3-1). XT-runtime cases for each against
+      PHP's results, with a PHP probe; the existing exports stay; no other runtime
+      behaviour changes; lands before Story 14.3's last 20 Test IDs are ported"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-14.3-1.md"
