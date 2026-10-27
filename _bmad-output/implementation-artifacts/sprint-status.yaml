@@ -160,7 +160,7 @@ development_status:
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
-  14-4-set-operations-and-combining: blocked  # 58 of 124 built (first run); ESC-14.4-1 (14 runtime array builtins and PHP's array +; contract, qualifies for the monitor under the runtime-builtins standing rule) holds 50 Test IDs; ESC-14.4-2 (PHP callable strings to the *Using members; divergence, supersedes DIV-9.13, waits on the Maintainer) holds 16; XT-collections-8 waits for its CI-signed Oracle fixture, on which both Fidelity reviewers reject (F-7)
+  14-4-set-operations-and-combining: in-progress  # ESC-14.4-1 ruled option 1 by the monitor (runtime-builtins standing rule) and ESC-14.4-2 option 1 by the Maintainer (callable-name resolver, DIV-9.13 / DIV-9.14 amended); action item epic-14-item-9-runtime-set-functions-callable-names lands first and frees the 66 held Test IDs
   14-5-mapping-grouping-sorting-chunking-and-aggregates: backlog
   14-6-arr-helpers: backlog
   14-7-lazycollection-behaviour: backlog
@@ -2050,3 +2050,24 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-14.3-1.md"
+  - id: "epic-14-item-9-runtime-set-functions-callable-names"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.4-1.md, by the
+      monitor under decisions/MAINT-2026-10-26-runtime-builtins.md; decisions/ESC-14.4-2.md, by the Maintainer), in scope
+      packages/runtime: under their PHP names and the Oracle's PHP 8.5.11 behaviour,
+      @xaravel/runtime/php exports array_merge_recursive, array_replace,
+      array_replace_recursive, array_diff, array_diff_assoc, array_diff_key, array_intersect
+      (string comparison of values, an object without __toString throwing PHP's Error), the
+      callback forms array_udiff, array_diff_uassoc, array_diff_ukey, array_uintersect and
+      array_intersect_uassoc, array_pad (ValueError beyond its limit) and is_int, plus
+      arrayUnion(a, b) for PHP's array + (ESC-14.4-1); and a shared resolver from a PHP
+      global-function name to the runtime export of that name, read by callbackParameter
+      and is_callable, so a callable string such as 'strcasecmp' is called as the runtime's
+      strcasecmp, a name with no export keeping PHP's TypeError; 'Class::method' strings and
+      callable arrays keep their current handling (ESC-14.4-2, DIV-9.13 / DIV-9.14 as
+      amended). XT-runtime cases for each against PHP's results, with a PHP probe; the
+      existing exports stay; no other runtime behaviour changes; lands before Story 14.4's
+      66 held Test IDs are ported"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-14.4-2.md"
