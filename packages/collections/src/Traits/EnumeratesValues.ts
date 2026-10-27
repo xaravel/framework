@@ -1,10 +1,10 @@
 // Laravel's `Illuminate\Support\Traits\EnumeratesValues` (v13.37.0), the members Stories 14.1-14.3 port, as a
 // runtime trait (AD-26 Traits row): `Collection` and `LazyCollection` are `mixin(null, EnumeratesValues, Macroable)`,
 // and the trait uses `Conditionable` as Upstream's does. The other members belong to the Collections Stories that port
-// their tests; `dump` and `dd` call Symfony's VarDumper through Support (Epic 19). `percentage` (PHP's `round`) and
-// `whereBetween` / `whereNotBetween` (PHP's `reset` / `end`) wait for the runtime to export those builtins
-// (ESC-14.3-1). `whenEmpty` and its kin call Conditionable's `when`, so they are dual helpers as it is (AD-6, DIV-1.6):
-// no `@asyncRoot` tag and no declared Promise.
+// their tests; `dump` and `dd` call Symfony's VarDumper through Support (Epic 19). `whereBetween` and `whereNotBetween`
+// read PHP's `reset` / `end` over a `Ref` of their own copy of `$values` (DIV-9.2), as PHP's by-value parameter is.
+// `whenEmpty` and its kin call Conditionable's `when`, so they are dual helpers as it is (AD-6, DIV-1.6): no
+// `@asyncRoot` tag and no declared Promise.
 //
 // `static::$proxies` is one Upstream static per using class, held per Scope Frame unit with `frameStatic` (AD-5): the
 // key is the class whose own `proxy` is this trait's (the layer `mixin` builds), so `Collection`, its subclasses and
@@ -32,6 +32,7 @@ import {
   BlockedByComponentError,
   CachingIterator,
   count,
+  end,
   Exception,
   fqcn,
   frameStatic,
@@ -54,7 +55,11 @@ import {
   looseEquals,
   mixin,
   type PhpArrayKey,
+  type PhpFloat,
+  Ref,
   registerClass,
+  reset,
+  round,
   spaceship,
   sprintf,
   Stringable,
@@ -337,6 +342,18 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 
   /**
+   * Calculate the percentage of items that pass a given truth test, rounded to `precision` digits by PHP's `round`: a
+   * float (with the float marker when integral, DIV-9.4), or `null` for an empty collection.
+   */
+  percentage<R>(this: EnumeratesValuesHost, callback: SyncCallback<[value: any, key: any], R>, precision: number = 2): number | PhpFloat | null {
+    if (this.isEmpty()) {
+      return null;
+    }
+
+    return round((this.filter(callback).count() / this.count()) * 100, precision);
+  }
+
+  /**
    * Apply the callback if the collection is empty, else the `default` when one is given: `when(isEmpty(), callback,
    * default)`. A dual helper, as `when` is (AD-6, DIV-1.6): it returns its callback's result, or the collection when
    * that is `null`.
@@ -426,6 +443,24 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   /** Filter items whose value for the given key is in `values`, using strict comparison. */
   whereInStrict<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown): T {
     return this.whereIn(key, values, true);
+  }
+
+  /**
+   * Filter items such that the value of the given key is between the given values: `>=` the first of `values` and
+   * `<=` the last, by PHP's comparison.
+   */
+  whereBetween<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown): T {
+    return (this.where(key, ">=", reset(new Ref(values))) as T & EnumeratesValues).where(key, "<=", end(new Ref(values)));
+  }
+
+  /**
+   * Filter items such that the value of the given key is not between the given values: `<` the first of `values` or
+   * `>` the last, by PHP's comparison.
+   */
+  whereNotBetween<T extends EnumeratesValuesHost>(this: T & EnumeratesValues, key: unknown, values: unknown): T {
+    // PHP's arrow function captures `$values` by value, and `reset` / `end` take each call's copy by reference.
+    // PHP's `$a > $b` compares the operands swapped: `$b < $a`.
+    return this.filter((item: unknown) => spaceship(data_get(item, key), reset(new Ref(values))) < 0 || spaceship(end(new Ref(values)), data_get(item, key)) < 0) as T;
   }
 
   /** Filter items whose value for the given key is not in `values` (an array, `Arrayable` or Traversable), by `==` or `===`. */

@@ -447,6 +447,15 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return this.hasMany();
   }
 
+  /** Group an associative array by a field or using a callback, lazily through `Collection.groupBy`. */
+  groupBy<T, R>(this: T, groupBy: SyncCallback<[value: any, key: any], R>, preserveKeys?: boolean): T;
+  groupBy<T, K>(this: T, groupBy: ValueOrSyncCallback<K>, preserveKeys?: boolean): T;
+  groupBy(groupBy: unknown, preserveKeys?: boolean): this {
+    void groupBy;
+    void preserveKeys;
+    return this.passthru("groupBy", [...arguments]);
+  }
+
   /**
    * Key an associative array by a field or using a callback (a callable over the item and its key, or a `data_get`
    * key), lazily: an enum case key is its value, and an object or `null` key its string.

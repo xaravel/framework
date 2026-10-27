@@ -27,10 +27,10 @@
 // Upstream's. `$c->when->contains(...)` is `c.__get('when').__call('contains', [...])` (DIV-12.16), and the
 // `HigherOrderWhenProxy` it returns answers `concat` (DIV-12.12). testWhere uses Support's `HtmlString` and
 // testWhereInstanceOf `Str`, so they keep Upstream's bodies in the blocked case, through local classes that throw
-// `BlockedByComponentError("support")`. ESC-14.3-1 holds 20 Test IDs whose members or fixtures call PHP builtins the
-// runtime does not export yet (`round`, `reset`, `end`, `is_bool`, `strtoupper`, `trim`, `chunk_split`); their lines
-// stay `not-ported-yet` (not `blocked-by:runtime`, as for ESC-14.2-4: tools/expectations/reasons.ts accepts
-// `blocked-by` only for a later Phase or Epic), and a comment marks where each would sit.
+// `BlockedByComponentError("support")`. The fixtures `TestSupportCollectionHigherOrderItem`,
+// `TestSupportCollectionHigherOrderStaticClass1` and `TestSupportCollectionHigherOrderStaticClass2` call PHP's
+// `strtoupper`, `trim` and `chunk_split`, which the runtime exports since ESC-14.3-1, and testHighOrderPercentage's
+// expected `75.00` is `float(75)`, as `round` returns a float (DIV-9.4).
 //
 // `Mockery::mock(Arrayable::class)` is `Mockery.mock(Arrayable)` over the contract token, and
 // `Mockery::mock(JsonSerializable::class)` is `Mockery.mock(JsonSerializable)` over the runtime's PHP-interface token
@@ -48,9 +48,11 @@ import {
   BlockedByComponentError,
   callMethod,
   CachingIterator,
+  chunk_split,
   count,
   Error as PhpError,
   Exception,
+  float,
   fqcn,
   gettype,
   implode,
@@ -77,9 +79,11 @@ import {
   stdClass,
   str_starts_with,
   strlen,
+  strtoupper,
   substr,
   Throwable,
   toPhpString,
+  trim,
   UnexpectedValueException,
   valueCopy,
   WeakMap,
@@ -207,6 +211,45 @@ class TestArrayAccessImplementation {
   }
 }
 
+/** Upstream's test-local `TestSupportCollectionHigherOrderItem`. */
+class TestSupportCollectionHigherOrderItem {
+  name: unknown;
+
+  constructor(name: unknown = "taylor") {
+    this.name = name;
+  }
+
+  uppercase(): string {
+    return (this.name = strtoupper(this.name));
+  }
+
+  is(name: unknown): boolean {
+    return this.name === name;
+  }
+}
+
+/** Upstream's test-local `TestSupportCollectionHigherOrderStaticClass1`. */
+class TestSupportCollectionHigherOrderStaticClass1 {
+  static transform(name: unknown): string {
+    return strtoupper(name);
+  }
+
+  static matches(name: string): boolean {
+    return str_starts_with(name, "T");
+  }
+}
+
+/** Upstream's test-local `TestSupportCollectionHigherOrderStaticClass2`. */
+class TestSupportCollectionHigherOrderStaticClass2 {
+  static transform(name: unknown): string {
+    return trim(chunk_split(name, 1, " "));
+  }
+
+  static matches(name: string): boolean {
+    return str_starts_with(name, "O");
+  }
+}
+
 /** A row of testPluckWithDotNotation and testPluckWithClosure. */
 type PluckRow = { name: string; skill: { backend: string[] } };
 
@@ -229,6 +272,9 @@ class SupportCollectionTest extends TestCase {
     registerTestClass("Illuminate\\Tests\\Support\\StaffEnum", StaffEnum);
     registerTestClass("Illuminate\\Tests\\Support\\TestAccessorEloquentTestStub", TestAccessorEloquentTestStub);
     registerTestClass("Illuminate\\Tests\\Support\\TestArrayAccessImplementation", TestArrayAccessImplementation);
+    registerTestClass("Illuminate\\Tests\\Support\\TestSupportCollectionHigherOrderItem", TestSupportCollectionHigherOrderItem);
+    registerTestClass("Illuminate\\Tests\\Support\\TestSupportCollectionHigherOrderStaticClass1", TestSupportCollectionHigherOrderStaticClass1);
+    registerTestClass("Illuminate\\Tests\\Support\\TestSupportCollectionHigherOrderStaticClass2", TestSupportCollectionHigherOrderStaticClass2);
   }
 }
 
@@ -2511,8 +2557,7 @@ portedTest(`${ID}::testPutAddsItemToCollection`, { case: SupportCollectionTest }
   this.assertSame({ foo: 3, bar: { nested: "two" } }, data.toArray());
 });
 
-// Story 14.3: filtering, slicing and conditional methods, in Upstream's order. The Test IDs ESC-14.3-1 holds keep a
-// one-line comment where they would sit.
+// Story 14.3: filtering, slicing and conditional methods, in Upstream's order.
 
 portedTest(`${ID}::testSkipMethod`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const data = new collection([1, 2, 3, 4, 5, 6]);
@@ -2680,7 +2725,11 @@ portedTest(`${ID}::testHigherOrderFilter`, { case: SupportCollectionTest, datase
   this.assertCount(1, c.__get("filter").__call("active", [])); // adapted:DIV-12.16
 });
 
-// testHigherOrderSole#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+portedTest(`${ID}::testHigherOrderSole`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([new TestSupportCollectionHigherOrderItem("Adam"), new TestSupportCollectionHigherOrderItem("Taylor")]);
+
+  this.assertSame("Taylor", (c.__get("sole").__call("is", ["Taylor"]) as TestSupportCollectionHigherOrderItem).name); // adapted:DIV-12.16
+});
 
 portedTest(`${ID}::testWhere`, { case: SupportCollectionBlockedBySupportTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
@@ -2779,8 +2828,21 @@ portedTest(`${ID}::testWhereNotInStrict`, { case: SupportCollectionTest, dataset
   this.assertEquals([{ v: 2 }, { v: "3" }, { v: 4 }], c.whereNotInStrict("v", [1, 3]).values().all());
 });
 
-// testBetween#0/#1 and testWhereNotBetween#0/#1 are held by ESC-14.3-1 (`whereBetween` / `whereNotBetween` need
-// `reset` / `end`).
+portedTest(`${ID}::testBetween`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+
+  this.assertEquals([{ v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }], c.whereBetween("v", [2, 4]).values().all());
+  this.assertEquals([{ v: 1 }], c.whereBetween("v", [-1, 1]).all());
+  this.assertEquals([{ v: 3 }, { v: "3" }], c.whereBetween("v", [3, 3]).values().all());
+});
+
+portedTest(`${ID}::testWhereNotBetween`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const c = new collection([{ v: 1 }, { v: 2 }, { v: 3 }, { v: "3" }, { v: 4 }]);
+
+  this.assertEquals([{ v: 1 }], c.whereNotBetween("v", [2, 4]).values().all());
+  this.assertEquals([{ v: 2 }, { v: 3 }, { v: 3 }, { v: 4 }], c.whereNotBetween("v", [-1, 1]).values().all());
+  this.assertEquals([{ v: 1 }, { v: "2" }, { v: "4" }], c.whereNotBetween("v", [3, 3]).values().all());
+});
 
 portedTest(`${ID}::testDuplicates`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let duplicates = (collection.make([1, 2, 1, "laravel", null, "laravel", "php", null]) as OverloadedView).duplicates().all();
@@ -3074,7 +3136,15 @@ portedTest(`${ID}::testTakeUntilReturnsAllItemsForUnmetValue`, { case: SupportCo
   this.assertSame(data.toArray(), actual.toArray());
 });
 
-// testTakeUntilCanBeProxied#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+portedTest(`${ID}::testTakeUntilCanBeProxied`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([new TestSupportCollectionHigherOrderItem("Adam"), new TestSupportCollectionHigherOrderItem("Taylor"), new TestSupportCollectionHigherOrderItem("Jason")]);
+
+  const actual = data.__get("takeUntil").__call("is", ["Jason"]) as AnyCollection; // adapted:DIV-12.16
+
+  this.assertCount(2, actual);
+  this.assertSame("Adam", (actual.get(0) as TestSupportCollectionHigherOrderItem).name);
+  this.assertSame("Taylor", (actual.get(1) as TestSupportCollectionHigherOrderItem).name);
+});
 
 portedTest(`${ID}::testTakeWhileUsingValue`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let data = new collection([1, 1, 2, 2, 3, 3]);
@@ -3108,7 +3178,20 @@ portedTest(`${ID}::testTakeWhileReturnsNoItemsForUnmetValue`, { case: SupportCol
   this.assertSame([], actual.toArray());
 });
 
-// testTakeWhileCanBeProxied#0/#1 are held by ESC-14.3-1 (TestSupportCollectionHigherOrderItem needs `strtoupper`).
+portedTest(`${ID}::testTakeWhileCanBeProxied`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([
+    new TestSupportCollectionHigherOrderItem("Adam"),
+    new TestSupportCollectionHigherOrderItem("Adam"),
+    new TestSupportCollectionHigherOrderItem("Taylor"),
+    new TestSupportCollectionHigherOrderItem("Taylor"),
+  ]);
+
+  const actual = data.__get("takeWhile").__call("is", ["Adam"]) as AnyCollection; // adapted:DIV-12.16
+
+  this.assertCount(2, actual);
+  this.assertSame("Adam", (actual.get(0) as TestSupportCollectionHigherOrderItem).name);
+  this.assertSame("Adam", (actual.get(1) as TestSupportCollectionHigherOrderItem).name);
+});
 
 portedTest(`${ID}::testRejectRemovesElementsPassingTruthTest`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   let c = new collection(["foo", "bar"]);
@@ -3201,9 +3284,63 @@ portedTest(`${ID}::testSliceNegativeOffsetAndNegativeLength`, { case: SupportCol
   this.assertEquals([3, 4, 5, 6], data.slice(-6, -2).values().toArray());
 });
 
-// testHigherOrderCollectionGroupBy, testHigherOrderCollectionMap, testHigherOrderCollectionMapFromArrays and
-// testHigherOrderCollectionStaticCall (#0/#1 each) are held by ESC-14.3-1 (`groupBy` needs `is_bool`, and the
-// fixtures need `strtoupper`, `trim` and `chunk_split`).
+portedTest(`${ID}::testHigherOrderCollectionGroupBy`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const data = new collection([new TestSupportCollectionHigherOrderItem(), new TestSupportCollectionHigherOrderItem("TAYLOR"), new TestSupportCollectionHigherOrderItem("foo")]);
+
+  this.assertEquals(
+    {
+      taylor: [data.get(0)],
+      TAYLOR: [data.get(1)],
+      foo: [data.get(2)],
+    },
+    (data.__get("groupBy").__get("name") as AnyCollection).toArray(), // adapted:DIV-12.16
+  );
+
+  this.assertEquals(
+    {
+      TAYLOR: [data.get(0), data.get(1)],
+      FOO: [data.get(2)],
+    },
+    (data.__get("groupBy").__call("uppercase", []) as AnyCollection).toArray(), // adapted:DIV-12.16
+  );
+});
+
+portedTest(`${ID}::testHigherOrderCollectionMap`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const person1 = Object.assign(new stdClass(), { name: "Taylor" });
+  const person2 = Object.assign(new stdClass(), { name: "Yaz" });
+
+  let data = new collection([person1, person2]);
+
+  this.assertEquals(["Taylor", "Yaz"], (data.__get("map").__get("name") as AnyCollection).toArray()); // adapted:DIV-12.16
+
+  data = new collection([new TestSupportCollectionHigherOrderItem(), new TestSupportCollectionHigherOrderItem()]);
+
+  this.assertEquals(["TAYLOR", "TAYLOR"], ((data.__get("each").__call("uppercase", []) as AnyCollection).__get("map").__get("name") as AnyCollection).toArray()); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testHigherOrderCollectionMapFromArrays`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const person1 = { name: "Taylor" };
+  const person2 = { name: "Yaz" };
+
+  let data = new collection([person1, person2]);
+
+  this.assertEquals(["Taylor", "Yaz"], (data.__get("map").__get("name") as AnyCollection).toArray()); // adapted:DIV-12.16
+
+  data = new collection([new TestSupportCollectionHigherOrderItem(), new TestSupportCollectionHigherOrderItem()]);
+
+  this.assertEquals(["TAYLOR", "TAYLOR"], ((data.__get("each").__call("uppercase", []) as AnyCollection).__get("map").__get("name") as AnyCollection).toArray()); // adapted:DIV-12.16
+});
+
+portedTest(`${ID}::testHigherOrderCollectionStaticCall`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const class1 = fqcn(TestSupportCollectionHigherOrderStaticClass1);
+  const class2 = fqcn(TestSupportCollectionHigherOrderStaticClass2);
+
+  const classes = new collection([class1, class2]);
+
+  this.assertEquals(["TAYLOR", "t a y l o r"], (classes.__get("map").__call("transform", ["taylor"]) as AnyCollection).toArray()); // adapted:DIV-12.16
+  this.assertEquals(class1, classes.__get("first").__call("matches", ["Taylor"])); // adapted:DIV-12.16
+  this.assertEquals(class2, classes.__get("first").__call("matches", ["Otwell"])); // adapted:DIV-12.16
+});
 
 portedTest(`${ID}::testPartition`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
   const data = new collection(phpRange(1, 10));
@@ -3608,4 +3745,13 @@ portedTest(`${ID}::testWhereNotNullWithoutKey`, { case: SupportCollectionTest, d
   );
 });
 
-// testHighOrderPercentage#0/#1 are held by ESC-14.3-1 (`percentage` needs `round`).
+portedTest(`${ID}::testHighOrderPercentage`, { case: SupportCollectionTest, dataset: COLLECTION_CLASSES }, async function (collection: CollectionClass) {
+  const collection_ = new collection([
+    { name: "Taylor", active: true },
+    { name: "Nuno", active: true },
+    { name: "Dries", active: false },
+    { name: "Jess", active: true },
+  ]);
+
+  this.assertSame(float(75), collection_.__get("percentage").__get("active")); // adapted:DIV-9.4 adapted:DIV-12.16
+});
