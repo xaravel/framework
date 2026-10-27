@@ -15,7 +15,7 @@
    - The session has 4 slots, counting you. Run the review layers in batches that fit, two and then two.
    - A subagent that fails with "Selected model is at capacity": retry it once after a minute. Then record that layer as not run, and let the iteration's review rules decide.
 5. **Sandbox.**
-   - You may write in the clone (`.git` included), `$XARAVEL_ORCH_STATE`, `~/.cache`, `~/.claude`, `~/.bun` and `~/.config/gh`. The network is on.
+   - You may write in the clone (`.git` included), `$XARAVEL_ORCH_STATE`, `~/.cache`, `~/.claude`, `~/.bun`, `~/.config/gh` and `~/.codex`. The network is on. `~/.codex` is writable only so the Fidelity Review's Codex reviewer, a nested `codex exec`, can start. Never edit anything in it, `config.toml` and `auth.json` included.
    - Put temporary files, review diffs included, under `$TMPDIR` (`$XARAVEL_ORCH_STATE/tmp`), never `/tmp`.
    - `git push` and `gh` authenticate through `~/.config/gh/hosts.yml`.
    - The sandbox refuses some diagnostic calls, such as `ps`, `nice`, `renice` and `setpriority`. Do not use them.
