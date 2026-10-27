@@ -217,3 +217,11 @@ the callback exception wins (DIV-9.16).
 `combine` and `zip` still coordinate manual iterators and can leave temporary
 input generators open on early exit. Their cleanup remains for the later
 LazyCollection Story; the guarantees above do not cover those wrappers.
+
+### Arr helpers (Story 14.6)
+
+`Arr` accepts lists, string maps and ordered `PhpArray` values. Dot access gives a literal top-level key precedence over a nested path. `has`, `hasAll` and `hasAny` treat present null values as existing; `get` returns the supplied default only for missing paths. `set`, `pull` and `forget` take `Ref` boxes and write copied arrays back to the box. Reads and returned arrays are value copies, including nested arrays.
+
+The independent helper surface includes array conversion and value selection, synchronous predicates and mapping, keying, joining, sorting, CSS classes, slicing and sole-item exceptions. Callback forms resolve through the runtime; `mapSpread` uses PHP append and argument-unpacking semantics. `LazyCollection.tapEach` supplies the lazy enumeration recorder used by the direct Arr test.
+
+Story 14.6 remains blocked by runtime contracts. `ESC-14.6-1` holds `isAssoc`, `isList`, recursive sorting, `push`, `query` and `shuffle` until `array_is_list`, `array_push`, `http_build_query` / `PHP_QUERY_RFC3986` and `Randomizer.shuffleArray` land. `ESC-14.6-2` holds the two complete accessible/arrayable tests that instantiate the missing PHP `DateTime` builtin. `ESC-14.6-3` holds the five typed accessor members and their complete tests pending a public runtime coercive argument binder, including validation of unused defaults and normalization of bigint, tagged float and class-string returns. These seventeen Test IDs remain `not-ported-yet` with Escalation metadata. Carbon-key plucking and `toCssStyles` retain their complete test bodies and throw `BlockedByComponentError("support")` at their real Carbon / `Str.finish` dependency seams, for Support (Epic 19) to clear.

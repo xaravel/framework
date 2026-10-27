@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: backlog
+  14-6-arr-helpers: blocked  # ESC-14.6-1/2/3: 17 runtime-held IDs; ESC-14.6-4: Fidelity core trait-evidence gap
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
