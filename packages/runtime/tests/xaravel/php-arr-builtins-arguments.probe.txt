@@ -1,0 +1,186 @@
+int.big	["string","9007199254740993"]
+int.numeric	["int",1000]
+int.float	["int",1]
+int.null	"TypeError: bindInt(): Argument #1 ($value) must be of type int, null given"
+float.int	["float",1.0]
+string.bool	["string","1"]
+bool.zero	["bool",false]
+union.float	["float",1.5]
+union.int	["int",12]
+union.exact	["float",1.0]
+unused.default	"TypeError: typed(): Argument #3 ($default) must be of type ?int, array given"
+key.invalid	"TypeError: typed(): Argument #2 ($key) must be of type string|int|null, array given"
+array.invalid	"TypeError: typed(): Argument #1 ($array) must be of type array, int given"
+nullable	["int",1]
+parameter.Array	["array",[]]
+return.Array	["array",[]]
+return.error.Array	"TypeError: returnArray(): Return value must be of type array, int returned"
+parameter.null.Array	"TypeError: parameterArray(): Argument #1 ($value) must be of type array, null given"
+parameter.String	["string","12"]
+return.String	["string","12"]
+return.error.String	"TypeError: returnString(): Return value must be of type string, array returned"
+parameter.null.String	"TypeError: parameterString(): Argument #1 ($value) must be of type string, null given"
+parameter.Bool	["bool",false]
+return.Bool	["bool",false]
+return.error.Bool	"TypeError: returnBool(): Return value must be of type bool, array returned"
+parameter.null.Bool	"TypeError: parameterBool(): Argument #1 ($value) must be of type bool, null given"
+parameter.Int	["int",12]
+return.Int	["int",12]
+return.error.Int	"TypeError: returnInt(): Return value must be of type int, array returned"
+parameter.null.Int	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, null given"
+parameter.Float	["float",1.0]
+return.Float	["float",1.0]
+return.error.Float	"TypeError: returnFloat(): Return value must be of type float, array returned"
+parameter.null.Float	"TypeError: parameterFloat(): Argument #1 ($value) must be of type float, null given"
+default.omitted.Array	["null",null]
+default.supplied.Array	["array",[]]
+default.omitted.String	["null",null]
+default.supplied.String	["string","12"]
+default.omitted.Bool	["null",null]
+default.supplied.Bool	["bool",true]
+default.omitted.Int	["null",null]
+default.supplied.Int	["int",12]
+default.omitted.Float	["null",null]
+default.supplied.Float	["float",1.0]
+count.required	"ArgumentCountError: Too few arguments to function requiredCount(), 0 passed and exactly 1 expected"
+count.optional	"ArgumentCountError: Too few arguments to function optionalCount(), 0 passed and at least 1 expected"
+unused.Array	"TypeError: unusedArray(): Argument #2 ($default) must be of type ?array, int given"
+unused.String	"TypeError: unusedString(): Argument #2 ($default) must be of type ?string, array given"
+unused.Bool	"TypeError: unusedBool(): Argument #2 ($default) must be of type ?bool, array given"
+unused.Int	"TypeError: unusedInt(): Argument #2 ($default) must be of type ?int, array given"
+unused.Float	"TypeError: unusedFloat(): Argument #2 ($default) must be of type ?float, array given"
+count.beforeRequired0	"ArgumentCountError: Too few arguments to function beforeRequired(), 0 passed and exactly 2 expected"
+count.beforeRequired1	"ArgumentCountError: Too few arguments to function beforeRequired(), 1 passed and exactly 2 expected"
+count.beforeRequired2	["array",[null,2]]
+matrix.0.integer	["int",12]
+matrix.0.fraction	["int",1]
+matrix.0.numeric	["string","12"]
+matrix.0.decimal	["string","1.5"]
+matrix.0.exponent	["string","1e3"]
+matrix.0.overflow	["string","9223372036854775808"]
+matrix.0.text	["string","x"]
+matrix.0.null	["null",null]
+matrix.0.bool	["int",1]
+matrix.0.array	"TypeError: matrix0(): Argument #1 ($value) must be of type string|int|null, array given"
+matrix.1.integer	["int",12]
+matrix.1.fraction	["float",1.5]
+matrix.1.numeric	["int",12]
+matrix.1.decimal	["float",1.5]
+matrix.1.exponent	["float",1000.0]
+matrix.1.overflow	["float",9.223372036854776e+18]
+matrix.1.text	"TypeError: matrix1(): Argument #1 ($value) must be of type int|float, string given"
+matrix.1.null	"TypeError: matrix1(): Argument #1 ($value) must be of type int|float, null given"
+matrix.1.bool	["int",1]
+matrix.1.array	"TypeError: matrix1(): Argument #1 ($value) must be of type int|float, array given"
+matrix.2.integer	["float",12.0]
+matrix.2.fraction	["float",1.5]
+matrix.2.numeric	["float",12.0]
+matrix.2.decimal	["float",1.5]
+matrix.2.exponent	["float",1000.0]
+matrix.2.overflow	["float",9.223372036854776e+18]
+matrix.2.text	["bool",true]
+matrix.2.null	"TypeError: matrix2(): Argument #1 ($value) must be of type float|bool, null given"
+matrix.2.bool	["bool",true]
+matrix.2.array	"TypeError: matrix2(): Argument #1 ($value) must be of type float|bool, array given"
+matrix.3.integer	["string","12"]
+matrix.3.fraction	["string","1.5"]
+matrix.3.numeric	["string","12"]
+matrix.3.decimal	["string","1.5"]
+matrix.3.exponent	["string","1e3"]
+matrix.3.overflow	["string","9223372036854775808"]
+matrix.3.text	["string","x"]
+matrix.3.null	"TypeError: matrix3(): Argument #1 ($value) must be of type array|string, null given"
+matrix.3.bool	["string","1"]
+matrix.3.array	["array",[]]
+copy.return	["array",[{"nested":[1]},{"nested":[1,2]}]]
+copy.parameter	["array",[{"nested":[1]},{"nested":[1,2]}]]
+class.bool	["bool",true]
+class.int.error	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, string given"
+class.return.error	"TypeError: returnInt(): Return value must be of type int, string returned"
+returnMatrix.0.numeric	["string","12"]
+returnMatrix.0.decimal	["string","1.5"]
+returnMatrix.0.overflow	["string","9223372036854775808"]
+returnMatrix.0.text	["string","x"]
+returnMatrix.0.null	["null",null]
+returnMatrix.0.array	"TypeError: returnMatrix0(): Return value must be of type string|int|null, array returned"
+returnMatrix.1.numeric	["int",12]
+returnMatrix.1.decimal	["float",1.5]
+returnMatrix.1.overflow	["float",9.223372036854776e+18]
+returnMatrix.1.text	"TypeError: returnMatrix1(): Return value must be of type int|float, string returned"
+returnMatrix.1.null	"TypeError: returnMatrix1(): Return value must be of type int|float, null returned"
+returnMatrix.1.array	"TypeError: returnMatrix1(): Return value must be of type int|float, array returned"
+returnMatrix.2.numeric	["float",12.0]
+returnMatrix.2.decimal	["float",1.5]
+returnMatrix.2.overflow	["float",9.223372036854776e+18]
+returnMatrix.2.text	["bool",true]
+returnMatrix.2.null	"TypeError: returnMatrix2(): Return value must be of type float|bool, null returned"
+returnMatrix.2.array	"TypeError: returnMatrix2(): Return value must be of type float|bool, array returned"
+returnMatrix.3.numeric	["string","12"]
+returnMatrix.3.decimal	["string","1.5"]
+returnMatrix.3.overflow	["string","9223372036854775808"]
+returnMatrix.3.text	["string","x"]
+returnMatrix.3.null	"TypeError: returnMatrix3(): Return value must be of type array|string, null returned"
+returnMatrix.3.array	["array",[]]
+numeric.Int.fraction	["int",1]
+numeric.Int.exponent	["int",1000]
+numeric.Int.large	["int",9007199254740993]
+numeric.Int.overflow	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, string given"
+numeric.Int.leading	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, string given"
+numeric.Int.empty	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, string given"
+numeric.Float.fraction	["float",1.5]
+numeric.Float.exponent	["float",1000.0]
+numeric.Float.large	["float",9007199254740992.0]
+numeric.Float.overflow	["float",9.223372036854776e+18]
+numeric.Float.leading	"TypeError: parameterFloat(): Argument #1 ($value) must be of type float, string given"
+numeric.Float.empty	"TypeError: parameterFloat(): Argument #1 ($value) must be of type float, string given"
+boundary.parameter.Int.min	["array",["int",-9223372036854775808]]
+boundary.return.Int.min	["array",["int",-9223372036854775808]]
+boundary.parameter.Int.max	["array",["int",9223372036854775807]]
+boundary.return.Int.max	["array",["int",9223372036854775807]]
+boundary.parameter.Int.under	["array",["int",-9223372036854775808]]
+boundary.return.Int.under	["array",["int",-9223372036854775808]]
+boundary.parameter.Int.overflowExponent	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, string given"
+boundary.return.Int.overflowExponent	"TypeError: returnInt(): Return value must be of type int, string returned"
+boundary.parameter.Int.nan	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, float given"
+boundary.return.Int.nan	"TypeError: returnInt(): Return value must be of type int, float returned"
+boundary.parameter.Int.inf	"TypeError: parameterInt(): Argument #1 ($value) must be of type int, float given"
+boundary.return.Int.inf	"TypeError: returnInt(): Return value must be of type int, float returned"
+boundary.parameter.Int.negativeZero	["array",["int",0]]
+boundary.return.Int.negativeZero	["array",["int",0]]
+boundary.parameter.Float.min	["array",["float",-9.223372036854776e+18]]
+boundary.return.Float.min	["array",["float",-9.223372036854776e+18]]
+boundary.parameter.Float.max	["array",["float",9.223372036854776e+18]]
+boundary.return.Float.max	["array",["float",9.223372036854776e+18]]
+boundary.parameter.Float.under	["array",["float",-9.223372036854776e+18]]
+boundary.return.Float.under	["array",["float",-9.223372036854776e+18]]
+boundary.parameter.Float.overflowExponent	["array",["float","INF"]]
+boundary.return.Float.overflowExponent	["array",["float","INF"]]
+boundary.parameter.Float.nan	["array",["float","NAN"]]
+boundary.return.Float.nan	["array",["float","NAN"]]
+boundary.parameter.Float.inf	["array",["float","INF"]]
+boundary.return.Float.inf	["array",["float","INF"]]
+boundary.parameter.Float.negativeZero	["array",["float","-0"]]
+boundary.return.Float.negativeZero	["array",["float","-0"]]
+default.nonnull.Int	["int",7]
+default.nonnull.Float	["float",1.0]
+default.nonnull.String	["string","default"]
+default.nonnull.Bool	["bool",true]
+default.mutable	["array",[{"nested":[1,2]},{"nested":[1]}]]
+reordered.0.fraction	["float",1.5]
+reordered.0.numeric	["float",12.0]
+reordered.0.text	["bool",true]
+reordered.0.nil	"TypeError: reordered0(): Argument #1 ($value) must be of type float|bool, null given"
+reordered.0.bool	["bool",true]
+reordered.0.array	"TypeError: reordered0(): Argument #1 ($value) must be of type float|bool, array given"
+reordered.1.fraction	["string","1.5"]
+reordered.1.numeric	["string","12"]
+reordered.1.text	["string","x"]
+reordered.1.nil	"TypeError: reordered1(): Argument #1 ($value) must be of type array|string, null given"
+reordered.1.bool	["string","1"]
+reordered.1.array	["array",[]]
+reordered.2.fraction	["int",1]
+reordered.2.numeric	["string","12"]
+reordered.2.text	["string","x"]
+reordered.2.nil	["null",null]
+reordered.2.bool	["int",1]
+reordered.2.array	"TypeError: reordered2(): Argument #1 ($value) must be of type string|int|null, array given"
