@@ -314,6 +314,32 @@ string `… Argument #2 ($property) must be of type string, array given`.
   recorded methods, its built-in parents' (`getIterator` for `IteratorAggregate`) and its parents'. `__call` and
   `__callStatic` do not make a missing method exist, as in PHP.
 
+## `callMethod`
+
+`callMethod(object, name, ...args)` is PHP's dynamic method call `$object->$name(...$args)` (ESC-14.2-7), for a port
+of Upstream code that names the method in a variable. It checks in PHP's order:
+
+1. A `name` that is no JS string, a `__toString` object included, throws PHP's `Error` `Method name must be a string`.
+2. An `object` that is no PHP object throws PHP's `Error` `Call to a member function foo() on null`, the type being
+   `null`, `true`, `false`, `int`, `float`, `string` or `array`. A class constructor or a contract token is a
+   class-string, so it reads `string`. A symbol or a `bigint` outside int64, which is no PHP value, throws the
+   runtime's JS `TypeError`, as `phpType` does.
+3. A Closure takes `__invoke` in any case, and is called with `args`.
+4. Otherwise the method is found as `method_exists` finds it, by the same resolver: each holder of the prototype
+   chain, nearest first, then each of the static chain, matched exactly and then in any case on that holder (so a
+   subclass's `FOO` overrides a parent's `foo`, as in PHP); then `__toString` as the `toString()` port. A prototype
+   method is called with `this` the object, a static one with `this` the object's class (PHP's `static::`).
+5. Failing that, the class's instance `__call`, found the same way, is called as `__call(name, args)`, `name` in the
+   caller's case and `args` a JS array. A static `__call` and `__callStatic` take no part, as in PHP.
+6. Failing that, it throws PHP's `Error` `Call to undefined method A::nope()`, the class named by `get_debug_type`
+   (`A@anonymous` for an unregistered subclass, `Closure::nope()` for a Closure).
+
+The call's result is returned, with `undefined` (a JS function with no `return`) read as `null` (AD-9).
+
+PHP's visibility checks are not ported, since a JS method has none: no "Call to private method" error is thrown.
+Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` are not ported through `callMethod`; each throws
+a JS `TypeError` naming the method.
+
 ## `range`
 
 `range(start, end, step = 1)` follows PHP 8.3's rules: two ints give ints; a float bound or a fractional step gives
@@ -389,7 +415,7 @@ limit, as the codecs do ([codecs](codecs.md)): a `substr` result that splits a U
 (`substr("héllo", 1, 1)`), a `range` character of 0x80 or more, a `sprintf` result that is no valid UTF-8 (a
 precision that splits a sequence, `%.1s` of `"é"`, or a `%c` byte of 0x80 or more on its own), and a string holding a
 lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, `lcfirst`, `range`, `explode`,
-`sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`, `strnatcasecmp` or `strcoll`.
+`sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`, `strnatcasecmp`, `strcoll` or `unhandledMatch`.
 
 ## Not ported
 
@@ -413,6 +439,10 @@ lone surrogate passed to `substr`, `str_starts_with`, `str_contains`, `strlen`, 
   those go through the existing string and key casts, which read a token as an array.
 - A Closure's PHP callable name (`{closure:<file>:<line>}`): `is_callable` gives `Closure::__invoke`.
 - `is_callable` for a method name in another case: JS names are case-sensitive, so `[obj, 'M']` misses `m`.
+- `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it
+  (see [`callMethod`](#callmethod)).
+- `callMethod(object, "toString")` finds the `__toString` port under its JS name, where PHP has no `toString` method:
+  the JS name `toString` is the `__toString` port, as for `method_exists`.
 - An `UnitEnum` or `BackedEnum` brand: an enum case answers `instanceof`, but `hasBrand(case, UnitEnum)` is `false`.
 - `toPhpArray` does not act on `ArrayObject`'s `STD_PROP_LIST` flag: an `ArrayObject` always gives its storage.
 - `array_unique`'s enum rule orders different cases by a runtime counter where PHP compares object addresses; it only
