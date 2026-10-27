@@ -16,7 +16,7 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <body>
 <p><a href="../index.html">Dashboard</a></p>
 <h1>API-surface diff: collections</h1>
-<p>upstream 670 · matched 133 · missing 464 · renamed 0 · extra 3 · unexplained 485</p>
+<p>upstream 670 · matched 180 · missing 409 · renamed 0 · extra 21 · unexplained 456</p>
 <table>
 <thead><tr><th>category</th><th>kind</th><th>fqcn</th><th>member</th><th>to</th><th>explained</th></tr></thead>
 <tbody>
@@ -51,7 +51,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>mapWithKeys</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>mixin</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>onlyValues</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>partition</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>prependKeysWith</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>push</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Arr</td><td>query</td><td></td><td>unexplained</td></tr>
@@ -107,7 +106,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>collapseWithKeys</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>collect</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>combine</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>concat</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>crossJoin</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>dd</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>diff</td><td></td><td>unexplained</td></tr>
@@ -118,8 +116,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>diffUsing</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>dot</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>dump</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>duplicates</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>duplicatesStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>each</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>eachSpread</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>empty</td><td></td><td>unexplained</td></tr>
@@ -146,7 +142,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>isNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>join</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>jsonSerialize</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>keyBy</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>macro</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>make</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>mapInto</td><td></td><td>unexplained</td></tr>
@@ -178,8 +173,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>replaceRecursive</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>reverse</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>shuffle</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>skipUntil</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>skipWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>sliding</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>some</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>sort</td><td></td><td>unexplained</td></tr>
@@ -191,8 +184,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>split</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>splitIn</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>sum</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>takeUntil</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>takeWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>tap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>times</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>toArray</td><td></td><td>unexplained</td></tr>
@@ -225,9 +216,16 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>whereStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>wrap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Collection</td><td>zip</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>filterAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>rejectAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>partitionAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>everyAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>containsAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>firstAsync</td><td></td><td>unexplained</td></tr>
 <tr><td>extra</td><td>method</td><td>Illuminate\Support\Collection</td><td>entries</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>contains</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>doesntContain</td><td></td><td>DIV-12.20</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>every</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>except</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>first</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>firstOrFail</td><td></td><td>DIV-12.20</td></tr>
@@ -238,9 +236,14 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>hasSole</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>last</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>only</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>partition</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>sole</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>some</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unique</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unlessEmpty</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unlessNotEmpty</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whenEmpty</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whenNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>where</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>average</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>avg</td><td></td><td>unexplained</td></tr>
@@ -249,7 +252,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>chunkWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>collapse</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>combine</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>concat</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>crossJoin</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>dd</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>diff</td><td></td><td>unexplained</td></tr>
@@ -259,11 +261,8 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>diffKeysUsing</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>diffUsing</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>dump</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>duplicates</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>duplicatesStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>eachSpread</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>empty</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>every</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>flatMap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>flatten</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>flip</td><td></td><td>unexplained</td></tr>
@@ -276,7 +275,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>intersectByKeys</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>intersectUsing</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>join</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>keyBy</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>make</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>mapInto</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>mapSpread</td><td></td><td>unexplained</td></tr>
@@ -290,7 +288,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>min</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>mode</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>pad</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>partition</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>pipe</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>pipeInto</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>pipeThrough</td><td></td><td>unexplained</td></tr>
@@ -303,8 +300,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>replaceRecursive</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>reverse</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>shuffle</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>skipUntil</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>skipWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>sliding</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>sort</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>sortByDesc</td><td></td><td>unexplained</td></tr>
@@ -315,33 +310,24 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>split</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>splitIn</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>sum</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>takeUntil</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>takeWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>tap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>times</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>undot</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>union</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>uniqueStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unless</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unlessEmpty</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unlessNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>unwrap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>when</td><td></td><td>DIV-12.20</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whenEmpty</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whenNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereBetween</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereIn</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereInStrict</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereInstanceOf</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereNotBetween</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereNotIn</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereNotInStrict</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereNotNull</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereNull</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>whereStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>wrap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>zip</td><td></td><td>unexplained</td></tr>
 <tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>entries</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>filterAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>rejectAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>partitionAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>everyAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>containsAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\Enumerable</td><td>firstAsync</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>class</td><td>Illuminate\Support\LazyCollection</td><td></td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>after</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>before</td><td></td><td>unexplained</td></tr>
@@ -375,7 +361,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>collapseWithKeys</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>collect</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>combine</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>concat</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>crossJoin</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>dd</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>diff</td><td></td><td>unexplained</td></tr>
@@ -386,8 +371,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>diffUsing</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>dot</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>dump</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>duplicates</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>duplicatesStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>each</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>eachSpread</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>eager</td><td></td><td>unexplained</td></tr>
@@ -415,7 +398,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>isNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>join</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>jsonSerialize</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>keyBy</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>macro</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>make</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>mapInto</td><td></td><td>unexplained</td></tr>
@@ -448,8 +430,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>replaceRecursive</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>reverse</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>shuffle</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>skipUntil</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>skipWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>sliding</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>some</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>sort</td><td></td><td>unexplained</td></tr>
@@ -461,9 +441,7 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>split</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>splitIn</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>sum</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>takeUntil</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>takeUntilTimeout</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>takeWhile</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>tap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>tapEach</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>throttle</td><td></td><td>unexplained</td></tr>
@@ -496,12 +474,20 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>withHeartbeat</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>wrap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>zip</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>filterAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>rejectAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>partitionAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>everyAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>containsAsync</td><td></td><td>unexplained</td></tr>
+<tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>firstAsync</td><td></td><td>unexplained</td></tr>
 <tr><td>extra</td><td>method</td><td>Illuminate\Support\LazyCollection</td><td>entries</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\MultipleItemsFoundException</td><td>__construct</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>every</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>firstWhere</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>fromJson</td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>hasMany</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>jsonSerialize</td><td></td><td>unexplained</td></tr>
+<tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>partition</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>some</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>mismatch</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>where</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>average</td><td></td><td>unexplained</td></tr>
@@ -510,7 +496,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>dd</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>dump</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>eachSpread</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>every</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>flatMap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>forPage</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>mapInto</td><td></td><td>unexplained</td></tr>
@@ -518,7 +503,6 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>mapToGroups</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>max</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>min</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>partition</td><td></td><td>DIV-12.20</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>percentage</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>pipe</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>pipeInto</td><td></td><td>unexplained</td></tr>
@@ -530,23 +514,10 @@ td{font-variant-numeric:tabular-nums}.empty{color:#59636e}.blocking{border:2px s
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>sum</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>tap</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>unique</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>uniqueStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>unless</td><td></td><td>DIV-12.20</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>unlessEmpty</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>unlessNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>when</td><td></td><td>DIV-12.20</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whenEmpty</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whenNotEmpty</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereBetween</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereIn</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereInStrict</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereInstanceOf</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereNotBetween</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereNotIn</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereNotInStrict</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereNotNull</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereNull</td><td></td><td>unexplained</td></tr>
-<tr><td>missing</td><td>method</td><td>Illuminate\Support\Traits\EnumeratesValues</td><td>whereStrict</td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>trait</td><td>Illuminate\Support\Traits\TransformsToResourceCollection</td><td></td><td></td><td>unexplained</td></tr>
 <tr><td>missing</td><td>function</td><td>Illuminate\Support\enum_value</td><td></td><td></td><td>unexplained</td></tr>
 <tr><td>mismatch</td><td>function</td><td>collect</td><td></td><td></td><td>unexplained</td></tr>
