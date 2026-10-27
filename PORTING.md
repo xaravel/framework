@@ -60,6 +60,9 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 | `===` / `!==` where an operand can be a PHP array | `identical(a, b)` / `!identical(a, b)` | ESC-14.2-1 |
 | `$o->$name(...$args)` (a dynamic method name) | `callMethod(o, name, ...args)`: PHP's case-insensitive method lookup, then `__call` | ESC-14.2-7 |
 | `$a + $b` on arrays | `arrayUnion(a, b)`: the left entries, then each right entry whose key the left lacks | ESC-14.4-1 |
+| `$a + $b`, `$a / $b` on numbers or numeric strings | `plus(a, b)`, `divide(a, b)`: PHP's coercion, int or float result, `TypeError` and `DivisionByZeroError` | ESC-14.5-2 |
+| `$a[] = $v` on an array value | `arrayAppend(a, v)` over a `Ref`: the next integer key | ESC-14.5-3 |
+| `$f(...$args)` | `callUnpacked(f, args)`: integer keys positional, string keys named | ESC-14.5-3 |
 | `<=>` | `spaceship(a, b)` | Story 9.6 |
 | `is_numeric` | `isNumeric(v)` | Story 9.6 |
 | `(int)`, `(float)`, `(string)`, `(bool)` | `toInt`, `toFloat`, `toPhpString`, `toBool` | Story 9.6 |
