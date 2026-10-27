@@ -2,7 +2,7 @@
 title: 'Epic 14 item 10: runtime chunk, sort, arithmetic and callables'
 type: feature
 created: '2026-10-27'
-status: blocked
+status: in-review
 baseline_revision: 0f4708b536cb1d7c678886ee5fcc5334eb3b5f72
 review_loop_iteration: 2
 followup_review_recommended: false
@@ -41,7 +41,7 @@ deferred:
 
 ## Boundaries & Constraints
 
-**Always:** Keep every requirement of the action item's immutable `action`, and the four approved rulings in context. Code, tests and docs stay in `packages/runtime/**`; own spec and bookkeeping stay under implementation-artifacts. Preserve AD-2/4/5/6/9/10/19/23/26, synchronous APIs, named exports, exact integer handling, float markers, array value copies and PHP errors. Locale is a Scope Frame slot; C and POSIX always work, any other locale is accepted only with Oracle-matching collation evidence. Callable forms follow amended DIV-9.13/14. All existing exports remain.
+**Always:** Keep every requirement of the action item's immutable `action`, and the four approved rulings in context. Code, tests and docs stay in `packages/runtime/**`; own spec and bookkeeping stay under implementation-artifacts. Preserve AD-2/4/5/6/9/10/19/23/26, synchronous APIs, named exports, exact integer handling, float markers, array value copies and PHP errors. Locale is a Scope Frame slot; C and POSIX always work; every other locale returns false under the Maintainer’s 2026-10-27 amendment. Callable forms follow amended DIV-9.13/14. All existing exports remain.
 
 **Never:** Change another package, grader, Expectations, protected instructions or decision. Never exhaust a generator to close it. A user-held generator stays resumable. Named unpacking to a target without an options form is explicitly untranslatable under ESC-14.5-3; never silently drop names. PORTING.md already names the helpers and is read-only here.
 
@@ -450,3 +450,5 @@ Follow-up review recommended: false; no specific remaining risk from the applied
 Verification: runtime harness 90/90, typecheck and lint passed. Host PHP 8.5.11 with -n and error_reporting=0 reproduces all recorded evidence; all earlier rows are unchanged and six new rows are added (71 total). Direct host PHP also confirms the yielding-finally error and executed prefix. The pre-repair full harness passed 21,817 comparisons with no differences and 445 Xaravel tests with five skips; the repaired-tree full run exited 1: checked=21817 differ=2, XARAVEL tests=450 passed=443 failed=2 skipped=5. XT-conformance-135 (async-surface) and XT-conformance-157 (spikes) timed out; no runtime Test ID failed. Focused retry: XT-conformance-157 passed, XT-conformance-135 timed out again. No full final-tree pass is claimed.
 
 Resume: run the PHP probe in the pinned Oracle image, compare its output to the recorded rows (without Darwin normalization on Linux), and settle any difference within this item's authorized scope. Then set this existing spec to in-review, remove the item's waiting entry, and finalize checks/Fidelity status before merging #492. Story 14.5 is a later unit.
+
+2026-10-27 — Resume at in-review under merged PR #494: Maintainer narrows locales to C/POSIX and removes live Oracle execution as a prerequisite. Existing implementation already rejects other locales. Preserve host probe evidence and resume final-tree verification and reviews; earlier failed cancellation is not retried.
