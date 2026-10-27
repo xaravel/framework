@@ -1,6 +1,5 @@
 // Laravel's `Illuminate\Support\Collection` (v13.37.0), the members Stories 14.1-14.3 port; the Collections
-// Stories that port their tests add the rest (`groupBy`, which needs PHP's `is_bool` from the runtime, waits on
-// ESC-14.3-1). It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
+// Stories that port their tests add the rest. It is `mixin(null, EnumeratesValues, Macroable)`, as Upstream's
 // `use EnumeratesValues, Macroable` (`TransformsToResourceCollection` needs `@xaravel/http` and comes with the Story
 // that ports its tests).
 //
@@ -55,6 +54,7 @@ import {
   in_array,
   InvalidArgumentException,
   is_array,
+  is_bool,
   is_callable,
   is_null,
   is_object,
@@ -100,6 +100,7 @@ import { Arr } from "./Arr";
 import { Enumerable } from "./Enumerable";
 import { enum_value } from "./functions";
 import { data_get, value } from "./helpers";
+import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
 import { ItemNotFoundException } from "./ItemNotFoundException";
 import { LazyCollection } from "./LazyCollection";
 import { MultipleItemsFoundException } from "./MultipleItemsFoundException";
@@ -458,6 +459,65 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    */
   containsManyItems<R>(callback: SyncCallback<[value: any, key: any], R> | null = null): boolean {
     return this.hasMany(callback);
+  }
+
+  /**
+   * Group an associative array by a field or using a callback (a callable over the item and its key, or a `data_get`
+   * key), or by a list of them, one nested level each. A callback may give a list of group keys, which puts the item in
+   * each group. A `bool` group key is its int, an enum case its value, and a `Stringable` or `null` its string. Each
+   * group is a new collection of the items, keyed as here when `preserveKeys`, else re-indexed.
+   */
+  groupBy<T, R>(this: T, groupBy: SyncCallback<[value: any, key: any], R>, preserveKeys?: boolean): T;
+  groupBy<T, K>(this: T, groupBy: ValueOrSyncCallback<K>, preserveKeys?: boolean): T;
+  groupBy(groupBy: unknown, preserveKeys: boolean = false): this {
+    let nextGroups: unknown = null;
+
+    if (!this.useAsCallable(groupBy) && is_array(groupBy)) {
+      const nextGroupsRef = new Ref<unknown>(groupBy);
+
+      groupBy = array_shift(nextGroupsRef);
+
+      nextGroups = nextGroupsRef.value;
+    }
+
+    const retriever = this.valueRetriever(groupBy);
+
+    const results = new PhpArray<PhpKeyInput, this>();
+
+    for (const [key, value_] of arrayEntries(this.items)) {
+      let groupKeys = retriever(value_, key);
+
+      if (!is_array(groupKeys)) {
+        groupKeys = [groupKeys];
+      }
+
+      for (const [, item] of arrayEntries(groupKeys as object)) {
+        let groupKey: unknown;
+        if (is_bool(item)) {
+          groupKey = toInt(item);
+        } else if (item instanceof UnitEnum) {
+          groupKey = enum_value(item);
+        } else if (item instanceof Stringable || is_null(item)) {
+          groupKey = toPhpString(item);
+        } else {
+          groupKey = item;
+        }
+
+        if (!array_key_exists(groupKey, results)) {
+          results.set(groupKey as PhpKeyInput, this.newInstance());
+        }
+
+        results.get(groupKey as PhpKeyInput)!.offsetSet(preserveKeys ? key : null, value_);
+      }
+    }
+
+    const result = this.newInstance(results);
+
+    if (toBool(nextGroups)) {
+      return (result.__get("map") as HigherOrderCollectionProxy).__call("groupBy", [nextGroups, preserveKeys]) as this;
+    }
+
+    return result;
   }
 
   /**

@@ -219,6 +219,12 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Filter items by the given key value pair using strict comparison. */
   whereInStrict(key: unknown, values: unknown): Enumerable;
 
+  /** Filter items such that the value of the given key is between the given values. */
+  whereBetween(key: unknown, values: unknown): Enumerable;
+
+  /** Filter items such that the value of the given key is not between the given values. */
+  whereNotBetween(key: unknown, values: unknown): Enumerable;
+
   /** Filter items by the given key value pair. */
   whereNotIn(key: unknown, values: unknown, strict?: boolean): Enumerable;
 
@@ -227,6 +233,10 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
 
   /** Filter the items, removing any items that don't match the given type(s). */
   whereInstanceOf(type: unknown): Enumerable;
+
+  /** Group an associative array by a field or using a callback (or by a list of them, one level each). */
+  groupBy<R>(groupBy: SyncCallback<[value: any, key: any], R>, preserveKeys?: boolean): Enumerable;
+  groupBy<K>(groupBy: ValueOrSyncCallback<K>, preserveKeys?: boolean): Enumerable;
 
   /** Key an associative array by a field or using a callback. */
   keyBy<R>(keyBy: SyncCallback<[value: any, key: any], R>): Enumerable;
@@ -367,9 +377,12 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     whereStrict: ["key", "value"],
     whereIn: ["key", "values", "strict"],
     whereInStrict: ["key", "values"],
+    whereBetween: ["key", "values"],
+    whereNotBetween: ["key", "values"],
     whereNotIn: ["key", "values", "strict"],
     whereNotInStrict: ["key", "values"],
     whereInstanceOf: ["type"],
+    groupBy: ["groupBy", "preserveKeys"],
     keyBy: ["keyBy"],
     partition: ["key", "operator", "value"],
     concat: ["source"],

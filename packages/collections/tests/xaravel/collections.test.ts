@@ -573,6 +573,10 @@ collect([1]).contains(async () => true);
 collect([1]).takeWhile(async () => true);
 Arr.where([1], async () => true);
 e.filter(async () => true);
+collect([1]).percentage(async () => true);
+LazyCollection.make([1]).percentage(async () => true);
+collect([1]).groupBy(async () => "a");
+LazyCollection.make([1]).groupBy(async () => "a");
 `;
 
 /** The lines of `ASYNC_CALLBACKS` that pass an async callback. */
@@ -600,6 +604,11 @@ export const taken = collect([1]).takeWhile((value) => value < 2);
 export const takenValue = collect([1]).takeWhile(1);
 export const where = Arr.where([1], (value) => value > 0);
 export const enumerable = e.filter((value) => value !== null);
+export const percent = collect([1, 2]).percentage((value) => value > 1);
+export const lazyPercent = LazyCollection.make([1, 2]).percentage((value) => value > 1);
+export const grouped = collect([1, 2]).groupBy((value) => value % 2);
+export const groupedKey = collect([{ k: "a" }]).groupBy("k", true);
+export const lazyGrouped = LazyCollection.make([1, 2]).groupBy((value, key) => key);
 `;
 
 /**
@@ -714,13 +723,13 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 
 xaravelTest(
   "XT-collections-7",
-  "Collections are sync (AD-6): passing an async callback to a sync member (filter, map, each, first, reject, every, partition, contains and takeWhile on Collection, filter on LazyCollection, Arr.where, and filter on an Enumerable-typed receiver) fails to compile under the repository's tsc, through SyncCallback's NotPromise half (and ValueOrSyncCallback for the value-or-callback members), and oxlint's no-misused-promises reports every such call, through its void half, while the same calls with sync callbacks, and value forms such as every('age', '>=', 18) and reject(), compile and lint clean; the async companions filterAsync, rejectAsync, partitionAsync, everyAsync, containsAsync and firstAsync (DIV-1 Callbacks, DIV-1.2) exist on Collection and LazyCollection, await each callback before starting the next, in key order, keep the items' keys, return filter's, reject's, partition's, every's, contains' and first's results (every and contains stopping at the first decisive item, first resolving value(default) when none matches), and reject when a callback rejects; async-surface.json lists the six companions of Collection, LazyCollection and the Enumerable interface with root callback; duplicates' AD-26 options object { callback, strict } gives what its positional form gives, on both classes, while an invokable object is the callback and a plain object with a function __invoke is not read as the options object; whereInstanceOf filters by a class-name string, a constructor or a list of classes, keyBy keys an enum case by its value, an object by its string and null by \"\", concat appends a Collection's and a LazyCollection's values with keys reset, and two Collections of equal items are == through the props protocol (AD-9.6)",
+  "Collections are sync (AD-6): passing an async callback to a sync member (filter, map, each, first, reject, every, partition, contains and takeWhile on Collection, filter on LazyCollection, percentage and groupBy on both classes, Arr.where, and filter on an Enumerable-typed receiver) fails to compile under the repository's tsc, through SyncCallback's NotPromise half (and ValueOrSyncCallback for the value-or-callback members), and oxlint's no-misused-promises reports every such call, through its void half, while the same calls with sync callbacks, and value forms such as every('age', '>=', 18) and reject(), compile and lint clean; the async companions filterAsync, rejectAsync, partitionAsync, everyAsync, containsAsync and firstAsync (DIV-1 Callbacks, DIV-1.2) exist on Collection and LazyCollection, await each callback before starting the next, in key order, keep the items' keys, return filter's, reject's, partition's, every's, contains' and first's results (every and contains stopping at the first decisive item, first resolving value(default) when none matches), and reject when a callback rejects; async-surface.json lists the six companions of Collection, LazyCollection and the Enumerable interface with root callback; duplicates' AD-26 options object { callback, strict } gives what its positional form gives, on both classes, while an invokable object is the callback and a plain object with a function __invoke is not read as the options object; whereInstanceOf filters by a class-name string, a constructor or a list of classes, keyBy keys an enum case by its value, an object by its string and null by \"\", concat appends a Collection's and a LazyCollection's values with keys reset, and two Collections of equal items are == through the props protocol (AD-9.6)",
   async () => {
     // (a) tsc and (b) oxlint reject async callbacks to sync members.
     await withFixture(ASYNC_CALLBACKS, async (dir) => {
       const tsc = await tscFixture(dir);
       Assert.assertNotEquals(0, tsc.code, tsc.output);
-      Assert.assertSame(ASYNC_LINES.length, 12, "the fixture's async calls");
+      Assert.assertSame(ASYNC_LINES.length, 16, "the fixture's async calls");
       Assert.assertSame(
         ASYNC_LINES,
         tsc.errors.map((error) => Number(error.split(":")[0])),
