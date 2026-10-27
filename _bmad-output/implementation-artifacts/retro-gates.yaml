@@ -101,4 +101,7 @@ epic-13:
   waiting_on_maintainer: []
 epic-14:
   # No retrospective yet: this entry routes the Maintainer-ruled action item that waits on a ruling (step D).
-  waiting_on_maintainer: []
+  # Draft PR #492: repaired-tree full verification and current review remain missing;
+  # the recorded cancellation refusal must not be retried through another route.
+  waiting_on_maintainer:
+    - epic-14-item-10-runtime-chunk-sort-arith-callables
