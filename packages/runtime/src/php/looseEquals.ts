@@ -20,8 +20,11 @@ function sign(n: number): Order {
   return n > 0 ? 1 : n < 0 ? -1 : 0;
 }
 
-/** `zend_binary_strcmp`'s sign: PHP compares UTF-8 bytes, whose order is code-point order. */
-function strcmp(a: string, b: string): Order {
+/**
+ * `zend_binary_strcmp`'s sign: PHP compares UTF-8 bytes, whose order is code-point order. Internal: the package does
+ * not export it (the set functions compare with it too).
+ */
+export function binaryStrcmp(a: string, b: string): Order {
   if (a === b) {
     return 0;
   }
@@ -44,11 +47,11 @@ function smartStrcmp(a: string, b: string): Order {
   const x = parseNumeric(a, false);
   const y = x === null ? null : parseNumeric(b, false);
   if (x === null || y === null) {
-    return strcmp(a, b);
+    return binaryStrcmp(a, b);
   }
   if (x.overflow !== 0 && x.overflow === y.overflow && x.float - y.float === 0) {
     // Both integers overflow to the same side: a numeric comparison would be inaccurate.
-    return strcmp(a, b);
+    return binaryStrcmp(a, b);
   }
   if (x.int !== null && y.int !== null) {
     return x.int > y.int ? 1 : x.int < y.int ? -1 : 0;
@@ -66,7 +69,7 @@ function smartStrcmp(a: string, b: string): Order {
     }
     dy = Number(y.int);
   } else if (dx === dy && !Number.isFinite(dx)) {
-    return strcmp(a, b);
+    return binaryStrcmp(a, b);
   }
   return sign(dx - dy);
 }
@@ -75,7 +78,7 @@ function smartStrcmp(a: string, b: string): Order {
 function compareIntToString(int: number | bigint, s: string): Order {
   const numeric = parseNumeric(s, false);
   if (numeric === null) {
-    return strcmp(String(int), s);
+    return binaryStrcmp(String(int), s);
   }
   if (numeric.int !== null) {
     return int > numeric.int ? 1 : int < numeric.int ? -1 : 0;
@@ -87,7 +90,7 @@ function compareIntToString(int: number | bigint, s: string): Order {
 function compareFloatToString(float: number, s: string): Order {
   const numeric = parseNumeric(s, false);
   if (numeric === null) {
-    return strcmp(formatFloat(float), s);
+    return binaryStrcmp(formatFloat(float), s);
   }
   return threeway(float, numeric.int !== null ? Number(numeric.int) : numeric.float);
 }

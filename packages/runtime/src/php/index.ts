@@ -26,12 +26,19 @@ export {
   array_all,
   array_any,
   array_combine,
+  array_diff,
+  array_diff_assoc,
+  array_diff_key,
+  array_diff_uassoc,
+  array_diff_ukey,
   array_filter,
   array_find_key,
   array_first,
   array_flip,
+  array_intersect,
   array_intersect_assoc,
   array_intersect_key,
+  array_intersect_uassoc,
   array_key_exists,
   array_key_first,
   array_key_last,
@@ -39,11 +46,18 @@ export {
   array_last,
   array_map,
   array_merge,
+  array_merge_recursive,
+  array_pad,
+  array_replace,
+  array_replace_recursive,
   array_reverse,
   array_search,
   array_slice,
+  array_udiff,
+  array_uintersect,
   array_unique,
   array_values,
+  arrayUnion,
   COUNT_NORMAL,
   COUNT_RECURSIVE,
   count,
@@ -170,6 +184,7 @@ export { looseEquals, spaceship } from "./looseEquals";
 export { normalizeNull } from "./normalizeNull";
 export { callMethod, method_exists, property_exists } from "./objectFunctions";
 export { arrayFromEntries, normalizeKey, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
+export { phpFunction } from "./phpFunctions";
 export { phpSerialize } from "./phpSerialize";
 export { getDebugType, getDebugType as get_debug_type, gettype } from "./phpType";
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
@@ -179,6 +194,6 @@ export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
 export { sprintf } from "./sprintf";
 export { chunk_split, explode, implode, lcfirst, str_contains, str_starts_with, strlen, strtoupper, substr, trim } from "./stringFunctions";
-export { is_a, is_array, is_bool, is_callable, is_iterable, is_null, is_object, is_string } from "./typeTests";
+export { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";

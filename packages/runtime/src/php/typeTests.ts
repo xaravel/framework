@@ -1,6 +1,7 @@
 // PHP's type tests (action item epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9; `is_null` action item
 // epic-14-item-6-runtime-sort-string-functions, ESC-14.2-4; `is_bool` action item
-// epic-14-item-8-runtime-round-string-array-pointer, ESC-14.3-1), under their PHP names, ports
+// epic-14-item-8-runtime-round-string-array-pointer, ESC-14.3-1; `is_int` action item
+// epic-14-item-9-runtime-set-functions-callable-names, ESC-14.4-1), under their PHP names, ports
 // of PHP 8.5.11's `ext/standard/type.c`, `Zend/zend_builtin_functions.c` (`is_a_impl`) and `Zend/zend_API.c`
 // (`zend_is_callable_at_frame`, `zend_get_callable_name_ex`) in coercive typing mode, over the AD-9 value model:
 //
@@ -11,9 +12,9 @@
 //   Closure, and `is_a(ctor, name)` needs `$allowString`;
 // - any other function is a PHP `Closure`.
 //
-// `is_callable` follows DIV-9.13 and DIV-9.14: no table of PHP functions exists, so a string is callable only as a
-// `'Class::method'` the class rules accept (any string under `$syntaxOnly`), and every method reachable by name is
-// public. Everything is synchronous.
+// `is_callable` follows DIV-9.13 and DIV-9.14 as ESC-14.4-2 amends them: a string is callable as a global function name
+// the runtime exports (`phpFunction`, the registry of `phpFunctions.ts`) or as a `'Class::method'` the class rules
+// accept (any string under `$syntaxOnly`), and every method reachable by name is public. Everything is synchronous.
 import { isContractToken, lookUpName } from "../registry/registry";
 import { BackedEnum } from "./BackedEnum";
 import { arrayEntries, toPhpString } from "./casts";
@@ -21,6 +22,7 @@ import { isBackedEnumClass, isEnumClass } from "./classExistence";
 import { isClassConstructor, isClosureValue } from "./Closure";
 import { hasBrand } from "./hasBrand";
 import { boolParameter, stringParameter } from "./phpArguments";
+import { phpFunction } from "./phpFunctions";
 import type { PhpArrayKey } from "./PhpArray";
 import { className, phpType } from "./phpType";
 import { Ref } from "./Ref";
@@ -97,6 +99,14 @@ export function is_null(value: unknown): boolean {
 /** PHP's `is_bool($value)`: true for `true` and `false`, false for anything else. */
 export function is_bool(value: unknown): boolean {
   return typeof value === "boolean";
+}
+
+/**
+ * PHP's `is_int($value)`: true for a PHP int (`phpType`: a number that is a safe integer and not `-0` nor marked
+ * `float()`, or a bigint), false for anything else, a float, a numeric string and a bool included.
+ */
+export function is_int(value: unknown): boolean {
+  return phpType(value) === "int";
 }
 
 /** PHP's `is_string($value)`: a string, or a contract token, which is its class-string (AD-9). */
@@ -227,7 +237,11 @@ function isCallable(value: unknown, syntaxOnly: boolean): boolean {
     }
     const string = stringOf(value);
     const separator = string.indexOf("::");
-    if (separator <= 0) {
+    if (separator < 0) {
+      // A global function name: the runtime's export of that name (ESC-14.4-2).
+      return phpFunction(string) !== null;
+    }
+    if (separator === 0) {
       return false;
     }
     const klass = lookUpName(string.slice(0, separator));
@@ -282,10 +296,12 @@ function callableName(value: unknown): string {
  * PHP's `is_callable($value, $syntax_only = false, &$callable_name = null)`, under DIV-9.13 and DIV-9.14: a Closure
  * or an object with a function `__invoke` is callable; a callable array `[object, method]` when the method is on the
  * object's class (either chain) or the class has `__call`; `[class-string, method]` (a class constructor or a contract
- * token included) and a `'Class::method'` string when the method is static, or missing with a `__callStatic`. Any
- * other string, a PHP function name included, is not. Under `syntax_only`, any string, and any two-entry array of a
- * class-string or an object and a string, is. `callable_name`, a `Ref`, receives PHP's name (`<FQCN>::method`,
- * `<FQCN>::__invoke`, `Closure::__invoke`, the string itself, `Array`). Throws PHP's `TypeError` for a
+ * token included) and a `'Class::method'` string when the method is static, or missing with a `__callStatic`; a
+ * string with no `::` when it names, in any case and after one leading `\`, a PHP global function the runtime
+ * exports (`phpFunction`, ESC-14.4-2). Any other string, a PHP function the runtime does not export included, is
+ * not. Under `syntax_only`, any string, and any two-entry array of a class-string or an object and a string, is.
+ * `callable_name`, a `Ref`, receives PHP's name (`<FQCN>::method`, `<FQCN>::__invoke`, `Closure::__invoke`, the
+ * string itself, `Array`). Throws PHP's `TypeError` for a
  * `syntax_only` that is no bool, and a JS `TypeError` for a `callable_name` that is no `Ref`.
  */
 export function is_callable(value: unknown, syntax_only: unknown = false, callable_name: Ref<unknown> | null = null): boolean {

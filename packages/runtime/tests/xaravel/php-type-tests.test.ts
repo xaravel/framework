@@ -677,9 +677,11 @@ xaravelTest(
     Assert.assertFalse(is_a(new ArrayObject([]), "Countable"), "Countable is no recorded interface");
     Assert.assertFalse(is_a(Pure.A, "Nope"));
 
-    // Xaravel-only: DIV-9.14 (no PHP function table), a closure's name, class constructors and tokens as targets.
-    Assert.assertFalse(is_callable("strlen"));
-    Assert.assertTrue(is_callable("strlen", true));
+    // Xaravel-only: DIV-9.14 (a function name is callable when the runtime exports it, ESC-14.4-2), a closure's name,
+    // class constructors and tokens as targets.
+    Assert.assertTrue(is_callable("strlen"));
+    Assert.assertFalse(is_callable("str_rot13"));
+    Assert.assertTrue(is_callable("str_rot13", true));
     const name = new Ref<unknown>(null);
     Assert.assertTrue(is_callable(() => null, false, name));
     Assert.assertSame("Closure::__invoke", name.value);
@@ -740,10 +742,11 @@ xaravelTest(
     Assert.assertSame(getDebugType, get_debug_type);
     Assert.assertSame(jsonLastError, json_last_error);
 
-    // Xaravel-only: the unported callable forms (DIV-9.13), as array_filter refuses them.
+    // Xaravel-only: the unported callable forms (DIV-9.13: a name the runtime does not export, ESC-14.4-2), as
+    // array_filter refuses them.
     Assert.assertSame(
       "TypeError: array_map(): Argument #1 ($callback) is a PHP callable string, which Xaravel does not port; pass a function",
-      thrownText(() => array_map("strtoupper", ["a"])),
+      thrownText(() => array_map("str_rot13", ["a"])),
     );
     Assert.assertSame(
       "TypeError: array_map(): Argument #1 ($callback) is a PHP callable array, which Xaravel does not port; pass a function",

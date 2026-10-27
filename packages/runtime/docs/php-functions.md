@@ -5,7 +5,9 @@ core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generato
 `instanceof` targets and the rest of the functions Collections calls (ESC-14.1-9, action item
 `epic-14-item-3-runtime-type-tests-functions`), and the array, by-reference, sort, string and object functions Story
 14.2 calls (ESC-14.2-1, action item `epic-14-item-5-runtime-array-functions`), and `is_null`, `uasort` and the string
-comparisons `Collection::sortBy` calls (ESC-14.2-4, action item `epic-14-item-6-runtime-sort-string-functions`).
+comparisons `Collection::sortBy` calls (ESC-14.2-4, action item `epic-14-item-6-runtime-sort-string-functions`), and
+the set, merge and replace functions, `array_pad`, `is_int`, `arrayUnion` and the PHP function-name resolver Story
+14.4 calls (ESC-14.4-1, ESC-14.4-2, action item `epic-14-item-9-runtime-set-functions-callable-names`).
 Everything here is exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is
 synchronous. Each function ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`,
 `ext/spl/spl_iterators.c`, `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`,
@@ -87,6 +89,8 @@ map it:
 
 - `is_array(value)`, `is_object(value)`, `is_string(value)`: as above.
 - `is_bool(value)`: `true` for `true` and `false`, `false` for anything else (`0`, `"true"`, `null`).
+- `is_int(value)`: `true` for a PHP int (`phpType` `"int"`: a number that is a safe integer, not `-0` and not marked
+  `float()`, or a bigint), `false` for anything else (`float(1)`, `"1"`, `true`, `null`, `2 ** 53`).
 - `is_null(value)`: `true` for `null` and for `undefined`, which reads as null (AD-9), `false` for anything else (a
   contract token is a string, a `PhpFloat` NaN a float).
 - `is_iterable(value)`: an array, or a Traversable object (a bare JS generator object included).
@@ -106,7 +110,10 @@ map it:
     chain or its static side), or the class has `__call`;
   - `[class-string, method]` (a string, a contract token or a class constructor) and a `'Class::method'` string are
     callable when the method is static, or missing with a `__callStatic`;
-  - any other string, a PHP function name such as `'strlen'` included, is not (DIV-9.14); under `syntax_only`, any
+  - a string with no `::` is callable when it names a PHP global function the runtime exports, in any case and after
+    one leading `\` (`'strlen'`, `'\StrLen'`; see [Callables](#callables-php-function-names), DIV-9.14 as
+    ESC-14.4-2 amends it);
+  - any other string, a PHP function the runtime does not export included, is not; under `syntax_only`, any
     string, and any two-entry array (keys 0 and 1) of a class-string or an object and a string, is;
   - `callable_name`, a `Ref`, receives PHP's name: `<FQCN>::method`, `<FQCN>::__invoke`, the string itself, `Array`
     for a malformed array, or the `(string)` of a scalar. A Closure's name is `Closure::__invoke`; PHP 8.5 names a
@@ -201,6 +208,52 @@ map it:
   (PHP's `string_compare_function`: an array reads as `"Array"`, an object without a `__toString` port throws PHP's
   `Error`). With one argument each gives `array` itself. A non-array throws `Argument #1 ($array) must be of type
   array, …` and, for the rest, `Argument #<n> must be of type array, …`.
+- `array_diff(array, ...arrays)`, `array_diff_assoc(array, ...arrays)`, `array_diff_key(array, ...arrays)` and
+  `array_intersect(array, ...arrays)`: the entries of `array`, keys kept and in its order, whose value's string is
+  the string of no value (`array_diff`) or of a value of every other array (`array_intersect`); whose key no other
+  array has (`array_diff_key`, `"1"` and `1` one key); or that no other array has under the same key with the same
+  string (`array_diff_assoc`). Values compare as PHP's `string_compare_function` compares them (`1`, `"1"`,
+  `1.0` and `true` are one; an array reads as `"Array"`; an object without a `__toString` port throws PHP's
+  `Error`). `array_diff` ports `PHP_FUNCTION(array_diff)`'s three paths (an empty, a one-element and a longer
+  `array`); `array_intersect` ports `php_array_intersect`, which sorts each array with `zend_sort` and walks them
+  in step. With no argument each throws PHP's `ArgumentCountError`; a non-array throws `Argument #1 ($array) must be
+  of type array, …` and, for the rest, `Argument #<n> must be of type array, …`.
+- The callback forms `array_udiff(array, ...arrays, value_compare_func)`, `array_uintersect(…, value_compare_func)`,
+  `array_diff_ukey(…, key_compare_func)`, `array_diff_uassoc(…, key_compare_func)` and
+  `array_intersect_uassoc(…, key_compare_func)` take the callback last, as a `callable` taken as `array_any` takes
+  one, a PHP function name such as `'strcasecmp'` included ([Callables](#callables-php-function-names)). The
+  `u…` forms compare values with it, the `…ukey` / `…uassoc` forms keys (an int key as an int), and the
+  `…uassoc` forms the values as strings. Each ports `php_array_diff` / `php_array_intersect` as written: every array
+  sorted by `zend_sort` with the callback, then walked as PHP walks it, so the callback gets the same operands in the
+  same order as PHP gives it, and an inconsistent callback (one returning a constant, or `$a > $b`) gives PHP's
+  result. Its result is read as `uasort` reads it (`(int)`, then its sign; `false` retried swapped); after it
+  throws it is not called again and the thrown value propagates. Fewer than two arguments throw PHP's
+  `ArgumentCountError` `array_udiff() expects at least 2 arguments, 1 given`; a callback PHP refuses throws
+  `array_udiff(): Argument #3 must be a valid callback, no array or string given`, checked before the arrays.
+- `array_merge_recursive(...arrays)`: `array_merge` (int keys renumbered, `[]` with no argument), except that a
+  string key two arrays share holds both values: merged recursively when both are arrays (an object read as its
+  properties), else gathered into a list (`null` gives `[null]`, so `['a' => null]` twice gives `['a' => [null,
+  null]]`). A non-array throws `array_merge_recursive(): Argument #<n> must be of type array, …`.
+- `array_replace(array, ...replacements)` and `array_replace_recursive(array, ...replacements)`: each later array's
+  entries set over `array` in turn, keys kept (a key `array` has keeps its place); the recursive form replaces an
+  array value under an array value recursively. With no argument each throws PHP's `ArgumentCountError`.
+- `array_merge_recursive` and `array_replace_recursive` throw PHP's `Error` `Recursion detected` for a
+  self-referencing array (a JS cycle) they would merge or replace into itself, where PHP's recursion guards
+  (`GC_PROTECT_RECURSION` on the merged-into array, on the replacing array) detect it. A nested array is copied,
+  never changed in place.
+- `array_pad(array, length, value)`: `array` padded with `value` to `|length|` entries, on the right for a positive
+  `length` and on the left for a negative one, int keys renumbered and string keys kept; `array` itself when it
+  has `|length|` entries or more. A `|length|` above 2^30 (`HT_MAX_SIZE`) throws PHP's `ValueError`
+  `array_pad(): Argument #2 ($length) must not exceed the maximum allowed array size`.
+- `arrayUnion(a, b)` is PHP's `$a + $b` for arrays (`add_function_array`): `a`'s entries, then each entry of `b`
+  whose key `a` lacks (`"1"` and `1` one key). It has no PHP function name: a port writes it for `+` on arrays
+  (ESC-14.4-1). It is the array form of `+` only: when either operand is no array it throws PHP's `TypeError`
+  `Unsupported operand types: array + int` (`bool` for a bool, an object's class), two non-arrays included
+  (`arrayUnion(1, 2)` throws `int + int`, where PHP's `+` gives 3).
+- Where PHP returns a copy of the first array (`zend_array_dup`, `ZVAL_COPY`: `array_intersect`, the callback forms,
+  `array_diff`'s copy paths, `array_replace`, `array_replace_recursive`, `array_pad` with no padding, `arrayUnion`),
+  the result keeps that array's next free index, as the by-reference functions keep it: `array_intersect(['a', 'b'],
+  ['a'])` is a `PhpArray` whose next `push` lands at key 2, as PHP's `$r[] = 'z'` does.
 - `SORT_LOCALE_STRING` (5), `SORT_NATURAL` (6) and `SORT_FLAG_CASE` (8), beside `SORT_REGULAR`, `SORT_NUMERIC` and
   `SORT_STRING`, for `asort` / `arsort`.
 
@@ -255,9 +308,10 @@ equal values keep their order, for `arsort` too, which negates the comparison, n
 `zend_sort` with PHP's stable fallback, so values the callback calls equal keep their order, and the callback is
 called with the same operands, in the same order, as PHP calls it.
 
-- `callback` is a `callable`, taken as `array_any` takes one: a function or an object whose `__invoke` is a function.
-  `null` (and any other value) throws PHP's `TypeError` `uasort(): Argument #2 ($callback) must be a valid callback, no
-  array or string given`; a PHP callable string or array throws the DIV-9.13 `TypeError`. `ref` is checked first, as
+- `callback` is a `callable`, taken as `array_any` takes one: a function, an object whose `__invoke` is a function, or
+  a PHP function name the runtime exports (`'strnatcasecmp'`). `null` (and any other value) throws PHP's `TypeError`
+  `uasort(): Argument #2 ($callback) must be a valid callback, no array or string given`; any other PHP callable
+  string or array throws the DIV-9.13 `TypeError`. `ref` is checked first, as
   `asort` checks it.
 - The callback's result is read as `php_array_user_compare_unstable` reads it: PHP's `(int)` (`toInt`: `0.5` is 0,
   `"1"` 1, `null` 0, a non-empty array 1), then its sign. A `false` result calls the callback again with the operands
@@ -299,6 +353,33 @@ called with the same operands, in the same order, as PHP calls it.
   RoundingMode|int, string given` (and the `int|float` / `int` ones for `num` / `precision`), and PHP's `ValueError`
   `round(): Argument #3 ($mode) must be a valid rounding mode (RoundingMode::*)` for an int outside 1 to 8, `null`
   included.
+
+## Callables: PHP function names
+
+A PHP callable string that names a global function, such as `'strcasecmp'`, is called as the runtime's export of that
+name (ESC-14.4-2; DIV-9.13 and DIV-9.14 as it amends them). `phpFunction(name)` is the resolver: it gives the resolved
+callback, or `null` when the runtime exports no PHP function of that name.
+
+- The registry lists every PHP global function the runtime exports under its PHP name, and only those: never a helper
+  (`arrayEntries`, `arrayUnion`, `identical`, `phpFunction`), a camelCase name (`'getDebugType'` does not resolve,
+  `'get_debug_type'` does), a class or a constant. It is frozen, and records PHP 8.5.11's `ReflectionFunction` counts,
+  variadic flag and by-reference positions for each.
+- A name resolves case-insensitively (ASCII, as PHP lower-cases it), after one leading `\` (`'\strlen'`; a name with
+  two leading backslashes does not), and only with no `::` in it: `'Class::method'` strings, callable arrays, class
+  constructors and contract tokens keep their DIV-9.13 handling, except that a class constructor or contract token
+  whose class-string names an exported function in any case (a class named `Count`) is called as that function, as
+  PHP calls the function a callable string names, and `is_callable` is `true` for it.
+- The resolved callback checks the argument count as PHP checks an internal function's, and throws PHP's
+  `ArgumentCountError` `strtoupper() expects exactly 1 argument, 2 given` (`at least`, `at most`; PHP's canonical
+  name). So `array_filter($a, 'strlen')` works and `array_any($a, 'is_string')`, which passes `(value, key)`, throws
+  as in PHP.
+- A by-reference parameter (`reset`, `end`, `array_shift`, the sorts, `is_callable`'s `callable_name`) given a
+  value that is no `Ref` gets a fresh `Ref`, so `array_map('reset', $lists)` gives each list's first value; PHP's
+  warning that the argument should be passed by reference is not reproduced. A `Ref` is passed as it is.
+- `callbackParameter`, which every runtime function that takes a callback uses (`array_filter`, `array_map`,
+  `array_any`, `array_all`, `array_find_key`, `uasort`, the callback set functions), calls a resolved name; a name
+  the registry lacks keeps the DIV-9.13 `TypeError` naming the callable form. `is_callable` gives `true` for a
+  resolved name; `callable_name` stays the string as given.
 
 ## PHP names beside camelCase exports
 
@@ -460,9 +541,11 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
   one must only be driven through its `Generator`.
 - `array_unique`'s `SORT_LOCALE_STRING`, `SORT_NATURAL` and `SORT_STRING | SORT_FLAG_CASE` comparators (and the
   `SORT_FLAG_CASE` forms of the first two): each throws a `ValueError` naming the flag in full. PHP compares no value of an array of one element, so no flag is refused there.
-- PHP callable strings (`'strlen'`) and arrays (`[Str::class, 'upper']`) as `array_filter` and `array_map` callbacks
-  (DIV-9.13): each throws a `TypeError` naming the callable form; pass a function, or an object with an `__invoke`
-  method. `is_callable` gives `false` for a PHP function name (DIV-9.14).
+- PHP callable strings naming a function the runtime does not export (`'strtolower'`), `'Class::method'` strings and
+  callable arrays (`[Str::class, 'upper']`) as callbacks (DIV-9.13): each throws a `TypeError` naming the callable
+  form; pass a function, or an object with an `__invoke` method. `is_callable` gives `false` for such a function name
+  (DIV-9.14). `Reflector::isCallable` (`packages/reflection`) and Collections' `callCallable` do not read the resolver
+  yet; `phpFunction` is exported for their Stories.
 - `sprintf`'s locale handling (`setlocale`, a locale decimal point for `%f` / `%g`): the point is always `.`.
 - `Traversable` and `Iterator` answering a bare JS generator object: it answers `instanceof Generator` and
   `is_a(gen, 'Generator')`, but not `instanceof Traversable` / `Iterator`, nor `is_a(gen, 'Traversable')` /
@@ -486,12 +569,14 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
   groups equal cases, as PHP's comment says, and the kept keys are the same.
 - `in_array` and `array_unique` apply PHP's enum rule above to the values they compare, not to values nested inside
   them, which `looseEquals` and `spaceship` compare; those do not apply PHP's enum handler yet.
-- PHP callable strings and arrays as `array_any`, `array_all` and `array_find_key` callbacks (DIV-9.13), as for
-  `array_filter`.
 - A locale for `SORT_LOCALE_STRING` and `strcoll`, and `setlocale`: each is the C locale's byte order, as PHP's
   default locale gives it.
-- `usort` and `uksort`; `uasort` is ported. PHP callable strings and arrays as a `uasort` callback (DIV-9.13), as for
-  `array_filter`: pass `strnatcasecmp` itself, not `'strnatcasecmp'`.
+- `usort` and `uksort`; `uasort` is ported.
+- `ReflectionFunction` over a PHP function name: it does not read the `phpFunctions.ts` registry, so
+  `new ReflectionFunction('strlen')` still throws `ReflectionException` `Function strlen() does not exist`.
+- `array_intersect_ukey`, `array_udiff_assoc`, `array_udiff_uassoc`, `array_uintersect_assoc` and
+  `array_uintersect_uassoc`; the other set functions are ported.
+- `array_merge_recursive`'s `Error` `The total number of elements must be lower than …` for 2^30 elements or more.
 - The order PHP gives two distinct enum cases under `SORT_REGULAR` (`asort`, `arsort`, `array_unique`) is by object
   address; the runtime orders them by first comparison, so only the grouping of equal cases and their place after
   other values are PHP's.

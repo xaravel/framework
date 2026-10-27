@@ -9,6 +9,11 @@ Loading the package root or `@xaravel/runtime/php` records all six interfaces an
 only `@xaravel/runtime/scope` or `@xaravel/runtime/registry` records `Throwable` and `Stringable`, which PHP's
 `Exception` and `Error` carry; the others resolve once a module that defines them loads.
 
+A class, an interface or an enum is no PHP callable string: the function-name resolver `phpFunction`
+([PHP function names](php-functions.md#callables-php-function-names), ESC-14.4-2) never resolves `'ArrayObject'`,
+`'SortDirection'` or any other class name, and a class constructor or contract token passed as a callback keeps the
+DIV-9.13 `TypeError`.
+
 ## The interfaces
 
 `Traversable`, `Iterator`, `IteratorAggregate`, `JsonSerializable`, `Stringable` and `Throwable` are contract tokens,

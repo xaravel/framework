@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-26-2026 20:33
+last_updated: 10-26-2026 22:55
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2052,22 +2052,23 @@ action_items:
     ref: "decisions/ESC-14.3-1.md"
   - id: "epic-14-item-9-runtime-set-functions-callable-names"
     epic: 14
-    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.4-1.md, by the
-      monitor under decisions/MAINT-2026-10-26-runtime-builtins.md; decisions/ESC-14.4-2.md, by the Maintainer), in scope
-      packages/runtime: under their PHP names and the Oracle's PHP 8.5.11 behaviour,
-      @xaravel/runtime/php exports array_merge_recursive, array_replace,
-      array_replace_recursive, array_diff, array_diff_assoc, array_diff_key, array_intersect
-      (string comparison of values, an object without __toString throwing PHP's Error), the
-      callback forms array_udiff, array_diff_uassoc, array_diff_ukey, array_uintersect and
-      array_intersect_uassoc, array_pad (ValueError beyond its limit) and is_int, plus
-      arrayUnion(a, b) for PHP's array + (ESC-14.4-1); and a shared resolver from a PHP
-      global-function name to the runtime export of that name, read by callbackParameter
-      and is_callable, so a callable string such as 'strcasecmp' is called as the runtime's
-      strcasecmp, a name with no export keeping PHP's TypeError; 'Class::method' strings and
-      callable arrays keep their current handling (ESC-14.4-2, DIV-9.13 / DIV-9.14 as
-      amended). XT-runtime cases for each against PHP's results, with a PHP probe; the
-      existing exports stay; no other runtime behaviour changes; lands before Story 14.4's
-      66 held Test IDs are ported"
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-14.4-1.md,
+      by the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md; decisions/ESC-14.4-2.md,
+      by the Maintainer), in scope packages/runtime: under their PHP names and the
+      Oracle's PHP 8.5.11 behaviour, @xaravel/runtime/php exports array_merge_recursive,
+      array_replace, array_replace_recursive, array_diff, array_diff_assoc, array_diff_key,
+      array_intersect (string comparison of values, an object without __toString throwing
+      PHP's Error), the callback forms array_udiff, array_diff_uassoc, array_diff_ukey,
+      array_uintersect and array_intersect_uassoc, array_pad (ValueError beyond its
+      limit) and is_int, plus arrayUnion(a, b) for PHP's array + (ESC-14.4-1); and
+      a shared resolver from a PHP global-function name to the runtime export of that
+      name, read by callbackParameter and is_callable, so a callable string such as
+      'strcasecmp' is called as the runtime's strcasecmp, a name with no export keeping
+      PHP's TypeError; 'Class::method' strings and callable arrays keep their current
+      handling (ESC-14.4-2, DIV-9.13 / DIV-9.14 as amended). XT-runtime cases for
+      each against PHP's results, with a PHP probe; the existing exports stay; no
+      other runtime behaviour changes; lands before Story 14.4's 66 held Test IDs
+      are ported"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-14.4-2.md"
