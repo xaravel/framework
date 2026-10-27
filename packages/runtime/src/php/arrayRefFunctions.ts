@@ -16,11 +16,11 @@
 // (`nNextFreeElement`, which a later `[]` append reads) differs from the one the result's keys give: then it stays a
 // `PhpArray` with PHP's index. PHP's warnings are not reproduced. Everything is synchronous.
 import { isContractToken } from "../registry/registry";
-import { numericCompare, regularCompare, requiredCallback, toPhpArray } from "./arrayFunctions";
-import { arrayEntries, toInt, toPhpString } from "./casts";
+import { keptArray, numericCompare, regularCompare, requiredCallback, toPhpArray, userCompare } from "./arrayFunctions";
+import { arrayEntries, toPhpString } from "./casts";
 import { LONE_SURROGATE, utf8 } from "./mangle";
 import { argumentTypeError, intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
-import { arrayFromEntries, nextFreeIndex, PhpArray, phpArrayWithNextFree, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
+import { arrayFromEntries, nextFreeIndex, PhpArray, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 import { phpType } from "./phpType";
 import { Ref } from "./Ref";
 import { zendSort } from "./zendSort";
@@ -35,25 +35,6 @@ function referencedArray(fn: string, ref: unknown): { array: object; entries: [P
     return { array, entries: arrayEntries(array) };
   }
   throw argumentTypeError(fn, 1, "array", "array", array);
-}
-
-/** The next free index `entries`' own keys give (the largest int key plus 1), or null when none is an int. */
-function derivedNextFree(entries: readonly (readonly [PhpArrayKey, unknown])[]): bigint | null {
-  let next: bigint | null = null;
-  for (const [key] of entries) {
-    if (typeof key !== "string" && (next === null || BigInt(key) >= next)) {
-      next = BigInt(key) + 1n;
-    }
-  }
-  return next;
-}
-
-/**
- * `entries` as the written-back array of a function that keeps the keys: through `arrayFromEntries`, unless `nextFree`
- * (PHP's kept next free index) differs from the one the keys give, which only a `PhpArray` carries.
- */
-function keptArray(entries: readonly (readonly [PhpArrayKey, unknown])[], nextFree: bigint | null): unknown {
-  return nextFree === derivedNextFree(entries) ? arrayFromEntries(entries) : phpArrayWithNextFree(entries, nextFree);
 }
 
 /** Appends `entries` to `target`, a string key kept and an int key renumbered (`zend_hash_next_index_insert_new`). */
@@ -445,41 +426,6 @@ export function arsort(array: Ref<unknown>, flags: unknown = 0): true {
 }
 
 /**
- * `php_array_user_compare_unstable`: `callback(a, b)` read as PHP reads it, its `zval_get_long` (`toInt`) and then its
- * sign; a `false` result calls `callback(b, a)` and negates that sign, and `true` is 1 (PHP's bool deprecation is not
- * reproduced). Once a call has thrown (or its result could not be read), no further call is made: PHP's
- * `zend_call_function` returns at once while an exception is pending, and the comparison is 0.
- */
-function userCompare(callback: (...args: unknown[]) => unknown, failed: { error: { thrown: unknown } | null }): (a: unknown, b: unknown) => number {
-  // The sign of `callback(a, b)` (null for a `false` result), read inside the try: a throw from the callback or from
-  // reading its result is recorded, and the comparison is 0.
-  const call = (a: unknown, b: unknown): number | null => {
-    if (failed.error !== null) {
-      return 0;
-    }
-    try {
-      const result = callback(a, b) ?? null;
-      if (result === false) {
-        return null;
-      }
-      const long = toInt(result);
-      return long > 0 ? 1 : long < 0 ? -1 : 0;
-    } catch (thrown) {
-      failed.error = { thrown };
-      return 0;
-    }
-  };
-  return (a, b) => {
-    const first = call(a, b);
-    if (first !== null) {
-      return first;
-    }
-    const swapped = call(b, a);
-    return swapped === null ? 0 : -swapped;
-  };
-}
-
-/**
  * PHP's `uasort(&$array, $callback)`: sorts `array.value` by value with `callback(a, b)`, keys kept, and returns true.
  * It ports `php_usort` over `zend_sort` with PHP's stable fallback (`RETURN_STABLE_SORT`: values the callback calls
  * equal keep their order). The callback's result is read as PHP reads it (`(int)`, then its sign: `0.5` is 0, `"1"`
@@ -488,7 +434,8 @@ function userCompare(callback: (...args: unknown[]) => unknown, failed: { error:
  * When the callback throws, it is not called again (each later comparison is 0), the partly sorted array is written
  * back, as PHP writes it, and the exception propagates. Throws as `asort` does for `array`, and, for `callback`, as
  * `array_any` does: PHP's `TypeError` `uasort(): Argument #2 ($callback) must be a valid callback, no array or string
- * given` for null, and the DIV-9.13 `TypeError` for a PHP callable string or array.
+ * given` for null; a PHP function name the runtime exports resolves (`phpFunction`, ESC-14.4-2), and any other PHP
+ * callable string or array throws the DIV-9.13 `TypeError`.
  */
 export function uasort(array: Ref<unknown>, callback: unknown): true {
   const { array: input, entries } = referencedArray("uasort", array);

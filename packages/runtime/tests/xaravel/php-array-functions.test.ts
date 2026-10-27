@@ -678,8 +678,9 @@ xaravelTest(
   () => {
     assertProbed("any_all", "any_all.stops", "find_key", "callbacks.errors", "first_last", "search", "flip");
 
-    // Xaravel-only: the unported callable forms (DIV-9.13), and a class constructor or a token as a class-string.
-    for (const callback of ["strlen", [new Kid(), "fooBar"], Kid, Traversable]) {
+    // Xaravel-only: the unported callable forms (DIV-9.13: a name the runtime does not export, ESC-14.4-2), and a class
+    // constructor or a token as a class-string.
+    for (const callback of ["str_rot13", [new Kid(), "fooBar"], Kid, Traversable]) {
       const form = Array.isArray(callback) ? "array" : "string";
       Assert.assertSame(
         `TypeError: array_any(): Argument #2 ($callback) is a PHP callable ${form}, which Xaravel does not port; pass a function`,

@@ -1208,8 +1208,9 @@ xaravelTest(
       }
     })())));
     Assert.assertSame('[["v"],["w"]]', json(invoked));
-    // Xaravel-only: PHP callable strings and arrays are not ported.
-    assertThrows(PhpTypeError, "array_filter(): Argument #2 ($callback) is a PHP callable string, which Xaravel does not port; pass a function", () => array_filter([1], "strlen"));
+    // Xaravel-only: a PHP callable string naming no function the runtime exports, and a callable array, are not ported
+    // (DIV-9.13; a name the runtime exports resolves, ESC-14.4-2).
+    assertThrows(PhpTypeError, "array_filter(): Argument #2 ($callback) is a PHP callable string, which Xaravel does not port; pass a function", () => array_filter([1], "str_rot13"));
     assertThrows(PhpTypeError, "array_filter(): Argument #2 ($callback) is a PHP callable array, which Xaravel does not port; pass a function", () => array_filter([1], ["Str", "upper"]));
 
     const unique = PROBE_CASES["array_unique"]!() as unknown[];

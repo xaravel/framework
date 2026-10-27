@@ -376,9 +376,10 @@ xaravelTest(
 
     // Xaravel-only: a by-reference argument must be a Ref (DIV-9.2).
     assertJsTypeError("uasort(): Argument #1 ($array) is by reference; pass a Ref holding the array (DIV-9.2)", () => uasort([1] as unknown as Ref<unknown>, () => 0));
-    // Xaravel-only: a PHP callable string or array is not ported (DIV-9.13).
+    // Xaravel-only: a PHP callable string naming no function the runtime exports, or a callable array, is not ported
+    // (DIV-9.13; a name the runtime exports resolves, ESC-14.4-2).
     for (const [callback, form] of [
-      ["strcmp", "string"],
+      ["str_rot13", "string"],
       [[Text, "toString"], "array"],
     ] as const) {
       const error = thrownBy(() => uasort(new Ref<unknown>([2, 1]), callback));

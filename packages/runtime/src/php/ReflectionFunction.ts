@@ -1,6 +1,7 @@
 // PHP's `ReflectionFunction` (DIV-3.2, DIV-3.3, DIV-3.4) over a closure: its parameters come from its
-// `inject({ … }, fn)` map and its return type from `returns(<Spec>, fn)`. PHP's global functions have no runtime
-// table (DIV-9.13), so a function name string does not exist.
+// `inject({ … }, fn)` map and its return type from `returns(<Spec>, fn)`. The runtime has a registry of the PHP global
+// functions it exports (`phpFunctions.ts`, ESC-14.4-2), but `ReflectionFunction` does not read it, so a function name
+// string still does not exist.
 import { readReturnMetadata } from "../metadata/returns";
 import { registerClass } from "../registry/registry";
 import { phpTypeName } from "./phpType";
