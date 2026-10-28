@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: blocked  # ESC-14.6-10: missing temporary offset-reference lifetime cleanup; copied arrays share expired traversal cells. Five typed accessors retained; push/set repair held whole.
+  14-6-arr-helpers: in-progress  # ESC-14.6-10 ruled by the Maintainer (decisions/MAINT-2026-10-28-story-14-6-sixth.md): no runtime lifetime protocol; port Arr.set's repair and Arr.push by value under PORTING.md § By-reference parameters, with the copy-isolation matrix; five typed accessors complete.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
