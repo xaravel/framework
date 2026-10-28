@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-28-2026 00:25
+last_updated: 10-28-2026 00:50
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: in-progress  # ESC-14.6-6 approved by the monitor, ESC-14.6-7 by the Maintainer with DIV-9.17 (decisions/MAINT-2026-10-27-story-14-6-third.md); action items epic-14-item-13-runtime-class-string-tokens and epic-14-item-14-runtime-arrayaccess-offset-reference land first, then the five typed accessors and push. Complete pending bodies retained; existing independent helpers and Support holds preserved.
+  14-6-arr-helpers: blocked  # permission denied: Fidelity Review for prerequisite epic-14-item-14-runtime-arrayaccess-offset-reference; see its blocked spec. Item 13 is done; item 14 waits on Maintainer execution authorization and review repairs. Existing independent helpers and Support holds preserved.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
@@ -2165,5 +2165,5 @@ action_items:
       and the null-key cases; existing exports stay; no other runtime behaviour changes;
       lands before Story 14.6 resumes"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/MAINT-2026-10-27-story-14-6-third.md"
