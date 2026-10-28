@@ -55,7 +55,7 @@
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPrepend","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPrependKeysWith","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPull","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPush","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-8"}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPush","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-9"}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testQuery","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testRandom","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testRandomNotIncrementingKeys","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: in-progress  # ESC-14.6-8 approved by the monitor (decisions/MAINT-2026-10-28-story-14-6-fourth.md); action item epic-14-item-15-runtime-offset-assign lands first, then push with its set repair and the review repairs in ESC-14.6-8; five typed accessors complete. Review loop 6.
+  14-6-arr-helpers: blocked  # ESC-14.6-9: missing arbitrary offset reference acquisition; numeric string-offset reference must throw PHP Error. Five typed accessors complete; push/set repair held whole.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
