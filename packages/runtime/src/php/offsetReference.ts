@@ -10,6 +10,15 @@ import { valueCopy } from "./valueCopy";
 /** A real Ref accepted by synchronous PHP by-reference helpers. */
 export type OffsetReference = Ref<unknown>;
 
+// Captured cells retain identity across sibling references and SPL wrappers,
+// including after a slot is detached by replacement, removal or exchange.
+const capturedSlots = new WeakMap<OffsetReference, { value: unknown }>();
+
+/** Internal observation target for offsetAssign's user-code string coercion. */
+export function offsetReferenceTarget(reference: OffsetReference): { value: unknown } {
+  return capturedSlots.get(reference) ?? reference;
+}
+
 /**
  * The reference PHP obtains from `$object[$offset]` (DIV-9.17).
  * Builtin ArrayObject::offsetGet, including an inherited implementation, exposes
@@ -54,6 +63,7 @@ export function offsetReference(object: ArrayAccess, offset: unknown): OffsetRef
   }
   const captured = slot;
   const reference = new Ref<unknown>(null);
+  capturedSlots.set(reference, captured);
   Object.defineProperty(reference, "value", {
     enumerable: true,
     configurable: true,

@@ -16,6 +16,16 @@ synchronous.
   number. `isFloat(v)` is PHP's `is_float`: true for a marked value and for a non-integral `number`.
 - **By-reference parameters.** PHP's `function f(&$x)` takes a `Ref` box (`Ref<T>`). The callee writes `ref.value`, and the
   caller reads it back.
+- **Offset assignment.** `offsetAssign(ref, key, value)` assigns through a `Ref` holding
+  any PHP value; a null key appends. Arrays separate and copy values, null/false
+  become arrays, and scalar errors preserve the receiver. `ArrayAccess` retains its
+  handle and receives `offsetSet` with copied arguments. The result is the assigned
+  value; string writes count UTF-8 bytes, pad with spaces and return the first written
+  byte (null for an ignored negative offset or a receiver write during RHS conversion).
+  Conversion preserves callback writes, including same-value writes and exceptions. Results outside the JS string model
+  throw a JS `TypeError` naming the UTF-8 limit (ESC-9.7-1 §2). DIV-9.17 omits
+  notices and the false-to-array deprecation. This construct helper is not a PHP
+  global function and does not resolve through `phpFunction`.
 - **Offset references.** `offsetReference(object, offset)` returns an `OffsetReference`,
   a real `Ref<unknown>` accepted by by-reference helpers. Builtin `ArrayObject`
   storage (also through wrappers and inherited `offsetGet`) writes through. An

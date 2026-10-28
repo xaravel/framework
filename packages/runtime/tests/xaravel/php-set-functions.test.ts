@@ -691,7 +691,7 @@ xaravelTest(
     Assert.assertSame(103, registry().length);
 
     // Xaravel-only: the helpers, classes and constants are never resolved; a non-string is no name.
-    for (const helper of ["arrayUnion", "arrayEntries", "phpFunction", "bindPhpArguments", "phpReturn", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {
+    for (const helper of ["arrayUnion", "arrayEntries", "offsetAssign", "phpFunction", "bindPhpArguments", "phpReturn", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {
       Assert.assertNull(phpFunction(helper), helper);
     }
     Assert.assertNull(phpFunction(5));
