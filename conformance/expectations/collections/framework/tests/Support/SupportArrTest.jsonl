@@ -30,11 +30,11 @@
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testHasAnyMethod","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testIsAssoc","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testIsList","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-6"}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAFloat","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-6"}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAString","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-6"}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnArray","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-6"}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnInteger","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-6"}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean","variant":"none","status":"pass","reason":null,"adapted":"DIV-10.1","escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAFloat","variant":"none","status":"pass","reason":null,"adapted":"DIV-10.1","escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAString","variant":"none","status":"pass","reason":null,"adapted":"DIV-10.1","escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnArray","variant":"none","status":"pass","reason":null,"adapted":"DIV-10.1","escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnInteger","variant":"none","status":"pass","reason":null,"adapted":"DIV-10.1","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testJoin","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testKeyBy","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testLast","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
@@ -55,7 +55,7 @@
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPrepend","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPrependKeysWith","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPull","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPush","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-7"}
+{"id":"Illuminate\\Tests\\Support\\SupportArrTest::testPush","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.6-8"}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testQuery","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testRandom","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportArrTest::testRandomNotIncrementingKeys","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

@@ -26,6 +26,51 @@ class SupportArrTest extends TestCase {
 }
 // Carbon belongs to Support (Epic 19); retain the complete upstream test body below.
 class Carbon { constructor(_value: string) { throw new BlockedByComponentError("support"); } }
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAString', { case: SupportArrTest }, async function () {
+  const test_array = { string: 'foo bar', integer: 1234 };
+  this.assertSame('foo bar', Arr.string(test_array, 'string'));
+  this.assertSame('default', Arr.string(test_array, 'missing_key', 'default'));
+  this.expectException(InvalidArgumentException);
+  this.expectExceptionMessageMatches(/^Array value for key \[integer\] must be a string, (.*) found./); // adapted:DIV-10.1
+  Arr.string(test_array, 'integer');
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnInteger', { case: SupportArrTest }, async function () {
+  const test_array = { string: 'foo bar', integer: 1234 };
+  this.assertSame(1234, Arr.integer(test_array, 'integer'));
+  this.assertSame(999, Arr.integer(test_array, 'missing_key', 999));
+  this.expectException(InvalidArgumentException);
+  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be an integer, (.*) found./); // adapted:DIV-10.1
+  Arr.integer(test_array, 'string');
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAFloat', { case: SupportArrTest }, async function () {
+  const test_array = { string: 'foo bar', float: 12.34 };
+  this.assertSame(12.34, Arr.float(test_array, 'float'));
+  this.assertSame(56.78, Arr.float(test_array, 'missing_key', 56.78));
+  this.expectException(InvalidArgumentException);
+  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be a float, (.*) found./); // adapted:DIV-10.1
+  Arr.float(test_array, 'string');
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsABoolean', { case: SupportArrTest }, async function () {
+  const test_array = { string: 'foo bar', boolean: true };
+  this.assertTrue(Arr.boolean(test_array, 'boolean'));
+  this.assertTrue(Arr.boolean(test_array, 'missing_key', true));
+  this.expectException(InvalidArgumentException);
+  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be a boolean, (.*) found./); // adapted:DIV-10.1
+  Arr.boolean(test_array, 'string');
+});
+
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnArray', { case: SupportArrTest }, async function () {
+  const test_array = { string: 'foo bar', array: ['foo', 'bar'] };
+  this.assertSame(['foo', 'bar'], Arr.array(test_array, 'array'));
+  this.assertSame([1, 'two'], Arr.array(test_array, 'missing_key', [1, 'two']));
+  this.expectException(InvalidArgumentException);
+  this.expectExceptionMessageMatches(/^Array value for key \[string\] must be an array, (.*) found./); // adapted:DIV-10.1
+  Arr.array(test_array, 'string');
+});
+
 portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testAdd', { case: SupportArrTest }, async function () {
   let array: any = Arr.add({ name: 'Desk' }, 'price', 100);
   this.assertEquals({ name: 'Desk', price: 100 }, array);

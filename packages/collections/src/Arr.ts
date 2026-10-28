@@ -1,5 +1,6 @@
 // Laravel's Illuminate\Support\Arr (v13.37.0). Story 14.6 completes the independent array helpers.
-// Typed accessors and push remain whole and absent pending ESC-14.6-6 (all five accessors) and ESC-14.6-7 (push). CSS styles reach Support through a throwing Str.finish dependency seam.
+// Push and the ArrayAccess set repair remain held by ESC-14.6-8; typed accessors are complete.
+// CSS styles reach Support through a throwing Str.finish dependency seam.
 // PHP array arguments accept lists, plain maps and PhpArrays, with value-copy isolation (AD-9).
 // By-reference parameters use Ref (DIV-9.2), while ArrayAccess objects retain PHP's handle semantics.
 // Callbacks are synchronous (AD-6); PHP callable forms resolve through the shared runtime.
@@ -55,6 +56,13 @@ import {
   explode,
   InvalidArgumentException,
   is_array,
+  is_bool,
+  is_float,
+  is_int,
+  gettype,
+  sprintf,
+  phpReturn,
+  type PhpFloat,
   is_null,
   is_object,
   is_string,
@@ -171,6 +179,36 @@ export class Arr extends mixin(null, Macroable) {
     const result = new Ref(valueCopy(array));
     if (is_null(this.get(array, key))) this.set(result, key, value_);
     return result.value;
+  }
+
+  /** Get an array item using dot notation, binding PHP parameters before lookup. */
+  static array(_array: unknown, _key: unknown, _defaultValue: unknown = null): unknown {
+    const fn = "Illuminate\\Support\\Arr::array";
+    const [array, key, defaultValue] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+      { name: "default", type: "?array", default: null },
+    ], Array.from(arguments));
+    const selected = Arr.get(array, key, defaultValue);
+    if (!is_array(selected)) {
+      throw new InvalidArgumentException(sprintf("Array value for key [%s] must be an array, %s found.", key, gettype(selected)));
+    }
+    return phpReturn(fn, "array", selected);
+  }
+
+  /** Get a boolean item using dot notation, binding PHP parameters before lookup. */
+  static boolean(_array: unknown, _key: unknown, _defaultValue: unknown = null): boolean {
+    const fn = "Illuminate\\Support\\Arr::boolean";
+    const [array, key, defaultValue] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+      { name: "default", type: "?bool", default: null },
+    ], Array.from(arguments));
+    const selected = Arr.get(array, key, defaultValue);
+    if (!is_bool(selected)) {
+      throw new InvalidArgumentException(sprintf("Array value for key [%s] must be a boolean, %s found.", key, gettype(selected)));
+    }
+    return phpReturn(fn, "bool", selected) as boolean;
   }
 
   /** Collapse an array of arrays (or of `Enumerable`s) into a single array. */
@@ -394,6 +432,21 @@ export class Arr extends mixin(null, Macroable) {
     return valueCopy(result);
   }
 
+  /** Get a float item using dot notation, binding PHP parameters before lookup. */
+  static float(_array: unknown, _key: unknown, _defaultValue: unknown = null): number | PhpFloat {
+    const fn = "Illuminate\\Support\\Arr::float";
+    const [array, key, defaultValue] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+      { name: "default", type: "?float", default: null },
+    ], Array.from(arguments));
+    const selected = Arr.get(array, key, defaultValue);
+    if (!is_float(selected)) {
+      throw new InvalidArgumentException(sprintf("Array value for key [%s] must be a float, %s found.", key, gettype(selected)));
+    }
+    return phpReturn(fn, "float", selected) as number | PhpFloat;
+  }
+
   /**
    * Remove one or many array items from a given array using "dot" notation. `array` is PHP's `&$array` (DIV-9.2): the
    * new array is written to `array.value`, and an `ArrayAccess` object on the path loses the key in place.
@@ -561,6 +614,21 @@ export class Arr extends mixin(null, Macroable) {
     if (is_array(array)) return array_any(array, (item: unknown, key: unknown) => callCallable(callback, valueCopy(item), key));
     for (const [key, item] of iterateEntries(array)) if (toBool(callCallable(callback, valueCopy(item), key))) return true;
     return false;
+  }
+
+  /** Get an integer item using dot notation, binding PHP parameters before lookup. */
+  static integer(_array: unknown, _key: unknown, _defaultValue: unknown = null): number | bigint {
+    const fn = "Illuminate\\Support\\Arr::integer";
+    const [array, key, defaultValue] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+      { name: "default", type: "?int", default: null },
+    ], Array.from(arguments));
+    const selected = Arr.get(array, key, defaultValue);
+    if (!is_int(selected)) {
+      throw new InvalidArgumentException(sprintf("Array value for key [%s] must be an integer, %s found.", key, gettype(selected)));
+    }
+    return phpReturn(fn, "int", selected) as number | bigint;
   }
 
   /** Determine whether an array has keys other than sequential integers starting at zero. */
@@ -899,6 +967,21 @@ export class Arr extends mixin(null, Macroable) {
   static sortRecursiveDesc(array: unknown, options: number = SORT_REGULAR): unknown {
     if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::sortRecursiveDesc(), 0 passed and at least 1 expected");
     return this.sortRecursive(array, options, SortDirection.Descending);
+  }
+
+  /** Get a string item using dot notation, binding PHP parameters before lookup. */
+  static string(_array: unknown, _key: unknown, _defaultValue: unknown = null): string {
+    const fn = "Illuminate\\Support\\Arr::string";
+    const [array, key, defaultValue] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+      { name: "default", type: "?string", default: null },
+    ], Array.from(arguments));
+    const selected = Arr.get(array, key, defaultValue);
+    if (!is_string(selected)) {
+      throw new InvalidArgumentException(sprintf("Array value for key [%s] must be a string, %s found.", key, gettype(selected)));
+    }
+    return phpReturn(fn, "string", selected) as string;
   }
 
   /** Compile conditional CSS classes. */
