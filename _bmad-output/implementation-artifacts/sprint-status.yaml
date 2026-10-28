@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-27-2026 17:24
+last_updated: 10-27-2026 18:11
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: blocked  # ESC-14.6-6: class-string copy/type classification affects all five typed accessors; ESC-14.6-7: ArrayAccess offset reference contract for push. Complete pending bodies retained; existing independent helpers and Support holds preserved.
+  14-6-arr-helpers: in-progress  # ESC-14.6-6 approved by the monitor (decisions/MAINT-2026-10-27-story-14-6-third.md); action item epic-14-item-13-runtime-class-string-tokens lands first, then the five typed accessors; ESC-14.6-7 (push, ArrayAccess offset references) waits on the Maintainer. Complete pending bodies retained; existing independent helpers and Support holds preserved.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
@@ -2134,3 +2134,20 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-27-story-14-6-binder.md"
+  - id: "epic-14-item-13-runtime-class-string-tokens"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-27-story-14-6-third.md),
+      in scope packages/runtime: a contract token (the value PORTING maps C::class
+      to, such as the runtime Stringable) stays a PHP class-name string under PHP
+      8.5.11 behaviour. valueCopy returns it unchanged, alone or nested in an array,
+      never copied as an array; bindPhpArguments and phpReturn keep it and normalize
+      it to its class-name string where the declared type is string; the shared type
+      classification (phpType, and through it gettype, is_array and the type names
+      in PHP TypeError and exception messages) reads it as string, as is_string already
+      does (ESC-14.6-6). XT-runtime cases against PHP for direct, selected, nested
+      and default tokens; existing exports stay; class constructors and packages/assert
+      are out of scope; no other runtime behaviour changes; lands before Story 14.6
+      resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-27-story-14-6-third.md"
