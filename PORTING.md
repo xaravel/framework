@@ -62,6 +62,7 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 | `$a + $b` on arrays | `arrayUnion(a, b)`: the left entries, then each right entry whose key the left lacks | ESC-14.4-1 |
 | `$a + $b`, `$a / $b` on numbers or numeric strings | `plus(a, b)`, `divide(a, b)`: PHP's coercion, int or float result, `TypeError` and `DivisionByZeroError` | ESC-14.5-2 |
 | `$a[] = $v` on an array value | `arrayAppend(a, v)` over a `Ref`: the next integer key | ESC-14.5-3 |
+| `$x[$k] = $v` or `$x[] = $v` where `$x` may be any PHP value | `offsetAssign(ref, key, value)` over a `Ref`, `key` `null` for `[]`: PHP's write to an array, `null` or `false` (made an array), string or `ArrayAccess` receiver, and its `Error` on a scalar | ESC-14.6-8 |
 | `$f(...$args)` | `callUnpacked(f, args)`: integer keys positional, string keys named | ESC-14.5-3 |
 | `<=>` | `spaceship(a, b)` | Story 9.6 |
 | `is_numeric` | `isNumeric(v)` | Story 9.6 |
