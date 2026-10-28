@@ -242,6 +242,7 @@ export {
   Ref,
   offsetReference,
   offsetAssign,
+  referenceAt,
   type OffsetReference,
   SORT_NUMERIC,
   SORT_REGULAR,
