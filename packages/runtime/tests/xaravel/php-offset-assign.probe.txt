@@ -1,0 +1,78 @@
+PHP 8.5.11
+receiver0 [{"y":[1]},[1]]
+receiver1 [{"y":[1]},[1]]
+receiver2 Error: Cannot use a scalar value as an array true
+receiver3 Error: Cannot use a scalar value as an array 12
+receiver4 Error: Cannot use a scalar value as an array 1.5
+invalid0 TypeError: Cannot access offset of type array on array []
+invalid1 TypeError: Cannot access offset of type array on array []
+string0 ["aXc","X"]
+string1 ["ab1","1"]
+string2 ["abc  1","1"]
+string3 ["abc",null]
+string4 ["aZc","Z"]
+string5 TypeError: Cannot access offset of type string on string "abc"
+string6 TypeError: Cannot access offset of type array on string "abc"
+string7 Error: Cannot assign an empty string to a string offset "abc"
+string8 Error: [] operator not supported for strings "abc"
+string9 ["éZ","Z"]
+string10 ["Abc","A"]
+string11 Error: Cannot assign an empty string to a string offset "abc"
+string12 ["a2c","2"]
+string13 Error: Object of class stdClass could not be converted to string "abc"
+object Error: Cannot use object of type stdClass as array {}
+bytes c36263 c3
+bytes 58a9 58
+next-free [{"6":"next"},"next"]
+negative-next [{"-5":"a","-4":"b"},"b"]
+overflow Error: Cannot add element to the array as the next element is already occupied {"9223372036854775807":"max"}
+scalar-reference Error: Cannot use a scalar value as an array [[["exists","x"],["set","x",[]],["get","x"]],12]
+composition0 [{"x":{"y":[1]}},{"y":[1]}]
+composition1 [{"x":{"y":[1]}},{"y":[1]}]
+composition2 [{"x":[]},{"y":[1]}]
+argument-copy [{"child":[1,3]},{"child":[1,3]},[["set","x",{"child":[1,2]}]]]
+conversion0 ["longer",null,1]
+conversion1 Error: conversion failed ["longer",1]
+coercion0 ["aZc","Z"]
+coercion1 ["Zbc","Z"]
+coercion2 ["Zbc","Z"]
+coercion3 ["Zbc","Z"]
+coercion4 TypeError: Cannot access offset of type string on string "abc"
+coercion5 ["aZc","Z"]
+coercion6 ["abc",null]
+coercion7 ["abc",null]
+coercion8 TypeError: Cannot access offset of type string on string "abc"
+coercion9 TypeError: Cannot access offset of type string on string "abc"
+pointer0 [{"a":3,"b":2},"b"]
+pointer1 [{"a":1,"b":2,"0":3},"b"]
+pointer-exhausted-before [[1],null]
+pointer-exhausted-after [{"0":1,"6":3},6]
+retained0 TypeError: Cannot access offset of type array on array [[1],null]
+retained-next0 [{"0":1,"6":4},6]
+retained1 TypeError: Cannot access offset of type stdClass on array [[1],null]
+retained-next1 [{"0":1,"6":4},6]
+slot-invalid0 TypeError: Cannot access offset of type array on array [{"x":[]},[]]
+slot-invalid1 TypeError: Cannot access offset of type array on array [{"x":[]},[]]
+conversion-same ["abc",null,1]
+conversion-unchanged ["aZc","Z",1]
+conversion-nested ["Qbc",null,1]
+conversion-empty ["abc",null,1]
+conversion-multibyte ["abc",null,1]
+sibling-same ["abc","abc",{"x":"abc"},null,1]
+sibling-changed ["longer","longer",{"x":"longer"},null,1]
+sibling-nested ["Qbc","Qbc",{"x":"Qbc"},null,1]
+sibling-throw Error: sibling failed ["longer","longer",{"x":"longer"},1]
+negative-no-conversion ["abc",null,0]
+self-copy [{"child":[1,2],"self":{"child":[1]}},{"child":[1]}]
+object-handles [true,true,true]
+nested-object-ordinary-0 ["Qbc","Qbc",null,"Q",1,1]
+nested-object-ordinary-1 Error: inner failed ["longer","longer",null,1,1]
+nested-object-shared-0 ["Qbc","Qbc",null,"Q",1,1]
+nested-object-shared-1 Error: inner failed ["longer","longer",null,1,1]
+detached-coercion-replace ["longer","longer",{"x":"replacement"},null]
+detached-coercion-reinsert ["longer","longer",{"x":"replacement"},null]
+detached-coercion-exchange ["longer","longer",{"x":"replacement"},null]
+convert-append0 [["value"],[0],"value"]
+convert-append1 [["value"],[0],"value"]
+reject-before-conversion-object-key TypeError: Cannot access offset of type stdClass on string ["abc",0]
+reject-before-conversion-append Error: [] operator not supported for strings ["abc",0]

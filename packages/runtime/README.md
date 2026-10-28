@@ -32,3 +32,20 @@ result settles after the unit's defer list drains.
 ## Dependencies
 
 None.
+
+## Offset assignment
+
+`offsetAssign(ref, key, value)` is exported from both `@xaravel/runtime/php`
+and `@xaravel/runtime`. It supplies PHP offset assignment over any `Ref` value;
+`null` key denotes append (`$x[] = $value`). Arrays copy their values, null/false
+become arrays, scalar errors retain the receiver, and `ArrayAccess` objects retain
+their handles and receive `offsetSet`. Compose it with `offsetReference` for nested
+writes: builtin slots write through while userland `offsetGet` values stay detached.
+It returns the assigned value; string assignment instead returns the first written
+byte, or null for an ignored negative offset. String offsets count UTF-8 bytes and
+pad with spaces. A receiver write during RHS string conversion cancels the pending
+offset write and returns null, including a write of the same value; conversion
+exceptions retain those writes. Under [ESC-9.7-1 §2](../../decisions/ESC-9.7-1.md), a result with no
+JS string representation throws a JS `TypeError` naming the UTF-8 limit. It never
+replacement-decodes invalid bytes. Notices and the false-to-array deprecation are
+omitted under DIV-9.17.

@@ -190,6 +190,7 @@ export { getDebugType, getDebugType as get_debug_type, gettype } from "./phpType
 export { phpUnserialize, type PhpUnserializeOptions } from "./phpUnserialize";
 export { Ref } from "./Ref";
 export { offsetReference, type OffsetReference } from "./offsetReference";
+export { offsetAssign } from "./offsetAssign";
 export { RoundingMode } from "./RoundingMode";
 export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
