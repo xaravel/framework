@@ -8,6 +8,7 @@
 // storage, as PHP's `get_properties` handler gives them.
 import { fqcn, registerClass, resolveClass, type RegisteredClass } from "../registry/registry";
 import { ArrayIterator } from "./ArrayIterator";
+import { ArrayAccess } from "./ArrayAccess";
 import {
   attachState,
   boxDelete,
@@ -31,14 +32,13 @@ import { valueCopy } from "./valueCopy";
 
 const PHP_PROPS = Symbol.for("xaravel.php.props");
 const COUNTABLE = Symbol.for("Countable");
-const ARRAY_ACCESS = Symbol.for("ArrayAccess");
 
 /** Whether `klass` is `ArrayIterator` or a subclass of it. */
 function derivesFromArrayIterator(klass: unknown): klass is RegisteredClass {
   return klass === ArrayIterator || (typeof klass === "function" && klass.prototype instanceof ArrayIterator);
 }
 
-export class ArrayObject implements IteratorAggregate {
+export class ArrayObject implements IteratorAggregate, ArrayAccess {
   /** PHP's `ArrayObject::STD_PROP_LIST`. */
   static readonly STD_PROP_LIST = 1;
   /** PHP's `ArrayObject::ARRAY_AS_PROPS`. */
@@ -68,7 +68,7 @@ export class ArrayObject implements IteratorAggregate {
     return true;
   }
 
-  get [ARRAY_ACCESS](): true {
+  get [ArrayAccess.brand](): true {
     return true;
   }
 

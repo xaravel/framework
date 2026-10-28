@@ -42,6 +42,8 @@ export interface ArrayBox {
   readonly array: PhpArray<PhpKeyInput, unknown>;
   readonly seqs: Map<PhpArrayKey, number>;
   lastSeq: number;
+  /** Captured offset slots; deleting a key detaches its cell. */
+  readonly references: Map<PhpArrayKey, { value: unknown }>;
 }
 
 /** A box over `array`, which it takes as it is. */
@@ -50,7 +52,7 @@ export function newBox(array: PhpArray<PhpKeyInput, unknown> = new PhpArray()): 
   for (const key of array.keys()) {
     seqs.set(key, seqs.size + 1);
   }
-  return { [BOX]: true, array, seqs, lastSeq: seqs.size };
+  return { [BOX]: true, array, seqs, lastSeq: seqs.size, references: new Map() };
 }
 
 /** Whether a storage is a box rather than a wrapped SPL array object. */
@@ -63,6 +65,8 @@ export function boxSet(box: ArrayBox, key: PhpKeyInput, value: unknown): void {
   const normal = normalizeKey(key);
   const had = box.array.has(normal);
   box.array.set(normal, value);
+  // A direct SPL offset write replaces even a referenced slot (PHP 8.5.11).
+  box.references.delete(normal);
   if (!had) {
     box.seqs.set(normal, ++box.lastSeq);
   }
@@ -78,6 +82,7 @@ export function boxDelete(box: ArrayBox, key: PhpKeyInput): void {
   const normal = normalizeKey(key);
   if (box.array.delete(normal)) {
     box.seqs.delete(normal);
+    box.references.delete(normal);
   }
 }
 

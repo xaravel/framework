@@ -1,0 +1,8 @@
+ArrayObject nested root={"x":{"y":[1]}} return={"y":[1]}
+notice: Indirect modification of overloaded element of ValueGetArrayObject has no effect
+ValueGetArrayObject nested root={"x":[]} return={"y":[1]}
+Illuminate\Support\Arr::push(): Return value must be of type array, ArrayObject returned
+root-leaf mutation={"x":[1]}
+null-key root=array {"x":[],"0":1} return={"x":[],"0":1}
+Array value for key [] must be an array, object found.
+null-key ArrayObject unchanged={"x":[]}
