@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: blocked  # permission denied: Fidelity Review for prerequisite epic-14-item-14-runtime-arrayaccess-offset-reference; see its blocked spec. Item 13 is done; item 14 waits on Maintainer execution authorization and review repairs. Existing independent helpers and Support holds preserved.
+  14-6-arr-helpers: in-progress  # item 13 done; item 14 (epic-14-item-14-runtime-arrayaccess-offset-reference) resumes first: the Maintainer authorized the Fidelity Review's destinations (tools/orchestrator/codex.md item 9), and its saved patch still needs the recorded unset/reinsertion repair and a completed review; then the five typed accessors and push. Existing independent helpers and Support holds preserved.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
