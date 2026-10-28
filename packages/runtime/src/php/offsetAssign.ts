@@ -1,4 +1,5 @@
 import { hasBrand } from "./hasBrand";
+import { assignedArray } from "./arrayReference";
 import { ArrayAccess } from "./ArrayAccess";
 import { keptArray, toPhpArray } from "./arrayFunctions";
 import { copyArrayPointer } from "./arrayPointer";
@@ -73,9 +74,11 @@ export function offsetAssign(reference: Ref<unknown>, key: unknown, value: unkno
   if (type === "array") {
     const normalized = key === null ? null : normalizeKey(key);
     const array = toPhpArray(input);
-    if (normalized === null) array.push(assigned);
-    else array.set(normalized as PhpKeyInput, assigned);
-    reference.value = copyArrayPointer(input as object, keptArray([...array], nextFreeIndex(array)) as object);
+    const writtenKey = normalized === null ? array.push(assigned) : normalized;
+    if (normalized !== null) array.set(normalized as PhpKeyInput, assigned);
+    const next = copyArrayPointer(input as object, keptArray([...array], nextFreeIndex(array)) as object);
+    reference.value = next;
+    assignedArray(reference, input as object, reference.value as object, writtenKey, assigned);
     return valueCopy(assigned);
   }
   if (type === "object") {

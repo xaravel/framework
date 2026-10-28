@@ -1,3 +1,4 @@
+import { arrayCells, rekeyEntry, referenceEntry, setEntryCell } from "./arrayReferenceCells";
 // PHP's array functions the Collections core calls (ESC-14.1-6; action item
 // epic-14-item-2-runtime-generators-functions), under their PHP names, each a port of PHP 8.5.11's
 // `ext/standard/array.c` or `ext/spl/spl_iterators.c` in coercive typing mode: `is_scalar`, `in_array`,
@@ -90,8 +91,10 @@ export function array_combine(keys: unknown, values: unknown): unknown {
   }
   const result = new PhpArray<PhpKeyInput, unknown>();
   keyEntries.forEach(([, key], index) => {
-    const value = valueEntries[index]![1];
-    result.set(phpType(key) === "int" ? (key as number | bigint) : toPhpString(key), value);
+    const entry = valueEntries[index]!;
+    const target = normalizeKey(phpType(key) === "int" ? (key as number | bigint) : toPhpString(key));
+    setEntryCell(result, target, entry);
+    result.set(target, entry[1]);
   });
   return arrayFromEntries(result);
 }
@@ -117,7 +120,8 @@ export function array_filter(array: unknown, callback: unknown = null, mode: unk
     return [];
   }
   const kept: [PhpArrayKey, unknown][] = [];
-  for (const [key, value] of entries) {
+  for (const entry of entries) {
+    const [key, value] = entry;
     if (fn !== null) {
       let args: unknown[];
       if (useType === ARRAY_FILTER_USE_BOTH) {
@@ -135,7 +139,7 @@ export function array_filter(array: unknown, callback: unknown = null, mode: unk
     } else if (!isTrue(value)) {
       continue;
     }
-    kept.push([key, value]);
+    kept.push(entry);
   }
   return arrayFromEntries(kept);
 }
@@ -255,11 +259,12 @@ export function array_unique(array: unknown, flags: unknown = SORT_STRING): unkn
   if (sortType === BigInt(SORT_STRING)) {
     const seen = new Set<string>();
     const kept: [PhpArrayKey, unknown][] = [];
-    for (const [key, value] of entries) {
+    for (const entry of entries) {
+      const [, value] = entry;
       const string = typeof value === "string" ? value : toPhpString(value);
       if (!seen.has(string)) {
         seen.add(string);
-        kept.push([key, value]);
+        kept.push(entry);
       }
     }
     return arrayFromEntries(kept);
@@ -368,12 +373,13 @@ export function array_map(callback: unknown, array: unknown, ...arrays: unknown[
     }
     return arrayFromEntries(entries.map(([key, value]) => [key, fn(value) ?? null] as const));
   }
-  const lists = [array, ...arrays].map((value, index) => arrayArgument("array_map", index + 2, index === 0 ? "array" : null, value).map(([, item]) => item));
+  const lists = [array, ...arrays].map((value, index) => arrayArgument("array_map", index + 2, index === 0 ? "array" : null, value));
   const length = Math.max(...lists.map((list) => list.length));
   const result: unknown[] = [];
   for (let index = 0; index < length; index++) {
-    const values = lists.map((list) => (index < list.length ? list[index] : null));
-    result.push(fn === null ? values : (fn(...values) ?? null));
+    const entries = lists.map((list, position) => index < list.length ? rekeyEntry(list[index]!, position) : [position, null] as [number, unknown]);
+    const values = entries.map(([, value]) => value);
+    result.push(fn === null ? arrayFromEntries(entries) : (fn(...values) ?? null));
   }
   return result;
 }
@@ -395,7 +401,7 @@ export function array_keys(array: unknown, ...rest: [filter_value?: unknown, str
 
 /** PHP's `array_values($array)`: the values of `array` as a list. Throws PHP's `TypeError` for a non-array. */
 export function array_values(array: unknown): unknown[] {
-  return arrayArgument("array_values", 1, "array", array).map(([, value]) => value);
+  return arrayFromEntries(arrayArgument("array_values", 1, "array", array).map((entry, index) => rekeyEntry(entry, index))) as unknown[];
 }
 
 /** Whether two normalised keys are the same key: two equal strings, or two equal ints. */
@@ -486,12 +492,11 @@ export function array_merge(...arrays: unknown[]): unknown {
   const lists = arrays.map((value, index) => arrayArgument("array_merge", index + 1, null, value));
   const result = new PhpArray<PhpKeyInput, unknown>();
   for (const entries of lists) {
-    for (const [key, value] of entries) {
-      if (typeof key === "string") {
-        result.set(key, value);
-      } else {
-        result.push(value);
-      }
+    for (const entry of entries) {
+      const [key, value] = entry;
+      const target = typeof key === "string" ? key : result.push(value);
+      setEntryCell(result, target, entry);
+      if (typeof key === "string") { result.set(key, value); }
     }
   }
   return arrayFromEntries(result);
@@ -644,12 +649,11 @@ export function array_flip(array: unknown): unknown {
  */
 function renumbered(entries: Iterable<readonly [PhpArrayKey, unknown]>, preserveKeys: boolean): unknown {
   const result = new PhpArray<PhpKeyInput, unknown>();
-  for (const [key, value] of entries) {
-    if (typeof key === "string" || preserveKeys) {
-      result.set(key, value);
-    } else {
-      result.push(value);
-    }
+  for (const entry of entries) {
+    const [key, value] = entry;
+    const target = typeof key === "string" || preserveKeys ? key : result.push(value);
+    setEntryCell(result, target, entry);
+    if (typeof key === "string" || preserveKeys) { result.set(key, value); }
   }
   return arrayFromEntries(result);
 }
@@ -1051,7 +1055,7 @@ function remaining(array: object, first: readonly Bucket[], deleted: ReadonlySet
   const kept: [PhpArrayKey, unknown][] = [];
   for (const { key, value } of first) {
     if (!deleted.has(keyId(key))) {
-      kept.push([key, value]);
+      kept.push(referenceEntry(key, value, arrayCells(array)?.get(key) ?? null));
     }
   }
   return keptArray(kept, nextFreeOf(array));
@@ -1355,12 +1359,14 @@ function isPhpArray(value: unknown): value is object {
  * `protecting` holds `dest`'s arrays being merged into; meeting one again throws PHP's `Error` `Recursion detected`.
  */
 function mergeRecursive(dest: PhpArray<PhpKeyInput, unknown>, src: readonly [PhpArrayKey, unknown][], protecting: Set<object>): void {
-  for (const [key, value] of src) {
+  for (const entry of src) {
+    const [key, value] = entry;
     if (typeof key !== "string") {
-      dest.push(value);
+      setEntryCell(dest, dest.push(value), entry);
       continue;
     }
     if (!dest.has(key)) {
+      setEntryCell(dest, key, entry);
       dest.set(key, value);
       continue;
     }
@@ -1391,6 +1397,7 @@ function mergeRecursive(dest: PhpArray<PhpKeyInput, unknown>, src: readonly [Php
     } else {
       target.push(source ?? null);
     }
+    arrayCells(dest)?.delete(key);
     dest.set(key, keptDup(target));
   }
 }
@@ -1409,12 +1416,11 @@ export function array_merge_recursive(...arrays: unknown[]): unknown {
   }
   const lists = arrays.map((value, index) => setArgument(fn, index + 1, value, null));
   const dest = new PhpArray<PhpKeyInput, unknown>();
-  for (const [key, value] of lists[0]!) {
-    if (typeof key === "string") {
-      dest.set(key, value);
-    } else {
-      dest.push(value);
-    }
+  for (const entry of lists[0]!) {
+    const [key, value] = entry;
+    const target = typeof key === "string" ? key : dest.push(value);
+    setEntryCell(dest, target, entry);
+    if (typeof key === "string") dest.set(key, value);
   }
   for (const entries of lists.slice(1)) {
     mergeRecursive(dest, entries, new Set());
@@ -1438,7 +1444,9 @@ function replaceArguments(fn: string, args: readonly unknown[]): { dest: PhpArra
 export function array_replace(...args: [array: unknown, ...replacements: unknown[]]): unknown {
   const { dest, others } = replaceArguments("array_replace", args);
   for (const entries of others) {
-    for (const [key, value] of entries) {
+    for (const entry of entries) {
+      const [key, value] = entry;
+      setEntryCell(dest, key, entry);
       dest.set(key, value);
     }
   }
@@ -1451,9 +1459,11 @@ export function array_replace(...args: [array: unknown, ...replacements: unknown
  * throws PHP's `Error` `Recursion detected` (PHP protects `dest`'s separated copies too, which are fresh arrays).
  */
 function replaceRecursive(dest: PhpArray<PhpKeyInput, unknown>, src: readonly [PhpArrayKey, unknown][], protecting: Set<object>): void {
-  for (const [key, value] of src) {
+  for (const entry of src) {
+    const [key, value] = entry;
     const current = dest.has(key) ? (dest.get(key) ?? null) : null;
     if (!isPhpArray(value) || !isPhpArray(current)) {
+      setEntryCell(dest, key, entry);
       dest.set(key, value);
       continue;
     }
@@ -1467,6 +1477,7 @@ function replaceRecursive(dest: PhpArray<PhpKeyInput, unknown>, src: readonly [P
     } finally {
       protecting.delete(value);
     }
+    arrayCells(dest)?.delete(key);
     dest.set(key, keptDup(target));
   }
 }
@@ -1515,12 +1526,11 @@ export function array_pad(array: unknown, length: unknown, value: unknown): unkn
   if (size < 0n) {
     padding();
   }
-  for (const [key, item] of entries) {
-    if (typeof key === "string") {
-      result.set(key, item);
-    } else {
-      result.push(item);
-    }
+  for (const entry of entries) {
+    const [key, item] = entry;
+    const target = typeof key === "string" ? key : result.push(item);
+    if (typeof key === "string") result.set(key, item);
+    setEntryCell(result, target, entry);
   }
   if (size > 0n) {
     padding();
@@ -1549,8 +1559,10 @@ export function arrayUnion(a: unknown, b: unknown): unknown {
     throw new PhpTypeError(`Unsupported operand types: ${operandTypeName(a)} + ${operandTypeName(b)}`);
   }
   const result = dupArray(a);
-  for (const [key, value] of arrayEntries(b)) {
+  for (const entry of arrayEntries(b)) {
+    const [key, value] = entry;
     if (!result.has(key)) {
+      setEntryCell(result, key, entry);
       result.set(key, value);
     }
   }
@@ -1571,7 +1583,7 @@ export function array_chunk(array: unknown, length: unknown, preserve_keys: unkn
   const result: unknown[] = [];
   for (let index = 0; index < entries.length; index += count) {
     const chunk = entries.slice(index, index + count);
-    result.push(valueCopy(preserve ? arrayFromEntries(chunk) : chunk.map(([, value]) => value)));
+    result.push(valueCopy(preserve ? arrayFromEntries(chunk) : arrayFromEntries(chunk.map((entry, position) => rekeyEntry(entry, position)))));
   }
   return result;
 }

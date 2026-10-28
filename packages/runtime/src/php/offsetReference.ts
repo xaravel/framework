@@ -14,6 +14,11 @@ export type OffsetReference = Ref<unknown>;
 // including after a slot is detached by replacement, removal or exchange.
 const capturedSlots = new WeakMap<OffsetReference, { value: unknown }>();
 
+/** Internal: register the cell behind a native-array reference. */
+export function registerOffsetReferenceTarget(reference: OffsetReference, cell: { value: unknown }): void {
+  capturedSlots.set(reference, cell);
+}
+
 /** Internal observation target for offsetAssign's user-code string coercion. */
 export function offsetReferenceTarget(reference: OffsetReference): { value: unknown } {
   return capturedSlots.get(reference) ?? reference;

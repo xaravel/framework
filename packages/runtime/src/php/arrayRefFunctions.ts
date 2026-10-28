@@ -1,3 +1,4 @@
+import { entryCell, referenceEntry, rekeyEntry, setEntryCell } from "./arrayReferenceCells";
 // PHP's by-reference array functions Story 14.2 calls (action item epic-14-item-5-runtime-array-functions,
 // ESC-14.2-1), under their PHP names, ports of PHP 8.5.11's `ext/standard/array.c` and `strnatcmp.c` in coercive
 // typing mode: `array_shift`, `array_pop`, `array_unshift`, `array_splice`, `asort` and `arsort`. Beside them, for
@@ -43,12 +44,11 @@ function referencedArray(fn: string, ref: unknown): { array: object; entries: [P
 
 /** Appends `entries` to `target`, a string key kept and an int key renumbered (`zend_hash_next_index_insert_new`). */
 function appendRenumbered(target: PhpArray<PhpKeyInput, unknown>, entries: Iterable<readonly [PhpArrayKey, unknown]>): void {
-  for (const [key, value] of entries) {
-    if (typeof key === "string") {
-      target.set(key, value);
-    } else {
-      target.push(value);
-    }
+  for (const entry of entries) {
+    const [key, value] = entry;
+    const next = typeof key === "string" ? key : target.push(value);
+    if (typeof key === "string") target.set(key, value);
+    setEntryCell(target, next, entry);
   }
 }
 
@@ -156,7 +156,7 @@ export function array_splice(array: Ref<unknown>, offset: unknown, length: unkno
   const { entries } = referencedArray("array_splice", array);
   let from = BigInt(intParameter("array_splice", 2, "offset", offset));
   const userLength = nullableIntParameter("array_splice", 3, "length", length);
-  const replace = [...toPhpArray(replacement ?? null).values()];
+  const replace = [...toPhpArray(replacement ?? null)];
   const count = BigInt(entries.length);
   let size = userLength === null ? count : BigInt(userLength);
   if (from > count) {
@@ -175,8 +175,8 @@ export function array_splice(array: Ref<unknown>, offset: unknown, length: unkno
   const removed = new PhpArray<PhpKeyInput, unknown>();
   appendRenumbered(out, entries.slice(0, start));
   appendRenumbered(removed, entries.slice(start, end));
-  for (const value of replace) {
-    out.push(value);
+  for (const entry of replace) {
+    setEntryCell(out, out.push(entry[1]), entry);
   }
   appendRenumbered(out, entries.slice(end));
   array.value = arrayFromEntries(out);
@@ -411,7 +411,7 @@ function sortByValue(fn: string, array: Ref<unknown>, flags: unknown, reverse: b
  * calls equal keep their order), keys kept, as the array a sort writes back (`keptArray` for a `PhpArray` input).
  */
 function sortedArray(input: object, entries: readonly [PhpArrayKey, unknown][], cmp: (a: unknown, b: unknown) => number): unknown {
-  const buckets = entries.map(([key, value], index) => ({ key, value, index }));
+  const buckets = entries.map((entry, index) => ({ key: entry[0], get value(): unknown { return entry[1]; }, index }));
   if (buckets.length > 1) {
     zendSort(buckets, (a, b) => {
       const result = cmp(a.value, b.value);
@@ -421,7 +421,7 @@ function sortedArray(input: object, entries: readonly [PhpArrayKey, unknown][], 
       return a.index > b.index ? 1 : a.index < b.index ? -1 : 0;
     });
   }
-  const sorted = buckets.map(({ key, value }) => [key, value] as const);
+  const sorted = buckets.map(({ index }) => entries[index]!);
   return input instanceof PhpArray ? keptArray(sorted, nextFreeIndex(input)) : arrayFromEntries(sorted);
 }
 
@@ -542,16 +542,20 @@ function newSort(fn: string, array: Ref<unknown>, flags: unknown, reverse: boole
   const failed: { error: { thrown: unknown } | null } = { error: null };
   const compare = fn === "uksort" ? userCompare(requiredCallback(fn, 2, callback), failed)
     : dataCompare(fn, BigInt(intParameter(fn, 2, "flags", flags)), failed);
-  const buckets = entries.map(([key, value], index) => ({ key, value, index }));
+  const buckets = entries.map((entry, index) => ({ key: entry[0], get value(): unknown { return entry[1]; }, index }));
   zendSort(buckets, (a, b) => {
     let result = 0;
     try { result = compare(byKey ? a.key : a.value, byKey ? b.key : b.value); }
     catch (thrown) { failed.error ??= { thrown }; }
     return result === 0 ? a.index - b.index : reverse ? -result : result;
   });
-  const sorted = buckets.map(({ key, value }) => [key, valueCopy(value)] as const);
+  const sorted = buckets.map(({ index }) => {
+    const entry = entries[index]!;
+    const cell = entryCell(entry);
+    return referenceEntry(entry[0], cell === null ? valueCopy(entry[1]) : entry[1], cell);
+  });
   array.value = byKey ? (input instanceof PhpArray ? keptArray(sorted, nextFreeIndex(input)) : arrayFromEntries(sorted))
-    : buckets.map(({ value }) => valueCopy(value));
+    : arrayFromEntries(sorted.map((entry, position) => rekeyEntry(entry, position)));
   if (failed.error !== null) throw failed.error.thrown;
   return true;
 }
