@@ -12,6 +12,7 @@ import { intKey } from "./phpInt";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf, toIntArgument, toStringArgument } from "./throwableArguments";
 import { TypeError as PhpTypeError } from "./TypeError";
+import { fqcn, isContractToken } from "../registry/registry";
 
 /** A PHP number: an int or a float. */
 export type PhpNumber = { readonly int: number | bigint } | { readonly float: number };
@@ -95,7 +96,7 @@ function toNumber(value: unknown): PhpNumber | null {
     case "float":
       return { float: Number(value) };
     case "string": {
-      const numeric = parseNumeric(value as string, false);
+      const numeric = parseNumeric(isContractToken(value) ? fqcn(value) : value as string, false);
       if (numeric === null) {
         return null;
       }
@@ -122,7 +123,7 @@ export function numberOrStringParameter(fn: string, position: number, name: stri
     case "float":
       return { float: Number(php) };
     case "string":
-      return { string: php as string };
+      return { string: isContractToken(php) ? fqcn(php) : php as string };
     case "object": {
       const string = typeof php === "function" ? null : toStringArgument(php);
       if (string !== null) {

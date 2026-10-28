@@ -9,6 +9,7 @@ import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf } from "./throwableArguments";
 import { TypeError as PhpTypeError } from "./TypeError";
+import { fqcn, isContractToken } from "../registry/registry";
 
 /** PHP's 64-bit integer limits, kept exact. */
 export const PHP_INT_MAX = INT_MAX;
@@ -22,7 +23,7 @@ function numeric(value: unknown): PhpNumber | null {
     case "int": return { int: php as number | bigint };
     case "float": return { float: Number(php) };
     case "string": {
-      const parsed = parseNumeric(php as string, true);
+      const parsed = parseNumeric(isContractToken(php) ? fqcn(php) : php as string, true);
       return parsed === null ? null : parsed.int === null ? { float: parsed.float } : { int: intKey(parsed.int) };
     }
     default: return null;

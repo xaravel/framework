@@ -614,7 +614,7 @@ xaravelTest(
     Assert.assertFalse(is_array(ArrayObject));
     Assert.assertFalse(is_iterable(ArrayObject));
     Assert.assertFalse(is_object(Traversable));
-    Assert.assertSame("array", gettype(Traversable), "gettype keeps its result");
+    Assert.assertSame("string", gettype(Traversable), "gettype reads a contract token as its PHP class string (ESC-14.6-6)");
     Assert.assertSame("Closure", getDebugType(() => null));
     Assert.assertTrue(is_array(phpArray([5, 1])));
 

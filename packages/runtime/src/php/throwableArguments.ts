@@ -20,7 +20,7 @@
 // the `TypeError` from the class the Registry's base map holds under that name (`php/TypeError.ts` registers it),
 // falling back to the JS `TypeError` only when nothing registered it. The package does not export this module;
 // `phpArguments.ts` reads the same coercions for PHP's functions.
-import { registeredBaseClass } from "../registry/registry";
+import { fqcn, isContractToken, registeredBaseClass } from "../registry/registry";
 import { parseNumeric } from "./numericString";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 import { className, phpType, phpTypeName } from "./phpType";
@@ -82,7 +82,7 @@ export function toIntArgument(argument: unknown): number | bigint | null {
     case "float":
       return floatToIntArgument(typeof value === "number" ? value : Number(value));
     case "string": {
-      const numeric = parseNumeric(value as string, false);
+      const numeric = parseNumeric(isContractToken(value) ? fqcn(value) : value as string, false);
       if (numeric === null) {
         return null;
       }
@@ -106,7 +106,7 @@ export function toStringArgument(argument: unknown): string | null {
     case "float":
       return formatFloat(typeof value === "number" ? value : Number(value));
     case "string":
-      return value as string;
+      return isContractToken(value) ? fqcn(value) : value as string;
     case "object":
       break;
     default:
