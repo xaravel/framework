@@ -157,7 +157,7 @@ Collection.proxy("adults"); // adds a proxied method, as Laravel's proxy()
 ## Divergences
 
 - **DIV-1:** collections are sync; a sync member's callback must be sync, and a callback that may be async goes to the async companion (`filterAsync`, `rejectAsync`, `partitionAsync`, `everyAsync`, `containsAsync`, `firstAsync`), which awaits it (DIV-1 Callbacks, DIV-1.2).
-- **DIV-9.2:** PHP's by-reference arrays (`Arr.forget`, `Arr.pull`, `Arr.set`) are a `Ref`.
+- **DIV-9.2:** PHP's by-reference arrays (`Arr.forget`, `Arr.pull`, `Arr.set`, `Arr.push`) are a `Ref`.
 - **DIV-9.15:** spreading a keyed PHP array into `push(...)` or `unshift(...)` spreads its values, `...array_values(a)`.
 - **DIV-12.6:** index reads are `get(k)` (or `offsetGet(k)`), not `c[k]`.
 - **DIV-12.16:** higher-order messages are `__get(name)` and `__call(method, args)` calls, not magic properties.
@@ -230,6 +230,21 @@ Use `Arr.sortRecursive(input, { options: SORT_NATURAL, descending: true })` to s
 
 The typed accessors `array`, `boolean`, `float`, `integer` and `string` accept PHP arrays and `ArrayAccess` objects with dot keys. Every supplied argument binds through PHP's weak parameter rules before lookup, including an unused nullable default. Selected values must already have the requested PHP type: selected null raises the upstream `InvalidArgumentException`, while invalid parameters raise PHP's `TypeError`. Integer results are `number | bigint`; float results are `number | PhpFloat` (integral floats carry the runtime marker); class-string tokens returned by `string` normalize to primitive strings. Array results are isolated copies and object values keep their handles.
 
-`push` and the associated ArrayAccess repair to `set` remain whole and unreleased under `ESC-14.6-8`: a userland offset reference can yield a scalar after initialization, and the runtime has no shared offset-assignment seam for PHP's scalar/string outcomes. The complete pending canonical body, attempted methods and integration regressions are preserved in the Escalation. Existing `set` behavior is unchanged in this increment. No local PHP offset-write substitute is supplied.
+`push` takes the caller's array in a `Ref`, appends one or more values (or none), and returns the innermost array that `set` returns. `set` itself returns the innermost modified value, including a string receiver, or the object handle for a direct root-leaf assignment. A null key replaces the entire array after appending:
+
+```ts
+import { Arr } from "@xaravel/collections";
+import { Ref } from "@xaravel/runtime";
+
+const items = new Ref<unknown>({ office: { furniture: ["Desk"] } });
+Arr.push(items, "office.furniture", "Chair", "Lamp"); // { furniture: ["Desk", "Chair", "Lamp"] }
+Arr.array(items.value, "office.furniture"); // ["Desk", "Chair", "Lamp"]
+Arr.integer({}, "missing", "3"); // 3, PHP weak default coercion
+```
+
+For `ArrayAccess` roots, `set` keeps the object's handle. Builtin or inherited `ArrayObject.offsetGet` writes through nested references; overriding or userland `offsetGet` returns a detached array, so nested writes stay local (DIV-9.17 omits PHP's indirect-modification notice only). A root-leaf `push` mutates via `offsetSet` and then throws its declared array-return `TypeError`, because `set` returns the root object. A null-key `push` on an `ArrayAccess` object fails the array selection before mutation.
+
+Native array paths use temporary by-value traversal, so copying a selected, returned or caller array after `set` or `push` keeps every ordinary array level isolated. Explicit caller-held offset references remain shared, as in PHP. Initialization writes remain visible if a later offset operation throws.
+
 
 The complete accessible/arrayable DateTime tests now use `blocked-by:support` under the Maintainer ruling in `decisions/ESC-14.6-2.md`. Carbon-key plucking and `toCssStyles` retain their complete test bodies and throw `BlockedByComponentError("support")` at their Carbon / `Str.finish` dependency seams, for Support (Epic 19) to clear.

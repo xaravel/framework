@@ -71,6 +71,22 @@ portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testItGetsAnArray', { ca
   Arr.array(test_array, 'string');
 });
 
+portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testPush', { case: SupportArrTest }, async function () {
+  let array = new Ref<unknown>([]); // adapted:DIV-9.2
+  Arr.push(array, 'office.furniture', 'Desk'); // adapted:DIV-9.2
+  this.assertEquals(['Desk'], Arr.get(array.value, 'office.furniture')); // adapted:DIV-9.2
+  Arr.push(array, 'office.furniture', 'Chair', 'Lamp'); // adapted:DIV-9.2
+  this.assertEquals(['Desk', 'Chair', 'Lamp'], Arr.get(array.value, 'office.furniture')); // adapted:DIV-9.2
+  array = new Ref<unknown>([]); // adapted:DIV-9.2
+  Arr.push(array, null, 'Chris', 'Nuno'); // adapted:DIV-9.2
+  this.assertEquals(['Chris', 'Nuno'], array.value); // adapted:DIV-9.2
+  Arr.push(array, null, 'Taylor'); // adapted:DIV-9.2
+  this.assertEquals(['Chris', 'Nuno', 'Taylor'], array.value); // adapted:DIV-9.2
+  this.expectExceptionObject(new InvalidArgumentException('Array value for key [foo.bar] must be an array, boolean found.'));
+  array = new Ref<unknown>({ foo: { bar: false } }); // adapted:DIV-9.2
+  Arr.push(array, 'foo.bar', 'baz'); // adapted:DIV-9.2
+});
+
 portedTest('Illuminate\\Tests\\Support\\SupportArrTest::testAdd', { case: SupportArrTest }, async function () {
   let array: any = Arr.add({ name: 'Desk' }, 'price', 100);
   this.assertEquals({ name: 'Desk', price: 100 }, array);
