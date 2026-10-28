@@ -1,0 +1,36 @@
+invalid.null	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, null given"
+reordered.null	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, null given"
+nullable.null	["null",null]
+invalid.int	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, int given"
+reordered.int	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, int given"
+nullable.int	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, int given"
+invalid.float	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, float given"
+reordered.float	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, float given"
+nullable.float	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, float given"
+invalid.true	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, true given"
+reordered.true	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, true given"
+nullable.true	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, true given"
+invalid.false	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, false given"
+reordered.false	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, false given"
+nullable.false	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, false given"
+invalid.string	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, string given"
+reordered.string	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, string given"
+nullable.string	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, string given"
+invalid.closure	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, Closure given"
+reordered.closure	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, Closure given"
+nullable.closure	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, Closure given"
+invalid.object	"TypeError: accessUnion(): Argument #1 ($value) must be of type ArrayAccess|array, BinderOther given"
+reordered.object	"TypeError: reorderedUnion(): Argument #1 ($value) must be of type ArrayAccess|array, BinderOther given"
+nullable.object	"TypeError: nullableUnion(): Argument #1 ($value) must be of type ArrayAccess|array|null, BinderOther given"
+handle.arrayobject	["array",[true,2]]
+default.arrayobject	["bool",true]
+handle.custom	["array",[true,2]]
+default.custom	["bool",true]
+copy.list	["array",[[[1]],[[1,2]]]]
+copy.map	["array",[{"nested":[1]},{"nested":[1,2]}]]
+copy.mixed	["array",[{"2":[1],"name":1},{"2":[1,2],"name":1}]]
+omitted	["null",null]
+nullable.array	["array",[1]]
+nullable.handle	["bool",true]
+unused.invalid	"TypeError: accessUnion(): Argument #2 ($default) must be of type ?int, array given"
+timing	["bool",false]
