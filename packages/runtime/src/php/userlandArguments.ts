@@ -11,8 +11,9 @@ import { TypeError } from "./TypeError";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { valueCopy } from "./valueCopy";
 import { isClassConstructor } from "./Closure";
+import { ArrayAccess } from "./ArrayAccess";
 
-/** A PHP scalar/array declaration, including nullable declarations and unions, e.g. `?int`, `string|int|null`. */
+/** A PHP scalar, array or ArrayAccess declaration, including nullable declarations and unions. */
 export type PhpUserlandType = string;
 /** One userland parameter. An own `default` property distinguishes optional parameters, including a null default. */
 export interface PhpParameter {
@@ -24,9 +25,10 @@ export interface PhpParameter {
 function members(type: string): string[] {
   return (type.startsWith("?") ? `${type.slice(1)}|null` : type).split("|");
 }
-function declaration(type: string): string {
+function declaration(type: string, parameter = false): string {
   const types = members(type);
-  const ordered = ["array", "string", "int", "float", "bool", "null"].filter((t) => types.includes(t));
+  const order = parameter ? ["ArrayAccess", "array", "string", "int", "float", "bool", "null"] : ["array", "string", "int", "float", "bool", "null"];
+  const ordered = order.filter((t) => types.includes(t));
   if (ordered.length === 2 && ordered[1] === "null") return `?${ordered[0]!}`;
   return ordered.join("|");
 }
@@ -39,10 +41,11 @@ function normalizedValue(value: unknown): unknown {
   return is_string(value) || isClassConstructor(value) ? stringOf(value) : phpValueOf(value ?? null);
 }
 /** Returns a success flag separately: null is a valid PHP value. */
-function coerce(type: string, argument: unknown): { value: unknown } | null {
+function coerce(type: string, argument: unknown, parameter = false): { value: unknown } | null {
   const value = normalizedValue(argument);
   const types = members(type);
   if (value === null) return types.includes("null") ? { value: null } : null;
+  if (parameter && types.includes("ArrayAccess") && value instanceof ArrayAccess) return { value };
   let actual: string;
   try { actual = is_string(value) || isClassConstructor(value) ? "string" : phpType(value); } catch { return null; }
   if (types.includes(actual)) {
@@ -88,8 +91,8 @@ export function bindPhpArguments(fn: string, parameters: readonly PhpParameter[]
       throw new ArgumentCountError(`Too few arguments to function ${fn}(), ${args.length} passed and ${qualifier} ${required} expected`);
     }
     const supplied = index < args.length ? args[index] : parameter.default;
-    const result = coerce(parameter.type, supplied);
-    if (result === null) throw argumentTypeError(fn, index + 1, parameter.name, declaration(parameter.type), normalizedValue(supplied));
+    const result = coerce(parameter.type, supplied, true);
+    if (result === null) throw argumentTypeError(fn, index + 1, parameter.name, declaration(parameter.type, true), normalizedValue(supplied));
     return valueCopy(result.value);
   });
 }
