@@ -1,5 +1,5 @@
 // Laravel's Illuminate\Support\Arr (v13.37.0). Story 14.6 completes the independent array helpers.
-// Typed accessors and push remain whole and absent pending ESC-14.6-5. CSS styles reach Support through a throwing Str.finish dependency seam.
+// Typed accessors and push remain whole and absent pending ESC-14.6-6 (all five accessors) and ESC-14.6-7 (push). CSS styles reach Support through a throwing Str.finish dependency seam.
 // PHP array arguments accept lists, plain maps and PhpArrays, with value-copy isolation (AD-9).
 // By-reference parameters use Ref (DIV-9.2), while ArrayAccess objects retain PHP's handle semantics.
 // Callbacks are synchronous (AD-6); PHP callable forms resolve through the shared runtime.
