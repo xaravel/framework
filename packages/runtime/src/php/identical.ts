@@ -8,6 +8,7 @@ import { arrayEntries, floatValue } from "./casts";
 import { Error as PhpError } from "./Error";
 import type { PhpArrayKey } from "./PhpArray";
 import { phpType } from "./phpType";
+import { fqcn, isContractToken } from "../registry/registry";
 
 /** Whether two normalised array keys are the same key. */
 function sameKey(a: PhpArrayKey, b: PhpArrayKey): boolean {
@@ -18,6 +19,8 @@ function sameKey(a: PhpArrayKey, b: PhpArrayKey): boolean {
 }
 
 function same(a: unknown, b: unknown, guard: Set<object>): boolean {
+  if (isContractToken(a)) a = fqcn(a);
+  if (isContractToken(b)) b = fqcn(b);
   const type = phpType(a);
   if (type !== phpType(b)) {
     return false;

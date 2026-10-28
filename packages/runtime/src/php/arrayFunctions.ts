@@ -632,7 +632,7 @@ export function array_flip(array: unknown): unknown {
     if (type === "int") {
       flipped.set(value as number | bigint, key);
     } else if (type === "string") {
-      flipped.set(value as string, key);
+      flipped.set(toPhpString(value), key);
     }
   }
   return arrayFromEntries(flipped);

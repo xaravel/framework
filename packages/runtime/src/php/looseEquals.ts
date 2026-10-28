@@ -4,6 +4,7 @@
 import { arrayEntries, floatValue, formatFloat, isTrue, phpType, type PhpType, stringPort, toPhpString } from "./casts";
 import { parseNumeric } from "./isNumeric";
 import type { PhpArrayKey } from "./PhpArray";
+import { fqcn, isContractToken } from "../registry/registry";
 
 const PHP_PROPS = Symbol.for("xaravel.php.props");
 const RECURSION = "Nesting level too deep - recursive dependency?";
@@ -186,6 +187,8 @@ function compareObject(o: object, other: unknown, otherType: PhpType, objectLeft
 }
 
 function compare(a: unknown, b: unknown, guard: Set<object>): Order {
+  if (isContractToken(a)) a = fqcn(a);
+  if (isContractToken(b)) b = fqcn(b);
   const ta = phpType(a);
   const tb = phpType(b);
   switch (`${ta},${tb}`) {

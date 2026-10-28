@@ -1,0 +1,22 @@
+namespaced	["string","TokenProbe\\Named","TokenProbe\\Named","TokenProbe\\Named","TokenProbe\\Named"]
+distinct	[false,-1,1,false,false,-1]
+direct	["string","string",true,false,"Stringable"]
+selected	"Stringable"
+parameter	"Stringable"
+return	"Stringable"
+default.string	"Stringable"
+nested	[{"nested":["Stringable"]},{"nested":["Stringable","changed"]}]
+default.array	[{"nested":["Stringable","changed"]},{"nested":["Stringable"]}]
+invalid.parameter	"TypeError: tokenArray(): Argument #1 ($value) must be of type array, string given"
+invalid.return	"TypeError: tokenReturnArray(): Return value must be of type array, string returned"
+regression	["array","object","NULL","integer","boolean","string"]
+casts	[0,0,"Stringable",true]
+comparison	[true,0,1,-1]
+identical	[true,true]
+exception.message	"Stringable"
+exception.code	"TypeError: Exception::__construct(): Argument #2 ($code) must be of type int, string given"
+arithmetic	"TypeError: Unsupported operand types: string + int"
+numeric.builtin	"TypeError: floor(): Argument #1 ($num) must be of type int|float, string given"
+flip	{"Stringable":0}
+range.start	["S","T","U"]
+range.end	["Q","R","S"]

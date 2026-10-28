@@ -16,6 +16,7 @@ import { capFloatToInt, floatToInt, intKey } from "./phpInt";
 import { className, phpType } from "./phpType";
 import { formatFloat, stringPort } from "./scalarString";
 import { TypeError as PhpTypeError } from "./TypeError";
+import { fqcn, isContractToken } from "../registry/registry";
 
 export { className, phpType, type PhpType } from "./phpType";
 export { formatFloat, stringPort } from "./scalarString";
@@ -98,7 +99,7 @@ export function toInt(v: unknown): number | bigint {
     case "float":
       return floatToInt(floatValue(v));
     case "string": {
-      const numeric = parseNumeric(v as string, true);
+      const numeric = parseNumeric(isContractToken(v) ? fqcn(v) : v as string, true);
       if (numeric === null) {
         return 0;
       }
@@ -127,7 +128,7 @@ export function toFloat(v: unknown): number {
     case "float":
       return floatValue(v);
     case "string":
-      return parseNumeric(v as string, true)?.float ?? 0;
+      return parseNumeric(isContractToken(v) ? fqcn(v) : v as string, true)?.float ?? 0;
     case "array":
       return arrayCount(v as object) > 0 ? 1 : 0;
     default:
@@ -151,7 +152,7 @@ export function toPhpString(v: unknown): string {
     case "float":
       return formatFloat(floatValue(v));
     case "string":
-      return v as string;
+      return isContractToken(v) ? fqcn(v) : v as string;
     case "array":
       return "Array";
     default:

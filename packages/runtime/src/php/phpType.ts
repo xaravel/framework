@@ -2,7 +2,7 @@
 // messages give an object, and the type name PHP's `TypeError` messages give an argument. Shared by the casts, the
 // codecs and the PHP throwables' constructor checks (`throwableArguments.ts`), so it imports only the Registry and
 // `phpInt.ts`, neither of which loads a PHP throwable: an exception class may import it without an import cycle.
-import { fqcn } from "../registry/registry";
+import { fqcn, isContractToken } from "../registry/registry";
 import { INT_MAX, INT_MIN } from "./phpInt";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
@@ -39,6 +39,9 @@ export function phpType(v: unknown): PhpType {
   }
   if (v === null) {
     return "null";
+  }
+  if (isContractToken(v)) {
+    return "string";
   }
   const record = v as Record<symbol, unknown>;
   if (record[PHP_FLOAT] === true) {
