@@ -3,7 +3,7 @@ title: 'Story 14.6: Arr helpers'
 type: feature
 created: '2026-10-27'
 status: blocked
-baseline_revision: 4809ad1a1f623da9ec4063053ff417d39358e698
+baseline_revision: d38a9bd3187014a364b2ce699c74f00b7dfb4829
 review_loop_iteration: 6
 followup_review_recommended: false
 context:
@@ -16,6 +16,8 @@ context:
   - '{project-root}/decisions/MAINT-2026-10-26-runtime-builtins.md'
   - '{project-root}/conformance/review/fidelity.md'
   - '{project-root}/conformance/escalations/ESC-14.6-8.md'
+  - '{project-root}/decisions/MAINT-2026-10-28-story-14-6-fourth.md'
+  - '{project-root}/decisions/ESC-14.6-8.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -66,13 +68,13 @@ deferred:
 
 </intent-contract>
 
-## Current resume scope (2026-10-28, blocked increment)
+## Current resume scope (2026-10-28, reference-acquisition contract hold)
 
-Five whole typed accessors and their complete canonical tests are released. The four legitimate Support holds remain. Push and its associated ArrayAccess set repair are held whole under ESC-14.6-8: runtime offsetReference can expose a scalar, but no shared public assignment seam implements PHP scalar/string offset writes and exact errors. The complete attempted push/set implementation, canonical testPush and all positive regressions are preserved in the Escalation, pending correction rather than executable partial release. Baseline set and every prior assertion remain unchanged. Current outcomes are 82 passes, four blocked-by:support and one not-ported-yet.
-
-The requirements below preserve resumption intent. Current contract hold supersedes execution of push/set tasks and future completion claims. Review repair loop reached 6 and HALTs under the >5 non-convergence rule; the actual missing runtime contract also independently blocks release. No second spec or other Component implementation was created.
+Runtime item 15 released offsetAssign and the complete push/set attempt passed the focused suite. Pinned PHP comparison then exposed a distinct missing operation: taking a reference to an intermediate numeric string offset throws Error Cannot create references to/from string offsets. Runtime offsetReference accepts ArrayAccess only. ESC-14.6-9 holds the complete push/set repair and canonical testPush whole; its documentary diff preserves every attempted method, prior positive regression and new argument-order/call-order regression. Five complete typed accessors stay released and baseline set remains intact. Four Support holds remain. Story completion is not claimed.
 
 ## Code Map
+
+- `packages/runtime/src/php/offsetAssign.ts` and its public php export provide all arbitrary receiver writes. This release satisfies ESC-14.6-8; preserve its exact scalar/string errors and call order. Read-only.
 
 - `stories/14.6.md`, `PORTING.md`, `_bmad-output/implementation-artifacts/epic-14-context.md` and architecture AD-6/9/22/26 are scope and porting evidence. The manifest owns 87 Test IDs and XT-collections-12. Read-only except authorized status bookkeeping outside implementation.
 - `conformance/upstream/framework/src/Illuminate/Collections/Arr.php:82/100/406/653/1031/1066/1198` is the read-only array/boolean/float/integer/set/push/string source. Accessors explicitly call Arr::get; push uses static::array and static::set, has a declared array return, and mutates before return validation. set has no declared array return: a root leaf returns the ArrayAccess handle, a nested path returns its innermost array, and null replaces the Ref value.
@@ -85,7 +87,7 @@ The requirements below preserve resumption intent. Current contract hold superse
 
 ## Current review repair requirements (2026-10-28)
 
-Re-derive the complete implementation from baseline using the saved positive attempt at `/Users/ea/.xaravel-orchestrator/tmp/14.6-before-review-rederive.patch`. KEEP every complete canonical body, released method, exact exception, runtime binder/return and offsetReference usage, all previous assertions and added typed/token/default/copy/dispatch/ArrayAccess regressions, docs and six truthful Expectations. Never restore the historical runtime holds.
+Re-derive the complete implementation from baseline using the documentary positive diff in conformance/escalations/ESC-14.6-8.md. KEEP every complete canonical body, released method, exact exception, runtime binder/return and offsetReference usage, all previous assertions and added typed/token/default/copy/dispatch/ArrayAccess regressions, docs and six truthful Expectations. Never restore the historical runtime holds.
 
 - `Arr.set` must copy its by-value `value_` argument at entry, before null-key/key conversion or any userland offset callback. Userland offsetExists currently mutates a supplied `{child:[1]}` to `[1,2]` before leaf copy; the stored value must remain the entry snapshot while object handles remain shared.
 - Derive `Arr.set` traversal iteratively, including reconstruction of copied array parents and genuine offset references, preserving all explicit offsetExists/Get/Set effects and detached versus write-through behavior. A 50,000-segment initially empty path must succeed without a native recursive-call limit; no arbitrary depth cap or local runtime copy/reference replacement.
@@ -120,6 +122,10 @@ Re-derive the complete implementation from baseline using the saved positive att
 - `bun run story:check 14.6` -- pass with remote/authenticated run evidence where required; record any environmental refusal precisely, never claim completion from fast/local-only evidence.
 
 ## Spec Change Log
+
+- 2026-10-28 contract stop: pinned PHP 8.5.11 rejects intermediate numeric string-offset reference acquisition, while the attempt returns an array. offsetAssign implements the preceding assignment but no public runtime seam implements the following reference operation. Raised ESC-14.6-9; preserve the entire positive attempt and add the numeric-string reference cases on resumption. KEEP all five completed accessors, every baseline assertion, four Support holds and immutable historical verdicts. Hold push/set whole; no local PHP reference substitute.
+
+- 2026-10-28 resume: runtime item 15 and approved ESC-14.6-8 now provide public offsetAssign. Transitioned blocked to draft for the released contract pass; the prior review counter remains 6 because this implementation stopped on a new contract before review. Implement whole push/set with offsetAssign, copy set value and push variadics before key coercion, select push from the current caller Ref after coercion, and preserve all prior assertions and positive regressions. Historical holds below are superseded only for this released scope.
 
 - 2026-10-28 final hold: second review reproduced userland offsetGet scalar assignment mismatch and push key-coercion argument-order defects. No public runtime offset-assignment seam exists. Raised ESC-14.6-8, kept five complete typed accessors/tests, restored set to baseline and held push whole. Preserved full attempt and all regressions in the Escalation. KEEP prior assertions, canonical bodies, Support holds and all immutable verdicts. Counter 6 triggers HALT; no partial runtime substitute or done claim.
 
@@ -1102,3 +1108,21 @@ Story done is intentionally not claimed: testPush remains not-ported-yet and ESC
 Pre-push evidence formatting: removed trailing whitespace from blank context lines in the documentary attempt diff; no executable code or assertion changed. Re-ran Fidelity for that changed evidence tree: both pass, current at bebc18bd27f56a867dcbd5446e5c9c85dd1e1a98. Final staged whitespace check passes.
 
 Committed-tree story:check: PASS manifest, Xaravel tests, fixtures, API surface and approvals (two passes at bebc18bd27f56a867dcbd5446e5c9c85dd1e1a98). FAIL tests only for held testPush; FAIL Escalations only for open ESC-14.6-8; FAIL authenticated full-run lookup because GH_TOKEN is unset. These correctly prohibit done. Working tree is clean before publication.
+
+
+## Auto Run Result — 2026-10-28 reference-acquisition hold
+
+Status: blocked.
+Blocking condition: ESC-14.6-9, missing shared reference acquisition for an arbitrary offset receiver, particularly PHP's numeric-string offset reference Error. The PHP 8.5.11 probe and actual attempted Bun results are recorded in the Escalation. `x.0.z` and `x.1.z` throw on PHP; the attempt returned `{z:1}`. The entire pending package diff, complete canonical testPush and all positive regressions are preserved there and under the orchestrator state tmp directory.
+
+Implementation verification before the contract stop: fast baseline seed 814ce70c reproduced missing push; typecheck and lint passed; Story harness checked 87 with zero differences; Collections checked 1,029 with zero differences; all 12 Collections Xaravel tests passed; Expectations, Escalations and Divergence checks passed before the new Escalation. Passing checks did not cover the newly probed reference case and do not establish completion. No review layers ran: the implementation contract stop precedes review. No review findings patched or deferred in this pass; follow-up review recommendation false because implementation remains held. Fresh reviews will be required after the missing runtime contract lands.
+
+Final executable scope: baseline Collections code, baseline assertions and five completed typed accessors retained. Only the held Test ID's Escalation link and Story/spec bookkeeping change, plus ESC-14.6-9. No grader weakening, runtime change, partial release or waiver.
+
+
+Final held-tree checks: Story harness `checked=87 differ=0`; Collections Xaravel `tests=12 passed=12 failed=0 skipped=0`; Expectations and Divergence checks pass; Escalations validates 138 records and 137 decisions with ESC-14.6-9 intentionally open. `story:check 14.6` rejects done for held testPush, open ESC-14.6-9, no current-tree approvals and GH_TOKEN unavailable. Manifest, assigned Xaravel test, fixtures and API-surface clauses pass. All package files and the manifest exactly match the starting main tree.
+
+The attempted-tree sandbox full harness was terminated after more than six minutes of infrastructure subprocess activity without a summary. Its timing is not classified as a product failure. The final held-tree full harness was re-run outside the sandbox under iteration note 6.
+
+
+Final full harness outside the sandbox: PASS, `XARAVEL tests=472 passed=467 failed=0 skipped=5`; `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Seven backend Variants are NOT-RUN because services/probes are unavailable locally, as AD-17 allows. Final typecheck and lint/disables (935 files) pass. The implementation workflow HALTs blocked on ESC-14.6-9; it does not enter review or claim done.
