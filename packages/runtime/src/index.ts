@@ -240,6 +240,8 @@ export {
   type PhpUnserializeOptions,
   range,
   Ref,
+  offsetReference,
+  type OffsetReference,
   SORT_NUMERIC,
   SORT_REGULAR,
   SORT_STRING,

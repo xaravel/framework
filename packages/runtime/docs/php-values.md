@@ -16,6 +16,16 @@ synchronous.
   number. `isFloat(v)` is PHP's `is_float`: true for a marked value and for a non-integral `number`.
 - **By-reference parameters.** PHP's `function f(&$x)` takes a `Ref` box (`Ref<T>`). The callee writes `ref.value`, and the
   caller reads it back.
+- **Offset references.** `offsetReference(object, offset)` returns an `OffsetReference`,
+  a real `Ref<unknown>` accepted by by-reference helpers. Builtin `ArrayObject`
+  storage (also through wrappers and inherited `offsetGet`) writes through. An
+  overridden or other userland `offsetGet` yields a detached array value and never
+  calls `offsetSet`; DIV-9.17 omits PHP's indirect-modification notice. Assignments
+  copy arrays and preserve object handles. Captured references share reference
+  writes; direct offset overwrites and unsets detach them from the slot. Reinsertion
+  creates a new slot. After a storage exchange, existing references retain the
+  original storage. A null (or undefined) offset selects the empty-string
+  slot; consumers retain responsibility for whole-root/null-key policies.
 - **Objects.** `stdClass` is PHP's class with no members; a dynamic property is a plain property write. An object PHP
   compares with `==` exposes its compared properties through `[Symbol.for('xaravel.php.props')]()`.
 
