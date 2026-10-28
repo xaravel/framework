@@ -3,6 +3,7 @@
 // (AD-9.5). Its `[Symbol.iterator]()` yields normalised `[key, value]` pairs, the protocol the grader reads without
 // importing the runtime (decisions/ESC-4.1-1.md). A key is a safe-integer `number`, a `bigint` for an int beyond
 // ±(2^53 − 1), or a `string`. `jsonEncode` encodes it by the list rule.
+import { arrayCells, copyArrayCells, referenceEntry, setEntryCell } from "./arrayReferenceCells";
 import { arrayPointer, copyArrayPointer, setArrayPointer } from "./arrayPointer";
 import type { PhpFloat } from "./PhpFloat";
 import { fqcn, registerClass } from "../registry/registry";
@@ -120,8 +121,11 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   }
 
   constructor(entries: Iterable<readonly [K, V]> = []) {
-    for (const [key, value] of entries) {
+    for (const entry of entries) {
+      const [key, value] = entry;
+      arrayCells(this)?.delete(normalizeKey(key));
       this.set(key, value);
+      setEntryCell(this, normalizeKey(key), entry);
     }
   }
 
@@ -137,12 +141,15 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   /** The value at `key`, or null when the key is missing. */
   get(key: K | PhpKeyInput): V | null {
     const normal = normalizeKey(key);
-    return this.#entries.get(normal) ?? null;
+    const cell = arrayCells(this)?.get(normal);
+    return (cell === undefined ? this.#entries.get(normal) ?? null : cell.value) as V | null;
   }
 
   /** `$a[$key] = $value`. A rewritten key keeps its first position. Returns this array. */
   set(key: K | PhpKeyInput, value: V): this {
     const normal = normalizeKey(key);
+    const cell = arrayCells(this)?.get(normal);
+    if (cell !== undefined) cell.value = normalizeNull(value);
     this.#entries.set(normal, normalizeNull(value) as V);
     this.#advance(normal);
     return this;
@@ -165,6 +172,7 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
         position++;
       }
     }
+    arrayCells(this)?.delete(normal);
     this.#entries.delete(normal);
     if (position < pointer) setArrayPointer(this, pointer - 1);
     return true;
@@ -195,6 +203,7 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
       copy.#entries.set(key, value);
     }
     copy.#nextFree = this.#nextFree;
+    copyArrayCells(this, copy);
     return copyArrayPointer(this, copy);
   }
 
@@ -204,14 +213,15 @@ export class PhpArray<K extends PhpKeyInput = PhpKeyInput, V = unknown> implemen
   }
 
   /** The values, in insertion order. */
-  values(): IterableIterator<V> {
-    return this.#entries.values();
+  *values(): IterableIterator<V> {
+    for (const [, value] of this) yield value;
   }
 
   /** The `[key, value]` pairs, in insertion order. */
   *entries(): IterableIterator<[PhpArrayKey, V]> {
     for (const [key, value] of this.#entries) {
-      yield [key, value];
+      const cell = arrayCells(this)?.get(key);
+      yield referenceEntry(key, (cell === undefined ? value : cell.value) as V, cell ?? null);
     }
   }
 
@@ -253,13 +263,16 @@ export function arrayFromEntries(entries: Iterable<readonly [PhpKeyInput, unknow
   const array = new PhpArray<PhpKeyInput, unknown>(entries);
   const pairs = [...array];
   if (pairs.every(([key], index) => key === index)) {
-    return pairs.map(([, value]) => value);
+    const list = pairs.map(([, value]) => value);
+    copyArrayCells(array, list);
+    return list;
   }
   if (pairs.every(([key]) => typeof key === "string")) {
     const map: Record<string, unknown> = {};
     for (const [key, value] of pairs) {
       Object.defineProperty(map, key as string, { value, enumerable: true, writable: true, configurable: true });
     }
+    copyArrayCells(array, map);
     return map;
   }
   return array;

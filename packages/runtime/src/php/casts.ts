@@ -1,3 +1,4 @@
+import { arrayCells, referenceEntry } from "./arrayReferenceCells";
 // PHP's scalar casts over the AD-9 value model (Story 9.6): `(int)`, `(float)`, `(string)` and `(bool)` as PHP 8.5's
 // `zval_get_long`, `zval_get_double`, `zval_get_string` and `zend_is_true` give them. The internal `phpType`
 // (re-exported from `phpType.ts`), `isTrue` and `formatFloat` (re-exported from `scalarString.ts`) are shared with
@@ -25,17 +26,18 @@ const PHP_ARRAY = Symbol.for("xaravel.php.array");
 
 /** The `[key, value]` pairs of a PHP array (see `phpType`), in PHP order; `undefined` values read as `null`. */
 export function arrayEntries(v: object): [PhpArrayKey, unknown][] {
+  const cells = arrayCells(v);
   if (Array.isArray(v)) {
     const entries: [PhpArrayKey, unknown][] = [];
     for (let index = 0; index < v.length; index++) {
-      entries.push([index, (v[index] as unknown) ?? null]);
+      entries.push(referenceEntry(index, (v[index] as unknown) ?? null, cells?.get(index) ?? null));
     }
     return entries;
   }
   if ((v as Record<symbol, unknown>)[PHP_ARRAY] === true) {
-    return [...(v as Iterable<readonly [PhpArrayKey, unknown]>)].map(([key, value]) => [key, value ?? null]);
+    return [...(v as Iterable<readonly [PhpArrayKey, unknown]>)].map(([key, value]) => referenceEntry(key, value ?? null, cells?.get(key) ?? null));
   }
-  return Object.keys(v).map((key) => [normalizeKey(key), ((v as Record<string, unknown>)[key] as unknown) ?? null]);
+  return Object.keys(v).map((key) => referenceEntry(normalizeKey(key), ((v as Record<string, unknown>)[key] as unknown) ?? null, cells?.get(normalizeKey(key)) ?? null));
 }
 
 /** The number of entries of a PHP array (`count($a)`). */

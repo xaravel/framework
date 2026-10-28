@@ -36,6 +36,21 @@ synchronous.
   creates a new slot. After a storage exchange, existing references retain the
   original storage. A null (or undefined) offset selects the empty-string
   slot; consumers retain responsibility for whole-root/null-key policies.
+- **Arbitrary offset references.** `referenceAt(ref, key)` acquires PHP's `&$x[$key]`
+  through a `Ref` holding any PHP value; null appends (`&$x[]`). Arrays create a
+  missing null slot, preserve key coercion and append overflow, and share repeated
+  references to a captured slot. Sibling writes and direct array overwrites retain
+  aliases; removing a slot or replacing the receiver detaches it. Array copies
+  made before acquisition are isolated; copies made afterward preserve existing
+  reference cells, as PHP does. Surviving reference cells travel with entries through
+  append, removal, reindexing, sorting, casts and array-returning operations. Deleted
+  or truncated native slots are pruned before copying; referenced values are shared
+  without recursive descent. Assigned arrays copy values and objects keep their
+  handles. Null and false become arrays before key validation. Other scalars fail
+  unchanged, strings raise PHP's reference or offset-type error, and preceding
+  `offsetAssign` writes remain observable. ArrayAccess delegates to
+  `offsetReference`, including its builtin versus userland semantics and null
+  empty-string offset policy. DIV-9.17 omits notices and deprecations only.
 - **Objects.** `stdClass` is PHP's class with no members; a dynamic property is a plain property write. An object PHP
   compares with `==` exposes its compared properties through `[Symbol.for('xaravel.php.props')]()`.
 

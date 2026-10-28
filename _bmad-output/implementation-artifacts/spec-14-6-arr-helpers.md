@@ -2,7 +2,7 @@
 title: 'Story 14.6: Arr helpers'
 type: feature
 created: '2026-10-27'
-status: blocked
+status: draft
 baseline_revision: d38a9bd3187014a364b2ce699c74f00b7dfb4829
 review_loop_iteration: 6
 followup_review_recommended: false
@@ -122,6 +122,8 @@ Re-derive the complete implementation from baseline using the documentary positi
 - `bun run story:check 14.6` -- pass with remote/authenticated run evidence where required; record any environmental refusal precisely, never claim completion from fast/local-only evidence.
 
 ## Spec Change Log
+
+- 2026-10-28 resume: runtime referenceAt landed in #517, resolving ESC-14.6-9; return to draft to re-plan the complete push/set repair with the approved receiver matrix.
 
 - 2026-10-28 contract stop: pinned PHP 8.5.11 rejects intermediate numeric string-offset reference acquisition, while the attempt returns an array. offsetAssign implements the preceding assignment but no public runtime seam implements the following reference operation. Raised ESC-14.6-9; preserve the entire positive attempt and add the numeric-string reference cases on resumption. KEEP all five completed accessors, every baseline assertion, four Support holds and immutable historical verdicts. Hold push/set whole; no local PHP reference substitute.
 
