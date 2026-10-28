@@ -5,9 +5,114 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, LazyCollection } from "@xaravel/collections";
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
-import { ArgumentCountError, ArrayIterator, JsonSerializable, stdClass, arrayAppend, arrayEntries, Error as PhpError, keyed, PhpArray, Ref, valueCopy, SortDirection, SORT_NATURAL, TypeError as PhpTypeError, UnhandledMatchError } from "@xaravel/runtime";
+import { ArgumentCountError, ArrayObject, ArrayIterator, InvalidArgumentException, JsonSerializable, Stringable, float, stdClass, arrayAppend, arrayEntries, Error as PhpError, keyed, PhpArray, Ref, valueCopy, SortDirection, SORT_NATURAL, TypeError as PhpTypeError, UnhandledMatchError } from "@xaravel/runtime";
 
-xaravelTest("XT-collections-12", "FR-23: Arr dot get/set/has/forget preserve PHP keys, insertion order, null semantics and array value copies; synchronous callable forms reject async callbacks and lazy traversal stops and cleans up correctly", async () => {
+xaravelTest("XT-collections-12", "FR-23: Arr typed accessors bind PHP arguments before lookup and preserve class-string/scalar representations; dot get/set/has/forget preserve keys, order, nulls and value copies; synchronous callbacks and lazy traversal preserve their contracts", async () => {
+  const fails = (invoke: () => unknown, klass: new (...args: any[]) => unknown, message: string | null = null): void => {
+    let error: unknown = null;
+    try { invoke(); } catch (caught) { error = caught; }
+    Assert.assertInstanceOf(klass, error);
+    if (message !== null) Assert.assertSame(message, (error as PhpTypeError).getMessage());
+  };
+  const typedCases = [
+    ["array", [1], [2], "array", "an array"],
+    ["boolean", true, "0", "bool", "a boolean"],
+    ["float", float(2), "3", "float", "a float"],
+    ["integer", 2, "3", "int", "an integer"],
+    ["string", "ok", 3, "string", "a string"],
+  ] as const;
+  for (const [method, selected, default_, type, label] of typedCases) {
+    const call = Arr[method] as (...args: unknown[]) => unknown;
+    const fn = "Illuminate\\Support\\Arr::" + method;
+    for (const input of [{ key: selected }, new PhpArray([["key", selected]]), new ArrayObject({ key: selected })]) {
+      Assert.assertSame(selected, call(input, "key"));
+    }
+    Assert.assertSame(selected, call([selected], 0));
+    fails(() => call({ key: selected }, "key", new stdClass()), PhpTypeError,
+      fn + "(): Argument #3 ($default) must be of type ?" + type + ", stdClass given");
+    fails(() => call({ key: null }, "key"), InvalidArgumentException,
+      "Array value for key [key] must be " + label + ", NULL found.");
+    fails(() => call({}, "key"), InvalidArgumentException);
+    fails(() => call(), ArgumentCountError,
+      "Too few arguments to function " + fn + "(), 0 passed and at least 2 expected");
+    fails(() => call(null, "key"), PhpTypeError,
+      fn + "(): Argument #1 ($array) must be of type ArrayAccess|array, null given");
+    fails(() => call({}, []), PhpTypeError,
+      fn + "(): Argument #2 ($key) must be of type string|int|null, array given");
+    const expected = method === "boolean" ? false : method === "float" ? float(3) : method === "integer" ? 3 : method === "string" ? "3" : [2];
+    Assert.assertSame(expected, call({}, "missing", default_));
+  }
+  Assert.assertSame(9223372036854775807n, Arr.integer({ key: 9223372036854775807n }, "key"));
+  Assert.assertSame(float(2), Arr.float({ key: float(2) }, "key"));
+  fails(() => Arr.float({ key: 2 }, "key"), InvalidArgumentException);
+  fails(() => Arr.integer({ key: float(2) }, "key"), InvalidArgumentException);
+  const typedHandle = new stdClass();
+  const typedSource = { key: { child: [1], typedHandle } };
+  const typedCopy = Arr.array(typedSource, "key") as typeof typedSource.key;
+  typedCopy.child.push(2);
+  Assert.assertSame([1], typedSource.key.child);
+  Assert.assertSame(typedHandle, typedCopy.typedHandle);
+  class ExplicitTypedGetArr extends Arr {
+    static override get(): unknown { throw new Error("typed accessors must use Arr.get"); }
+  }
+  Assert.assertSame([1], ExplicitTypedGetArr.array({ key: [1] }, "key"));
+  Assert.assertTrue(ExplicitTypedGetArr.boolean({ key: true }, "key"));
+  Assert.assertSame(float(2), ExplicitTypedGetArr.float({ key: float(2) }, "key"));
+  Assert.assertSame(2, ExplicitTypedGetArr.integer({ key: 2 }, "key"));
+  Assert.assertSame([1], Arr.array([1], null));
+  const accessorArrayObject = new ArrayObject({ key: [1] });
+  const accessorArrayCopy = Arr.array(accessorArrayObject, "key") as number[];
+  accessorArrayCopy.push(2);
+  Assert.assertSame([1], accessorArrayObject.offsetGet("key"));
+
+
+Assert.assertSame("Stringable", Arr.string({ key: Stringable }, "key"));
+Assert.assertSame("Stringable", Arr.string({}, "key", Stringable));
+fails(() => Arr.array({ key: Stringable }, "key"), InvalidArgumentException,
+  "Array value for key [key] must be an array, string found.");
+Assert.assertSame(Stringable, (Arr.array({ key: { token: Stringable } }, "key") as { token: unknown }).token);
+for (const [method, label] of [["boolean", "a boolean"], ["float", "a float"], ["integer", "an integer"]] as const) {
+  fails(() => Arr[method]({ key: Stringable }, "key"), InvalidArgumentException,
+    "Array value for key [key] must be " + label + ", string found.");
+}
+const allTypedCases = typedCases;
+for (const [method, selected, default_, type] of allTypedCases) {
+  const call = Arr[method] as (...args: unknown[]) => unknown;
+    const fn = "Illuminate\\Support\\Arr::" + method;
+    for (const [invalid, actual] of [[null, "null"], [1, "int"], ["bad", "string"], [true, "true"], [new stdClass(), "stdClass"], [Stringable, "string"]] as const) {
+      fails(() => call(invalid, "key"), PhpTypeError,
+        fn + "(): Argument #1 ($array) must be of type ArrayAccess|array, " + actual + " given");
+    }
+    fails(() => call({}), ArgumentCountError,
+      "Too few arguments to function " + fn + "(), 1 passed and at least 2 expected");
+    Assert.assertSame(selected, call({ key: selected }, "key", null));
+  Assert.assertSame(selected, call({ outer: { inner: selected } }, "outer.inner"));
+  Assert.assertSame(selected, call({ "outer.inner": selected, outer: { inner: null } }, "outer.inner"));
+  Assert.assertSame(selected, call({ key: selected }, "key", default_));
+  class LookupProbe extends ArrayObject {
+    reads: unknown[] = [];
+    override offsetExists(key: Parameters<ArrayObject['offsetExists']>[0]): boolean { this.reads.push(["exists", key]); return super.offsetExists(key); }
+    override offsetGet(key: Parameters<ArrayObject['offsetGet']>[0]): unknown { this.reads.push(["get", key]); return super.offsetGet(key); }
+  }
+  const probe = new LookupProbe({ key: selected });
+  fails(() => call(probe, "key", new stdClass()), PhpTypeError,
+    "Illuminate\\Support\\Arr::" + method + "(): Argument #3 ($default) must be of type ?" + type + ", stdClass given");
+  Assert.assertSame([], probe.reads);
+  Assert.assertSame(selected, call(probe, "key"));
+  Assert.assertSame([["exists", "key"], ["get", "key"]], probe.reads);
+}
+Assert.assertSame("3", Arr.string({}, "missing", 3));
+  Assert.assertTrue((Arr.array({ key: { token: Stringable } }, "key") as { token: unknown }).token === Stringable);
+  Assert.assertTrue((Arr.array({}, "missing", { token: Stringable }) as { token: unknown }).token === Stringable);
+  Assert.assertSame("ok", Arr.string({ "1": "ok" }, true));
+  Assert.assertSame("ok", Arr.string({ "1": "ok" }, float(1)));
+fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
+  "Array value for key [key] must be a string, NULL found.");
+
+  class ExplicitGetArr extends Arr {
+    static override get(): unknown { throw new Error("typed accessors must use Arr.get"); }
+  }
+  Assert.assertSame("ok", ExplicitGetArr.string({ key: "ok" }, "key"));
   const recursive = new PhpArray<string | number, unknown>([
     ["z", new PhpArray<string, unknown>([["b", [10, 2, 1]], ["a", { value: [3, 1, 2] }]])],
     [4, ["item10", "item2", "item1"]],

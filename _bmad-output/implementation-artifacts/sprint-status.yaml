@@ -162,7 +162,7 @@ development_status:
   14-3-filtering-slicing-and-conditional-methods: done
   14-4-set-operations-and-combining: done  # 124 Story IDs match; two current Fidelity passes; review complete
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
-  14-6-arr-helpers: in-progress  # runtime prerequisite items 13 and 14 done; resume the five typed accessors and push next. Existing independent helpers and Support holds preserved.
+  14-6-arr-helpers: blocked  # ESC-14.6-8: runtime scalar/string offset assignment missing; five typed accessors complete, push/set repair held whole. Review loop 6.
   14-7-lazycollection-behaviour: backlog
   14-8-lazycollection-laziness-guarantees: backlog
   epic-14-retrospective: optional
