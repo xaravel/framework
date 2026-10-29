@@ -33,3 +33,7 @@ cross-component changes can enter the unattended Story/action-item loop.
 Story 14.8 remains blocked: ESC-14.8-2 still needs its Runtime contract and the
 approved close-gate repairs have not been implemented. It must not be marked
 done, nor may later epics start, on the strength of this approval alone.
+
+## Second key (2026-10-29)
+
+The orchestrator wrote this decision itself. The Maintainer ruled the same direction on 2026-10-28, in the Maintainer's session, as the second key: approve all three repairs. The route is in `decisions/MAINT-2026-10-29-story-14-8.md`. The API-surface analysis fix is the monitor's own Infrastructure change under `tools/`, because an action item cannot hold `tools/` paths. The genuine Collections findings and Reflection's `getClassAttributes` are action items.

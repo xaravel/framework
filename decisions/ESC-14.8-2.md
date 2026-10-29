@@ -29,3 +29,7 @@ Story 14.8 remains blocked until the Runtime contract exists and the independent
 Epic-close repairs approved in `decisions/ESC-14.8-1.md` are implemented through
 their own tracked Infrastructure route. Its sprint status and retained tests
 remain unchanged; later epics must not start on the strength of this approval.
+
+## Second key (2026-10-29)
+
+The orchestrator wrote this decision itself. The monitor approved the same direction on 2026-10-29 as the second key, under the Maintainer's standing rule `decisions/MAINT-2026-10-26-runtime-builtins.md`, and told the Maintainer in the Maintainer's session. `array_sum`'s PHP 8.3 warning for an unsupported operand is not raised under DIV-9.17, which the Maintainer widened the same day to every PHP notice, warning and deprecation; the operand is skipped as in PHP. The route is in `decisions/MAINT-2026-10-29-story-14-8.md`.
