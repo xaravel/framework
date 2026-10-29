@@ -212,8 +212,6 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   max<R>(callback?: SyncCallable<[value: any, key: any], R> | string | null): unknown;
   /** Reduce the collection. */
   reduce<R>(callback: SyncCallable<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
-  /** Reduce an associative collection. */
-  reduceWithKeys<R>(callback: SyncCallable<[carry: any, value: any, key: any], R>, initial?: unknown): unknown;
   /** Reduce by mutating an initial value. */
   reduceInto<I, R>(initial: I, callback: SyncCallable<[carry: import("@xaravel/runtime").Ref<I>, value: any, key: any], R>): I;
   /** Pass the collection to a callback. */

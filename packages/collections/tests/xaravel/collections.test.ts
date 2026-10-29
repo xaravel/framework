@@ -1186,7 +1186,7 @@ xaravelTest(
     const lines = [
       'import { Arr, collect, LazyCollection, type Enumerable } from "@xaravel/collections";',
       'const e: Enumerable = collect([1]);',
-      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => operations.map((operation) => `${operation.startsWith("pipe(") ? "void " : ""}${target}.${operation};`)),
+      ...["collect([1])", "LazyCollection.make([1])", "e"].flatMap((target) => operations.filter((operation) => target !== "e" || !operation.startsWith("reduceWithKeys(")).map((operation) => `${operation.startsWith("pipe(") ? "void " : ""}${target}.${operation};`)),
       'Arr.mapWithKeys([1], async (value: number) => ({ value }));',
       'Arr.map([1], async (value: number) => value);',
       'const descendingComparison: Extract<Parameters<typeof e.sortByDesc<number>>[0], (...args: number[]) => unknown> = async (a: number, b: number) => a - b; void descendingComparison;',
