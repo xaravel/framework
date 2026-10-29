@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "node:path";
 import {
   appendRecords,
   buildPrompt,
+  type ChangedFile,
   CHECKLIST_FILE,
   classifyUnavailable,
   consequenceEntries,
@@ -36,6 +37,7 @@ import {
   gatherEvidence,
   importedDeclarations,
   inventoryContext,
+  itemTestIds,
   inItemScope,
   itemXaravelTestIds,
   touchedTestFixtures,
@@ -1922,7 +1924,30 @@ class Real { use Concerns\CountsEnumerations; }
     const itemUser = buildPrompt({ ...promptBase, subject: "item", storyId: grader, manifestText: "id: x", evidence: NO_EVIDENCE }).user;
     expect(itemUser.startsWith(`# Retrospective action item ${grader}: tree `)).toBe(true);
     expect(itemUser).toContain(`## Action item\n\n${ITEM_NOTE}\n\n\`\`\`yaml\nid: x\n\`\`\``);
-    expect(itemUser).toContain("The action item assigns no Ported Test IDs.");
+    expect(itemUser).toContain("The action item's change adds or changes no Expectations line, so it is reviewed as assigning no Ported Test IDs.");
+    // An item's assigned Ported Test IDs are those of the Expectations lines its own change adds or changes, so the
+    // prompt shows their Inventory rows and Upstream source, as a manifest's test_ids do (epic-14-item-18: F-1..F-3
+    // rejected SupportReflectorTest::testGetClassAttributes for the Upstream body the prompt did not carry).
+    const reflectorId = "Illuminate\\Tests\\Support\\SupportReflectorTest::testGetClassAttributes";
+    const expectationFile = (filename: string, patch: string | null): ChangedFile => ({ filename, status: "modified", patch });
+    const line = (id: string, status: string): string => JSON.stringify({ id, variant: "none", status, reason: null, adapted: null, escalation: null });
+    expect(
+      itemTestIds([
+        expectationFile("conformance/expectations/reflection/framework/tests/Support/SupportReflectorTest.jsonl", `@@ -3 +3 @@\n-${line(reflectorId, "skip")}\n+${line(reflectorId, "pass")}\n+${line("B::testB", "pass")}\n+${line("A::testA", "pass")}\n+${line("A::testA", "pass")}\n+not json\n+{"id":""}`),
+        expectationFile("conformance/expectations/reflection/x.md", `@@ -0,0 +1 @@\n+${line("C::testC", "pass")}`),
+        expectationFile("packages/reflection/tests/ported/x.test.ts", `@@ -0,0 +1 @@\n+${line("D::testD", "pass")}`),
+        expectationFile("conformance/expectations/reflection/y.jsonl", `@@ -1 +0,0 @@\n-${line("E::testE", "pass")}`),
+        expectationFile("conformance/expectations/reflection/z.jsonl", null),
+      ]),
+    ).toEqual(["A::testA", "B::testB", reflectorId]);
+    const reflectorInventory = inventoryContext(root, itemTestIds([expectationFile("conformance/expectations/reflection/framework/tests/Support/SupportReflectorTest.jsonl", `@@ -3 +3 @@\n+${line(reflectorId, "pass")}`)]));
+    expect(reflectorInventory.map((entry) => entry.id)).toEqual([reflectorId]);
+    expect(reflectorInventory[0]!.upstream).toContain("public function testGetClassAttributes()");
+    const itemWithTests = buildPrompt({ ...promptBase, subject: "item", storyId: grader, manifestText: "id: x", inventory: reflectorInventory, evidence: NO_EVIDENCE }).user;
+    expect(itemWithTests).toContain("An action item has no manifest: it is reviewed as assigning the Test IDs whose Expectations lines its own change adds or changes (`itemTestIds`).");
+    expect(itemWithTests).toContain(`### ${reflectorId}`);
+    expect(itemWithTests).toContain("public function testGetClassAttributes()");
+    expect(itemWithTests).not.toContain("reviewed as assigning no Ported Test IDs");
     expect(itemUser).not.toContain("## Manifest");
     // An item's assigned Xaravel Test ids are those its touched tests declare, so evidence (c) shows the Oracle fixtures
     // of a test it changes, as a manifest's ids do for a Story (Epic 9 retro item 4, #326: XT-runtime-22's fixture).
