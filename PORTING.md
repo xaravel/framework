@@ -120,6 +120,7 @@ bun run porting:translate --blade '<blade template>'
 | `C::class` | `C` |
 | `->`, `?->`, `::` (calls, properties, constants, `C::$p`) | `.`, `?.`, `.` |
 | `f(...)`, `$o->m(...)` (first-class callable) | `f`, `o.m.bind(o)` |
+| `func_get_args()` reading arguments past the declared parameters | a trailing rest parameter after the declared ones, `...moreKeys` (DIV-12.21) |
 | named arguments `f(1, b: 2, c: 3)` | `f(1, { b: 2, c: 3 })` (trailing named arguments become one object, AD-26) |
 | bare function or constant name | kept verbatim (the import comes from the package § Imports below names: a helper from the Component whose api-surface declares it, PHP builtins and constants from `@xaravel/runtime/php`) |
 | `true`/`FALSE`/`Null` | lower case |
