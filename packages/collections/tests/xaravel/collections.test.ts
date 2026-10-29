@@ -2041,3 +2041,67 @@ xaravelTest(
     Assert.assertSame("BlockedByComponentError(support)", (failure as BlockedByComponentError).message);
   },
 );
+
+xaravelTest(
+  "XT-collections-15",
+  "LazyCollection defers source enumeration and preserves exact partial and full source counts through public results, including keyed sources, early termination and replay (FR-23, AD-6, AD-9)",
+  () => {
+    const enumerated: number[] = [];
+    let starts = 0;
+    const source = LazyCollection.make(function* () {
+      starts++;
+      for (let value = 1; value <= 20; value++) {
+        enumerated.push(value);
+        yield keyed(value === 1 ? "07" : value, value);
+      }
+    });
+    const mapped = source.map((value: number) => value * 2);
+    const selected = mapped.filter((value: number) => value % 4 === 0).take(3);
+    const chunked = source.chunk(5).take(3);
+    const remembered = source.remember();
+    Assert.assertSame(0, starts);
+    Assert.assertSame([], enumerated);
+    Assert.assertSame(new PhpArray([[2, 4], [4, 8], [6, 12]]), selected.all());
+    Assert.assertSame([1, 2, 3, 4, 5, 6], enumerated);
+    Assert.assertSame(1, starts);
+    enumerated.length = 0;
+    Assert.assertSame(1, source.first());
+    Assert.assertSame(2, starts);
+    Assert.assertSame([1], enumerated);
+    enumerated.length = 0;
+    Assert.assertSame([2, 4, 6], mapped.take(3).values().all());
+    Assert.assertSame(3, starts);
+    Assert.assertSame([1, 2, 3], enumerated);
+    enumerated.length = 0;
+    Assert.assertSame([5, 5, 5], chunked.map((chunk: LazyCollection) => chunk.count()).all());
+    Assert.assertSame(4, starts);
+    Assert.assertSame(Array.from({ length: 15 }, (_, index) => index + 1), enumerated);
+    enumerated.length = 0;
+    Assert.assertSame(["07", 2], [...remembered.take(2).keys()]);
+    Assert.assertSame(5, starts);
+    Assert.assertSame([1, 2], enumerated);
+    Assert.assertSame([1, 2], remembered.take(2).values().all());
+    Assert.assertSame(5, starts);
+    Assert.assertSame([1, 2], enumerated);
+    Assert.assertSame([1, 2, 3], remembered.take(3).values().all());
+    Assert.assertSame(5, starts);
+    Assert.assertSame([1, 2, 3], enumerated);
+    enumerated.length = 0;
+    Assert.assertSame(420, mapped.sum());
+    Assert.assertSame(6, starts);
+    Assert.assertSame(Array.from({ length: 20 }, (_, index) => index + 1), enumerated);
+    enumerated.length = 0;
+    Assert.assertSame(420, mapped.sum());
+    Assert.assertSame(7, starts);
+    Assert.assertSame(Array.from({ length: 20 }, (_, index) => index + 1), enumerated);
+    let infiniteCount = 0;
+    const infinite = LazyCollection.make(function* () {
+      for (let value = 1; ; value++) {
+        if (++infiniteCount > 1000) throw new Error("LazyCollection.take(3) consumed over 1000 source items");
+        yield value;
+      }
+    });
+    Assert.assertSame([1, 2, 3], infinite.take(3).all());
+    Assert.assertSame(3, infiniteCount);
+  },
+);
